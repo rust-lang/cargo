@@ -953,7 +953,7 @@ new desc
 
 "#]])
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the metadata changed
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the environment variable CARGO_PKG_DESCRIPTION changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2113,49 +2113,114 @@ fn simulated_docker_deps_stay_cached() {
 
 #[cargo_test]
 fn metadata_change_invalidates() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
+    // (key, value, value-updated, env-var-name)
+    let scenarios = [
+        (
+            "description",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_DESCRIPTION",
+        ),
+        (
+            "homepage",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_HOMEPAGE",
+        ),
+        (
+            "repository",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_REPOSITORY",
+        ),
+        (
+            "license",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_LICENSE",
+        ),
+        (
+            "license-file",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_LICENSE_FILE",
+        ),
+        (
+            "authors",
+            r#"["foo"]"#,
+            r#"["foo_updated"]"#,
+            "CARGO_PKG_AUTHORS",
+        ),
+        (
+            "rust-version",
+            r#""1.0.0""#,
+            r#""1.0.1""#,
+            "CARGO_PKG_RUST_VERSION",
+        ),
+        ("readme", r#""foo""#, r#""foo_updated""#, "CARGO_PKG_README"),
+    ];
+    let base_cargo_toml = r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                "#;
 
-    p.cargo("build").run();
+    let p = project().build();
+    for (key, value, value_updated, env_var) in scenarios {
+        p.change_file("Cargo.toml", base_cargo_toml);
+        p.change_file(
+            "src/main.rs",
+            &format!(
+                r#"
+            fn main() {{
+                let output = env!("{env_var}");
+                println!("{{output}}");
+            }}
+            "#
+            ),
+        );
 
-    for attr in &[
-        "authors = [\"foo\"]",
-        "description = \"desc\"",
-        "homepage = \"https://example.com\"",
-        "repository =\"https://example.com\"",
-    ] {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(p.root().join("Cargo.toml"))
-            .unwrap();
-        writeln!(file, "{}", attr).unwrap();
-        p.cargo("build")
-            .with_stderr_data(str![[r#"
+        // Compile the first time
+        p.cargo("build").run();
+
+        // Update the manifest, rebuild, and verify the build was invalided
+        p.change_file("Cargo.toml", &format!("{base_cargo_toml}\n{key} = {value}"));
+        p.cargo("build -v")
+            .with_stderr_data(format!(
+                r#"[DIRTY] foo v0.1.0 ([ROOT]/foo): the environment variable {env_var} changed
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+"#
+            ))
+            .run();
+
+        // Remove references to the metadata and rebuild
+        p.change_file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                println!("foo");
+            }
+            "#,
+        );
+        p.cargo("build").run();
+
+        // Update the manifest value and verify the build is NOT invalidated.
+        p.change_file(
+            "Cargo.toml",
+            &format!("{base_cargo_toml}\n{key} = {value_updated}"),
+        );
+
+        p.cargo("build -v")
+            .with_stderr_data(str![[r#"
+[FRESH] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
             .run();
     }
-    p.cargo("build -v")
-        .with_stderr_data(str![[r#"
-[FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
 #[cargo_test]

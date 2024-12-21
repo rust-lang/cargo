@@ -19,6 +19,7 @@ use cargo_util::paths;
 use cargo_util::ProcessBuilder;
 use cargo_util::Sha256;
 
+use crate::core::manifest::ManifestMetadata;
 use crate::CargoResult;
 use crate::CARGO_ENV;
 
@@ -334,7 +335,10 @@ pub fn translate_dep_info(
     //
     // For cargo#13280, We trace env vars that are defined in the `[env]` config table.
     on_disk_info.env.retain(|(key, _)| {
-        env_config.contains_key(key) || !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV
+        ManifestMetadata::should_track(key)
+            || env_config.contains_key(key)
+            || !rustc_cmd.get_envs().contains_key(key)
+            || key == CARGO_ENV
     });
 
     let serialize_path = |file| {
