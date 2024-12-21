@@ -2018,11 +2018,33 @@ fn metadata_change_invalidates() {
         "description = \"desc\"",
         "homepage = \"https://example.com\"",
         "repository =\"https://example.com\"",
+        "readme =\"README.md\"",
+        "license =\"MIT\"",
+        "license-file =\"foo.txt\"",
+        "categories = [\"foo\"]",
+        "keywords = [\"foo\"]",
+        "documentation =\"https://example.com\"",
     ] {
+        let cargo_toml = p.root().join("Cargo.toml");
+
+        // license and license-file together will emit a warning, so remove license since we
+        // already tested it. Also rebuild it so that when we add license-file, we validate the
+        // fingerprint was updated.
+        if attr.starts_with("license-file") {
+            let contents = fs::read_to_string(&cargo_toml)
+                .unwrap()
+                .replace("license =\"MIT\"\n", "");
+            fs::write(&cargo_toml, &contents).unwrap();
+
+            p.cargo("build -Zchecksum-freshness")
+                .masquerade_as_nightly_cargo(&["checksum-freshness"])
+                .run();
+        }
+
         let mut file = OpenOptions::new()
             .write(true)
             .append(true)
-            .open(p.root().join("Cargo.toml"))
+            .open(cargo_toml)
             .unwrap();
         writeln!(file, "{}", attr).unwrap();
         p.cargo("build -Zchecksum-freshness")

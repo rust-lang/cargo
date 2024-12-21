@@ -1531,7 +1531,18 @@ fn calculate_normal(
     ));
     // Include metadata since it is exposed as environment variables.
     let m = unit.pkg.manifest().metadata();
-    let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
+    let metadata = util::hash_u64((
+        &m.authors,
+        &m.description,
+        &m.homepage,
+        &m.repository,
+        &m.readme,
+        &m.license,
+        &m.license_file,
+        &m.documentation,
+        &m.categories,
+        &m.keywords,
+    ));
     let mut config = StableHasher::new();
     if let Some(linker) = build_runner.compilation.target_linker(unit.kind) {
         linker.hash(&mut config);
