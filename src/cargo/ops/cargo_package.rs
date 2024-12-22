@@ -796,7 +796,7 @@ fn check_repo_state(
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .replace("\\", "/");
-    let Some(git) = git(gctx, src_files, &repo, &opts)? else {
+    let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
         // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
@@ -805,6 +805,7 @@ fn check_repo_state(
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 
     fn git(
+        pkg: &Package,
         gctx: &GlobalContext,
         src_files: &[PathBuf],
         repo: &git2::Repository,
@@ -828,6 +829,7 @@ fn check_repo_state(
         let mut dirty_src_files: Vec<_> = src_files
             .iter()
             .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
+            .chain(dirty_metadata_paths(pkg, repo)?.iter())
             .map(|path| {
                 pathdiff::diff_paths(path, cwd)
                     .as_ref()
@@ -858,6 +860,41 @@ fn check_repo_state(
                 dirty_src_files.join("\n")
             )
         }
+    }
+
+    /// Checks whether files at paths specified in `package.readme` and
+    /// `package.license-file` have been modified.
+    ///
+    /// This is required because those paths may link to a file outside the
+    /// current package root, but still under the git workdir, affecting the
+    /// final packaged `.crate` file.
+    fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
+        let mut dirty_files = Vec::new();
+        let workdir = repo.workdir().unwrap();
+        let root = pkg.root();
+        let meta = pkg.manifest().metadata();
+        for path in [&meta.license_file, &meta.readme] {
+            let Some(path) = path.as_deref().map(Path::new) else {
+                continue;
+            };
+            let abs_path = paths::normalize_path(&root.join(path));
+            if paths::strip_prefix_canonical(abs_path.as_path(), root).is_ok() {
+                // Inside package root. Don't bother checking git status.
+                continue;
+            }
+            if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
+                // Outside package root but under git workdir,
+                if repo.status_file(&rel_path)? != git2::Status::CURRENT {
+                    dirty_files.push(if abs_path.is_symlink() {
+                        // For symlinks, shows paths to symlink sources
+                        workdir.join(rel_path)
+                    } else {
+                        abs_path
+                    });
+                }
+            }
+        }
+        Ok(dirty_files)
     }
 
     // Helper to collect dirty statuses for a single repo.

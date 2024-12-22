@@ -1373,9 +1373,14 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
 
     // Ensure dirty files be reported.
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 2 files in the working directory contain changes that were not yet committed into git:
+
+LICENSE
+README.md
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
