@@ -6873,3 +6873,32 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 "#]])
         .run();
 }
+
+#[cargo_test]
+#[cfg(unix)]
+fn simple_with_fifo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    std::process::Command::new("mkfifo")
+        .current_dir(p.root())
+        .arg(p.root().join("blocks-when-read"))
+        .status()
+        .expect("a FIFO can be created");
+
+    // Avoid actual blocking even in case of failure, assuming that what it lists here
+    // would also be read eventually.
+    p.cargo("package -l")
+        .with_stdout_does_not_contain("blocks-when-read")
+        .run();
+}
