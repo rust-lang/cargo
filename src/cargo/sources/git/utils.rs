@@ -1057,7 +1057,9 @@ pub fn fetch(
 fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
     matches!(
         err,
-        gix::env::collate::fetch::Error::Fetch(gix::remote::fetch::Error::LockShallowFile(_))
+        gix::env::collate::fetch::Error::Fetch(gix::remote::fetch::Error::Fetch(
+            gix::protocol::fetch::Error::LockShallowFile(_)
+        ))
     )
 }
 

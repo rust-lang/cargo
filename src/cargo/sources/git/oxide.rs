@@ -352,7 +352,7 @@ pub fn cargo_config_to_gitoxide_overrides(gctx: &GlobalContext) -> CargoResult<V
 }
 
 /// Reinitializes a given Git repository. This is useful when a Git repository
-/// seems corrupted and we want to start over.
+/// seems corrupted, and we want to start over.
 pub fn reinitialize(git_dir: &Path) -> CargoResult<()> {
     fn init(path: &Path, bare: bool) -> CargoResult<()> {
         let mut opts = git2::RepositoryInitOptions::new();
