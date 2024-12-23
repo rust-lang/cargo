@@ -532,7 +532,10 @@ impl SourceId {
         url == CRATES_IO_INDEX || url == CRATES_IO_HTTP_INDEX || is_overridden_crates_io_url(url)
     }
 
-    /// Hashes `self`.
+    /// Hashes `self` to be used in the name of some Cargo folders, so shouldn't vary.
+    ///
+    /// For git and url, `as_str` gives the serialisation of a url (which has a spec) and so
+    /// insulates against possible changes in how the url crate does hashing.
     ///
     /// For paths, remove the workspace prefix so the same source will give the
     /// same hash in different locations, helping reproducible builds.
@@ -550,7 +553,11 @@ impl SourceId {
                 return;
             }
         }
-        self.hash(into)
+        self.inner.kind.hash(into);
+        match self.inner.kind {
+            SourceKind::Git(_) => (&self).inner.canonical_url.hash(into),
+            _ => (&self).inner.url.as_str().hash(into),
+        }
     }
 
     pub fn full_eq(self, other: SourceId) -> bool {
@@ -665,16 +672,10 @@ impl fmt::Display for SourceId {
     }
 }
 
-/// The hash of `SourceId` is used in the name of some Cargo folders, so shouldn't
-/// vary. `as_str` gives the serialisation of a url (which has a spec) and so
-/// insulates against possible changes in how the url crate does hashing.
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
-        match self.inner.kind {
-            SourceKind::Git(_) => self.inner.canonical_url.hash(into),
-            _ => self.inner.url.as_str().hash(into),
-        }
+        self.inner.canonical_url.hash(into);
     }
 }
 
