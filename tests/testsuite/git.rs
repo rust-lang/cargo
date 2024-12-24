@@ -4249,6 +4249,13 @@ fn simple_with_fifo() {
     // would also be read eventually.
     git_project
         .cargo("package -l")
-        .with_stdout_does_not_contain("blocks-when-read")
+        .with_stdout_data(str![[r#"
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+
+"#]])
         .run();
 }

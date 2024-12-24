@@ -6899,6 +6899,12 @@ fn simple_with_fifo() {
     // Avoid actual blocking even in case of failure, assuming that what it lists here
     // would also be read eventually.
     p.cargo("package -l")
-        .with_stdout_does_not_contain("blocks-when-read")
+        .with_stdout_data(str![[r#"
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+
+"#]])
         .run();
 }
