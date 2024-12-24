@@ -351,8 +351,6 @@ impl<'gctx> Compilation<'gctx> {
             }
         }
 
-        let metadata = pkg.manifest().metadata();
-
         let cargo_exe = self.gctx.cargo_exe()?;
         cmd.env(crate::CARGO_ENV, cargo_exe);
 
@@ -360,7 +358,6 @@ impl<'gctx> Compilation<'gctx> {
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
-        let rust_version = pkg.rust_version().as_ref().map(ToString::to_string);
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_MANIFEST_PATH", pkg.manifest_path())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
@@ -368,37 +365,13 @@ impl<'gctx> Compilation<'gctx> {
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
             .env("CARGO_PKG_VERSION_PRE", pkg.version().pre.as_str())
             .env("CARGO_PKG_VERSION", &pkg.version().to_string())
-            .env("CARGO_PKG_NAME", &*pkg.name())
-            .env(
-                "CARGO_PKG_DESCRIPTION",
-                metadata.description.as_ref().unwrap_or(&String::new()),
-            )
-            .env(
-                "CARGO_PKG_HOMEPAGE",
-                metadata.homepage.as_ref().unwrap_or(&String::new()),
-            )
-            .env(
-                "CARGO_PKG_REPOSITORY",
-                metadata.repository.as_ref().unwrap_or(&String::new()),
-            )
-            .env(
-                "CARGO_PKG_LICENSE",
-                metadata.license.as_ref().unwrap_or(&String::new()),
-            )
-            .env(
-                "CARGO_PKG_LICENSE_FILE",
-                metadata.license_file.as_ref().unwrap_or(&String::new()),
-            )
-            .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
-            .env(
-                "CARGO_PKG_RUST_VERSION",
-                &rust_version.as_deref().unwrap_or_default(),
-            )
-            .env(
-                "CARGO_PKG_README",
-                metadata.readme.as_ref().unwrap_or(&String::new()),
-            )
-            .cwd(pkg.root());
+            .env("CARGO_PKG_NAME", &*pkg.name());
+
+        for (key, value) in pkg.manifest().metadata().env_vars() {
+            cmd.env(key, value.as_ref());
+        }
+
+        cmd.cwd(pkg.root());
 
         apply_env_config(self.gctx, &mut cmd)?;
 

@@ -1099,7 +1099,7 @@ new desc
 
 "#]])
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the metadata changed
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the environment variable CARGO_PKG_DESCRIPTION changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1992,57 +1992,6 @@ fn script_fails_stay_dirty() {
         .with_stderr_data("...\n[..]Crash![..]\n...")
         .with_status(101)
         .run();
-}
-
-#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
-fn metadata_change_invalidates() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -Zchecksum-freshness")
-        .masquerade_as_nightly_cargo(&["checksum-freshness"])
-        .run();
-
-    for attr in &[
-        "authors = [\"foo\"]",
-        "description = \"desc\"",
-        "homepage = \"https://example.com\"",
-        "repository =\"https://example.com\"",
-    ] {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(p.root().join("Cargo.toml"))
-            .unwrap();
-        writeln!(file, "{}", attr).unwrap();
-        p.cargo("build -Zchecksum-freshness")
-            .masquerade_as_nightly_cargo(&["checksum-freshness"])
-            .with_stderr_data(str![[r#"
-[COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-            .run();
-    }
-    p.cargo("build -Zchecksum-freshness -v")
-        .masquerade_as_nightly_cargo(&["checksum-freshness"])
-        .with_stderr_data(str![[r#"
-[FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
 #[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]

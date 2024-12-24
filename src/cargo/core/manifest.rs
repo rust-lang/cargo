@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -144,6 +145,86 @@ pub struct ManifestMetadata {
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
     pub rust_version: Option<RustVersion>,
+}
+
+macro_rules! get_metadata_env {
+    ($meta:ident, $field:ident) => {
+        $meta.$field.as_deref().unwrap_or_default().into()
+    };
+    ($meta:ident, $field:ident, $to_var:expr) => {
+        $to_var($meta).into()
+    };
+}
+
+macro_rules! metadata_envs {
+    (
+        $(
+            ($field:ident, $key:literal$(, $to_var:expr)?),
+        )*
+    ) => {
+        struct MetadataEnvs;
+        impl MetadataEnvs {
+            $(
+                fn $field(meta: &ManifestMetadata) -> Cow<'_, str> {
+                    get_metadata_env!(meta, $field$(, $to_var)?)
+                }
+            )*
+
+            pub fn should_track(key: &str) -> bool {
+                let keys = [$($key),*];
+                key.strip_prefix("CARGO_PKG_")
+                    .map(|key| keys.iter().any(|k| *k == key))
+                    .unwrap_or_default()
+            }
+
+            pub fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
+                key.strip_prefix("CARGO_PKG_").and_then(|key| match key {
+                    $($key => Some(Self::$field(meta)),)*
+                    _ => None,
+                })
+            }
+
+            pub fn vars(meta: &ManifestMetadata) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
+                [
+                    $(
+                        (
+                            concat!("CARGO_PKG_", $key),
+                            Self::$field(meta),
+                        ),
+                    )*
+                ].into_iter()
+            }
+        }
+    }
+}
+
+// Metadata enviromental variables that are emitted to rustc. Usable by `env!()`
+// If these change we need to trigger a rebuild.
+// NOTE: The env var name will be prefixed with `CARGO_PKG_`
+metadata_envs! {
+    (description, "DESCRIPTION"),
+    (homepage, "HOMEPAGE"),
+    (repository, "REPOSITORY"),
+    (license, "LICENSE"),
+    (license_file, "LICENSE_FILE"),
+    (authors, "AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
+    (rust_version, "RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
+    (readme, "README"),
+}
+
+impl ManifestMetadata {
+    /// Whether the given env var should be tracked by Cargo's dep-info.
+    pub fn should_track(env_key: &str) -> bool {
+        MetadataEnvs::should_track(env_key)
+    }
+
+    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
+        MetadataEnvs::var(self, env_key)
+    }
+
+    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
+        MetadataEnvs::vars(self)
+    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]

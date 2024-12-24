@@ -26,7 +26,6 @@ pub enum DirtyReason {
         old: Vec<String>,
         new: Vec<String>,
     },
-    MetadataChanged,
     ConfigSettingsChanged,
     CompileKindChanged,
     LocalLengthsChanged,
@@ -168,7 +167,6 @@ impl DirtyReason {
                 s.dirty_because(unit, "the profile configuration changed")
             }
             DirtyReason::RustflagsChanged { .. } => s.dirty_because(unit, "the rustflags changed"),
-            DirtyReason::MetadataChanged => s.dirty_because(unit, "the metadata changed"),
             DirtyReason::ConfigSettingsChanged => {
                 s.dirty_because(unit, "the config settings changed")
             }

@@ -78,7 +78,6 @@
 //! [`CompileKind`] (host/target)              | ✓           | ✓                   | ✓                      | ✓
 //! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                   | ✓                      | ✓
 //! `package_id`                               |             | ✓                   | ✓                      | ✓
-//! authors, description, homepage, repo       | ✓           |                     |                        |
 //! Target src path relative to ws             | ✓           |                     |                        |
 //! Target flags (test/bench/for_host/edition) | ✓           |                     |                        |
 //! -C incremental=… flag                      | ✓           |                     |                        |
@@ -189,6 +188,8 @@
 //! files to learn about environment variables that the rustc compile depends on.
 //! Cargo then later uses this to trigger a recompile if a referenced env var
 //! changes (even if the source didn't change).
+//! This also includes env vars generated from Cargo metadata like `CARGO_PKG_DESCRIPTION`.
+//! (See [`crate::core::manifest::ManifestMetadata`]
 //!
 //! #### dep-info files for build system integration.
 //!
@@ -612,10 +613,6 @@ pub struct Fingerprint {
     memoized_hash: Mutex<Option<u64>>,
     /// RUSTFLAGS/RUSTDOCFLAGS environment variable value (or config value).
     rustflags: Vec<String>,
-    /// Hash of some metadata from the manifest, such as "authors", or
-    /// "description", which are exposed as environment variables during
-    /// compilation.
-    metadata: u64,
     /// Hash of various config settings that change how things are compiled.
     config: u64,
     /// The rustc target. This is only relevant for `.json` files, otherwise
@@ -831,11 +828,12 @@ impl LocalFingerprint {
         &self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         checksum_cache: &mut HashMap<PathBuf, Checksum>,
-        pkg_root: &Path,
+        pkg: &Package,
         target_root: &Path,
         cargo_exe: &Path,
         gctx: &GlobalContext,
     ) -> CargoResult<Option<StaleItem>> {
+        let pkg_root = pkg.root();
         match self {
             // We need to parse `dep_info`, learn about the crate's dependencies.
             //
@@ -849,6 +847,12 @@ impl LocalFingerprint {
                     return Ok(Some(StaleItem::MissingFile(dep_info)));
                 };
                 for (key, previous) in info.env.iter() {
+                    if let Some(value) = pkg.manifest().metadata().env_var(key.as_str()) {
+                        if Some(value.as_ref()) == previous.as_deref() {
+                            continue;
+                        }
+                    }
+
                     let current = if key == CARGO_ENV {
                         Some(cargo_exe.to_str().ok_or_else(|| {
                             format_err!(
@@ -932,7 +936,6 @@ impl Fingerprint {
             local: Mutex::new(Vec::new()),
             memoized_hash: Mutex::new(None),
             rustflags: Vec::new(),
-            metadata: 0,
             config: 0,
             compile_kind: 0,
             fs_status: FsStatus::Stale,
@@ -994,9 +997,6 @@ impl Fingerprint {
                 old: old.rustflags.clone(),
                 new: self.rustflags.clone(),
             };
-        }
-        if self.metadata != old.metadata {
-            return DirtyReason::MetadataChanged;
         }
         if self.config != old.config {
             return DirtyReason::ConfigSettingsChanged;
@@ -1142,13 +1142,14 @@ impl Fingerprint {
         &mut self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
         checksum_cache: &mut HashMap<PathBuf, Checksum>,
-        pkg_root: &Path,
+        pkg: &Package,
         target_root: &Path,
         cargo_exe: &Path,
         gctx: &GlobalContext,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
+        let pkg_root = pkg.root();
         let mut mtimes = HashMap::new();
 
         // Get the `mtime` of all outputs. Optionally update their mtime
@@ -1249,7 +1250,7 @@ impl Fingerprint {
             if let Some(item) = local.find_stale_item(
                 mtime_cache,
                 checksum_cache,
-                pkg_root,
+                pkg,
                 target_root,
                 cargo_exe,
                 gctx,
@@ -1279,7 +1280,6 @@ impl hash::Hash for Fingerprint {
             profile,
             ref deps,
             ref local,
-            metadata,
             config,
             compile_kind,
             ref rustflags,
@@ -1294,7 +1294,6 @@ impl hash::Hash for Fingerprint {
             path,
             profile,
             &*local,
-            metadata,
             config,
             compile_kind,
             rustflags,
@@ -1445,7 +1444,7 @@ fn calculate(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     fingerprint.check_filesystem(
         &mut build_runner.mtime_cache,
         &mut build_runner.checksum_cache,
-        unit.pkg.root(),
+        &unit.pkg,
         &target_root,
         cargo_exe,
         build_runner.bcx.gctx,
@@ -1529,9 +1528,6 @@ fn calculate_normal(
         build_runner.lto[unit],
         unit.pkg.manifest().lint_rustflags(),
     ));
-    // Include metadata since it is exposed as environment variables.
-    let m = unit.pkg.manifest().metadata();
-    let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     let mut config = StableHasher::new();
     if let Some(linker) = build_runner.compilation.target_linker(unit.kind) {
         linker.hash(&mut config);
@@ -1560,7 +1556,6 @@ fn calculate_normal(
         deps,
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
-        metadata,
         config: Hasher::finish(&config),
         compile_kind,
         rustflags: extra_flags,
