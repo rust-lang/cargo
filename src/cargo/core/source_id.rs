@@ -598,14 +598,38 @@ impl Ord for SourceId {
             other => return other,
         }
 
-        // If the `kind` and the `url` are equal, then for git sources we also
-        // ensure that the canonical urls are equal.
+        let ord = self.inner.canonical_url.cmp(&other.inner.canonical_url);
+
         match (&self.inner.kind, &other.inner.kind) {
             (SourceKind::Git(_), SourceKind::Git(_)) => {
-                self.inner.canonical_url.cmp(&other.inner.canonical_url)
+                // In the pre-PR code we returned Ord here,
+                // so there is no chance that this commit has broken anything about this match arm.
             }
-            _ => self.inner.url.cmp(&other.inner.url),
+            _ => {
+                // In the pre-PR code we returned cmp of url here, so let's make sure that's the same.
+                assert_eq!(self.inner.url.cmp(&other.inner.url), ord);
+                // I am quite sure that this assert will never fire.
+                // In order for it to fire either `url`s are equal but `canonical_url`s are not,
+                // or the other way around. The algorithm for constructing a canonical URL is deterministic,
+                // so if it's given the same URL it will return the same canonical URL.
+
+                // But what if we have two different URLs that canonical eyes the same?
+                // I assert that the second one would get thrown out when the second `SourceId` was interned.
+                // `SourceId::new` is the only way to make a `SourceId`. It allways construct them with
+                // `precise: None`. Furthermore, it uses `SourceId::wrap` to see if it has ever constructed
+                // a previous instance with a `SourceIdInner` that is `SourceIdInner::eq` with the one beeing added.
+                // `SourceIdInner::eq` only looks at `kind`, `precise`, and `canonical_url`.
+                // Proof by contradiction: If we had constructed two `SourceId` that:
+                // 1. have the same `kind` (check that a few lines ago)
+                // 2. have the same `precise` (as at construction time it is allways None)
+                // 3. have the same `canonical_url` (by the assumption of this paragraph)
+                // then the `ptr::eq` would return equal. Even if they were constructed with different `url`s,
+                // `SourceId::wrap` would have noticed that they `SourceIdInner::eq`
+                // and thus returned a pointer to the first one.
+            }
         }
+
+        ord
     }
 }
 
