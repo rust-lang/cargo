@@ -91,7 +91,7 @@ fn binary_name1() {
     let deps_path = p.bin("007bar").with_extension("d");
     assert!(deps_path.is_file(), "{:?}", bar_path);
 
-    let depinfo = p.read_file(deps_path.to_str().unwrap());
+    let depinfo = p.read_file(&deps_path);
 
     // Prepare what content we expect to be present in deps file.
     let deps_exp = format!(

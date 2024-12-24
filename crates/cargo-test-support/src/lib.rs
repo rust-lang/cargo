@@ -299,7 +299,7 @@ impl ProjectBuilder {
     }
 
     /// Adds a symlink to a file to the project.
-    pub fn symlink<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
+    pub fn symlink(mut self, dst: impl AsRef<Path>, src: impl AsRef<Path>) -> Self {
         self.symlinks.push(SymlinkBuilder::new(
             self.root.root().join(dst),
             self.root.root().join(src),
@@ -308,7 +308,7 @@ impl ProjectBuilder {
     }
 
     /// Create a symlink to a directory
-    pub fn symlink_dir<T: AsRef<Path>>(mut self, dst: T, src: T) -> Self {
+    pub fn symlink_dir(mut self, dst: impl AsRef<Path>, src: impl AsRef<Path>) -> Self {
         self.symlinks.push(SymlinkBuilder::new_dir(
             self.root.root().join(dst),
             self.root.root().join(src),
@@ -368,7 +368,7 @@ impl ProjectBuilder {
 
 impl Project {
     /// Copy the test project from a fixed state
-    pub fn from_template(template_path: impl AsRef<std::path::Path>) -> Self {
+    pub fn from_template(template_path: impl AsRef<Path>) -> Self {
         let root = paths::root();
         let project_root = root.join("case");
         snapbox::dir::copy_template(template_path.as_ref(), &project_root).unwrap();
@@ -459,7 +459,7 @@ impl Project {
     /// # let p = cargo_test_support::project().build();
     /// p.change_file("src/lib.rs", "fn new_fn() {}");
     /// ```
-    pub fn change_file(&self, path: &str, body: &str) {
+    pub fn change_file(&self, path: impl AsRef<Path>, body: &str) {
         FileBuilder::new(self.root().join(path), body, false).mk()
     }
 
@@ -530,7 +530,7 @@ impl Project {
     }
 
     /// Returns the contents of a path in the project root
-    pub fn read_file(&self, path: &str) -> String {
+    pub fn read_file(&self, path: impl AsRef<Path>) -> String {
         let full = self.root().join(path);
         fs::read_to_string(&full)
             .unwrap_or_else(|e| panic!("could not read file {}: {}", full.display(), e))
@@ -572,12 +572,12 @@ pub fn project() -> ProjectBuilder {
 }
 
 /// Generates a project layout in given directory, see [`ProjectBuilder`]
-pub fn project_in(dir: &str) -> ProjectBuilder {
+pub fn project_in(dir: impl AsRef<Path>) -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join(dir).join("foo"))
 }
 
 /// Generates a project layout inside our fake home dir, see [`ProjectBuilder`]
-pub fn project_in_home(name: &str) -> ProjectBuilder {
+pub fn project_in_home(name: impl AsRef<Path>) -> ProjectBuilder {
     ProjectBuilder::new(paths::home().join(name))
 }
 
