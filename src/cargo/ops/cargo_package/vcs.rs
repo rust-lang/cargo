@@ -1,5 +1,6 @@
 //! Helpers to gather the VCS information for `cargo package`.
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -187,6 +188,7 @@ fn git(
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
         .map(|p| p.as_ref())
         .chain(dirty_metadata_paths(pkg, repo)?.iter())
+        .chain(dirty_symlinks(pkg, repo, src_files)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -247,6 +249,34 @@ fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<V
         }
     }
     Ok(dirty_files)
+}
+
+/// Checks whether source files are symlinks and have been modified.
+///
+/// This is required because those paths may link to a file outside the
+/// current package root, but still under the git workdir, affecting the
+/// final packaged `.crate` file.
+fn dirty_symlinks(
+    pkg: &Package,
+    repo: &git2::Repository,
+    src_files: &[PathEntry],
+) -> CargoResult<HashSet<PathBuf>> {
+    let workdir = repo.workdir().unwrap();
+    let mut dirty_symlinks = HashSet::new();
+    for rel_path in src_files
+        .iter()
+        .filter(|p| p.is_symlink_or_under_symlink())
+        .map(|p| p.as_ref().as_path())
+        // If inside package root. Don't bother checking git status.
+        .filter(|p| paths::strip_prefix_canonical(p, pkg.root()).is_err())
+        // Handle files outside package root but under git workdir,
+        .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
+    {
+        if repo.status_file(&rel_path)? != git2::Status::CURRENT {
+            dirty_symlinks.insert(workdir.join(rel_path));
+        }
+    }
+    Ok(dirty_symlinks)
 }
 
 /// Helper to collect dirty statuses for a single repo.
