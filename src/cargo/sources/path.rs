@@ -626,8 +626,11 @@ fn list_files_gix(
         .filter(|res| {
             // Don't include Cargo.lock if it is untracked. Packaging will
             // generate a new one as needed.
+            // Also don't include untrackable directory entries, like FIFOs.
             res.as_ref().map_or(true, |item| {
-                !(item.entry.status == Status::Untracked && item.entry.rela_path == "Cargo.lock")
+                item.entry.disk_kind != Some(gix::dir::entry::Kind::Untrackable)
+                    && !(item.entry.status == Status::Untracked
+                        && item.entry.rela_path == "Cargo.lock")
             })
         })
         .map(|res| res.map(|item| (item.entry.rela_path, item.entry.disk_kind)))
@@ -751,7 +754,8 @@ fn list_files_walk(
     for entry in walkdir {
         match entry {
             Ok(entry) => {
-                if !entry.file_type().is_dir() {
+                let file_type = entry.file_type();
+                if file_type.is_file() || file_type.is_symlink() {
                     ret.push(entry.into_path());
                 }
             }
