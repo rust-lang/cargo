@@ -1309,6 +1309,123 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 }
 
 #[cargo_test]
+fn dirty_file_outside_pkg_root_considered_dirty() {
+    if !symlink_supported() {
+        return;
+    }
+    let main_outside_pkg_root = paths::root().join("main.rs");
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard"]
+                resolver = "2"
+                [workspace.package]
+                edition = "2015"
+            "#,
+        )
+        .file("lib.rs", r#"compile_error!("you shall not pass")"#)
+        .file("LICENSE", "before")
+        .file("README.md", "before")
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition.workspace = true
+                homepage = "saruman"
+                description = "saruman"
+                license-file = "../LICENSE"
+            "#,
+        )
+        .symlink("lib.rs", "isengard/src/lib.rs")
+        .symlink("README.md", "isengard/README.md")
+        .file(&main_outside_pkg_root, "fn main() {}")
+        .symlink(&main_outside_pkg_root, "isengard/src/main.rs")
+    });
+    git::commit(&repo);
+
+    // Changing files outside pkg root under situations below should be treated
+    // as dirty. `cargo package` is expected to fail on VCS stastus check.
+    //
+    // * Changes in files outside package root that source files symlink to
+    p.change_file("README.md", "after");
+    p.change_file("lib.rs", "pub fn after() {}");
+    // * Changes in files outside pkg root that `license-file`/`readme` point to
+    p.change_file("LICENSE", "after");
+    // * When workspace inheritance is involved and changed
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard"]
+            resolver = "2"
+            [workspace.package]
+            edition = "2021"
+        "#,
+    );
+    // Changes in files outside git workdir won't affect vcs status check
+    p.change_file(
+        &main_outside_pkg_root,
+        r#"fn main() { eprintln!("after"); }"#,
+    );
+
+    // Ensure dirty files be reported.
+    p.cargo("package --workspace --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 2 files in the working directory contain changes that were not yet committed into git:
+
+LICENSE
+README.md
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+
+    p.cargo("package --workspace --no-verify --allow-dirty")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let cargo_toml = str![[r##"
+...
+[package]
+edition = "2021"
+...
+
+"##]];
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "src/main.rs",
+            "Cargo.lock",
+            "LICENSE",
+            "README.md",
+        ],
+        [
+            ("src/lib.rs", str!["pub fn after() {}"]),
+            ("src/main.rs", str![r#"fn main() { eprintln!("after"); }"#]),
+            ("README.md", str!["after"]),
+            ("LICENSE", str!["after"]),
+            ("Cargo.toml", cargo_toml),
+        ],
+    );
+}
+
+#[cargo_test]
 fn issue_13695_allow_dirty_vcs_info() {
     let p = project()
         .file(
