@@ -25,7 +25,7 @@ fn build_dep_info() {
 
     assert!(depinfo_bin_path.is_file());
 
-    let depinfo = p.read_file(depinfo_bin_path.to_str().unwrap());
+    let depinfo = p.read_file(depinfo_bin_path);
 
     let bin_path = p.bin("foo");
     let src_path = p.root().join("src").join("foo.rs");
@@ -134,7 +134,7 @@ fn dep_path_inside_target_has_correct_path() {
 
     assert!(depinfo_path.is_file(), "{:?}", depinfo_path);
 
-    let depinfo = p.read_file(depinfo_path.to_str().unwrap());
+    let depinfo = p.read_file(depinfo_path);
 
     let bin_path = p.bin("a");
     let target_debug_blah = Path::new("target").join("debug").join("blah");
