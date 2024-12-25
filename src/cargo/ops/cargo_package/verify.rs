@@ -1,3 +1,5 @@
+//! Helpers to verify a packaged `.crate` file.
+
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -29,6 +31,7 @@ use crate::CargoResult;
 use super::PackageOpts;
 use super::TmpRegistry;
 
+/// Verifies whether a `.crate` file is able to compile.
 pub fn run_verify(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -123,6 +126,11 @@ pub fn run_verify(
     Ok(())
 }
 
+/// Hashes everything under a given directory.
+///
+/// This is for checking if any source file inside a `.crate` file has changed
+/// durint the compilation. It is usually caused by bad build scripts or proc
+/// macros trying to modify source files. Cargo disallows that.
 fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
     fn wrap(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
         let mut result = HashMap::new();
@@ -148,6 +156,7 @@ fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
     Ok(result)
 }
 
+/// Reports the hash difference before and after the compilation computed by  [`hash_all`].
 fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf, u64>) -> String {
     let mut changed = Vec::new();
     let mut removed = Vec::new();

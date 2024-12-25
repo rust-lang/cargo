@@ -79,7 +79,7 @@ enum GeneratedFile {
     Manifest,
     /// Generates `Cargo.lock` in some cases (like if there is a binary).
     Lockfile,
-    /// Adds a `.cargo_vcs_info.json` file if in a (clean) git repo.
+    /// Adds a `.cargo_vcs_info.json` file if in a git repo.
     VcsInfo(vcs::VcsInfo),
 }
 

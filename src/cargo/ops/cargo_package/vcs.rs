@@ -1,3 +1,5 @@
+//! Helpers to gather the VCS information for `cargo package`.
+
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -12,13 +14,15 @@ use crate::GlobalContext;
 
 use super::PackageOpts;
 
+/// Represents the VCS information when packaging.
 #[derive(Serialize)]
 pub struct VcsInfo {
     git: GitVcsInfo,
-    /// Path to the package within repo (empty string if root). / not \
+    /// Path to the package within repo (empty string if root).
     path_in_vcs: String,
 }
 
+/// Represents the Git VCS information when packaging.
 #[derive(Serialize)]
 pub struct GitVcsInfo {
     sha1: String,
@@ -27,11 +31,13 @@ pub struct GitVcsInfo {
     dirty: bool,
 }
 
-/// Checks if the package source is in a *git* DVCS repository. If *git*, and
-/// the source is *dirty* (e.g., has uncommitted changes), and `--allow-dirty`
-/// has not been passed, then `bail!` with an informative message. Otherwise
-/// return the sha1 hash of the current *HEAD* commit, or `None` if no repo is
-/// found.
+/// Checks if the package source is in a *git* DVCS repository.
+///
+/// If *git*, and the source is *dirty* (e.g., has uncommitted changes),
+/// and `--allow-dirty` has not been passed,
+/// then `bail!` with an informative message.
+/// Otherwise return the sha1 hash of the current *HEAD* commit,
+/// or `None` if no repo is found.
 #[tracing::instrument(skip_all)]
 pub fn check_repo_state(
     p: &Package,
@@ -104,6 +110,7 @@ pub fn check_repo_state(
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 }
 
+/// The real git status check starts from here.
 fn git(
     pkg: &Package,
     gctx: &GlobalContext,
