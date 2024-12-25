@@ -3,15 +3,16 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::task::Poll;
 
-use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::dependency::DepKind;
 use crate::core::manifest::Target;
 use crate::core::resolver::CliFeatures;
 use crate::core::resolver::HasDevUnits;
-use crate::core::{Feature, PackageIdSpecQuery, Shell, Verbosity, Workspace};
+use crate::core::PackageIdSpecQuery;
+use crate::core::Shell;
+use crate::core::Verbosity;
+use crate::core::Workspace;
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::{infer_registry, RegistryOrIndex};
@@ -20,19 +21,23 @@ use crate::sources::{PathSource, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
+use crate::util::human_readable_bytes;
+use crate::util::restricted_names;
 use crate::util::toml::prepare_for_publish;
-use crate::util::{
-    self, human_readable_bytes, restricted_names, FileLock, Filesystem, GlobalContext, Graph,
-};
+use crate::util::FileLock;
+use crate::util::Filesystem;
+use crate::util::GlobalContext;
+use crate::util::Graph;
 use crate::{drop_println, ops};
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
-use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
-use serde::Serialize;
-use tar::{Archive, Builder, EntryType, Header, HeaderMode};
+use tar::{Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
 use unicase::Ascii as UncasedAscii;
+
+mod vcs;
+mod verify;
 
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
@@ -74,23 +79,8 @@ enum GeneratedFile {
     Manifest,
     /// Generates `Cargo.lock` in some cases (like if there is a binary).
     Lockfile,
-    /// Adds a `.cargo_vcs_info.json` file if in a (clean) git repo.
-    VcsInfo(VcsInfo),
-}
-
-#[derive(Serialize)]
-struct VcsInfo {
-    git: GitVcsInfo,
-    /// Path to the package within repo (empty string if root). / not \
-    path_in_vcs: String,
-}
-
-#[derive(Serialize)]
-struct GitVcsInfo {
-    sha1: String,
-    /// Indicate whether or not the Git worktree is dirty.
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    dirty: bool,
+    /// Adds a `.cargo_vcs_info.json` file if in a git repo.
+    VcsInfo(vcs::VcsInfo),
 }
 
 // Builds a tarball and places it in the output directory.
@@ -264,7 +254,7 @@ fn do_package<'a>(
     // are already all in the local registry overlay.
     if opts.verify {
         for (pkg, opts, tarball) in &outputs {
-            run_verify(ws, pkg, tarball, local_reg.as_ref(), opts)
+            verify::run_verify(ws, pkg, tarball, local_reg.as_ref(), opts)
                 .context("failed to verify package tarball")?
         }
     }
@@ -396,7 +386,7 @@ fn prepare_archive(
     let src_files = src.list_files(pkg)?;
 
     // Check (git) repository state, getting the current commit hash.
-    let vcs_info = check_repo_state(pkg, &src_files, gctx, &opts)?;
+    let vcs_info = vcs::check_repo_state(pkg, &src_files, gctx, &opts)?;
 
     build_ar_list(ws, pkg, src_files, vcs_info)
 }
@@ -407,7 +397,7 @@ fn build_ar_list(
     ws: &Workspace<'_>,
     pkg: &Package,
     src_files: Vec<PathBuf>,
-    vcs_info: Option<VcsInfo>,
+    vcs_info: Option<vcs::VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::new();
     let root = pkg.root();
@@ -728,226 +718,6 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
     Ok(())
 }
 
-/// Checks if the package source is in a *git* DVCS repository. If *git*, and
-/// the source is *dirty* (e.g., has uncommitted changes), and `--allow-dirty`
-/// has not been passed, then `bail!` with an informative message. Otherwise
-/// return the sha1 hash of the current *HEAD* commit, or `None` if no repo is
-/// found.
-#[tracing::instrument(skip_all)]
-fn check_repo_state(
-    p: &Package,
-    src_files: &[PathBuf],
-    gctx: &GlobalContext,
-    opts: &PackageOpts<'_>,
-) -> CargoResult<Option<VcsInfo>> {
-    let Ok(repo) = git2::Repository::discover(p.root()) else {
-        gctx.shell().verbose(|shell| {
-            shell.warn(format!("no (git) VCS found for `{}`", p.root().display()))
-        })?;
-        // No Git repo found. Have to assume it is clean.
-        return Ok(None);
-    };
-
-    let Some(workdir) = repo.workdir() else {
-        debug!(
-            "no (git) workdir found for repo at `{}`",
-            repo.path().display()
-        );
-        // No git workdir. Have to assume it is clean.
-        return Ok(None);
-    };
-
-    debug!("found a git repo at `{}`", workdir.display());
-    let path = p.manifest_path();
-    let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
-    let Ok(status) = repo.status_file(&path) else {
-        gctx.shell().verbose(|shell| {
-            shell.warn(format!(
-                "no (git) Cargo.toml found at `{}` in workdir `{}`",
-                path.display(),
-                workdir.display()
-            ))
-        })?;
-        // No checked-in `Cargo.toml` found. This package may be irrelevant.
-        // Have to assume it is clean.
-        return Ok(None);
-    };
-
-    if !(status & git2::Status::IGNORED).is_empty() {
-        gctx.shell().verbose(|shell| {
-            shell.warn(format!(
-                "found (git) Cargo.toml ignored at `{}` in workdir `{}`",
-                path.display(),
-                workdir.display()
-            ))
-        })?;
-        // An ignored `Cargo.toml` found. This package may be irrelevant.
-        // Have to assume it is clean.
-        return Ok(None);
-    }
-
-    debug!(
-        "found (git) Cargo.toml at `{}` in workdir `{}`",
-        path.display(),
-        workdir.display(),
-    );
-    let path_in_vcs = path
-        .parent()
-        .and_then(|p| p.to_str())
-        .unwrap_or("")
-        .replace("\\", "/");
-    let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
-        // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
-        // then don't generate the corresponding file in order to maintain consistency with past behavior.
-        return Ok(None);
-    };
-
-    return Ok(Some(VcsInfo { git, path_in_vcs }));
-
-    fn git(
-        pkg: &Package,
-        gctx: &GlobalContext,
-        src_files: &[PathBuf],
-        repo: &git2::Repository,
-        opts: &PackageOpts<'_>,
-    ) -> CargoResult<Option<GitVcsInfo>> {
-        // This is a collection of any dirty or untracked files. This covers:
-        // - new/modified/deleted/renamed/type change (index or worktree)
-        // - untracked files (which are "new" worktree files)
-        // - ignored (in case the user has an `include` directive that
-        //   conflicts with .gitignore).
-        let mut dirty_files = Vec::new();
-        collect_statuses(repo, &mut dirty_files)?;
-        // Include each submodule so that the error message can provide
-        // specifically *which* files in a submodule are modified.
-        status_submodules(repo, &mut dirty_files)?;
-
-        // Find the intersection of dirty in git, and the src_files that would
-        // be packaged. This is a lazy n^2 check, but seems fine with
-        // thousands of files.
-        let cwd = gctx.cwd();
-        let mut dirty_src_files: Vec<_> = src_files
-            .iter()
-            .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
-            .chain(dirty_metadata_paths(pkg, repo)?.iter())
-            .map(|path| {
-                pathdiff::diff_paths(path, cwd)
-                    .as_ref()
-                    .unwrap_or(path)
-                    .display()
-                    .to_string()
-            })
-            .collect();
-        let dirty = !dirty_src_files.is_empty();
-        if !dirty || opts.allow_dirty {
-            // Must check whetherthe repo has no commit firstly, otherwise `revparse_single` would fail on bare commit repo.
-            // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
-            if repo.is_empty()? {
-                return Ok(None);
-            }
-            let rev_obj = repo.revparse_single("HEAD")?;
-            Ok(Some(GitVcsInfo {
-                sha1: rev_obj.id().to_string(),
-                dirty,
-            }))
-        } else {
-            dirty_src_files.sort_unstable();
-            anyhow::bail!(
-                "{} files in the working directory contain changes that were \
-                 not yet committed into git:\n\n{}\n\n\
-                 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag",
-                dirty_src_files.len(),
-                dirty_src_files.join("\n")
-            )
-        }
-    }
-
-    /// Checks whether files at paths specified in `package.readme` and
-    /// `package.license-file` have been modified.
-    ///
-    /// This is required because those paths may link to a file outside the
-    /// current package root, but still under the git workdir, affecting the
-    /// final packaged `.crate` file.
-    fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
-        let mut dirty_files = Vec::new();
-        let workdir = repo.workdir().unwrap();
-        let root = pkg.root();
-        let meta = pkg.manifest().metadata();
-        for path in [&meta.license_file, &meta.readme] {
-            let Some(path) = path.as_deref().map(Path::new) else {
-                continue;
-            };
-            let abs_path = paths::normalize_path(&root.join(path));
-            if paths::strip_prefix_canonical(abs_path.as_path(), root).is_ok() {
-                // Inside package root. Don't bother checking git status.
-                continue;
-            }
-            if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
-                // Outside package root but under git workdir,
-                if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-                    dirty_files.push(if abs_path.is_symlink() {
-                        // For symlinks, shows paths to symlink sources
-                        workdir.join(rel_path)
-                    } else {
-                        abs_path
-                    });
-                }
-            }
-        }
-        Ok(dirty_files)
-    }
-
-    // Helper to collect dirty statuses for a single repo.
-    fn collect_statuses(
-        repo: &git2::Repository,
-        dirty_files: &mut Vec<PathBuf>,
-    ) -> CargoResult<()> {
-        let mut status_opts = git2::StatusOptions::new();
-        // Exclude submodules, as they are being handled manually by recursing
-        // into each one so that details about specific files can be
-        // retrieved.
-        status_opts
-            .exclude_submodules(true)
-            .include_ignored(true)
-            .include_untracked(true);
-        let repo_statuses = repo.statuses(Some(&mut status_opts)).with_context(|| {
-            format!(
-                "failed to retrieve git status from repo {}",
-                repo.path().display()
-            )
-        })?;
-        let workdir = repo.workdir().unwrap();
-        let this_dirty = repo_statuses.iter().filter_map(|entry| {
-            let path = entry.path().expect("valid utf-8 path");
-            if path.ends_with("Cargo.lock") && entry.status() == git2::Status::IGNORED {
-                // It is OK to include Cargo.lock even if it is ignored.
-                return None;
-            }
-            // Use an absolute path, so that comparing paths is easier
-            // (particularly with submodules).
-            Some(workdir.join(path))
-        });
-        dirty_files.extend(this_dirty);
-        Ok(())
-    }
-
-    // Helper to collect dirty statuses while recursing into submodules.
-    fn status_submodules(
-        repo: &git2::Repository,
-        dirty_files: &mut Vec<PathBuf>,
-    ) -> CargoResult<()> {
-        for submodule in repo.submodules()? {
-            // Ignore submodules that don't open, they are probably not initialized.
-            // If its files are required, then the verification step should fail.
-            if let Ok(sub_repo) = submodule.open() {
-                status_submodules(&sub_repo, dirty_files)?;
-                collect_statuses(&sub_repo, dirty_files)?;
-            }
-        }
-        Ok(())
-    }
-}
-
 /// Compresses and packages a list of [`ArchiveFile`]s and writes into the given file.
 ///
 /// Returns the uncompressed size of the contents of the new archive file.
@@ -1158,160 +928,6 @@ pub fn check_yanked(
         }
     }
     Ok(())
-}
-
-fn run_verify(
-    ws: &Workspace<'_>,
-    pkg: &Package,
-    tar: &FileLock,
-    local_reg: Option<&TmpRegistry<'_>>,
-    opts: &PackageOpts<'_>,
-) -> CargoResult<()> {
-    let gctx = ws.gctx();
-
-    gctx.shell().status("Verifying", pkg)?;
-
-    tar.file().seek(SeekFrom::Start(0))?;
-    let f = GzDecoder::new(tar.file());
-    let dst = tar
-        .parent()
-        .join(&format!("{}-{}", pkg.name(), pkg.version()));
-    if dst.exists() {
-        paths::remove_dir_all(&dst)?;
-    }
-    let mut archive = Archive::new(f);
-    // We don't need to set the Modified Time, as it's not relevant to verification
-    // and it errors on filesystems that don't support setting a modified timestamp
-    archive.set_preserve_mtime(false);
-    archive.unpack(dst.parent().unwrap())?;
-
-    // Manufacture an ephemeral workspace to ensure that even if the top-level
-    // package has a workspace we can still build our new crate.
-    let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, id, ws.gctx());
-    let new_pkg = src.root_package()?;
-    let pkg_fingerprint = hash_all(&dst)?;
-    let mut ws = Workspace::ephemeral(new_pkg, gctx, None, true)?;
-    if let Some(local_reg) = local_reg {
-        ws.add_local_overlay(
-            local_reg.upstream,
-            local_reg.root.as_path_unlocked().to_owned(),
-        );
-    }
-
-    let rustc_args = if pkg
-        .manifest()
-        .unstable_features()
-        .require(Feature::public_dependency())
-        .is_ok()
-        || ws.gctx().cli_unstable().public_dependency
-    {
-        // FIXME: Turn this on at some point in the future
-        //Some(vec!["-D exported_private_dependencies".to_string()])
-        Some(vec![])
-    } else {
-        None
-    };
-
-    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    ops::compile_with_exec(
-        &ws,
-        &ops::CompileOptions {
-            build_config: BuildConfig::new(
-                gctx,
-                opts.jobs.clone(),
-                opts.keep_going,
-                &opts.targets,
-                CompileMode::Build,
-            )?,
-            cli_features: opts.cli_features.clone(),
-            spec: ops::Packages::Packages(Vec::new()),
-            filter: ops::CompileFilter::Default {
-                required_features_filterable: true,
-            },
-            target_rustdoc_args: None,
-            target_rustc_args: rustc_args,
-            target_rustc_crate_types: None,
-            rustdoc_document_private_items: false,
-            honor_rust_version: None,
-        },
-        &exec,
-    )?;
-
-    // Check that `build.rs` didn't modify any files in the `src` directory.
-    let ws_fingerprint = hash_all(&dst)?;
-    if pkg_fingerprint != ws_fingerprint {
-        let changes = report_hash_difference(&pkg_fingerprint, &ws_fingerprint);
-        anyhow::bail!(
-            "Source directory was modified by build.rs during cargo publish. \
-             Build scripts should not modify anything outside of OUT_DIR.\n\
-             {}\n\n\
-             To proceed despite this, pass the `--no-verify` flag.",
-            changes
-        )
-    }
-
-    Ok(())
-}
-
-fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
-    fn wrap(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
-        let mut result = HashMap::new();
-        let walker = walkdir::WalkDir::new(path).into_iter();
-        for entry in walker.filter_entry(|e| !(e.depth() == 1 && e.file_name() == "target")) {
-            let entry = entry?;
-            let file_type = entry.file_type();
-            if file_type.is_file() {
-                let file = File::open(entry.path())?;
-                let hash = util::hex::hash_u64_file(&file)?;
-                result.insert(entry.path().to_path_buf(), hash);
-            } else if file_type.is_symlink() {
-                let hash = util::hex::hash_u64(&fs::read_link(entry.path())?);
-                result.insert(entry.path().to_path_buf(), hash);
-            } else if file_type.is_dir() {
-                let hash = util::hex::hash_u64(&());
-                result.insert(entry.path().to_path_buf(), hash);
-            }
-        }
-        Ok(result)
-    }
-    let result = wrap(path).with_context(|| format!("failed to verify output at {:?}", path))?;
-    Ok(result)
-}
-
-fn report_hash_difference(orig: &HashMap<PathBuf, u64>, after: &HashMap<PathBuf, u64>) -> String {
-    let mut changed = Vec::new();
-    let mut removed = Vec::new();
-    for (key, value) in orig {
-        match after.get(key) {
-            Some(after_value) => {
-                if value != after_value {
-                    changed.push(key.to_string_lossy());
-                }
-            }
-            None => removed.push(key.to_string_lossy()),
-        }
-    }
-    let mut added: Vec<_> = after
-        .keys()
-        .filter(|key| !orig.contains_key(*key))
-        .map(|key| key.to_string_lossy())
-        .collect();
-    let mut result = Vec::new();
-    if !changed.is_empty() {
-        changed.sort_unstable();
-        result.push(format!("Changed: {}", changed.join("\n\t")));
-    }
-    if !added.is_empty() {
-        added.sort_unstable();
-        result.push(format!("Added: {}", added.join("\n\t")));
-    }
-    if !removed.is_empty() {
-        removed.sort_unstable();
-        result.push(format!("Removed: {}", removed.join("\n\t")));
-    }
-    assert!(!result.is_empty(), "unexpected empty change detection");
-    result.join("\n")
 }
 
 // It can often be the case that files of a particular name on one platform

@@ -141,7 +141,7 @@ trigger_files = ["src/cargo/util/flock.rs", "src/cargo/util/important_paths.rs"]
 trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
-trigger_files = ["src/cargo/sources/git/"]
+trigger_files = ["src/cargo/sources/git/", "src/cargo/ops/cargo_package/vcs.rs"]
 
 [autolabel."A-home"]
 trigger_files = ["crates/home/"]
@@ -309,7 +309,7 @@ trigger_files = ["src/bin/cargo/commands/new.rs", "src/cargo/ops/cargo_new.rs"]
 trigger_files = ["src/bin/cargo/commands/owner.rs", "src/cargo/ops/registry/owner.rs"]
 
 [autolabel."Command-package"]
-trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package.rs"]
+trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package/"]
 
 [autolabel."Command-pkgid"]
 trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/cargo/ops/cargo_pkgid.rs"]
