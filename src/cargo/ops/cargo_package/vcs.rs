@@ -102,147 +102,141 @@ pub fn check_repo_state(
     };
 
     return Ok(Some(VcsInfo { git, path_in_vcs }));
+}
 
-    fn git(
-        pkg: &Package,
-        gctx: &GlobalContext,
-        src_files: &[PathBuf],
-        repo: &git2::Repository,
-        opts: &PackageOpts<'_>,
-    ) -> CargoResult<Option<GitVcsInfo>> {
-        // This is a collection of any dirty or untracked files. This covers:
-        // - new/modified/deleted/renamed/type change (index or worktree)
-        // - untracked files (which are "new" worktree files)
-        // - ignored (in case the user has an `include` directive that
-        //   conflicts with .gitignore).
-        let mut dirty_files = Vec::new();
-        collect_statuses(repo, &mut dirty_files)?;
-        // Include each submodule so that the error message can provide
-        // specifically *which* files in a submodule are modified.
-        status_submodules(repo, &mut dirty_files)?;
+fn git(
+    pkg: &Package,
+    gctx: &GlobalContext,
+    src_files: &[PathBuf],
+    repo: &git2::Repository,
+    opts: &PackageOpts<'_>,
+) -> CargoResult<Option<GitVcsInfo>> {
+    // This is a collection of any dirty or untracked files. This covers:
+    // - new/modified/deleted/renamed/type change (index or worktree)
+    // - untracked files (which are "new" worktree files)
+    // - ignored (in case the user has an `include` directive that
+    //   conflicts with .gitignore).
+    let mut dirty_files = Vec::new();
+    collect_statuses(repo, &mut dirty_files)?;
+    // Include each submodule so that the error message can provide
+    // specifically *which* files in a submodule are modified.
+    status_submodules(repo, &mut dirty_files)?;
 
-        // Find the intersection of dirty in git, and the src_files that would
-        // be packaged. This is a lazy n^2 check, but seems fine with
-        // thousands of files.
-        let cwd = gctx.cwd();
-        let mut dirty_src_files: Vec<_> = src_files
-            .iter()
-            .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
-            .chain(dirty_metadata_paths(pkg, repo)?.iter())
-            .map(|path| {
-                pathdiff::diff_paths(path, cwd)
-                    .as_ref()
-                    .unwrap_or(path)
-                    .display()
-                    .to_string()
-            })
-            .collect();
-        let dirty = !dirty_src_files.is_empty();
-        if !dirty || opts.allow_dirty {
-            // Must check whetherthe repo has no commit firstly, otherwise `revparse_single` would fail on bare commit repo.
-            // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
-            if repo.is_empty()? {
-                return Ok(None);
+    // Find the intersection of dirty in git, and the src_files that would
+    // be packaged. This is a lazy n^2 check, but seems fine with
+    // thousands of files.
+    let cwd = gctx.cwd();
+    let mut dirty_src_files: Vec<_> = src_files
+        .iter()
+        .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
+        .chain(dirty_metadata_paths(pkg, repo)?.iter())
+        .map(|path| {
+            pathdiff::diff_paths(path, cwd)
+                .as_ref()
+                .unwrap_or(path)
+                .display()
+                .to_string()
+        })
+        .collect();
+    let dirty = !dirty_src_files.is_empty();
+    if !dirty || opts.allow_dirty {
+        // Must check whetherthe repo has no commit firstly, otherwise `revparse_single` would fail on bare commit repo.
+        // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
+        if repo.is_empty()? {
+            return Ok(None);
+        }
+        let rev_obj = repo.revparse_single("HEAD")?;
+        Ok(Some(GitVcsInfo {
+            sha1: rev_obj.id().to_string(),
+            dirty,
+        }))
+    } else {
+        dirty_src_files.sort_unstable();
+        anyhow::bail!(
+            "{} files in the working directory contain changes that were \
+             not yet committed into git:\n\n{}\n\n\
+             to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag",
+            dirty_src_files.len(),
+            dirty_src_files.join("\n")
+        )
+    }
+}
+
+/// Checks whether files at paths specified in `package.readme` and
+/// `package.license-file` have been modified.
+///
+/// This is required because those paths may link to a file outside the
+/// current package root, but still under the git workdir, affecting the
+/// final packaged `.crate` file.
+fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
+    let mut dirty_files = Vec::new();
+    let workdir = repo.workdir().unwrap();
+    let root = pkg.root();
+    let meta = pkg.manifest().metadata();
+    for path in [&meta.license_file, &meta.readme] {
+        let Some(path) = path.as_deref().map(Path::new) else {
+            continue;
+        };
+        let abs_path = paths::normalize_path(&root.join(path));
+        if paths::strip_prefix_canonical(abs_path.as_path(), root).is_ok() {
+            // Inside package root. Don't bother checking git status.
+            continue;
+        }
+        if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
+            // Outside package root but under git workdir,
+            if repo.status_file(&rel_path)? != git2::Status::CURRENT {
+                dirty_files.push(if abs_path.is_symlink() {
+                    // For symlinks, shows paths to symlink sources
+                    workdir.join(rel_path)
+                } else {
+                    abs_path
+                });
             }
-            let rev_obj = repo.revparse_single("HEAD")?;
-            Ok(Some(GitVcsInfo {
-                sha1: rev_obj.id().to_string(),
-                dirty,
-            }))
-        } else {
-            dirty_src_files.sort_unstable();
-            anyhow::bail!(
-                "{} files in the working directory contain changes that were \
-                 not yet committed into git:\n\n{}\n\n\
-                 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag",
-                dirty_src_files.len(),
-                dirty_src_files.join("\n")
-            )
         }
     }
+    Ok(dirty_files)
+}
 
-    /// Checks whether files at paths specified in `package.readme` and
-    /// `package.license-file` have been modified.
-    ///
-    /// This is required because those paths may link to a file outside the
-    /// current package root, but still under the git workdir, affecting the
-    /// final packaged `.crate` file.
-    fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
-        let mut dirty_files = Vec::new();
-        let workdir = repo.workdir().unwrap();
-        let root = pkg.root();
-        let meta = pkg.manifest().metadata();
-        for path in [&meta.license_file, &meta.readme] {
-            let Some(path) = path.as_deref().map(Path::new) else {
-                continue;
-            };
-            let abs_path = paths::normalize_path(&root.join(path));
-            if paths::strip_prefix_canonical(abs_path.as_path(), root).is_ok() {
-                // Inside package root. Don't bother checking git status.
-                continue;
-            }
-            if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
-                // Outside package root but under git workdir,
-                if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-                    dirty_files.push(if abs_path.is_symlink() {
-                        // For symlinks, shows paths to symlink sources
-                        workdir.join(rel_path)
-                    } else {
-                        abs_path
-                    });
-                }
-            }
+/// Helper to collect dirty statuses for a single repo.
+fn collect_statuses(repo: &git2::Repository, dirty_files: &mut Vec<PathBuf>) -> CargoResult<()> {
+    let mut status_opts = git2::StatusOptions::new();
+    // Exclude submodules, as they are being handled manually by recursing
+    // into each one so that details about specific files can be
+    // retrieved.
+    status_opts
+        .exclude_submodules(true)
+        .include_ignored(true)
+        .include_untracked(true);
+    let repo_statuses = repo.statuses(Some(&mut status_opts)).with_context(|| {
+        format!(
+            "failed to retrieve git status from repo {}",
+            repo.path().display()
+        )
+    })?;
+    let workdir = repo.workdir().unwrap();
+    let this_dirty = repo_statuses.iter().filter_map(|entry| {
+        let path = entry.path().expect("valid utf-8 path");
+        if path.ends_with("Cargo.lock") && entry.status() == git2::Status::IGNORED {
+            // It is OK to include Cargo.lock even if it is ignored.
+            return None;
         }
-        Ok(dirty_files)
-    }
+        // Use an absolute path, so that comparing paths is easier
+        // (particularly with submodules).
+        Some(workdir.join(path))
+    });
+    dirty_files.extend(this_dirty);
+    Ok(())
+}
 
-    // Helper to collect dirty statuses for a single repo.
-    fn collect_statuses(
-        repo: &git2::Repository,
-        dirty_files: &mut Vec<PathBuf>,
-    ) -> CargoResult<()> {
-        let mut status_opts = git2::StatusOptions::new();
-        // Exclude submodules, as they are being handled manually by recursing
-        // into each one so that details about specific files can be
-        // retrieved.
-        status_opts
-            .exclude_submodules(true)
-            .include_ignored(true)
-            .include_untracked(true);
-        let repo_statuses = repo.statuses(Some(&mut status_opts)).with_context(|| {
-            format!(
-                "failed to retrieve git status from repo {}",
-                repo.path().display()
-            )
-        })?;
-        let workdir = repo.workdir().unwrap();
-        let this_dirty = repo_statuses.iter().filter_map(|entry| {
-            let path = entry.path().expect("valid utf-8 path");
-            if path.ends_with("Cargo.lock") && entry.status() == git2::Status::IGNORED {
-                // It is OK to include Cargo.lock even if it is ignored.
-                return None;
-            }
-            // Use an absolute path, so that comparing paths is easier
-            // (particularly with submodules).
-            Some(workdir.join(path))
-        });
-        dirty_files.extend(this_dirty);
-        Ok(())
-    }
-
-    // Helper to collect dirty statuses while recursing into submodules.
-    fn status_submodules(
-        repo: &git2::Repository,
-        dirty_files: &mut Vec<PathBuf>,
-    ) -> CargoResult<()> {
-        for submodule in repo.submodules()? {
-            // Ignore submodules that don't open, they are probably not initialized.
-            // If its files are required, then the verification step should fail.
-            if let Ok(sub_repo) = submodule.open() {
-                status_submodules(&sub_repo, dirty_files)?;
-                collect_statuses(&sub_repo, dirty_files)?;
-            }
+/// Helper to collect dirty statuses while recursing into submodules.
+fn status_submodules(repo: &git2::Repository, dirty_files: &mut Vec<PathBuf>) -> CargoResult<()> {
+    for submodule in repo.submodules()? {
+        // Ignore submodules that don't open, they are probably not initialized.
+        // If its files are required, then the verification step should fail.
+        if let Ok(sub_repo) = submodule.open() {
+            status_submodules(&sub_repo, dirty_files)?;
+            collect_statuses(&sub_repo, dirty_files)?;
         }
-        Ok(())
     }
+    Ok(())
 }

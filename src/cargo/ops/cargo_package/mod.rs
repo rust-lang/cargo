@@ -34,8 +34,6 @@ use tracing::debug;
 use unicase::Ascii as UncasedAscii;
 
 mod vcs;
-use self::vcs::check_repo_state;
-use self::vcs::VcsInfo;
 
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
@@ -78,7 +76,7 @@ enum GeneratedFile {
     /// Generates `Cargo.lock` in some cases (like if there is a binary).
     Lockfile,
     /// Adds a `.cargo_vcs_info.json` file if in a (clean) git repo.
-    VcsInfo(VcsInfo),
+    VcsInfo(vcs::VcsInfo),
 }
 
 // Builds a tarball and places it in the output directory.
@@ -384,7 +382,7 @@ fn prepare_archive(
     let src_files = src.list_files(pkg)?;
 
     // Check (git) repository state, getting the current commit hash.
-    let vcs_info = check_repo_state(pkg, &src_files, gctx, &opts)?;
+    let vcs_info = vcs::check_repo_state(pkg, &src_files, gctx, &opts)?;
 
     build_ar_list(ws, pkg, src_files, vcs_info)
 }
@@ -395,7 +393,7 @@ fn build_ar_list(
     ws: &Workspace<'_>,
     pkg: &Package,
     src_files: Vec<PathBuf>,
-    vcs_info: Option<VcsInfo>,
+    vcs_info: Option<vcs::VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::new();
     let root = pkg.root();
