@@ -1,5 +1,6 @@
 //! Helpers to gather the VCS information for `cargo package`.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -39,6 +40,8 @@ pub struct GitVcsInfo {
 pub struct VcsInfoBuilder<'a, 'gctx> {
     ws: &'a Workspace<'gctx>,
     opts: &'a PackageOpts<'gctx>,
+    /// Map each git workdir path to the workdir's git status cache.
+    caches: HashMap<PathBuf, RepoStatusCache>,
 }
 
 impl<'a, 'gctx> VcsInfoBuilder<'a, 'gctx> {
@@ -46,7 +49,11 @@ impl<'a, 'gctx> VcsInfoBuilder<'a, 'gctx> {
         ws: &'a Workspace<'gctx>,
         opts: &'a PackageOpts<'gctx>,
     ) -> VcsInfoBuilder<'a, 'gctx> {
-        VcsInfoBuilder { ws, opts }
+        VcsInfoBuilder {
+            ws,
+            opts,
+            caches: Default::default(),
+        }
     }
 
     /// Builds an [`VcsInfo`] for the given `pkg` and its associated `src_files`.
@@ -55,7 +62,53 @@ impl<'a, 'gctx> VcsInfoBuilder<'a, 'gctx> {
         pkg: &Package,
         src_files: &[PathEntry],
     ) -> CargoResult<Option<VcsInfo>> {
-        check_repo_state(pkg, src_files, self.ws.gctx(), self.opts)
+        check_repo_state(pkg, src_files, self.ws.gctx(), self.opts, &mut self.caches)
+    }
+}
+
+/// Cache of git status inquries for a Git workdir.
+struct RepoStatusCache {
+    repo: git2::Repository,
+    /// Status of each file path relative to the git workdir path.
+    cache: HashMap<PathBuf, git2::Status>,
+}
+
+impl RepoStatusCache {
+    fn new(repo: git2::Repository) -> RepoStatusCache {
+        RepoStatusCache {
+            repo,
+            cache: Default::default(),
+        }
+    }
+
+    /// Like [`git2::Repository::status_file`] but with cache.
+    fn status_file(&mut self, path: &Path) -> CargoResult<git2::Status> {
+        use std::collections::hash_map::Entry;
+        match self.cache.entry(path.into()) {
+            Entry::Occupied(entry) => {
+                tracing::trace!(
+                    target: "cargo_package_vcs_cache",
+                    "git status cache hit for `{}` at workdir `{}`",
+                    path.display(),
+                    self.repo.workdir().unwrap().display()
+                );
+                Ok(*entry.get())
+            }
+            Entry::Vacant(entry) => {
+                tracing::trace!(
+                    target: "cargo_package_vcs_cache",
+                    "git status cache miss for `{}` at workdir `{}`",
+                    path.display(),
+                    self.repo.workdir().unwrap().display()
+                );
+                let status = self.repo.status_file(path)?;
+                Ok(*entry.insert(status))
+            }
+        }
+    }
+
+    fn workdir(&self) -> &Path {
+        self.repo.workdir().unwrap()
     }
 }
 
@@ -72,6 +125,7 @@ pub fn check_repo_state(
     src_files: &[PathEntry],
     gctx: &GlobalContext,
     opts: &PackageOpts<'_>,
+    caches: &mut HashMap<PathBuf, RepoStatusCache>,
 ) -> CargoResult<Option<VcsInfo>> {
     let Ok(repo) = git2::Repository::discover(p.root()) else {
         gctx.shell().verbose(|shell| {
@@ -91,14 +145,20 @@ pub fn check_repo_state(
     };
 
     debug!("found a git repo at `{}`", workdir.display());
+
+    let cache = caches
+        .entry(workdir.to_path_buf())
+        .or_insert_with(|| RepoStatusCache::new(repo));
+
     let path = p.manifest_path();
-    let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
-    let Ok(status) = repo.status_file(&path) else {
+    let path =
+        paths::strip_prefix_canonical(path, cache.workdir()).unwrap_or_else(|_| path.to_path_buf());
+    let Ok(status) = cache.status_file(&path) else {
         gctx.shell().verbose(|shell| {
             shell.warn(format!(
                 "no (git) Cargo.toml found at `{}` in workdir `{}`",
                 path.display(),
-                workdir.display()
+                cache.workdir().display()
             ))
         })?;
         // No checked-in `Cargo.toml` found. This package may be irrelevant.
@@ -111,7 +171,7 @@ pub fn check_repo_state(
             shell.warn(format!(
                 "found (git) Cargo.toml ignored at `{}` in workdir `{}`",
                 path.display(),
-                workdir.display()
+                cache.workdir().display()
             ))
         })?;
         // An ignored `Cargo.toml` found. This package may be irrelevant.
@@ -119,19 +179,19 @@ pub fn check_repo_state(
         return Ok(None);
     }
 
-    warn_symlink_checked_out_as_plain_text_file(gctx, src_files, &repo)?;
+    warn_symlink_checked_out_as_plain_text_file(gctx, src_files, &cache)?;
 
     debug!(
         "found (git) Cargo.toml at `{}` in workdir `{}`",
         path.display(),
-        workdir.display(),
+        cache.workdir().display(),
     );
     let path_in_vcs = path
         .parent()
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .replace("\\", "/");
-    let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
+    let Some(git) = git(p, gctx, src_files, cache, &opts)? else {
         // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
@@ -156,9 +216,10 @@ pub fn check_repo_state(
 fn warn_symlink_checked_out_as_plain_text_file(
     gctx: &GlobalContext,
     src_files: &[PathEntry],
-    repo: &git2::Repository,
+    cache: &RepoStatusCache,
 ) -> CargoResult<()> {
-    if repo
+    if cache
+        .repo
         .config()
         .and_then(|c| c.get_bool("core.symlinks"))
         .unwrap_or(true)
@@ -171,7 +232,7 @@ fn warn_symlink_checked_out_as_plain_text_file(
         shell.warn(format_args!(
             "found symbolic links that may be checked out as regular files for git repo at `{}`\n\
             This might cause the `.crate` file to include incorrect or incomplete files",
-            repo.workdir().unwrap().display(),
+            cache.workdir().display(),
         ))?;
         let extra_note = if cfg!(windows) {
             "\nAnd on Windows, enable the Developer Mode to support symlinks"
@@ -191,7 +252,7 @@ fn git(
     pkg: &Package,
     gctx: &GlobalContext,
     src_files: &[PathEntry],
-    repo: &git2::Repository,
+    cache: &mut RepoStatusCache,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<GitVcsInfo>> {
     // This is a collection of any dirty or untracked files. This covers:
@@ -200,10 +261,10 @@ fn git(
     // - ignored (in case the user has an `include` directive that
     //   conflicts with .gitignore).
     let mut dirty_files = Vec::new();
-    collect_statuses(repo, &mut dirty_files)?;
+    collect_statuses(&cache.repo, &mut dirty_files)?;
     // Include each submodule so that the error message can provide
     // specifically *which* files in a submodule are modified.
-    status_submodules(repo, &mut dirty_files)?;
+    status_submodules(&cache.repo, &mut dirty_files)?;
 
     // Find the intersection of dirty in git, and the src_files that would
     // be packaged. This is a lazy n^2 check, but seems fine with
@@ -213,7 +274,7 @@ fn git(
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
         .map(|p| p.as_ref())
-        .chain(dirty_metadata_paths(pkg, repo)?.iter())
+        .chain(dirty_metadata_paths(pkg, cache)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -226,10 +287,10 @@ fn git(
     if !dirty || opts.allow_dirty {
         // Must check whetherthe repo has no commit firstly, otherwise `revparse_single` would fail on bare commit repo.
         // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
-        if repo.is_empty()? {
+        if cache.repo.is_empty()? {
             return Ok(None);
         }
-        let rev_obj = repo.revparse_single("HEAD")?;
+        let rev_obj = cache.repo.revparse_single("HEAD")?;
         Ok(Some(GitVcsInfo {
             sha1: rev_obj.id().to_string(),
             dirty,
@@ -252,9 +313,8 @@ fn git(
 /// This is required because those paths may link to a file outside the
 /// current package root, but still under the git workdir, affecting the
 /// final packaged `.crate` file.
-fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
+fn dirty_metadata_paths(pkg: &Package, repo: &mut RepoStatusCache) -> CargoResult<Vec<PathBuf>> {
     let mut dirty_files = Vec::new();
-    let workdir = repo.workdir().unwrap();
     let root = pkg.root();
     let meta = pkg.manifest().metadata();
     for path in [&meta.license_file, &meta.readme] {
@@ -266,12 +326,12 @@ fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<V
             // Inside package root. Don't bother checking git status.
             continue;
         }
-        if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
+        if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), repo.workdir()) {
             // Outside package root but under git workdir,
             if repo.status_file(&rel_path)? != git2::Status::CURRENT {
                 dirty_files.push(if abs_path.is_symlink() {
                     // For symlinks, shows paths to symlink sources
-                    workdir.join(rel_path)
+                    repo.workdir().join(rel_path)
                 } else {
                     abs_path
                 });

@@ -1185,6 +1185,7 @@ fn vcs_status_check_for_each_workspace_member() {
             "#,
         )
         .file("hobbit", "...")
+        .file("README.md", "")
         .file(
             "isengard/Cargo.toml",
             r#"
@@ -1194,6 +1195,7 @@ fn vcs_status_check_for_each_workspace_member() {
                 homepage = "saruman"
                 description = "saruman"
                 license = "MIT"
+                readme = "../README.md"
             "#,
         )
         .file("isengard/src/lib.rs", "")
@@ -1206,6 +1208,7 @@ fn vcs_status_check_for_each_workspace_member() {
                 homepage = "sauron"
                 description = "sauron"
                 license = "MIT"
+                readme = "../README.md"
             "#,
         )
         .file("mordor/src/lib.rs", "")
@@ -1228,10 +1231,15 @@ fn vcs_status_check_for_each_workspace_member() {
 
     // Ensure dirty files be reported only for one affected package.
     p.cargo("package --workspace --no-verify")
+        .env("CARGO_LOG", "cargo_package_vcs_cache=trace")
         .with_status(101)
         .with_stderr_data(str![[r#"
+   [..] TRACE cargo_package_vcs_cache: git status cache miss for `isengard/Cargo.toml` at workdir `[ROOT]/foo/`
+   [..] TRACE cargo_package_vcs_cache: git status cache miss for `README.md` at workdir `[ROOT]/foo/`
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+   [..] TRACE cargo_package_vcs_cache: git status cache miss for `mordor/Cargo.toml` at workdir `[ROOT]/foo/`
+   [..] TRACE cargo_package_vcs_cache: git status cache hit for `README.md` at workdir `[ROOT]/foo/`
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
 mordor/src/lib.rs
@@ -1246,9 +1254,9 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
     p.cargo("package --workspace --no-verify --allow-dirty")
         .with_stderr_data(str![[r#"
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[PACKAGING] mordor v0.0.0 ([ROOT]/foo/mordor)
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] mordor v0.0.0 ([ROOT]/foo/mordor)
+[PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -1263,6 +1271,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
             "Cargo.toml.orig",
             "src/lib.rs",
             "Cargo.lock",
+            "README.md",
         ],
         [(
             ".cargo_vcs_info.json",
@@ -1290,6 +1299,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
             "src/lib.rs",
             "src/main.rs",
             "Cargo.lock",
+            "README.md",
         ],
         [(
             ".cargo_vcs_info.json",
