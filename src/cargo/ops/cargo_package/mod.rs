@@ -226,6 +226,7 @@ fn do_package<'a>(
 
     // Packages need to be created in dependency order, because dependencies must
     // be added to our local overlay before we can create lockfiles that depend on them.
+    let mut vcs_info_builder = vcs::VcsInfoBuilder::new(ws, opts);
     let sorted_pkgs = deps.sort();
     let mut outputs: Vec<(Package, PackageOpts<'_>, FileLock)> = Vec::new();
     for (pkg, cli_features) in sorted_pkgs {
@@ -234,7 +235,7 @@ fn do_package<'a>(
             to_package: ops::Packages::Default,
             ..opts.clone()
         };
-        let ar_files = prepare_archive(ws, &pkg, &opts)?;
+        let ar_files = prepare_archive(ws, &pkg, &opts, &mut vcs_info_builder)?;
 
         if opts.list {
             for ar_file in &ar_files {
@@ -369,6 +370,7 @@ fn prepare_archive(
     ws: &Workspace<'_>,
     pkg: &Package,
     opts: &PackageOpts<'_>,
+    vcs_info_builder: &mut vcs::VcsInfoBuilder<'_, '_>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let gctx = ws.gctx();
     let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
@@ -387,7 +389,7 @@ fn prepare_archive(
     let src_files = src.list_files(pkg)?;
 
     // Check (git) repository state, getting the current commit hash.
-    let vcs_info = vcs::check_repo_state(pkg, &src_files, gctx, &opts)?;
+    let vcs_info = vcs_info_builder.build(pkg, &src_files)?;
 
     build_ar_list(ws, pkg, src_files, vcs_info)
 }

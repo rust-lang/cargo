@@ -9,6 +9,7 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -30,6 +31,32 @@ pub struct GitVcsInfo {
     /// Indicate whether or not the Git worktree is dirty.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     dirty: bool,
+}
+
+/// A shared builder for generating [`VcsInfo`] for packages inside the same workspace.
+///
+/// This is aimed to cache duplicate works like file system or VCS info lookups.
+pub struct VcsInfoBuilder<'a, 'gctx> {
+    ws: &'a Workspace<'gctx>,
+    opts: &'a PackageOpts<'gctx>,
+}
+
+impl<'a, 'gctx> VcsInfoBuilder<'a, 'gctx> {
+    pub fn new(
+        ws: &'a Workspace<'gctx>,
+        opts: &'a PackageOpts<'gctx>,
+    ) -> VcsInfoBuilder<'a, 'gctx> {
+        VcsInfoBuilder { ws, opts }
+    }
+
+    /// Builds an [`VcsInfo`] for the given `pkg` and its associated `src_files`.
+    pub fn build(
+        &mut self,
+        pkg: &Package,
+        src_files: &[PathEntry],
+    ) -> CargoResult<Option<VcsInfo>> {
+        check_repo_state(pkg, src_files, self.ws.gctx(), self.opts)
+    }
 }
 
 /// Checks if the package source is in a *git* DVCS repository.
