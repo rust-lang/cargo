@@ -300,7 +300,7 @@ impl LocalManifest {
     /// Write changes back to the file.
     pub fn write(&self) -> CargoResult<()> {
         let mut manifest = self.manifest.data.to_string();
-        let raw = match self.embedded.as_ref() {
+        let mut raw = match self.embedded.as_ref() {
             Some(Embedded::Implicit(start)) => {
                 if !manifest.ends_with("\n") {
                     manifest.push_str("\n");
@@ -321,6 +321,11 @@ impl LocalManifest {
             }
             None => manifest,
         };
+
+        if self.is_crlf() {
+            raw = to_crlf_line_ending(&raw);
+        }
+
         let new_contents_bytes = raw.as_bytes();
 
         cargo_util::paths::write_atomic(&self.path, new_contents_bytes)
@@ -566,6 +571,10 @@ impl LocalManifest {
         }
         status
     }
+
+    fn is_crlf(&self) -> bool {
+        return self.raw.contains("\r\n");
+    }
 }
 
 impl std::fmt::Display for LocalManifest {
@@ -752,4 +761,26 @@ fn remove_array_index(array: &mut toml_edit::Array, index: usize) {
         merged_lines.push_str(trailing);
         array.set_trailing(merged_lines);
     }
+}
+
+fn to_crlf_line_ending(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\r' if chars.peek() == Some(&'\n') => {
+                chars.next();
+                result.push('\r');
+                result.push('\n');
+            }
+            '\n' => {
+                result.push('\r');
+                result.push('\n');
+            }
+            _ => result.push(c),
+        }
+    }
+
+    result
 }
