@@ -29,6 +29,7 @@
 pub use self::config::SourceConfigMap;
 pub use self::directory::DirectorySource;
 pub use self::git::GitSource;
+pub use self::path::PathEntry;
 pub use self::path::PathSource;
 pub use self::path::RecursivePathSource;
 pub use self::registry::{

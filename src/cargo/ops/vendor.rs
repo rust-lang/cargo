@@ -2,6 +2,7 @@ use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
+use crate::sources::PathEntry;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::{try_canonicalize, CargoResult, GlobalContext};
@@ -315,13 +316,14 @@ fn sync(
 fn cp_sources(
     pkg: &Package,
     src: &Path,
-    paths: &[PathBuf],
+    paths: &[PathEntry],
     dst: &Path,
     cksums: &mut BTreeMap<String, String>,
     tmp_buf: &mut [u8],
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     for p in paths {
+        let p = p.as_ref();
         let relative = p.strip_prefix(&src).unwrap();
 
         match relative.to_str() {

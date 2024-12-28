@@ -94,7 +94,7 @@ impl<'gctx> PathSource<'gctx> {
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
     #[tracing::instrument(skip_all)]
-    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
         list_files(pkg, self.gctx)
     }
 
@@ -278,7 +278,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
-    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
         list_files(pkg, self.gctx)
     }
 
@@ -404,6 +404,32 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     }
 }
 
+/// [`PathBuf`] with extra metadata.
+#[derive(Clone, Debug)]
+pub struct PathEntry {
+    path: PathBuf,
+}
+
+impl PathEntry {
+    pub fn into_path_buf(self) -> PathBuf {
+        self.path
+    }
+}
+
+impl std::ops::Deref for PathEntry {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.path.as_path()
+    }
+}
+
+impl AsRef<PathBuf> for PathEntry {
+    fn as_ref(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
 fn first_package<'p>(
     pkg_id: PackageId,
     pkgs: &'p Vec<Package>,
@@ -446,7 +472,7 @@ fn first_package<'p>(
 /// are relevant for building this package, but it also contains logic to
 /// use other methods like `.gitignore`, `package.include`, or
 /// `package.exclude` to filter the list of files.
-pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>> {
+pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
     _list_files(pkg, gctx).with_context(|| {
         format!(
             "failed to determine list of files in {}",
@@ -456,7 +482,7 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBu
 }
 
 /// See [`PathSource::list_files`].
-fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>> {
+fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
     let root = pkg.root();
     let no_include_option = pkg.manifest().include().is_empty();
     let git_repo = if no_include_option {
@@ -580,7 +606,7 @@ fn list_files_gix(
     repo: &gix::Repository,
     filter: &dyn Fn(&Path, bool) -> bool,
     gctx: &GlobalContext,
-) -> CargoResult<Vec<PathBuf>> {
+) -> CargoResult<Vec<PathEntry>> {
     debug!("list_files_gix {}", pkg.package_id());
     let options = repo
         .dirwalk_options()?
@@ -619,7 +645,7 @@ fn list_files_gix(
         vec![include, exclude]
     };
 
-    let mut files = Vec::<PathBuf>::new();
+    let mut files = Vec::<PathEntry>::new();
     let mut subpackages_found = Vec::new();
     for item in repo
         .dirwalk_iter(index.clone(), pathspec, Default::default(), options)?
@@ -701,7 +727,7 @@ fn list_files_gix(
         } else if (filter)(&file_path, is_dir) {
             assert!(!is_dir);
             trace!("  found {}", file_path.display());
-            files.push(file_path);
+            files.push(PathEntry { path: file_path });
         }
     }
 
@@ -715,7 +741,7 @@ fn list_files_gix(
 /// is not tracked under a Git repository.
 fn list_files_walk(
     path: &Path,
-    ret: &mut Vec<PathBuf>,
+    ret: &mut Vec<PathEntry>,
     is_root: bool,
     filter: &dyn Fn(&Path, bool) -> bool,
     gctx: &GlobalContext,
@@ -756,7 +782,9 @@ fn list_files_walk(
             Ok(entry) => {
                 let file_type = entry.file_type();
                 if file_type.is_file() || file_type.is_symlink() {
-                    ret.push(entry.into_path());
+                    ret.push(PathEntry {
+                        path: entry.into_path(),
+                    });
                 }
             }
             Err(err) if err.loop_ancestor().is_some() => {
@@ -770,7 +798,9 @@ fn list_files_walk(
                 // Otherwise, simply recover from it.
                 // Don't worry about error skipping here, the callers would
                 // still hit the IO error if they do access it thereafter.
-                Some(path) => ret.push(path.to_path_buf()),
+                Some(path) => ret.push(PathEntry {
+                    path: path.to_path_buf(),
+                }),
                 None => return Err(err.into()),
             },
         }
@@ -801,7 +831,7 @@ fn last_modified_file(
         let mtime = paths::mtime(&file).unwrap_or_else(|_| FileTime::zero());
         if mtime > max {
             max = mtime;
-            max_path = file;
+            max_path = file.into_path_buf();
         }
     }
     trace!("last modified file {}: {}", path.display(), max);

@@ -16,6 +16,7 @@ use crate::core::Workspace;
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::{infer_registry, RegistryOrIndex};
+use crate::sources::path::PathEntry;
 use crate::sources::registry::index::{IndexPackage, RegistryDependency};
 use crate::sources::{PathSource, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
@@ -396,7 +397,7 @@ fn prepare_archive(
 fn build_ar_list(
     ws: &Workspace<'_>,
     pkg: &Package,
-    src_files: Vec<PathBuf>,
+    src_files: Vec<PathEntry>,
     vcs_info: Option<vcs::VcsInfo>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::new();
@@ -420,7 +421,7 @@ fn build_ar_list(
                     .push(ArchiveFile {
                         rel_path: rel_path.to_owned(),
                         rel_str: rel_str.to_owned(),
-                        contents: FileContents::OnDisk(src_file.clone()),
+                        contents: FileContents::OnDisk(src_file.to_path_buf()),
                     });
             }
         }

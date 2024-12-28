@@ -9,6 +9,7 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::Package;
+use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
 
@@ -41,7 +42,7 @@ pub struct GitVcsInfo {
 #[tracing::instrument(skip_all)]
 pub fn check_repo_state(
     p: &Package,
-    src_files: &[PathBuf],
+    src_files: &[PathEntry],
     gctx: &GlobalContext,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
@@ -114,7 +115,7 @@ pub fn check_repo_state(
 fn git(
     pkg: &Package,
     gctx: &GlobalContext,
-    src_files: &[PathBuf],
+    src_files: &[PathEntry],
     repo: &git2::Repository,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<GitVcsInfo>> {
@@ -136,6 +137,7 @@ fn git(
     let mut dirty_src_files: Vec<_> = src_files
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
+        .map(|p| p.as_ref())
         .chain(dirty_metadata_paths(pkg, repo)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
