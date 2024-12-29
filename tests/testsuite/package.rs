@@ -1339,10 +1339,12 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
                 license-file = "../LICENSE"
             "#,
         )
+        .file("original-dir/file", "before")
         .symlink("lib.rs", "isengard/src/lib.rs")
         .symlink("README.md", "isengard/README.md")
         .file(&main_outside_pkg_root, "fn main() {}")
         .symlink(&main_outside_pkg_root, "isengard/src/main.rs")
+        .symlink_dir("original-dir", "isengard/symlink-dir")
     });
     git::commit(&repo);
 
@@ -1352,6 +1354,7 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     // * Changes in files outside package root that source files symlink to
     p.change_file("README.md", "after");
     p.change_file("lib.rs", "pub fn after() {}");
+    p.change_file("original-dir/file", "after");
     // * Changes in files outside pkg root that `license-file`/`readme` point to
     p.change_file("LICENSE", "after");
     // * When workspace inheritance is involved and changed
@@ -1388,7 +1391,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
     p.cargo("package --workspace --no-verify --allow-dirty")
         .with_stderr_data(str![[r#"
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 9 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -1411,6 +1414,7 @@ edition = "2021"
             "Cargo.toml.orig",
             "src/lib.rs",
             "src/main.rs",
+            "symlink-dir/file",
             "Cargo.lock",
             "LICENSE",
             "README.md",
@@ -1418,6 +1422,7 @@ edition = "2021"
         [
             ("src/lib.rs", str!["pub fn after() {}"]),
             ("src/main.rs", str![r#"fn main() { eprintln!("after"); }"#]),
+            ("symlink-dir/file", str!["after"]),
             ("README.md", str!["after"]),
             ("LICENSE", str!["after"]),
             ("Cargo.toml", cargo_toml),
