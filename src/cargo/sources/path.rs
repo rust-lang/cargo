@@ -404,15 +404,69 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     }
 }
 
+/// Type that abstracts over [`gix::dir::entry::Kind`] and [`fs::FileType`].
+#[derive(Debug, Clone, Copy)]
+enum FileType {
+    File,
+    Dir,
+    Symlink,
+    Other,
+}
+
+impl From<fs::FileType> for FileType {
+    fn from(value: fs::FileType) -> Self {
+        if value.is_file() {
+            FileType::File
+        } else if value.is_dir() {
+            FileType::Dir
+        } else if value.is_symlink() {
+            FileType::Symlink
+        } else {
+            FileType::Other
+        }
+    }
+}
+
+impl From<gix::dir::entry::Kind> for FileType {
+    fn from(value: gix::dir::entry::Kind) -> Self {
+        use gix::dir::entry::Kind;
+        match value {
+            Kind::Untrackable => FileType::Other,
+            Kind::File => FileType::File,
+            Kind::Symlink => FileType::Symlink,
+            Kind::Directory | Kind::Repository => FileType::Dir,
+        }
+    }
+}
+
 /// [`PathBuf`] with extra metadata.
 #[derive(Clone, Debug)]
 pub struct PathEntry {
     path: PathBuf,
+    ty: FileType,
 }
 
 impl PathEntry {
     pub fn into_path_buf(self) -> PathBuf {
         self.path
+    }
+
+    /// Similar to [`std::path::Path::is_file`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_file(&self) -> bool {
+        matches!(self.ty, FileType::File)
+    }
+
+    /// Similar to [`std::path::Path::is_dir`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_dir(&self) -> bool {
+        matches!(self.ty, FileType::Dir)
+    }
+
+    /// Similar to [`std::path::Path::is_symlink`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.ty, FileType::Symlink)
     }
 }
 
@@ -727,7 +781,10 @@ fn list_files_gix(
         } else if (filter)(&file_path, is_dir) {
             assert!(!is_dir);
             trace!("  found {}", file_path.display());
-            files.push(PathEntry { path: file_path });
+            files.push(PathEntry {
+                path: file_path,
+                ty: kind.map(Into::into).unwrap_or(FileType::Other),
+            });
         }
     }
 
@@ -782,8 +839,15 @@ fn list_files_walk(
             Ok(entry) => {
                 let file_type = entry.file_type();
                 if file_type.is_file() || file_type.is_symlink() {
+                    // We follow_links(true) here so check if entry was created from a symlink
+                    let ty = if entry.path_is_symlink() {
+                        FileType::Symlink
+                    } else {
+                        file_type.into()
+                    };
                     ret.push(PathEntry {
                         path: entry.into_path(),
+                        ty,
                     });
                 }
             }
@@ -800,6 +864,7 @@ fn list_files_walk(
                 // still hit the IO error if they do access it thereafter.
                 Some(path) => ret.push(PathEntry {
                     path: path.to_path_buf(),
+                    ty: FileType::Other,
                 }),
                 None => return Err(err.into()),
             },
