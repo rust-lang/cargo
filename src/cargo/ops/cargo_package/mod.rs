@@ -1,4 +1,6 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -40,10 +42,27 @@ use unicase::Ascii as UncasedAscii;
 mod vcs;
 mod verify;
 
+#[derive(Debug, Clone)]
+pub enum PackageListFormat {
+    PathPerLine,
+    Json,
+}
+
+impl std::str::FromStr for PackageListFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageListFormat, anyhow::Error> {
+        match s {
+            "json" => Ok(PackageListFormat::Json),
+            f => bail!("unknown package list format `{f}`"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
     pub gctx: &'gctx GlobalContext,
-    pub list: bool,
+    pub list: Option<PackageListFormat>,
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
@@ -225,6 +244,7 @@ fn do_package<'a>(
     // be added to our local overlay before we can create lockfiles that depend on them.
     let sorted_pkgs = deps.sort();
     let mut outputs: Vec<(Package, PackageOpts<'_>, FileLock)> = Vec::new();
+    let mut json_output = BTreeMap::new();
     for (pkg, cli_features) in sorted_pkgs {
         let opts = PackageOpts {
             cli_features: cli_features.clone(),
@@ -233,9 +253,16 @@ fn do_package<'a>(
         };
         let ar_files = prepare_archive(ws, &pkg, &opts)?;
 
-        if opts.list {
-            for ar_file in &ar_files {
-                drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+        if let Some(list) = &opts.list {
+            match list {
+                PackageListFormat::PathPerLine => {
+                    for ar_file in &ar_files {
+                        drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+                    }
+                }
+                PackageListFormat::Json => {
+                    json_output.insert(pkg.package_id().to_spec(), "");
+                }
             }
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
@@ -246,6 +273,10 @@ fn do_package<'a>(
             }
             outputs.push((pkg, opts, tarball));
         }
+    }
+
+    if let Some(PackageListFormat::Json) = opts.list {
+        ws.gctx().shell().print_json(&json_output)?;
     }
 
     // Verify all packages in the workspace. This can be done in any order, since the dependencies
