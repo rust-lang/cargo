@@ -40,10 +40,38 @@ use unicase::Ascii as UncasedAscii;
 mod vcs;
 mod verify;
 
+/// Message format for `cargo package`.
+///
+/// Currently only affect the output of the `--list` flag.
+#[derive(Debug, Clone)]
+pub enum PackageMessageFormat {
+    Human,
+    Json,
+}
+
+impl PackageMessageFormat {
+    pub const POSSIBLE_VALUES: [&str; 2] = ["human", "json"];
+
+    pub const DEFAULT: &str = "human";
+}
+
+impl std::str::FromStr for PackageMessageFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageMessageFormat, anyhow::Error> {
+        match s {
+            "human" => Ok(PackageMessageFormat::Human),
+            "json" => Ok(PackageMessageFormat::Json),
+            f => bail!("unknown message format `{f}`"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
     pub gctx: &'gctx GlobalContext,
     pub list: bool,
+    pub fmt: PackageMessageFormat,
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub include_lockfile: bool,
@@ -236,8 +264,17 @@ fn do_package<'a>(
         let ar_files = prepare_archive(ws, &pkg, &opts)?;
 
         if opts.list {
-            for ar_file in &ar_files {
-                drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+            match opts.fmt {
+                PackageMessageFormat::Human => {
+                    // While this form is called "human",
+                    // it keeps the old file-per-line format for compatibility.
+                    for ar_file in &ar_files {
+                        drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+                    }
+                }
+                PackageMessageFormat::Json => {
+                    let _ = ws.gctx().shell().print_json(&HashMap::<(), ()>::new());
+                }
             }
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;

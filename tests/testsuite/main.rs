@@ -135,6 +135,7 @@ mod open_namespaces;
 mod owner;
 mod package;
 mod package_features;
+mod package_message_format;
 mod patch;
 mod path;
 mod paths;

@@ -1,6 +1,8 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, PackageOpts};
+use cargo::ops;
+use cargo::ops::PackageMessageFormat;
+use cargo::ops::PackageOpts;
 
 pub fn cli() -> Command {
     subcommand("package")
@@ -30,6 +32,13 @@ pub fn cli() -> Command {
             "exclude-lockfile",
             "Don't include the lock file when packaging",
         ))
+        .arg(
+            opt("message-format", "Output representation (unstable)")
+                .value_name("FMT")
+                // This currently requires and only works with `--list`.
+                .requires("list")
+                .value_parser(PackageMessageFormat::POSSIBLE_VALUES),
+        )
         .arg_silent_suggestion()
         .arg_package_spec_no_all(
             "Package(s) to assemble",
@@ -75,12 +84,21 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     }
     let specs = args.packages_from_flags()?;
 
+    let fmt = if let Some(fmt) = args._value_of("message-format") {
+        gctx.cli_unstable()
+            .fail_if_stable_opt("--message-format", 11666)?;
+        fmt.parse()?
+    } else {
+        PackageMessageFormat::Human
+    };
+
     ops::package(
         &ws,
         &PackageOpts {
             gctx,
             verify: !args.flag("no-verify"),
             list: args.flag("list"),
+            fmt,
             check_metadata: !args.flag("no-metadata"),
             allow_dirty: args.flag("allow-dirty"),
             include_lockfile: !args.flag("exclude-lockfile"),
