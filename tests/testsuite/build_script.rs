@@ -4000,7 +4000,7 @@ fn warnings_emitted_when_build_script_panics() {
                 fn main() {
                     println!("cargo::warning=foo");
                     println!("cargo::warning=bar");
-                    panic!();
+                    panic!("our crate panicked");
                 }
             "#,
         )
@@ -4022,10 +4022,9 @@ Caused by:
   cargo::warning=bar
 
   --- stderr
-  thread 'main' panicked at build.rs:5:21:
-  explicit panic
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
+...
+[..]our crate panicked[..]
+...
 "#]])
         .run();
 }
@@ -4039,7 +4038,7 @@ fn warnings_emitted_when_dependency_panics() {
                 fn main() {
                     println!("cargo::warning=foo");
                     println!("cargo::warning=bar");
-                    panic!();
+                    panic!("dependency panicked");
                 }
             "#,
         )
@@ -4093,10 +4092,9 @@ Caused by:
   cargo::warning=bar
 
   --- stderr
-  thread 'main' panicked at [ROOT]/home/.cargo/registry/src/-[HASH]/published-0.1.0/build.rs:5:21:
-  explicit panic
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
+...
+[..]dependency panicked[..]
+...
 "#]])
         .run();
 }
