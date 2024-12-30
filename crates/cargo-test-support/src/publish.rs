@@ -78,6 +78,7 @@ where
 }
 
 /// Check the `cargo publish` API call
+#[track_caller]
 pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_files: &[&str]) {
     let new_path = registry::api_path().join("api/v1/crates/new");
     _validate_upload(
@@ -90,6 +91,7 @@ pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_
 }
 
 /// Check the `cargo publish` API call, with file contents
+#[track_caller]
 pub fn validate_upload_with_contents(
     expected_json: &str,
     expected_crate_name: &str,
@@ -107,6 +109,7 @@ pub fn validate_upload_with_contents(
 }
 
 /// Check the `cargo publish` API call to the alternative test registry
+#[track_caller]
 pub fn validate_alt_upload(
     expected_json: &str,
     expected_crate_name: &str,
@@ -122,6 +125,7 @@ pub fn validate_alt_upload(
     );
 }
 
+#[track_caller]
 fn _validate_upload(
     new_path: &Path,
     expected_json: &str,
@@ -142,6 +146,7 @@ fn _validate_upload(
     );
 }
 
+#[track_caller]
 fn read_new_post(new_path: &Path) -> (Vec<u8>, Vec<u8>) {
     let mut f = File::open(new_path).unwrap();
 
@@ -170,6 +175,7 @@ fn read_new_post(new_path: &Path) -> (Vec<u8>, Vec<u8>) {
 /// - `expected_contents` should be a list of `(file_name, contents)` tuples
 ///   to validate the contents of the given file. Only the listed files will
 ///   be checked (others will be ignored).
+#[track_caller]
 pub fn validate_crate_contents(
     reader: impl Read,
     expected_crate_name: &str,
@@ -185,6 +191,7 @@ pub fn validate_crate_contents(
     )
 }
 
+#[track_caller]
 fn validate_crate_contents_(
     reader: impl Read,
     expected_crate_name: &str,
@@ -192,10 +199,11 @@ fn validate_crate_contents_(
     expected_contents: InMemoryDir,
 ) {
     let mut rdr = GzDecoder::new(reader);
-    assert_eq!(
-        rdr.header().unwrap().filename().unwrap(),
-        expected_crate_name.as_bytes()
-    );
+    snapbox::assert_data_eq!(rdr.header().unwrap().filename().unwrap(), {
+        let expected: snapbox::Data = expected_crate_name.into();
+        expected.raw()
+    });
+
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
