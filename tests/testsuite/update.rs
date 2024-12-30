@@ -1536,7 +1536,7 @@ fn report_behind() {
 [UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
-[NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
+[NOTE] to see how you depend on a package, run `cargo tree --invert <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 
 "#]])
@@ -1561,7 +1561,7 @@ fn report_behind() {
 [UNCHANGED] breaking v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
-[NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
+[NOTE] to see how you depend on a package, run `cargo tree --invert <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 
 "#]])

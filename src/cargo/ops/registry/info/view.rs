@@ -400,7 +400,7 @@ fn suggest_cargo_tree(package_id: PackageId, shell: &mut Shell) -> CargoResult<(
     let literal = LITERAL;
 
     shell.note(format_args!(
-        "to see how you depend on {name}, run `{literal}cargo tree --invert --package {name}@{version}{literal:#}`",
+        "to see how you depend on {name}, run `{literal}cargo tree --invert {name}@{version}{literal:#}`",
         name = package_id.name(),
         version = package_id.version(),
     ))
