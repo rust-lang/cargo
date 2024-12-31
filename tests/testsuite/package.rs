@@ -7025,3 +7025,89 @@ src/main.rs
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn git_core_symlinks_false() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let git_project = git::new("bar", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                description = "bar"
+                license = "MIT"
+                edition = "2021"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "//! This is a module")
+        .symlink("src/lib.rs", "symlink-lib.rs")
+        .symlink_dir("src", "symlink-dir")
+    });
+
+    let url = git_project.root().to_url().to_string();
+
+    let p = project().build();
+    let root = p.root();
+    // Remove the default project layout,
+    // so we can git-fetch from git_project under the same directory
+    fs::remove_dir_all(&root).unwrap();
+    fs::create_dir_all(&root).unwrap();
+    let repo = git::init(&root);
+
+    let mut cfg = repo.config().unwrap();
+    cfg.set_bool("core.symlinks", false).unwrap();
+
+    // let's fetch from git_project so it respects our core.symlinks=false config.
+    repo.remote_anonymous(&url)
+        .unwrap()
+        .fetch(&["HEAD"], None, None)
+        .unwrap();
+    let rev = repo
+        .find_reference("FETCH_HEAD")
+        .unwrap()
+        .peel_to_commit()
+        .unwrap();
+    repo.reset(rev.as_object(), git2::ResetType::Hard, None)
+        .unwrap();
+
+    p.cargo("package --allow-dirty")
+        .with_stderr_data(str![[r#"
+[WARNING] found symbolic links that may be checked out as regular files for git repo at `[ROOT]/foo/`
+This might cause the `.crate` file to include incorrect or incomplete files
+[NOTE] to avoid this, set the Git config `core.symlinks` to `true`
+...
+[PACKAGING] bar v0.0.0 ([ROOT]/foo)
+[PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] bar v0.0.0 ([ROOT]/foo)
+[COMPILING] bar v0.0.0 ([ROOT]/foo/target/package/bar-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let f = File::open(&p.root().join("target/package/bar-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "bar-0.0.0.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            // We're missing symlink-dir/lib.rs in the `.crate` file.
+            "symlink-dir",
+            "symlink-lib.rs",
+            ".cargo_vcs_info.json",
+        ],
+        [
+            // And their contents are incorrect.
+            ("symlink-dir", str!["[ROOT]/bar/src"]),
+            ("symlink-lib.rs", str!["[ROOT]/bar/src/lib.rs"]),
+        ],
+    );
+}

@@ -9,6 +9,7 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::Package;
+use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
 
@@ -41,7 +42,7 @@ pub struct GitVcsInfo {
 #[tracing::instrument(skip_all)]
 pub fn check_repo_state(
     p: &Package,
-    src_files: &[PathBuf],
+    src_files: &[PathEntry],
     gctx: &GlobalContext,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
@@ -91,6 +92,8 @@ pub fn check_repo_state(
         return Ok(None);
     }
 
+    warn_symlink_checked_out_as_plain_text_file(gctx, src_files, &repo)?;
+
     debug!(
         "found (git) Cargo.toml at `{}` in workdir `{}`",
         path.display(),
@@ -110,11 +113,57 @@ pub fn check_repo_state(
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 }
 
+/// Warns if any symlinks were checked out as plain text files.
+///
+/// Git config [`core.symlinks`] defaults to true when unset.
+/// In git-for-windows (and git as well),
+/// the config should be set to false explicitly when the repo was created,
+/// if symlink support wasn't detected [^1].
+///
+/// We assume the config was always set at creation time and never changed.
+/// So, if it is true, we don't bother users with any warning.
+///
+/// [^1]: <https://github.com/git-for-windows/git/blob/f1241afcc7956918d5da33ef74abd9cbba369247/setup.c#L2394-L2403>
+///
+/// [`core.symlinks`]: https://git-scm.com/docs/git-config#Documentation/git-config.txt-coresymlinks
+fn warn_symlink_checked_out_as_plain_text_file(
+    gctx: &GlobalContext,
+    src_files: &[PathEntry],
+    repo: &git2::Repository,
+) -> CargoResult<()> {
+    if repo
+        .config()
+        .and_then(|c| c.get_bool("core.symlinks"))
+        .unwrap_or(true)
+    {
+        return Ok(());
+    }
+
+    if src_files.iter().any(|f| f.maybe_plain_text_symlink()) {
+        let mut shell = gctx.shell();
+        shell.warn(format_args!(
+            "found symbolic links that may be checked out as regular files for git repo at `{}`\n\
+            This might cause the `.crate` file to include incorrect or incomplete files",
+            repo.workdir().unwrap().display(),
+        ))?;
+        let extra_note = if cfg!(windows) {
+            "\nAnd on Windows, enable the Developer Mode to support symlinks"
+        } else {
+            ""
+        };
+        shell.note(format_args!(
+            "to avoid this, set the Git config `core.symlinks` to `true`{extra_note}",
+        ))?;
+    }
+
+    Ok(())
+}
+
 /// The real git status check starts from here.
 fn git(
     pkg: &Package,
     gctx: &GlobalContext,
-    src_files: &[PathBuf],
+    src_files: &[PathEntry],
     repo: &git2::Repository,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<GitVcsInfo>> {
@@ -136,6 +185,7 @@ fn git(
     let mut dirty_src_files: Vec<_> = src_files
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
+        .map(|p| p.as_ref())
         .chain(dirty_metadata_paths(pkg, repo)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)

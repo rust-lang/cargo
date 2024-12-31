@@ -94,7 +94,7 @@ impl<'gctx> PathSource<'gctx> {
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
     #[tracing::instrument(skip_all)]
-    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
         list_files(pkg, self.gctx)
     }
 
@@ -278,7 +278,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
-    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
         list_files(pkg, self.gctx)
     }
 
@@ -404,6 +404,103 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     }
 }
 
+/// Type that abstracts over [`gix::dir::entry::Kind`] and [`fs::FileType`].
+#[derive(Debug, Clone, Copy)]
+enum FileType {
+    File { maybe_symlink: bool },
+    Dir,
+    Symlink,
+    Other,
+}
+
+impl From<fs::FileType> for FileType {
+    fn from(value: fs::FileType) -> Self {
+        if value.is_file() {
+            FileType::File {
+                maybe_symlink: false,
+            }
+        } else if value.is_dir() {
+            FileType::Dir
+        } else if value.is_symlink() {
+            FileType::Symlink
+        } else {
+            FileType::Other
+        }
+    }
+}
+
+impl From<gix::dir::entry::Kind> for FileType {
+    fn from(value: gix::dir::entry::Kind) -> Self {
+        use gix::dir::entry::Kind;
+        match value {
+            Kind::Untrackable => FileType::Other,
+            Kind::File => FileType::File {
+                maybe_symlink: false,
+            },
+            Kind::Symlink => FileType::Symlink,
+            Kind::Directory | Kind::Repository => FileType::Dir,
+        }
+    }
+}
+
+/// [`PathBuf`] with extra metadata.
+#[derive(Clone, Debug)]
+pub struct PathEntry {
+    path: PathBuf,
+    ty: FileType,
+}
+
+impl PathEntry {
+    pub fn into_path_buf(self) -> PathBuf {
+        self.path
+    }
+
+    /// Similar to [`std::path::Path::is_file`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_file(&self) -> bool {
+        matches!(self.ty, FileType::File { .. })
+    }
+
+    /// Similar to [`std::path::Path::is_dir`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_dir(&self) -> bool {
+        matches!(self.ty, FileType::Dir)
+    }
+
+    /// Similar to [`std::path::Path::is_symlink`]
+    /// but doesn't follow the symbolic link nor make any system call
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.ty, FileType::Symlink)
+    }
+
+    /// Whether this path might be a plain text symlink.
+    ///
+    /// Git may check out symlinks as plain text files that contain the link texts,
+    /// when either `core.symlinks` is `false`, or on Windows.
+    pub fn maybe_plain_text_symlink(&self) -> bool {
+        matches!(
+            self.ty,
+            FileType::File {
+                maybe_symlink: true
+            }
+        )
+    }
+}
+
+impl std::ops::Deref for PathEntry {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.path.as_path()
+    }
+}
+
+impl AsRef<PathBuf> for PathEntry {
+    fn as_ref(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
 fn first_package<'p>(
     pkg_id: PackageId,
     pkgs: &'p Vec<Package>,
@@ -446,7 +543,7 @@ fn first_package<'p>(
 /// are relevant for building this package, but it also contains logic to
 /// use other methods like `.gitignore`, `package.include`, or
 /// `package.exclude` to filter the list of files.
-pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>> {
+pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
     _list_files(pkg, gctx).with_context(|| {
         format!(
             "failed to determine list of files in {}",
@@ -456,7 +553,7 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBu
 }
 
 /// See [`PathSource::list_files`].
-fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>> {
+fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
     let root = pkg.root();
     let no_include_option = pkg.manifest().include().is_empty();
     let git_repo = if no_include_option {
@@ -580,7 +677,7 @@ fn list_files_gix(
     repo: &gix::Repository,
     filter: &dyn Fn(&Path, bool) -> bool,
     gctx: &GlobalContext,
-) -> CargoResult<Vec<PathBuf>> {
+) -> CargoResult<Vec<PathEntry>> {
     debug!("list_files_gix {}", pkg.package_id());
     let options = repo
         .dirwalk_options()?
@@ -619,7 +716,7 @@ fn list_files_gix(
         vec![include, exclude]
     };
 
-    let mut files = Vec::<PathBuf>::new();
+    let mut files = Vec::<PathEntry>::new();
     let mut subpackages_found = Vec::new();
     for item in repo
         .dirwalk_iter(index.clone(), pathspec, Default::default(), options)?
@@ -633,7 +730,24 @@ fn list_files_gix(
                         && item.entry.rela_path == "Cargo.lock")
             })
         })
-        .map(|res| res.map(|item| (item.entry.rela_path, item.entry.disk_kind)))
+        .map(|res| {
+            res.map(|item| {
+                // Assumption: if a file tracked as a symlink in Git index, and
+                // the actual file type on disk is file, then it might be a
+                // plain text file symlink.
+                // There are exceptions like the file has changed from a symlink
+                // to a real text file, but hasn't been committed to Git index.
+                // Exceptions may be rare so we're okay with this now.
+                let maybe_plain_text_symlink = item.entry.index_kind
+                    == Some(gix::dir::entry::Kind::Symlink)
+                    && item.entry.disk_kind == Some(gix::dir::entry::Kind::File);
+                (
+                    item.entry.rela_path,
+                    item.entry.disk_kind,
+                    maybe_plain_text_symlink,
+                )
+            })
+        })
         .chain(
             // Append entries that might be tracked in `<pkg_root>/target/`.
             index
@@ -651,12 +765,13 @@ fn list_files_gix(
                         // This traversal is not part of a `status()`, and tracking things in `target/`
                         // is rare.
                         None,
+                        false,
                     )
                 })
                 .map(Ok),
         )
     {
-        let (rela_path, kind) = item?;
+        let (rela_path, kind, maybe_plain_text_symlink) = item?;
         let file_path = root.join(gix::path::from_bstr(rela_path));
         if file_path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml") {
             // Keep track of all sub-packages found and also strip out all
@@ -701,7 +816,17 @@ fn list_files_gix(
         } else if (filter)(&file_path, is_dir) {
             assert!(!is_dir);
             trace!("  found {}", file_path.display());
-            files.push(file_path);
+            let ty = match kind.map(Into::into) {
+                Some(FileType::File { .. }) => FileType::File {
+                    maybe_symlink: maybe_plain_text_symlink,
+                },
+                Some(ty) => ty,
+                None => FileType::Other,
+            };
+            files.push(PathEntry {
+                path: file_path,
+                ty,
+            });
         }
     }
 
@@ -715,7 +840,7 @@ fn list_files_gix(
 /// is not tracked under a Git repository.
 fn list_files_walk(
     path: &Path,
-    ret: &mut Vec<PathBuf>,
+    ret: &mut Vec<PathEntry>,
     is_root: bool,
     filter: &dyn Fn(&Path, bool) -> bool,
     gctx: &GlobalContext,
@@ -756,7 +881,16 @@ fn list_files_walk(
             Ok(entry) => {
                 let file_type = entry.file_type();
                 if file_type.is_file() || file_type.is_symlink() {
-                    ret.push(entry.into_path());
+                    // We follow_links(true) here so check if entry was created from a symlink
+                    let ty = if entry.path_is_symlink() {
+                        FileType::Symlink
+                    } else {
+                        file_type.into()
+                    };
+                    ret.push(PathEntry {
+                        path: entry.into_path(),
+                        ty,
+                    });
                 }
             }
             Err(err) if err.loop_ancestor().is_some() => {
@@ -770,7 +904,10 @@ fn list_files_walk(
                 // Otherwise, simply recover from it.
                 // Don't worry about error skipping here, the callers would
                 // still hit the IO error if they do access it thereafter.
-                Some(path) => ret.push(path.to_path_buf()),
+                Some(path) => ret.push(PathEntry {
+                    path: path.to_path_buf(),
+                    ty: FileType::Other,
+                }),
                 None => return Err(err.into()),
             },
         }
@@ -801,7 +938,7 @@ fn last_modified_file(
         let mtime = paths::mtime(&file).unwrap_or_else(|_| FileTime::zero());
         if mtime > max {
             max = mtime;
-            max_path = file;
+            max_path = file.into_path_buf();
         }
     }
     trace!("last modified file {}: {}", path.display(), max);
