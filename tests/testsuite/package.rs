@@ -1378,10 +1378,9 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     p.cargo("package --workspace --no-verify")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] 5 files in the working directory contain changes that were not yet committed into git:
+[ERROR] 4 files in the working directory contain changes that were not yet committed into git:
 
 LICENSE
-README.md
 README.md
 lib.rs
 original-dir/file
