@@ -7077,6 +7077,10 @@ fn git_core_symlinks_false() {
 
     p.cargo("package --allow-dirty")
         .with_stderr_data(str![[r#"
+[WARNING] found symbolic links that may be checked out as regular files for git repo at `[ROOT]/foo/`
+This might cause the `.crate` file to include incorrect or incomplete files
+[NOTE] to avoid this, set the Git config `core.symlinks` to `true`
+...
 [PACKAGING] bar v0.0.0 ([ROOT]/foo)
 [PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.0.0 ([ROOT]/foo)

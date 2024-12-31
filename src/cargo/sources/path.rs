@@ -407,7 +407,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
 /// Type that abstracts over [`gix::dir::entry::Kind`] and [`fs::FileType`].
 #[derive(Debug, Clone, Copy)]
 enum FileType {
-    File,
+    File { maybe_symlink: bool },
     Dir,
     Symlink,
     Other,
@@ -416,7 +416,9 @@ enum FileType {
 impl From<fs::FileType> for FileType {
     fn from(value: fs::FileType) -> Self {
         if value.is_file() {
-            FileType::File
+            FileType::File {
+                maybe_symlink: false,
+            }
         } else if value.is_dir() {
             FileType::Dir
         } else if value.is_symlink() {
@@ -432,7 +434,9 @@ impl From<gix::dir::entry::Kind> for FileType {
         use gix::dir::entry::Kind;
         match value {
             Kind::Untrackable => FileType::Other,
-            Kind::File => FileType::File,
+            Kind::File => FileType::File {
+                maybe_symlink: false,
+            },
             Kind::Symlink => FileType::Symlink,
             Kind::Directory | Kind::Repository => FileType::Dir,
         }
@@ -454,7 +458,7 @@ impl PathEntry {
     /// Similar to [`std::path::Path::is_file`]
     /// but doesn't follow the symbolic link nor make any system call
     pub fn is_file(&self) -> bool {
-        matches!(self.ty, FileType::File)
+        matches!(self.ty, FileType::File { .. })
     }
 
     /// Similar to [`std::path::Path::is_dir`]
@@ -467,6 +471,19 @@ impl PathEntry {
     /// but doesn't follow the symbolic link nor make any system call
     pub fn is_symlink(&self) -> bool {
         matches!(self.ty, FileType::Symlink)
+    }
+
+    /// Whether this path might be a plain text symlink.
+    ///
+    /// Git may check out symlinks as plain text files that contain the link texts,
+    /// when either `core.symlinks` is `false`, or on Windows.
+    pub fn maybe_plain_text_symlink(&self) -> bool {
+        matches!(
+            self.ty,
+            FileType::File {
+                maybe_symlink: true
+            }
+        )
     }
 }
 
@@ -713,7 +730,24 @@ fn list_files_gix(
                         && item.entry.rela_path == "Cargo.lock")
             })
         })
-        .map(|res| res.map(|item| (item.entry.rela_path, item.entry.disk_kind)))
+        .map(|res| {
+            res.map(|item| {
+                // Assumption: if a file tracked as a symlink in Git index, and
+                // the actual file type on disk is file, then it might be a
+                // plain text file symlink.
+                // There are exceptions like the file has changed from a symlink
+                // to a real text file, but hasn't been committed to Git index.
+                // Exceptions may be rare so we're okay with this now.
+                let maybe_plain_text_symlink = item.entry.index_kind
+                    == Some(gix::dir::entry::Kind::Symlink)
+                    && item.entry.disk_kind == Some(gix::dir::entry::Kind::File);
+                (
+                    item.entry.rela_path,
+                    item.entry.disk_kind,
+                    maybe_plain_text_symlink,
+                )
+            })
+        })
         .chain(
             // Append entries that might be tracked in `<pkg_root>/target/`.
             index
@@ -731,12 +765,13 @@ fn list_files_gix(
                         // This traversal is not part of a `status()`, and tracking things in `target/`
                         // is rare.
                         None,
+                        false,
                     )
                 })
                 .map(Ok),
         )
     {
-        let (rela_path, kind) = item?;
+        let (rela_path, kind, maybe_plain_text_symlink) = item?;
         let file_path = root.join(gix::path::from_bstr(rela_path));
         if file_path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml") {
             // Keep track of all sub-packages found and also strip out all
@@ -781,9 +816,16 @@ fn list_files_gix(
         } else if (filter)(&file_path, is_dir) {
             assert!(!is_dir);
             trace!("  found {}", file_path.display());
+            let ty = match kind.map(Into::into) {
+                Some(FileType::File { .. }) => FileType::File {
+                    maybe_symlink: maybe_plain_text_symlink,
+                },
+                Some(ty) => ty,
+                None => FileType::Other,
+            };
             files.push(PathEntry {
                 path: file_path,
-                ty: kind.map(Into::into).unwrap_or(FileType::Other),
+                ty,
             });
         }
     }
