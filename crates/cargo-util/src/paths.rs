@@ -710,9 +710,9 @@ pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
 /// This canonicalizes both paths before stripping. This is useful if the
 /// paths are obtained in different ways, and one or the other may or may not
 /// have been normalized in some way.
-pub fn strip_prefix_canonical<P: AsRef<Path>>(
-    path: P,
-    base: P,
+pub fn strip_prefix_canonical(
+    path: impl AsRef<Path>,
+    base: impl AsRef<Path>,
 ) -> Result<PathBuf, std::path::StripPrefixError> {
     // Not all filesystems support canonicalize. Just ignore if it doesn't work.
     let safe_canonicalize = |path: &Path| match path.canonicalize() {
