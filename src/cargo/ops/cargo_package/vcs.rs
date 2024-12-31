@@ -242,12 +242,7 @@ fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<V
         if let Ok(rel_path) = paths::strip_prefix_canonical(&abs_path, workdir) {
             // Outside package root but under git workdir,
             if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-                dirty_files.push(if abs_path.is_symlink() {
-                    // For symlinks, shows paths to symlink sources
-                    workdir.join(rel_path)
-                } else {
-                    abs_path
-                });
+                dirty_files.push(workdir.join(rel_path))
             }
         }
     }
