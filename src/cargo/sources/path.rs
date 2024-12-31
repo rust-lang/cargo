@@ -448,6 +448,8 @@ impl From<gix::dir::entry::Kind> for FileType {
 pub struct PathEntry {
     path: PathBuf,
     ty: FileType,
+    /// Whether this path was visited when traversing a symlink directory.
+    under_symlink_dir: bool,
 }
 
 impl PathEntry {
@@ -469,8 +471,19 @@ impl PathEntry {
 
     /// Similar to [`std::path::Path::is_symlink`]
     /// but doesn't follow the symbolic link nor make any system call
+    ///
+    /// If the path is not a symlink but under a symlink parent directory,
+    /// this will return false.
+    /// See [`PathEntry::is_symlink_or_under_symlink`] for an alternative.
     pub fn is_symlink(&self) -> bool {
         matches!(self.ty, FileType::Symlink)
+    }
+
+    /// Whether a path is a symlink or a path under a symlink directory.
+    ///
+    /// Use [`PathEntry::is_symlink`] to get the exact file type of the path only.
+    pub fn is_symlink_or_under_symlink(&self) -> bool {
+        self.is_symlink() || self.under_symlink_dir
     }
 
     /// Whether this path might be a plain text symlink.
@@ -826,6 +839,9 @@ fn list_files_gix(
             files.push(PathEntry {
                 path: file_path,
                 ty,
+                // Git index doesn't include files from symlink diretory,
+                // symlink dirs are handled in `list_files_walk`.
+                under_symlink_dir: false,
             });
         }
     }
@@ -847,6 +863,10 @@ fn list_files_walk(
 ) -> CargoResult<()> {
     let walkdir = WalkDir::new(path)
         .follow_links(true)
+        // While this is the default, set it explicitly.
+        // We need walkdir to visit the directory tree in depth-first order,
+        // so we can ensure a path visited later be under a certain directory.
+        .contents_first(false)
         .into_iter()
         .filter_entry(|entry| {
             let path = entry.path();
@@ -876,10 +896,27 @@ fn list_files_walk(
 
             true
         });
+
+    let mut current_symlink_dir = None;
     for entry in walkdir {
         match entry {
             Ok(entry) => {
                 let file_type = entry.file_type();
+
+                match current_symlink_dir.as_ref() {
+                    Some(dir) if entry.path().starts_with(dir) => {
+                        // Still walk under the same parent symlink dir, so keep it
+                    }
+                    Some(_) | None => {
+                        // Not under any parent symlink dir, update the current one.
+                        current_symlink_dir = if file_type.is_dir() && entry.path_is_symlink() {
+                            Some(entry.path().to_path_buf())
+                        } else {
+                            None
+                        };
+                    }
+                }
+
                 if file_type.is_file() || file_type.is_symlink() {
                     // We follow_links(true) here so check if entry was created from a symlink
                     let ty = if entry.path_is_symlink() {
@@ -890,6 +927,8 @@ fn list_files_walk(
                     ret.push(PathEntry {
                         path: entry.into_path(),
                         ty,
+                        // This rely on contents_first(false), which walks in depth-first order
+                        under_symlink_dir: current_symlink_dir.is_some(),
                     });
                 }
             }
@@ -907,6 +946,7 @@ fn list_files_walk(
                 Some(path) => ret.push(PathEntry {
                     path: path.to_path_buf(),
                     ty: FileType::Other,
+                    under_symlink_dir: false,
                 }),
                 None => return Err(err.into()),
             },

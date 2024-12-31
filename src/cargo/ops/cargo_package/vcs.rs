@@ -1,6 +1,6 @@
 //! Helpers to gather the VCS information for `cargo package`.
 
-use std::path::Path;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -186,7 +186,7 @@ fn git(
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
         .map(|p| p.as_ref())
-        .chain(dirty_metadata_paths(pkg, repo)?.iter())
+        .chain(dirty_files_outside_pkg_root(pkg, repo, src_files)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -219,39 +219,47 @@ fn git(
     }
 }
 
-/// Checks whether files at paths specified in `package.readme` and
-/// `package.license-file` have been modified.
+/// Checks whether "included" source files outside package root have been modified.
+///
+/// This currently looks at
+///
+/// * `package.readme` and `package.license-file` pointing to paths outside package root
+/// * symlinks targets reside outside package root
 ///
 /// This is required because those paths may link to a file outside the
 /// current package root, but still under the git workdir, affecting the
 /// final packaged `.crate` file.
-fn dirty_metadata_paths(pkg: &Package, repo: &git2::Repository) -> CargoResult<Vec<PathBuf>> {
-    let mut dirty_files = Vec::new();
+fn dirty_files_outside_pkg_root(
+    pkg: &Package,
+    repo: &git2::Repository,
+    src_files: &[PathEntry],
+) -> CargoResult<HashSet<PathBuf>> {
+    let pkg_root = pkg.root();
     let workdir = repo.workdir().unwrap();
-    let root = pkg.root();
+
     let meta = pkg.manifest().metadata();
-    for path in [&meta.license_file, &meta.readme] {
-        let Some(path) = path.as_deref().map(Path::new) else {
-            continue;
-        };
-        let abs_path = paths::normalize_path(&root.join(path));
-        if paths::strip_prefix_canonical(abs_path.as_path(), root).is_ok() {
-            // Inside package root. Don't bother checking git status.
-            continue;
-        }
-        if let Ok(rel_path) = paths::strip_prefix_canonical(abs_path.as_path(), workdir) {
-            // Outside package root but under git workdir,
-            if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-                dirty_files.push(if abs_path.is_symlink() {
-                    // For symlinks, shows paths to symlink sources
-                    workdir.join(rel_path)
-                } else {
-                    abs_path
-                });
-            }
+    let metadata_paths: Vec<_> = [&meta.license_file, &meta.readme]
+        .into_iter()
+        .filter_map(|p| p.as_deref())
+        .map(|path| paths::normalize_path(&pkg_root.join(path)))
+        .collect();
+
+    let mut dirty_symlinks = HashSet::new();
+    for rel_path in src_files
+        .iter()
+        .filter(|p| p.is_symlink_or_under_symlink())
+        .map(|p| p.as_ref())
+        .chain(metadata_paths.iter())
+        // If inside package root. Don't bother checking git status.
+        .filter(|p| paths::strip_prefix_canonical(p, pkg_root).is_err())
+        // Handle files outside package root but under git workdir,
+        .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
+    {
+        if repo.status_file(&rel_path)? != git2::Status::CURRENT {
+            dirty_symlinks.insert(workdir.join(rel_path));
         }
     }
-    Ok(dirty_files)
+    Ok(dirty_symlinks)
 }
 
 /// Helper to collect dirty statuses for a single repo.
