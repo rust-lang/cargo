@@ -383,3 +383,72 @@ fn rustc_cfg_with_and_without_value() {
     );
     check.run();
 }
+
+#[cargo_test]
+fn rerun_if_env_is_exsited_config() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo::rerun-if-env-changed=FOO");
+            }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [env]
+            FOO = "foo"
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo(r#"check --config 'env.FOO="bar"'"#)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn rerun_if_env_newly_added_in_config() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo::rerun-if-env-changed=FOO");
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo(r#"check --config 'env.FOO="foo"'"#)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

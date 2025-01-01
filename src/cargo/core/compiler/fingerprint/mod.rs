@@ -374,6 +374,7 @@ mod dirty_reason;
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::hash::{self, Hash, Hasher};
@@ -509,7 +510,7 @@ pub fn prepare_target(
         // thunk we can invoke on a foreign thread to calculate this.
         let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
         let metadata = build_runner.get_run_build_script_metadata(unit);
-        let (gen_local, _overridden) = build_script_local_fingerprints(build_runner, unit);
+        let (gen_local, _overridden) = build_script_local_fingerprints(build_runner, unit)?;
         let output_path = build_runner.build_explicit_deps[unit]
             .build_script_output
             .clone();
@@ -801,15 +802,24 @@ pub enum StaleItem {
 
 impl LocalFingerprint {
     /// Read the environment variable of the given env `key`, and creates a new
-    /// [`LocalFingerprint::RerunIfEnvChanged`] for it.
+    /// [`LocalFingerprint::RerunIfEnvChanged`] for it. The `env_config` is used firstly
+    /// to check if the env var is set in the config system as some envs need to be overridden.
+    /// If not, it will fallback to `std::env::var`.
     ///
-    // TODO: This is allowed at this moment. Should figure out if it makes
-    // sense if permitting to read env from the config system.
+    // TODO: `std::env::var` is allowed at this moment. Should figure out
+    // if it makes sense if permitting to read env from the env snapshot.
     #[allow(clippy::disallowed_methods)]
-    fn from_env<K: AsRef<str>>(key: K) -> LocalFingerprint {
+    fn from_env<K: AsRef<str>>(
+        key: K,
+        env_config: &Arc<HashMap<String, OsString>>,
+    ) -> LocalFingerprint {
         let key = key.as_ref();
         let var = key.to_owned();
-        let val = env::var(key).ok();
+        let val = if let Some(val) = env_config.get(key) {
+            val.to_str().map(ToOwned::to_owned)
+        } else {
+            env::var(key).ok()
+        };
         LocalFingerprint::RerunIfEnvChanged { var, val }
     }
 
@@ -1577,7 +1587,7 @@ fn calculate_run_custom_build(
     // the build script this means we'll be watching files and env vars.
     // Otherwise if we haven't previously executed it we'll just start watching
     // the whole crate.
-    let (gen_local, overridden) = build_script_local_fingerprints(build_runner, unit);
+    let (gen_local, overridden) = build_script_local_fingerprints(build_runner, unit)?;
     let deps = &build_runner.build_explicit_deps[unit];
     let local = (gen_local)(
         deps,
@@ -1671,7 +1681,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
 fn build_script_local_fingerprints(
     build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
-) -> (
+) -> CargoResult<(
     Box<
         dyn FnOnce(
                 &BuildDeps,
@@ -1680,20 +1690,20 @@ fn build_script_local_fingerprints(
             + Send,
     >,
     bool,
-) {
+)> {
     assert!(unit.mode.is_run_custom_build());
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(build_runner, unit) {
         debug!("override local fingerprints deps {}", unit.pkg);
-        return (
+        return Ok((
             Box::new(
                 move |_: &BuildDeps, _: Option<&dyn Fn() -> CargoResult<String>>| {
                     Ok(Some(vec![fingerprint]))
                 },
             ),
             true, // this is an overridden build script
-        );
+        ));
     }
 
     // ... Otherwise this is a "real" build script and we need to return a real
@@ -1705,6 +1715,7 @@ fn build_script_local_fingerprints(
     // obvious.
     let pkg_root = unit.pkg.root().to_path_buf();
     let target_dir = target_root(build_runner);
+    let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
     let calculate =
         move |deps: &BuildDeps, pkg_fingerprint: Option<&dyn Fn() -> CargoResult<String>>| {
             if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
@@ -1734,11 +1745,16 @@ fn build_script_local_fingerprints(
             // Ok so now we're in "new mode" where we can have files listed as
             // dependencies as well as env vars listed as dependencies. Process
             // them all here.
-            Ok(Some(local_fingerprints_deps(deps, &target_dir, &pkg_root)))
+            Ok(Some(local_fingerprints_deps(
+                deps,
+                &target_dir,
+                &pkg_root,
+                &env_config,
+            )))
         };
 
     // Note that `false` == "not overridden"
-    (Box::new(calculate), false)
+    Ok((Box::new(calculate), false))
 }
 
 /// Create a [`LocalFingerprint`] for an overridden build script.
@@ -1769,6 +1785,7 @@ fn local_fingerprints_deps(
     deps: &BuildDeps,
     target_root: &Path,
     pkg_root: &Path,
+    env_config: &Arc<HashMap<String, OsString>>,
 ) -> Vec<LocalFingerprint> {
     debug!("new local fingerprints deps {:?}", pkg_root);
     let mut local = Vec::new();
@@ -1793,7 +1810,7 @@ fn local_fingerprints_deps(
     local.extend(
         deps.rerun_if_env_changed
             .iter()
-            .map(LocalFingerprint::from_env),
+            .map(|s| LocalFingerprint::from_env(s, env_config)),
     );
 
     local
