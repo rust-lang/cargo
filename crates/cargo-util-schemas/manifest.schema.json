@@ -33,15 +33,29 @@
         }
       ]
     },
-    "profile": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/TomlProfiles"
-        },
-        {
-          "type": "null"
+    "badges": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
         }
-      ]
+      }
+    },
+    "features": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
     },
     "lib": {
       "anyOf": [
@@ -134,18 +148,6 @@
         "$ref": "#/definitions/InheritableDependency"
       }
     },
-    "features": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      }
-    },
     "target": {
       "type": [
         "object",
@@ -155,14 +157,35 @@
         "$ref": "#/definitions/TomlPlatform"
       }
     },
-    "replace": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": {
-        "$ref": "#/definitions/TomlDependency_for_String"
-      }
+    "lints": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/InheritableLints"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "workspace": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TomlWorkspace"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "profile": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TomlProfiles"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "patch": {
       "type": [
@@ -176,42 +199,19 @@
         }
       }
     },
-    "workspace": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/TomlWorkspace"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "badges": {
+    "replace": {
       "type": [
         "object",
         "null"
       ],
       "additionalProperties": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "string"
-        }
+        "$ref": "#/definitions/TomlDependency_for_String"
       }
-    },
-    "lints": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/InheritableLints"
-        },
-        {
-          "type": "null"
-        }
-      ]
     }
   },
   "definitions": {
     "TomlPackage": {
-      "description": "Represents the `package`/`project` sections of a `Cargo.toml`./n/nNote that the order of the fields matters, since this is the order they are serialized to a TOML file. For example, you cannot have values after the field `metadata`, since it is a table and values cannot appear after tables.",
+      "description": "Represents the `package`/`project` sections of a `Cargo.toml`.\n\nNote that the order of the fields matters, since this is the order they are serialized to a TOML file. For example, you cannot have values after the field `metadata`, since it is a table and values cannot appear after tables.",
       "type": "object",
       "required": [
         "name"
@@ -517,7 +517,7 @@
         {
           "description": "The type that is used when not inheriting from a workspace.",
           "type": "string",
-          "pattern": "^(0|[1-9]//d*)//.(0|[1-9]//d*)//.(0|[1-9]//d*)(?:-((?:0|[1-9]//d*|//d*[a-zA-Z-][0-9a-zA-Z-]*)(?://.(?:0|[1-9]//d*|//d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?://+([0-9a-zA-Z-]+(?://.[0-9a-zA-Z-]+)*))?$"
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
         },
         {
           "description": "The type when inheriting from a workspace.",
@@ -560,7 +560,7 @@
       ]
     },
     "StringOrVec": {
-      "description": "A StringOrVec can be parsed from either a TOML string or array, but is always stored as a vector.",
+      "description": "This can be parsed from either a TOML string or array, but is always stored as a vector.",
       "type": "array",
       "items": {
         "type": "string"
@@ -654,210 +654,6 @@
           }
         }
       }
-    },
-    "TomlProfiles": {
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/TomlProfile"
-      }
-    },
-    "TomlProfile": {
-      "type": "object",
-      "properties": {
-        "opt-level": {
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TomlOptLevel"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "lto": {
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/StringOrBool"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "codegen-backend": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "codegen-units": {
-          "default": null,
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint32",
-          "minimum": 0.0
-        },
-        "debug": {
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TomlDebugInfo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "split-debuginfo": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "debug-assertions": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "rpath": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "panic": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "overflow-checks": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "incremental": {
-          "default": null,
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "dir-name": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "inherits": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "strip": {
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/StringOrBool"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "rustflags": {
-          "default": null,
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "package": {
-          "default": null,
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": {
-            "$ref": "#/definitions/TomlProfile"
-          }
-        },
-        "build-override": {
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TomlProfile"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "trim-paths": {
-          "description": "Unstable feature `-Ztrim-paths`.",
-          "default": null,
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TomlTrimPaths"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      }
-    },
-    "TomlOptLevel": {
-      "type": "string"
-    },
-    "TomlDebugInfo": {
-      "type": "string",
-      "enum": [
-        "None",
-        "LineDirectivesOnly",
-        "LineTablesOnly",
-        "Limited",
-        "Full"
-      ]
-    },
-    "TomlTrimPaths": {
-      "anyOf": [
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TomlTrimPathsValue"
-          }
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "TomlTrimPathsValue": {
-      "type": "string",
-      "enum": [
-        "diagnostics",
-        "macro",
-        "object"
-      ]
     },
     "TomlTarget": {
       "type": "object",
@@ -986,11 +782,11 @@
     "TomlDependency_for_String": {
       "anyOf": [
         {
-          "description": "In the simple format, only a version is specified, eg. `package = /"<version>/"`",
+          "description": "In the simple format, only a version is specified, eg. `package = \"<version>\"`",
           "type": "string"
         },
         {
-          "description": "The simple format is equivalent to a detailed dependency specifying only a version, eg. `package = { version = /"<version>/" }`",
+          "description": "The simple format is equivalent to a detailed dependency specifying only a version, eg. `package = { version = \"<version>\" }`",
           "allOf": [
             {
               "$ref": "#/definitions/TomlDetailedDependency_for_String"
@@ -1218,6 +1014,52 @@
         }
       }
     },
+    "InheritableLints": {
+      "type": "object",
+      "required": [
+        "workspace"
+      ],
+      "properties": {
+        "workspace": {
+          "type": "boolean"
+        }
+      }
+    },
+    "TomlLint": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TomlLintLevel"
+        },
+        {
+          "$ref": "#/definitions/TomlLintConfig"
+        }
+      ]
+    },
+    "TomlLintLevel": {
+      "type": "string",
+      "enum": [
+        "forbid",
+        "deny",
+        "warn",
+        "allow"
+      ]
+    },
+    "TomlLintConfig": {
+      "type": "object",
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "level": {
+          "$ref": "#/definitions/TomlLintLevel"
+        },
+        "priority": {
+          "default": 0,
+          "type": "integer",
+          "format": "int8"
+        }
+      }
+    },
     "TomlWorkspace": {
       "type": "object",
       "properties": {
@@ -1306,7 +1148,7 @@
             "string",
             "null"
           ],
-          "pattern": "^(0|[1-9]//d*)//.(0|[1-9]//d*)//.(0|[1-9]//d*)(?:-((?:0|[1-9]//d*|//d*[a-zA-Z-][0-9a-zA-Z-]*)(?://.(?:0|[1-9]//d*|//d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?://+([0-9a-zA-Z-]+(?://.[0-9a-zA-Z-]+)*))?$"
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
         },
         "authors": {
           "type": [
@@ -1435,51 +1277,209 @@
         }
       }
     },
-    "TomlLint": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/TomlLintLevel"
-        },
-        {
-          "$ref": "#/definitions/TomlLintConfig"
-        }
-      ]
+    "TomlProfiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/TomlProfile"
+      }
     },
-    "TomlLintLevel": {
+    "TomlProfile": {
+      "type": "object",
+      "properties": {
+        "opt-level": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TomlOptLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lto": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "codegen-backend": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "codegen-units": {
+          "default": null,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "debug": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TomlDebugInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "split-debuginfo": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "debug-assertions": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "rpath": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "panic": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "overflow-checks": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "incremental": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dir-name": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inherits": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strip": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustflags": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "package": {
+          "default": null,
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/TomlProfile"
+          }
+        },
+        "build-override": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TomlProfile"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trim-paths": {
+          "description": "Unstable feature `-Ztrim-paths`.",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TomlTrimPaths"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "TomlOptLevel": {
+      "type": "string"
+    },
+    "TomlDebugInfo": {
       "type": "string",
       "enum": [
-        "forbid",
-        "deny",
-        "warn",
-        "allow"
+        "None",
+        "LineDirectivesOnly",
+        "LineTablesOnly",
+        "Limited",
+        "Full"
       ]
     },
-    "TomlLintConfig": {
-      "type": "object",
-      "required": [
-        "level"
-      ],
-      "properties": {
-        "level": {
-          "$ref": "#/definitions/TomlLintLevel"
+    "TomlTrimPaths": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TomlTrimPathsValue"
+          }
         },
-        "priority": {
-          "default": 0,
-          "type": "integer",
-          "format": "int8"
+        {
+          "type": "null"
         }
-      }
+      ]
     },
-    "InheritableLints": {
-      "type": "object",
-      "required": [
-        "workspace"
-      ],
-      "properties": {
-        "workspace": {
-          "type": "boolean"
-        }
-      }
+    "TomlTrimPathsValue": {
+      "type": "string",
+      "enum": [
+        "diagnostics",
+        "macro",
+        "object"
+      ]
     }
   }
 }
