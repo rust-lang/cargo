@@ -102,7 +102,7 @@ supports-unicode = "3.0.0"
 snapbox = { version = "0.6.20", features = ["diff", "dir", "term-svg", "regex", "json"] }
 tar = { version = "0.4.42", default-features = false }
 tempfile = "3.10.1"
-thiserror = "1.0.63"
+thiserror = "2.0.0"
 time = { version = "0.3.36", features = ["parsing", "formatting", "serde"] }
 toml = "0.8.19"
 toml_edit = { version = "0.22.20", features = ["serde"] }

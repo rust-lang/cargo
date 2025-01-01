@@ -372,7 +372,7 @@ dependencies = [
  "supports-unicode",
  "tar",
  "tempfile",
- "thiserror 1.0.63",
+ "thiserror 2.0.3",
  "time",
  "toml",
  "toml_edit",
@@ -395,7 +395,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snapbox",
- "thiserror 1.0.63",
+ "thiserror 2.0.3",
  "time",
  "windows-sys 0.59.0",
 ]
@@ -514,7 +514,7 @@ dependencies = [
  "serde-value",
  "serde_json",
  "snapbox",
- "thiserror 1.0.63",
+ "thiserror 2.0.3",
  "toml",
  "unicode-xid",
  "url",
@@ -711,7 +711,7 @@ dependencies = [
  "percent-encoding",
  "serde",
  "serde_json",
- "thiserror 1.0.63",
+ "thiserror 2.0.3",
  "url",
 ]
 
@@ -3109,7 +3109,7 @@ dependencies = [
  "serde_json",
  "similar",
  "tempfile",
- "thiserror 1.0.63",
+ "thiserror 2.0.3",
  "tracing",
  "tracing-subscriber",
 ]
