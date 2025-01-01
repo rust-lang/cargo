@@ -205,6 +205,13 @@ jobs:
     - name: Fetch smoke test
       run: ci/fetch-smoke-test.sh
 
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: rustup update stable && rustup default stable
+    - run: cargo test -p cargo-util-schemas -F unstable-schema
+
   resolver:
     runs-on: ubuntu-latest
     steps:
