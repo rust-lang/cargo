@@ -1787,5 +1787,5 @@ pub struct UnresolvedError;
 fn dump_manifest_schema() {
     let schema = schemars::schema_for!(crate::manifest::TomlManifest);
     let dump = serde_json::to_string_pretty(&schema).unwrap();
-    snapbox::assert_data_eq!(dump, snapbox::file!("../../manifest.schema.json"));
+    snapbox::assert_data_eq!(dump, snapbox::file!("../../manifest.schema.json").raw());
 }
