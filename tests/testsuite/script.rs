@@ -1307,11 +1307,10 @@ fn cmd_pkgid_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .run();
 
-    // FIXME: It should be `path+[ROOTURL]/foo/script.rs#script@0.0.0`.
     p.cargo("-Zscript pkgid --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-path+[ROOTURL]/foo#script@0.0.0
+path+[ROOTURL]/foo/script.rs#script@0.0.0
 
 "#]])
         .with_stderr_data(str![[r#"
