@@ -156,41 +156,24 @@ macro_rules! get_metadata_env {
     };
 }
 
+struct MetadataEnvs;
+
 macro_rules! metadata_envs {
     (
         $(
             ($field:ident, $key:literal$(, $to_var:expr)?),
         )*
     ) => {
-        struct MetadataEnvs;
         impl MetadataEnvs {
-            $(
-                fn $field(meta: &ManifestMetadata) -> Cow<'_, str> {
-                    get_metadata_env!(meta, $field$(, $to_var)?)
-                }
-            )*
-
-            pub fn should_track(key: &str) -> bool {
-                let keys = [$($key),*];
-                keys.iter().any(|k| *k == key)
+            fn keys() -> &'static [&'static str] {
+                &[$($key),*]
             }
 
-            pub fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
+            fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
                 match key {
-                    $($key => Some(Self::$field(meta)),)*
+                    $($key => Some(get_metadata_env!(meta, $field$(, $to_var)?)),)*
                     _ => None,
                 }
-            }
-
-            pub fn vars(meta: &ManifestMetadata) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
-                [
-                    $(
-                        (
-                            $key,
-                            Self::$field(meta),
-                        ),
-                    )*
-                ].into_iter()
             }
         }
     }
@@ -213,7 +196,8 @@ metadata_envs! {
 impl ManifestMetadata {
     /// Whether the given env var should be tracked by Cargo's dep-info.
     pub fn should_track(env_key: &str) -> bool {
-        MetadataEnvs::should_track(env_key)
+        let keys = MetadataEnvs::keys();
+        keys.iter().any(|k| *k == env_key)
     }
 
     pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
@@ -221,7 +205,9 @@ impl ManifestMetadata {
     }
 
     pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
-        MetadataEnvs::vars(self)
+        MetadataEnvs::keys()
+            .iter()
+            .map(|k| (*k, MetadataEnvs::var(self, k).unwrap()))
     }
 }
 
