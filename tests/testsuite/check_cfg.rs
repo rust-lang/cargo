@@ -318,6 +318,94 @@ fn well_known_names_values_doctest() {
 }
 
 #[cargo_test]
+fn test_false_lib() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                test = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .run();
+
+    p.cargo("clean").run();
+    p.cargo("test -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .run();
+
+    p.cargo("clean").run();
+    p.cargo("test --lib -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .run();
+}
+
+#[cargo_test]
+fn test_false_bins() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [[bin]]
+                name = "daemon"
+                test = false
+                path = "src/deamon.rs"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/deamon.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test")) // for foo & deamon
+        .run();
+}
+
+#[cargo_test]
+fn test_false_examples() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [lib]
+                test = false
+
+                [[example]]
+                name = "daemon"
+                test = false
+                path = "src/deamon.rs"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/deamon.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .run();
+}
+
+#[cargo_test]
 fn features_doc() {
     let p = project()
         .file(
