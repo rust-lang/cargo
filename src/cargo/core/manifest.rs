@@ -172,23 +172,21 @@ macro_rules! metadata_envs {
 
             pub fn should_track(key: &str) -> bool {
                 let keys = [$($key),*];
-                key.strip_prefix("CARGO_PKG_")
-                    .map(|key| keys.iter().any(|k| *k == key))
-                    .unwrap_or_default()
+                keys.iter().any(|k| *k == key)
             }
 
             pub fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
-                key.strip_prefix("CARGO_PKG_").and_then(|key| match key {
+                match key {
                     $($key => Some(Self::$field(meta)),)*
                     _ => None,
-                })
+                }
             }
 
             pub fn vars(meta: &ManifestMetadata) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
                 [
                     $(
                         (
-                            concat!("CARGO_PKG_", $key),
+                            $key,
                             Self::$field(meta),
                         ),
                     )*
@@ -202,14 +200,14 @@ macro_rules! metadata_envs {
 // If these change we need to trigger a rebuild.
 // NOTE: The env var name will be prefixed with `CARGO_PKG_`
 metadata_envs! {
-    (description, "DESCRIPTION"),
-    (homepage, "HOMEPAGE"),
-    (repository, "REPOSITORY"),
-    (license, "LICENSE"),
-    (license_file, "LICENSE_FILE"),
-    (authors, "AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
-    (rust_version, "RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
-    (readme, "README"),
+    (description, "CARGO_PKG_DESCRIPTION"),
+    (homepage, "CARGO_PKG_HOMEPAGE"),
+    (repository, "CARGO_PKG_REPOSITORY"),
+    (license, "CARGO_PKG_LICENSE"),
+    (license_file, "CARGO_PKG_LICENSE_FILE"),
+    (authors, "CARGO_PKG_AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
+    (rust_version, "CARGO_PKG_RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
+    (readme, "CARGO_PKG_README"),
 }
 
 impl ManifestMetadata {
