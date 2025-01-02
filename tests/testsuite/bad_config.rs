@@ -2152,6 +2152,37 @@ Caused by:
 }
 
 #[cargo_test]
+fn github_pull_request_url() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                git = "https://github.com/foo/bar/pull/123"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) specifies a GitHub pull request link. If you were trying to specify a specific github PR, replace the URL with the git URL (e.g. `git = "https://github.com/foo/bar.git"`) and add `rev = "refs/pull/123/head"` in the dependency declaration.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn fragment_in_git_url() {
     let p = project()
         .file(

@@ -2144,6 +2144,8 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 .unwrap_or(GitReference::DefaultBranch);
             let loc = git.into_url()?;
 
+            bail_if_github_pull_request(&name_in_toml, &loc)?;
+
             if let Some(fragment) = loc.fragment() {
                 let msg = format!(
                     "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
@@ -2180,6 +2182,26 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         }
         (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
     }
+}
+
+/// Checks if the URL is a GitHub pull request URL.
+///
+/// If the URL is a GitHub pull request URL, an error is returned with a message that explains
+/// how to specify a specific git revision.
+fn bail_if_github_pull_request(name_in_toml: &str, url: &Url) -> CargoResult<()> {
+    if url.host_str() != Some("github.com") {
+        return Ok(());
+    }
+    let path_components = url.path().split('/').collect::<Vec<_>>();
+    if let ["", owner, repo, "pull", pr_number, ..] = path_components[..] {
+        bail!(
+            "dependency ({name_in_toml}) specifies a GitHub pull request link. \
+                If you were trying to specify a specific github PR, replace the URL with the git \
+                URL (e.g. `git = \"https://github.com/{owner}/{repo}.git\"`) \
+                and add `rev = \"refs/pull/{pr_number}/head\"` in the dependency declaration.",
+        );
+    }
+    Ok(())
 }
 
 pub(crate) fn lookup_path_base<'a>(
