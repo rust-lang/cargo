@@ -147,6 +147,24 @@ pub struct ManifestMetadata {
     pub rust_version: Option<RustVersion>,
 }
 
+impl ManifestMetadata {
+    /// Whether the given env var should be tracked by Cargo's dep-info.
+    pub fn should_track(env_key: &str) -> bool {
+        let keys = MetadataEnvs::keys();
+        keys.iter().any(|k| *k == env_key)
+    }
+
+    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
+        MetadataEnvs::var(self, env_key)
+    }
+
+    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
+        MetadataEnvs::keys()
+            .iter()
+            .map(|k| (*k, MetadataEnvs::var(self, k).unwrap()))
+    }
+}
+
 macro_rules! get_metadata_env {
     ($meta:ident, $field:ident) => {
         $meta.$field.as_deref().unwrap_or_default().into()
@@ -191,24 +209,6 @@ metadata_envs! {
     (authors, "CARGO_PKG_AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
     (rust_version, "CARGO_PKG_RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
     (readme, "CARGO_PKG_README"),
-}
-
-impl ManifestMetadata {
-    /// Whether the given env var should be tracked by Cargo's dep-info.
-    pub fn should_track(env_key: &str) -> bool {
-        let keys = MetadataEnvs::keys();
-        keys.iter().any(|k| *k == env_key)
-    }
-
-    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
-        MetadataEnvs::var(self, env_key)
-    }
-
-    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
-        MetadataEnvs::keys()
-            .iter()
-            .map(|k| (*k, MetadataEnvs::var(self, k).unwrap()))
-    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
