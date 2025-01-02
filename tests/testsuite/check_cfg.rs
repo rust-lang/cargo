@@ -336,17 +336,18 @@ fn test_false_lib() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_does_not_contain(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
         .run();
 
     p.cargo("clean").run();
     p.cargo("test -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
         .run();
 
     p.cargo("clean").run();
     p.cargo("test --lib -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
         .run();
 }
 
@@ -372,7 +373,8 @@ fn test_false_bins() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test")) // for foo & deamon
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test")) // for foo
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs")) // for deamon
         .run();
 }
 
@@ -401,7 +403,8 @@ fn test_false_examples() {
         .build();
 
     p.cargo("check --examples -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_does_not_contain(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
         .run();
 }
 
