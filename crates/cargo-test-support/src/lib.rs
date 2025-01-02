@@ -1524,6 +1524,12 @@ impl ArgLineCommandExt for &mut ProcessBuilder {
     }
 }
 
+impl ArgLineCommandExt for &mut Execs {
+    fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
+        self.arg(s)
+    }
+}
+
 impl ArgLineCommandExt for snapbox::cmd::Command {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
         self.arg(s)
