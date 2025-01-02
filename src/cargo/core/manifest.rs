@@ -147,6 +147,24 @@ pub struct ManifestMetadata {
     pub rust_version: Option<RustVersion>,
 }
 
+impl ManifestMetadata {
+    /// Whether the given env var should be tracked by Cargo's dep-info.
+    pub fn should_track(env_key: &str) -> bool {
+        let keys = MetadataEnvs::keys();
+        keys.iter().any(|k| *k == env_key)
+    }
+
+    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
+        MetadataEnvs::var(self, env_key)
+    }
+
+    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
+        MetadataEnvs::keys()
+            .iter()
+            .map(|k| (*k, MetadataEnvs::var(self, k).unwrap()))
+    }
+}
+
 macro_rules! get_metadata_env {
     ($meta:ident, $field:ident) => {
         $meta.$field.as_deref().unwrap_or_default().into()
@@ -156,43 +174,24 @@ macro_rules! get_metadata_env {
     };
 }
 
+struct MetadataEnvs;
+
 macro_rules! metadata_envs {
     (
         $(
             ($field:ident, $key:literal$(, $to_var:expr)?),
         )*
     ) => {
-        struct MetadataEnvs;
         impl MetadataEnvs {
-            $(
-                fn $field(meta: &ManifestMetadata) -> Cow<'_, str> {
-                    get_metadata_env!(meta, $field$(, $to_var)?)
-                }
-            )*
-
-            pub fn should_track(key: &str) -> bool {
-                let keys = [$($key),*];
-                key.strip_prefix("CARGO_PKG_")
-                    .map(|key| keys.iter().any(|k| *k == key))
-                    .unwrap_or_default()
+            fn keys() -> &'static [&'static str] {
+                &[$($key),*]
             }
 
-            pub fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
-                key.strip_prefix("CARGO_PKG_").and_then(|key| match key {
-                    $($key => Some(Self::$field(meta)),)*
+            fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
+                match key {
+                    $($key => Some(get_metadata_env!(meta, $field$(, $to_var)?)),)*
                     _ => None,
-                })
-            }
-
-            pub fn vars(meta: &ManifestMetadata) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
-                [
-                    $(
-                        (
-                            concat!("CARGO_PKG_", $key),
-                            Self::$field(meta),
-                        ),
-                    )*
-                ].into_iter()
+                }
             }
         }
     }
@@ -202,29 +201,14 @@ macro_rules! metadata_envs {
 // If these change we need to trigger a rebuild.
 // NOTE: The env var name will be prefixed with `CARGO_PKG_`
 metadata_envs! {
-    (description, "DESCRIPTION"),
-    (homepage, "HOMEPAGE"),
-    (repository, "REPOSITORY"),
-    (license, "LICENSE"),
-    (license_file, "LICENSE_FILE"),
-    (authors, "AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
-    (rust_version, "RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
-    (readme, "README"),
-}
-
-impl ManifestMetadata {
-    /// Whether the given env var should be tracked by Cargo's dep-info.
-    pub fn should_track(env_key: &str) -> bool {
-        MetadataEnvs::should_track(env_key)
-    }
-
-    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
-        MetadataEnvs::var(self, env_key)
-    }
-
-    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
-        MetadataEnvs::vars(self)
-    }
+    (description, "CARGO_PKG_DESCRIPTION"),
+    (homepage, "CARGO_PKG_HOMEPAGE"),
+    (repository, "CARGO_PKG_REPOSITORY"),
+    (license, "CARGO_PKG_LICENSE"),
+    (license_file, "CARGO_PKG_LICENSE_FILE"),
+    (authors, "CARGO_PKG_AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
+    (rust_version, "CARGO_PKG_RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
+    (readme, "CARGO_PKG_README"),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
