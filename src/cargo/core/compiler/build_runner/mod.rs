@@ -291,6 +291,10 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
 
             super::output_depinfo(&mut self, unit)?;
+
+            if self.bcx.build_config.sbom {
+                super::output_sbom(&mut self, unit)?;
+            }
         }
 
         for (script_meta, output) in self.build_script_outputs.lock().unwrap().iter() {
@@ -444,6 +448,29 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
         self.files().metadata(unit).unit_id()
+    }
+
+    /// Returns the list of SBOM output file paths for a given [`Unit`].
+    ///
+    /// Only call this function when `sbom` is active.
+    pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        const SBOM_FILE_EXTENSION: &str = ".cargo-sbom.json";
+
+        fn append_sbom_suffix(link: &PathBuf, suffix: &str) -> PathBuf {
+            let mut link_buf = link.clone().into_os_string();
+            link_buf.push(suffix);
+            PathBuf::from(link_buf)
+        }
+
+        assert!(self.bcx.build_config.sbom);
+        let files = self
+            .outputs(unit)?
+            .iter()
+            .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
+            .filter_map(|output_file| output_file.hardlink.as_ref())
+            .map(|link| append_sbom_suffix(link, SBOM_FILE_EXTENSION))
+            .collect::<Vec<_>>();
+        Ok(files)
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
