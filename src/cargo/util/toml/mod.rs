@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
+use tracing_subscriber::fmt::format;
 
 use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
@@ -2144,6 +2145,8 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 .unwrap_or(GitReference::DefaultBranch);
             let loc = git.into_url()?;
 
+            bail_if_github_pull_request(&name_in_toml, &loc)?;
+
             if let Some(fragment) = loc.fragment() {
                 let msg = format!(
                     "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
@@ -2180,6 +2183,27 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         }
         (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
     }
+}
+
+/// Checks if the URL is a GitHub pull request URL.
+///
+/// If the URL is a GitHub pull request URL, an error is returned with a message that explains
+/// how to specify a specific git revision.
+fn bail_if_github_pull_request(name_in_toml: &str, url: &Url) -> CargoResult<()> {
+    if url.host_str() != Some("github.com") {
+        return Ok(());
+    }
+    let path_components = url.path().split('/').collect::<Vec<_>>();
+    if let ["", owner, repo, "pull", pr_number, ..] = path_components[..] {
+        let repo_url = format!("https://github.com/{owner}/{repo}.git");
+        let rev = format!("refs/pull/{pr_number}/head");
+        bail!(
+            "dependency ({name_in_toml}) git url {url} is not a repository. \
+                The path looks like a pull request. Try replacing the dependency with: \
+                `git = \"{repo_url}\" rev = \"{rev}\"` in the dependency declaration.",
+        );
+    }
+    Ok(())
 }
 
 pub(crate) fn lookup_path_base<'a>(
