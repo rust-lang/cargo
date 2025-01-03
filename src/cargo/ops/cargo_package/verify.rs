@@ -94,7 +94,7 @@ pub fn run_verify(
                 opts.jobs.clone(),
                 opts.keep_going,
                 &opts.targets,
-                CompileMode::Build,
+                CompileMode::Check { test: false },
             )?,
             cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),
