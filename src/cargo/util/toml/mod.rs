@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
+use tracing_subscriber::fmt::format;
 
 use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
@@ -2194,11 +2195,12 @@ fn bail_if_github_pull_request(name_in_toml: &str, url: &Url) -> CargoResult<()>
     }
     let path_components = url.path().split('/').collect::<Vec<_>>();
     if let ["", owner, repo, "pull", pr_number, ..] = path_components[..] {
+        let repo_url = format!("https://github.com/{owner}/{repo}.git");
+        let rev = format!("refs/pull/{pr_number}/head");
         bail!(
-            "dependency ({name_in_toml}) specifies a GitHub pull request link. \
-                If you were trying to specify a specific github PR, replace the URL with the git \
-                URL (e.g. `git = \"https://github.com/{owner}/{repo}.git\"`) \
-                and add `rev = \"refs/pull/{pr_number}/head\"` in the dependency declaration.",
+            "dependency ({name_in_toml}) git url {url} is not a repository. \
+                The path looks like a pull request. Try replacing the dependency with: \
+                `git = \"{repo_url}\" rev = \"{rev}\"` in the dependency declaration.",
         );
     }
     Ok(())

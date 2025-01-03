@@ -358,6 +358,50 @@ fn patch_to_git() {
 }
 
 #[cargo_test]
+fn patch_to_git_pull_request() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { git = 'https://github.com/foo/bar/pull/123' }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) git url https://github.com/foo/bar/pull/123 is not a repository. The path looks like a pull request. Try replacing the dependency with: `git = "https://github.com/foo/bar.git" rev = "refs/pull/123/head"` in the dependency declaration.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn unused() {
     Package::new("bar", "0.1.0").publish();
 

@@ -2176,7 +2176,7 @@ fn github_pull_request_url() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  dependency (bar) specifies a GitHub pull request link. If you were trying to specify a specific github PR, replace the URL with the git URL (e.g. `git = "https://github.com/foo/bar.git"`) and add `rev = "refs/pull/123/head"` in the dependency declaration.
+  dependency (bar) git url https://github.com/foo/bar/pull/123 is not a repository. The path looks like a pull request. Try replacing the dependency with: `git = "https://github.com/foo/bar.git" rev = "refs/pull/123/head"` in the dependency declaration.
 
 "#]])
         .run();
