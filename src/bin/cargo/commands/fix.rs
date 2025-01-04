@@ -21,7 +21,7 @@ pub fn cli() -> Command {
         ))
         .arg(flag(
             "allow-dirty",
-            "Fix code even if the working directory is dirty",
+            "Fix code even if the working directory is dirty or has staged changes",
         ))
         .arg(flag(
             "allow-staged",
@@ -86,6 +86,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         opts.filter = ops::CompileFilter::new_all_targets();
     }
 
+    let allow_dirty = args.flag("allow-dirty");
+
     ops::fix(
         gctx,
         &ws,
@@ -94,9 +96,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),
             compile_opts: opts,
-            allow_dirty: args.flag("allow-dirty"),
+            allow_dirty,
+            allow_staged: allow_dirty || args.flag("allow-staged"),
             allow_no_vcs: args.flag("allow-no-vcs"),
-            allow_staged: args.flag("allow-staged"),
             broken_code: args.flag("broken-code"),
             requested_lockfile_path: lockfile_path,
         },
