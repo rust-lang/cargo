@@ -317,7 +317,7 @@ fn well_known_names_values_doctest() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "warning currently only on nightly")]
 fn test_false_lib() {
     let p = project()
         .file(
@@ -332,26 +332,57 @@ fn test_false_lib() {
                 test = false
             "#,
         )
-        .file("src/lib.rs", "")
+        .file("src/lib.rs", "#[cfg(test)] mod tests {}")
         .build();
 
     p.cargo("check -v")
         .with_stderr_does_not_contain(x!("rustc" => "cfg" of "docsrs,test"))
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unexpected `cfg` condition name: `test`
+...
+
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("clean").run();
     p.cargo("test -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unexpected `cfg` condition name: `test`
+...
+
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOCTEST] foo
+[RUNNING] [..]
+
+"#]])
         .run();
 
     p.cargo("clean").run();
     p.cargo("test --lib -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unexpected `cfg` condition name: `test`
+ --> src/lib.rs:1:7
+...
+
+[WARNING] `foo` (lib test) generated 1 warning
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "warning currently only on nightly")]
 fn test_false_bins() {
     let p = project()
         .file(
@@ -368,17 +399,26 @@ fn test_false_bins() {
                 path = "src/deamon.rs"
             "#,
         )
-        .file("src/main.rs", "fn main() {}")
-        .file("src/deamon.rs", "fn main() {}")
+        .file("src/main.rs", "fn main() {}\n#[cfg(test)] mod tests {}")
+        .file("src/deamon.rs", "fn main() {}\n#[cfg(test)] mod tests {}")
         .build();
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test")) // for foo
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs")) // for deamon
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unexpected `cfg` condition name: `test`
+...
+
+[WARNING] `foo` (bin "daemon") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "warning currently only on nightly")]
 fn test_false_examples() {
     let p = project()
         .file(
@@ -398,17 +438,34 @@ fn test_false_examples() {
                 path = "src/deamon.rs"
             "#,
         )
-        .file("src/lib.rs", "")
-        .file("src/deamon.rs", "fn main() {}")
+        .file("src/lib.rs", "#[cfg(test)] mod tests {}")
+        .file("src/deamon.rs", "fn main() {}\n#[cfg(test)] mod tests {}")
         .build();
 
     p.cargo("check --examples -v")
         .with_stderr_does_not_contain(x!("rustc" => "cfg" of "docsrs,test"))
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unexpected `cfg` condition name: `test`
+...
+
+[WARNING] `foo` (lib) generated 1 warning
+...
+[WARNING] unexpected `cfg` condition name: `test`
+...
+
+[WARNING] `foo` (example "daemon") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "bench is nightly")]
+#[cargo_test(
+    nightly,
+    reason = "bench is nightly & warning currently only on nightly"
+)]
 fn test_false_benches() {
     let p = project()
         .file(
@@ -436,8 +493,14 @@ fn test_false_benches() {
         )
         .build();
 
-    p.cargo("bench --bench ben1 -v")
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+    // Benches always require the `test` cfg, there should be no warning.
+    p.cargo("bench --bench ben1")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/ben1.rs (target/release/deps/ben1-[HASH][EXE])
+
+"#]])
         .run();
 }
 
