@@ -33,7 +33,7 @@ fn self_signed_should_fail() {
         .build();
     // I think the text here depends on the curl backend.
     let err_msg = if cfg!(target_os = "macos") {
-        "untrusted connection error; class=Ssl (16); code=Certificate (-17)"
+        "untrusted connection error; class=Ssl (16)[..]"
     } else if cfg!(unix) {
         "the SSL certificate is invalid; class=Ssl (16)[..]"
     } else if cfg!(windows) {
