@@ -84,7 +84,8 @@ OPTIONS
            Fix code even if a VCS was not detected.
 
        --allow-dirty
-           Fix code even if the working directory has changes.
+           Fix code even if the working directory has changes (including staged
+           changes).
 
        --allow-staged
            Fix code even if the working directory has staged changes.
