@@ -312,13 +312,6 @@ fn has_rustup_stable() -> bool {
         // This cannot run on rust-lang/rust CI due to the lack of rustup.
         return false;
     }
-    if cfg!(windows) && !is_ci() && option_env!("RUSTUP_WINDOWS_PATH_ADD_BIN").is_none() {
-        // There is an issue with rustup that doesn't allow recursive cargo
-        // invocations. Disable this on developer machines if the environment
-        // variable is not enabled. This can be removed once
-        // https://github.com/rust-lang/rustup/issues/3036 is resolved.
-        return false;
-    }
     // Cargo mucks with PATH on Windows, adding sysroot host libdir, which is
     // "bin", which circumvents the rustup wrapper. Use the path directly from
     // CARGO_HOME.
