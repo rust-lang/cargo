@@ -1,5 +1,43 @@
 # Changelog
 
+## Cargo 1.86 (2025-04-03)
+[d73d2caf...HEAD](https://github.com/rust-lang/cargo/compare/d73d2caf...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- The `rerun-if-env-changed` build script instruction can now correctly detect
+  changes in the `[env]` configuration table.
+  [#14756](https://github.com/rust-lang/cargo/pull/14756)
+- cargo-package: Verify the VCS status of symlinks
+  when they point to paths outside the current package root.
+  [#14981](https://github.com/rust-lang/cargo/pull/14981)
+
+### Nightly only
+
+- cargo-util-schemas: Correct and update the JSON Schema
+  [#15000](https://github.com/rust-lang/cargo/pull/15000)
+
+### Documentation
+
+### Internal
+
+- cargo-test-macro: Remove condition on `RUSTUP_WINDOWS_PATH_ADD_BIN`
+  [#15017](https://github.com/rust-lang/cargo/pull/15017)
+- test: Clean up shallow fetch tests
+  [#15002](https://github.com/rust-lang/cargo/pull/15002)
+- test: Fix `https::self_signed_should_fail` for macos
+  [#15016](https://github.com/rust-lang/cargo/pull/15016)
+- Update to libgit2 1.9.
+  [#15018](https://github.com/rust-lang/cargo/pull/15018)
+- Update dependencies: update rust crate itertools to 0.14.0
+  [#14996](https://github.com/rust-lang/cargo/pull/14996)
+  [#14998](https://github.com/rust-lang/cargo/pull/14998)
+  [#15012](https://github.com/rust-lang/cargo/pull/15012)
+
 ## Cargo 1.85 (2025-02-20)
 [66221abd...rust-1.85.0](https://github.com/rust-lang/cargo/compare/66221abd...rust-1.85.0)
 
