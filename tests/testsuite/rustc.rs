@@ -794,6 +794,37 @@ windows
 }
 
 #[cargo_test]
+fn rustc_with_print_cfg_config_toml_env() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "targets/best-target.json",
+            r#"{
+  "llvm-target": "x86_64-unknown-none",
+  "target-pointer-width": "64",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
+  "arch": "x86_64"
+}"#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+[build]
+target = "best-target"
+[env]
+RUST_TARGET_PATH = { value = "./targets", relative = true }
+"#,
+        )
+        .file("src/main.rs", r#"fn main() {} "#)
+        .build();
+
+    p.cargo("rustc -Z unstable-options --print cfg")
+        .masquerade_as_nightly_cargo(&["print"])
+        .with_stdout_data(str!["..."].unordered())
+        .run();
+}
+
+#[cargo_test]
 fn precedence() {
     // Ensure that the precedence of cargo-rustc is only lower than RUSTFLAGS,
     // but higher than most flags set by cargo.
