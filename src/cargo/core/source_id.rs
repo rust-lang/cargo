@@ -762,7 +762,7 @@ mod tests {
     // value.
     //
     // Note that the hash value matches what the crates.io source id has hashed
-    // since long before Rust 1.30. We strive to keep this value the same across
+    // since Rust 1.84.0. We strive to keep this value the same across
     // versions of Cargo because changing it means that users will need to
     // redownload the index and all crates they use when using a new Cargo version.
     //
@@ -771,6 +771,11 @@ mod tests {
     // you're able to restore the hash to its original value, please do so!
     // Otherwise please just leave a comment in your PR as to why the hash value is
     // changing and why the old value can't be easily preserved.
+    // If it takes an ugly hack to restore it,
+    // then leave a link here so we can remove the hack next time we change the hash.
+    //
+    // Hacks to remove next time the hash changes:
+    // - (fill in your code here)
     //
     // The hash value should be stable across platforms, and doesn't depend on
     // endianness and bit-width. One caveat is that absolute paths on Windows
@@ -782,6 +787,11 @@ mod tests {
         use std::hash::Hasher;
         use std::path::Path;
 
+        use snapbox::assert_data_eq;
+        use snapbox::str;
+        use snapbox::IntoData as _;
+
+        use crate::util::hex::short_hash;
         use crate::util::StableHasher;
 
         #[cfg(not(windows))]
@@ -792,68 +802,68 @@ mod tests {
         let gen_hash = |source_id: SourceId| {
             let mut hasher = StableHasher::new();
             source_id.stable_hash(ws_root, &mut hasher);
-            Hasher::finish(&hasher)
+            Hasher::finish(&hasher).to_string()
         };
 
         let source_id = SourceId::crates_io(&GlobalContext::default().unwrap()).unwrap();
-        assert_eq!(gen_hash(source_id), 7062945687441624357);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "25cdd57fae9f0462");
+        assert_data_eq!(gen_hash(source_id), str!["7062945687441624357"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["25cdd57fae9f0462"].raw());
 
         let url = "https://my-crates.io".into_url().unwrap();
         let source_id = SourceId::for_registry(&url).unwrap();
-        assert_eq!(gen_hash(source_id), 8310250053664888498);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "b2d65deb64f05373");
+        assert_data_eq!(gen_hash(source_id), str!["8310250053664888498"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["b2d65deb64f05373"].raw());
 
         let url = "https://your-crates.io".into_url().unwrap();
         let source_id = SourceId::for_alt_registry(&url, "alt").unwrap();
-        assert_eq!(gen_hash(source_id), 14149534903000258933);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "755952de063f5dc4");
+        assert_data_eq!(gen_hash(source_id), str!["14149534903000258933"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["755952de063f5dc4"].raw());
 
         let url = "sparse+https://my-crates.io".into_url().unwrap();
         let source_id = SourceId::for_registry(&url).unwrap();
-        assert_eq!(gen_hash(source_id), 16249512552851930162);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "327cfdbd92dd81e1");
+        assert_data_eq!(gen_hash(source_id), str!["16249512552851930162"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["327cfdbd92dd81e1"].raw());
 
         let url = "sparse+https://your-crates.io".into_url().unwrap();
         let source_id = SourceId::for_alt_registry(&url, "alt").unwrap();
-        assert_eq!(gen_hash(source_id), 6156697384053352292);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "64a713b6a6fb7055");
+        assert_data_eq!(gen_hash(source_id), str!["6156697384053352292"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["64a713b6a6fb7055"].raw());
 
         let url = "file:///tmp/ws/crate".into_url().unwrap();
         let source_id = SourceId::for_git(&url, GitReference::DefaultBranch).unwrap();
-        assert_eq!(gen_hash(source_id), 473480029881867801);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "199e591d94239206");
+        assert_data_eq!(gen_hash(source_id), str!["473480029881867801"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["199e591d94239206"].raw());
 
         let path = &ws_root.join("crate");
         let source_id = SourceId::for_local_registry(path).unwrap();
         #[cfg(not(windows))]
         {
-            assert_eq!(gen_hash(source_id), 11515846423845066584);
-            assert_eq!(crate::util::hex::short_hash(&source_id), "58d73c154f81d09f");
+            assert_data_eq!(gen_hash(source_id), str!["11515846423845066584"].raw());
+            assert_data_eq!(short_hash(&source_id), str!["58d73c154f81d09f"].raw());
         }
         #[cfg(windows)]
         {
-            assert_eq!(gen_hash(source_id), 6146331155906064276);
-            assert_eq!(crate::util::hex::short_hash(&source_id), "946fb2239f274c55");
+            assert_data_eq!(gen_hash(source_id), str!["6146331155906064276"].raw());
+            assert_data_eq!(short_hash(&source_id), str!["946fb2239f274c55"].raw());
         }
 
         let source_id = SourceId::for_path(path).unwrap();
-        assert_eq!(gen_hash(source_id), 215644081443634269);
+        assert_data_eq!(gen_hash(source_id), str!["215644081443634269"].raw());
         #[cfg(not(windows))]
-        assert_eq!(crate::util::hex::short_hash(&source_id), "64bace89c92b101f");
+        assert_data_eq!(short_hash(&source_id), str!["64bace89c92b101f"].raw());
         #[cfg(windows)]
-        assert_eq!(crate::util::hex::short_hash(&source_id), "01e1e6c391813fb6");
+        assert_data_eq!(short_hash(&source_id), str!["01e1e6c391813fb6"].raw());
 
         let source_id = SourceId::for_directory(path).unwrap();
         #[cfg(not(windows))]
         {
-            assert_eq!(gen_hash(source_id), 6127590343904940368);
-            assert_eq!(crate::util::hex::short_hash(&source_id), "505191d1f3920955");
+            assert_data_eq!(gen_hash(source_id), str!["6127590343904940368"].raw());
+            assert_data_eq!(short_hash(&source_id), str!["505191d1f3920955"].raw());
         }
         #[cfg(windows)]
         {
-            assert_eq!(gen_hash(source_id), 10423446877655960172);
-            assert_eq!(crate::util::hex::short_hash(&source_id), "6c8ad69db585a790");
+            assert_data_eq!(gen_hash(source_id), str!["10423446877655960172"].raw());
+            assert_data_eq!(short_hash(&source_id), str!["6c8ad69db585a790"].raw());
         }
     }
 
