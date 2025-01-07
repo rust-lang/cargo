@@ -72,14 +72,14 @@ impl<'a> PartialEq<&'a str> for InternedString {
 impl Eq for InternedString {}
 
 impl InternedString {
-    pub fn new(str: &str) -> InternedString {
-        InternedString::from_cow(str.into())
+    pub fn new(s: &str) -> InternedString {
+        InternedString::from_cow(s.into())
     }
 
-    fn from_cow<'a>(str: Cow<'a, str>) -> InternedString {
+    fn from_cow<'a>(cs: Cow<'a, str>) -> InternedString {
         let mut cache = interned_storage();
-        let s = cache.get(str.as_ref()).copied().unwrap_or_else(|| {
-            let s = str.into_owned().leak();
+        let s = cache.get(cs.as_ref()).copied().unwrap_or_else(|| {
+            let s = cs.into_owned().leak();
             cache.insert(s);
             s
         });

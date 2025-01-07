@@ -531,11 +531,11 @@ impl<'de, 'gctx> de::MapAccess<'de> for ValueDeserializer<'gctx> {
                 seed.deserialize(Tuple2Deserializer(1i32, env.as_str()))
             }
             Definition::Cli(path) => {
-                let str = path
+                let s = path
                     .as_ref()
                     .map(|p| p.to_string_lossy())
                     .unwrap_or_default();
-                seed.deserialize(Tuple2Deserializer(2i32, str))
+                seed.deserialize(Tuple2Deserializer(2i32, s))
             }
         }
     }
