@@ -591,21 +591,10 @@ impl Ord for SourceId {
             return Ordering::Equal;
         }
 
-        // Sort first based on `kind`, deferring to the URL comparison below if
+        // Sort first based on `kind`, deferring to the URL comparison if
         // the kinds are equal.
-        match self.inner.kind.cmp(&other.inner.kind) {
-            Ordering::Equal => {}
-            other => return other,
-        }
-
-        // If the `kind` and the `url` are equal, then for git sources we also
-        // ensure that the canonical urls are equal.
-        match (&self.inner.kind, &other.inner.kind) {
-            (SourceKind::Git(_), SourceKind::Git(_)) => {
-                self.inner.canonical_url.cmp(&other.inner.canonical_url)
-            }
-            _ => self.inner.url.cmp(&other.inner.url),
-        }
+        let ord_kind = self.inner.kind.cmp(&other.inner.kind);
+        ord_kind.then_with(|| self.inner.canonical_url.cmp(&other.inner.canonical_url))
     }
 }
 
