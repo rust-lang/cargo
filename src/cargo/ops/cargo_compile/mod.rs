@@ -41,7 +41,7 @@ use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
+use crate::core::compiler::{apply_env_config, standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -188,6 +188,7 @@ pub fn print<'a>(
         }
         let target_info = TargetInfo::new(gctx, &build_config.requested_kinds, &rustc, *kind)?;
         let mut process = rustc.process();
+        apply_env_config(gctx, &mut process)?;
         process.args(&target_info.rustflags);
         if let Some(args) = target_rustc_args {
             process.args(args);

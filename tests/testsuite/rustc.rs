@@ -821,7 +821,6 @@ RUST_TARGET_PATH = { value = "./targets", relative = true }
 
     p.cargo("rustc -Z unstable-options --print cfg")
         .masquerade_as_nightly_cargo(&["print"])
-        .with_status(101)
         .with_stdout_data(str!["..."].unordered())
         .run();
 }
