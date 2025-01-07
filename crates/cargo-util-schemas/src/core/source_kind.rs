@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 /// The possible kinds of code source.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SourceKind {
     /// A git repository.
     Git(GitReference),
@@ -15,6 +15,19 @@ pub enum SourceKind {
     LocalRegistry,
     /// A directory-based registry.
     Directory,
+}
+
+// The hash here is important for what folder packages get downloaded into.
+// Changes trigger all users to download another copy of their crates.
+// So the `stable_hash` test checks that we only change it intentionally.
+// We implement hash manually to callout the stability impact.
+impl std::hash::Hash for SourceKind {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        if let SourceKind::Git(git) = self {
+            git.hash(state);
+        }
+    }
 }
 
 impl SourceKind {
