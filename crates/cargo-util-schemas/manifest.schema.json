@@ -951,9 +951,6 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "workspace"
-      ],
       "additionalProperties": {
         "type": "object",
         "additionalProperties": {
