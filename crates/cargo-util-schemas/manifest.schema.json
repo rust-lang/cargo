@@ -621,40 +621,7 @@
         }
       ]
     },
-    "TomlValue": {
-      "type": "object",
-      "properties": {
-        "string": {
-          "type": "string"
-        },
-        "integer": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "float": {
-          "type": "number",
-          "format": "double"
-        },
-        "boolean": {
-          "type": "boolean"
-        },
-        "datetime": {
-          "type": "string"
-        },
-        "array": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TomlValue"
-          }
-        },
-        "table": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TomlValue"
-          }
-        }
-      }
-    },
+    "TomlValue": true,
     "TomlTarget": {
       "type": "object",
       "properties": {
