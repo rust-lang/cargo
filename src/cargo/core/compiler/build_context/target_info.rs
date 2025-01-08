@@ -206,6 +206,10 @@ impl TargetInfo {
             process.arg("--print=crate-name"); // `___` as a delimiter.
             process.arg("--print=cfg");
 
+            // parse_crate_type() relies on "unsupported/unknown crate type" error message,
+            // so make warnings always emitted as warnings.
+            process.arg("-Wwarnings");
+
             let (output, error) = rustc
                 .cached_output(&process, extra_fingerprint)
                 .with_context(|| {

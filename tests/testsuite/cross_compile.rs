@@ -1260,3 +1260,38 @@ fn doctest_xcompile_linker() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn always_emit_warnings_as_warnings_when_learning_target_info() {
+    if cross_compile::disabled() {
+        return;
+    }
+
+    let target = "wasm32-unknown-unknown";
+    if !cross_compile::requires_target_installed(target) {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v --target")
+        .env("RUSTFLAGS", "-Awarnings")
+        .arg(target)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]-Awarnings[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
