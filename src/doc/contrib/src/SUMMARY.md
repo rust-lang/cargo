@@ -14,6 +14,7 @@
     - [Architecture](./implementation/architecture.md)
     - [New packages](./implementation/packages.md)
     - [New subcommands](./implementation/subcommands.md)
+    - [Data Schemas](./implementation/schemas.md)
     - [Console Output](./implementation/console.md)
     - [Filesystem](./implementation/filesystem.md)
     - [Formatting](./implementation/formatting.md)
