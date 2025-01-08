@@ -2255,7 +2255,7 @@ fn build_script_with_dynamic_native_dependency() {
                 crate-type = ["dylib"]
             "#,
         )
-        .file("src/lib.rs", "#[no_mangle] pub extern fn foo() {}")
+        .file("src/lib.rs", r#"#[no_mangle] pub extern "C" fn foo() {}"#)
         .build();
 
     let foo = project()
@@ -2316,7 +2316,7 @@ fn build_script_with_dynamic_native_dependency() {
                 pub fn bar() {
                     #[cfg_attr(not(target_env = "msvc"), link(name = "builder"))]
                     #[cfg_attr(target_env = "msvc", link(name = "builder.dll"))]
-                    extern { fn foo(); }
+                    extern "C" { fn foo(); }
                     unsafe { foo() }
                 }
             "#,
@@ -4821,7 +4821,7 @@ fn _rename_with_link_search_path(cross: bool, expected: impl IntoData) {
         )
         .file(
             "src/lib.rs",
-            "#[no_mangle] pub extern fn cargo_test_foo() {}",
+            r#"#[no_mangle] pub extern "C" fn cargo_test_foo() {}"#,
         );
     let p = p.build();
 
@@ -4866,7 +4866,7 @@ fn _rename_with_link_search_path(cross: bool, expected: impl IntoData) {
         .file(
             "src/main.rs",
             r#"
-                extern {
+                extern "C" {
                     #[link_name = "cargo_test_foo"]
                     fn foo();
                 }
