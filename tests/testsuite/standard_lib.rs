@@ -6,6 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
+use cargo_test_support::cross_compile;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
@@ -391,24 +392,8 @@ fn check_core() {
 
 #[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
-    let has_rustup_aarch64_unknown_none = std::process::Command::new("rustup")
-        .args(["target", "list", "--installed"])
-        .output()
-        .ok()
-        .map(|output| {
-            String::from_utf8(output.stdout)
-                .map(|stdout| stdout.contains("aarch64-unknown-none"))
-                .unwrap_or_default()
-        })
-        .unwrap_or_default();
-    if !has_rustup_aarch64_unknown_none {
-        let msg =
-            "to run this test, run `rustup target add aarch64-unknown-none --toolchain nightly`";
-        if cargo_util::is_ci() {
-            panic!("{msg}");
-        } else {
-            eprintln!("{msg}");
-        }
+    let target = "aarch64-unknown-none";
+    if !cross_compile::requires_target_installed(target) {
         return;
     }
 
@@ -427,7 +412,8 @@ fn build_std_with_no_arg_for_core_only_target() {
         .build();
 
     p.cargo("build -v")
-        .arg("--target=aarch64-unknown-none")
+        .arg("--target")
+        .arg(target)
         .build_std(&setup)
         .with_stderr_data(
             str![[r#"
@@ -457,7 +443,8 @@ fn build_std_with_no_arg_for_core_only_target() {
     // Note that we don't  download std dependencies for the second call
     // because `-Zbuild-std` downloads them all also when building for core only.
     p.cargo("build -v")
-        .arg("--target=aarch64-unknown-none")
+        .arg("--target")
+        .arg(target)
         .target_host()
         .build_std(&setup)
         .with_stderr_data(
