@@ -1287,11 +1287,11 @@ fn always_emit_warnings_as_warnings_when_learning_target_info() {
     p.cargo("build -v --target")
         .env("RUSTFLAGS", "-Awarnings")
         .arg(target)
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] output of --print=file-names missing when learning about target-specific information from rustc
-command was: `rustc - --crate-name ___ --print=file-names -Awarnings --target wasm32-unknown-unknown --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg`
-...
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]-Awarnings[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
 "#]])
         .run();
 }
