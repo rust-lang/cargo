@@ -1525,6 +1525,7 @@ impl TomlPlatform {
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct InheritableLints {
     #[serde(skip_serializing_if = "is_false")]
+    #[cfg_attr(feature = "unstable-schema", schemars(default))]
     pub workspace: bool,
     #[serde(flatten)]
     pub lints: TomlLints,
