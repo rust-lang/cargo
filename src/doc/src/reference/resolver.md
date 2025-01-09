@@ -210,7 +210,7 @@ the resolver can take into account a dependency version's compatibility with you
 This is controlled by the config field [`resolver.incompatible-rust-versions`].
 
 With the `fallback` setting, the resolver will prefer packages with a Rust version that is
-equal to or greater than your own Rust version.
+less than or equal to your own Rust version.
 For example, you are using Rust 1.85 to develop the following package:
 ```toml
 [package]
