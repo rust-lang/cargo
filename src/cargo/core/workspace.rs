@@ -271,7 +271,9 @@ impl<'gctx> Workspace<'gctx> {
         ws.require_optional_deps = require_optional_deps;
         let id = package.package_id();
         let package = MaybePackage::Package(package);
-        ws.packages.packages.insert(ws.current_manifest.clone(), package);
+        ws.packages
+            .packages
+            .insert(ws.current_manifest.clone(), package);
         ws.target_dir = if let Some(dir) = target_dir {
             Some(dir)
         } else {
@@ -1793,7 +1795,11 @@ impl<'gctx> Packages<'gctx> {
         match self.packages.entry(manifest_path.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
+                let source_id = if crate::util::toml::is_embedded(manifest_path) {
+                    SourceId::for_path(manifest_path)?
+                } else {
+                    SourceId::for_path(manifest_path.parent().unwrap())?
+                };
                 let manifest = read_manifest(manifest_path, source_id, self.gctx)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
