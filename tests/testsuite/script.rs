@@ -1370,6 +1370,47 @@ registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+fn script_as_dep() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+
+[dependencies]
+script.path = "script.rs"
+"#,
+        )
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2024
+[ERROR] failed to get `script` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `script`
+
+Caused by:
+  Unable to update [ROOT]/foo/script.rs
+
+Caused by:
+  failed to read `[ROOT]/foo/script.rs/Cargo.toml`
+
+Caused by:
+  Not a directory (os error 20)
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
