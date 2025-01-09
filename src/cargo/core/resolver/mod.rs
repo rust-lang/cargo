@@ -59,7 +59,6 @@
 //! over the place.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -757,22 +756,8 @@ impl RemainingCandidates {
     ) -> Option<(Summary, bool)> {
         for b in self.remaining.iter() {
             let b_id = b.package_id();
-            // The `links` key in the manifest dictates that there's only one
-            // package in a dependency graph, globally, with that particular
-            // `links` key. If this candidate links to something that's already
-            // linked to by a different package then we've gotta skip this.
-            if let Some(link) = b.links() {
-                if let Some(&a) = cx.links.get(&link) {
-                    if a != b_id {
-                        conflicting_prev_active
-                            .entry(a)
-                            .or_insert_with(|| ConflictReason::Links(link));
-                        continue;
-                    }
-                }
-            }
 
-            // Otherwise the condition for being a valid candidate relies on
+            // The condition for being a valid candidate relies on
             // semver. Cargo dictates that you can't duplicate multiple
             // semver-compatible versions of a crate. For example we can't
             // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
@@ -789,12 +774,27 @@ impl RemainingCandidates {
                 }
             }
 
+            // Otherwise the `links` key in the manifest dictates that there's only one
+            // package in a dependency graph, globally, with that particular
+            // `links` key. If this candidate links to something that's already
+            // linked to by a different package then we've gotta skip this.
+            if let Some(link) = b.links() {
+                if let Some(&a) = cx.links.get(&link) {
+                    if a != b_id {
+                        conflicting_prev_active
+                            .entry(a)
+                            .or_insert_with(|| ConflictReason::Links(link));
+                        continue;
+                    }
+                }
+            }
+
             // Well if we made it this far then we've got a valid dependency. We
             // want this iterator to be inherently "peekable" so we don't
             // necessarily return the item just yet. Instead we stash it away to
             // get returned later, and if we replaced something then that was
             // actually the candidate to try first so we return that.
-            if let Some(r) = mem::replace(&mut self.has_another, Some(b.clone())) {
+            if let Some(r) = self.has_another.replace(b.clone()) {
                 return Some((r, true));
             }
         }
