@@ -403,6 +403,13 @@ variables like `TARGET` that [Cargo sets for build scripts][build-env]. The
 environment variables in use are those received by `cargo` invocations, not
 those received by the executable of the build script.
 
+As of 1.46, using [`env!`][env-macro] and [`option_env!`][option-env-macro] in
+source code will automatically detect changes and trigger rebuilds.
+`rerun-if-env-changed` is no longer needed for variables already referenced by
+these macros.
+
+[option-env-macro]: ../../std/macro.option_env.html
+
 ## The `links` Manifest Key
 
 The `package.links` key may be set in the `Cargo.toml` manifest to declare
