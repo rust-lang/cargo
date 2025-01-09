@@ -359,11 +359,6 @@ fn patch_to_git() {
 
 #[cargo_test]
 fn patch_to_git_pull_request() {
-    let bar = git::repo(&paths::root().join("override"))
-        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("src/lib.rs", "pub fn bar() {}")
-        .build();
-
     Package::new("bar", "0.1.0").publish();
 
     let p = project()
@@ -392,10 +387,26 @@ fn patch_to_git_pull_request() {
     p.cargo("check -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[WARNING] dependency (bar) git url https://github.com/foo/bar/pull/123 is not a repository. The path looks like a pull request. Try replacing the dependency with: `git = "https://github.com/foo/bar.git" rev = "refs/pull/123/head"` in the dependency declaration.
+[UPDATING] git repository `https://github.com/foo/bar/pull/123`
+[WARNING] spurious network error (3 tries remaining): unexpected http status code: 404; class=Http (34)
+[WARNING] spurious network error (2 tries remaining): unexpected http status code: 404; class=Http (34)
+[WARNING] spurious network error (1 tries remaining): unexpected http status code: 404; class=Http (34)
+[ERROR] failed to load source for dependency `bar`
 
 Caused by:
-  dependency (bar) git url https://github.com/foo/bar/pull/123 is not a repository. The path looks like a pull request. Try replacing the dependency with: `git = "https://github.com/foo/bar.git" rev = "refs/pull/123/head"` in the dependency declaration.
+  Unable to update https://github.com/foo/bar/pull/123
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
+
+Caused by:
+  network failure seems to have happened
+  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  unexpected http status code: 404; class=Http (34)
 
 "#]])
         .run();
