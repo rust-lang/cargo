@@ -1187,7 +1187,7 @@ fn fetch_with_gitoxide(
                     );
                     let outcome = connection
                         .prepare_fetch(&mut progress, gix::remote::ref_map::Options::default())?
-                        .with_shallow(shallow.clone().into())
+                        .with_shallow(shallow.clone())
                         .receive(&mut progress, should_interrupt)?;
                     Ok(outcome)
                 });

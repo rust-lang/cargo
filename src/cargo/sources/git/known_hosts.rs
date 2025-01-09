@@ -100,7 +100,7 @@ enum KnownHostError {
 
 impl From<anyhow::Error> for KnownHostError {
     fn from(err: anyhow::Error) -> KnownHostError {
-        KnownHostError::CheckError(err.into())
+        KnownHostError::CheckError(err)
     }
 }
 
