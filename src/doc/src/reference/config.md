@@ -346,6 +346,10 @@ all capital letters.
 > extension by default. However, for backward compatibility reason, when both
 > files exist, Cargo will read and write the file without the extension.
 
+> **Note:** Cargo will use the token as is in the `Authorization` header without modification. 
+> For registries that require an authentication scheme like (like Bearer) the
+> `registry.<name>.token` should be prefixed with the scheme name (ie. `Bearer `) by the user.
+
 ## Configuration keys
 
 This section documents all configuration keys. The description for keys with
