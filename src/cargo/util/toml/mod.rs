@@ -11,7 +11,8 @@ use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
-    self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
+    self, FeatureDefinition, FeatureMetadata, FeatureName, PackageName, PathBaseName,
+    TomlDependency, TomlDetailedDependency, TomlManifest,
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
@@ -708,8 +709,8 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 
 #[tracing::instrument(skip_all)]
 fn normalize_features(
-    original_features: Option<&BTreeMap<manifest::FeatureName, Vec<String>>>,
-) -> CargoResult<Option<BTreeMap<manifest::FeatureName, Vec<String>>>> {
+    original_features: Option<&BTreeMap<manifest::FeatureName, FeatureDefinition>>,
+) -> CargoResult<Option<BTreeMap<manifest::FeatureName, FeatureDefinition>>> {
     let Some(normalized_features) = original_features.cloned() else {
         return Ok(None);
     };
@@ -1296,6 +1297,8 @@ pub fn to_real_manifest(
         }
     }
 
+    validate_feature_definitions(original_toml.features.as_ref(), warnings)?;
+
     validate_dependencies(original_toml.dependencies.as_ref(), None, None, warnings)?;
     validate_dependencies(
         original_toml.dev_dependencies(),
@@ -1497,7 +1500,7 @@ pub fn to_real_manifest(
                 .map(|(k, v)| {
                     (
                         InternedString::new(k),
-                        v.iter().map(InternedString::from).collect(),
+                        v.enables().iter().map(InternedString::from).collect(),
                     )
                 })
                 .collect(),
@@ -1762,6 +1765,30 @@ fn to_virtual_manifest(
     warn_on_unused(&manifest.original_toml()._unused_keys, warnings);
 
     Ok(manifest)
+}
+
+fn validate_feature_definitions(
+    features: Option<&BTreeMap<FeatureName, FeatureDefinition>>,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    let Some(features) = features else {
+        return Ok(());
+    };
+
+    for (feature, feature_definition) in features {
+        match feature_definition {
+            FeatureDefinition::Array(..) => {}
+            FeatureDefinition::Metadata(FeatureMetadata { _unused_keys, .. }) => {
+                warnings.extend(
+                    _unused_keys
+                        .keys()
+                        .map(|k| format!("unused manifest key: `features.{feature}.{k}`")),
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[tracing::instrument(skip_all)]
@@ -2902,16 +2929,23 @@ fn prepare_toml_for_publish(
         };
 
         features.values_mut().for_each(|feature_deps| {
-            feature_deps.retain(|feature_dep| {
-                let feature_value = FeatureValue::new(InternedString::new(feature_dep));
-                match feature_value {
-                    FeatureValue::Dep { dep_name } | FeatureValue::DepFeature { dep_name, .. } => {
-                        let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();
-                        dep_name_set.contains(k)
+            let feature_array = feature_deps
+                .enables()
+                .iter()
+                .filter(|feature_dep| {
+                    let feature_value = FeatureValue::new(InternedString::new(feature_dep));
+                    match feature_value {
+                        FeatureValue::Dep { dep_name }
+                        | FeatureValue::DepFeature { dep_name, .. } => {
+                            let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();
+                            dep_name_set.contains(k)
+                        }
+                        _ => true,
                     }
-                    _ => true,
-                }
-            });
+                })
+                .cloned()
+                .collect();
+            *feature_deps = FeatureDefinition::Array(feature_array);
         });
     }
 
