@@ -1,6 +1,9 @@
 //! Tests for `[features]` table.
 
+use std::fs::File;
+
 use crate::prelude::*;
+use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{rustc_host, str};
@@ -2490,13 +2493,9 @@ fn feature_metadata() {
 
     p.cargo("check --features c")
         .masquerade_as_nightly_cargo(&["feature-metadata"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
-  --> Cargo.toml:11:21
-   |
-11 |                 c = { enables = ["a", "b"] }
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2522,11 +2521,14 @@ fn feature_metadata_is_unstable() {
     p.cargo("check --features a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
- --> Cargo.toml:7:21
-  |
-7 |                 a = { enables = [] }
-  |                     ^^^^^^^^^^^^^^^^
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `feature-metadata` is required
+
+  The package requires the Cargo feature called `feature-metadata`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#feature_metadata for more information about the status of this feature.
 
 "#]])
         .run();
@@ -2555,7 +2557,7 @@ fn feature_metadata_missing_enables() {
         .masquerade_as_nightly_cargo(&["feature-metadata"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
+[ERROR] missing field `enables`
  --> Cargo.toml:9:23
   |
 9 |                 foo = {}
@@ -2586,13 +2588,9 @@ fn feature_metadata_empty_enables() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["feature-metadata"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
- --> Cargo.toml:9:23
-  |
-9 |                 foo = { enables = [] }
-  |                       ^^^^^^^^^^^^^^^^
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2620,13 +2618,12 @@ fn unused_keys_in_feature_metadata() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["feature-metadata"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
- --> Cargo.toml:9:23
-  |
-9 |                 foo = { enables = ["bar"], a = false, b = true }
-  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] Cargo.toml: unused manifest key: `features.foo.a`
+[WARNING] Cargo.toml: unused manifest key: `features.foo.b`
+[WARNING] `foo` (manifest) generated 2 warnings
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2655,14 +2652,32 @@ fn normalize_feature_metadata() {
 
     p.cargo("package --no-verify")
         .masquerade_as_nightly_cargo(&["feature-metadata"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: map, expected a sequence
-  --> Cargo.toml:11:21
-   |
-11 |                 c = { enables = ["a", "b"] }
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
+    let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
+    let normalized_manifest = str![[r#"
+...
+[features]
+a = []
+b = []
+c = [
+    "a",
+    "b",
+]
+
+...
+"#]];
+    validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        [("Cargo.toml", normalized_manifest)],
+    );
 }

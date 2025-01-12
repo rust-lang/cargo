@@ -115,6 +115,7 @@ Each new feature described below should explain how to use it.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
+    * [feature-metadata](#feature-metadata) --- Table syntax for feature definitions.
     * [`unstable-editions`](#unstable-editions) --- Allows use of editions that are not yet stable.
 * Information and metadata
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -2443,6 +2444,21 @@ See the [`include` config documentation](config.md#include) for more.
 ## pubtime
 
 The `pubtime` index field  has been stabilized in Rust 1.94.0.
+
+## feature-metadata
+
+* Tracking Issue: [#14157](https://github.com/rust-lang/cargo/issues/14157)
+
+This allows to use a table when defining features, with a required `enables` key:
+
+```toml
+[features]
+# same as `foo = []`
+foo = { enables = [] }
+```
+
+This is equivalent to the array-of-strings syntax.
+Support for other keys should be added later.
 
 ## lockfile-path
 
