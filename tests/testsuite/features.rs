@@ -2458,3 +2458,211 @@ required-features = ["feat"]
     p.cargo(&format!("check --target={host} --examples --frozen"))
         .run();
 }
+
+#[cargo_test]
+fn feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = []
+                b = []
+                c = { enables = ["a", "b"] }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    #[cfg(not(all(feature = "a", feature = "b")))]
+                    compile_error!("Cargo features `a` and `b` must be enabled");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check --features c")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+  --> Cargo.toml:11:21
+   |
+11 |                 c = { enables = ["a", "b"] }
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_is_unstable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = { enables = [] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check --features a")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+ --> Cargo.toml:7:21
+  |
+7 |                 a = { enables = [] }
+  |                     ^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_missing_enables() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = {}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = {}
+  |                       ^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_empty_enables() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = [] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = { enables = [] }
+  |                       ^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unused_keys_in_feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = ["bar"], a = false, b = true }
+                bar = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = { enables = ["bar"], a = false, b = true }
+  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn normalize_feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = []
+                b = []
+                c = { enables = ["a", "b"] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: map, expected a sequence
+  --> Cargo.toml:11:21
+   |
+11 |                 c = { enables = ["a", "b"] }
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
