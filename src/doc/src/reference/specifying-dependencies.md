@@ -390,7 +390,7 @@ bitflags = { path = "my-bitflags", version = "1.0" }
 # version 1.0 from crates.io when published.
 smallvec = { git = "https://github.com/servo/rust-smallvec.git", version = "1.0" }
 
-# N.B. that if a version doesn't match, Cargo will fail to compile!
+# Note: if a version doesn't match, Cargo will fail to compile!
 ```
 
 One example where this can be useful is when you have split up a library into
