@@ -605,13 +605,13 @@
           }
         },
         {
-          "description": "Metadata of this feature.",
+          "description": "Unstable feature `feature-metadata`. Metadata of this feature.",
           "$ref": "#/$defs/FeatureMetadata"
         }
       ]
     },
     "FeatureMetadata": {
-      "description": "Metadata of a feature.",
+      "description": "Unstable feature `feature-metadata`. Metadata of a feature.",
       "type": "object",
       "properties": {
         "enables": {
