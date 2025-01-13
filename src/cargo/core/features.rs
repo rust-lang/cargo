@@ -519,6 +519,9 @@ features! {
 
     /// Allow paths that resolve relatively to a base specified in the config.
     (unstable, path_bases, "", "reference/unstable.html#path-bases"),
+
+    /// Allow to use a table for defining features.
+    (unstable, feature_metadata, "", "reference/unstable.html#feature_metadata"),
 }
 
 /// Status and metadata for a single unstable feature.
