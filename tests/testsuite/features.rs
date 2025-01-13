@@ -2357,13 +2357,14 @@ fn unused_keys_in_feature_metadata() {
         .file(
             "Cargo.toml",
             r#"
-               [package]
-               name = "foo"
-               edition = "2015"
 
-               [features]
-               foo = { enables = ["bar"], a = false, b = true }
-               bar = []
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = ["bar"], a = false, b = true }
+                bar = []
             "#,
         )
         .file("src/lib.rs", "")
