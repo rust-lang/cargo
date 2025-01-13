@@ -4,7 +4,7 @@ NAME
        cargo-login — Log in to a registry
 
 SYNOPSIS
-       cargo login [options] [token] [-- args]
+       cargo login [options] [-- args]
 
 DESCRIPTION
        This command will run a credential provider to save a token so that
@@ -23,7 +23,7 @@ DESCRIPTION
        registry.global-credential-providers will be attempted, starting from
        the end of the list.
 
-       If the token argument is not specified, it will be read from stdin.
+       The token will be read from stdin.
 
        The API token for crates.io may be retrieved from
        <https://crates.io/me>.

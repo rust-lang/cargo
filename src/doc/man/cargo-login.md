@@ -6,7 +6,7 @@ cargo-login --- Log in to a registry
 
 ## SYNOPSIS
 
-`cargo login` [_options_] [_token_] [`--` _args_]
+`cargo login` [_options_] [`--` _args_]
 
 ## DESCRIPTION
 
@@ -24,7 +24,7 @@ If a registry has a credential-provider specified, it will be used. Otherwise,
 the providers from the config value `registry.global-credential-providers` will
 be attempted, starting from the end of the list.
 
-If the _token_ argument is not specified, it will be read from stdin.
+The _token_ will be read from stdin.
 
 The API token for crates.io may be retrieved from <https://crates.io/me>.
 

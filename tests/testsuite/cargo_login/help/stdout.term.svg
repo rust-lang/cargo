@@ -1,4 +1,4 @@
-<svg width="827px" height="470px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="452px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -23,51 +23,49 @@
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-cyan bold">cargo[EXE] login</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-cyan">[TOKEN]</tspan><tspan> </tspan><tspan class="fg-cyan bold">[--</tspan><tspan> </tspan><tspan class="fg-cyan">[args]...</tspan><tspan class="fg-cyan bold">]</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-cyan bold">cargo[EXE] login</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-cyan bold">[--</tspan><tspan> </tspan><tspan class="fg-cyan">[args]...</tspan><tspan class="fg-cyan bold">]</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>
     <tspan x="10px" y="100px"><tspan class="fg-green bold">Arguments:</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-cyan">[TOKEN]</tspan><tspan>    </tspan>
+    <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-cyan">[args]...</tspan><tspan>  Additional arguments for the credential provider</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-cyan">[args]...</tspan><tspan>  Additional arguments for the credential provider</tspan>
+    <tspan x="10px" y="136px">
 </tspan>
-    <tspan x="10px" y="154px">
+    <tspan x="10px" y="154px"><tspan class="fg-green bold">Options:</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan class="fg-green bold">Options:</tspan>
+    <tspan x="10px" y="172px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REGISTRY&gt;</tspan><tspan>      Registry to use</tspan>
 </tspan>
-    <tspan x="10px" y="190px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REGISTRY&gt;</tspan><tspan>      Registry to use</tspan>
+    <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>               Use verbose output (-vv very verbose/build.rs output)</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>               Use verbose output (-vv very verbose/build.rs output)</tspan>
+    <tspan x="10px" y="208px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                    Do not print cargo log messages</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                    Do not print cargo log messages</tspan>
+    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
+    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
 </tspan>
-    <tspan x="10px" y="262px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
+    <tspan x="10px" y="262px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
+    <tspan x="10px" y="280px"><tspan>                                 details</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>                                 details</tspan>
+    <tspan x="10px" y="298px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                     Print help</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                     Print help</tspan>
+    <tspan x="10px" y="316px">
 </tspan>
-    <tspan x="10px" y="334px">
+    <tspan x="10px" y="334px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan class="fg-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="370px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
+    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="406px">
 </tspan>
-    <tspan x="10px" y="424px">
+    <tspan x="10px" y="424px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help login</tspan><tspan class="bold">` for more detailed information.</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help login</tspan><tspan class="bold">` for more detailed information.</tspan>
-</tspan>
-    <tspan x="10px" y="460px">
+    <tspan x="10px" y="442px">
 </tspan>
   </text>
 
