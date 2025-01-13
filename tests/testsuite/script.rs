@@ -1402,10 +1402,7 @@ Caused by:
   Unable to update [ROOT]/foo/script.rs
 
 Caused by:
-  failed to read `[ROOT]/foo/script.rs/Cargo.toml`
-
-Caused by:
-  Not a directory (os error 20)
+  Single file packages cannot be used as dependencies
 
 "#]])
         .run();
