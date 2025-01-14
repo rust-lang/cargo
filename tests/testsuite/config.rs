@@ -2175,7 +2175,14 @@ fn build_std() {
         .unwrap()
         .build_std
         .unwrap();
-    assert_eq!(value, vec!["core,std,panic_abort".to_string()]);
+    assert_eq!(
+        value,
+        vec![
+            "core".to_string(),
+            "std".to_string(),
+            "panic_abort".to_string(),
+        ],
+    );
 
     let gctx = GlobalContextBuilder::new()
         .config_arg("unstable.build-std=['core', 'std,panic_abort']")
@@ -2188,7 +2195,11 @@ fn build_std() {
         .unwrap();
     assert_eq!(
         value,
-        vec!["core".to_string(), "std,panic_abort".to_string()]
+        vec![
+            "core".to_string(),
+            "std".to_string(),
+            "panic_abort".to_string(),
+        ]
     );
 
     let gctx = GlobalContextBuilder::new()
@@ -2205,7 +2216,11 @@ fn build_std() {
         .unwrap();
     assert_eq!(
         value,
-        vec!["backtrace,panic-unwind,windows_raw_dylib".to_string()]
+        vec![
+            "backtrace".to_string(),
+            "panic-unwind".to_string(),
+            "windows_raw_dylib".to_string(),
+        ]
     );
 
     let gctx = GlobalContextBuilder::new()
@@ -2221,7 +2236,8 @@ fn build_std() {
         value,
         vec![
             "backtrace".to_string(),
-            "panic-unwind,windows_raw_dylib".to_string()
+            "panic-unwind".to_string(),
+            "windows_raw_dylib".to_string(),
         ]
     );
 }
