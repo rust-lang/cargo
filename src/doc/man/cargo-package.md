@@ -26,9 +26,9 @@ stored in the `target/package` directory. This performs the following steps:
     - The original `Cargo.toml` file is rewritten and normalized.
     - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
       manifest.
-    - `Cargo.lock` is automatically included if the package contains an
-      executable binary or example target. {{man "cargo-install" 1}} will use the
-      packaged lock file if the `--locked` flag is used.
+    - `Cargo.lock` is always included. When missing, a new lock file will be
+      generated. {{man "cargo-install" 1}} will use the packaged lock file if
+      the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.

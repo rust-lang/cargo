@@ -26,9 +26,9 @@ DESCRIPTION
           o  [patch], [replace], and [workspace] sections are removed from the
              manifest.
 
-          o  Cargo.lock is automatically included if the package contains an
-             executable binary or example target. cargo-install(1) will use the
-             packaged lock file if the --locked flag is used.
+          o  Cargo.lock is always included. When missing, a new lock file will
+             be generated. cargo-install(1) will use the packaged lock file if
+             the --locked flag is used.
 
           o  A .cargo_vcs_info.json file is included that contains information
              about the current VCS checkout hash if available, as well as a
