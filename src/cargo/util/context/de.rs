@@ -154,17 +154,13 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
     where
         V: de::Visitor<'de>,
     {
-        let merge = if name == "StringList" {
-            true
-        } else if name == "UnmergedStringList" {
-            false
+        if name == "StringList" {
+            let vals = self.gctx.get_list_or_string(&self.key)?;
+            let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
+            visitor.visit_newtype_struct(vals.into_deserializer())
         } else {
-            return visitor.visit_newtype_struct(self);
-        };
-
-        let vals = self.gctx.get_list_or_string(&self.key, merge)?;
-        let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
-        visitor.visit_newtype_struct(vals.into_deserializer())
+            visitor.visit_newtype_struct(self)
+        }
     }
 
     fn deserialize_enum<V>(

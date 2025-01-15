@@ -1,4 +1,4 @@
-use super::{GlobalContext, UnmergedStringList, Value};
+use super::{GlobalContext, StringList, Value};
 use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
@@ -64,7 +64,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
     where
         D: serde::Deserializer<'de>,
     {
-        let vsl = Value::<UnmergedStringList>::deserialize(deserializer)?;
+        let vsl = Value::<StringList>::deserialize(deserializer)?;
         let mut strings = vsl.val.0;
         if strings.is_empty() {
             return Err(D::Error::invalid_length(0, &"at least one element"));
