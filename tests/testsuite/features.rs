@@ -2351,7 +2351,7 @@ Caused by:
 
   The package requires the Cargo feature called `feature-metadata`, but that feature is not stabilized in this version of Cargo ([..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/ for more information about the status of this feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#feature_metadata for more information about the status of this feature.
 
 "#]])
         .run();
