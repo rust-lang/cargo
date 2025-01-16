@@ -6,7 +6,7 @@
 .SH "NAME"
 cargo\-login \[em] Log in to a registry
 .SH "SYNOPSIS"
-\fBcargo login\fR [\fIoptions\fR] [\fItoken\fR] [\fB\-\-\fR \fIargs\fR]
+\fBcargo login\fR [\fIoptions\fR] [\fB\-\-\fR \fIargs\fR]
 .SH "DESCRIPTION"
 This command will run a credential provider to save a token so that commands
 that require authentication, such as \fBcargo\-publish\fR(1), will be
@@ -22,7 +22,7 @@ If a registry has a credential\-provider specified, it will be used. Otherwise,
 the providers from the config value \fBregistry.global\-credential\-providers\fR will
 be attempted, starting from the end of the list.
 .sp
-If the \fItoken\fR argument is not specified, it will be read from stdin.
+The \fItoken\fR will be read from stdin.
 .sp
 The API token for crates.io may be retrieved from <https://crates.io/me>\&.
 .sp
