@@ -182,33 +182,7 @@ fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Ve
 
 /// List all runnable commands
 fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
-    let prefix = "cargo-";
-    let suffix = env::consts::EXE_SUFFIX;
-    let mut commands = BTreeMap::new();
-    for dir in search_directories(gctx) {
-        let entries = match fs::read_dir(dir) {
-            Ok(entries) => entries,
-            _ => continue,
-        };
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
-                continue;
-            };
-            let Some(name) = filename
-                .strip_prefix(prefix)
-                .and_then(|s| s.strip_suffix(suffix))
-            else {
-                continue;
-            };
-            if is_executable(entry.path()) {
-                commands.insert(
-                    name.to_string(),
-                    CommandInfo::External { path: path.clone() },
-                );
-            }
-        }
-    }
+    let mut commands = third_party_subcommands(gctx);
 
     for cmd in commands::builtin() {
         commands.insert(
@@ -250,6 +224,37 @@ fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
         },
     );
 
+    commands
+}
+
+fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
+    let prefix = "cargo-";
+    let suffix = env::consts::EXE_SUFFIX;
+    let mut commands = BTreeMap::new();
+    for dir in search_directories(gctx) {
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            _ => continue,
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            let Some(name) = filename
+                .strip_prefix(prefix)
+                .and_then(|s| s.strip_suffix(suffix))
+            else {
+                continue;
+            };
+            if is_executable(entry.path()) {
+                commands.insert(
+                    name.to_string(),
+                    CommandInfo::External { path: path.clone() },
+                );
+            }
+        }
+    }
     commands
 }
 
