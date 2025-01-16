@@ -703,14 +703,17 @@ fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> S
 }
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
-    for pkg in pkgs {
-        if pkg.publish() == &Some(Vec::new()) {
-            bail!(
-                    "`{}` cannot be published.\n\
-                    `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
-                    pkg.name(),
-                );
-        }
+    let unpublishable = pkgs
+        .iter()
+        .filter(|pkg| pkg.publish() == &Some(Vec::new()))
+        .map(|pkg| format!("`{}`", pkg.name()))
+        .collect::<Vec<_>>();
+    if !unpublishable.is_empty() {
+        bail!(
+            "{} cannot be published.\n\
+            `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
+            unpublishable.join(", ")
+        );
     }
 
     let reg_name = match reg_or_index {

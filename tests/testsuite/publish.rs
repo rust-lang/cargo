@@ -4105,7 +4105,7 @@ fn multiple_unpublishable_package() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep` cannot be published.
+[ERROR] `dep`, `main` cannot be published.
 `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
