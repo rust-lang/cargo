@@ -89,7 +89,7 @@ edition.</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---allow-dirty"><a class="option-anchor" href="#option-cargo-fix---allow-dirty"></a><code>--allow-dirty</code></dt>
-<dd class="option-desc">Fix code even if the working directory has changes.</dd>
+<dd class="option-desc">Fix code even if the working directory has changes (including staged changes).</dd>
 
 
 <dt class="option-term" id="option-cargo-fix---allow-staged"><a class="option-anchor" href="#option-cargo-fix---allow-staged"></a><code>--allow-staged</code></dt>
