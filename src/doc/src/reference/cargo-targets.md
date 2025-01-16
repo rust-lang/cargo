@@ -216,7 +216,10 @@ the target name.
 ### The `test` field
 
 The `test` field indicates whether or not the target is tested by default by
-[`cargo test`]. The default is `true` for lib, bins, and tests.
+[`cargo test`], and whenever the target is expected to have tests. Warnings
+may be reported when tests are unexpected (i.e., `test = false`).
+
+The default is `true` for lib, bins, and tests.
 
 > **Note**: Examples are built by [`cargo test`] by default to ensure they
 > continue to compile, but they are not *tested* by default. Setting `test =
