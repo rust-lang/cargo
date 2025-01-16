@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/*"
+]
+
+[workspace.package]
+rust-version = "1.81"
+edition = "2021"
+
+[package]
+name = "template"
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.81"
+
+[lib]
+name = "template"
+path = "src/lib.rs"
