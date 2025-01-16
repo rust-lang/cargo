@@ -4049,3 +4049,65 @@ fn one_unpublishable_package() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn multiple_unpublishable_package() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = false
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = false
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `dep`, `main` cannot be published.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+
+"#]])
+        .run();
+}
