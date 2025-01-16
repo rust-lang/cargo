@@ -869,7 +869,7 @@ fn inheritable_from_path(
 macro_rules! package_field_getter {
     ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
         $(
-            #[doc = concat!("Gets the field `workspace.package", $key, "`.")]
+            #[doc = concat!("Gets the field `workspace.package.", $key, "`.")]
             fn $field(&self) -> CargoResult<$ret> {
                 let Some(val) = self.package.as_ref().and_then(|p| p.$field.as_ref()) else  {
                     bail!("`workspace.package.{}` was not defined", $key);
@@ -940,7 +940,7 @@ impl InheritableFields {
         Ok(dep)
     }
 
-    /// Gets the field `workspace.lint`.
+    /// Gets the field `workspace.lints`.
     pub fn lints(&self) -> CargoResult<manifest::TomlLints> {
         let Some(val) = &self.lints else {
             bail!("`workspace.lints` was not defined");
