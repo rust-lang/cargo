@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-miri --- Checks a package to catch common mistakes and improve your Rust code
+cargo-clippy --- Checks a package to catch common mistakes and improve your Rust code
 
 ## DESCRIPTION
 
