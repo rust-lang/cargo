@@ -54,7 +54,6 @@ where the workspace's `Cargo.toml` is located.
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
 ### Virtual workspace
@@ -77,7 +76,6 @@ resolver = "2"
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
 edition = "2024"     # the edition, will have no effect on a resolver used in the workspace
-authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
 By having a workspace without a root package,

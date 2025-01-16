@@ -63,7 +63,6 @@ The first section in a `Cargo.toml` is `[package]`.
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
 The only field required by Cargo is [`name`](#the-name-field). If publishing to
@@ -121,10 +120,10 @@ This field is optional and defaults to `0.0.0`.  The field is required for publi
 
 ### The `authors` field
 
+> **Warning**: This field is deprecated
+
 The optional `authors` field lists in an array the people or organizations that are considered
-the "authors" of the package. The exact meaning is open to interpretation --- it
-may list the original or primary authors, current maintainers, or owners of the
-package. An optional email address may be included within angled brackets at
+the "authors" of the package. An optional email address may be included within angled brackets at
 the end of each author entry.
 
 ```toml
@@ -133,13 +132,8 @@ the end of each author entry.
 authors = ["Graydon Hoare", "Fnu Lnu <no-reply@rust-lang.org>"]
 ```
 
-This field is only surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
-environment variable within `build.rs`. It is not displayed in the [crates.io]
-user interface.
-
-> **Warning**: Package manifests cannot be changed once published, so this
-> field cannot be changed or removed in already-published versions of a
-> package.
+This field is surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
+environment variable within `build.rs` for backwards compatibility.
 
 ### The `edition` field
 
