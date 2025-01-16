@@ -2624,3 +2624,147 @@ foo v0.1.0 ([ROOT]/foo/sub/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn nonexistence_package_togother_with_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2021"
+
+            [workspace]
+            members = ["baz"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_manifest("baz", "0.1.0"))
+        .file("baz/src/lib.rs", "");
+
+    let p = p.build();
+
+    p.cargo("check --package nonexistence --workspace")
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+    // With pattern *
+    p.cargo("check --package nonpattern* --workspace")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("package --package nonexistence --workspace")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] baz v0.1.0 ([ROOT]/foo/baz)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/target/package/baz-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    // With pattern *
+    p.cargo("package --package nonpattern* --workspace")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] baz v0.1.0 ([ROOT]/foo/baz)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/target/package/baz-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("publish --dry-run --package nonexistence -Zpackage-workspace --workspace")
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate baz@0.1.0 already exists on crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] baz v0.1.0 ([ROOT]/foo/baz)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/target/package/baz-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] baz v0.1.0 ([ROOT]/foo/baz)
+[WARNING] aborting upload due to dry run
+[UPLOADING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .run();
+    // With pattern *
+    p.cargo("publish --dry-run --package nonpattern* -Zpackage-workspace --workspace")
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate baz@0.1.0 already exists on crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] baz v0.1.0 ([ROOT]/foo/baz)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/target/package/baz-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] baz v0.1.0 ([ROOT]/foo/baz)
+[WARNING] aborting upload due to dry run
+[UPLOADING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .run();
+
+    p.cargo("tree --package nonexistence  --workspace")
+        .with_stderr_data(str![])
+        .run();
+    // With pattern *
+    p.cargo("tree --package nonpattern*  --workspace")
+        .with_stderr_data(str![])
+        .run();
+}
