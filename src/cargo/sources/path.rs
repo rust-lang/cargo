@@ -124,6 +124,9 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     fn read_package(&self) -> CargoResult<Package> {
+        if crate::util::toml::is_embedded(&self.path) {
+            anyhow::bail!("The embedded script cannot be used as a dependency");
+        }
         let path = self.path.join("Cargo.toml");
         let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
         Ok(pkg)

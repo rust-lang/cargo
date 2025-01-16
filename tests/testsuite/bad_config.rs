@@ -1814,13 +1814,13 @@ fn workspace_default_features2() {
     p.cargo("check")
         .with_stderr_data(
             str![[r#"
-[WARNING] [ROOT]/foo/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `dep_workspace_only` dependency)
 [CHECKING] dep_package_only v0.1.0 ([ROOT]/foo/dep_package_only)
 [CHECKING] dep_workspace_only v0.1.0 ([ROOT]/foo/dep_workspace_only)
 [CHECKING] package_only v0.1.0 ([ROOT]/foo/package_only)
 [CHECKING] workspace_only v0.1.0 ([ROOT]/foo/workspace_only)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] [ROOT]/foo/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 
 "#]]
             .unordered(),
