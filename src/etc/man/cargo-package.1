@@ -35,9 +35,9 @@ manifest.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBCargo.lock\fR is automatically included if the package contains an
-executable binary or example target. \fBcargo\-install\fR(1) will use the
-packaged lock file if the \fB\-\-locked\fR flag is used.
+\h'-04'\(bu\h'+02'\fBCargo.lock\fR is always included. When missing, a new lock file will be
+generated. \fBcargo\-install\fR(1) will use the packaged lock file if
+the \fB\-\-locked\fR flag is used.
 .RE
 .sp
 .RS 4
