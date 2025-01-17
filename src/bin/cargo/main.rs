@@ -205,16 +205,8 @@ fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     }
 
     // Add the user-defined aliases
-    if let Ok(aliases) = gctx.get::<BTreeMap<String, StringOrVec>>("alias") {
-        for (name, target) in aliases.iter() {
-            commands.insert(
-                name.to_string(),
-                CommandInfo::Alias {
-                    target: target.clone(),
-                },
-            );
-        }
-    }
+    let alias_commands = user_defined_aliases(gctx);
+    commands.extend(alias_commands);
 
     // `help` is special, so it needs to be inserted separately.
     commands.insert(
@@ -253,6 +245,21 @@ fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo
                     CommandInfo::External { path: path.clone() },
                 );
             }
+        }
+    }
+    commands
+}
+
+fn user_defined_aliases(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
+    let mut commands = BTreeMap::new();
+    if let Ok(aliases) = gctx.get::<BTreeMap<String, StringOrVec>>("alias") {
+        for (name, target) in aliases.iter() {
+            commands.insert(
+                name.to_string(),
+                CommandInfo::Alias {
+                    target: target.clone(),
+                },
+            );
         }
     }
     commands
