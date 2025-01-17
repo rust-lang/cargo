@@ -20,7 +20,8 @@ pub enum Packages {
     /// Opt in all packages.
     ///
     /// As of the time of this writing, it only works on opting in all workspace members.
-    All,
+    /// Keeps the packages passed in to verify that they exist in the workspace.
+    All(Vec<String>),
     /// Opt out of packages passed in.
     ///
     /// As of the time of this writing, it only works on opting out workspace members.
@@ -36,7 +37,7 @@ impl Packages {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
             (false, _, _) => anyhow::bail!("--exclude can only be used together with --workspace"),
-            (true, 0, _) => Packages::All,
+            (true, 0, _) => Packages::All(package),
             (true, _, _) => Packages::OptOut(exclude),
         })
     }
@@ -44,11 +45,13 @@ impl Packages {
     /// Converts selected packages to [`PackageIdSpec`]s.
     pub fn to_package_id_specs(&self, ws: &Workspace<'_>) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match self {
-            Packages::All => ws
-                .members()
-                .map(Package::package_id)
-                .map(|id| id.to_spec())
-                .collect(),
+            Packages::All(packages) => {
+                emit_packages_not_found_within_workspace(ws, packages)?;
+                ws.members()
+                    .map(Package::package_id)
+                    .map(|id| id.to_spec())
+                    .collect()
+            }
             Packages::OptOut(opt_out) => {
                 let (mut patterns, mut ids) = opt_patterns_and_ids(opt_out)?;
                 let specs = ws
@@ -111,7 +114,10 @@ impl Packages {
     pub fn get_packages<'ws>(&self, ws: &'ws Workspace<'_>) -> CargoResult<Vec<&'ws Package>> {
         let packages: Vec<_> = match self {
             Packages::Default => ws.default_members().collect(),
-            Packages::All => ws.members().collect(),
+            Packages::All(packages) => {
+                emit_packages_not_found_within_workspace(ws, packages)?;
+                ws.members().collect()
+            }
             Packages::OptOut(opt_out) => {
                 let (mut patterns, mut ids) = opt_patterns_and_ids(opt_out)?;
                 let packages = ws
@@ -161,7 +167,7 @@ impl Packages {
     pub fn needs_spec_flag(&self, ws: &Workspace<'_>) -> bool {
         match self {
             Packages::Default => ws.default_members().count() > 1,
-            Packages::All => ws.members().count() > 1,
+            Packages::All(_) => ws.members().count() > 1,
             Packages::Packages(_) => true,
             Packages::OptOut(_) => true,
         }
@@ -204,6 +210,32 @@ fn emit_pattern_not_found(
             ws.root().display(),
         )
     }
+    Ok(())
+}
+
+fn emit_packages_not_found_within_workspace(
+    ws: &Workspace<'_>,
+    packages: &[String],
+) -> CargoResult<()> {
+    let (mut patterns, mut ids) = opt_patterns_and_ids(packages)?;
+    let _: Vec<_> = ws
+        .members()
+        .filter(|pkg| {
+            let id = ids.iter().find(|id| id.matches(pkg.package_id())).cloned();
+            if let Some(id) = &id {
+                ids.remove(id);
+            }
+            !id.is_some() && !match_patterns(pkg, &mut patterns)
+        })
+        .map(Package::package_id)
+        .map(|id| id.to_spec())
+        .collect();
+    let names = ids
+        .into_iter()
+        .map(|id| id.to_string())
+        .collect::<BTreeSet<_>>();
+    emit_package_not_found(ws, names, false)?;
+    emit_pattern_not_found(ws, patterns, false)?;
     Ok(())
 }
 

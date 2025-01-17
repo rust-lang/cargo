@@ -136,7 +136,7 @@ fn build_resolve_graph(
         CompileKind::from_requested_targets(ws.gctx(), &metadata_opts.filter_platforms)?;
     let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
     // Resolve entire workspace.
-    let specs = Packages::All.to_package_id_specs(ws)?;
+    let specs = Packages::All(Vec::new()).to_package_id_specs(ws)?;
     let force_all = if metadata_opts.filter_platforms.is_empty() {
         crate::core::resolver::features::ForceAllTargets::Yes
     } else {
