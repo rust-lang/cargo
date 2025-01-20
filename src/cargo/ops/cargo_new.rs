@@ -999,6 +999,7 @@ fn update_manifest_with_new_member(
         if was_sorted {
             members.sort_by(|lhs, rhs| lhs.as_str().cmp(&rhs.as_str()));
         }
+        members.fmt();
     } else {
         let mut array = Array::new();
         array.push(display_path);
