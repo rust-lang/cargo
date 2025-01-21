@@ -242,7 +242,7 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
     bail!(
         "the working directory of this package has uncommitted changes, and \
          `cargo fix` can potentially perform destructive changes; if you'd \
-         like to suppress this error pass `--allow-dirty`, `--allow-staged`, \
+         like to suppress this error pass `--allow-dirty`, \
          or commit the changes to these files:\n\
          \n\
          {}\n\

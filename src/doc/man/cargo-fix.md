@@ -93,7 +93,7 @@ Fix code even if a VCS was not detected.
 {{/option}}
 
 {{#option "`--allow-dirty`" }}
-Fix code even if the working directory has changes.
+Fix code even if the working directory has changes (including staged changes).
 {{/option}}
 
 {{#option "`--allow-staged`" }}
