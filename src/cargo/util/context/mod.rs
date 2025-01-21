@@ -736,7 +736,7 @@ impl GlobalContext {
                     Ok(Some(CV::List(cv_list, cv_def)))
                 }
                 Some(cv) => {
-                    // This can't assume StringList or UnmergedStringList.
+                    // This can't assume StringList.
                     // Return an error, which is the behavior of merging
                     // multiple config.toml files with the same scenario.
                     bail!(
@@ -910,20 +910,8 @@ impl GlobalContext {
     }
 
     /// Helper for `StringList` type to get something that is a string or list.
-    fn get_list_or_string(
-        &self,
-        key: &ConfigKey,
-        merge: bool,
-    ) -> CargoResult<Vec<(String, Definition)>> {
+    fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
         let mut res = Vec::new();
-
-        if !merge {
-            self.get_env_list(key, &mut res)?;
-
-            if !res.is_empty() {
-                return Ok(res);
-            }
-        }
 
         match self.get_cv(key)? {
             Some(CV::List(val, _def)) => res.extend(val),
@@ -943,6 +931,7 @@ impl GlobalContext {
     }
 
     /// Internal method for getting an environment variable as a list.
+    /// If the key is a non-mergable list and a value is found in the environment, existing values are cleared.
     fn get_env_list(
         &self,
         key: &ConfigKey,
@@ -952,6 +941,10 @@ impl GlobalContext {
             self.check_environment_key_case_mismatch(key);
             return Ok(());
         };
+
+        if is_nonmergable_list(&key) {
+            output.clear();
+        }
 
         let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
@@ -2227,13 +2220,31 @@ impl ConfigValue {
     ///
     /// Container and non-container types cannot be mixed.
     fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
+        self.merge_helper(from, force, &mut ConfigKey::new())
+    }
+
+    fn merge_helper(
+        &mut self,
+        from: ConfigValue,
+        force: bool,
+        parts: &mut ConfigKey,
+    ) -> CargoResult<()> {
+        let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                if force {
-                    old.append(new);
+                if is_nonmergable_list(&parts) {
+                    // Use whichever list is higher priority.
+                    if force || is_higher_priority {
+                        mem::swap(new, old);
+                    }
                 } else {
-                    new.append(old);
-                    mem::swap(new, old);
+                    // Merge the lists together.
+                    if force {
+                        old.append(new);
+                    } else {
+                        new.append(old);
+                        mem::swap(new, old);
+                    }
                 }
                 old.sort_by(|a, b| a.1.cmp(&b.1));
             }
@@ -2243,7 +2254,8 @@ impl ConfigValue {
                         Occupied(mut entry) => {
                             let new_def = value.definition().clone();
                             let entry = entry.get_mut();
-                            entry.merge(value, force).with_context(|| {
+                            parts.push(&key);
+                            entry.merge_helper(value, force, parts).with_context(|| {
                                 format!(
                                     "failed to merge key `{}` between \
                                      {} and {}",
@@ -2273,7 +2285,7 @@ impl ConfigValue {
                 ));
             }
             (old, mut new) => {
-                if force || new.definition().is_higher_priority(old.definition()) {
+                if force || is_higher_priority {
                     mem::swap(old, &mut new);
                 }
             }
@@ -2346,6 +2358,17 @@ impl ConfigValue {
             self.definition()
         )
     }
+}
+
+/// List of which configuration lists cannot be merged.
+/// Instead of merging, these the higher priority list replaces the lower priority list.
+fn is_nonmergable_list(key: &ConfigKey) -> bool {
+    key.matches("registry.credential-provider")
+        || key.matches("registries.*.credential-provider")
+        || key.matches("target.*.runner")
+        || key.matches("host.runner")
+        || key.matches("credential-alias.*")
+        || key.matches("doc.browser")
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
@@ -2915,14 +2938,6 @@ impl StringList {
         &self.0
     }
 }
-
-/// Alternative to [`StringList`] that follows precedence rules, rather than merging config values with environment values,
-///
-/// e.g. a string list found in the environment will be used instead of one in a config file.
-///
-/// This is currently only used by [`PathAndArgs`]
-#[derive(Debug, Deserialize)]
-pub struct UnmergedStringList(Vec<String>);
 
 #[macro_export]
 macro_rules! __shell_print {

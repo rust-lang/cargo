@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
+use cargo::util::auth::RegistryConfig;
 use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
 };
@@ -2162,6 +2163,37 @@ gitoxide = \"fetch\"
             .unwrap();
         unstable_flags.gitoxide == expect
     }
+}
+
+#[cargo_test]
+fn nonmergable_lists() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        "\
+[registries.example]
+credential-provider = ['a', 'b']
+",
+    );
+
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(
+        &foo_path,
+        "\
+[registries.example]
+credential-provider = ['c', 'd']
+",
+    );
+
+    let gctx = GlobalContextBuilder::new().cwd("foo").build();
+    let provider = gctx
+        .get::<Option<RegistryConfig>>(&format!("registries.example"))
+        .unwrap()
+        .unwrap()
+        .credential_provider
+        .unwrap();
+    assert_eq!(provider.path.raw_value(), "c");
+    assert_eq!(provider.args, ["d"]);
 }
 
 #[cargo_test]
