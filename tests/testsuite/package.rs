@@ -1402,6 +1402,269 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 }
 
 #[cargo_test]
+fn dirty_workspace_manifest() {
+    Package::new("dep", "1.0.0").publish();
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard"]
+                resolver = "2"
+                [workspace.package]
+                edition = "2015"
+                [workspace.dependencies]
+                dep = "1"
+            "#,
+        )
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition.workspace = true
+                [dependencies]
+                dep = "1"
+            "#,
+        )
+        .file("isengard/src/lib.rs", "")
+    });
+    git::commit(&repo);
+
+    // change in field not inherited by member wont be considered dirty
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard"]
+            resolver = "2"
+            [workspace.package]
+            edition = "2015"
+            [workspace.dependencies]
+            dep = "2"
+        "#,
+    );
+
+    p.cargo("package --workspace --no-verify --no-metadata")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[UPDATING] `dummy-registry` index
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let cargo_toml = str![[r#"
+...
+[package]
+edition = "2015"
+...
+[dependencies.dep]
+version = "1"
+...
+"#]];
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
+        [("Cargo.toml", cargo_toml)],
+    );
+
+    // change in field inherited by member will be considered dirty
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard"]
+            resolver = "2"
+            [workspace.package]
+            edition = "2021"
+            [workspace.dependencies]
+            dep = "1"
+        "#,
+    );
+
+    p.cargo("package --workspace --no-verify --no-metadata")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[UPDATING] `dummy-registry` index
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    // --allow-dirty works
+    p.cargo("package --workspace --no-verify --no-metadata --allow-dirty")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[UPDATING] `dummy-registry` index
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let cargo_toml = str![[r##"
+...
+[package]
+edition = "2021"
+...
+[dependencies.dep]
+version = "1"
+...
+"##]];
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
+        [("Cargo.toml", cargo_toml)],
+    );
+}
+
+#[cargo_test]
+fn dirty_and_broken_workspace_manifest_with_inherited_fields() {
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard"]
+                broken
+            "#,
+        )
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition.workspace = true
+            "#,
+        )
+        .file("isengard/src/lib.rs", "")
+    });
+    git::commit(&repo);
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard"]
+            resolver = "2"
+            [workspace.package]
+            edition = "2021"
+        "#,
+    );
+
+    p.cargo("package --workspace --no-verify --no-metadata")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let cargo_toml = str![[r#"
+...
+[package]
+edition = "2021"
+...
+"#]];
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
+        [("Cargo.toml", cargo_toml)],
+    );
+}
+
+#[cargo_test]
+fn dirty_and_broken_workspace_manifest_without_inherited_fields() {
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard"]
+                broken
+            "#,
+        )
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition = "2021"
+            "#,
+        )
+        .file("isengard/src/lib.rs", "")
+    });
+    git::commit(&repo);
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard"]
+            resolver = "2"
+            [workspace.package]
+            edition = "2024"
+        "#,
+    );
+
+    p.cargo("package --workspace --no-verify --no-metadata")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let cargo_toml = str![[r#"
+...
+[package]
+edition = "2021"
+...
+"#]];
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
+        [("Cargo.toml", cargo_toml)],
+    );
+}
+
+#[cargo_test]
 fn issue_13695_allow_dirty_vcs_info() {
     let p = project()
         .file(
