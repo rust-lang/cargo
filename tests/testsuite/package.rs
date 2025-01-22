@@ -1493,10 +1493,13 @@ version = "1"
     );
 
     p.cargo("package --workspace --no-verify --no-metadata")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[UPDATING] `dummy-registry` index
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.toml
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1571,6 +1574,18 @@ fn dirty_and_broken_workspace_manifest_with_inherited_fields() {
     );
 
     p.cargo("package --workspace --no-verify --no-metadata")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.toml
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+
+    p.cargo("package --workspace --no-verify --no-metadata --allow-dirty")
         .with_stderr_data(str![[r#"
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)

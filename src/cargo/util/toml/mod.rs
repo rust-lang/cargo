@@ -84,10 +84,14 @@ pub fn read_manifest(
                 .borrow_mut()
                 .insert(package_root.to_owned(), ws_root_config.clone());
         }
+        let inherit_cell = LazyCell::new();
+        let inherit = || {
+            inherit_cell.try_borrow_with(|| load_inheritable_fields(gctx, path, &workspace_config))
+        };
         let normalized_toml = normalize_toml(
             &original_toml,
             &features,
-            &workspace_config,
+            &inherit,
             path,
             gctx,
             &mut warnings,
@@ -158,12 +162,14 @@ fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(contents: &str) -> Result<toml_edit::ImDocument<String>, toml_edit::de::Error> {
+pub(crate) fn parse_document(
+    contents: &str,
+) -> Result<toml_edit::ImDocument<String>, toml_edit::de::Error> {
     toml_edit::ImDocument::parse(contents.to_owned()).map_err(Into::into)
 }
 
 #[tracing::instrument(skip_all)]
-fn deserialize_toml(
+pub(crate) fn deserialize_toml(
     document: &toml_edit::ImDocument<String>,
 ) -> Result<manifest::TomlManifest, toml_edit::de::Error> {
     let mut unused = BTreeSet::new();
@@ -242,7 +248,7 @@ fn to_workspace_config(
     Ok(workspace_config)
 }
 
-fn to_workspace_root_config(
+pub(crate) fn to_workspace_root_config(
     normalized_toml: &manifest::TomlWorkspace,
     manifest_file: &Path,
 ) -> WorkspaceRootConfig {
@@ -266,22 +272,16 @@ fn to_workspace_root_config(
 
 /// See [`Manifest::normalized_toml`] for more details
 #[tracing::instrument(skip_all)]
-fn normalize_toml(
+pub(crate) fn normalize_toml<'a>(
     original_toml: &manifest::TomlManifest,
     features: &Features,
-    workspace_config: &WorkspaceConfig,
+    inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     manifest_file: &Path,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlManifest> {
     let package_root = manifest_file.parent().unwrap();
-
-    let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
-    let inherit = || {
-        inherit_cell
-            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
-    };
     let workspace_root = || inherit().map(|fields| fields.ws_root().as_path());
 
     let mut normalized_toml = manifest::TomlManifest {
