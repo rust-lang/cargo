@@ -1212,15 +1212,6 @@ fn vcs_status_check_for_each_workspace_member() {
     });
     git::commit(&repo);
 
-    p.change_file(
-        "Cargo.toml",
-        r#"
-            [workspace]
-            members = ["isengard", "mordor"]
-            [workspace.package]
-            edition = "2021"
-        "#,
-    );
     // Dirty file outside won't affect packaging.
     p.change_file("hobbit", "changed!");
     p.change_file("mordor/src/lib.rs", "changed!");
@@ -1321,8 +1312,6 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
                 [workspace]
                 members = ["isengard"]
                 resolver = "2"
-                [workspace.package]
-                edition = "2015"
             "#,
         )
         .file("lib.rs", r#"compile_error!("you shall not pass")"#)
@@ -1333,7 +1322,7 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
             r#"
                 [package]
                 name = "isengard"
-                edition.workspace = true
+                edition = "2021"
                 homepage = "saruman"
                 description = "saruman"
                 license-file = "../LICENSE"
@@ -1357,17 +1346,6 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     p.change_file("original-dir/file", "after");
     // * Changes in files outside pkg root that `license-file`/`readme` point to
     p.change_file("LICENSE", "after");
-    // * When workspace inheritance is involved and changed
-    p.change_file(
-        "Cargo.toml",
-        r#"
-            [workspace]
-            members = ["isengard"]
-            resolver = "2"
-            [workspace.package]
-            edition = "2021"
-        "#,
-    );
     // Changes in files outside git workdir won't affect vcs status check
     p.change_file(
         &main_outside_pkg_root,
@@ -1398,14 +1376,6 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 "#]])
         .run();
 
-    let cargo_toml = str![[r##"
-...
-[package]
-edition = "2021"
-...
-
-"##]];
-
     let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
     validate_crate_contents(
         f,
@@ -1427,7 +1397,6 @@ edition = "2021"
             ("symlink-dir/file", str!["after"]),
             ("README.md", str!["after"]),
             ("LICENSE", str!["after"]),
-            ("Cargo.toml", cargo_toml),
         ],
     );
 }
