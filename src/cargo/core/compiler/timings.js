@@ -316,7 +316,7 @@ function setup_canvas(id, width, height) {
   return ctx;
 }
 
-function draw_graph_axes(id, graph_height) {
+function resize_graph(graph_height) {
   const scale = document.getElementById('scale').valueAsNumber;
   // Cap the size of the graph. It is hard to view if it is too large, and
   // browsers may not render a large graph because it takes too much memory.
@@ -326,6 +326,10 @@ function draw_graph_axes(id, graph_height) {
   const px_per_sec = graph_width / DURATION;
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;
+  return { canvas_width, canvas_height, graph_width, graph_height, px_per_sec };
+}
+
+function init_canvas(id, canvas_width, canvas_height) {
   let ctx = setup_canvas(id, canvas_width, canvas_height);
   ctx.fillStyle = CANVAS_BG;
   ctx.fillRect(0, 0, canvas_width, canvas_height);
@@ -334,6 +338,12 @@ function draw_graph_axes(id, graph_height) {
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'center';
   ctx.strokeStyle = AXES_COLOR;
+  return ctx
+}
+
+function draw_graph_axes(id, graph_height) {
+  let { canvas_width, canvas_height, graph_width, px_per_sec } = resize_graph(graph_height);
+  let ctx = init_canvas(id, canvas_width, canvas_height);
 
   // Draw main axes.
   ctx.beginPath();
