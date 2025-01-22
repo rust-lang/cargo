@@ -711,6 +711,22 @@ h1 {
   color: var(--canvas-axes);
 }
 
+.box rect {
+  fill: var(--canvas-not-custom-build);
+}
+
+.box rect.rmeta {
+  fill: var(--canvas-block);
+}
+
+.box.run-custom-build rect {
+  fill: var(--canvas-custom-build);
+}
+
+.box text {
+  font-size: 14px;
+}
+
 .my-table {
   margin-top: 20px;
   margin-bottom: 20px;

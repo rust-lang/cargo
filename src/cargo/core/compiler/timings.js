@@ -22,6 +22,8 @@ let UNIT_COORDS = {};
 // Map of unit index to the index it was unlocked by.
 let REVERSE_UNIT_DEPS = {};
 let REVERSE_UNIT_RMETA_DEPS = {};
+// Cache of measured text widths for SVG
+let MEASURE_TEXT_CACHE = {};
 
 // Colors from css
 const getCssColor = name => getComputedStyle(document.body).getPropertyValue(name);
@@ -65,14 +67,6 @@ function render_pipeline_graph() {
   container.style.width = canvas_width;
   container.style.height = canvas_height;
 
-  const axis_bottom = create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec });
-  const axis_left = create_axis_left(graph_height, units.length);
-  const dep_lines = create_dep_lines(units);
-  const svg = document.getElementById(`pipeline-graph-svg`);
-  if (svg) {
-    svg.innerHTML = `${axis_bottom}${axis_left}${dep_lines}`;
-  }
-
   ctx.strokeStyle = AXES_COLOR;
 
   // Draw the graph.
@@ -98,39 +92,66 @@ function render_pipeline_graph() {
     unitCount.set(unit.name, count + 1);
   }
 
-  // Draw the blocks.
-  for (i=0; i<units.length; i++) {
-    let unit = units[i];
-    let {x, y, width, rmeta_x} = UNIT_COORDS[unit.i];
-
-    HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
-
-    ctx.beginPath();
-    ctx.fillStyle = unit.mode == 'run-custom-build' ? CUSTOM_BUILD_COLOR : NOT_CUSTOM_BUILD_COLOR;
-    roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
-    ctx.fill();
-
-    if (unit.rmeta_time != null) {
-      ctx.beginPath();
-      ctx.fillStyle = BLOCK_COLOR;
-      let ctime = unit.duration - unit.rmeta_time;
-      roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
-      ctx.fill();
-    }
-    ctx.fillStyle = TEXT_COLOR;
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'middle';
-    ctx.font = '14px sans-serif';
-
-    const labelName = (unitCount.get(unit.name) || 0) > 1 ? `${unit.name} (v${unit.version})${unit.target}` : `${unit.name}${unit.target}`;
-    const label = `${labelName}: ${unit.duration}s`;
-
-    const text_info = ctx.measureText(label);
-    const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
-    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
-    draw_dep_lines(ctx, unit.i, false);
+  const axis_bottom = create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec });
+  const axis_left = create_axis_left(graph_height, units.length);
+  const dep_lines = create_dep_lines(units);
+  const boxes = create_boxes(units, unitCount, canvas_width, px_per_sec);
+  const svg = document.getElementById(`pipeline-graph-svg`);
+  if (svg) {
+    svg.innerHTML = `${axis_bottom}${axis_left}${dep_lines}${boxes}`;
   }
-  ctx.restore();
+}
+
+function create_boxes(units, unitCount, canvas_width, px_per_sec) {
+  let boxes = units.map(unit => {
+    const { x, y, width, rmeta_x } = UNIT_COORDS[unit.i]
+    const labelName =
+      (unitCount.get(unit.name) || 0) > 1
+        ? `${unit.name} (v${unit.version})${unit.target}`
+        : `${unit.name}${unit.target}`;
+    const label = `${labelName}: ${unit.duration}s`;
+    const textinfo_width = measure_text_width(label);
+    const label_x = Math.min(x + 5.0, canvas_width - textinfo_width - X_LINE);
+    const rmeta_rect = unit.rmeta_time ?
+      `<rect
+        class="rmeta"
+        x="${rmeta_x}"
+        y="${y}"
+        rx="${RADIUS}"
+        width="${px_per_sec * (unit.duration - unit.rmeta_time)}"
+        height="${BOX_HEIGHT}"
+      ></rect>`
+      : "";
+    return (
+      `<g class="box ${unit.mode}" data-i="${unit.i}">
+        <rect x="${x}" y="${y}" rx="${RADIUS}" width="${width}" height="${BOX_HEIGHT}"></rect>${rmeta_rect}
+        <text x="${label_x}" y="${y + BOX_HEIGHT / 2}">${label}</text>
+      </g>`
+    )
+  }).join("");
+  return `<g id="boxes" transform="translate(${X_LINE}, ${MARGIN})">${boxes}</g>`
+}
+
+function measure_text_width(text) {
+  if (text in MEASURE_TEXT_CACHE) {
+    return MEASURE_TEXT_CACHE[text];
+  }
+
+  let div = document.createElement('DIV');
+  div.innerHTML = text;
+  Object.assign(div.style, {
+    position: 'absolute',
+    top: '-100px',
+    left: '-100px',
+    fontFamily: 'sans-serif',
+    fontSize: '14px'
+  });
+  document.body.appendChild(div);
+  let width = div.offsetWidth;
+  document.body.removeChild(div);
+
+  MEASURE_TEXT_CACHE[text] = width;
+  return width;
 }
 
 // Create lines from the given unit to the units it unlocks.
