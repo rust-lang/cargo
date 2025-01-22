@@ -683,7 +683,7 @@ h1 {
   display: block;
 }
 
-.graph line {
+.graph line, .graph polyline {
   stroke: currentColor;
   stroke-width: 2;
 }
@@ -694,9 +694,17 @@ h1 {
   dominant-baseline: central;
 }
 
-.graph .grid {
+.graph .grid, .dep-lines {
   stroke-dasharray: 2;
+}
+
+.graph .grid {
   color: var(--canvas-grid);
+}
+
+.dep-lines {
+  color: var(--canvas-dep-line);
+  fill: none;
 }
 
 .axis {

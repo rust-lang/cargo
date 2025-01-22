@@ -67,14 +67,12 @@ function render_pipeline_graph() {
 
   const axis_bottom = create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec });
   const axis_left = create_axis_left(graph_height, units.length);
+  const dep_lines = create_dep_lines(units);
   const svg = document.getElementById(`pipeline-graph-svg`);
   if (svg) {
-    svg.innerHTML = `${axis_bottom}${axis_left}`;
+    svg.innerHTML = `${axis_bottom}${axis_left}${dep_lines}`;
   }
 
-  // Canvas for hover highlights. This is a separate layer to improve performance.
-  const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
-  linectx.clearRect(0, 0, canvas_width, canvas_height);
   ctx.strokeStyle = AXES_COLOR;
 
   // Draw the graph.
@@ -133,6 +131,44 @@ function render_pipeline_graph() {
     draw_dep_lines(ctx, unit.i, false);
   }
   ctx.restore();
+}
+
+// Create lines from the given unit to the units it unlocks.
+function create_dep_lines(units) {
+  const lines = units
+    .filter(unit => unit.i in UNIT_COORDS)
+    .map(unit => {
+      const { i, unlocked_units, unlocked_rmeta_units } = unit;
+      const { x: from_x, y: from_y, rmeta_x } = UNIT_COORDS[i]
+      let dep_lines = unlocked_units
+        .filter(unlocked => unlocked in UNIT_COORDS)
+        .map(unlocked => create_one_dep_line(from_x, from_y, i, unlocked, "dep"))
+        .join("");
+      let rmeta_dep_lines = unlocked_rmeta_units
+        .filter(unlocked => unlocked in UNIT_COORDS)
+        .map(unlocked => create_one_dep_line(rmeta_x, from_y, i, unlocked, "rmeta"))
+        .join("");
+      return [dep_lines, rmeta_dep_lines];
+    }).flat().join("");
+  return `<g class="dep-lines" transform="translate(${X_LINE}, ${MARGIN})">${lines}</g>`
+}
+
+function create_one_dep_line(from_x, from_y, from_unit, to_unit, dep_type) {
+  const { x: u_x, y: u_y } = UNIT_COORDS[to_unit];
+  const prefix = dep_type == "rmeta" ? "rdep" : "dep";
+  return (
+    `<polyline
+      id="${prefix}-${to_unit}"
+      class="dep-line"
+      data-i="${from_unit}"
+      points="
+        ${from_x} ${from_y + BOX_HEIGHT / 2},
+        ${from_x - 5} ${from_y + BOX_HEIGHT / 2},
+        ${from_x - 5} ${u_y + BOX_HEIGHT / 2},
+        ${u_x}, ${u_y + BOX_HEIGHT / 2}
+      ">
+      </polyline>`
+  )
 }
 
 // Draws lines from the given unit to the units it unlocks.
