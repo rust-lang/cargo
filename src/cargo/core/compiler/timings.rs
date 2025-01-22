@@ -694,7 +694,7 @@ h1 {
   dominant-baseline: central;
 }
 
-.graph .grid, .dep-lines {
+.graph .grid, .dep-line {
   stroke-dasharray: 2;
 }
 
@@ -702,9 +702,13 @@ h1 {
   color: var(--canvas-grid);
 }
 
-.dep-lines {
+.dep-line {
   color: var(--canvas-dep-line);
   fill: none;
+}
+
+.dep-line.hl {
+  color: var(--canvas-dep-line-highlighted);
 }
 
 .axis {
@@ -725,6 +729,7 @@ h1 {
 
 .box text {
   font-size: 14px;
+  pointer-events: none;
 }
 
 .my-table {

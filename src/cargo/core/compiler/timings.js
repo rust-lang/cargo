@@ -19,9 +19,6 @@ let HIT_BOXES = [];
 let LAST_HOVER = null;
 // Key is unit index, value is {x, y, width, rmeta_x} of the box.
 let UNIT_COORDS = {};
-// Map of unit index to the index it was unlocked by.
-let REVERSE_UNIT_DEPS = {};
-let REVERSE_UNIT_RMETA_DEPS = {};
 // Cache of measured text widths for SVG
 let MEASURE_TEXT_CACHE = {};
 
@@ -39,23 +36,10 @@ const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
 const DEP_LINE_HIGHLIGHTED_COLOR = getCssColor('--canvas-dep-line-highlighted');
 const CPU_COLOR = getCssColor('--canvas-cpu');
 
-for (let n=0; n<UNIT_DATA.length; n++) {
-  let unit = UNIT_DATA[n];
-  for (let unlocked of unit.unlocked_units) {
-    REVERSE_UNIT_DEPS[unlocked] = n;
-  }
-  for (let unlocked of unit.unlocked_rmeta_units) {
-    REVERSE_UNIT_RMETA_DEPS[unlocked] = n;
-  }
-}
-
 function render_pipeline_graph() {
   if (UNIT_DATA.length == 0) {
     return;
   }
-  let g = document.getElementById('pipeline-graph');
-  HIT_BOXES.length = 0;
-  g.onmousemove = pipeline_mousemove;
   const min_time = document.getElementById('min-unit-time').valueAsNumber;
 
   const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
@@ -96,9 +80,14 @@ function render_pipeline_graph() {
   const axis_left = create_axis_left(graph_height, units.length);
   const dep_lines = create_dep_lines(units);
   const boxes = create_boxes(units, unitCount, canvas_width, px_per_sec);
+  const dep_lines_hl_container = `<g id="hl-pipeline" transform="translate(${X_LINE}, ${MARGIN})"></g>`;
   const svg = document.getElementById(`pipeline-graph-svg`);
   if (svg) {
-    svg.innerHTML = `${axis_bottom}${axis_left}${dep_lines}${boxes}`;
+    svg.innerHTML = (
+      `${axis_bottom}${axis_left}${dep_lines}${boxes}${dep_lines_hl_container}`
+    );
+    let g = document.getElementById('boxes');
+    g.onmousemove = pipeline_mousemove;
   }
 }
 
@@ -190,34 +179,6 @@ function create_one_dep_line(from_x, from_y, from_unit, to_unit, dep_type) {
       ">
       </polyline>`
   )
-}
-
-// Draws lines from the given unit to the units it unlocks.
-function draw_dep_lines(ctx, unit_idx, highlighted) {
-  const unit = UNIT_DATA[unit_idx];
-  const {x, y, rmeta_x} = UNIT_COORDS[unit_idx];
-  ctx.save();
-  for (const unlocked of unit.unlocked_units) {
-    draw_one_dep_line(ctx, x, y, unlocked, highlighted);
-  }
-  for (const unlocked of unit.unlocked_rmeta_units) {
-    draw_one_dep_line(ctx, rmeta_x, y, unlocked, highlighted);
-  }
-  ctx.restore();
-}
-
-function draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
-  if (to_unit in UNIT_COORDS) {
-    let {x: u_x, y: u_y} = UNIT_COORDS[to_unit];
-    ctx.strokeStyle = highlighted ? DEP_LINE_HIGHLIGHTED_COLOR: DEP_LINE_COLOR;
-    ctx.setLineDash([2]);
-    ctx.beginPath();
-    ctx.moveTo(from_x, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, u_y+BOX_HEIGHT/2);
-    ctx.lineTo(u_x, u_y+BOX_HEIGHT/2);
-    ctx.stroke();
-  }
 }
 
 function render_timing_graph() {
@@ -534,44 +495,33 @@ function roundedRect(ctx, x, y, width, height, r) {
 }
 
 function pipeline_mouse_hit(event) {
-  // This brute-force method can be optimized if needed.
-  for (let box of HIT_BOXES) {
-    if (event.offsetX >= box.x && event.offsetX <= box.x2 &&
-        event.offsetY >= box.y && event.offsetY <= box.y2) {
-      return box;
-    }
+  const target = event.target;
+  if (target.tagName == 'rect') {
+    return target.parentNode.dataset.i;
   }
 }
 
 function pipeline_mousemove(event) {
   // Highlight dependency lines on mouse hover.
-  let box = pipeline_mouse_hit(event);
-  if (box) {
-    if (box.i != LAST_HOVER) {
-      LAST_HOVER = box.i;
-      let g = document.getElementById('pipeline-graph-lines');
-      let ctx = g.getContext('2d');
-      ctx.clearRect(0, 0, g.width, g.height);
-      ctx.save();
-      ctx.translate(X_LINE, MARGIN);
-      ctx.lineWidth = 2;
-      draw_dep_lines(ctx, box.i, true);
+  let i = pipeline_mouse_hit(event);
+  if (i && i != LAST_HOVER) {
+		let deps =
+    document.querySelectorAll(`.dep-line[data-i="${LAST_HOVER}"],#dep-${LAST_HOVER},#rdep-${LAST_HOVER}`);
+    for (let el of deps) {
+      el.classList.remove('hl');
+    }
 
-      if (box.i in REVERSE_UNIT_DEPS) {
-        const dep_unit = REVERSE_UNIT_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, x, y, box.i, true);
-        }
-      }
-      if (box.i in REVERSE_UNIT_RMETA_DEPS) {
-        const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, rmeta_x, y, box.i, true);
-        }
-      }
-      ctx.restore();
+    LAST_HOVER = i;
+    deps = document.querySelectorAll(`.dep-line[data-i="${LAST_HOVER}"],#dep-${LAST_HOVER},#rdep-${LAST_HOVER}`);
+    let ids = [];
+    for (let el of deps) {
+      el.classList.add('hl');
+      ids.push(el.id);
+    }
+
+    let hl = document.getElementById('hl-pipeline');
+    if (hl) {
+      hl.innerHTML = ids.map(id => `<use xlink:href="#${id}"/>`).join('');
     }
   }
 }
