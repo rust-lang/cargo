@@ -59,32 +59,23 @@ function render_pipeline_graph() {
   const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
 
   const graph_height = Y_TICK_DIST * units.length;
-  const {ctx, graph_width, canvas_width, canvas_height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
+  let { canvas_width, canvas_height, graph_width, px_per_sec } = resize_graph(graph_height);
+  let ctx = init_canvas('pipeline-graph', canvas_width, canvas_height);
   const container = document.getElementById('pipeline-container');
   container.style.width = canvas_width;
   container.style.height = canvas_height;
+
+  const axis_bottom = create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec });
+  const axis_left = create_axis_left(graph_height, units.length);
+  const svg = document.getElementById(`pipeline-graph-svg`);
+  if (svg) {
+    svg.innerHTML = `${axis_bottom}${axis_left}`;
+  }
 
   // Canvas for hover highlights. This is a separate layer to improve performance.
   const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
   linectx.clearRect(0, 0, canvas_width, canvas_height);
   ctx.strokeStyle = AXES_COLOR;
-  // Draw Y tick marks.
-  for (let n=1; n<units.length; n++) {
-    const y = MARGIN + Y_TICK_DIST * n;
-    ctx.beginPath();
-    ctx.moveTo(X_LINE, y);
-    ctx.lineTo(X_LINE-5, y);
-    ctx.stroke();
-  }
-
-  // Draw Y labels.
-  ctx.textAlign = 'end';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = AXES_COLOR;
-  for (let n=0; n<units.length; n++) {
-    let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
-    ctx.fillText(n+1, X_LINE-4, y);
-  }
 
   // Draw the graph.
   ctx.save();
@@ -377,7 +368,54 @@ function draw_graph_axes(id, graph_height) {
   }
   ctx.strokeStyle = TEXT_COLOR;
   ctx.setLineDash([]);
-  return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
+  return { canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec };
+}
+
+function create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec }) {
+  const { step, tick_dist, num_ticks } = split_ticks(DURATION, px_per_sec, graph_width);
+  const grid_height = canvas_height - Y_LINE - MARGIN;
+  const ticks = Array(num_ticks).fill(0).map((_, idx) => {
+    const i = idx + 1;
+    const time = i * step;
+    return (
+      `<g class="tick" transform="translate(${i * tick_dist}, ${grid_height})">
+         <line y2="5"></line>
+         <line class="grid" y1="-1" y2="-${grid_height}"></line>
+         <text y="1em">${time}s</text>
+       </g>`
+    )
+  }).join("");
+
+  const height = graph_height;
+  const width = graph_width + 20;
+  return (
+    `<g class="axis" transform="translate(${X_LINE}, ${MARGIN})" text-anchor="middle">
+       <line class="domain" x2="${width}" y1="${height}" y2="${height}"></line>
+       ${ticks}
+     </g>`
+  );
+}
+
+function create_axis_left(graph_height, ticks_num) {
+  const text_offset = -Y_TICK_DIST / 2;
+  const ticks = Array(ticks_num).fill(0).map((_, idx) => {
+    const i = idx + 1;
+    let mark = (i == ticks_num) ? "" :
+      `<line stroke="currentColor" stroke-width="2" x2="-5"></line>`;
+    return (
+      `<g class="tick" transform="translate(0, ${i * Y_TICK_DIST})">
+        ${mark}<text x="-5" y="${text_offset}">${i}</text>
+      </g>`
+    )
+  }).join("");
+
+  const height = graph_height + 1;
+  return (
+    `<g class="axis" transform="translate(${X_LINE}, ${MARGIN})" text-anchor="end">
+      <line class="domain" y2="${height}"></line>
+      ${ticks}
+    </g>`
+  )
 }
 
 // Determine the spacing and number of ticks along an axis.

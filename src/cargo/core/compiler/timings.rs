@@ -683,6 +683,26 @@ h1 {
   display: block;
 }
 
+.graph line {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.graph text {
+  fill: currentColor;
+  stroke-width: 0;
+  dominant-baseline: central;
+}
+
+.graph .grid {
+  stroke-dasharray: 2;
+  color: var(--canvas-grid);
+}
+
+.axis {
+  color: var(--canvas-axes);
+}
+
 .my-table {
   margin-top: 20px;
   margin-bottom: 20px;
