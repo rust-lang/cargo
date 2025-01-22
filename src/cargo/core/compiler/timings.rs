@@ -679,6 +679,10 @@ h1 {
   border-bottom: 1px solid var(--h1-border-bottom);
 }
 
+#pipeline-graph {
+  background-color: var(--canvas-background);
+}
+
 .graph {
   display: block;
 }
@@ -838,11 +842,7 @@ static HTML_CANVAS: &str = r#"
   </tr>
 </table>
 
-<div id="pipeline-container" class="canvas-container">
- <canvas id="pipeline-graph" class="graph" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
- <canvas id="pipeline-graph-lines" style="position: absolute; left: 0; top: 0; z-index: 1; pointer-events:none;"></canvas>
- <svg id="pipeline-graph-svg" class="graph" style="position: absolute; left: 0; top: 0; height: 100%; width: 100%;"></svg>
-</div>
+<svg id="pipeline-graph" class="graph"></svg>
 <div class="canvas-container">
   <canvas id="timing-graph" class="graph"></canvas>
 </div>

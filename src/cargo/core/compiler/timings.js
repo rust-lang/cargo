@@ -46,16 +46,6 @@ function render_pipeline_graph() {
 
   const graph_height = Y_TICK_DIST * units.length;
   let { canvas_width, canvas_height, graph_width, px_per_sec } = resize_graph(graph_height);
-  let ctx = init_canvas('pipeline-graph', canvas_width, canvas_height);
-  const container = document.getElementById('pipeline-container');
-  container.style.width = canvas_width;
-  container.style.height = canvas_height;
-
-  ctx.strokeStyle = AXES_COLOR;
-
-  // Draw the graph.
-  ctx.save();
-  ctx.translate(X_LINE, MARGIN);
 
   // Compute x,y coordinate of each block.
   // We also populate a map with the count of each unit name to disambiguate if necessary
@@ -81,8 +71,10 @@ function render_pipeline_graph() {
   const dep_lines = create_dep_lines(units);
   const boxes = create_boxes(units, unitCount, canvas_width, px_per_sec);
   const dep_lines_hl_container = `<g id="hl-pipeline" transform="translate(${X_LINE}, ${MARGIN})"></g>`;
-  const svg = document.getElementById(`pipeline-graph-svg`);
+  const svg = document.getElementById(`pipeline-graph`);
   if (svg) {
+    svg.style.width = canvas_width;
+    svg.style.height = canvas_height;
     svg.innerHTML = (
       `${axis_bottom}${axis_left}${dep_lines}${boxes}${dep_lines_hl_container}`
     );
