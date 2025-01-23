@@ -742,8 +742,8 @@ impl<'gctx> Workspace<'gctx> {
         // self.root_manifest must be Some to have retrieved workspace_config
         let root_manifest_path = self.root_manifest.clone().unwrap();
 
-        let members_paths =
-            workspace_config.members_paths(workspace_config.members.as_ref().unwrap_or(&vec![]))?;
+        let members_paths = workspace_config
+            .members_paths(workspace_config.members.as_deref().unwrap_or_default())?;
         let default_members_paths = if root_manifest_path == self.current_manifest {
             if let Some(ref default) = workspace_config.default_members {
                 Some(workspace_config.members_paths(default)?)
@@ -754,14 +754,15 @@ impl<'gctx> Workspace<'gctx> {
             None
         };
 
-        for path in &members_paths {
+        for (path, glob) in &members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)
                 .with_context(|| {
                     format!(
                         "failed to load manifest for workspace member `{}`\n\
-                        referenced by workspace at `{}`",
+                        referenced{} by workspace at `{}`",
                         path.display(),
-                        root_manifest_path.display()
+                        glob.map(|g| format!(" via `{g}`")).unwrap_or_default(),
+                        root_manifest_path.display(),
                     )
                 })?;
         }
@@ -769,7 +770,7 @@ impl<'gctx> Workspace<'gctx> {
         self.find_path_deps(&root_manifest_path, &root_manifest_path, false)?;
 
         if let Some(default) = default_members_paths {
-            for path in default {
+            for (path, default_member_glob) in default {
                 let normalized_path = paths::normalize_path(&path);
                 let manifest_path = normalized_path.join("Cargo.toml");
                 if !self.members.contains(&manifest_path) {
@@ -779,16 +780,19 @@ impl<'gctx> Workspace<'gctx> {
                     // manifest path, both because `members_paths` doesn't
                     // include `/Cargo.toml`, and because excluded paths may not
                     // be crates.
-                    let exclude = members_paths.contains(&normalized_path)
+                    let exclude = members_paths.iter().any(|(m, _)| *m == normalized_path)
                         && workspace_config.is_excluded(&normalized_path);
                     if exclude {
                         continue;
                     }
                     bail!(
-                        "package `{}` is listed in default-members but is not a member\n\
-                        for workspace at {}.",
+                        "package `{}` is listed in default-members{} but is not a member\n\
+                        for workspace at `{}`.",
                         path.display(),
-                        root_manifest_path.display()
+                        default_member_glob
+                            .map(|g| format!(" via `{g}`"))
+                            .unwrap_or_default(),
+                        root_manifest_path.display(),
                     )
                 }
                 self.default_members.push(manifest_path)
@@ -1872,8 +1876,13 @@ impl WorkspaceRootConfig {
         self.members.is_some()
     }
 
+    /// Returns expanded paths along with the glob that they were expanded from.
+    /// The glob is `None` if the path matched exactly.
     #[tracing::instrument(skip_all)]
-    fn members_paths(&self, globs: &[String]) -> CargoResult<Vec<PathBuf>> {
+    fn members_paths<'g>(
+        &self,
+        globs: &'g [String],
+    ) -> CargoResult<Vec<(PathBuf, Option<&'g str>)>> {
         let mut expanded_list = Vec::new();
 
         for glob in globs {
@@ -1883,8 +1892,11 @@ impl WorkspaceRootConfig {
             // If glob does not find any valid paths, then put the original
             // path in the expanded list to maintain backwards compatibility.
             if expanded_paths.is_empty() {
-                expanded_list.push(pathbuf);
+                expanded_list.push((pathbuf, None));
             } else {
+                let used_glob_pattern = expanded_paths.len() > 1 || expanded_paths[0] != pathbuf;
+                let glob = used_glob_pattern.then_some(glob.as_str());
+
                 // Some OS can create system support files anywhere.
                 // (e.g. macOS creates `.DS_Store` file if you visit a directory using Finder.)
                 // Such files can be reported as a member path unexpectedly.
@@ -1892,7 +1904,7 @@ impl WorkspaceRootConfig {
                 // as a member.
                 for expanded_path in expanded_paths {
                     if expanded_path.is_dir() {
-                        expanded_list.push(expanded_path);
+                        expanded_list.push((expanded_path, glob));
                     }
                 }
             }

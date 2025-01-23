@@ -948,7 +948,7 @@ fn virtual_default_member_is_not_a_member() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `[ROOT]/foo/something-else` is listed in default-members but is not a member
-for workspace at [ROOT]/foo/Cargo.toml.
+for workspace at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -1731,7 +1731,7 @@ fn excluded_default_members_still_must_be_members() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `[ROOT]/foo/bar` is listed in default-members but is not a member
-for workspace at [ROOT]/foo/Cargo.toml.
+for workspace at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -1968,7 +1968,7 @@ fn glob_syntax_invalid_members() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/crates/bar`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
+referenced via `crates/*` by workspace at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
