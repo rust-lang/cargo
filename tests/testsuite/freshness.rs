@@ -2799,7 +2799,6 @@ fn lld_is_fresh() {
             r#"
                 [target.x86_64-pc-windows-msvc]
                 linker = "rust-lld"
-                rustflags = ["-C", "link-arg=-fuse-ld=lld"]
             "#,
         )
         .file(
