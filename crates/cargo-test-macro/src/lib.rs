@@ -10,7 +10,7 @@
 use proc_macro::*;
 use std::path::Path;
 use std::process::Command;
-use std::sync::Once;
+use std::sync::LazyLock;
 
 /// Replacement for `#[test]`
 ///
@@ -254,23 +254,21 @@ fn to_token_stream(code: &str) -> TokenStream {
     code.parse().unwrap()
 }
 
-static mut VERSION: (u32, bool) = (0, false);
+static VERSION: std::sync::LazyLock<(u32, bool)> = LazyLock::new(|| {
+    let output = Command::new("rustc")
+        .arg("-V")
+        .output()
+        .expect("rustc should run");
+    let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
+    let vers = stdout.split_whitespace().skip(1).next().unwrap();
+    let is_nightly = option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_none()
+        && (vers.contains("-nightly") || vers.contains("-dev"));
+    let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
+    (minor, is_nightly)
+});
 
 fn version() -> (u32, bool) {
-    static INIT: Once = Once::new();
-    INIT.call_once(|| {
-        let output = Command::new("rustc")
-            .arg("-V")
-            .output()
-            .expect("rustc should run");
-        let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
-        let vers = stdout.split_whitespace().skip(1).next().unwrap();
-        let is_nightly = option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_none()
-            && (vers.contains("-nightly") || vers.contains("-dev"));
-        let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
-        unsafe { VERSION = (minor, is_nightly) }
-    });
-    unsafe { VERSION }
+    LazyLock::force(&VERSION).clone()
 }
 
 fn check_command(command_path: &Path, args: &[&str]) -> bool {
