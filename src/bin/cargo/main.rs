@@ -219,7 +219,7 @@ fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     commands
 }
 
-fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
+pub fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeMap::new();
