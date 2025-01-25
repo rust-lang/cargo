@@ -603,7 +603,7 @@ impl GlobalContext {
     ///
     /// Returns `None` if the user has not chosen an explicit directory.
     ///
-    /// Callers should prefer `Workspace::target_dir` instead.
+    /// Callers should prefer [`Workspace::target_dir`] instead.
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
@@ -631,6 +631,34 @@ impl GlobalContext {
             Ok(Some(Filesystem::new(path)))
         } else {
             Ok(None)
+        }
+    }
+
+    /// The directory to use for intermediate build artifacts.
+    ///
+    /// Falls back to the target directory if not specified.
+    ///
+    /// Callers should prefer [`Workspace::build_dir`] instead.
+    pub fn build_dir(&self) -> CargoResult<Option<Filesystem>> {
+        if !self.cli_unstable().build_dir {
+            return self.target_dir();
+        }
+        if let Some(val) = &self.build_config()?.build_dir {
+            let path = val.resolve_path(self);
+
+            // Check if the target directory is set to an empty string in the config.toml file.
+            if val.raw_value().is_empty() {
+                bail!(
+                    "the build directory is set to an empty string in {}",
+                    val.value().definition
+                )
+            }
+
+            Ok(Some(Filesystem::new(path)))
+        } else {
+            // For now, fallback to the previous implementation.
+            // This will change in the future.
+            return self.target_dir();
         }
     }
 
@@ -2653,6 +2681,7 @@ pub struct CargoBuildConfig {
     pub pipelining: Option<bool>,
     pub dep_info_basedir: Option<ConfigRelativePath>,
     pub target_dir: Option<ConfigRelativePath>,
+    pub build_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
     pub jobs: Option<JobsConfig>,
