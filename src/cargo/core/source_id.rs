@@ -581,8 +581,8 @@ impl PartialOrd for SourceId {
     }
 }
 
-// Custom comparison defined as canonical URL equality for git sources and URL
-// equality for other sources, ignoring the `precise` and `name` fields.
+// Custom comparison defined as source kind and canonical URL equality,
+// ignoring the `precise` and `name` fields.
 impl Ord for SourceId {
     fn cmp(&self, other: &SourceId) -> Ordering {
         // If our interior pointers are to the exact same `SourceIdInner` then
