@@ -4954,3 +4954,15 @@ local-time = 1979-05-27
         )
         .run();
 }
+
+#[cargo_test]
+fn cargo_metadata_root_only() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .build();
+
+    p.cargo("metadata --root-only")
+        .with_stdout_data(str![[r#"[ROOT]/foo"#]])
+        .run();
+}
