@@ -878,20 +878,26 @@ fn custom_build_script_rustc_flags() {
             "foo/build.rs",
             r#"
                 fn main() {
-                    println!("cargo::rustc-flags=-l nonexistinglib -L /dummy/path1 -L /dummy/path2");
+                    let root = std::env::current_dir().unwrap();
+                    let root = root.parent().unwrap();
+                    println!("cargo::rustc-flags=-l nonexistinglib \
+                        -L {R}/dummy-path1 -L {R}/dummy-path2", R=root.display());
                 }
             "#,
         )
         .build();
+    p.root().join("dummy-path1").mkdir_p();
+    p.root().join("dummy-path2").mkdir_p();
 
-    p.cargo("build --verbose").with_stderr_data(str![[r#"
+    p.cargo("build --verbose")
+        .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L [ROOT]/foo/dummy-path1 -L [ROOT]/foo/dummy-path2 -l nonexistinglib`
 [COMPILING] bar v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L /dummy/path1 -L /dummy/path2`
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L [ROOT]/foo/dummy-path1 -L [ROOT]/foo/dummy-path2`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -932,20 +938,25 @@ fn custom_build_script_rustc_flags_no_space() {
             "foo/build.rs",
             r#"
                 fn main() {
-                    println!("cargo::rustc-flags=-lnonexistinglib -L/dummy/path1 -L/dummy/path2");
+                    let root = std::env::current_dir().unwrap();
+                    let root = root.parent().unwrap();
+                    println!("cargo::rustc-flags=-lnonexistinglib \
+                        -L {R}/dummy-path1 -L {R}/dummy-path2", R=root.display());
                 }
             "#,
         )
         .build();
+    p.root().join("dummy-path1").mkdir_p();
+    p.root().join("dummy-path2").mkdir_p();
 
     p.cargo("build --verbose").with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L [ROOT]/foo/dummy-path1 -L [ROOT]/foo/dummy-path2 -l nonexistinglib`
 [COMPILING] bar v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L /dummy/path1 -L /dummy/path2`
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L [ROOT]/foo/dummy-path1 -L [ROOT]/foo/dummy-path2`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -2975,11 +2986,13 @@ fn flags_go_into_tests() {
             "a/build.rs",
             r#"
                 fn main() {
-                    println!("cargo::rustc-link-search=test");
+                    let path = std::env::current_dir().unwrap().parent().unwrap().join("link-dir");
+                    println!("cargo::rustc-link-search={}", path.display());
                 }
             "#,
         )
         .build();
+    p.root().join("link-dir").mkdir_p();
 
     p.cargo("test -v --test=foo")
         .with_stderr_data(str![[r#"
@@ -2987,12 +3000,12 @@ fn flags_go_into_tests() {
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc [..] a/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/a-[HASH]/build-script-build`
-[RUNNING] `rustc [..] a/src/lib.rs [..] -L test`
+[RUNNING] `rustc [..] a/src/lib.rs [..] -L [ROOT]/foo/link-dir`
 [COMPILING] b v0.5.0 ([ROOT]/foo/b)
-[RUNNING] `rustc [..] b/src/lib.rs [..] -L test`
+[RUNNING] `rustc [..] b/src/lib.rs [..] -L [ROOT]/foo/link-dir`
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..] src/lib.rs [..] -L test`
-[RUNNING] `rustc [..] tests/foo.rs [..] -L test`
+[RUNNING] `rustc [..] src/lib.rs [..] -L [ROOT]/foo/link-dir`
+[RUNNING] `rustc [..] tests/foo.rs [..] -L [ROOT]/foo/link-dir`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 
@@ -3011,7 +3024,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .with_stderr_data(str![[r#"
 [FRESH] a v0.5.0 ([ROOT]/foo/a)
 [COMPILING] b v0.5.0 ([ROOT]/foo/b)
-[RUNNING] `rustc --crate-name b [..] -L test`
+[RUNNING] `rustc --crate-name b [..] -L [ROOT]/foo/link-dir`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/deps/b-[HASH][EXE]`
 
