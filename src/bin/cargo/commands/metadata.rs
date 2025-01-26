@@ -19,6 +19,7 @@ pub fn cli() -> Command {
             "Output information only about the workspace members \
              and don't fetch dependencies",
         ))
+        .arg(flag("root-only", "Only outputs the workspace root"))
         .arg(
             opt("format-version", "Format version")
                 .value_name("VERSION")
@@ -34,6 +35,15 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    if args.get_flag("root-only") {
+        gctx.shell()
+            .print_ansi_stdout(args.root_manifest(gctx)?.parent().map_or_else(
+                || [b'/'].as_slice(),
+                |path| path.as_os_str().as_encoded_bytes(),
+            ))?;
+        return Ok(());
+    }
+
     let ws = args.workspace(gctx)?;
 
     let version = match args.get_one::<String>("format-version") {
