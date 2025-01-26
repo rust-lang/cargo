@@ -352,6 +352,10 @@ Output information only about the workspace members and don't fetch
 dependencies.
 {{/option}}
 
+{{#option "`--root-only`" }}
+Only outputs the workspace root.
+{{/option}}
+
 {{#option "`--format-version` _version_" }}
 Specify the version of the output format to use. Currently `1` is the only
 possible value.
