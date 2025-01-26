@@ -352,6 +352,10 @@ Notes:
 dependencies.</dd>
 
 
+<dt class="option-term" id="option-cargo-metadata---root-only"><a class="option-anchor" href="#option-cargo-metadata---root-only"></a><code>--root-only</code></dt>
+<dd class="option-desc">Only outputs the workspace root.</dd>
+
+
 <dt class="option-term" id="option-cargo-metadata---format-version"><a class="option-anchor" href="#option-cargo-metadata---format-version"></a><code>--format-version</code> <em>version</em></dt>
 <dd class="option-desc">Specify the version of the output format to use. Currently <code>1</code> is the only
 possible value.</dd>

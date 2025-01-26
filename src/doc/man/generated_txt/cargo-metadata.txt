@@ -345,6 +345,9 @@ OPTIONS
            Output information only about the workspace members and don’t
            fetch dependencies.
 
+       --root-only
+           Only outputs the workspace root.
+
        --format-version version
            Specify the version of the output format to use. Currently 1 is the
            only possible value.
