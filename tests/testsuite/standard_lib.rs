@@ -699,7 +699,7 @@ fn no_implicit_alloc() {
         .target_host()
         .with_stderr_data(str![[r#"
 ...
-error[E0433]: failed to resolve: use of undeclared crate or module `alloc`
+error[E0433]: failed to resolve[..]`alloc`
 ...
 "#]])
         .with_status(101)
