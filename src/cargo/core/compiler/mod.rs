@@ -1391,17 +1391,26 @@ fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     }
     arg_feature.push("))");
 
-    // In addition to the package features, we also include the `test` cfg (since
-    // compiler-team#785, as to be able to someday apply yt conditionaly), as well
-    // the `docsrs` cfg from the docs.rs service.
+    // In addition to the package features, we also conditionaly include the `test` cfg
+    // based on the unit target "test" field (ie `lib.test = false`, `[[bin]] test = false` and
+    // others).
     //
-    // We include `docsrs` here (in Cargo) instead of rustc, since there is a much closer
+    // We also include `docsrs` here (in Cargo) instead of rustc, since there is a much closer
     // relationship between Cargo and docs.rs than rustc and docs.rs. In particular, all
     // users of docs.rs use Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
+    let arg_extra = if unit.target.tested()
+        // Benchmarks default to `test = false` but most of them still use the test crate
+        // and the `#[test]` attribute, so for now always mark `test` as well known for them.
+        || unit.target.is_bench()
+    {
+        OsString::from("cfg(docsrs,test)")
+    } else {
+        OsString::from("cfg(docsrs)")
+    };
 
     vec![
         OsString::from("--check-cfg"),
-        OsString::from("cfg(docsrs,test)"),
+        arg_extra,
         OsString::from("--check-cfg"),
         arg_feature,
     ]
