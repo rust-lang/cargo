@@ -3143,6 +3143,7 @@ fn unaccessible_registry_cache_still_works() {
     // make sure we add the permissions to the files afterwards so "cargo clean" can remove them (#6934)
     set_permissions(&f_cache_path, 0o777);
 
+    #[cfg_attr(windows, allow(unused_variables))]
     fn set_permissions(path: &Path, permissions: u32) {
         #[cfg(not(windows))]
         {
