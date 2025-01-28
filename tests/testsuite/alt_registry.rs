@@ -814,7 +814,8 @@ fn no_api() {
 "#]])
         .run();
 
-    p.cargo("login --registry alternative TOKEN")
+    p.cargo("login --registry alternative")
+        .with_stdin("TOKEN")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] registry `alternative` does not support API commands

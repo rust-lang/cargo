@@ -81,7 +81,10 @@ fn registry_credentials() {
 
     let reg = "alternative";
 
-    cargo_process("login --registry").arg(reg).arg(TOKEN).run();
+    cargo_process("login --registry")
+        .arg(reg)
+        .with_stdin(TOKEN)
+        .run();
 
     // Ensure that we have not updated the default token
     check_token(Some(ORIGINAL_TOKEN), None);
@@ -92,7 +95,7 @@ fn registry_credentials() {
     let reg2 = "alternative2";
     cargo_process("login --registry")
         .arg(reg2)
-        .arg(TOKEN2)
+        .with_stdin(TOKEN2)
         .run();
 
     // Ensure not overwriting 1st alternate registry token with
@@ -127,8 +130,24 @@ Caused by:
 
     cargo_process("login")
         .replace_crates_io(registry.index_url())
-        .arg("")
+        .with_stdin("")
         .with_stderr_data(str![[r#"
+please paste the token found on [ROOTURL]/api/me below
+[ERROR] credential provider `cargo:token` failed action `login`
+
+Caused by:
+  please provide a non-empty token
+
+"#]])
+        .with_status(101)
+        .run();
+
+    cargo_process("login")
+        .replace_crates_io(registry.index_url())
+        .arg("")
+        .with_stdin("")
+        .with_stderr_data(str![[r#"
+[WARNING] `cargo login <token>` is deprecated in favor of reading `<token>` from stdin
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
@@ -356,7 +375,7 @@ fn default_registry_configured() {
     .unwrap();
 
     cargo_process("login")
-        .arg("a-new-token")
+        .with_stdin("a-new-token")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOGIN] token for `alternative` saved
