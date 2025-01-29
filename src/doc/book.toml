@@ -6,7 +6,12 @@ author = "Alex Crichton, Steve Klabnik and Carol Nichols, with contributions fro
 smart-punctuation = true # Enable smart-punctuation feature for more than quotes.
 git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/src"
 edit-url-template = "https://github.com/rust-lang/cargo/edit/master/src/doc/{path}"
-search.use-boolean-and = true
+
+[output.html.search]
+use-boolean-and = true
+
+[output.html.search.chapter]
+"CHANGELOG.md" = { enable = false }
 
 [output.html.redirect]
 "/guide/build-cache.html" = "../reference/build-cache.html"
