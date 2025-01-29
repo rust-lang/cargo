@@ -313,7 +313,6 @@ name = "my-pg-tool"
 required-features = ["postgres", "tools"]
 ```
 
-
 ## Target auto-discovery
 
 By default, Cargo automatically determines the targets to build based on the
@@ -379,7 +378,6 @@ autobins = false
 [`cargo test`]: ../commands/cargo-test.md
 [cfg-test]: ../../reference/conditional-compilation.html#test
 [crate types]: ../../reference/linkage.html
-[crates.io]: https://crates.io/
 [customized]: #configuring-a-target
 [dependencies]: specifying-dependencies.md
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
