@@ -183,7 +183,7 @@ The process here is similar to the beta-backporting process. The
 [choochoo]: https://doc.rust-lang.org/book/appendix-07-nightly-rust.html
 [rust-lang/rust]: https://github.com/rust-lang/rust/
 [rust-lang/cargo]: https://github.com/rust-lang/cargo/
-[CHANGELOG]: https://github.com/rust-lang/cargo/blob/master/CHANGELOG.md
+[CHANGELOG]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/CHANGELOG.md
 [release process]: https://forge.rust-lang.org/release/process.html
 [`TargetInfo`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/build_context/target_info.rs
 [crates.io]: https://crates.io/
