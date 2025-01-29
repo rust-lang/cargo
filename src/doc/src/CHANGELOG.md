@@ -2694,7 +2694,7 @@
   [#11790](https://github.com/rust-lang/cargo/pull/11790)
 - Broke endless loop on cyclic features in added dependency in `cargo add`.
   [#11805](https://github.com/rust-lang/cargo/pull/11805)
-- Don't panic when [`patch`] involved in dependency resolution results in a conflict.
+- Don't panic when `[patch]` involved in dependency resolution results in a conflict.
   [#11770](https://github.com/rust-lang/cargo/pull/11770)
 - Fixed credential token format validation.
   [#11951](https://github.com/rust-lang/cargo/pull/11951)
