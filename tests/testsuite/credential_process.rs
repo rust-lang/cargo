@@ -101,7 +101,8 @@ fn credential_provider_auth_failure() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[ERROR] token rejected for `alternative`, please run `cargo login --registry alternative`
+[ERROR] token rejected for `alternative`
+You may need to log in using this registry's credential provider
 
 Caused by:
   failed to get successful HTTP response from [..]
