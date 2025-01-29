@@ -105,10 +105,10 @@ For example, `1.0.0-alpha.11` is higher than `1.0.0-alpha.4`.
 A metadata part can be added after a plus, such as `1.0.0+21AF26D3`.
 This is for informational purposes only and is generally ignored by Cargo.
 
-Cargo bakes in the concept of [Semantic Versioning](https://semver.org/),
-so versions are considered [compatible](semver.md) if their left-most non-zero major/minor/patch component is the same.
-See the [Resolver] chapter for more information on how Cargo uses versions to
-resolve dependencies.
+Cargo bakes in the concept of [SemVer], so versions are considered [compatible]
+if their left-most non-zero major/minor/patch component is the same. See the
+[Resolver] chapter for more information on how Cargo uses versions to resolve
+dependencies.
 
 This field is optional and defaults to `0.0.0`.  The field is required for publishing packages.
 
@@ -116,7 +116,7 @@ This field is optional and defaults to `0.0.0`.  The field is required for publi
 
 [SemVer]: https://semver.org
 [Resolver]: resolver.md
-[SemVer compatibility]: semver.md
+[compatible]: semver.md
 
 ### The `authors` field
 
@@ -611,8 +611,6 @@ information on the `[dependencies]`, `[dev-dependencies]`,
 The `[profile]` tables provide a way to customize compiler settings such as
 optimizations and debug settings. See [the Profiles chapter](profiles.md) for
 more detail.
-
-
 
 [`cargo init`]: ../commands/cargo-init.md
 [`cargo new`]: ../commands/cargo-new.md
