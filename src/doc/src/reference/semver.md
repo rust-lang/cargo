@@ -2310,7 +2310,6 @@ document what your commitments are.
 [items]: ../../reference/items.html
 [non_exhaustive]: ../../reference/attributes/type_system.html#the-non_exhaustive-attribute
 [object safe]: ../../reference/items/traits.html#object-safety
-[rust-feature]: https://doc.rust-lang.org/nightly/unstable-book/
 [sealed trait]: https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
 [SemVer]: https://semver.org/
 [struct literal]: ../../reference/expressions/struct-expr.html
