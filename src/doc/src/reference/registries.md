@@ -124,12 +124,10 @@ controlled via the [`registries.crates-io.protocol`] config key.
 [Credential Provider Protocol]: credential-provider-protocol.md
 [Registry Authentication]: registry-authentication.md
 [`cargo publish`]: ../commands/cargo-publish.md
-[`cargo package`]: ../commands/cargo-package.md
 [`cargo login`]: ../commands/cargo-login.md
 [config]: config.md
 [crates.io]: https://crates.io/
 [`registries.crates-io.protocol`]: config.md#registriescrates-ioprotocol
-
 
 <script>
 (function() {
