@@ -395,8 +395,8 @@ pub struct AuthorizationError {
     pub login_url: Option<Url>,
     /// Specific reason indicating what failed
     reason: AuthorizationErrorReason,
-    /// Should the _TOKEN environment variable name be included when displaying this error?
-    display_token_env_help: bool,
+    /// Should `cargo login` and the `_TOKEN` env var be included when displaying this error?
+    supports_cargo_token_credential_provider: bool,
 }
 
 impl AuthorizationError {
@@ -409,15 +409,16 @@ impl AuthorizationError {
         // Only display the _TOKEN environment variable suggestion if the `cargo:token` credential
         // provider is available for the source. Otherwise setting the environment variable will
         // have no effect.
-        let display_token_env_help = credential_provider(gctx, &sid, false, false)?
-            .iter()
-            .any(|p| p.first().map(String::as_str) == Some("cargo:token"));
+        let supports_cargo_token_credential_provider =
+            credential_provider(gctx, &sid, false, false)?
+                .iter()
+                .any(|p| p.first().map(String::as_str) == Some("cargo:token"));
         Ok(AuthorizationError {
             sid,
             default_registry: gctx.default_registry()?,
             login_url,
             reason,
-            display_token_env_help,
+            supports_cargo_token_credential_provider,
         })
     }
 }
@@ -432,20 +433,30 @@ impl fmt::Display for AuthorizationError {
                 ""
             };
             write!(f, "{}, please run `cargo login{args}`", self.reason)?;
-            if self.display_token_env_help {
+            if self.supports_cargo_token_credential_provider {
                 write!(f, "\nor use environment variable CARGO_REGISTRY_TOKEN")?;
             }
             Ok(())
         } else if let Some(name) = self.sid.alt_registry_key() {
-            let key = ConfigKey::from_str(&format!("registries.{name}.token"));
             write!(
                 f,
-                "{} for `{}`, please run `cargo login --registry {name}`",
+                "{} for `{}`",
                 self.reason,
-                self.sid.display_registry_name(),
+                self.sid.display_registry_name()
             )?;
-            if self.display_token_env_help {
-                write!(f, "\nor use environment variable {}", key.as_env_key())?;
+            if self.supports_cargo_token_credential_provider {
+                let key = ConfigKey::from_str(&format!("registries.{name}.token"));
+                write!(
+                    f,
+                    ", please run `cargo login --registry {name}`\n\
+                    or use environment variable {}",
+                    key.as_env_key()
+                )?;
+            } else {
+                write!(
+                    f,
+                    "\nYou may need to log in using this registry's credential provider"
+                )?;
             }
             Ok(())
         } else if self.reason == AuthorizationErrorReason::TokenMissing {
