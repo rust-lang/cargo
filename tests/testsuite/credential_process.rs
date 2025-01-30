@@ -88,6 +88,30 @@ You may press ctrl-c [..]
 }
 
 #[cargo_test]
+fn credential_provider_auth_failure() {
+    let _reg = registry::RegistryBuilder::new()
+        .http_index()
+        .auth_required()
+        .alternative()
+        .no_configure_token()
+        .credential_provider(&["cargo:token-from-stdout", "true"])
+        .build();
+
+    cargo_process("install libc --registry=alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] token rejected for `alternative`, please run `cargo login --registry alternative`
+
+Caused by:
+  failed to get successful HTTP response from [..]
+  body:
+  [..]
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn basic_unsupported() {
     // Non-action commands don't support login/logout.
     let registry = registry::RegistryBuilder::new()
