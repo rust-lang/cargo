@@ -3605,10 +3605,7 @@ fn invalid_token() {
         .env("CARGO_REGISTRY_TOKEN", "\x16")
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
+[ERROR] Token for registry `crates-io` is invalid (defined in environment variable `CARGO_REGISTRY_TOKEN`)
 
 Caused by:
   token contains invalid characters.
