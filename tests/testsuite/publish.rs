@@ -3612,7 +3612,7 @@ fn invalid_token() {
 
 Caused by:
   token contains invalid characters.
-  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+  Only printable ASCII characters are allowed as it is sent in a HTTPS header.
 
 "#]])
         .with_status(101)
