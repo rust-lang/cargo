@@ -16,7 +16,7 @@ use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCache
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
-use rand::prelude::SliceRandom;
+use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
