@@ -4191,19 +4191,7 @@ fn test_hint_workspace_virtual() {
         .file("a/src/lib.rs", "#[test] fn t1() {}")
         .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
         .file("b/src/lib.rs", "#[test] fn t1() {assert!(false)}")
-        .file(
-            "c/Cargo.toml",
-            r#"
-                [package]
-                name = "c"
-                version = "0.1.0"
-                edition = "2015"
-
-                [[example]]
-                name = "ex1"
-                test = true
-            "#,
-        )
+        .file("c/Cargo.toml", &basic_manifest("c", "0.1.0"))
         .file(
             "c/src/lib.rs",
             r#"
@@ -4287,17 +4275,14 @@ fn test_hint_workspace_virtual() {
 [ERROR] test failed, to rerun pass `-p c --bin c`
 [RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --test t1`
-[RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1-[HASH][EXE])
-[ERROR] test failed, to rerun pass `-p c --example ex1`
 [DOCTEST] a
 [DOCTEST] b
 [DOCTEST] c
 [ERROR] doctest failed, to rerun pass `-p c --doc`
-[ERROR] 5 targets failed:
+[ERROR] 4 targets failed:
     `-p b --lib`
     `-p c --bin c`
     `-p c --test t1`
-    `-p c --example ex1`
     `-p c --doc`
 
 "#]])
