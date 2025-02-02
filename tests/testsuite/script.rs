@@ -1409,6 +1409,22 @@ Caused by:
 }
 
 #[cargo_test]
+fn cmd_install_with_embedded() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript install --path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `[ROOT]/foo/script.rs` is not a directory. --path must point to a directory containing a Cargo.toml file.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
