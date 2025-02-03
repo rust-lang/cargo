@@ -121,12 +121,12 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
                         args.into_iter().map(|os| os.to_string_lossy()).join(" ")
                     )
                 };
-                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+                format!("\n\thelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`")
             } else {
                 "".to_owned()
             };
             let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!("\n\tDid you mean the file `{suggested_script}`")
+                format!("\n\thelp: there is a script with a similar name: `{suggested_script}`")
             } else {
                 "".to_owned()
             };
@@ -153,12 +153,12 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
                         args.into_iter().map(|os| os.to_string_lossy()).join(" ")
                     )
                 };
-                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+                format!("\n\thelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`")
             } else {
                 "".to_owned()
             };
             let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!("\n\tDid you mean the file `{suggested_script}` with `-Zscript`")
+                format!("\n\thelp: there is a script with a similar name: `{suggested_script}` (requires `-Zscript`)")
             } else {
                 "".to_owned()
             };
