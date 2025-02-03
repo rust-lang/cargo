@@ -131,7 +131,7 @@ fn main() {
     let biggest = counts.last().unwrap().1;
 
     src_entries.retain(|src| src.encoded_registry_name == biggest);
-    let mut rng = &mut rand::thread_rng();
+    let mut rng = &mut rand::rng();
     let sample: Vec<_> = src_entries.choose_multiple(&mut rng, 500).collect();
     let mut f = File::create(homedir.join("random-sample")).unwrap();
     for src in sample {
