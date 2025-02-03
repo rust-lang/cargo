@@ -106,7 +106,7 @@ A metadata part can be added after a plus, such as `1.0.0+21AF26D3`.
 This is for informational purposes only and is generally ignored by Cargo.
 
 Cargo bakes in the concept of [Semantic Versioning](https://semver.org/),
-so versions are considered considered [compatible](semver.md) if their left-most non-zero major/minor/patch component is the same.
+so versions are considered [compatible](semver.md) if their left-most non-zero major/minor/patch component is the same.
 See the [Resolver] chapter for more information on how Cargo uses versions to
 resolve dependencies.
 
