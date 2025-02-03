@@ -30,7 +30,8 @@ impl PackageIdSpecQuery for PackageIdSpec {
     {
         let i: Vec<_> = i.into_iter().collect();
         let spec = PackageIdSpec::parse(spec).with_context(|| {
-            let suggestion = edit_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
+            let suggestion =
+                edit_distance::closest_msg(spec, i.iter(), |id| id.name().as_str(), "package");
             format!("invalid package ID specification: `{}`{}", spec, suggestion)
         })?;
         spec.query(i)
@@ -98,6 +99,7 @@ impl PackageIdSpecQuery for PackageIdSpec {
                     self.name(),
                     all_ids.iter(),
                     |id| id.name().as_str(),
+                    "package",
                 ));
             }
 

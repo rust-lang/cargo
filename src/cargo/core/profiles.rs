@@ -1414,7 +1414,12 @@ fn validate_packages_unmatched(
             })
             .collect();
         if name_matches.is_empty() {
-            let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
+            let suggestion = closest_msg(
+                &spec.name(),
+                resolve.iter(),
+                |p| p.name().as_str(),
+                "package",
+            );
             shell.warn(format!(
                 "profile package spec `{}` in profile `{}` did not match any packages{}",
                 spec, name, suggestion

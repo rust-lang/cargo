@@ -737,7 +737,7 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
 
-	Did you mean `foo`?
+	[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -796,7 +796,7 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
 
-	Did you mean `foo`?
+	[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();

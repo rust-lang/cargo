@@ -1535,8 +1535,12 @@ pub fn to_real_manifest(
             .filter(|t| t.is_bin())
             .any(|t| t.name() == run)
         {
-            let suggestion =
-                util::closest_msg(run, targets.iter().filter(|t| t.is_bin()), |t| t.name());
+            let suggestion = util::closest_msg(
+                run,
+                targets.iter().filter(|t| t.is_bin()),
+                |t| t.name(),
+                "target",
+            );
             bail!("default-run target `{}` not found{}", run, suggestion);
         }
     }

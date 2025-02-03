@@ -166,6 +166,7 @@ fn clean_specs(
                 &spec.name(),
                 resolve.iter(),
                 |id| id.name().as_str(),
+                "package",
             ));
             anyhow::bail!(
                 "package ID specification `{}` did not match any packages{}",

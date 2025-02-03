@@ -186,7 +186,7 @@ fn find_closest_capital_c_to_c() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `C`
 
-	Did you mean `c`?
+	[HELP] a command with a similar name exists: `c`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `C` with `cargo search cargo-C`
@@ -202,7 +202,7 @@ fn find_closest_capital_b_to_b() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `B`
 
-	Did you mean `b`?
+	[HELP] a command with a similar name exists: `b`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `B` with `cargo search cargo-B`
@@ -218,7 +218,7 @@ fn find_closest_biuld_to_build() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `biuld`
 
-	Did you mean `build`?
+	[HELP] a command with a similar name exists: `build`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `biuld` with `cargo search cargo-biuld`
@@ -276,7 +276,7 @@ fn find_closest_alias() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `myalais`
 
-	Did you mean `myalias`?
+	[HELP] a command with a similar name exists: `myalias`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `myalais` with `cargo search cargo-myalais`
@@ -562,7 +562,7 @@ fn full_did_you_mean() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `bluid`
 
-	Did you mean `build`?
+	[HELP] a command with a similar name exists: `build`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `bluid` with `cargo search cargo-bluid`

@@ -84,7 +84,7 @@ fn path_required() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `echo`
 
-	Did you mean `bench`?
+	[HELP] a command with a similar name exists: `bench`
 
 	View all installed commands with `cargo --list`
 	Find a package to install `echo` with `cargo search cargo-echo`
