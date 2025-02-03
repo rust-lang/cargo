@@ -15,6 +15,7 @@ use crate::util::{Filesystem, GlobalContext, IntoUrl, Progress, ProgressStyle, a
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_util::paths;
+use crates_io::check_token;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
 use std::cell::RefCell;
@@ -663,6 +664,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                 self.auth_error_headers.clone(),
                 true,
             )?;
+            check_token(&authorization)?;
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!(target: "network", "including authorization for {}", full_url);
         }
