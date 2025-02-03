@@ -289,8 +289,7 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
                     "no such command: `{cmd}`\n\n\t\
-                    Cargo does not handle `+toolchain` directives.\n\t\
-                    Did you mean to invoke `cargo` through `rustup` instead?{script_suggestion}",
+                    help: invoke `cargo` through `rustup` to handle `+toolchain` directives{script_suggestion}",
                 )
             } else {
                 let suggestions = list_commands(gctx);

@@ -549,8 +549,7 @@ fn subcommand_leading_plus_output_contains() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `+nightly`
 
-	Cargo does not handle `+toolchain` directives.
-	Did you mean to invoke `cargo` through `rustup` instead?
+	[HELP] invoke `cargo` through `rustup` to handle `+toolchain` directives
 
 "#]])
         .run();
