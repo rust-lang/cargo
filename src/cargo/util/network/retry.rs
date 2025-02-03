@@ -130,8 +130,8 @@ impl<'a> Retry<'a> {
         }
 
         if self.retries == 1 {
-            let mut rng = rand::thread_rng();
-            INITIAL_RETRY_SLEEP_BASE_MS + rng.gen_range(0..INITIAL_RETRY_JITTER_MS)
+            let mut rng = rand::rng();
+            INITIAL_RETRY_SLEEP_BASE_MS + rng.random_range(0..INITIAL_RETRY_JITTER_MS)
         } else {
             min(
                 ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE_MS,
