@@ -89,10 +89,10 @@ a list of known community-developed subcommands.
 
 Cargo releases coincide with Rust releases.
 High level release notes are available as part of [Rust's release notes][rel].
-Detailed release notes are available in this repo at [CHANGELOG.md].
+Detailed release notes are available in the [changelog].
 
 [rel]: https://github.com/rust-lang/rust/blob/master/RELEASES.md
-[CHANGELOG.md]: CHANGELOG.md
+[changelog]: https://doc.rust-lang.org/nightly/cargo/CHANGELOG.md
 
 ## Reporting issues
 
