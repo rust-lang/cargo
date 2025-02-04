@@ -436,24 +436,41 @@ mod sys {
     use std::io::{Error, Result};
     use std::os::unix::io::AsRawFd;
 
+    #[cfg(not(target_os = "solaris"))]
+    const LOCK_SH: i32 = libc::LOCK_SH;
+    #[cfg(target_os = "solaris")]
+    const LOCK_SH: i32 = 1;
+    #[cfg(not(target_os = "solaris"))]
+    const LOCK_EX: i32 = libc::LOCK_EX;
+    #[cfg(target_os = "solaris")]
+    const LOCK_EX: i32 = 2;
+    #[cfg(not(target_os = "solaris"))]
+    const LOCK_NB: i32 = libc::LOCK_NB;
+    #[cfg(target_os = "solaris")]
+    const LOCK_NB: i32 = 4;
+    #[cfg(not(target_os = "solaris"))]
+    const LOCK_UN: i32 = libc::LOCK_UN;
+    #[cfg(target_os = "solaris")]
+    const LOCK_UN: i32 = 8;
+
     pub(super) fn lock_shared(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_SH)
+        flock(file, LOCK_SH)
     }
 
     pub(super) fn lock_exclusive(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_EX)
+        flock(file, LOCK_EX)
     }
 
     pub(super) fn try_lock_shared(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_SH | libc::LOCK_NB)
+        flock(file, LOCK_SH | LOCK_NB)
     }
 
     pub(super) fn try_lock_exclusive(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_EX | libc::LOCK_NB)
+        flock(file, LOCK_EX | LOCK_NB)
     }
 
     pub(super) fn unlock(file: &File) -> Result<()> {
-        flock(file, libc::LOCK_UN)
+        flock(file, LOCK_UN)
     }
 
     pub(super) fn error_contended(err: &Error) -> bool {
@@ -493,18 +510,18 @@ mod sys {
             l_pid: 0,
             l_pad: [0, 0, 0, 0],
         };
-        flock.l_type = if flag & libc::LOCK_UN != 0 {
+        flock.l_type = if flag & LOCK_UN != 0 {
             libc::F_UNLCK
-        } else if flag & libc::LOCK_EX != 0 {
+        } else if flag & LOCK_EX != 0 {
             libc::F_WRLCK
-        } else if flag & libc::LOCK_SH != 0 {
+        } else if flag & LOCK_SH != 0 {
             libc::F_RDLCK
         } else {
             panic!("unexpected flock() operation")
         };
 
         let mut cmd = libc::F_SETLKW;
-        if (flag & libc::LOCK_NB) != 0 {
+        if (flag & LOCK_NB) != 0 {
             cmd = libc::F_SETLK;
         }
 
