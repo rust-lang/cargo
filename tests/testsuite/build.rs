@@ -2127,7 +2127,6 @@ fn ignore_broken_symlinks() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] File system loop found: [ROOT]/foo/a/b/c/d/foo points to an ancestor [ROOT]/foo/a/b
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

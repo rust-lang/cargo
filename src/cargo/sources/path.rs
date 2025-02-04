@@ -95,7 +95,7 @@ impl<'gctx> PathSource<'gctx> {
     /// `package.exclude` to filter the list of files.
     #[tracing::instrument(skip_all)]
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
-        list_files(pkg, self.gctx)
+        list_files(pkg)
     }
 
     /// Gets the last modified file in a package.
@@ -106,7 +106,7 @@ impl<'gctx> PathSource<'gctx> {
                 self.path
             )));
         }
-        last_modified_file(&self.path, pkg, self.gctx)
+        last_modified_file(&self.path, pkg)
     }
 
     /// Returns the root path of this source.
@@ -279,7 +279,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathEntry>> {
-        list_files(pkg, self.gctx)
+        list_files(pkg)
     }
 
     /// Gets the last modified file in a package.
@@ -290,7 +290,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
                 self.path
             )));
         }
-        last_modified_file(&self.path, pkg, self.gctx)
+        last_modified_file(&self.path, pkg)
     }
 
     /// Returns the root path of this source.
@@ -556,8 +556,8 @@ fn first_package<'p>(
 /// are relevant for building this package, but it also contains logic to
 /// use other methods like `.gitignore`, `package.include`, or
 /// `package.exclude` to filter the list of files.
-pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
-    _list_files(pkg, gctx).with_context(|| {
+pub fn list_files(pkg: &Package) -> CargoResult<Vec<PathEntry>> {
+    _list_files(pkg).with_context(|| {
         format!(
             "failed to determine list of files in {}",
             pkg.root().display()
@@ -566,7 +566,7 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEn
 }
 
 /// See [`PathSource::list_files`].
-fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
+fn _list_files(pkg: &Package) -> CargoResult<Vec<PathEntry>> {
     let root = pkg.root();
     let no_include_option = pkg.manifest().include().is_empty();
     let git_repo = if no_include_option {
@@ -626,11 +626,11 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
     // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
     if no_include_option {
         if let Some(repo) = git_repo {
-            return list_files_gix(pkg, &repo, &filter, gctx);
+            return list_files_gix(pkg, &repo, &filter);
         }
     }
     let mut ret = Vec::new();
-    list_files_walk(pkg.root(), &mut ret, true, &filter, gctx)?;
+    list_files_walk(pkg.root(), &mut ret, true, &filter)?;
     Ok(ret)
 }
 
@@ -689,7 +689,6 @@ fn list_files_gix(
     pkg: &Package,
     repo: &gix::Repository,
     filter: &dyn Fn(&Path, bool) -> bool,
-    gctx: &GlobalContext,
 ) -> CargoResult<Vec<PathEntry>> {
     debug!("list_files_gix {}", pkg.package_id());
     let options = repo
@@ -820,10 +819,10 @@ fn list_files_gix(
             // .git repositories.
             match gix::open(&file_path) {
                 Ok(sub_repo) => {
-                    files.extend(list_files_gix(pkg, &sub_repo, filter, gctx)?);
+                    files.extend(list_files_gix(pkg, &sub_repo, filter)?);
                 }
                 Err(_) => {
-                    list_files_walk(&file_path, &mut files, false, filter, gctx)?;
+                    list_files_walk(&file_path, &mut files, false, filter)?;
                 }
             }
         } else if (filter)(&file_path, is_dir) {
@@ -859,7 +858,6 @@ fn list_files_walk(
     ret: &mut Vec<PathEntry>,
     is_root: bool,
     filter: &dyn Fn(&Path, bool) -> bool,
-    gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let walkdir = WalkDir::new(path)
         .follow_links(true)
@@ -933,7 +931,7 @@ fn list_files_walk(
                 }
             }
             Err(err) if err.loop_ancestor().is_some() => {
-                gctx.shell().warn(err)?;
+                debug!(%err);
             }
             Err(err) => match err.path() {
                 // If an error occurs with a path, filter it again.
@@ -957,14 +955,10 @@ fn list_files_walk(
 }
 
 /// Gets the last modified file in a package.
-fn last_modified_file(
-    path: &Path,
-    pkg: &Package,
-    gctx: &GlobalContext,
-) -> CargoResult<(FileTime, PathBuf)> {
+fn last_modified_file(path: &Path, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
     let mut max = FileTime::zero();
     let mut max_path = PathBuf::new();
-    for file in list_files(pkg, gctx).with_context(|| {
+    for file in list_files(pkg).with_context(|| {
         format!(
             "failed to determine the most recently modified file in {}",
             pkg.root().display()

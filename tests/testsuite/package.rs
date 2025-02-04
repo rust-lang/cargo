@@ -1043,9 +1043,20 @@ fn filesystem_loop() {
         .build()
         .cargo("package -v")
         .with_stderr_data(str![[r#"
-...
-[WARNING] File system loop found: [ROOT]/foo/a/b/c/d/foo points to an ancestor [ROOT]/foo/a/b
-...
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[WARNING] found (git) Cargo.toml ignored at `target/tmp/cit/t0/foo/Cargo.toml` in workdir `/Users/whlo/dev/cargo/`
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[ARCHIVING] Cargo.lock
+[ARCHIVING] Cargo.toml
+[ARCHIVING] Cargo.toml.orig
+[ARCHIVING] src/main.rs
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[RUNNING] `rustc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
 "#]])
         .run();
 }
