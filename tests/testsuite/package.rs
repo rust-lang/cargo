@@ -1039,9 +1039,12 @@ fn filesystem_loop() {
 
     project()
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .symlink_dir("a/b", "a/b/c/foo")
         .symlink_dir("a/b", "a/b/c/d/foo")
+        .symlink_dir("a/b", "a/b/c/d/e/foo")
         .build()
         .cargo("package -v")
+        .env("__CARGO_TEST_FS_LOOP_LIMIT_DO_NOT_USE_THIS", "2")
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
