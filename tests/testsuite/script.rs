@@ -84,11 +84,11 @@ fn path_required() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `echo`
 
-	[HELP] a command with a similar name exists: `bench`
+[HELP] a command with a similar name exists: `bench`
 
-	View all installed commands with `cargo --list`
-	Find a package to install `echo` with `cargo search cargo-echo`
-	To run the file `echo`, provide a relative path like `./echo`
+[HELP] view all installed commands with `cargo --list`
+[HELP] find a package to install `echo` with `cargo search cargo-echo`
+[HELP] To run the file `echo`, provide a relative path like `./echo`
 
 "#]])
         .run();
@@ -582,8 +582,7 @@ fn script_like_dir() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no such file or subcommand `foo.rs`
-	`foo.rs` is a directory
+[ERROR] no such file or subcommand `foo.rs`: `foo.rs` is a directory
 
 "#]])
         .run();
@@ -630,7 +629,7 @@ fn did_you_mean_file() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
-	[HELP] there is a script with a similar name: `./food.rs`
+[HELP] there is a script with a similar name: `./food.rs`
 
 "#]])
         .run();
@@ -648,7 +647,7 @@ fn did_you_mean_file_stable() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `foo.rs`
-	[HELP] there is a script with a similar name: `./food.rs` (requires `-Zscript`)
+[HELP] there is a script with a similar name: `./food.rs` (requires `-Zscript`)
 
 "#]])
         .run();
@@ -664,7 +663,7 @@ fn did_you_mean_command() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
-	[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
+[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
 
 "#]])
         .run();
@@ -680,7 +679,7 @@ fn did_you_mean_command_stable() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
-	[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
+[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
 
 "#]])
         .run();

@@ -117,7 +117,7 @@ pub fn closest_msg<'a, T>(
 ) -> String {
     match closest(choice, iter, &key) {
         Some(e) => format!(
-            "\n\n\thelp: a {kind} with a similar name exists: `{}`",
+            "\n\nhelp: a {kind} with a similar name exists: `{}`",
             key(&e)
         ),
         None => String::new(),
