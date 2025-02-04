@@ -639,7 +639,7 @@ fn clean_spec_version() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `baz` did not match any packages
 
-	Did you mean `bar`?
+[HELP] a package with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -694,7 +694,7 @@ fn clean_spec_partial_version() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `baz` did not match any packages
 
-	Did you mean `bar`?
+[HELP] a package with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -749,7 +749,7 @@ fn clean_spec_partial_version_ambiguous() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `baz` did not match any packages
 
-	Did you mean `bar`?
+[HELP] a package with a similar name exists: `bar`
 
 "#]])
         .run();

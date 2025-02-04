@@ -2763,7 +2763,7 @@ fn in_package_workspace_not_found() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `li` did not match any packages
 
-	Did you mean `foo`?
+[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -2865,7 +2865,7 @@ fn publish_path_dependency_without_workspace() {
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
 
-	Did you mean `foo`?
+[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();

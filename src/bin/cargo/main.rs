@@ -278,28 +278,28 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
     let command = match path {
         Some(command) => command,
         None => {
-            let script_suggestion = if gctx.cli_unstable().script
-                && std::path::Path::new(cmd).is_file()
-            {
-                let sep = std::path::MAIN_SEPARATOR;
-                format!("\n\tTo run the file `{cmd}`, provide a relative path like `.{sep}{cmd}`")
-            } else {
-                "".to_owned()
-            };
+            let script_suggestion =
+                if gctx.cli_unstable().script && std::path::Path::new(cmd).is_file() {
+                    let sep = std::path::MAIN_SEPARATOR;
+                    format!(
+                    "\nhelp: To run the file `{cmd}`, provide a relative path like `.{sep}{cmd}`"
+                )
+                } else {
+                    "".to_owned()
+                };
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
-                    "no such command: `{cmd}`\n\n\t\
-                    Cargo does not handle `+toolchain` directives.\n\t\
-                    Did you mean to invoke `cargo` through `rustup` instead?{script_suggestion}",
+                    "no such command: `{cmd}`\n\n\
+                    help: invoke `cargo` through `rustup` to handle `+toolchain` directives{script_suggestion}",
                 )
             } else {
                 let suggestions = list_commands(gctx);
-                let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c);
+                let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c, "command");
 
                 anyhow::format_err!(
-                    "no such command: `{cmd}`{did_you_mean}\n\n\t\
-                    View all installed commands with `cargo --list`\n\t\
-                    Find a package to install `{cmd}` with `cargo search cargo-{cmd}`{script_suggestion}",
+                    "no such command: `{cmd}`{did_you_mean}\n\n\
+                    help: view all installed commands with `cargo --list`\n\
+                    help: find a package to install `{cmd}` with `cargo search cargo-{cmd}`{script_suggestion}",
                 )
             };
 

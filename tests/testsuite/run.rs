@@ -474,7 +474,7 @@ fn bogus_default_run() {
 Caused by:
   default-run target `b` not found
 
-  	Did you mean `a`?
+  [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -756,7 +756,7 @@ Available bin targets:
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `a.rs`
 
-	Did you mean `a`?
+[HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -777,7 +777,7 @@ Available example targets:
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a.rs`
 
-	Did you mean `a`?
+[HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();

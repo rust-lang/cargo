@@ -1350,7 +1350,7 @@ Available bin targets:
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `a.rs`
 
-	Did you mean `a`?
+[HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -1371,7 +1371,7 @@ Available example targets:
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a.rs`
 
-	Did you mean `a`?
+[HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -5908,7 +5908,7 @@ fn target_filters_workspace() {
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `ex`
 
-	Did you mean `ex1`?
+[HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();
@@ -5918,7 +5918,7 @@ fn target_filters_workspace() {
         .with_stderr_data(str![[r#"
 [ERROR] no example target matches pattern `ex??`
 
-	Did you mean `ex1`?
+[HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();

@@ -63,7 +63,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [ERROR] invalid package ID specification: `./bar`
 
-	Did you mean `bar`?
+[HELP] a package with a similar name exists: `bar`
 
 Caused by:
   package ID specification `./bar` looks like a file path, maybe try [ROOTURL]/foo/bar
@@ -106,7 +106,7 @@ registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `https://example.com/crates-io` did not match any packages
-Did you mean one of these?
+[HELP] there are similar package ID specifications:
 
   crates-io@0.1.0
 
@@ -119,7 +119,7 @@ Did you mean one of these?
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `crates_io` did not match any packages
 
-	Did you mean `crates-io`?
+[HELP] a package with a similar name exists: `crates-io`
 
 "#]])
         .run();
@@ -193,7 +193,7 @@ Please re-run this command with one of the following specifications:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `two-ver@0.3.0` did not match any packages
-Did you mean one of these?
+[HELP] there are similar package ID specifications:
 
   two-ver@0.1.0
   two-ver@0.2.0

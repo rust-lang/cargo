@@ -78,7 +78,7 @@ fn profile_override_warnings() {
 [WARNING] profile package spec `bar@1.2.3` in profile `dev` has a version or URL that does not match any of the packages: bar v0.5.0 ([ROOT]/foo/bar)
 [WARNING] profile package spec `bart` in profile `dev` did not match any packages
 
-	Did you mean `bar`?
+[HELP] a package with a similar name exists: `bar`
 [WARNING] profile package spec `no-suggestion` in profile `dev` did not match any packages
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)

@@ -1967,7 +1967,7 @@ foo v0.1.0 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `no-dep` did not match any packages
 
-	Did you mean `bdep`?
+[HELP] a package with a similar name exists: `bdep`
 
 "#]])
         .with_status(101)

@@ -266,7 +266,7 @@ impl<'a> UnitGenerator<'a, '_> {
                         .filter(|target| is_expected_kind(target))
                 })
                 .collect::<Vec<_>>();
-            let suggestion = closest_msg(target_name, targets.iter(), |t| t.name());
+            let suggestion = closest_msg(target_name, targets.iter(), |t| t.name(), "target");
             if !suggestion.is_empty() {
                 anyhow::bail!(
                     "no {} target {} `{}`{}",
