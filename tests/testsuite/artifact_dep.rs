@@ -602,9 +602,9 @@ fn build_script_with_bin_artifacts() {
         .with_stderr_data(
             str![[r#"
 [LOCKING] 1 package to latest compatible version
-[COMPILING] foo v0.0.0 ([ROOT]/foo)
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
 
 "#]]
             .unordered(),
@@ -1433,7 +1433,6 @@ fn profile_override_basic() {
             str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..] -C opt-level=1 [..]`
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..] -C opt-level=3 [..]`
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..] -C opt-level=1 [..]`
@@ -1442,6 +1441,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=3 [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 
 "#]]
             .unordered(),
@@ -1870,8 +1870,8 @@ fn allow_dep_renames_with_multiple_versions() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
 
 "#]]
             .unordered(),
@@ -2835,13 +2835,13 @@ fn with_assumed_host_target_and_optional_build_dep() {
         .with_stderr_data(
             str![[r#"
 [LOCKING] 1 package to latest compatible version
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [RUNNING] `rustc --crate-name build_script_build --edition=2021 [..]--crate-type bin[..]
 [RUNNING] `rustc --crate-name d1 --edition=2021 [..]--crate-type bin[..]
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo --edition=2021 [..]--cfg[..]d1[..]
 [FINISHED] `dev` profile [..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 
 "#]]
             .unordered(),
@@ -3199,8 +3199,8 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
 [COMPILING] c v0.1.0 ([ROOT]/foo/c)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 
 "#]]
             .unordered(),

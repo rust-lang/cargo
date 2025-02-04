@@ -289,7 +289,7 @@ fn main() {}
   "edition": "2021",
   "features": {},
   "homepage": null,
-  "id": "path+[ROOTURL]/foo#foo::bar@0.0.0",
+  "id": "path+[ROOTURL]/foo/foo::bar.rs#foo::bar@0.0.0",
   "keywords": [],
   "license": null,
   "license_file": null,

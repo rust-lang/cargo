@@ -269,10 +269,11 @@ impl<'gctx> Workspace<'gctx> {
         let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), gctx);
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
-        let key = ws.current_manifest.parent().unwrap();
         let id = package.package_id();
         let package = MaybePackage::Package(package);
-        ws.packages.packages.insert(key.to_path_buf(), package);
+        ws.packages
+            .packages
+            .insert(ws.current_manifest.clone(), package);
         ws.target_dir = if let Some(dir) = target_dir {
             Some(dir)
         } else {
@@ -538,11 +539,7 @@ impl<'gctx> Workspace<'gctx> {
     /// Returns a mutable iterator over all packages in this workspace
     pub fn members_mut(&mut self) -> impl Iterator<Item = &mut Package> {
         let packages = &mut self.packages.packages;
-        let members: HashSet<_> = self
-            .members
-            .iter()
-            .map(|path| path.parent().unwrap().to_owned())
-            .collect();
+        let members: HashSet<_> = self.members.iter().map(|path| path).collect();
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
@@ -1163,7 +1160,6 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
         for (path, maybe_pkg) in &self.packages.packages {
-            let path = path.join("Cargo.toml");
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 if self.gctx.cli_unstable().cargo_lints {
                     self.emit_lints(pkg, &path)?
@@ -1792,19 +1788,22 @@ impl<'gctx> Packages<'gctx> {
     }
 
     fn maybe_get(&self, manifest_path: &Path) -> Option<&MaybePackage> {
-        self.packages.get(manifest_path.parent().unwrap())
+        self.packages.get(manifest_path)
     }
 
     fn maybe_get_mut(&mut self, manifest_path: &Path) -> Option<&mut MaybePackage> {
-        self.packages.get_mut(manifest_path.parent().unwrap())
+        self.packages.get_mut(manifest_path)
     }
 
     fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {
-        let key = manifest_path.parent().unwrap();
-        match self.packages.entry(key.to_path_buf()) {
+        match self.packages.entry(manifest_path.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = SourceId::for_path(key)?;
+                let source_id = if crate::util::toml::is_embedded(manifest_path) {
+                    SourceId::for_path(manifest_path)?
+                } else {
+                    SourceId::for_path(manifest_path.parent().unwrap())?
+                };
                 let manifest = read_manifest(manifest_path, source_id, self.gctx)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {

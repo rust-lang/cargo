@@ -2479,7 +2479,7 @@ fn main() {
         .with_stderr_data(str![[r#"
 [MIGRATING] foo.rs from 2021 edition to 2024
 [FIXED] foo.rs (1 fix)
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/foo.rs)
 [MIGRATING] [ROOT]/home/.cargo/target/[HASH]/foo.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
