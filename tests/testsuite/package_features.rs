@@ -340,6 +340,8 @@ f3f4
         .with_stderr_data(str![[r#"
 [ERROR] Package `foo v0.1.0 ([ROOT]/foo)` does not have the feature `f2`
 
+[HELP] a feature with a similar name exists: `f1`
+
 "#]])
         .run();
 
@@ -406,6 +408,8 @@ fn feature_default_resolver() {
         .with_stderr_data(str![[r#"
 [ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have the feature `testt`
 
+[HELP] a feature with a similar name exists: `test`
+
 "#]])
         .run();
 
@@ -421,6 +425,169 @@ feature set
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have a dependency named `a`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn command_line_optional_dep() {
+    // Enabling a dependency used as a `dep:` errors helpfully
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2015"
+
+            [features]
+            foo = ["dep:bar"]
+
+            [dependencies]
+            bar = { version = "1.0.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("check --features bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+Dependency `bar` would be enabled by these features:
+	- `foo`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn command_line_optional_dep_three_options() {
+    // Trying to enable an optional dependency used as a `dep:` errors helpfully, when there are three features which would enable the dependency
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2015"
+
+            [features]
+            f1 = ["dep:bar"]
+            f2 = ["dep:bar"]
+            f3 = ["dep:bar"]
+
+            [dependencies]
+            bar = { version = "1.0.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("check --features bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+Dependency `bar` would be enabled by these features:
+	- `f1`
+	- `f2`
+	- `f3`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn command_line_optional_dep_many_options() {
+    // Trying to enable an optional dependency used as a `dep:` errors helpfully, when there are many features which would enable the dependency
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2015"
+
+            [features]
+            f1 = ["dep:bar"]
+            f2 = ["dep:bar"]
+            f3 = ["dep:bar"]
+            f4 = ["dep:bar"]
+
+            [dependencies]
+            bar = { version = "1.0.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("check --features bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+Dependency `bar` would be enabled by these features:
+	- `f1`
+	- `f2`
+	- `f3`
+	  ...
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn command_line_optional_dep_many_paths() {
+    // Trying to enable an optional dependency used as a `dep:` errors helpfully, when a features would enable the dependency in multiple ways
+    Package::new("bar", "1.0.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .feature("c", &[])
+        .feature("d", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2015"
+
+            [features]
+            f1 = ["dep:bar", "bar/a", "bar/b"] # Remove the implicit feature
+            f2 = ["bar/b", "bar/c"] # Overlaps with previous
+            f3 = ["bar/d"] # No overlap with previous
+
+            [dependencies]
+            bar = { version = "1.0.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("check --features bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+Dependency `bar` would be enabled by these features:
+	- `f1`
+	- `f2`
+	- `f3`
 
 "#]])
         .run();
@@ -654,6 +821,8 @@ m1-feature set
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] Package `member1 v0.1.0 ([ROOT]/foo/member1)` does not have the feature `m2-feature`
+
+[HELP] a feature with a similar name exists: `m1-feature`
 
 "#]])
         .run();
