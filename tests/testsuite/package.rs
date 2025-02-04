@@ -1045,20 +1045,14 @@ fn filesystem_loop() {
         .build()
         .cargo("package -v")
         .env("__CARGO_TEST_FS_LOOP_LIMIT_DO_NOT_USE_THIS", "2")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[WARNING] found (git) Cargo.toml ignored at `target/tmp/cit/t0/foo/Cargo.toml` in workdir `/Users/whlo/dev/cargo/`
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[ARCHIVING] Cargo.lock
-[ARCHIVING] Cargo.toml
-[ARCHIVING] Cargo.toml.orig
-[ARCHIVING] src/main.rs
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] failed to determine list of files in [ROOT]/foo
+
+Caused by:
+  file system loop detected at `[ROOT]/foo/a/b` (exceeded limit of 2)
 
 "#]])
         .run();

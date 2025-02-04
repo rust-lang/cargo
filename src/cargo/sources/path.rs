@@ -895,6 +895,13 @@ fn list_files_walk(
             true
         });
 
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
+    let loop_count_limit = std::env::var("__CARGO_TEST_FS_LOOP_LIMIT_DO_NOT_USE_THIS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1024);
+    let mut fs_loop = HashMap::new();
     let mut current_symlink_dir = None;
     for entry in walkdir {
         match entry {
@@ -932,6 +939,15 @@ fn list_files_walk(
             }
             Err(err) if err.loop_ancestor().is_some() => {
                 debug!(%err);
+                let ancestor = err.loop_ancestor().unwrap();
+                let loop_count = fs_loop.entry(ancestor.to_path_buf()).or_insert(0u32);
+                *loop_count += 1;
+                if *loop_count > loop_count_limit {
+                    anyhow::bail!(
+                        "file system loop detected at `{}` (exceeded limit of {loop_count_limit})",
+                        ancestor.display(),
+                    );
+                }
             }
             Err(err) => match err.path() {
                 // If an error occurs with a path, filter it again.
