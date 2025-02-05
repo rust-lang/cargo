@@ -52,11 +52,22 @@ The `cargo fix` subcommand can also be used to migrate a package from one
    (without the `--edition` flag) to apply any suggestions given by the
    compiler.
 
-And hopefully that's it! Just keep in mind of the caveats mentioned above that
-`cargo fix` cannot update code for inactive features or `cfg` expressions.
-Also, in some rare cases the compiler is unable to automatically migrate all
-code to the new edition, and this may require manual changes after building
-with the new edition.
+If you encounter failing fixes during migration, instead of fixing everything
+in a single `cargo fix` invocation, try fixing only a subset of packages for
+specific features and Cargo targets. Fixing each combination separately can
+help identify the root cause of failures more easily and avoid unintended
+feature unification between packages. For example:
+
+* Use the `--package` flag to fix only some packages, e.g., `cargo fix --package foo`.
+* Instead of `--all-features`, use the `--features` flag to activate a specific
+  set of features, e.g., `cargo fix --package foo --features myfeat`.
+* `cargo fix` implies `--all-targets` by default. Use target selection flags to
+  fix only a subset of Cargo targets, e.g., `cargo fix --bin mybin`.
+
+Also keep in mind of the caveats mentioned above that `cargo fix` cannot update
+code for inactive features or `cfg` expressions. Also, in some rare cases the
+compiler is unable to automatically migrate all code to the new edition,
+and this may require manual changes after building with the new edition.
 
 [edition]: https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 [edition field]: ../reference/manifest.html#the-edition-field

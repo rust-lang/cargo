@@ -64,11 +64,30 @@ warnings are issued, you may want to consider running \fBcargo fix\fR again
 compiler.
 .RE
 .sp
-And hopefully that\[cq]s it! Just keep in mind of the caveats mentioned above that
-\fBcargo fix\fR cannot update code for inactive features or \fBcfg\fR expressions.
-Also, in some rare cases the compiler is unable to automatically migrate all
-code to the new edition, and this may require manual changes after building
-with the new edition.
+If you encounter failing fixes during migration, instead of fixing everything
+in a single \fBcargo fix\fR invocation, try fixing only a subset of packages for
+specific features and Cargo targets. Fixing each combination separately can
+help identify the root cause of failures more easily and avoid unintended
+feature unification between packages. For example:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Use the \fB\-\-package\fR flag to fix only some packages, e.g., \fBcargo fix \-\-package foo\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Instead of \fB\-\-all\-features\fR, use the \fB\-\-features\fR flag to activate a specific
+set of features, e.g., \fBcargo fix \-\-package foo \-\-features myfeat\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'\fBcargo fix\fR implies \fB\-\-all\-targets\fR by default. Use target selection flags to
+fix only a subset of Cargo targets, e.g., \fBcargo fix \-\-bin mybin\fR\&.
+.RE
+.sp
+Also keep in mind of the caveats mentioned above that \fBcargo fix\fR cannot update
+code for inactive features or \fBcfg\fR expressions. Also, in some rare cases the
+compiler is unable to automatically migrate all code to the new edition,
+and this may require manual changes after building with the new edition.
 .SH "OPTIONS"
 .SS "Fix options"
 .sp
