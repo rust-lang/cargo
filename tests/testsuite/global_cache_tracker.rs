@@ -2145,18 +2145,8 @@ fn resilient_to_unexpected_files() {
 
     p.cargo("clean gc -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to clean entries from the global cache
-
-Caused by:
-  failed to sync tracking database
-
-Caused by:
-  failed to read path `"[ROOT]/home/.cargo/registry/cache/foo"`
-
-Caused by:
-  Not a directory (os error 20)
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
         .run();
