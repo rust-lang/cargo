@@ -33,10 +33,6 @@ pass `--target` to fix code for the given target.
 
     cargo fix --target x86_64-pc-windows-gnu
 
-If you encounter any problems with `cargo fix` or otherwise have any questions
-or feature requests please don't hesitate to file an issue at
-<https://github.com/rust-lang/cargo>.
-
 ### Edition migration
 
 The `cargo fix` subcommand can also be used to migrate a package from one
