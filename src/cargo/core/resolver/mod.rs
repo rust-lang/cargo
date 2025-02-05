@@ -59,7 +59,6 @@
 //! over the place.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::mem;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -142,9 +141,7 @@ pub fn resolve(
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     let resolver_ctx = loop {
-        let resolver_ctx = ResolverContext::new();
         let resolver_ctx = activate_deps_loop(
-            resolver_ctx,
             &mut registry,
             summaries,
             first_version,
@@ -199,13 +196,13 @@ pub fn resolve(
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, `cx` is returned.
 fn activate_deps_loop(
-    mut resolver_ctx: ResolverContext,
     registry: &mut RegistryQueryer<'_>,
     summaries: &[(Summary, ResolveOpts)],
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
 ) -> CargoResult<ResolverContext> {
+    let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
 
@@ -759,22 +756,8 @@ impl RemainingCandidates {
     ) -> Option<(Summary, bool)> {
         for b in self.remaining.iter() {
             let b_id = b.package_id();
-            // The `links` key in the manifest dictates that there's only one
-            // package in a dependency graph, globally, with that particular
-            // `links` key. If this candidate links to something that's already
-            // linked to by a different package then we've gotta skip this.
-            if let Some(link) = b.links() {
-                if let Some(&a) = cx.links.get(&link) {
-                    if a != b_id {
-                        conflicting_prev_active
-                            .entry(a)
-                            .or_insert_with(|| ConflictReason::Links(link));
-                        continue;
-                    }
-                }
-            }
 
-            // Otherwise the condition for being a valid candidate relies on
+            // The condition for being a valid candidate relies on
             // semver. Cargo dictates that you can't duplicate multiple
             // semver-compatible versions of a crate. For example we can't
             // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
@@ -791,12 +774,27 @@ impl RemainingCandidates {
                 }
             }
 
+            // Otherwise the `links` key in the manifest dictates that there's only one
+            // package in a dependency graph, globally, with that particular
+            // `links` key. If this candidate links to something that's already
+            // linked to by a different package then we've gotta skip this.
+            if let Some(link) = b.links() {
+                if let Some(&a) = cx.links.get(&link) {
+                    if a != b_id {
+                        conflicting_prev_active
+                            .entry(a)
+                            .or_insert_with(|| ConflictReason::Links(link));
+                        continue;
+                    }
+                }
+            }
+
             // Well if we made it this far then we've got a valid dependency. We
             // want this iterator to be inherently "peekable" so we don't
             // necessarily return the item just yet. Instead we stash it away to
             // get returned later, and if we replaced something then that was
             // actually the candidate to try first so we return that.
-            if let Some(r) = mem::replace(&mut self.has_another, Some(b.clone())) {
+            if let Some(r) = self.has_another.replace(b.clone()) {
                 return Some((r, true));
             }
         }
