@@ -320,7 +320,7 @@ fn normalize_toml(
     if let Some(original_package) = original_toml.package() {
         let package_name = &original_package.name;
 
-        let normalized_package = normalize_package_toml(original_package, package_root, &inherit)?;
+        let normalized_package = normalize_package_toml(original_package, manifest_file, &inherit)?;
         let edition = normalized_package
             .normalized_edition()
             .expect("previously normalized")
@@ -545,9 +545,11 @@ fn normalize_patch<'a>(
 #[tracing::instrument(skip_all)]
 fn normalize_package_toml<'a>(
     original_package: &manifest::TomlPackage,
-    package_root: &Path,
+    manifest_file: &Path,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
+    let package_root = manifest_file.parent().unwrap();
+
     let normalized_package = manifest::TomlPackage {
         edition: original_package
             .edition
