@@ -967,12 +967,12 @@ fn find_candidate(
         if let Some(age) = age {
             // Above we use `cx` to determine if this is going to be conflicting.
             // But lets just double check if the `pop`ed frame agrees.
-            let frame_to_new = frame.context.age >= age;
+            let frame_too_new = frame.context.age >= age;
             debug_assert!(
                 frame
                     .context
                     .is_conflicting(Some(parent.package_id()), conflicting_activations)
-                    == frame_to_new.then_some(age)
+                    == frame_too_new.then_some(age)
             );
 
             if frame_to_new {
