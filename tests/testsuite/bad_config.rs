@@ -471,6 +471,31 @@ expected `}`
 }
 
 #[cargo_test]
+fn cargo_toml_missing_package_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+               [package]
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] missing field `name`
+ --> Cargo.toml:2:16
+  |
+2 |                [package]
+  |                ^^^^^^^^^
+  |
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn duplicate_binary_names() {
     let p = project()
         .file(
