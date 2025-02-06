@@ -124,11 +124,6 @@ fn expand_manifest_(
         ));
         toml::Value::String(DEFAULT_EDITION.to_string())
     });
-    for field in AUTO_FIELDS {
-        package
-            .entry(field.to_owned())
-            .or_insert_with(|| toml::Value::Boolean(false));
-    }
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
@@ -563,11 +558,6 @@ name = "test-"
 path = "/home/me/test.rs"
 
 [package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
 edition = "2024"
 name = "test-"
 
@@ -597,11 +587,6 @@ path = [..]
 time = "0.1.25"
 
 [package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
 edition = "2024"
 name = "test-"
 

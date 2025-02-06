@@ -333,12 +333,13 @@ fn normalize_toml(
 
         normalized_toml.features = normalize_features(original_toml.features.as_ref())?;
 
+        let auto_embedded = is_embedded.then_some(false);
         normalized_toml.lib = targets::normalize_lib(
             original_toml.lib.as_ref(),
             package_root,
             package_name,
             edition,
-            original_package.autolib,
+            original_package.autolib.or(auto_embedded),
             warnings,
         )?;
         normalized_toml.bin = Some(targets::normalize_bins(
@@ -346,7 +347,7 @@ fn normalize_toml(
             package_root,
             package_name,
             edition,
-            original_package.autobins,
+            original_package.autobins.or(auto_embedded),
             warnings,
             errors,
             normalized_toml.lib.is_some(),
@@ -355,7 +356,7 @@ fn normalize_toml(
             original_toml.example.as_ref(),
             package_root,
             edition,
-            original_package.autoexamples,
+            original_package.autoexamples.or(auto_embedded),
             warnings,
             errors,
         )?);
@@ -363,7 +364,7 @@ fn normalize_toml(
             original_toml.test.as_ref(),
             package_root,
             edition,
-            original_package.autotests,
+            original_package.autotests.or(auto_embedded),
             warnings,
             errors,
         )?);
@@ -371,7 +372,7 @@ fn normalize_toml(
             original_toml.bench.as_ref(),
             package_root,
             edition,
-            original_package.autobenches,
+            original_package.autobenches.or(auto_embedded),
             warnings,
             errors,
         )?);
