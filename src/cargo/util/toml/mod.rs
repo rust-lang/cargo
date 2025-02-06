@@ -1170,18 +1170,13 @@ pub fn to_real_manifest(
         );
     };
 
-    let original_package = original_toml
-        .package()
-        .ok_or_else(|| anyhow::format_err!("no `package` section found"))?;
-
-    let package_name = &original_package.name;
-    if package_name.contains(':') {
-        features.require(Feature::open_namespaces())?;
-    }
-
     let normalized_package = normalized_toml
         .package()
         .expect("previously verified to have a `[package]`");
+    let package_name = &normalized_package.name;
+    if package_name.contains(':') {
+        features.require(Feature::open_namespaces())?;
+    }
     let rust_version = normalized_package
         .normalized_rust_version()
         .expect("previously normalized")
