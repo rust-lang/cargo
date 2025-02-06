@@ -90,6 +90,7 @@ pub fn read_manifest(
             &features,
             &workspace_config,
             path,
+            is_embedded,
             gctx,
             &mut warnings,
             &mut errors,
@@ -274,6 +275,7 @@ fn normalize_toml(
     features: &Features,
     workspace_config: &WorkspaceConfig,
     manifest_file: &Path,
+    is_embedded: bool,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
@@ -318,7 +320,8 @@ fn normalize_toml(
     };
 
     if let Some(original_package) = original_toml.package() {
-        let normalized_package = normalize_package_toml(original_package, manifest_file, &inherit)?;
+        let normalized_package =
+            normalize_package_toml(original_package, manifest_file, is_embedded, &inherit)?;
         let package_name = &normalized_package.name.clone();
         let edition = normalized_package
             .normalized_edition()
@@ -545,6 +548,7 @@ fn normalize_patch<'a>(
 fn normalize_package_toml<'a>(
     original_package: &manifest::TomlPackage,
     manifest_file: &Path,
+    is_embedded: bool,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
     let package_root = manifest_file.parent().unwrap();
@@ -574,7 +578,11 @@ fn normalize_package_toml<'a>(
         .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
         .transpose()?
         .map(manifest::InheritableField::Value);
-    let build = targets::normalize_build(original_package.build.as_ref(), package_root);
+    let build = if is_embedded {
+        Some(StringOrBool::Bool(false))
+    } else {
+        targets::normalize_build(original_package.build.as_ref(), package_root)
+    };
     let metabuild = original_package.metabuild.clone();
     let default_target = original_package.default_target.clone();
     let forced_target = original_package.forced_target.clone();
