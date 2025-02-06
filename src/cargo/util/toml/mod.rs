@@ -318,9 +318,8 @@ fn normalize_toml(
     };
 
     if let Some(original_package) = original_toml.package() {
-        let package_name = &original_package.name;
-
         let normalized_package = normalize_package_toml(original_package, manifest_file, &inherit)?;
+        let package_name = &normalized_package.name.clone();
         let edition = normalized_package
             .normalized_edition()
             .expect("previously normalized")
