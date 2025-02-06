@@ -321,7 +321,7 @@ fn normalize_toml(
 
     if let Some(original_package) = original_toml.package() {
         let normalized_package =
-            normalize_package_toml(original_package, manifest_file, is_embedded, &inherit)?;
+            normalize_package_toml(original_package, manifest_file, is_embedded, gctx, &inherit)?;
         let package_name = &normalized_package.name.clone();
         let edition = normalized_package
             .normalized_edition()
@@ -550,6 +550,7 @@ fn normalize_package_toml<'a>(
     original_package: &manifest::TomlPackage,
     manifest_file: &Path,
     is_embedded: bool,
+    gctx: &GlobalContext,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
     let package_root = manifest_file.parent().unwrap();
@@ -559,7 +560,22 @@ fn normalize_package_toml<'a>(
         .clone()
         .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
         .transpose()?
-        .map(manifest::InheritableField::Value);
+        .map(manifest::InheritableField::Value)
+        .or_else(|| {
+            if is_embedded {
+                const DEFAULT_EDITION: crate::core::features::Edition =
+                    crate::core::features::Edition::LATEST_STABLE;
+                let _ = gctx.shell().warn(format_args!(
+                    "`package.edition` is unspecified, defaulting to `{}`",
+                    DEFAULT_EDITION
+                ));
+                Some(manifest::InheritableField::Value(
+                    DEFAULT_EDITION.to_string(),
+                ))
+            } else {
+                None
+            }
+        });
     let rust_version = original_package
         .rust_version
         .clone()

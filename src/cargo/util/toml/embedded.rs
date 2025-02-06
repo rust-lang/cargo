@@ -6,8 +6,6 @@ use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::GlobalContext;
 
-const DEFAULT_EDITION: crate::core::features::Edition =
-    crate::core::features::Edition::LATEST_STABLE;
 const AUTO_FIELDS: &[&str] = &[
     "autolib",
     "autobins",
@@ -64,24 +62,20 @@ pub(super) fn expand_manifest(
         }
         cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
 
-        let manifest = expand_manifest_(&frontmatter, &hacked_path, gctx)
+        let manifest = expand_manifest_(&frontmatter, &hacked_path)
             .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     } else {
         let frontmatter = "";
-        let manifest = expand_manifest_(frontmatter, path, gctx)
+        let manifest = expand_manifest_(frontmatter, path)
             .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     }
 }
 
-fn expand_manifest_(
-    manifest: &str,
-    path: &std::path::Path,
-    gctx: &GlobalContext,
-) -> CargoResult<toml::Table> {
+fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
     let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
     for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
@@ -117,13 +111,6 @@ fn expand_manifest_(
     package
         .entry("name".to_owned())
         .or_insert(toml::Value::String(name));
-    package.entry("edition".to_owned()).or_insert_with(|| {
-        let _ = gctx.shell().warn(format_args!(
-            "`package.edition` is unspecified, defaulting to `{}`",
-            DEFAULT_EDITION
-        ));
-        toml::Value::String(DEFAULT_EDITION.to_string())
-    });
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
@@ -558,7 +545,6 @@ name = "test-"
 path = "/home/me/test.rs"
 
 [package]
-edition = "2024"
 name = "test-"
 
 [workspace]
@@ -587,7 +573,6 @@ path = [..]
 time = "0.1.25"
 
 [package]
-edition = "2024"
 name = "test-"
 
 [workspace]
