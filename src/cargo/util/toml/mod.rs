@@ -66,8 +66,9 @@ pub fn read_manifest(
     let mut warnings = Default::default();
     let mut errors = Default::default();
 
-    let contents =
-        read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
+    let is_embedded = is_embedded(path);
+    let contents = read_toml_string(path, is_embedded, gctx)
+        .map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
     let original_toml = deserialize_toml(&document)
@@ -104,12 +105,14 @@ pub fn read_manifest(
                 workspace_config,
                 source_id,
                 path,
+                is_embedded,
                 gctx,
                 &mut warnings,
                 &mut errors,
             )
             .map(EitherManifest::Real)
         } else if normalized_toml.workspace.is_some() {
+            assert!(!is_embedded);
             to_virtual_manifest(
                 contents,
                 document,
@@ -146,9 +149,9 @@ pub fn read_manifest(
 }
 
 #[tracing::instrument(skip_all)]
-fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
+fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> CargoResult<String> {
     let mut contents = paths::read(path)?;
-    if is_embedded(path) {
+    if is_embedded {
         if !gctx.cli_unstable().script {
             anyhow::bail!("parsing `{}` requires `-Zscript`", path.display());
         }
@@ -1122,11 +1125,11 @@ pub fn to_real_manifest(
     workspace_config: WorkspaceConfig,
     source_id: SourceId,
     manifest_file: &Path,
+    is_embedded: bool,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
     _errors: &mut Vec<String>,
 ) -> CargoResult<Manifest> {
-    let embedded = is_embedded(manifest_file);
     let package_root = manifest_file.parent().unwrap();
     if !package_root.is_dir() {
         bail!(
@@ -1598,7 +1601,7 @@ pub fn to_real_manifest(
         metabuild,
         resolve_behavior,
         rustflags,
-        embedded,
+        is_embedded,
     );
     if manifest
         .normalized_toml()
@@ -2672,6 +2675,7 @@ pub fn prepare_for_publish(
         workspace_config,
         source_id,
         me.manifest_path(),
+        me.manifest().is_embedded(),
         gctx,
         &mut warnings,
         &mut errors,
