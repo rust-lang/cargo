@@ -484,12 +484,10 @@ fn cargo_toml_missing_package_name() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] missing field `name`
- --> Cargo.toml:2:16
-  |
-2 |                [package]
-  |                ^^^^^^^^^
-  |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  missing field `package.name`
 
 "#]])
         .run();

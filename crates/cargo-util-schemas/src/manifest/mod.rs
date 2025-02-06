@@ -178,8 +178,8 @@ pub struct TomlPackage {
     pub edition: Option<InheritableString>,
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<InheritableRustVersion>,
-    #[cfg_attr(feature = "unstable-schema", schemars(with = "String"))]
-    pub name: PackageName,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
+    pub name: Option<PackageName>,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
     pub build: Option<StringOrBool>,
@@ -226,7 +226,7 @@ pub struct TomlPackage {
 impl TomlPackage {
     pub fn new(name: PackageName) -> Self {
         Self {
-            name,
+            name: Some(name),
 
             edition: None,
             rust_version: None,
@@ -261,6 +261,10 @@ impl TomlPackage {
             metadata: None,
             _invalid_cargo_features: None,
         }
+    }
+
+    pub fn normalized_name(&self) -> Result<&PackageName, UnresolvedError> {
+        self.name.as_ref().ok_or(UnresolvedError)
     }
 
     pub fn normalized_edition(&self) -> Result<Option<&String>, UnresolvedError> {

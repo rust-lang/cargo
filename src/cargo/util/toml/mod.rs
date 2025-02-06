@@ -322,7 +322,10 @@ fn normalize_toml(
     if let Some(original_package) = original_toml.package() {
         let normalized_package =
             normalize_package_toml(original_package, manifest_file, is_embedded, gctx, &inherit)?;
-        let package_name = &normalized_package.name.clone();
+        let package_name = &normalized_package
+            .normalized_name()
+            .expect("previously normalized")
+            .clone();
         let edition = normalized_package
             .normalized_edition()
             .expect("previously normalized")
@@ -582,7 +585,12 @@ fn normalize_package_toml<'a>(
         .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
         .transpose()?
         .map(manifest::InheritableField::Value);
-    let name = original_package.name.clone();
+    let name = Some(
+        original_package
+            .name
+            .clone()
+            .ok_or_else(|| anyhow::format_err!("missing field `package.name`"))?,
+    );
     let version = original_package
         .version
         .clone()
@@ -1198,7 +1206,9 @@ pub fn to_real_manifest(
     let normalized_package = normalized_toml
         .package()
         .expect("previously verified to have a `[package]`");
-    let package_name = &normalized_package.name;
+    let package_name = normalized_package
+        .normalized_name()
+        .expect("previously normalized");
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
