@@ -964,7 +964,7 @@ fn find_candidate(
             .remaining_candidates
             .next(&mut frame.conflicting_activations, &frame.context);
         let Some((candidate, has_another)) = next else {
-            continue;
+            panic!("why did we save a frame that has no next?");
         };
 
         // If all members of `conflicting_activations` are still
