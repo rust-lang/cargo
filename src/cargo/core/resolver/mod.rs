@@ -965,7 +965,17 @@ fn find_candidate(
         // make any progress. As a result if we hit this condition we can
         // completely skip this backtrack frame and move on to the next.
         if let Some(age) = age {
-            if frame.context.age >= age {
+            // Above we use `cx` to determine if this is going to be conflicting.
+            // But lets just double check if the `pop`ed frame agrees.
+            let frame_to_new = frame.context.age >= age;
+            debug_assert!(
+                frame
+                    .context
+                    .is_conflicting(Some(parent.package_id()), conflicting_activations)
+                    == frame_to_new.then_some(age)
+            );
+
+            if frame_to_new {
                 trace!(
                     "{} = \"{}\" skip as not solving {}: {:?}",
                     frame.dep.package_name(),
@@ -973,22 +983,7 @@ fn find_candidate(
                     parent.package_id(),
                     conflicting_activations
                 );
-                // above we use `cx` to determine that this is still going to be conflicting.
-                // but lets just double check.
-                debug_assert!(
-                    frame
-                        .context
-                        .is_conflicting(Some(parent.package_id()), conflicting_activations)
-                        == Some(age)
-                );
                 continue;
-            } else {
-                // above we use `cx` to determine that this is not going to be conflicting.
-                // but lets just double check.
-                debug_assert!(frame
-                    .context
-                    .is_conflicting(Some(parent.package_id()), conflicting_activations)
-                    .is_none());
             }
         }
 
