@@ -960,13 +960,6 @@ fn find_candidate(
     };
 
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame
-            .remaining_candidates
-            .next(&mut frame.conflicting_activations, &frame.context);
-        let Some((candidate, has_another)) = next else {
-            panic!("why did we save a frame that has no next?");
-        };
-
         // If all members of `conflicting_activations` are still
         // active in this back up we know that we're guaranteed to not actually
         // make any progress. As a result if we hit this condition we can
@@ -998,6 +991,11 @@ fn find_candidate(
                     .is_none());
             }
         }
+
+        let (candidate, has_another) = frame
+            .remaining_candidates
+            .next(&mut frame.conflicting_activations, &frame.context)
+            .expect("why did we save a frame that has no next?");
 
         return Some((candidate, has_another, frame));
     }
