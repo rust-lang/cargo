@@ -1515,7 +1515,7 @@ pub fn to_real_manifest(
     }
 
     let pkgid = PackageId::new(
-        normalized_package.name.as_str().into(),
+        package_name.as_str().into(),
         version
             .cloned()
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
