@@ -87,19 +87,17 @@ fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml:
     // Prevent looking for a workspace by `read_manifest_from_str`
     manifest.insert("workspace".to_owned(), toml::Table::new().into());
 
-    let package = manifest
-        .entry("package".to_owned())
-        .or_insert_with(|| toml::Table::new().into())
-        .as_table_mut()
-        .ok_or_else(|| anyhow::format_err!("`package` must be a table"))?;
-    for key in ["workspace", "build", "links"]
-        .iter()
-        .chain(AUTO_FIELDS.iter())
-    {
-        if package.contains_key(*key) {
-            anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
+    if let Some(package) = manifest.get("package").and_then(|v| v.as_table()) {
+        for key in ["workspace", "build", "links"]
+            .iter()
+            .chain(AUTO_FIELDS.iter())
+        {
+            if package.contains_key(*key) {
+                anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
+            }
         }
     }
+
     // HACK: Using an absolute path while `hacked_path` is in use
     let bin_path = path.to_string_lossy().into_owned();
     let file_stem = path
@@ -541,8 +539,6 @@ fn main() {}
 name = "test-"
 path = "/home/me/test.rs"
 
-[package]
-
 [workspace]
 
 "#]]
@@ -567,8 +563,6 @@ path = [..]
 
 [dependencies]
 time = "0.1.25"
-
-[package]
 
 [workspace]
 

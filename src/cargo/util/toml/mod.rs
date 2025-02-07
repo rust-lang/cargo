@@ -1,4 +1,5 @@
 use annotate_snippets::{Level, Snippet};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -319,9 +320,20 @@ fn normalize_toml(
         _unused_keys: Default::default(),
     };
 
-    if let Some(original_package) = original_toml.package() {
-        let normalized_package =
-            normalize_package_toml(original_package, manifest_file, is_embedded, gctx, &inherit)?;
+    if let Some(original_package) = original_toml.package().map(Cow::Borrowed).or_else(|| {
+        if is_embedded {
+            Some(Cow::Owned(Box::new(manifest::TomlPackage::default())))
+        } else {
+            None
+        }
+    }) {
+        let normalized_package = normalize_package_toml(
+            &original_package,
+            manifest_file,
+            is_embedded,
+            gctx,
+            &inherit,
+        )?;
         let package_name = &normalized_package
             .normalized_name()
             .expect("previously normalized")
