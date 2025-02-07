@@ -171,7 +171,7 @@ pub struct InheritablePackage {
 /// are serialized to a TOML file. For example, you cannot have values after
 /// the field `metadata`, since it is a table and values cannot appear after
 /// tables.
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlPackage {
@@ -227,39 +227,7 @@ impl TomlPackage {
     pub fn new(name: PackageName) -> Self {
         Self {
             name: Some(name),
-
-            edition: None,
-            rust_version: None,
-            version: None,
-            authors: None,
-            build: None,
-            metabuild: None,
-            default_target: None,
-            forced_target: None,
-            links: None,
-            exclude: None,
-            include: None,
-            publish: None,
-            workspace: None,
-            im_a_teapot: None,
-            autolib: None,
-            autobins: None,
-            autoexamples: None,
-            autotests: None,
-            autobenches: None,
-            default_run: None,
-            description: None,
-            homepage: None,
-            documentation: None,
-            readme: None,
-            keywords: None,
-            categories: None,
-            license: None,
-            license_file: None,
-            repository: None,
-            resolver: None,
-            metadata: None,
-            _invalid_cargo_features: None,
+            ..Default::default()
         }
     }
 
