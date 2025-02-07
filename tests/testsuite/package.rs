@@ -7304,9 +7304,8 @@ fn exclude_lockfile() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("package --list")
+    p.cargo("package --list --exclude-lockfile")
         .with_stdout_data(str![[r#"
-Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -7315,10 +7314,10 @@ src/lib.rs
         .with_stderr_data("")
         .run();
 
-    p.cargo("package")
+    p.cargo("package --exclude-lockfile")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -7330,7 +7329,7 @@ src/lib.rs
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
         (),
     );
 }
@@ -7359,20 +7358,22 @@ fn unpublished_cyclic_dev_dependencies() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("package --no-verify")
-        .with_status(101)
+    p.cargo("package --no-verify --exclude-lockfile")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[UPDATING] `dummy-registry` index
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `foo` found
-  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-  required by package `foo v0.0.1 ([ROOT]/foo)`
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        // no Cargo.lock
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        (),
+    );
 }
 
 // A failing case from <https://github.com/rust-lang/cargo/issues/15059>
@@ -7409,18 +7410,20 @@ fn unpublished_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("package --no-verify -p foo")
-        .with_status(101)
+    p.cargo("package --no-verify -p foo --exclude-lockfile")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[UPDATING] `dummy-registry` index
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dep` found
-  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-  required by package `foo v0.0.1 ([ROOT]/foo)`
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        // no Cargo.lock
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        (),
+    );
 }

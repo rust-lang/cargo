@@ -36,8 +36,8 @@ manifest.
 .sp
 .RS 4
 \h'-04'\(bu\h'+03'\fBCargo.lock\fR is always included. When missing, a new lock file will be
-generated. \fBcargo\-install\fR(1) will use the packaged lock file if
-the \fB\-\-locked\fR flag is used.
+generated unless the \fB\-\-exclude\-lockfile\fR flag is used. \fBcargo\-install\fR(1)
+will use the packaged lock file if the \fB\-\-locked\fR flag is used.
 .RE
 .sp
 .RS 4
@@ -125,6 +125,15 @@ or the license).
 \fB\-\-allow\-dirty\fR
 .RS 4
 Allow working directories with uncommitted VCS changes to be packaged.
+.RE
+.sp
+\fB\-\-exclude\-lockfile\fR
+.RS 4
+Don\[cq]t include the lock file when packaging.
+.sp
+This flag is not for general use.
+Some tools may expect a lock file to be present (e.g. \fBcargo install \-\-locked\fR).
+Consider other options before using this.
 .RE
 .sp
 \fB\-\-index\fR \fIindex\fR

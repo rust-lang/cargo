@@ -46,6 +46,7 @@ pub struct PackageOpts<'gctx> {
     pub list: bool,
     pub check_metadata: bool,
     pub allow_dirty: bool,
+    pub include_lockfile: bool,
     pub verify: bool,
     pub jobs: Option<JobsConfig>,
     pub keep_going: bool,
@@ -194,6 +195,7 @@ fn do_package<'a>(
         .as_path_unlocked()
         .join(LOCKFILE_NAME)
         .exists()
+        && opts.include_lockfile
     {
         // Make sure the Cargo.lock is up-to-date and valid.
         let dry_run = false;
@@ -389,7 +391,7 @@ fn prepare_archive(
     // Check (git) repository state, getting the current commit hash.
     let vcs_info = vcs::check_repo_state(pkg, &src_files, gctx, &opts)?;
 
-    build_ar_list(ws, pkg, src_files, vcs_info)
+    build_ar_list(ws, pkg, src_files, vcs_info, opts.include_lockfile)
 }
 
 /// Builds list of files to archive.
@@ -399,6 +401,7 @@ fn build_ar_list(
     pkg: &Package,
     src_files: Vec<PathEntry>,
     vcs_info: Option<vcs::VcsInfo>,
+    include_lockfile: bool,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::new();
     let root = pkg.root();
@@ -453,15 +456,17 @@ fn build_ar_list(
         ))?;
     }
 
-    let rel_str = "Cargo.lock";
-    result
-        .entry(UncasedAscii::new(rel_str))
-        .or_insert_with(Vec::new)
-        .push(ArchiveFile {
-            rel_path: PathBuf::from(rel_str),
-            rel_str: rel_str.to_string(),
-            contents: FileContents::Generated(GeneratedFile::Lockfile),
-        });
+    if include_lockfile {
+        let rel_str = "Cargo.lock";
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::Lockfile),
+            });
+    }
 
     if let Some(vcs_info) = vcs_info {
         let rel_str = VCS_INFO_FILE;
