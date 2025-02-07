@@ -84,9 +84,6 @@ fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml:
         }
     }
 
-    // Prevent looking for a workspace by `read_manifest_from_str`
-    manifest.insert("workspace".to_owned(), toml::Table::new().into());
-
     if let Some(package) = manifest.get("package").and_then(|v| v.as_table()) {
         for key in ["workspace", "build", "links"]
             .iter()
@@ -539,8 +536,6 @@ fn main() {}
 name = "test-"
 path = "/home/me/test.rs"
 
-[workspace]
-
 "#]]
         );
     }
@@ -563,8 +558,6 @@ path = [..]
 
 [dependencies]
 time = "0.1.25"
-
-[workspace]
 
 "#]]
         );

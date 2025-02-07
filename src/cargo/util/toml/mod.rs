@@ -308,7 +308,10 @@ fn normalize_toml(
         build_dependencies2: None,
         target: None,
         lints: None,
-        workspace: original_toml.workspace.clone(),
+        workspace: original_toml.workspace.clone().or_else(|| {
+            // Prevent looking for a workspace by `read_manifest_from_str`
+            is_embedded.then(manifest::TomlWorkspace::default)
+        }),
         profile: original_toml.profile.clone(),
         patch: normalize_patch(
             gctx,
