@@ -6,14 +6,6 @@ use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::GlobalContext;
 
-const AUTO_FIELDS: &[&str] = &[
-    "autolib",
-    "autobins",
-    "autoexamples",
-    "autotests",
-    "autobenches",
-];
-
 pub(super) fn expand_manifest(
     content: &str,
     path: &std::path::Path,
@@ -78,23 +70,6 @@ pub(super) fn expand_manifest(
 fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
     let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
-    for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
-        if manifest.contains_key(key) {
-            anyhow::bail!("`{key}` is not allowed in embedded manifests")
-        }
-    }
-
-    if let Some(package) = manifest.get("package").and_then(|v| v.as_table()) {
-        for key in ["workspace", "build", "links"]
-            .iter()
-            .chain(AUTO_FIELDS.iter())
-        {
-            if package.contains_key(*key) {
-                anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
-            }
-        }
-    }
-
     // HACK: Using an absolute path while `hacked_path` is in use
     let bin_path = path.to_string_lossy().into_owned();
     let file_stem = path
@@ -107,10 +82,12 @@ fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml:
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
     bin.insert("path".to_owned(), toml::Value::String(bin_path));
-    manifest.insert(
-        "bin".to_owned(),
-        toml::Value::Array(vec![toml::Value::Table(bin)]),
-    );
+    manifest
+        .entry("bin")
+        .or_insert_with(|| Vec::<toml::Value>::new().into())
+        .as_array_mut()
+        .ok_or_else(|| anyhow::format_err!("`bin` must be an array"))?
+        .push(toml::Value::Table(bin));
 
     Ok(manifest)
 }

@@ -1333,6 +1333,89 @@ pub fn to_real_manifest(
         features.require(Feature::metabuild())?;
     }
 
+    if is_embedded {
+        let invalid_fields = [
+            ("`workspace`", original_toml.workspace.is_some()),
+            ("`lib`", original_toml.lib.is_some()),
+            (
+                "`bin`",
+                original_toml.bin.as_ref().map(|b| b.len()).unwrap_or(0) != 1,
+            ),
+            ("`example`", original_toml.example.is_some()),
+            ("`test`", original_toml.test.is_some()),
+            ("`bench`", original_toml.bench.is_some()),
+            (
+                "`package.workspace`",
+                original_toml
+                    .package()
+                    .map(|p| p.workspace.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.build`",
+                original_toml
+                    .package()
+                    .map(|p| p.build.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.links`",
+                original_toml
+                    .package()
+                    .map(|p| p.links.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.autolib`",
+                original_toml
+                    .package()
+                    .map(|p| p.autolib.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.autobins`",
+                original_toml
+                    .package()
+                    .map(|p| p.autobins.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.autoexamples`",
+                original_toml
+                    .package()
+                    .map(|p| p.autoexamples.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.autotests`",
+                original_toml
+                    .package()
+                    .map(|p| p.autotests.is_some())
+                    .unwrap_or(false),
+            ),
+            (
+                "`package.autobenches`",
+                original_toml
+                    .package()
+                    .map(|p| p.autobenches.is_some())
+                    .unwrap_or(false),
+            ),
+        ];
+        let invalid_fields = invalid_fields
+            .into_iter()
+            .filter_map(|(name, invalid)| invalid.then_some(name))
+            .collect::<Vec<_>>();
+        if !invalid_fields.is_empty() {
+            let fields = invalid_fields.join(", ");
+            let are = if invalid_fields.len() == 1 {
+                "is"
+            } else {
+                "are"
+            };
+            anyhow::bail!("{fields} {are} not allowed in embedded manifests")
+        }
+    }
+
     let resolve_behavior = match (
         normalized_package.resolver.as_ref(),
         normalized_toml
