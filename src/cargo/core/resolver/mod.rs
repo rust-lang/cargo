@@ -958,50 +958,48 @@ fn find_candidate(
     } else {
         None
     };
+    let mut new_frame = None;
+    if let Some(age) = age {
+        while let Some(frame) = backtrack_stack.pop() {
+            // If all members of `conflicting_activations` are still
+            // active in this back up we know that we're guaranteed to not actually
+            // make any progress. As a result if we hit this condition we can
+            // completely skip this backtrack frame and move on to the next.
 
-    while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame
-            .remaining_candidates
-            .next(&mut frame.conflicting_activations, &frame.context);
-        let Some((candidate, has_another)) = next else {
-            continue;
-        };
-
-        // If all members of `conflicting_activations` are still
-        // active in this back up we know that we're guaranteed to not actually
-        // make any progress. As a result if we hit this condition we can
-        // completely skip this backtrack frame and move on to the next.
-        if let Some(age) = age {
-            if frame.context.age >= age {
-                trace!(
-                    "{} = \"{}\" skip as not solving {}: {:?}",
-                    frame.dep.package_name(),
-                    frame.dep.version_req(),
-                    parent.package_id(),
-                    conflicting_activations
-                );
-                // above we use `cx` to determine that this is still going to be conflicting.
-                // but lets just double check.
-                debug_assert!(
-                    frame
-                        .context
-                        .is_conflicting(Some(parent.package_id()), conflicting_activations)
-                        == Some(age)
-                );
-                continue;
-            } else {
-                // above we use `cx` to determine that this is not going to be conflicting.
-                // but lets just double check.
-                debug_assert!(frame
+            // Above we use `cx` to determine if this is going to be conflicting.
+            // But lets just double check if the `pop`ed frame agrees.
+            let frame_too_new = frame.context.age >= age;
+            debug_assert!(
+                frame
                     .context
                     .is_conflicting(Some(parent.package_id()), conflicting_activations)
-                    .is_none());
-            }
-        }
+                    == frame_too_new.then_some(age)
+            );
 
-        return Some((candidate, has_another, frame));
+            if !frame_too_new {
+                new_frame = Some(frame);
+                break;
+            }
+            trace!(
+                "{} = \"{}\" skip as not solving {}: {:?}",
+                frame.dep.package_name(),
+                frame.dep.version_req(),
+                parent.package_id(),
+                conflicting_activations
+            );
+        }
+    } else {
+        // If we're here then we are in abnormal situations and need to just go one frame at a time.
+        new_frame = backtrack_stack.pop();
     }
-    None
+
+    new_frame.map(|mut frame| {
+        let (candidate, has_another) = frame
+            .remaining_candidates
+            .next(&mut frame.conflicting_activations, &frame.context)
+            .expect("why did we save a frame that has no next?");
+        (candidate, has_another, frame)
+    })
 }
 
 fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
