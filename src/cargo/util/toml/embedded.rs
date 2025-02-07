@@ -108,9 +108,6 @@ fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml:
         .to_string_lossy();
     let name = sanitize_name(file_stem.as_ref());
     let bin_name = name.clone();
-    package
-        .entry("name".to_owned())
-        .or_insert(toml::Value::String(name));
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
@@ -124,7 +121,7 @@ fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml:
 }
 
 /// Ensure the package name matches the validation from `ops::cargo_new::check_name`
-fn sanitize_name(name: &str) -> String {
+pub fn sanitize_name(name: &str) -> String {
     let placeholder = if name.contains('_') {
         '_'
     } else {
@@ -545,7 +542,6 @@ name = "test-"
 path = "/home/me/test.rs"
 
 [package]
-name = "test-"
 
 [workspace]
 
@@ -573,7 +569,6 @@ path = [..]
 time = "0.1.25"
 
 [package]
-name = "test-"
 
 [workspace]
 

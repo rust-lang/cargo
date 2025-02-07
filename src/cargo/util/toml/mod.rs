@@ -589,6 +589,20 @@ fn normalize_package_toml<'a>(
         original_package
             .name
             .clone()
+            .or_else(|| {
+                if is_embedded {
+                    let file_stem = manifest_file
+                        .file_stem()
+                        .expect("file name enforced previously")
+                        .to_string_lossy();
+                    let name = embedded::sanitize_name(file_stem.as_ref());
+                    let name =
+                        manifest::PackageName::new(name).expect("sanitize made the name valid");
+                    Some(name)
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| anyhow::format_err!("missing field `package.name`"))?,
     );
     let version = original_package
