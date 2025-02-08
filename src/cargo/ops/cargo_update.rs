@@ -525,7 +525,7 @@ fn print_lockfile_generation(
         };
         match change.kind {
             PackageChangeKind::Added => {
-                let possibilities = if let Some(query) = change.alternatives_query() {
+                let possibilities = match change.alternatives_query() { Some(query) => {
                     loop {
                         match registry.query_vec(&query, QueryKind::Exact) {
                             std::task::Poll::Ready(res) => {
@@ -534,9 +534,9 @@ fn print_lockfile_generation(
                             std::task::Poll::Pending => registry.block_until_ready()?,
                         }
                     }
-                } else {
+                } _ => {
                     vec![]
-                };
+                }};
 
                 let required_rust_version = report_required_rust_version(resolve, change);
                 let latest = report_latest(&possibilities, change);
@@ -588,7 +588,7 @@ fn print_lockfile_sync(
             PackageChangeKind::Added
             | PackageChangeKind::Upgraded
             | PackageChangeKind::Downgraded => {
-                let possibilities = if let Some(query) = change.alternatives_query() {
+                let possibilities = match change.alternatives_query() { Some(query) => {
                     loop {
                         match registry.query_vec(&query, QueryKind::Exact) {
                             std::task::Poll::Ready(res) => {
@@ -597,9 +597,9 @@ fn print_lockfile_sync(
                             std::task::Poll::Pending => registry.block_until_ready()?,
                         }
                     }
-                } else {
+                } _ => {
                     vec![]
-                };
+                }};
 
                 let required_rust_version = report_required_rust_version(resolve, change);
                 let latest = report_latest(&possibilities, change);
@@ -637,7 +637,7 @@ fn print_lockfile_updates(
     }
     let mut unchanged_behind = 0;
     for change in changes.values() {
-        let possibilities = if let Some(query) = change.alternatives_query() {
+        let possibilities = match change.alternatives_query() { Some(query) => {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -646,9 +646,9 @@ fn print_lockfile_updates(
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             }
-        } else {
+        } _ => {
             vec![]
-        };
+        }};
 
         match change.kind {
             PackageChangeKind::Added
@@ -1080,7 +1080,7 @@ pub struct PackageDiff {
 }
 
 impl PackageDiff {
-    pub fn new(resolve: &Resolve) -> impl Iterator<Item = Self> {
+    pub fn new(resolve: &Resolve) -> impl Iterator<Item = Self> + use<> {
         let mut changes = BTreeMap::new();
         let empty = Self::default();
         for dep in resolve.iter() {
@@ -1094,7 +1094,7 @@ impl PackageDiff {
         changes.into_iter().map(|(_, v)| v)
     }
 
-    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> impl Iterator<Item = Self> {
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> impl Iterator<Item = Self> + use<> {
         fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
         }

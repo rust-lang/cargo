@@ -37,7 +37,7 @@ impl fmt::Display for VersionInfo {
 /// Returns information about cargo's version.
 pub fn version() -> VersionInfo {
     macro_rules! option_env_str {
-        ($name:expr) => {
+        ($name:expr_2021) => {
             option_env!($name).map(|s| s.to_string())
         };
     }

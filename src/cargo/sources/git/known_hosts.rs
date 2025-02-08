@@ -477,16 +477,16 @@ fn check_ssh_known_hosts_loaded(
         // We're going to take the first HostKeyHasChanged error if
         // we find one, otherwise we'll take the first error (which
         // we expect to be a CertAuthority error).
-        if let Some(index) = latent_errors
+        match latent_errors
             .iter()
             .position(|e| matches!(e, KnownHostError::HostKeyHasChanged { .. }))
-        {
+        { Some(index) => {
             return Err(latent_errors.remove(index));
-        } else {
+        } _ => {
             // Otherwise, we take the first error (which we expect to be
             // a CertAuthority error).
             Err(latent_errors.pop().unwrap())
-        }
+        }}
     }
 }
 

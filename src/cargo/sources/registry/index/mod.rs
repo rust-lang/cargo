@@ -390,7 +390,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         name: InternedString,
         req: &'b OptVersionReq,
         load: &mut dyn RegistryData,
-    ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
+    ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b + use<'a, 'b>>>
     where
         'a: 'b,
     {

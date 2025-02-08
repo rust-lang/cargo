@@ -1071,16 +1071,15 @@ pub fn lockfile_path(
 pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
 
-    if let Ok(Some(registries)) =
-        gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
-    {
+    match gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
+    { Ok(Some(registries)) => {
         Ok(registries
             .keys()
             .map(|name| clap_complete::CompletionCandidate::new(name.to_owned()))
             .collect())
-    } else {
+    } _ => {
         Ok(vec![])
-    }
+    }}
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {

@@ -368,7 +368,7 @@ macro_rules! features {
     (
         $(
             $(#[$attr:meta])*
-            ($stab:ident, $feature:ident, $version:expr, $docs:expr),
+            ($stab:ident, $feature:ident, $version:expr_2021, $docs:expr_2021),
         )*
     ) => (
         /// Unstable feature context for querying if a new Cargo.toml syntax

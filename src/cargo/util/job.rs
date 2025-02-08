@@ -27,7 +27,7 @@ mod imp {
 
     pub type Setup = ();
 
-    pub unsafe fn setup() -> Option<()> {
+    pub unsafe fn setup() -> Option<()> { unsafe {
         // There's a test case for the behavior of
         // when-cargo-is-killed-subprocesses-are-also-killed, but that requires
         // one cargo spawned to become its own session leader, so we do that
@@ -39,7 +39,7 @@ mod imp {
             libc::setsid();
         }
         Some(())
-    }
+    }}
 }
 
 #[cfg(windows)]

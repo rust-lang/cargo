@@ -145,7 +145,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                     gctx,
                     current_rust_version,
                 )?
-            } else if let Some(dep) = dep {
+            } else { match dep { Some(dep) => {
                 let mut source = map.load(source_id, &HashSet::new())?;
                 if let Ok(Some(pkg)) = installed_exact_package(
                     dep.clone(),
@@ -171,13 +171,13 @@ impl<'gctx> InstallablePackage<'gctx> {
                     needs_update_if_source_is_index,
                     current_rust_version,
                 )?
-            } else {
+            } _ => {
                 bail!(
                     "must specify a crate to install from \
                          crates.io, or use --path or --git to \
                          specify alternate source"
                 )
-            }
+            }}}
         };
 
         let (ws, rustc, target) = make_ws_rustc_target(
@@ -191,7 +191,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         if gctx.locked() {
             // When --lockfile-path is set, check that passed lock file exists
             // (unlike the usual flag behavior, lockfile won't be created as we imply --locked)
-            if let Some(requested_lockfile_path) = ws.requested_lockfile_path() {
+            match ws.requested_lockfile_path() { Some(requested_lockfile_path) => {
                 if !requested_lockfile_path.is_file() {
                     bail!(
                         "no Cargo.lock file found in the requested path {}",
@@ -200,12 +200,12 @@ impl<'gctx> InstallablePackage<'gctx> {
                 }
             // If we're installing in --locked mode and there's no `Cargo.lock` published
             // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
-            } else if !ws.root().join("Cargo.lock").exists() {
+            } _ => if !ws.root().join("Cargo.lock").exists() {
                 gctx.shell().warn(format!(
                     "no Cargo.lock file published in {}",
                     pkg.to_string()
                 ))?;
-            }
+            }}
         }
         let pkg = if source_id.is_git() {
             // Don't use ws.current() in order to keep the package source as a git source so that
@@ -322,16 +322,16 @@ impl<'gctx> InstallablePackage<'gctx> {
         let mut td_opt = None;
         let mut needs_cleanup = false;
         if !self.source_id.is_path() {
-            let target_dir = if let Some(dir) = self.gctx.target_dir()? {
+            let target_dir = match self.gctx.target_dir()? { Some(dir) => {
                 dir
-            } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
+            } _ => { match TempFileBuilder::new().prefix("cargo-install").tempdir() { Ok(td) => {
                 let p = td.path().to_owned();
                 td_opt = Some(td);
                 Filesystem::new(p)
-            } else {
+            } _ => {
                 needs_cleanup = true;
                 Filesystem::new(self.gctx.cwd().join("target-install"))
-            };
+            }}}};
             self.ws.set_target_dir(target_dir);
         }
 
@@ -377,12 +377,12 @@ impl<'gctx> InstallablePackage<'gctx> {
             // behavior for this fallback case as well.
             if let CompileFilter::Only { bins, examples, .. } = &self.opts.filter {
                 let mut any_specific = false;
-                if let FilterRule::Just(ref v) = bins {
+                if let &FilterRule::Just(ref v) = bins {
                     if !v.is_empty() {
                         any_specific = true;
                     }
                 }
-                if let FilterRule::Just(ref v) = examples {
+                if let &FilterRule::Just(ref v) = examples {
                     if !v.is_empty() {
                         any_specific = true;
                     }

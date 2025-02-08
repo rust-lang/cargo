@@ -102,7 +102,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         None => {
             let reg = super::infer_registry(&just_pkgs)?;
             validate_registry(&just_pkgs, reg.as_ref())?;
-            if let Some(RegistryOrIndex::Registry(ref registry)) = &reg {
+            if let &Some(RegistryOrIndex::Registry(ref registry)) = &reg {
                 if registry != CRATES_IO_REGISTRY {
                     // Don't warn for crates.io.
                     opts.gctx.shell().note(&format!(

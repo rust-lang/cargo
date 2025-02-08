@@ -1364,7 +1364,7 @@ impl GlobalCacheTracker {
 ///
 /// Unfortunately it is a bit tricky to share this code without a macro.
 macro_rules! insert_or_update_parent {
-    ($self:expr, $conn:expr, $table_name:expr, $timestamps_field:ident, $keys_field:ident, $encoded_name:ident) => {
+    ($self:expr_2021, $conn:expr_2021, $table_name:expr_2021, $timestamps_field:ident, $keys_field:ident, $encoded_name:ident) => {
         let mut select_stmt = $conn.prepare_cached(concat!(
             "SELECT id, timestamp FROM ",
             $table_name,

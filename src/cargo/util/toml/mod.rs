@@ -816,7 +816,7 @@ fn load_inheritable_fields(
 ) -> CargoResult<InheritableFields> {
     match workspace_config {
         WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
-        WorkspaceConfig::Member {
+        &WorkspaceConfig::Member {
             root: Some(ref path_to_root),
         } => {
             let path = normalized_path
@@ -1175,7 +1175,7 @@ pub fn to_real_manifest(
         }
         edition
     } else {
-        let msrv_edition = if let Some(pkg_msrv) = &rust_version {
+        let msrv_edition = match &rust_version { Some(pkg_msrv) => {
             Edition::ALL
                 .iter()
                 .filter(|e| {
@@ -1188,9 +1188,9 @@ pub fn to_real_manifest(
                 })
                 .max()
                 .copied()
-        } else {
+        } _ => {
             None
-        }
+        }}
         .unwrap_or_default();
         let default_edition = Edition::default();
         let latest_edition = Edition::LATEST_STABLE;
@@ -1468,7 +1468,7 @@ pub fn to_real_manifest(
         .normalized_publish()
         .expect("previously normalized")
     {
-        Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
+        Some(&manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
         Some(manifest::VecStringOrBool::Bool(true)) => None,
         None => version.is_none().then_some(vec![]),
@@ -2199,9 +2199,9 @@ pub(crate) fn lookup_path_base<'a>(
     let base_key = format!("path-bases.{base}");
 
     // Look up the relevant base in the Config and use that as the root.
-    if let Some(path_bases) = gctx.get::<Option<ConfigRelativePath>>(&base_key)? {
+    match gctx.get::<Option<ConfigRelativePath>>(&base_key)? { Some(path_bases) => {
         Ok(path_bases.resolve_path(gctx))
-    } else {
+    } _ => {
         // Otherwise, check the built-in bases.
         match base.as_str() {
             "workspace" => Ok(workspace_root()?.to_path_buf()),
@@ -2210,7 +2210,7 @@ pub(crate) fn lookup_path_base<'a>(
             You must add an entry for `{base}` in the Cargo configuration [path-bases] table."
             ),
         }
-    }
+    }}
 }
 
 pub trait ResolveToPath {

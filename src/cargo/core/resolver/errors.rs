@@ -221,7 +221,7 @@ pub(super) fn activation_error(
     // give an error message that nothing was found.
     let mut msg = String::new();
     let mut hints = String::new();
-    if let Some(version_candidates) = rejected_versions(registry, dep) {
+    match rejected_versions(registry, dep) { Some(version_candidates) => {
         let version_candidates = match version_candidates {
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
@@ -253,7 +253,7 @@ pub(super) fn activation_error(
                     let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
                 }
                 IndexSummary::Unsupported(summary, schema_version) => {
-                    if let Some(rust_version) = summary.rust_version() {
+                    match summary.rust_version() { Some(rust_version) => {
                         // HACK: technically its unsupported and we shouldn't make assumptions
                         // about the entry but this is limited and for diagnostics purposes
                         let _ = writeln!(
@@ -262,14 +262,14 @@ pub(super) fn activation_error(
                             summary.version(),
                             rust_version
                         );
-                    } else {
+                    } _ => {
                         let _ = writeln!(
                             &mut msg,
                             "  version {} requires a Cargo version that supports index version {}",
                             summary.version(),
                             schema_version
                         );
-                    }
+                    }}
                 }
                 IndexSummary::Invalid(summary) => {
                     let _ = writeln!(
@@ -280,7 +280,7 @@ pub(super) fn activation_error(
                 }
             }
         }
-    } else if let Some(candidates) = alt_versions(registry, dep) {
+    } _ => { match alt_versions(registry, dep) { Some(candidates) => {
         let candidates = match candidates {
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
@@ -345,7 +345,7 @@ pub(super) fn activation_error(
                 "\nperhaps a crate was updated and forgotten to be re-vendored?"
             );
         }
-    } else if let Some(name_candidates) = alt_names(registry, dep) {
+    } _ => { match alt_names(registry, dep) { Some(name_candidates) => {
         let name_candidates = match name_candidates {
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
@@ -373,13 +373,13 @@ pub(super) fn activation_error(
                     _ => acc + ", " + el,
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
-    } else {
+    } _ => {
         let _ = writeln!(
             &mut msg,
             "no matching package named `{}` found",
             dep.package_name()
         );
-    }
+    }}}}}}
 
     let mut location_searched_msg = registry.describe_source(dep.source_id());
     if location_searched_msg.is_empty() {

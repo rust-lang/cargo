@@ -182,11 +182,11 @@ impl<'a> SummariesCache<'a> {
         let rest = &rest[4..];
 
         let mut iter = split(rest, 0);
-        let last_index_update = if let Some(update) = iter.next() {
+        let last_index_update = match iter.next() { Some(update) => {
             str::from_utf8(update)?
-        } else {
+        } _ => {
             bail!("malformed file");
-        };
+        }};
         let mut ret = SummariesCache::default();
         ret.index_version = last_index_update;
         while let Some(version) = iter.next() {

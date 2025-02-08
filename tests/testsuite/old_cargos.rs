@@ -385,13 +385,13 @@ fn new_features() {
         };
 
         macro_rules! check_lock {
-            ($tc_result:ident, $pkg:expr, $which:expr, $actual:expr, None) => {
+            ($tc_result:ident, $pkg:expr_2021, $which:expr_2021, $actual:expr_2021, None) => {
                 check_lock!(= $tc_result, $pkg, $which, $actual, None);
             };
-            ($tc_result:ident, $pkg:expr, $which:expr, $actual:expr, $expected:expr) => {
+            ($tc_result:ident, $pkg:expr_2021, $which:expr_2021, $actual:expr_2021, $expected:expr_2021) => {
                 check_lock!(= $tc_result, $pkg, $which, $actual, Some(Version::parse($expected).unwrap()));
             };
-            (= $tc_result:ident, $pkg:expr, $which:expr, $actual:expr, $expected:expr) => {
+            (= $tc_result:ident, $pkg:expr_2021, $which:expr_2021, $actual:expr_2021, $expected:expr_2021) => {
                 let exp: Option<Version> = $expected;
                 if $actual != $expected {
                     $tc_result.push(format!(
@@ -403,11 +403,11 @@ fn new_features() {
         }
 
         let check_err_contains = |tc_result: &mut Vec<_>, err: anyhow::Error, contents| {
-            if let Some(ProcessError {
+            match err.downcast_ref::<ProcessError>()
+            { Some(ProcessError {
                 stderr: Some(stderr),
                 ..
-            }) = err.downcast_ref::<ProcessError>()
-            {
+            }) => {
                 let stderr = std::str::from_utf8(stderr).unwrap();
                 if !stderr.contains(contents) {
                     tc_result.push(format!(
@@ -415,9 +415,9 @@ fn new_features() {
                         toolchain, contents, stderr
                     ));
                 }
-            } else {
+            } _ => {
                 panic!("{} unexpected error {}", toolchain, err);
-            }
+            }}
         };
 
         // Unlocked behavior.

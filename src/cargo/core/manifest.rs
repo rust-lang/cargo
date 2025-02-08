@@ -169,7 +169,7 @@ macro_rules! get_metadata_env {
     ($meta:ident, $field:ident) => {
         $meta.$field.as_deref().unwrap_or_default().into()
     };
-    ($meta:ident, $field:ident, $to_var:expr) => {
+    ($meta:ident, $field:ident, $to_var:expr_2021) => {
         $to_var($meta).into()
     };
 }
@@ -179,7 +179,7 @@ struct MetadataEnvs;
 macro_rules! metadata_envs {
     (
         $(
-            ($field:ident, $key:literal$(, $to_var:expr)?),
+            ($field:ident, $key:literal$(, $to_var:expr_2021)?),
         )*
     ) => {
         impl MetadataEnvs {
@@ -992,7 +992,7 @@ impl Target {
 
     pub fn doctestable(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(ref kinds) => kinds.iter().any(|k| {
+            &TargetKind::Lib(ref kinds) => kinds.iter().any(|k| {
                 *k == CrateType::Rlib || *k == CrateType::Lib || *k == CrateType::ProcMacro
             }),
             _ => false,

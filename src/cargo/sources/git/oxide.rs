@@ -121,7 +121,7 @@ fn translate_progress_to_bar(
             tasks.iter().find_map(|(_, t)| cb(t))
         }
 
-        if let Some((_, objs)) = find_in(&tasks, |t| progress_by_id(resolve_objects, t)) {
+        match find_in(&tasks, |t| progress_by_id(resolve_objects, t)) { Some((_, objs)) => {
             // Phase 3: Resolving deltas.
             let objects = objs.step.load(Ordering::Relaxed);
             let total_objects = objs.done_at.expect("known amount of objects");
@@ -132,12 +132,11 @@ fn translate_progress_to_bar(
                 total_objects * num_phases,
                 &msg,
             )?;
-        } else if let Some((objs, read_pack)) =
-            find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
+        } _ => { match find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
                 find_in(&tasks, |t| progress_by_id(delta_index_objects, t))
                     .map(|delta| (delta.1, read.1))
             })
-        {
+        { Some((objs, read_pack)) => {
             // Phase 2: Receiving objects.
             let objects = objs.step.load(Ordering::Relaxed);
             let total_objects = objs.done_at.expect("known amount of objects");
@@ -156,9 +155,8 @@ fn translate_progress_to_bar(
                 total_objects * num_phases,
                 &msg,
             )?;
-        } else if let Some((action, remote)) =
-            find_in(&tasks, |t| progress_by_id(remote_progress, t))
-        {
+        } _ => { match find_in(&tasks, |t| progress_by_id(remote_progress, t))
+        { Some((action, remote)) => {
             if !is_shallow {
                 continue;
             }
@@ -170,7 +168,7 @@ fn translate_progress_to_bar(
                 let msg = format!(", ({objects}/{total_objects}) {action}");
                 progress_bar.tick(objects, total_objects * num_phases, &msg)?;
             }
-        }
+        } _ => {}}}}}}
     }
     Ok(())
 }

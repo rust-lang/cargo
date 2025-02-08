@@ -791,7 +791,7 @@ where
         // Otherwise if we didn't even get to the authentication phase them we may
         // have failed to set up a connection, in these cases hint on the
         // `net.git-fetch-with-cli` configuration option.
-    } else if let Some(e) = err.downcast_ref::<git2::Error>() {
+    } else { match err.downcast_ref::<git2::Error>() { Some(e) => {
         match e.class() {
             ErrorClass::Net
             | ErrorClass::Ssl
@@ -817,7 +817,7 @@ where
             }
             _ => {}
         }
-    }
+    } _ => {}}}
 
     Err(err)
 }
@@ -1034,13 +1034,13 @@ pub fn fetch(
         }
     }
 
-    let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
+    let result = match gctx.net_config()?.git_fetch_with_cli { Some(true) => {
         fetch_with_cli(repo, remote_url, &refspecs, tags, gctx)
-    } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
+    } _ => if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
         fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
-    };
+    }};
 
     if fast_path_rev {
         if let Some(oid) = oid_to_fetch {

@@ -47,7 +47,7 @@ pub fn raw_rustc_output(project: &Project, path: &str, extra: &[&str]) -> String
     result
 }
 
-fn redact_rustc_message(msg: &str) -> impl IntoData {
+fn redact_rustc_message(msg: &str) -> impl IntoData + use<> {
     use snapbox::filter::{Filter, FilterPaths};
     let assert = assert_e2e();
     let redactions = assert.redactions();

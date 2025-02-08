@@ -115,7 +115,7 @@ use super::auth::RegistryConfig;
 
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
-    ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
+    ($name:ident, $ty:ty, $variant:ident, $expected:expr_2021) => {
         /// Low-level private method for getting a config value as an [`OptValue`].
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.get_cv(key)?;
@@ -617,7 +617,7 @@ impl GlobalContext {
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
-        } else if let Some(val) = &self.build_config()?.target_dir {
+        } else { match &self.build_config()?.target_dir { Some(val) => {
             let path = val.resolve_path(self);
 
             // Check if the target directory is set to an empty string in the config.toml file.
@@ -629,9 +629,9 @@ impl GlobalContext {
             }
 
             Ok(Some(Filesystem::new(path)))
-        } else {
+        } _ => {
             Ok(None)
-        }
+        }}}
     }
 
     /// Get a configuration value by key.
@@ -1537,11 +1537,10 @@ impl GlobalContext {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        if let Ok(possible_handle) = same_file::Handle::from_path(&possible) {
+        match same_file::Handle::from_path(&possible) { Ok(possible_handle) => {
             if warn {
-                if let Ok(possible_with_extension_handle) =
-                    same_file::Handle::from_path(&possible_with_extension)
-                {
+                match same_file::Handle::from_path(&possible_with_extension)
+                { Ok(possible_with_extension_handle) => {
                     // We don't want to print a warning if the version
                     // without the extension is just a symlink to the version
                     // WITH an extension, which people may want to do to
@@ -1555,7 +1554,7 @@ impl GlobalContext {
                             possible.display()
                         ))?;
                     }
-                } else {
+                } _ => {
                     self.shell().warn(format!(
                         "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
                         possible.display(),
@@ -1563,15 +1562,15 @@ impl GlobalContext {
                     self.shell().note(
                         format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
                     )?;
-                }
+                }}
             }
 
             Ok(Some(possible))
-        } else if possible_with_extension.exists() {
+        } _ => if possible_with_extension.exists() {
             Ok(Some(possible_with_extension))
         } else {
             Ok(None)
-        }
+        }}
     }
 
     fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
@@ -1603,19 +1602,19 @@ impl GlobalContext {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         RegistryName::new(registry)?;
-        if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
+        match self.get_string(&format!("registries.{}.index", registry))? { Some(index) => {
             self.resolve_registry_index(&index).with_context(|| {
                 format!(
                     "invalid index URL for registry `{}` defined in {}",
                     registry, index.definition
                 )
             })
-        } else {
+        } _ => {
             bail!(
                 "registry index was not found in any configuration: `{}`",
                 registry
             );
-        }
+        }}
     }
 
     /// Returns an error if `registry.index` is set.
@@ -2941,7 +2940,7 @@ impl StringList {
 
 #[macro_export]
 macro_rules! __shell_print {
-    ($config:expr, $which:ident, $newline:literal, $($arg:tt)*) => ({
+    ($config:expr_2021, $which:ident, $newline:literal, $($arg:tt)*) => ({
         let mut shell = $config.shell();
         let out = shell.$which();
         drop(out.write_fmt(format_args!($($arg)*)));
@@ -2953,30 +2952,30 @@ macro_rules! __shell_print {
 
 #[macro_export]
 macro_rules! drop_println {
-    ($config:expr) => ( $crate::drop_print!($config, "\n") );
-    ($config:expr, $($arg:tt)*) => (
+    ($config:expr_2021) => ( $crate::drop_print!($config, "\n") );
+    ($config:expr_2021, $($arg:tt)*) => (
         $crate::__shell_print!($config, out, true, $($arg)*)
     );
 }
 
 #[macro_export]
 macro_rules! drop_eprintln {
-    ($config:expr) => ( $crate::drop_eprint!($config, "\n") );
-    ($config:expr, $($arg:tt)*) => (
+    ($config:expr_2021) => ( $crate::drop_eprint!($config, "\n") );
+    ($config:expr_2021, $($arg:tt)*) => (
         $crate::__shell_print!($config, err, true, $($arg)*)
     );
 }
 
 #[macro_export]
 macro_rules! drop_print {
-    ($config:expr, $($arg:tt)*) => (
+    ($config:expr_2021, $($arg:tt)*) => (
         $crate::__shell_print!($config, out, false, $($arg)*)
     );
 }
 
 #[macro_export]
 macro_rules! drop_eprint {
-    ($config:expr, $($arg:tt)*) => (
+    ($config:expr_2021, $($arg:tt)*) => (
         $crate::__shell_print!($config, err, false, $($arg)*)
     );
 }

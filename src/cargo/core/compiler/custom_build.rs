@@ -548,7 +548,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             });
 
         // If the build failed
-        if let Err(error) = output {
+        match output { Err(error) => {
             insert_log_messages_in_build_outputs(
                 build_script_outputs,
                 id,
@@ -556,9 +556,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 log_messages_in_case_of_panic,
             );
             return Err(error);
-        }
-        // ... or it logged any errors
-        else if log_messages_in_case_of_panic
+        } _ => if log_messages_in_case_of_panic
             .iter()
             .any(|(severity, _)| *severity == Severity::Error)
         {
@@ -569,7 +567,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 log_messages_in_case_of_panic,
             );
             anyhow::bail!("build script logged errors");
-        }
+        }}
 
         let output = output.unwrap();
 
@@ -863,7 +861,7 @@ impl BuildOutput {
 
             let syntax_prefix = if old_syntax { "cargo:" } else { "cargo::" };
             macro_rules! check_and_add_target {
-                ($target_kind: expr, $is_target_kind: expr, $link_type: expr) => {
+                ($target_kind: expr_2021, $is_target_kind: expr_2021, $link_type: expr_2021) => {
                     if !targets.iter().any(|target| $is_target_kind(target)) {
                         bail!(
                             "invalid instruction `{}{}` from {}\n\

@@ -417,11 +417,11 @@ impl<'gctx> PackageSet<'gctx> {
         })
     }
 
-    pub fn package_ids(&self) -> impl Iterator<Item = PackageId> + '_ {
+    pub fn package_ids(&self) -> impl Iterator<Item = PackageId> + '_ + use<'_> {
         self.packages.keys().cloned()
     }
 
-    pub fn packages(&self) -> impl Iterator<Item = &Package> {
+    pub fn packages(&self) -> impl Iterator<Item = &Package> + use<'_> {
         self.packages.values().filter_map(|p| p.borrow())
     }
 
@@ -635,7 +635,7 @@ impl<'gctx> PackageSet<'gctx> {
         requested_kinds: &'a [CompileKind],
         target_data: &'a RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>)> + 'a {
+    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>)> + 'a + use<'a> {
         resolve
             .deps(pkg_id)
             .filter(move |&(_id, deps)| {

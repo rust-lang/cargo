@@ -471,16 +471,16 @@ fn prepare_toml_for_vendor(
         package.build = Some(build);
     }
 
-    let lib = if let Some(target) = &me.lib {
+    let lib = match &me.lib { Some(target) => {
         crate::util::toml::prepare_target_for_publish(
             target,
             Some(packaged_files),
             "library",
             gctx,
         )?
-    } else {
+    } _ => {
         None
-    };
+    }};
     let bin = crate::util::toml::prepare_targets_for_publish(
         me.bin.as_ref(),
         Some(packaged_files),

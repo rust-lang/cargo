@@ -787,15 +787,14 @@ fn extra_args(
 
     if let Some(rustflags) = rustflags_from_env(gctx, flags) {
         Ok(rustflags)
-    } else if let Some(rustflags) =
-        rustflags_from_target(gctx, host_triple, target_cfg, kind, flags)?
-    {
+    } else { match rustflags_from_target(gctx, host_triple, target_cfg, kind, flags)?
+    { Some(rustflags) => {
         Ok(rustflags)
-    } else if let Some(rustflags) = rustflags_from_build(gctx, flags)? {
+    } _ => { match rustflags_from_build(gctx, flags)? { Some(rustflags) => {
         Ok(rustflags)
-    } else {
+    } _ => {
         Ok(Vec::new())
-    }
+    }}}}}
 }
 
 /// Gets compiler flags from environment variables.

@@ -4,7 +4,7 @@ macro_rules! compact_debug {
     (
         impl fmt::Debug for $ty:ident {
             fn fmt(&$this:ident, f: &mut fmt::Formatter) -> fmt::Result {
-                let (default, default_name) = $e:expr;
+                let (default, default_name) = $e:expr_2021;
                 [debug_the_fields($($field:ident)*)]
             }
         }

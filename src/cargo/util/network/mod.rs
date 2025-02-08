@@ -36,7 +36,7 @@ impl<T> PollExt<T> for Poll<T> {
 /// when using old versions that don't support certain features.
 #[macro_export]
 macro_rules! try_old_curl {
-    ($e:expr, $msg:expr) => {
+    ($e:expr_2021, $msg:expr_2021) => {
         let result = $e;
         if cfg!(target_os = "macos") {
             if let Err(e) = result {
@@ -71,7 +71,7 @@ macro_rules! try_old_curl {
 /// of connections down to a more manageable state.
 #[macro_export]
 macro_rules! try_old_curl_http2_pipewait {
-    ($multiplexing:expr, $handle:expr) => {
+    ($multiplexing:expr_2021, $handle:expr_2021) => {
         if $multiplexing {
             $crate::try_old_curl!($handle.http_version(curl::easy::HttpVersion::V2), "HTTP/2");
         } else {

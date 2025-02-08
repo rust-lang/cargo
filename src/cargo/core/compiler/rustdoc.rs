@@ -187,15 +187,15 @@ pub fn add_root_urls(
         .registries
         .keys()
         .filter_map(|name| {
-            if let Ok(index_url) = gctx.get_registry_index(name) {
+            match gctx.get_registry_index(name) { Ok(index_url) => {
                 Some((name, index_url))
-            } else {
+            } _ => {
                 tracing::warn!(
                     "`doc.extern-map.{}` specifies a registry that is not defined",
                     name
                 );
                 None
-            }
+            }}
         })
         .collect();
     build_all_urls(

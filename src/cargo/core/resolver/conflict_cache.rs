@@ -76,14 +76,14 @@ impl ConflictStoreTrie {
     }
 
     fn insert(&mut self, mut iter: impl Iterator<Item = PackageId>, con: ConflictMap) {
-        if let Some(pid) = iter.next() {
+        match iter.next() { Some(pid) => {
             if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid)
                     .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             }
         // Else, we already have a subset of this in the `ConflictStore`.
-        } else {
+        } _ => {
             // We are at the end of the set we are adding, there are three cases for what to do
             // next:
             // 1. `self` is an empty dummy Node inserted by `or_insert_with`
@@ -104,7 +104,7 @@ impl ConflictStoreTrie {
                 }
             }
             *self = ConflictStoreTrie::Leaf(con)
-        }
+        }}
     }
 }
 

@@ -402,7 +402,7 @@ fn resolve_dependency(
         )
     };
     let old_dep = fuzzy_lookup(&mut selected_dep, lookup, gctx)?;
-    let mut dependency = if let Some(mut old_dep) = old_dep.clone() {
+    let mut dependency = match old_dep.clone() { Some(mut old_dep) => {
         if old_dep.name != selected_dep.name {
             // Assuming most existing keys are not relevant when the package changes
             if selected_dep.optional.is_none() {
@@ -416,9 +416,9 @@ fn resolve_dependency(
             }
             populate_dependency(old_dep, arg)
         }
-    } else {
+    } _ => {
         selected_dep
-    };
+    }};
 
     if dependency.source().is_none() {
         // Checking for a workspace dependency happens first since a member could be specified
@@ -426,9 +426,9 @@ fn resolve_dependency(
         let lookup = |toml_key: &_| {
             Ok(find_workspace_dep(toml_key, ws, ws.root_manifest(), ws.unstable_features()).ok())
         };
-        if let Some(_dep) = fuzzy_lookup(&mut dependency, lookup, gctx)? {
+        match fuzzy_lookup(&mut dependency, lookup, gctx)? { Some(_dep) => {
             dependency = dependency.set_source(WorkspaceSource::new());
-        } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
+        } _ => { match ws.members().find(|p| p.name().as_str() == dependency.name) { Some(package) => {
             // Only special-case workspaces when the user doesn't provide any extra
             // information, otherwise, trust the user.
             let mut src = PathSource::new(package.root());
@@ -439,7 +439,7 @@ fn resolve_dependency(
                 src = src.set_version(v);
             }
             dependency = dependency.set_source(src);
-        } else {
+        } _ => {
             let latest =
                 get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
 
@@ -451,7 +451,7 @@ fn resolve_dependency(
                 dependency.name = latest.name; // Normalize the name
             }
             dependency = dependency.set_source(latest.source.expect("latest always has a source"));
-        }
+        }}}}
     }
 
     if let Some(Source::Workspace(_)) = dependency.source() {
@@ -1139,7 +1139,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 }
 
 fn format_features_version_suffix(dep: &DependencyUI) -> String {
-    if let Some(version) = &dep.available_version {
+    match &dep.available_version { Some(version) => {
         let mut version = version.clone();
         version.build = Default::default();
         let version = version.to_string();
@@ -1154,9 +1154,9 @@ fn format_features_version_suffix(dep: &DependencyUI) -> String {
         } else {
             "".to_owned()
         }
-    } else {
+    } _ => {
         "".to_owned()
-    }
+    }}
 }
 
 fn find_workspace_dep(

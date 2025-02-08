@@ -627,7 +627,7 @@ impl Dependency {
                     table.remove("default-features");
                 }
             }
-            if let Some(new_features) = self.features.as_ref() {
+            match self.features.as_ref() { Some(new_features) => {
                 let mut features = table
                     .get("features")
                     .and_then(|i| i.as_value())
@@ -647,9 +647,9 @@ impl Dependency {
                 };
                 table.set_dotted(false);
                 overwrite_value(table, "features", features);
-            } else {
+            } _ => {
                 table.remove("features");
-            }
+            }}
             match self.optional {
                 Some(v) => {
                     table.set_dotted(false);

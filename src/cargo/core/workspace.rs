@@ -504,7 +504,7 @@ impl<'gctx> Workspace<'gctx> {
         // but that's not quite right as it won't deal with overlaps.
         let mut combined = from_config;
         for (url, deps_from_manifest) in from_manifest {
-            if let Some(deps_from_config) = combined.get_mut(url) {
+            match combined.get_mut(url) { Some(deps_from_config) => {
                 // We want from_config to take precedence for each patched name.
                 // NOTE: This is inefficient if the number of patches is large!
                 let mut from_manifest_pruned = deps_from_manifest.clone();
@@ -518,9 +518,9 @@ impl<'gctx> Workspace<'gctx> {
                 }
                 // Whatever is left does not exist in manifest dependencies.
                 deps_from_config.extend(from_manifest_pruned);
-            } else {
+            } _ => {
                 combined.insert(url.clone(), deps_from_manifest.clone());
-            }
+            }}
         }
         Ok(combined)
     }
@@ -537,13 +537,13 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     /// Returns a mutable iterator over all packages in this workspace
-    pub fn members_mut(&mut self) -> impl Iterator<Item = &mut Package> {
+    pub fn members_mut(&mut self) -> impl Iterator<Item = &mut Package> + use<'_> {
         let packages = &mut self.packages.packages;
         let members: HashSet<_> = self.members.iter().map(|path| path).collect();
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let &mut MaybePackage::Package(ref mut p) = package {
                     return Some(p);
                 }
             }
@@ -564,7 +564,7 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     /// Returns an iterator over default packages in this workspace
-    pub fn default_members_mut(&mut self) -> impl Iterator<Item = &mut Package> {
+    pub fn default_members_mut(&mut self) -> impl Iterator<Item = &mut Package> + use<'_> {
         let packages = &mut self.packages.packages;
         let members: HashSet<_> = self
             .default_members
@@ -574,7 +574,7 @@ impl<'gctx> Workspace<'gctx> {
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let &mut MaybePackage::Package(ref mut p) = package {
                     return Some(p);
                 }
             }
@@ -673,7 +673,7 @@ impl<'gctx> Workspace<'gctx> {
         if let Some(root_path) = &self.root_manifest {
             let root_package = self.packages.load(root_path)?;
             match root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
+                &WorkspaceConfig::Root(ref root_config) => {
                     return Ok(Some(root_config.clone()));
                 }
 
@@ -742,11 +742,11 @@ impl<'gctx> Workspace<'gctx> {
         let members_paths = workspace_config
             .members_paths(workspace_config.members.as_deref().unwrap_or_default())?;
         let default_members_paths = if root_manifest_path == self.current_manifest {
-            if let Some(ref default) = workspace_config.default_members {
+            match workspace_config.default_members { Some(ref default) => {
                 Some(workspace_config.members_paths(default)?)
-            } else {
+            } _ => {
                 None
-            }
+            }}
         } else {
             None
         };
@@ -1754,7 +1754,7 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     /// Returns all the configured local overlays, including the ones from our secret environment variable.
-    fn local_overlays(&self) -> CargoResult<impl Iterator<Item = (SourceId, SourceId)>> {
+    fn local_overlays(&self) -> CargoResult<impl Iterator<Item = (SourceId, SourceId)> + use<>> {
         let mut ret = self
             .local_overlays
             .iter()

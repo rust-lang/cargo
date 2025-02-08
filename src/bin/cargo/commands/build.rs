@@ -59,18 +59,18 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx.shell()
             .warn("the --out-dir flag has been changed to --artifact-dir")?;
         compile_opts.build_config.export_dir = Some(artifact_dir);
-    } else if let Some(artifact_dir) = gctx.build_config()?.artifact_dir.as_ref() {
+    } else { match gctx.build_config()?.artifact_dir.as_ref() { Some(artifact_dir) => {
         // If a CLI option is not specified for choosing the artifact dir, use the `artifact-dir` from the build config, if
         // present
         let artifact_dir = artifact_dir.resolve_path(gctx);
         compile_opts.build_config.export_dir = Some(artifact_dir);
-    } else if let Some(artifact_dir) = gctx.build_config()?.out_dir.as_ref() {
+    } _ => { match gctx.build_config()?.out_dir.as_ref() { Some(artifact_dir) => {
         // As a last priority, check `out-dir` in the build config
         gctx.shell()
             .warn("the out-dir config option has been changed to artifact-dir")?;
         let artifact_dir = artifact_dir.resolve_path(gctx);
         compile_opts.build_config.export_dir = Some(artifact_dir);
-    }
+    } _ => {}}}}}
 
     if compile_opts.build_config.export_dir.is_some() {
         gctx.cli_unstable()

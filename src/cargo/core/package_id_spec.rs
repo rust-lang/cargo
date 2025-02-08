@@ -84,11 +84,11 @@ impl PackageIdSpecQuery for PackageIdSpec {
             };
             if self.url().is_some() {
                 let spec = PackageIdSpec::new(self.name().to_owned());
-                let spec = if let Some(version) = self.partial_version().cloned() {
+                let spec = match self.partial_version().cloned() { Some(version) => {
                     spec.with_version(version)
-                } else {
+                } _ => {
                     spec
-                };
+                }};
                 try_spec(spec, &mut suggestion);
             }
             if suggestion.is_empty() && self.version().is_some() {

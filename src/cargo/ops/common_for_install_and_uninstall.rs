@@ -609,7 +609,7 @@ where
                                 Poll::Pending => source.block_until_ready()?,
                             }
                         };
-                        if let Some(alt) = msrv_deps
+                        match msrv_deps
                             .iter()
                             .map(|s| s.as_summary())
                             .filter(|summary| {
@@ -619,7 +619,7 @@ where
                                     .unwrap_or(true)
                             })
                             .max_by_key(|s| s.package_id())
-                        {
+                        { Some(alt) => {
                             if let Some(rust_version) = alt.rust_version() {
                                 format!(
                                     "\n`{name} {}` supports rustc {rust_version}",
@@ -631,9 +631,9 @@ where
                                     alt.version()
                                 )
                             }
-                        } else {
+                        } _ => {
                             String::new()
-                        }
+                        }}
                     } else {
                         String::new()
                     };
@@ -648,9 +648,8 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                if let Ok(pkg_id) =
-                    PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
-                {
+                match PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
+                { Ok(pkg_id) => {
                     source.invalidate_cache();
                     loop {
                         match source.is_yanked(pkg_id) {
@@ -659,9 +658,9 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
                             Poll::Pending => source.block_until_ready()?,
                         }
                     }
-                } else {
+                } _ => {
                     false
-                }
+                }}
             } else {
                 false
             };
@@ -701,9 +700,9 @@ where
 
     source.invalidate_cache();
 
-    return if let Some(dep) = dep {
+    return match dep { Some(dep) => {
         select_dep_pkg(source, dep, gctx, false, current_rust_version)
-    } else {
+    } _ => {
         let candidates = list_all(source)?;
         let binaries = candidates
             .iter()
@@ -723,7 +722,7 @@ where
             },
         };
         Ok(pkg.clone())
-    };
+    }};
 
     fn multi_err(kind: &str, git_url: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());
@@ -785,7 +784,7 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             .filter(|target| target.is_executable())
             .map(|target| to_exe(target.name()))
             .collect(),
-        CompileFilter::Only {
+        &CompileFilter::Only {
             ref bins,
             ref examples,
             ..

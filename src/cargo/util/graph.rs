@@ -51,7 +51,7 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         self.nodes.get(from)?.get(to)
     }
 
-    pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> {
+    pub fn edges(&self, from: &N) -> impl Iterator<Item = (&N, &E)> + use<'_, N, E> {
         self.nodes.get(from).into_iter().flat_map(|x| x.iter())
     }
 
