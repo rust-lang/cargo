@@ -705,11 +705,16 @@ fn non_existent_dependency_err(
     alt_name: Option<&str>,
 ) -> anyhow::Error {
     let mut msg = format!("the dependency `{name}` could not be found in `{search_table}`");
-    match found_table { Some(found_table) => {
-        msg.push_str(&format!("; it is present in `{found_table}`",));
-    } _ => if let Some(alt_name) = alt_name {
-        msg.push_str(&format!("; dependency `{alt_name}` exists",));
-    }}
+    match found_table {
+        Some(found_table) => {
+            msg.push_str(&format!("; it is present in `{found_table}`",));
+        }
+        _ => {
+            if let Some(alt_name) = alt_name {
+                msg.push_str(&format!("; dependency `{alt_name}` exists",));
+            }
+        }
+    }
     anyhow::format_err!(msg)
 }
 

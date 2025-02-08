@@ -76,35 +76,38 @@ impl ConflictStoreTrie {
     }
 
     fn insert(&mut self, mut iter: impl Iterator<Item = PackageId>, con: ConflictMap) {
-        match iter.next() { Some(pid) => {
-            if let ConflictStoreTrie::Node(p) = self {
-                p.entry(pid)
-                    .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
-                    .insert(iter, con);
-            }
-        // Else, we already have a subset of this in the `ConflictStore`.
-        } _ => {
-            // We are at the end of the set we are adding, there are three cases for what to do
-            // next:
-            // 1. `self` is an empty dummy Node inserted by `or_insert_with`
-            //      in witch case we should replace it with `Leaf(con)`.
-            // 2. `self` is a `Node` because we previously inserted a superset of
-            //      the thing we are working on (I don't know if this happens in practice)
-            //      but the subset that we are working on will
-            //      always match any time the larger set would have
-            //      in witch case we can replace it with `Leaf(con)`.
-            // 3. `self` is a `Leaf` that is in the same spot in the structure as
-            //      the thing we are working on. So it is equivalent.
-            //      We can replace it with `Leaf(con)`.
-            if cfg!(debug_assertions) {
-                if let ConflictStoreTrie::Leaf(c) = self {
-                    let a: Vec<_> = con.keys().collect();
-                    let b: Vec<_> = c.keys().collect();
-                    assert_eq!(a, b);
+        match iter.next() {
+            Some(pid) => {
+                if let ConflictStoreTrie::Node(p) = self {
+                    p.entry(pid)
+                        .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
+                        .insert(iter, con);
                 }
+                // Else, we already have a subset of this in the `ConflictStore`.
             }
-            *self = ConflictStoreTrie::Leaf(con)
-        }}
+            _ => {
+                // We are at the end of the set we are adding, there are three cases for what to do
+                // next:
+                // 1. `self` is an empty dummy Node inserted by `or_insert_with`
+                //      in witch case we should replace it with `Leaf(con)`.
+                // 2. `self` is a `Node` because we previously inserted a superset of
+                //      the thing we are working on (I don't know if this happens in practice)
+                //      but the subset that we are working on will
+                //      always match any time the larger set would have
+                //      in witch case we can replace it with `Leaf(con)`.
+                // 3. `self` is a `Leaf` that is in the same spot in the structure as
+                //      the thing we are working on. So it is equivalent.
+                //      We can replace it with `Leaf(con)`.
+                if cfg!(debug_assertions) {
+                    if let ConflictStoreTrie::Leaf(c) = self {
+                        let a: Vec<_> = con.keys().collect();
+                        let b: Vec<_> = c.keys().collect();
+                        assert_eq!(a, b);
+                    }
+                }
+                *self = ConflictStoreTrie::Leaf(con)
+            }
+        }
     }
 }
 

@@ -617,21 +617,24 @@ impl GlobalContext {
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
-        } else { match &self.build_config()?.target_dir { Some(val) => {
-            let path = val.resolve_path(self);
+        } else {
+            match &self.build_config()?.target_dir {
+                Some(val) => {
+                    let path = val.resolve_path(self);
 
-            // Check if the target directory is set to an empty string in the config.toml file.
-            if val.raw_value().is_empty() {
-                bail!(
-                    "the target directory is set to an empty string in {}",
-                    val.value().definition
-                )
+                    // Check if the target directory is set to an empty string in the config.toml file.
+                    if val.raw_value().is_empty() {
+                        bail!(
+                            "the target directory is set to an empty string in {}",
+                            val.value().definition
+                        )
+                    }
+
+                    Ok(Some(Filesystem::new(path)))
+                }
+                _ => Ok(None),
             }
-
-            Ok(Some(Filesystem::new(path)))
-        } _ => {
-            Ok(None)
-        }}}
+        }
     }
 
     /// Get a configuration value by key.
@@ -1537,40 +1540,47 @@ impl GlobalContext {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        match same_file::Handle::from_path(&possible) { Ok(possible_handle) => {
-            if warn {
-                match same_file::Handle::from_path(&possible_with_extension)
-                { Ok(possible_with_extension_handle) => {
-                    // We don't want to print a warning if the version
-                    // without the extension is just a symlink to the version
-                    // WITH an extension, which people may want to do to
-                    // support multiple Cargo versions at once and not
-                    // get a warning.
-                    if possible_handle != possible_with_extension_handle {
-                        self.shell().warn(format!(
-                            "both `{}` and `{}` exist. Using `{}`",
-                            possible.display(),
-                            possible_with_extension.display(),
-                            possible.display()
-                        ))?;
-                    }
-                } _ => {
-                    self.shell().warn(format!(
+        match same_file::Handle::from_path(&possible) {
+            Ok(possible_handle) => {
+                if warn {
+                    match same_file::Handle::from_path(&possible_with_extension) {
+                        Ok(possible_with_extension_handle) => {
+                            // We don't want to print a warning if the version
+                            // without the extension is just a symlink to the version
+                            // WITH an extension, which people may want to do to
+                            // support multiple Cargo versions at once and not
+                            // get a warning.
+                            if possible_handle != possible_with_extension_handle {
+                                self.shell().warn(format!(
+                                    "both `{}` and `{}` exist. Using `{}`",
+                                    possible.display(),
+                                    possible_with_extension.display(),
+                                    possible.display()
+                                ))?;
+                            }
+                        }
+                        _ => {
+                            self.shell().warn(format!(
                         "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
                         possible.display(),
                     ))?;
-                    self.shell().note(
+                            self.shell().note(
                         format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
                     )?;
-                }}
-            }
+                        }
+                    }
+                }
 
-            Ok(Some(possible))
-        } _ => if possible_with_extension.exists() {
-            Ok(Some(possible_with_extension))
-        } else {
-            Ok(None)
-        }}
+                Ok(Some(possible))
+            }
+            _ => {
+                if possible_with_extension.exists() {
+                    Ok(Some(possible_with_extension))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 
     fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
@@ -1602,19 +1612,20 @@ impl GlobalContext {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         RegistryName::new(registry)?;
-        match self.get_string(&format!("registries.{}.index", registry))? { Some(index) => {
-            self.resolve_registry_index(&index).with_context(|| {
+        match self.get_string(&format!("registries.{}.index", registry))? {
+            Some(index) => self.resolve_registry_index(&index).with_context(|| {
                 format!(
                     "invalid index URL for registry `{}` defined in {}",
                     registry, index.definition
                 )
-            })
-        } _ => {
-            bail!(
-                "registry index was not found in any configuration: `{}`",
-                registry
-            );
-        }}
+            }),
+            _ => {
+                bail!(
+                    "registry index was not found in any configuration: `{}`",
+                    registry
+                );
+            }
+        }
     }
 
     /// Returns an error if `registry.index` is set.

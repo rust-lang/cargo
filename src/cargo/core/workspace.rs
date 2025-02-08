@@ -504,23 +504,26 @@ impl<'gctx> Workspace<'gctx> {
         // but that's not quite right as it won't deal with overlaps.
         let mut combined = from_config;
         for (url, deps_from_manifest) in from_manifest {
-            match combined.get_mut(url) { Some(deps_from_config) => {
-                // We want from_config to take precedence for each patched name.
-                // NOTE: This is inefficient if the number of patches is large!
-                let mut from_manifest_pruned = deps_from_manifest.clone();
-                for dep_from_config in &mut *deps_from_config {
-                    if let Some(i) = from_manifest_pruned.iter().position(|dep_from_manifest| {
-                        // XXX: should this also take into account version numbers?
-                        dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
-                    }) {
-                        from_manifest_pruned.swap_remove(i);
+            match combined.get_mut(url) {
+                Some(deps_from_config) => {
+                    // We want from_config to take precedence for each patched name.
+                    // NOTE: This is inefficient if the number of patches is large!
+                    let mut from_manifest_pruned = deps_from_manifest.clone();
+                    for dep_from_config in &mut *deps_from_config {
+                        if let Some(i) = from_manifest_pruned.iter().position(|dep_from_manifest| {
+                            // XXX: should this also take into account version numbers?
+                            dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
+                        }) {
+                            from_manifest_pruned.swap_remove(i);
+                        }
                     }
+                    // Whatever is left does not exist in manifest dependencies.
+                    deps_from_config.extend(from_manifest_pruned);
                 }
-                // Whatever is left does not exist in manifest dependencies.
-                deps_from_config.extend(from_manifest_pruned);
-            } _ => {
-                combined.insert(url.clone(), deps_from_manifest.clone());
-            }}
+                _ => {
+                    combined.insert(url.clone(), deps_from_manifest.clone());
+                }
+            }
         }
         Ok(combined)
     }
@@ -742,11 +745,10 @@ impl<'gctx> Workspace<'gctx> {
         let members_paths = workspace_config
             .members_paths(workspace_config.members.as_deref().unwrap_or_default())?;
         let default_members_paths = if root_manifest_path == self.current_manifest {
-            match workspace_config.default_members { Some(ref default) => {
-                Some(workspace_config.members_paths(default)?)
-            } _ => {
-                None
-            }}
+            match workspace_config.default_members {
+                Some(ref default) => Some(workspace_config.members_paths(default)?),
+                _ => None,
+            }
         } else {
             None
         };

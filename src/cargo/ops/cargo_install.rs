@@ -145,39 +145,44 @@ impl<'gctx> InstallablePackage<'gctx> {
                     gctx,
                     current_rust_version,
                 )?
-            } else { match dep { Some(dep) => {
-                let mut source = map.load(source_id, &HashSet::new())?;
-                if let Ok(Some(pkg)) = installed_exact_package(
-                    dep.clone(),
-                    &mut source,
-                    gctx,
-                    original_opts,
-                    &root,
-                    &dst,
-                    force,
-                    lockfile_path,
-                ) {
-                    let msg = format!(
-                        "package `{}` is already installed, use --force to override",
-                        pkg
-                    );
-                    gctx.shell().status("Ignored", &msg)?;
-                    return Ok(None);
-                }
-                select_dep_pkg(
-                    &mut source,
-                    dep,
-                    gctx,
-                    needs_update_if_source_is_index,
-                    current_rust_version,
-                )?
-            } _ => {
-                bail!(
-                    "must specify a crate to install from \
+            } else {
+                match dep {
+                    Some(dep) => {
+                        let mut source = map.load(source_id, &HashSet::new())?;
+                        if let Ok(Some(pkg)) = installed_exact_package(
+                            dep.clone(),
+                            &mut source,
+                            gctx,
+                            original_opts,
+                            &root,
+                            &dst,
+                            force,
+                            lockfile_path,
+                        ) {
+                            let msg = format!(
+                                "package `{}` is already installed, use --force to override",
+                                pkg
+                            );
+                            gctx.shell().status("Ignored", &msg)?;
+                            return Ok(None);
+                        }
+                        select_dep_pkg(
+                            &mut source,
+                            dep,
+                            gctx,
+                            needs_update_if_source_is_index,
+                            current_rust_version,
+                        )?
+                    }
+                    _ => {
+                        bail!(
+                            "must specify a crate to install from \
                          crates.io, or use --path or --git to \
                          specify alternate source"
-                )
-            }}}
+                        )
+                    }
+                }
+            }
         };
 
         let (ws, rustc, target) = make_ws_rustc_target(
@@ -191,21 +196,26 @@ impl<'gctx> InstallablePackage<'gctx> {
         if gctx.locked() {
             // When --lockfile-path is set, check that passed lock file exists
             // (unlike the usual flag behavior, lockfile won't be created as we imply --locked)
-            match ws.requested_lockfile_path() { Some(requested_lockfile_path) => {
-                if !requested_lockfile_path.is_file() {
-                    bail!(
-                        "no Cargo.lock file found in the requested path {}",
-                        requested_lockfile_path.display()
-                    );
+            match ws.requested_lockfile_path() {
+                Some(requested_lockfile_path) => {
+                    if !requested_lockfile_path.is_file() {
+                        bail!(
+                            "no Cargo.lock file found in the requested path {}",
+                            requested_lockfile_path.display()
+                        );
+                    }
+                    // If we're installing in --locked mode and there's no `Cargo.lock` published
+                    // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
                 }
-            // If we're installing in --locked mode and there's no `Cargo.lock` published
-            // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
-            } _ => if !ws.root().join("Cargo.lock").exists() {
-                gctx.shell().warn(format!(
-                    "no Cargo.lock file published in {}",
-                    pkg.to_string()
-                ))?;
-            }}
+                _ => {
+                    if !ws.root().join("Cargo.lock").exists() {
+                        gctx.shell().warn(format!(
+                            "no Cargo.lock file published in {}",
+                            pkg.to_string()
+                        ))?;
+                    }
+                }
+            }
         }
         let pkg = if source_id.is_git() {
             // Don't use ws.current() in order to keep the package source as a git source so that
@@ -322,16 +332,20 @@ impl<'gctx> InstallablePackage<'gctx> {
         let mut td_opt = None;
         let mut needs_cleanup = false;
         if !self.source_id.is_path() {
-            let target_dir = match self.gctx.target_dir()? { Some(dir) => {
-                dir
-            } _ => { match TempFileBuilder::new().prefix("cargo-install").tempdir() { Ok(td) => {
-                let p = td.path().to_owned();
-                td_opt = Some(td);
-                Filesystem::new(p)
-            } _ => {
-                needs_cleanup = true;
-                Filesystem::new(self.gctx.cwd().join("target-install"))
-            }}}};
+            let target_dir = match self.gctx.target_dir()? {
+                Some(dir) => dir,
+                _ => match TempFileBuilder::new().prefix("cargo-install").tempdir() {
+                    Ok(td) => {
+                        let p = td.path().to_owned();
+                        td_opt = Some(td);
+                        Filesystem::new(p)
+                    }
+                    _ => {
+                        needs_cleanup = true;
+                        Filesystem::new(self.gctx.cwd().join("target-install"))
+                    }
+                },
+            };
             self.ws.set_target_dir(target_dir);
         }
 

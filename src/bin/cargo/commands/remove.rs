@@ -363,12 +363,14 @@ fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResul
                     )?;
 
                     // Generate a PackageIdSpec url for querying
-                    let url = match dep.source_id(workspace.gctx())?
-                    { MaybeWorkspace::Other(source_id) => {
-                        format!("{}#{}", source_id.url(), dep.name)
-                    } _ => {
-                        continue;
-                    }};
+                    let url = match dep.source_id(workspace.gctx())? {
+                        MaybeWorkspace::Other(source_id) => {
+                            format!("{}#{}", source_id.url(), dep.name)
+                        }
+                        _ => {
+                            continue;
+                        }
+                    };
 
                     if PackageIdSpec::query_str(&url, resolve.unused_patches().iter().cloned())
                         .is_ok()

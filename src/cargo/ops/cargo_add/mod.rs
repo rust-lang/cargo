@@ -402,23 +402,24 @@ fn resolve_dependency(
         )
     };
     let old_dep = fuzzy_lookup(&mut selected_dep, lookup, gctx)?;
-    let mut dependency = match old_dep.clone() { Some(mut old_dep) => {
-        if old_dep.name != selected_dep.name {
-            // Assuming most existing keys are not relevant when the package changes
-            if selected_dep.optional.is_none() {
-                selected_dep.optional = old_dep.optional;
+    let mut dependency = match old_dep.clone() {
+        Some(mut old_dep) => {
+            if old_dep.name != selected_dep.name {
+                // Assuming most existing keys are not relevant when the package changes
+                if selected_dep.optional.is_none() {
+                    selected_dep.optional = old_dep.optional;
+                }
+                selected_dep
+            } else {
+                if selected_dep.source().is_some() {
+                    // Overwrite with `crate_spec`
+                    old_dep.source = selected_dep.source;
+                }
+                populate_dependency(old_dep, arg)
             }
-            selected_dep
-        } else {
-            if selected_dep.source().is_some() {
-                // Overwrite with `crate_spec`
-                old_dep.source = selected_dep.source;
-            }
-            populate_dependency(old_dep, arg)
         }
-    } _ => {
-        selected_dep
-    }};
+        _ => selected_dep,
+    };
 
     if dependency.source().is_none() {
         // Checking for a workspace dependency happens first since a member could be specified
@@ -426,32 +427,46 @@ fn resolve_dependency(
         let lookup = |toml_key: &_| {
             Ok(find_workspace_dep(toml_key, ws, ws.root_manifest(), ws.unstable_features()).ok())
         };
-        match fuzzy_lookup(&mut dependency, lookup, gctx)? { Some(_dep) => {
-            dependency = dependency.set_source(WorkspaceSource::new());
-        } _ => { match ws.members().find(|p| p.name().as_str() == dependency.name) { Some(package) => {
-            // Only special-case workspaces when the user doesn't provide any extra
-            // information, otherwise, trust the user.
-            let mut src = PathSource::new(package.root());
-            // dev-dependencies do not need the version populated
-            if section.kind() != DepKind::Development {
-                let op = "";
-                let v = format!("{op}{version}", version = package.version());
-                src = src.set_version(v);
+        match fuzzy_lookup(&mut dependency, lookup, gctx)? {
+            Some(_dep) => {
+                dependency = dependency.set_source(WorkspaceSource::new());
             }
-            dependency = dependency.set_source(src);
-        } _ => {
-            let latest =
-                get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
+            _ => {
+                match ws.members().find(|p| p.name().as_str() == dependency.name) {
+                    Some(package) => {
+                        // Only special-case workspaces when the user doesn't provide any extra
+                        // information, otherwise, trust the user.
+                        let mut src = PathSource::new(package.root());
+                        // dev-dependencies do not need the version populated
+                        if section.kind() != DepKind::Development {
+                            let op = "";
+                            let v = format!("{op}{version}", version = package.version());
+                            src = src.set_version(v);
+                        }
+                        dependency = dependency.set_source(src);
+                    }
+                    _ => {
+                        let latest = get_latest_dependency(
+                            spec,
+                            &dependency,
+                            honor_rust_version,
+                            gctx,
+                            registry,
+                        )?;
 
-            if dependency.name != latest.name {
-                gctx.shell().warn(format!(
-                    "translating `{}` to `{}`",
-                    dependency.name, latest.name,
-                ))?;
-                dependency.name = latest.name; // Normalize the name
+                        if dependency.name != latest.name {
+                            gctx.shell().warn(format!(
+                                "translating `{}` to `{}`",
+                                dependency.name, latest.name,
+                            ))?;
+                            dependency.name = latest.name; // Normalize the name
+                        }
+                        dependency = dependency
+                            .set_source(latest.source.expect("latest always has a source"));
+                    }
+                }
             }
-            dependency = dependency.set_source(latest.source.expect("latest always has a source"));
-        }}}}
+        }
     }
 
     if let Some(Source::Workspace(_)) = dependency.source() {
@@ -1139,24 +1154,25 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 }
 
 fn format_features_version_suffix(dep: &DependencyUI) -> String {
-    match &dep.available_version { Some(version) => {
-        let mut version = version.clone();
-        version.build = Default::default();
-        let version = version.to_string();
-        // Avoid displaying the version if it will visually look like the version req that we
-        // showed earlier
-        let version_req = dep
-            .version()
-            .and_then(|v| semver::VersionReq::parse(v).ok())
-            .and_then(|v| precise_version(&v));
-        if version_req.as_deref() != Some(version.as_str()) {
-            format!(" as of v{version}")
-        } else {
-            "".to_owned()
+    match &dep.available_version {
+        Some(version) => {
+            let mut version = version.clone();
+            version.build = Default::default();
+            let version = version.to_string();
+            // Avoid displaying the version if it will visually look like the version req that we
+            // showed earlier
+            let version_req = dep
+                .version()
+                .and_then(|v| semver::VersionReq::parse(v).ok())
+                .and_then(|v| precise_version(&v));
+            if version_req.as_deref() != Some(version.as_str()) {
+                format!(" as of v{version}")
+            } else {
+                "".to_owned()
+            }
         }
-    } _ => {
-        "".to_owned()
-    }}
+        _ => "".to_owned(),
+    }
 }
 
 fn find_workspace_dep(

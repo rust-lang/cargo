@@ -619,21 +619,22 @@ where
                                     .unwrap_or(true)
                             })
                             .max_by_key(|s| s.package_id())
-                        { Some(alt) => {
-                            if let Some(rust_version) = alt.rust_version() {
-                                format!(
-                                    "\n`{name} {}` supports rustc {rust_version}",
-                                    alt.version()
-                                )
-                            } else {
-                                format!(
-                                    "\n`{name} {}` has an unspecified minimum rustc version",
-                                    alt.version()
-                                )
+                        {
+                            Some(alt) => {
+                                if let Some(rust_version) = alt.rust_version() {
+                                    format!(
+                                        "\n`{name} {}` supports rustc {rust_version}",
+                                        alt.version()
+                                    )
+                                } else {
+                                    format!(
+                                        "\n`{name} {}` has an unspecified minimum rustc version",
+                                        alt.version()
+                                    )
+                                }
                             }
-                        } _ => {
-                            String::new()
-                        }}
+                            _ => String::new(),
+                        }
                     } else {
                         String::new()
                     };
@@ -648,19 +649,19 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
-                match PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
-                { Ok(pkg_id) => {
-                    source.invalidate_cache();
-                    loop {
-                        match source.is_yanked(pkg_id) {
-                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
-                            Poll::Ready(Err(_)) => break false,
-                            Poll::Pending => source.block_until_ready()?,
+                match PackageId::try_new(dep.package_name(), &version[1..], source.source_id()) {
+                    Ok(pkg_id) => {
+                        source.invalidate_cache();
+                        loop {
+                            match source.is_yanked(pkg_id) {
+                                Poll::Ready(Ok(is_yanked)) => break is_yanked,
+                                Poll::Ready(Err(_)) => break false,
+                                Poll::Pending => source.block_until_ready()?,
+                            }
                         }
                     }
-                } _ => {
-                    false
-                }}
+                    _ => false,
+                }
             } else {
                 false
             };
@@ -700,29 +701,30 @@ where
 
     source.invalidate_cache();
 
-    return match dep { Some(dep) => {
-        select_dep_pkg(source, dep, gctx, false, current_rust_version)
-    } _ => {
-        let candidates = list_all(source)?;
-        let binaries = candidates
-            .iter()
-            .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);
-        let examples = candidates
-            .iter()
-            .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
-        let git_url = source.source_id().url().to_string();
-        let pkg = match one(binaries, |v| multi_err("binaries", &git_url, v))? {
-            Some(p) => p,
-            None => match one(examples, |v| multi_err("examples", &git_url, v))? {
+    return match dep {
+        Some(dep) => select_dep_pkg(source, dep, gctx, false, current_rust_version),
+        _ => {
+            let candidates = list_all(source)?;
+            let binaries = candidates
+                .iter()
+                .filter(|cand| cand.targets().iter().filter(|t| t.is_bin()).count() > 0);
+            let examples = candidates
+                .iter()
+                .filter(|cand| cand.targets().iter().filter(|t| t.is_example()).count() > 0);
+            let git_url = source.source_id().url().to_string();
+            let pkg = match one(binaries, |v| multi_err("binaries", &git_url, v))? {
                 Some(p) => p,
-                None => bail!(
-                    "no packages found with binaries or \
+                None => match one(examples, |v| multi_err("examples", &git_url, v))? {
+                    Some(p) => p,
+                    None => bail!(
+                        "no packages found with binaries or \
                          examples"
-                ),
-            },
-        };
-        Ok(pkg.clone())
-    }};
+                    ),
+                },
+            };
+            Ok(pkg.clone())
+        }
+    };
 
     fn multi_err(kind: &str, git_url: &str, mut pkgs: Vec<&Package>) -> String {
         pkgs.sort_unstable_by_key(|a| a.name());

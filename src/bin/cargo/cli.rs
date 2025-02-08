@@ -65,36 +65,43 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
         let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
         let version = get_version_string(is_verbose);
         drop_print!(gctx, "{}", version);
-    } else { match expanded_args.get_one::<String>("explain") { Some(code) => {
-        // Don't let config errors get in the way of parsing arguments
-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
-        let mut procss = gctx.load_global_rustc(None)?.process();
-        procss.arg("--explain").arg(code).exec()?;
-    } _ => if expanded_args.flag("list") {
-        // Don't let config errors get in the way of parsing arguments
-        let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
-        print_list(gctx, is_verbose);
     } else {
-        let (cmd, subcommand_args) = match expanded_args.subcommand() {
-            Some((cmd, args)) => (cmd, args),
-            _ => {
-                // No subcommand provided.
-                cli(gctx).print_help()?;
-                return Ok(());
+        match expanded_args.get_one::<String>("explain") {
+            Some(code) => {
+                // Don't let config errors get in the way of parsing arguments
+                let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
+                let mut procss = gctx.load_global_rustc(None)?.process();
+                procss.arg("--explain").arg(code).exec()?;
             }
-        };
-        let exec = Exec::infer(cmd)?;
-        configure_gctx(
-            gctx,
-            &expanded_args,
-            Some(subcommand_args),
-            global_args,
-            Some(&exec),
-        )?;
-        super::init_git(gctx);
+            _ => {
+                if expanded_args.flag("list") {
+                    // Don't let config errors get in the way of parsing arguments
+                    let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
+                    print_list(gctx, is_verbose);
+                } else {
+                    let (cmd, subcommand_args) = match expanded_args.subcommand() {
+                        Some((cmd, args)) => (cmd, args),
+                        _ => {
+                            // No subcommand provided.
+                            cli(gctx).print_help()?;
+                            return Ok(());
+                        }
+                    };
+                    let exec = Exec::infer(cmd)?;
+                    configure_gctx(
+                        gctx,
+                        &expanded_args,
+                        Some(subcommand_args),
+                        global_args,
+                        Some(&exec),
+                    )?;
+                    super::init_git(gctx);
 
-        exec.exec(gctx, subcommand_args)?;
-    }}}
+                    exec.exec(gctx, subcommand_args)?;
+                }
+            }
+        }
+    }
     Ok(())
 }
 

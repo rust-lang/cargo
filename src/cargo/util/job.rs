@@ -27,19 +27,21 @@ mod imp {
 
     pub type Setup = ();
 
-    pub unsafe fn setup() -> Option<()> { unsafe {
-        // There's a test case for the behavior of
-        // when-cargo-is-killed-subprocesses-are-also-killed, but that requires
-        // one cargo spawned to become its own session leader, so we do that
-        // here.
-        //
-        // ALLOWED: For testing cargo itself only.
-        #[allow(clippy::disallowed_methods)]
-        if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
-            libc::setsid();
+    pub unsafe fn setup() -> Option<()> {
+        unsafe {
+            // There's a test case for the behavior of
+            // when-cargo-is-killed-subprocesses-are-also-killed, but that requires
+            // one cargo spawned to become its own session leader, so we do that
+            // here.
+            //
+            // ALLOWED: For testing cargo itself only.
+            #[allow(clippy::disallowed_methods)]
+            if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
+                libc::setsid();
+            }
+            Some(())
         }
-        Some(())
-    }}
+    }
 }
 
 #[cfg(windows)]

@@ -80,11 +80,10 @@ pub(super) fn load_target_cfgs(
 /// Returns true if the `[target]` table should be applied to host targets.
 pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bool> {
     if gctx.cli_unstable().target_applies_to_host {
-        match gctx.get::<bool>("target-applies-to-host") { Ok(target_applies_to_host) => {
-            Ok(target_applies_to_host)
-        } _ => {
-            Ok(!gctx.cli_unstable().host_config)
-        }}
+        match gctx.get::<bool>("target-applies-to-host") {
+            Ok(target_applies_to_host) => Ok(target_applies_to_host),
+            _ => Ok(!gctx.cli_unstable().host_config),
+        }
     } else if gctx.cli_unstable().host_config {
         anyhow::bail!(
             "the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set"

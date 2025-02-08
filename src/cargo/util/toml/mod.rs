@@ -1175,8 +1175,8 @@ pub fn to_real_manifest(
         }
         edition
     } else {
-        let msrv_edition = match &rust_version { Some(pkg_msrv) => {
-            Edition::ALL
+        let msrv_edition = match &rust_version {
+            Some(pkg_msrv) => Edition::ALL
                 .iter()
                 .filter(|e| {
                     e.first_version()
@@ -1187,10 +1187,9 @@ pub fn to_real_manifest(
                         .unwrap_or_default()
                 })
                 .max()
-                .copied()
-        } _ => {
-            None
-        }}
+                .copied(),
+            _ => None,
+        }
         .unwrap_or_default();
         let default_edition = Edition::default();
         let latest_edition = Edition::LATEST_STABLE;
@@ -2199,18 +2198,19 @@ pub(crate) fn lookup_path_base<'a>(
     let base_key = format!("path-bases.{base}");
 
     // Look up the relevant base in the Config and use that as the root.
-    match gctx.get::<Option<ConfigRelativePath>>(&base_key)? { Some(path_bases) => {
-        Ok(path_bases.resolve_path(gctx))
-    } _ => {
-        // Otherwise, check the built-in bases.
-        match base.as_str() {
-            "workspace" => Ok(workspace_root()?.to_path_buf()),
-            _ => bail!(
-                "path base `{base}` is undefined. \
+    match gctx.get::<Option<ConfigRelativePath>>(&base_key)? {
+        Some(path_bases) => Ok(path_bases.resolve_path(gctx)),
+        _ => {
+            // Otherwise, check the built-in bases.
+            match base.as_str() {
+                "workspace" => Ok(workspace_root()?.to_path_buf()),
+                _ => bail!(
+                    "path base `{base}` is undefined. \
             You must add an entry for `{base}` in the Cargo configuration [path-bases] table."
-            ),
+                ),
+            }
         }
-    }}
+    }
 }
 
 pub trait ResolveToPath {

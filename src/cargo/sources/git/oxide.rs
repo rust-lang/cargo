@@ -121,54 +121,66 @@ fn translate_progress_to_bar(
             tasks.iter().find_map(|(_, t)| cb(t))
         }
 
-        match find_in(&tasks, |t| progress_by_id(resolve_objects, t)) { Some((_, objs)) => {
-            // Phase 3: Resolving deltas.
-            let objects = objs.step.load(Ordering::Relaxed);
-            let total_objects = objs.done_at.expect("known amount of objects");
-            let msg = format!(", ({objects}/{total_objects}) resolving deltas");
+        match find_in(&tasks, |t| progress_by_id(resolve_objects, t)) {
+            Some((_, objs)) => {
+                // Phase 3: Resolving deltas.
+                let objects = objs.step.load(Ordering::Relaxed);
+                let total_objects = objs.done_at.expect("known amount of objects");
+                let msg = format!(", ({objects}/{total_objects}) resolving deltas");
 
-            progress_bar.tick(
-                (total_objects * (num_phases - 1)) + objects,
-                total_objects * num_phases,
-                &msg,
-            )?;
-        } _ => { match find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
-                find_in(&tasks, |t| progress_by_id(delta_index_objects, t))
-                    .map(|delta| (delta.1, read.1))
-            })
-        { Some((objs, read_pack)) => {
-            // Phase 2: Receiving objects.
-            let objects = objs.step.load(Ordering::Relaxed);
-            let total_objects = objs.done_at.expect("known amount of objects");
-            let received_bytes = read_pack.step.load(Ordering::Relaxed);
-
-            let needs_percentage_update = last_percentage_update.elapsed() >= slow_check_interval;
-            if needs_percentage_update {
-                counter.add(received_bytes, now);
-                last_percentage_update = now;
+                progress_bar.tick(
+                    (total_objects * (num_phases - 1)) + objects,
+                    total_objects * num_phases,
+                    &msg,
+                )?;
             }
-            let (rate, unit) = human_readable_bytes(counter.rate() as u64);
-            let msg = format!(", {rate:.2}{unit}/s");
+            _ => {
+                match find_in(&tasks, |t| progress_by_id(read_pack_bytes, t)).and_then(|read| {
+                    find_in(&tasks, |t| progress_by_id(delta_index_objects, t))
+                        .map(|delta| (delta.1, read.1))
+                }) {
+                    Some((objs, read_pack)) => {
+                        // Phase 2: Receiving objects.
+                        let objects = objs.step.load(Ordering::Relaxed);
+                        let total_objects = objs.done_at.expect("known amount of objects");
+                        let received_bytes = read_pack.step.load(Ordering::Relaxed);
 
-            progress_bar.tick(
-                (total_objects * (num_phases - 2)) + objects,
-                total_objects * num_phases,
-                &msg,
-            )?;
-        } _ => { match find_in(&tasks, |t| progress_by_id(remote_progress, t))
-        { Some((action, remote)) => {
-            if !is_shallow {
-                continue;
-            }
-            // phase 1: work on the remote side
+                        let needs_percentage_update =
+                            last_percentage_update.elapsed() >= slow_check_interval;
+                        if needs_percentage_update {
+                            counter.add(received_bytes, now);
+                            last_percentage_update = now;
+                        }
+                        let (rate, unit) = human_readable_bytes(counter.rate() as u64);
+                        let msg = format!(", {rate:.2}{unit}/s");
 
-            // Resolving deltas.
-            let objects = remote.step.load(Ordering::Relaxed);
-            if let Some(total_objects) = remote.done_at {
-                let msg = format!(", ({objects}/{total_objects}) {action}");
-                progress_bar.tick(objects, total_objects * num_phases, &msg)?;
+                        progress_bar.tick(
+                            (total_objects * (num_phases - 2)) + objects,
+                            total_objects * num_phases,
+                            &msg,
+                        )?;
+                    }
+                    _ => {
+                        match find_in(&tasks, |t| progress_by_id(remote_progress, t)) {
+                            Some((action, remote)) => {
+                                if !is_shallow {
+                                    continue;
+                                }
+                                // phase 1: work on the remote side
+
+                                // Resolving deltas.
+                                let objects = remote.step.load(Ordering::Relaxed);
+                                if let Some(total_objects) = remote.done_at {
+                                    let msg = format!(", ({objects}/{total_objects}) {action}");
+                                    progress_bar.tick(objects, total_objects * num_phases, &msg)?;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             }
-        } _ => {}}}}}}
+        }
     }
     Ok(())
 }

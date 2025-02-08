@@ -221,165 +221,188 @@ pub(super) fn activation_error(
     // give an error message that nothing was found.
     let mut msg = String::new();
     let mut hints = String::new();
-    match rejected_versions(registry, dep) { Some(version_candidates) => {
-        let version_candidates = match version_candidates {
-            Ok(c) => c,
-            Err(e) => return to_resolve_err(e),
-        };
+    match rejected_versions(registry, dep) {
+        Some(version_candidates) => {
+            let version_candidates = match version_candidates {
+                Ok(c) => c,
+                Err(e) => return to_resolve_err(e),
+            };
 
-        let locked_version = dep
-            .version_req()
-            .locked_version()
-            .map(|v| format!(" (locked to {})", v))
-            .unwrap_or_default();
-        let _ = writeln!(
-            &mut msg,
-            "failed to select a version for the requirement `{} = \"{}\"`{}",
-            dep.package_name(),
-            dep.version_req(),
-            locked_version
-        );
-        for candidate in version_candidates {
-            match candidate {
-                IndexSummary::Candidate(summary) => {
-                    // HACK: If this was a real candidate, we wouldn't hit this case.
-                    // so it must be a patch which get normalized to being a candidate
-                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
-                }
-                IndexSummary::Yanked(summary) => {
-                    let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
-                }
-                IndexSummary::Offline(summary) => {
-                    let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
-                }
-                IndexSummary::Unsupported(summary, schema_version) => {
-                    match summary.rust_version() { Some(rust_version) => {
-                        // HACK: technically its unsupported and we shouldn't make assumptions
-                        // about the entry but this is limited and for diagnostics purposes
-                        let _ = writeln!(
-                            &mut msg,
-                            "  version {} requires cargo {}",
-                            summary.version(),
-                            rust_version
-                        );
-                    } _ => {
-                        let _ = writeln!(
+            let locked_version = dep
+                .version_req()
+                .locked_version()
+                .map(|v| format!(" (locked to {})", v))
+                .unwrap_or_default();
+            let _ = writeln!(
+                &mut msg,
+                "failed to select a version for the requirement `{} = \"{}\"`{}",
+                dep.package_name(),
+                dep.version_req(),
+                locked_version
+            );
+            for candidate in version_candidates {
+                match candidate {
+                    IndexSummary::Candidate(summary) => {
+                        // HACK: If this was a real candidate, we wouldn't hit this case.
+                        // so it must be a patch which get normalized to being a candidate
+                        let _ =
+                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                    }
+                    IndexSummary::Yanked(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                    }
+                    IndexSummary::Offline(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                    }
+                    IndexSummary::Unsupported(summary, schema_version) => {
+                        match summary.rust_version() {
+                            Some(rust_version) => {
+                                // HACK: technically its unsupported and we shouldn't make assumptions
+                                // about the entry but this is limited and for diagnostics purposes
+                                let _ = writeln!(
+                                    &mut msg,
+                                    "  version {} requires cargo {}",
+                                    summary.version(),
+                                    rust_version
+                                );
+                            }
+                            _ => {
+                                let _ = writeln!(
                             &mut msg,
                             "  version {} requires a Cargo version that supports index version {}",
                             summary.version(),
                             schema_version
                         );
-                    }}
+                            }
+                        }
+                    }
+                    IndexSummary::Invalid(summary) => {
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {}'s index entry is invalid",
+                            summary.version()
+                        );
+                    }
                 }
-                IndexSummary::Invalid(summary) => {
+            }
+        }
+        _ => {
+            match alt_versions(registry, dep) {
+                Some(candidates) => {
+                    let candidates = match candidates {
+                        Ok(c) => c,
+                        Err(e) => return to_resolve_err(e),
+                    };
+                    let versions = {
+                        let mut versions = candidates
+                            .iter()
+                            .take(3)
+                            .map(|cand| cand.version().to_string())
+                            .collect::<Vec<_>>();
+
+                        if candidates.len() > 3 {
+                            versions.push("...".into());
+                        }
+
+                        versions.join(", ")
+                    };
+
+                    let locked_version = dep
+                        .version_req()
+                        .locked_version()
+                        .map(|v| format!(" (locked to {})", v))
+                        .unwrap_or_default();
+
                     let _ = writeln!(
                         &mut msg,
-                        "  version {}'s index entry is invalid",
-                        summary.version()
+                        "failed to select a version for the requirement `{} = \"{}\"`{}",
+                        dep.package_name(),
+                        dep.version_req(),
+                        locked_version,
                     );
+                    let _ = writeln!(
+                        &mut msg,
+                        "candidate versions found which didn't match: {versions}",
+                    );
+
+                    // If we have a pre-release candidate, then that may be what our user is looking for
+                    if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
+                        let _ = write!(&mut hints, "\nif you are looking for the prerelease package it needs to be specified explicitly");
+                        let _ = write!(
+                            &mut hints,
+                            "\n    {} = {{ version = \"{}\" }}",
+                            pre.name(),
+                            pre.version()
+                        );
+                    }
+
+                    // If we have a path dependency with a locked version, then this may
+                    // indicate that we updated a sub-package and forgot to run `cargo
+                    // update`. In this case try to print a helpful error!
+                    if dep.source_id().is_path() && dep.version_req().is_locked() {
+                        let _ = write!(
+                            &mut hints,
+                            "\nconsider running `cargo update` to update \
+                          a path dependency's locked version",
+                        );
+                    }
+
+                    if registry.is_replaced(dep.source_id()) {
+                        let _ = write!(
+                            &mut hints,
+                            "\nperhaps a crate was updated and forgotten to be re-vendored?"
+                        );
+                    }
+                }
+                _ => {
+                    match alt_names(registry, dep) {
+                        Some(name_candidates) => {
+                            let name_candidates = match name_candidates {
+                                Ok(c) => c,
+                                Err(e) => return to_resolve_err(e),
+                            };
+                            let _ = writeln!(&mut msg, "no matching package found",);
+                            let _ = writeln!(
+                                &mut msg,
+                                "searched package name: `{}`",
+                                dep.package_name()
+                            );
+                            let mut names = name_candidates
+                                .iter()
+                                .take(3)
+                                .map(|c| c.1.name().as_str())
+                                .collect::<Vec<_>>();
+
+                            if name_candidates.len() > 3 {
+                                names.push("...");
+                            }
+                            // Vertically align first suggestion with missing crate name
+                            // so a typo jumps out at you.
+                            let suggestions =
+                                names
+                                    .iter()
+                                    .enumerate()
+                                    .fold(String::default(), |acc, (i, el)| match i {
+                                        0 => acc + el,
+                                        i if names.len() - 1 == i && name_candidates.len() <= 3 => {
+                                            acc + " or " + el
+                                        }
+                                        _ => acc + ", " + el,
+                                    });
+                            let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
+                        }
+                        _ => {
+                            let _ = writeln!(
+                                &mut msg,
+                                "no matching package named `{}` found",
+                                dep.package_name()
+                            );
+                        }
+                    }
                 }
             }
         }
-    } _ => { match alt_versions(registry, dep) { Some(candidates) => {
-        let candidates = match candidates {
-            Ok(c) => c,
-            Err(e) => return to_resolve_err(e),
-        };
-        let versions = {
-            let mut versions = candidates
-                .iter()
-                .take(3)
-                .map(|cand| cand.version().to_string())
-                .collect::<Vec<_>>();
-
-            if candidates.len() > 3 {
-                versions.push("...".into());
-            }
-
-            versions.join(", ")
-        };
-
-        let locked_version = dep
-            .version_req()
-            .locked_version()
-            .map(|v| format!(" (locked to {})", v))
-            .unwrap_or_default();
-
-        let _ = writeln!(
-            &mut msg,
-            "failed to select a version for the requirement `{} = \"{}\"`{}",
-            dep.package_name(),
-            dep.version_req(),
-            locked_version,
-        );
-        let _ = writeln!(
-            &mut msg,
-            "candidate versions found which didn't match: {versions}",
-        );
-
-        // If we have a pre-release candidate, then that may be what our user is looking for
-        if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
-            let _ = write!(&mut hints, "\nif you are looking for the prerelease package it needs to be specified explicitly");
-            let _ = write!(
-                &mut hints,
-                "\n    {} = {{ version = \"{}\" }}",
-                pre.name(),
-                pre.version()
-            );
-        }
-
-        // If we have a path dependency with a locked version, then this may
-        // indicate that we updated a sub-package and forgot to run `cargo
-        // update`. In this case try to print a helpful error!
-        if dep.source_id().is_path() && dep.version_req().is_locked() {
-            let _ = write!(
-                &mut hints,
-                "\nconsider running `cargo update` to update \
-                          a path dependency's locked version",
-            );
-        }
-
-        if registry.is_replaced(dep.source_id()) {
-            let _ = write!(
-                &mut hints,
-                "\nperhaps a crate was updated and forgotten to be re-vendored?"
-            );
-        }
-    } _ => { match alt_names(registry, dep) { Some(name_candidates) => {
-        let name_candidates = match name_candidates {
-            Ok(c) => c,
-            Err(e) => return to_resolve_err(e),
-        };
-        let _ = writeln!(&mut msg, "no matching package found",);
-        let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
-        let mut names = name_candidates
-            .iter()
-            .take(3)
-            .map(|c| c.1.name().as_str())
-            .collect::<Vec<_>>();
-
-        if name_candidates.len() > 3 {
-            names.push("...");
-        }
-        // Vertically align first suggestion with missing crate name
-        // so a typo jumps out at you.
-        let suggestions =
-            names
-                .iter()
-                .enumerate()
-                .fold(String::default(), |acc, (i, el)| match i {
-                    0 => acc + el,
-                    i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
-                    _ => acc + ", " + el,
-                });
-        let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
-    } _ => {
-        let _ = writeln!(
-            &mut msg,
-            "no matching package named `{}` found",
-            dep.package_name()
-        );
-    }}}}}}
+    }
 
     let mut location_searched_msg = registry.describe_source(dep.source_id());
     if location_searched_msg.is_empty() {

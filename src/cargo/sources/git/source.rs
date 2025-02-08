@@ -243,11 +243,10 @@ impl<'gctx> Source for GitSource<'gctx> {
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        match self.path_source.as_mut() { Some(src) => {
-            src.query(dep, kind, f)
-        } _ => {
-            Poll::Pending
-        }}
+        match self.path_source.as_mut() {
+            Some(src) => src.query(dep, kind, f),
+            _ => Poll::Pending,
+        }
     }
 
     fn supports_checksums(&self) -> bool {

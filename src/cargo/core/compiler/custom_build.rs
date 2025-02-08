@@ -548,26 +548,31 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             });
 
         // If the build failed
-        match output { Err(error) => {
-            insert_log_messages_in_build_outputs(
-                build_script_outputs,
-                id,
-                metadata_hash,
-                log_messages_in_case_of_panic,
-            );
-            return Err(error);
-        } _ => if log_messages_in_case_of_panic
-            .iter()
-            .any(|(severity, _)| *severity == Severity::Error)
-        {
-            insert_log_messages_in_build_outputs(
-                build_script_outputs,
-                id,
-                metadata_hash,
-                log_messages_in_case_of_panic,
-            );
-            anyhow::bail!("build script logged errors");
-        }}
+        match output {
+            Err(error) => {
+                insert_log_messages_in_build_outputs(
+                    build_script_outputs,
+                    id,
+                    metadata_hash,
+                    log_messages_in_case_of_panic,
+                );
+                return Err(error);
+            }
+            _ => {
+                if log_messages_in_case_of_panic
+                    .iter()
+                    .any(|(severity, _)| *severity == Severity::Error)
+                {
+                    insert_log_messages_in_build_outputs(
+                        build_script_outputs,
+                        id,
+                        metadata_hash,
+                        log_messages_in_case_of_panic,
+                    );
+                    anyhow::bail!("build script logged errors");
+                }
+            }
+        }
 
         let output = output.unwrap();
 

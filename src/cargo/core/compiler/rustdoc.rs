@@ -186,16 +186,15 @@ pub fn add_root_urls(
     let name2url: HashMap<&String, Url> = map
         .registries
         .keys()
-        .filter_map(|name| {
-            match gctx.get_registry_index(name) { Ok(index_url) => {
-                Some((name, index_url))
-            } _ => {
+        .filter_map(|name| match gctx.get_registry_index(name) {
+            Ok(index_url) => Some((name, index_url)),
+            _ => {
                 tracing::warn!(
                     "`doc.extern-map.{}` specifies a registry that is not defined",
                     name
                 );
                 None
-            }}
+            }
         })
         .collect();
     build_all_urls(

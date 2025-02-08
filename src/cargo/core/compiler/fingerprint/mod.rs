@@ -871,11 +871,10 @@ impl LocalFingerprint {
                             )
                         })?)
                     } else {
-                        match gctx.env_config()?.get(key) { Some(value) => {
-                            value.to_str()
-                        } _ => {
-                            gctx.get_env(key).ok()
-                        }}
+                        match gctx.env_config()?.get(key) {
+                            Some(value) => value.to_str(),
+                            _ => gctx.get_env(key).ok(),
+                        }
                     };
                     if current == previous.as_deref() {
                         continue;

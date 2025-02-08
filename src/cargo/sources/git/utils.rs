@@ -791,33 +791,38 @@ where
         // Otherwise if we didn't even get to the authentication phase them we may
         // have failed to set up a connection, in these cases hint on the
         // `net.git-fetch-with-cli` configuration option.
-    } else { match err.downcast_ref::<git2::Error>() { Some(e) => {
-        match e.class() {
-            ErrorClass::Net
-            | ErrorClass::Ssl
-            | ErrorClass::Submodule
-            | ErrorClass::FetchHead
-            | ErrorClass::Ssh
-            | ErrorClass::Http => {
-                let mut msg = "network failure seems to have happened\n".to_string();
-                msg.push_str(
+    } else {
+        match err.downcast_ref::<git2::Error>() {
+            Some(e) => {
+                match e.class() {
+                    ErrorClass::Net
+                    | ErrorClass::Ssl
+                    | ErrorClass::Submodule
+                    | ErrorClass::FetchHead
+                    | ErrorClass::Ssh
+                    | ErrorClass::Http => {
+                        let mut msg = "network failure seems to have happened\n".to_string();
+                        msg.push_str(
                     "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
                 );
-                msg.push_str(
+                        msg.push_str(
                     "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
                 );
-                err = err.context(msg);
-            }
-            ErrorClass::Callback => {
-                // This unwraps the git2 error. We're using the callback error
-                // specifically to convey errors from Rust land through the C
-                // callback interface. We don't need the `; class=Callback
-                // (26)` that gets tacked on to the git2 error message.
-                err = anyhow::format_err!("{}", e.message());
+                        err = err.context(msg);
+                    }
+                    ErrorClass::Callback => {
+                        // This unwraps the git2 error. We're using the callback error
+                        // specifically to convey errors from Rust land through the C
+                        // callback interface. We don't need the `; class=Callback
+                        // (26)` that gets tacked on to the git2 error message.
+                        err = anyhow::format_err!("{}", e.message());
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
-    } _ => {}}}
+    }
 
     Err(err)
 }
@@ -1034,13 +1039,16 @@ pub fn fetch(
         }
     }
 
-    let result = match gctx.net_config()?.git_fetch_with_cli { Some(true) => {
-        fetch_with_cli(repo, remote_url, &refspecs, tags, gctx)
-    } _ => if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
-        fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
-    } else {
-        fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
-    }};
+    let result = match gctx.net_config()?.git_fetch_with_cli {
+        Some(true) => fetch_with_cli(repo, remote_url, &refspecs, tags, gctx),
+        _ => {
+            if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
+                fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
+            } else {
+                fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+            }
+        }
+    };
 
     if fast_path_rev {
         if let Some(oid) = oid_to_fetch {

@@ -167,14 +167,15 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     } else if krates.is_empty() {
         from_cwd = true;
         SourceId::for_path(gctx.cwd())?
-    } else { match args.registry_or_index(gctx)? { Some(reg_or_index) => {
-        match reg_or_index {
-            ops::RegistryOrIndex::Registry(r) => SourceId::alt_registry(gctx, &r)?,
-            ops::RegistryOrIndex::Index(url) => SourceId::for_registry(&url)?,
+    } else {
+        match args.registry_or_index(gctx)? {
+            Some(reg_or_index) => match reg_or_index {
+                ops::RegistryOrIndex::Registry(r) => SourceId::alt_registry(gctx, &r)?,
+                ops::RegistryOrIndex::Index(url) => SourceId::for_registry(&url)?,
+            },
+            _ => SourceId::crates_io(gctx)?,
         }
-    } _ => {
-        SourceId::crates_io(gctx)?
-    }}};
+    };
 
     let root = args.get_one::<String>("root").map(String::as_str);
 

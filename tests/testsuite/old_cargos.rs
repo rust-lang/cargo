@@ -402,23 +402,26 @@ fn new_features() {
             };
         }
 
-        let check_err_contains = |tc_result: &mut Vec<_>, err: anyhow::Error, contents| {
-            match err.downcast_ref::<ProcessError>()
-            { Some(ProcessError {
-                stderr: Some(stderr),
-                ..
-            }) => {
-                let stderr = std::str::from_utf8(stderr).unwrap();
-                if !stderr.contains(contents) {
-                    tc_result.push(format!(
-                        "{} expected to see error contents:\n{}\nbut saw:\n{}",
-                        toolchain, contents, stderr
-                    ));
+        let check_err_contains =
+            |tc_result: &mut Vec<_>, err: anyhow::Error, contents| match err
+                .downcast_ref::<ProcessError>()
+            {
+                Some(ProcessError {
+                    stderr: Some(stderr),
+                    ..
+                }) => {
+                    let stderr = std::str::from_utf8(stderr).unwrap();
+                    if !stderr.contains(contents) {
+                        tc_result.push(format!(
+                            "{} expected to see error contents:\n{}\nbut saw:\n{}",
+                            toolchain, contents, stderr
+                        ));
+                    }
                 }
-            } _ => {
-                panic!("{} unexpected error {}", toolchain, err);
-            }}
-        };
+                _ => {
+                    panic!("{} unexpected error {}", toolchain, err);
+                }
+            };
 
         // Unlocked behavior.
         let which = "unlocked";

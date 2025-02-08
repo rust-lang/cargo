@@ -10,16 +10,17 @@ use std::path::Path;
 // 2. We are in an HG repo.
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
-        match GitRepo::discover(path, cwd) { Ok(repo) => {
-            // Don't check if the working directory itself is ignored.
-            if repo.workdir().map_or(false, |workdir| workdir == path) {
-                true
-            } else {
-                !repo.is_path_ignored(path).unwrap_or(false)
+        match GitRepo::discover(path, cwd) {
+            Ok(repo) => {
+                // Don't check if the working directory itself is ignored.
+                if repo.workdir().map_or(false, |workdir| workdir == path) {
+                    true
+                } else {
+                    !repo.is_path_ignored(path).unwrap_or(false)
+                }
             }
-        } _ => {
-            false
-        }}
+            _ => false,
+        }
     }
 
     in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()

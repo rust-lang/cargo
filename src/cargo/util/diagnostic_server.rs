@@ -303,14 +303,15 @@ impl RustfixDiagnosticServer {
             }
             let mut client = BufReader::new(client);
             let mut s = String::new();
-            match client.read_to_string(&mut s) { Err(e) => {
-                warn!("diagnostic server failed to read: {}", e);
-            } _ => {
-                match serde_json::from_str(&s) {
+            match client.read_to_string(&mut s) {
+                Err(e) => {
+                    warn!("diagnostic server failed to read: {}", e);
+                }
+                _ => match serde_json::from_str(&s) {
                     Ok(message) => on_message(message),
                     Err(e) => warn!("invalid diagnostics message: {}", e),
-                }
-            }}
+                },
+            }
             // The client should be kept alive until after `on_message` is
             // called to ensure that the client doesn't exit too soon (and
             // Message::Finish getting posted before Message::FixDiagnostic).

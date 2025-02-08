@@ -60,18 +60,21 @@ fn add_deps_for_unit(
             unit.pkg.root(),
             build_runner.files().host_root(),
             &dep_info_loc,
-        )? { Some(paths) => {
-            for path in paths.files.into_keys() {
-                deps.insert(path);
+        )? {
+            Some(paths) => {
+                for path in paths.files.into_keys() {
+                    deps.insert(path);
+                }
             }
-        } _ => {
-            debug!(
-                "can't find dep_info for {:?} {}",
-                unit.pkg.package_id(),
-                unit.target
-            );
-            return Err(internal("dep_info missing"));
-        }}
+            _ => {
+                debug!(
+                    "can't find dep_info for {:?} {}",
+                    unit.pkg.package_id(),
+                    unit.target
+                );
+                return Err(internal("dep_info missing"));
+            }
+        }
     }
 
     // Add rerun-if-changed dependencies

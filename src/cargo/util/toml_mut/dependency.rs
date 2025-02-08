@@ -627,29 +627,32 @@ impl Dependency {
                     table.remove("default-features");
                 }
             }
-            match self.features.as_ref() { Some(new_features) => {
-                let mut features = table
-                    .get("features")
-                    .and_then(|i| i.as_value())
-                    .and_then(|v| v.as_array())
-                    .and_then(|a| {
-                        a.iter()
-                            .map(|v| v.as_str())
-                            .collect::<Option<IndexSet<_>>>()
-                    })
-                    .unwrap_or_default();
-                let is_already_sorted = features.iter().is_sorted();
-                features.extend(new_features.iter().map(|s| s.as_str()));
-                let features = if is_already_sorted {
-                    features.into_iter().sorted().collect::<toml_edit::Value>()
-                } else {
-                    features.into_iter().collect::<toml_edit::Value>()
-                };
-                table.set_dotted(false);
-                overwrite_value(table, "features", features);
-            } _ => {
-                table.remove("features");
-            }}
+            match self.features.as_ref() {
+                Some(new_features) => {
+                    let mut features = table
+                        .get("features")
+                        .and_then(|i| i.as_value())
+                        .and_then(|v| v.as_array())
+                        .and_then(|a| {
+                            a.iter()
+                                .map(|v| v.as_str())
+                                .collect::<Option<IndexSet<_>>>()
+                        })
+                        .unwrap_or_default();
+                    let is_already_sorted = features.iter().is_sorted();
+                    features.extend(new_features.iter().map(|s| s.as_str()));
+                    let features = if is_already_sorted {
+                        features.into_iter().sorted().collect::<toml_edit::Value>()
+                    } else {
+                        features.into_iter().collect::<toml_edit::Value>()
+                    };
+                    table.set_dotted(false);
+                    overwrite_value(table, "features", features);
+                }
+                _ => {
+                    table.remove("features");
+                }
+            }
             match self.optional {
                 Some(v) => {
                     table.set_dotted(false);
