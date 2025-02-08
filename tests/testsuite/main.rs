@@ -168,6 +168,7 @@ mod rustdoc_extern_html;
 mod rustdocflags;
 mod rustflags;
 mod rustup;
+mod sbom;
 mod script;
 mod search;
 mod shell_quoting;
