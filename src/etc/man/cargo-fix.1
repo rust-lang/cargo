@@ -297,7 +297,7 @@ Specifying an output format (rather than the default) is unstable and requires
 \fB\-Zunstable\-options\fR\&. Valid output formats:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
+\h'-04'\(bu\h'+03'\fBhtml\fR (unstable, requires \fB\-Zunstable\-options\fR): Write a human\-readable file \fBcargo\-timing.html\fR to the
 \fBtarget/cargo\-timings\fR directory with a report of the compilation. Also write
 a report to the same directory with a timestamp in the filename if you want
 to look at older runs. HTML output is suitable for human consumption only,
@@ -305,7 +305,7 @@ and does not provide machine\-readable timing data.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+\h'-04'\(bu\h'+03'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
 information about timing information.
 .RE
 .RE
@@ -342,16 +342,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -364,34 +364,34 @@ The output format for diagnostic messages. Can be specified multiple times
 and consists of comma\-separated values. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
+\h'-04'\(bu\h'+03'\fBhuman\fR (default): Display in a human\-readable text format. Conflicts with
 \fBshort\fR and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
+\h'-04'\(bu\h'+03'\fBshort\fR: Emit shorter, human\-readable text messages. Conflicts with \fBhuman\fR
 and \fBjson\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\fR: Emit JSON messages to stdout. See
+\h'-04'\(bu\h'+03'\fBjson\fR: Emit JSON messages to stdout. See
 \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
 for more details. Conflicts with \fBhuman\fR and \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
+\h'-04'\(bu\h'+03'\fBjson\-diagnostic\-short\fR: Ensure the \fBrendered\fR field of JSON messages contains
 the \[lq]short\[rq] rendering from rustc. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
+\h'-04'\(bu\h'+03'\fBjson\-diagnostic\-rendered\-ansi\fR: Ensure the \fBrendered\fR field of JSON messages
 contains embedded ANSI color codes for respecting rustc\[cq]s default color
 scheme. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
+\h'-04'\(bu\h'+03'\fBjson\-render\-diagnostics\fR: Instruct Cargo to not include rustc diagnostics
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo\[cq]s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with \fBhuman\fR or \fBshort\fR\&.
@@ -417,11 +417,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -533,11 +533,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp

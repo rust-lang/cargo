@@ -17,29 +17,29 @@ This command can add or modify dependencies.
 The source for the dependency can be specified with:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fIcrate\fR\fB@\fR\fIversion\fR: Fetch from a registry with a version constraint of \[lq]\fIversion\fR\[rq]
+\h'-04'\(bu\h'+03'\fIcrate\fR\fB@\fR\fIversion\fR: Fetch from a registry with a version constraint of \[lq]\fIversion\fR\[rq]
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB\-\-path\fR \fIpath\fR: Fetch from the specified \fIpath\fR
+\h'-04'\(bu\h'+03'\fB\-\-path\fR \fIpath\fR: Fetch from the specified \fIpath\fR
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB\-\-git\fR \fIurl\fR: Pull from a git repo at \fIurl\fR
+\h'-04'\(bu\h'+03'\fB\-\-git\fR \fIurl\fR: Pull from a git repo at \fIurl\fR
 .RE
 .sp
 If no source is specified, then a best effort will be made to select one, including:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Existing dependencies in other tables (like \fBdev\-dependencies\fR)
+\h'-04'\(bu\h'+03'Existing dependencies in other tables (like \fBdev\-dependencies\fR)
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Workspace members
+\h'-04'\(bu\h'+03'Workspace members
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Latest release in the registry
+\h'-04'\(bu\h'+03'Latest release in the registry
 .RE
 .sp
 When you add a package that is already present, the existing entry will be updated with the flags specified.
@@ -189,16 +189,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -230,11 +230,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -322,11 +322,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp

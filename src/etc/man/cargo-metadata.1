@@ -25,17 +25,17 @@ some scenarios. The following is a non\-exhaustive list of changes that are not
 considered as incompatible:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBAdding new fields\fR \[em] New fields will be added when needed. Reserving this
+\h'-04'\(bu\h'+03'\fBAdding new fields\fR \[em] New fields will be added when needed. Reserving this
 helps Cargo evolve without bumping the format version too often.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBAdding new values for enum\-like fields\fR \[em] Same as adding new fields. It
+\h'-04'\(bu\h'+03'\fBAdding new values for enum\-like fields\fR \[em] Same as adding new fields. It
 keeps metadata evolving without stagnation.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBChanging opaque representations\fR \[em] The inner representations of some
+\h'-04'\(bu\h'+03'\fBChanging opaque representations\fR \[em] The inner representations of some
 fields are implementation details. For example, fields related to
 \[lq]Source ID\[rq] are treated as opaque identifiers to differentiate packages or
 sources. Consumers shouldn\[cq]t rely on those representations unless specified.
@@ -344,7 +344,7 @@ The JSON output has the following format:
 Notes:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'For \fB"id"\fR field syntax, see \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html> in the reference.
+\h'-04'\(bu\h'+03'For \fB"id"\fR field syntax, see \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html> in the reference.
 .RE
 .SH "OPTIONS"
 .SS "Output Options"
@@ -420,16 +420,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -450,11 +450,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -542,11 +542,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp
