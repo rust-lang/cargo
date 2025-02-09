@@ -25,7 +25,7 @@
 targets = [
     # The triple can be any string, but only the target triples built in to
     # rustc (as of 1.40) can be checked against actual config expressions
-    #{ triple = "x86_64-unknown-linux-musl" },
+    #"x86_64-unknown-linux-musl",
     # You can also specify which target_features you promise are enabled for a
     # particular target. target_features are currently not validated against
     # the actual valid features supported by the target architecture.
@@ -72,17 +72,10 @@ yanked = "warn"
 # output a note when they are encountered.
 ignore = [
     #"RUSTSEC-0000-0000",
+    #{ id = "RUSTSEC-0000-0000", reason = "you can specify a reason the advisory is ignored" },
+    #"a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
+    #{ crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
 ]
-# Threshold for security vulnerabilities, any vulnerability with a CVSS score
-# lower than the range specified will be ignored. Note that ignored advisories
-# will still output a note when they are encountered.
-# * None - CVSS Score 0.0
-# * Low - CVSS Score 0.1 - 3.9
-# * Medium - CVSS Score 4.0 - 6.9
-# * High - CVSS Score 7.0 - 8.9
-# * Critical - CVSS Score 9.0 - 10.0
-#severity-threshold =
-
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
 # Setting this to true can be helpful if you have special authentication requirements that cargo-deny does not support.
@@ -117,17 +110,15 @@ confidence-threshold = 0.8
 exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
-    #{ allow = ["Zlib"], name = "adler32", version = "*" },
+    #{ allow = ["Zlib"], crate = "adler32" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
 # adding a clarification entry for it allows you to manually specify the
 # licensing information
 #[[licenses.clarify]]
-# The name of the crate the clarification applies to
-#name = "ring"
-# The optional version constraint for the crate
-#version = "*"
+# The package spec the clarification applies to
+#crate = "ring"
 # The SPDX expression for the license requirements of the crate
 #expression = "MIT AND ISC AND OpenSSL"
 # One or more files in the crate's source used as the "source of truth" for
@@ -136,8 +127,8 @@ exceptions = [
 # and the crate will be checked normally, which may produce warnings or errors
 # depending on the rest of your configuration
 #license-files = [
-    # Each entry is a crate relative path, and the (opaque) hash of its contents
-    #{ path = "LICENSE", hash = 0xbd0eed23 }
+# Each entry is a crate relative path, and the (opaque) hash of its contents
+#{ path = "LICENSE", hash = 0xbd0eed23 }
 #]
 
 [licenses.private]
@@ -177,24 +168,23 @@ workspace-default-features = "allow"
 external-default-features = "allow"
 # List of crates that are allowed. Use with care!
 allow = [
-    #{ name = "ansi_term", version = "=0.11.0" },
+    #"ansi_term@0.11.0",
+    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is allowed" },
 ]
 # List of crates to deny
 deny = [
-    # Each entry the name of a crate and a version range. If version is
-    # not specified, all versions will be matched.
-    #{ name = "ansi_term", version = "=0.11.0" },
-    #
+    #"ansi_term@0.11.0",
+    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
     # Wrapper crates can optionally be specified to allow the crate when it
     # is a direct dependency of the otherwise banned crate
-    #{ name = "ansi_term", version = "=0.11.0", wrappers = [] },
+    #{ crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
 ]
 
 # List of features to allow/deny
 # Each entry the name of a crate and a version range. If version is
 # not specified, all versions will be matched.
 #[[bans.features]]
-#name = "reqwest"
+#crate = "reqwest"
 # Features to not allow
 #deny = ["json"]
 # Features to allow
@@ -215,14 +205,16 @@ deny = [
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = [
-    #{ name = "ansi_term", version = "=0.11.0" },
+    #"ansi_term@0.11.0",
+    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite.
 skip-tree = [
-    #{ name = "ansi_term", version = "=0.11.0", depth = 20 },
+    #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
+    #{ crate = "ansi_term@0.11.0", depth = 20 },
 ]
 
 # This section is considered when running `cargo deny check sources`.
@@ -242,9 +234,9 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = []
 
 [sources.allow-org]
-# 1 or more github.com organizations to allow git sources for
+# github.com organizations to allow git sources for
 github = []
-# 1 or more gitlab.com organizations to allow git sources for
+# gitlab.com organizations to allow git sources for
 gitlab = []
-# 1 or more bitbucket.org organizations to allow git sources for
+# bitbucket.org organizations to allow git sources for
 bitbucket = []
