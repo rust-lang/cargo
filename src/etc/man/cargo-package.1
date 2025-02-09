@@ -16,7 +16,7 @@ stored in the \fBtarget/package\fR directory. This performs the following steps:
 \h'-04' 1.\h'+01'Load and check the current workspace, performing some basic checks.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Path dependencies are not allowed unless they have a version key. Cargo
+\h'-04'\(bu\h'+03'Path dependencies are not allowed unless they have a version key. Cargo
 will ignore the path key for dependencies in published packages.
 \fBdev\-dependencies\fR do not have this restriction.
 .RE
@@ -26,32 +26,32 @@ will ignore the path key for dependencies in published packages.
 \h'-04' 2.\h'+01'Create the compressed \fB\&.crate\fR file.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The original \fBCargo.toml\fR file is rewritten and normalized.
+\h'-04'\(bu\h'+03'The original \fBCargo.toml\fR file is rewritten and normalized.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
+\h'-04'\(bu\h'+03'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
 manifest.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBCargo.lock\fR is always included. When missing, a new lock file will be
+\h'-04'\(bu\h'+03'\fBCargo.lock\fR is always included. When missing, a new lock file will be
 generated. \fBcargo\-install\fR(1) will use the packaged lock file if
 the \fB\-\-locked\fR flag is used.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
+\h'-04'\(bu\h'+03'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
 about the current VCS checkout hash if available, as well as a flag if the
 worktree is dirty.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Symlinks are flattened to their target files.
+\h'-04'\(bu\h'+03'Symlinks are flattened to their target files.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Files and directories are included or excluded based on rules mentioned in
+\h'-04'\(bu\h'+03'Files and directories are included or excluded based on rules mentioned in
 \fIthe \f(BI[include]\fI and \f(BI[exclude]\fI fields\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-exclude\-and\-include\-fields>\&.
 .RE
 .RE
@@ -60,7 +60,7 @@ worktree is dirty.
 \h'-04' 3.\h'+01'Extract the \fB\&.crate\fR file and build it to verify it can build.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'This will rebuild your package from scratch to ensure that it can be
+\h'-04'\(bu\h'+03'This will rebuild your package from scratch to ensure that it can be
 built from a pristine state. The \fB\-\-no\-verify\fR flag can be used to skip
 this step.
 .RE
@@ -238,11 +238,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -331,16 +331,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -393,11 +393,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp

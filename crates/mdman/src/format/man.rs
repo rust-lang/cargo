@@ -167,7 +167,7 @@ impl<'e> ManRenderer<'e> {
                                     *n += 1;
                                 }
                                 // Unordered list.
-                                None => self.output.push_str("\\h'-04'\\(bu\\h'+02'"),
+                                None => self.output.push_str("\\h'-04'\\(bu\\h'+03'"),
                             }
                             suppress_paragraph = true;
                         }
