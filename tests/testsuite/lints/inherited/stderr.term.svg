@@ -26,27 +26,27 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan> </tspan><tspan class="fg-bright-blue bold">--&gt;</tspan><tspan> Cargo.toml:6:1</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-blue bold">  |</tspan>
+    <tspan x="10px" y="64px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-bright-blue bold">6 |</tspan><tspan> im_a_teapot = { level = "warn", priority = 10 }</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-bright-blue bold">  |</tspan><tspan class="fg-bright-red bold"> ^^^^^^^^^^^</tspan><tspan> </tspan><tspan class="fg-bright-red bold">this is behind `test-dummy-unstable`, which is not enabled</tspan>
+    <tspan x="10px" y="100px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan><tspan> </tspan><tspan class="fg-bright-red bold">^^^^^^^^^^^</tspan><tspan> </tspan><tspan class="fg-bright-red bold">this is behind `test-dummy-unstable`, which is not enabled</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan class="fg-bright-blue bold">  |</tspan>
+    <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
     <tspan x="10px" y="136px"><tspan class="fg-bright-green bold">note</tspan><tspan>: </tspan><tspan class="bold">`cargo::im_a_teapot` was inherited</tspan>
 </tspan>
     <tspan x="10px" y="154px"><tspan> </tspan><tspan class="fg-bright-blue bold">--&gt;</tspan><tspan> foo/Cargo.toml:9:1</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan class="fg-bright-blue bold">  |</tspan>
+    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
     <tspan x="10px" y="190px"><tspan class="fg-bright-blue bold">9 |</tspan><tspan> workspace = true</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan class="fg-bright-blue bold">  |</tspan><tspan class="fg-bright-green bold"> ----------------</tspan>
+    <tspan x="10px" y="208px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan><tspan> </tspan><tspan class="fg-bright-green bold">----------------</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan class="fg-bright-blue bold">  |</tspan>
+    <tspan x="10px" y="226px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>  </tspan><tspan class="fg-bright-blue bold">=</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">help</tspan><tspan>: consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest</tspan>
+    <tspan x="10px" y="244px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="fg-bright-cyan bold">help</tspan><tspan>: consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest</tspan>
 </tspan>
     <tspan x="10px" y="262px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> encountered 1 errors(s) while verifying lints</tspan>
 </tspan>

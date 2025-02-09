@@ -747,8 +747,7 @@ fn bad_registry_name() {
 
   --> Cargo.toml:8:17
    |
- 8 |                   [dependencies.bar]
-   |  _________________^
+ 8 | /                 [dependencies.bar]
  9 | |                 version = "0.0.1"
 10 | |                 registry = "bad name"
    | |_____________________________________^
