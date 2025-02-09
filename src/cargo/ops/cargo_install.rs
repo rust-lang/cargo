@@ -9,6 +9,7 @@ use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
+use crate::util::context::FeatureUnification;
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};
@@ -862,6 +863,7 @@ fn make_ws_rustc_target<'gctx>(
         ws.set_resolve_honors_rust_version(Some(false));
         ws
     };
+    ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
     ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
     // if --lockfile-path is set, imply --locked

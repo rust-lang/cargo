@@ -21,6 +21,7 @@ use crate::core::{
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::util::context::FeatureUnification;
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -112,7 +113,8 @@ pub struct Workspace<'gctx> {
     /// and other places that use rust version.
     /// This is set based on the resolver version, config settings, and CLI flags.
     resolve_honors_rust_version: bool,
-
+    /// The feature unification mode used when building packages.
+    resolve_feature_unification: FeatureUnification,
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
 
@@ -246,6 +248,7 @@ impl<'gctx> Workspace<'gctx> {
             requested_lockfile_path: None,
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
+            resolve_feature_unification: FeatureUnification::Selected,
             custom_metadata: None,
             local_overlays: HashMap::new(),
         }
@@ -307,13 +310,20 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
         }
-        if let CargoResolverConfig {
-            incompatible_rust_versions: Some(incompatible_rust_versions),
-        } = self.gctx().get::<CargoResolverConfig>("resolver")?
-        {
+        let config = self.gctx().get::<CargoResolverConfig>("resolver")?;
+        if let Some(incompatible_rust_versions) = config.incompatible_rust_versions {
             self.resolve_honors_rust_version =
                 incompatible_rust_versions == IncompatibleRustVersions::Fallback;
         }
+        if self.gctx().cli_unstable().feature_unification {
+            self.resolve_feature_unification = config
+                .feature_unification
+                .unwrap_or(FeatureUnification::Selected);
+        } else if config.feature_unification.is_some() {
+            self.gctx()
+                .shell()
+                .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
+        };
 
         Ok(())
     }
@@ -661,6 +671,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn resolve_honors_rust_version(&self) -> bool {
         self.resolve_honors_rust_version
+    }
+
+    pub fn set_resolve_feature_unification(&mut self, feature_unification: FeatureUnification) {
+        self.resolve_feature_unification = feature_unification;
+    }
+
+    pub fn resolve_feature_unification(&self) -> FeatureUnification {
+        self.resolve_feature_unification
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

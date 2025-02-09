@@ -2745,6 +2745,7 @@ impl BuildTargetConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
+    pub feature_unification: Option<FeatureUnification>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
@@ -2752,6 +2753,13 @@ pub struct CargoResolverConfig {
 pub enum IncompatibleRustVersions {
     Allow,
     Fallback,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FeatureUnification {
+    Selected,
+    Workspace,
 }
 
 #[derive(Deserialize, Default)]

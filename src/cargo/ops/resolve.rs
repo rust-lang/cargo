@@ -75,6 +75,7 @@ use crate::core::Workspace;
 use crate::ops;
 use crate::sources::RecursivePathSource;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::context::FeatureUnification;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
 use anyhow::Context as _;
@@ -144,6 +145,10 @@ pub fn resolve_ws_with_opts<'gctx>(
     force_all_targets: ForceAllTargets,
     dry_run: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
+    let specs = match ws.resolve_feature_unification() {
+        FeatureUnification::Selected => specs,
+        FeatureUnification::Workspace => &ops::Packages::All(Vec::new()).to_package_id_specs(ws)?,
+    };
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;

@@ -70,22 +70,39 @@ fn workspace_feature_unification() {
         .build();
 
     p.cargo("check -p common")
-        .with_stderr_contains("[WARNING] unused config key `resolver.feature-unification` in `[ROOT]/foo/.cargo/config.toml`")
-        .with_stderr_contains("[ERROR] features were not unified")
-        .with_status(101)
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .with_stderr_data(str![[r#"
+[CHECKING] common v0.1.0 ([ROOT]/foo/common)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("check -p a")
-        .with_stderr_contains("[WARNING] unused config key `resolver.feature-unification` in `[ROOT]/foo/.cargo/config.toml`")
-        .with_stderr_contains("[ERROR] features were not unified")
-        .with_status(101)
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.1.0 ([ROOT]/foo/a)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("check -p b")
-        .with_stderr_contains("[WARNING] unused config key `resolver.feature-unification` in `[ROOT]/foo/.cargo/config.toml`")
-        .with_stderr_contains("[ERROR] features were not unified")
-        .with_status(101)
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .with_stderr_data(str![[r#"
+[CHECKING] b v0.1.0 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("check")
-        .with_stderr_contains("[WARNING] unused config key `resolver.feature-unification` in `[ROOT]/foo/.cargo/config.toml`")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -145,14 +162,16 @@ fn cargo_install_ignores_config() {
 
     cargo_process("install --path")
         .arg(p.root())
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
 [INSTALLING] a v0.1.0 ([ROOT]/foo)
 [COMPILING] common v0.1.0 ([ROOT]/foo/common)
 [COMPILING] a v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/a
-[INSTALLED] package `a v0.1.0 ([ROOT]/foo)` (executable `a`)
+[INSTALLING] [ROOT]/home/.cargo/bin/a[EXE]
+[INSTALLED] package `a v0.1.0 ([ROOT]/foo)` (executable `a[EXE]`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -177,6 +196,7 @@ fn unstable_config_on_stable() {
     p.cargo("check")
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `resolver.feature-unification` without `-Zfeature-unification`
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
