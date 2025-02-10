@@ -54,23 +54,23 @@ pub(super) fn expand_manifest(
         }
         cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
 
-        let manifest = expand_manifest_(&frontmatter, &hacked_path)
+        let manifest = inject_bin_path(&frontmatter, &hacked_path)
             .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     } else {
         let frontmatter = "";
-        let manifest = expand_manifest_(frontmatter, path)
+        let manifest = inject_bin_path(frontmatter, path)
             .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     }
 }
 
-fn expand_manifest_(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
+/// HACK: Add a `[[bin]]` table to the `original_toml`
+fn inject_bin_path(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
     let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
-    // HACK: Using an absolute path while `hacked_path` is in use
     let bin_path = path.to_string_lossy().into_owned();
     let file_stem = path
         .file_stem()
