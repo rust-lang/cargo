@@ -1,15 +1,17 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use crate::core::compiler::compilation::{self, UnitOutput};
-use crate::core::compiler::{self, artifact, Unit};
-use crate::core::PackageId;
+use crate::core::compiler::{self, artifact, CrateType, Unit};
+use crate::core::{PackageId, TargetKind};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use anyhow::{bail, Context as _};
+use cargo_util::paths;
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
@@ -291,6 +293,14 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
 
             super::output_depinfo(&mut self, unit)?;
+
+            if self.bcx.build_config.sbom {
+                let sbom = super::build_sbom(&mut self, unit)?;
+                for sbom_output_file in self.sbom_output_files(unit)? {
+                    let outfile = BufWriter::new(paths::create(sbom_output_file)?);
+                    serde_json::to_writer(outfile, &sbom)?;
+                }
+            }
         }
 
         for (script_meta, output) in self.build_script_outputs.lock().unwrap().iter() {
@@ -444,6 +454,44 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
         self.files().metadata(unit).unit_id()
+    }
+
+    /// Returns the list of SBOM output file paths for a given [`Unit`].
+    ///
+    /// Only call this function when `sbom` is active.
+    pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        const SBOM_FILE_EXTENSION: &str = ".cargo-sbom.json";
+
+        fn append_sbom_suffix(link: &PathBuf, suffix: &str) -> PathBuf {
+            let mut link_buf = link.clone().into_os_string();
+            link_buf.push(suffix);
+            PathBuf::from(link_buf)
+        }
+
+        assert!(self.bcx.build_config.sbom);
+        let sbom_enabled = match unit.target.kind() {
+            TargetKind::Lib(crate_types) | TargetKind::ExampleLib(crate_types) => {
+                crate_types.iter().any(|crate_type| {
+                    matches!(
+                        crate_type,
+                        CrateType::Cdylib | CrateType::Dylib | CrateType::Staticlib
+                    )
+                })
+            }
+            TargetKind::Bin | TargetKind::Test | TargetKind::Bench | TargetKind::ExampleBin => true,
+            TargetKind::CustomBuild => false,
+        };
+        if !sbom_enabled {
+            return Ok(Vec::new());
+        }
+
+        let files = self
+            .outputs(unit)?
+            .iter()
+            .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
+            .map(|link| append_sbom_suffix(link.bin_dst(), SBOM_FILE_EXTENSION))
+            .collect::<Vec<_>>();
+        Ok(files)
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
