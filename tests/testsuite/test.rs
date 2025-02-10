@@ -5009,7 +5009,11 @@ fn panic_abort_tests() {
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("test -Z panic-abort-tests -v")
+    // This uses -j1 because of a race condition. Otherwise it will build the
+    // two copies of `foo` in parallel, and which one is first is random. If
+    // `--test` is first, then the first line with `[..]` will match, and the
+    // second line with `--test` will fail.
+    p.cargo("test -Z panic-abort-tests -v -j1")
         .with_stderr_data(
             str![[r#"
 [RUNNING] `[..]--crate-name a [..]-C panic=abort[..]`
