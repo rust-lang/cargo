@@ -65,13 +65,13 @@ pub(super) fn expand_manifest(
         cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
 
         let manifest = expand_manifest_(&frontmatter, &hacked_path, gctx)
-            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     } else {
         let frontmatter = "";
         let manifest = expand_manifest_(frontmatter, path, gctx)
-            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     }
