@@ -1817,11 +1817,7 @@ impl<'gctx> Packages<'gctx> {
         match self.packages.entry(manifest_path.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = if crate::util::toml::is_embedded(manifest_path) {
-                    SourceId::for_path(manifest_path)?
-                } else {
-                    SourceId::for_path(manifest_path.parent().unwrap())?
-                };
+                let source_id = SourceId::for_manifest_path(manifest_path)?;
                 let manifest = read_manifest(manifest_path, source_id, self.gctx)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {

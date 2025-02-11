@@ -204,6 +204,17 @@ impl SourceId {
         SourceId::new(SourceKind::Path, url, None)
     }
 
+    /// Creates a `SourceId` from a filesystem path.
+    ///
+    /// `path`: an absolute path.
+    pub fn for_manifest_path(manifest_path: &Path) -> CargoResult<SourceId> {
+        if crate::util::toml::is_embedded(manifest_path) {
+            Self::for_path(manifest_path)
+        } else {
+            Self::for_path(manifest_path.parent().unwrap())
+        }
+    }
+
     /// Creates a `SourceId` from a Git reference.
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
         SourceId::new(SourceKind::Git(reference), url.clone(), None)
