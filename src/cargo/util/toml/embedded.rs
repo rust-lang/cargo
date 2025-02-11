@@ -6,16 +6,6 @@ use crate::util::restricted_names;
 use crate::CargoResult;
 use crate::GlobalContext;
 
-const DEFAULT_EDITION: crate::core::features::Edition =
-    crate::core::features::Edition::LATEST_STABLE;
-const AUTO_FIELDS: &[&str] = &[
-    "autolib",
-    "autobins",
-    "autoexamples",
-    "autotests",
-    "autobenches",
-];
-
 pub(super) fn expand_manifest(
     content: &str,
     path: &std::path::Path,
@@ -64,49 +54,23 @@ pub(super) fn expand_manifest(
         }
         cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
 
-        let manifest = expand_manifest_(&frontmatter, &hacked_path, gctx)
-            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+        let manifest = inject_bin_path(&frontmatter, &hacked_path)
+            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     } else {
         let frontmatter = "";
-        let manifest = expand_manifest_(frontmatter, path, gctx)
-            .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
+        let manifest = inject_bin_path(frontmatter, path)
+            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     }
 }
 
-fn expand_manifest_(
-    manifest: &str,
-    path: &std::path::Path,
-    gctx: &GlobalContext,
-) -> CargoResult<toml::Table> {
+/// HACK: Add a `[[bin]]` table to the `original_toml`
+fn inject_bin_path(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
     let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
-    for key in ["workspace", "lib", "bin", "example", "test", "bench"] {
-        if manifest.contains_key(key) {
-            anyhow::bail!("`{key}` is not allowed in embedded manifests")
-        }
-    }
-
-    // Prevent looking for a workspace by `read_manifest_from_str`
-    manifest.insert("workspace".to_owned(), toml::Table::new().into());
-
-    let package = manifest
-        .entry("package".to_owned())
-        .or_insert_with(|| toml::Table::new().into())
-        .as_table_mut()
-        .ok_or_else(|| anyhow::format_err!("`package` must be a table"))?;
-    for key in ["workspace", "build", "links"]
-        .iter()
-        .chain(AUTO_FIELDS.iter())
-    {
-        if package.contains_key(*key) {
-            anyhow::bail!("`package.{key}` is not allowed in embedded manifests")
-        }
-    }
-    // HACK: Using an absolute path while `hacked_path` is in use
     let bin_path = path.to_string_lossy().into_owned();
     let file_stem = path
         .file_stem()
@@ -114,38 +78,22 @@ fn expand_manifest_(
         .to_string_lossy();
     let name = sanitize_name(file_stem.as_ref());
     let bin_name = name.clone();
-    package
-        .entry("name".to_owned())
-        .or_insert(toml::Value::String(name));
-    package.entry("edition".to_owned()).or_insert_with(|| {
-        let _ = gctx.shell().warn(format_args!(
-            "`package.edition` is unspecified, defaulting to `{}`",
-            DEFAULT_EDITION
-        ));
-        toml::Value::String(DEFAULT_EDITION.to_string())
-    });
-    package
-        .entry("build".to_owned())
-        .or_insert_with(|| toml::Value::Boolean(false));
-    for field in AUTO_FIELDS {
-        package
-            .entry(field.to_owned())
-            .or_insert_with(|| toml::Value::Boolean(false));
-    }
 
     let mut bin = toml::Table::new();
     bin.insert("name".to_owned(), toml::Value::String(bin_name));
     bin.insert("path".to_owned(), toml::Value::String(bin_path));
-    manifest.insert(
-        "bin".to_owned(),
-        toml::Value::Array(vec![toml::Value::Table(bin)]),
-    );
+    manifest
+        .entry("bin")
+        .or_insert_with(|| Vec::<toml::Value>::new().into())
+        .as_array_mut()
+        .ok_or_else(|| anyhow::format_err!("`bin` must be an array"))?
+        .push(toml::Value::Table(bin));
 
     Ok(manifest)
 }
 
 /// Ensure the package name matches the validation from `ops::cargo_new::check_name`
-fn sanitize_name(name: &str) -> String {
+pub fn sanitize_name(name: &str) -> String {
     let placeholder = if name.contains('_') {
         '_'
     } else {
@@ -565,18 +513,6 @@ fn main() {}
 name = "test-"
 path = "/home/me/test.rs"
 
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
-build = false
-edition = "2024"
-name = "test-"
-
-[workspace]
-
 "#]]
         );
     }
@@ -599,18 +535,6 @@ path = [..]
 
 [dependencies]
 time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
-build = false
-edition = "2024"
-name = "test-"
-
-[workspace]
 
 "#]]
         );

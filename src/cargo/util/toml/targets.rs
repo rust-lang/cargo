@@ -117,7 +117,7 @@ pub(super) fn to_targets(
 
         targets.push(Target::metabuild_target(&format!(
             "metabuild-{}",
-            package.name
+            package.normalized_name().expect("previously normalized")
         )));
     }
 

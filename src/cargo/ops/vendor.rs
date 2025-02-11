@@ -434,6 +434,7 @@ fn prepare_for_vendor(
         workspace_config,
         source_id,
         me.manifest_path(),
+        me.manifest().is_embedded(),
         gctx,
         &mut warnings,
         &mut errors,

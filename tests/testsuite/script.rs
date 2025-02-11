@@ -842,6 +842,406 @@ Hello world!
         .run();
 }
 
+#[cargo_test]
+fn disallow_explicit_workspace() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[workspace]
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `workspace` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_lib() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[lib]
+name = "script"
+path = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `lib` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_bin() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[[bin]]
+name = "script"
+path = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `bin` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_example() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[[example]]
+name = "script"
+path = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `example` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_test() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[[test]]
+name = "script"
+path = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `test` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_bench() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+package.edition = "2021"
+
+[[bench]]
+name = "script"
+path = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `bench` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_build() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+build = "script.rs"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.build` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_links() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+links = "script"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.links` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_autolib() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+autolib = true
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.autolib` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_autobins() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+autobins = true
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.autobins` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_autoexamples() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+autoexamples = true
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.autoexamples` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_autotests() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+autotests = true
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.autotests` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disallow_explicit_package_autobenches() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"
+----
+[package]
+edition = "2021"
+autobenches = true
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
+
+Caused by:
+  `package.autobenches` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;

@@ -241,7 +241,10 @@
           ]
         },
         "name": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "version": {
           "anyOf": [
@@ -475,10 +478,7 @@
             }
           ]
         }
-      },
-      "required": [
-        "name"
-      ]
+      }
     },
     "InheritableField_for_string": {
       "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
