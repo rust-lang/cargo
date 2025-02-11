@@ -147,6 +147,9 @@ impl<'s> ScriptSource<'s> {
         if let Some(rest) = source.content.strip_prefix("#!") {
             // Ok, this is a shebang but if the next non-whitespace token is `[`,
             // then it may be valid Rust code, so consider it Rust code.
+            //
+            // NOTE: rustc considers line and block comments to be whitespace but to avoid
+            // any more awareness of Rust grammar, we are excluding it.
             if rest.trim_start().starts_with('[') {
                 return Ok(source);
             }
