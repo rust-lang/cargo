@@ -770,6 +770,7 @@ unstable_cli_options!(
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
+    feature_unification: bool = ("Enable new feature unification modes in workspaces"),
     features: Option<Vec<String>>,
     gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
     #[serde(deserialize_with = "deserialize_git_features")]
@@ -1271,6 +1272,7 @@ impl CliUnstable {
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
+            "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "gc" => self.gc = parse_empty(k, v)?,
             "git" => {
                 self.git = v.map_or_else(

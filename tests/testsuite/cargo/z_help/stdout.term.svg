@@ -1,4 +1,4 @@
-<svg width="1230px" height="776px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1230px" height="794px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -48,57 +48,59 @@
 </tspan>
     <tspan x="10px" y="298px"><tspan>    -Z dual-proc-macros         Build proc-macros for both the host and the target</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>    -Z gc                       Track cache usage and "garbage collect" unused files</tspan>
+    <tspan x="10px" y="316px"><tspan>    -Z feature-unification      Enable new feature unification modes in workspaces</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>    -Z git                      Enable support for shallow git fetch operations</tspan>
+    <tspan x="10px" y="334px"><tspan>    -Z gc                       Track cache usage and "garbage collect" unused files</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>    -Z gitoxide                 Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
+    <tspan x="10px" y="352px"><tspan>    -Z git                      Enable support for shallow git fetch operations</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>    -Z host-config              Enable the `[host]` section in the .cargo/config.toml file</tspan>
+    <tspan x="10px" y="370px"><tspan>    -Z gitoxide                 Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>    -Z minimal-versions         Resolve minimal dependency versions instead of maximum</tspan>
+    <tspan x="10px" y="388px"><tspan>    -Z host-config              Enable the `[host]` section in the .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>    -Z msrv-policy              Enable rust-version aware policy within cargo</tspan>
+    <tspan x="10px" y="406px"><tspan>    -Z minimal-versions         Resolve minimal dependency versions instead of maximum</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>    -Z mtime-on-use             Configure Cargo to update the mtime of used files</tspan>
+    <tspan x="10px" y="424px"><tspan>    -Z msrv-policy              Enable rust-version aware policy within cargo</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>    -Z no-index-update          Do not update the registry index even if the cache is outdated</tspan>
+    <tspan x="10px" y="442px"><tspan>    -Z mtime-on-use             Configure Cargo to update the mtime of used files</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>    -Z package-workspace        Handle intra-workspace dependencies when packaging</tspan>
+    <tspan x="10px" y="460px"><tspan>    -Z no-index-update          Do not update the registry index even if the cache is outdated</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>    -Z panic-abort-tests        Enable support to run tests with -Cpanic=abort</tspan>
+    <tspan x="10px" y="478px"><tspan>    -Z package-workspace        Handle intra-workspace dependencies when packaging</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>    -Z profile-rustflags        Enable the `rustflags` option in profiles in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="496px"><tspan>    -Z panic-abort-tests        Enable support to run tests with -Cpanic=abort</tspan>
 </tspan>
-    <tspan x="10px" y="514px"><tspan>    -Z public-dependency        Respect a dependency's `public` field in Cargo.toml to control public/private dependencies</tspan>
+    <tspan x="10px" y="514px"><tspan>    -Z profile-rustflags        Enable the `rustflags` option in profiles in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan>    -Z publish-timeout          Enable the `publish.timeout` key in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="532px"><tspan>    -Z public-dependency        Respect a dependency's `public` field in Cargo.toml to control public/private dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>    -Z root-dir                 Set the root directory relative to which paths are printed (defaults to workspace root)</tspan>
+    <tspan x="10px" y="550px"><tspan>    -Z publish-timeout          Enable the `publish.timeout` key in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="568px"><tspan>    -Z rustdoc-map              Allow passing external documentation mappings to rustdoc</tspan>
+    <tspan x="10px" y="568px"><tspan>    -Z root-dir                 Set the root directory relative to which paths are printed (defaults to workspace root)</tspan>
 </tspan>
-    <tspan x="10px" y="586px"><tspan>    -Z rustdoc-scrape-examples  Allows Rustdoc to scrape code examples from reverse-dependencies</tspan>
+    <tspan x="10px" y="586px"><tspan>    -Z rustdoc-map              Allow passing external documentation mappings to rustdoc</tspan>
 </tspan>
-    <tspan x="10px" y="604px"><tspan>    -Z script                   Enable support for single-file, `.rs` packages</tspan>
+    <tspan x="10px" y="604px"><tspan>    -Z rustdoc-scrape-examples  Allows Rustdoc to scrape code examples from reverse-dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="622px"><tspan>    -Z target-applies-to-host   Enable the `target-applies-to-host` key in the .cargo/config.toml file</tspan>
+    <tspan x="10px" y="622px"><tspan>    -Z script                   Enable support for single-file, `.rs` packages</tspan>
 </tspan>
-    <tspan x="10px" y="640px"><tspan>    -Z trim-paths               Enable the `trim-paths` option in profiles</tspan>
+    <tspan x="10px" y="640px"><tspan>    -Z target-applies-to-host   Enable the `target-applies-to-host` key in the .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="658px"><tspan>    -Z unstable-options         Allow the usage of unstable options</tspan>
+    <tspan x="10px" y="658px"><tspan>    -Z trim-paths               Enable the `trim-paths` option in profiles</tspan>
 </tspan>
-    <tspan x="10px" y="676px"><tspan>    -Z warnings                 Allow use of the build.warnings config key</tspan>
+    <tspan x="10px" y="676px"><tspan>    -Z unstable-options         Allow the usage of unstable options</tspan>
 </tspan>
-    <tspan x="10px" y="694px">
+    <tspan x="10px" y="694px"><tspan>    -Z warnings                 Allow use of the build.warnings config key</tspan>
 </tspan>
-    <tspan x="10px" y="712px"><tspan>Run with `cargo -Z [FLAG] [COMMAND]`</tspan>
+    <tspan x="10px" y="712px">
 </tspan>
-    <tspan x="10px" y="730px">
+    <tspan x="10px" y="730px"><tspan>Run with `cargo -Z [FLAG] [COMMAND]`</tspan>
 </tspan>
-    <tspan x="10px" y="748px"><tspan>See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about these flags.</tspan>
+    <tspan x="10px" y="748px">
 </tspan>
-    <tspan x="10px" y="766px">
+    <tspan x="10px" y="766px"><tspan>See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about these flags.</tspan>
+</tspan>
+    <tspan x="10px" y="784px">
 </tspan>
   </text>
 
