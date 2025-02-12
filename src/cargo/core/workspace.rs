@@ -447,7 +447,7 @@ impl<'gctx> Workspace<'gctx> {
             BTreeMap<String, BTreeMap<String, TomlDependency<ConfigRelativePath>>>,
         > = self.gctx.get("patch")?;
 
-        let source = SourceId::for_path(self.root())?;
+        let source = SourceId::for_manifest_path(self.root_manifest())?;
 
         let mut warnings = Vec::new();
 
@@ -1144,7 +1144,7 @@ impl<'gctx> Workspace<'gctx> {
         if let Some(p) = loaded.get(manifest_path).cloned() {
             return Ok(p);
         }
-        let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
+        let source_id = SourceId::for_manifest_path(manifest_path)?;
         let package = ops::read_package(manifest_path, source_id, self.gctx)?;
         loaded.insert(manifest_path.to_path_buf(), package.clone());
         Ok(package)
@@ -1817,11 +1817,7 @@ impl<'gctx> Packages<'gctx> {
         match self.packages.entry(manifest_path.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = if crate::util::toml::is_embedded(manifest_path) {
-                    SourceId::for_path(manifest_path)?
-                } else {
-                    SourceId::for_path(manifest_path.parent().unwrap())?
-                };
+                let source_id = SourceId::for_manifest_path(manifest_path)?;
                 let manifest = read_manifest(manifest_path, source_id, self.gctx)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
@@ -1979,8 +1975,7 @@ pub fn find_workspace_root(
     gctx: &GlobalContext,
 ) -> CargoResult<Option<PathBuf>> {
     find_workspace_root_with_loader(manifest_path, gctx, |self_path| {
-        let key = self_path.parent().unwrap();
-        let source_id = SourceId::for_path(key)?;
+        let source_id = SourceId::for_manifest_path(self_path)?;
         let manifest = read_manifest(self_path, source_id, gctx)?;
         Ok(manifest
             .workspace_config()

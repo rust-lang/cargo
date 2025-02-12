@@ -946,7 +946,7 @@ fn inheritable_from_path(
         return Ok(ws_root.inheritable().clone());
     };
 
-    let source_id = SourceId::for_path(workspace_path_root)?;
+    let source_id = SourceId::for_manifest_path(&workspace_path)?;
     let man = read_manifest(&workspace_path, source_id, gctx)?;
     match man.workspace_config() {
         WorkspaceConfig::Root(root) => {
