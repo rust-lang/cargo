@@ -312,9 +312,9 @@ The JSON output has the following format:
                 ]
             }
         ],
-        /* The root package of the workspace.
-           This is null if this is a virtual workspace. Otherwise it is
-           the Package ID of the root package.
+        /* The package in the current working directory (if --manifest-path is not given).
+           This is null if there is a virtual workspace. Otherwise it is
+           the Package ID of the package.
         */
         "root": "file:///path/to/my-package#0.1.0",
     },
@@ -359,7 +359,7 @@ possible value.
 
 {{#option "`--filter-platform` _triple_" }}
 This filters the `resolve` output to only include dependencies for the
-given [target triple](../appendix/glossary.html#target). 
+given [target triple](../appendix/glossary.html#target).
 Without this flag, the resolve includes all targets.
 
 Note that the dependencies listed in the "packages" array still includes all
