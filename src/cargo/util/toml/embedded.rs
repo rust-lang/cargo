@@ -467,6 +467,82 @@ fn main() {}
     }
 
     #[test]
+    fn split_indent() {
+        assert_err(
+            ScriptSource::parse(
+                r#"#!/usr/bin/env cargo
+    ---
+    [dependencies]
+    time="0.1.25"
+    ----
+
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `-`"],
+        );
+    }
+
+    #[test]
+    fn split_escaped() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+-----
+---
+---
+-----
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "---\n---\n"
+content: "\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_invalid_escaped() {
+        assert_err(
+            ScriptSource::parse(
+                r#"#!/usr/bin/env cargo
+---
+-----
+-----
+---
+
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `--`"],
+        );
+    }
+
+    #[test]
+    fn split_dashes_in_body() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+---
+Hello---
+World
+---
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "Hello"
+content: "World\n---\n\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
     fn split_mismatched_dashes() {
         assert_err(
             ScriptSource::parse(
