@@ -153,7 +153,11 @@ impl<'s> ScriptSource<'s> {
             let without_spaces = rest.trim_start_matches([' ', '\t']);
             let without_nl = without_spaces.trim_start_matches(['\r', '\n']);
             if without_nl == rest {
+                // nothing trimmed
                 break;
+            } else if without_nl == without_spaces {
+                // frontmatter must come after a newline
+                return Ok(source);
             }
             rest = without_nl;
         }
@@ -468,9 +472,8 @@ fn main() {}
 
     #[test]
     fn split_indent() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source(
+            r#"#!/usr/bin/env cargo
     ---
     [dependencies]
     time="0.1.25"
@@ -478,8 +481,13 @@ fn main() {}
 
 fn main() {}
 "#,
-            ),
-            str!["unexpected trailing content on closing fence: `-`"],
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: None
+content: "    ---\n    [dependencies]\n    time=\"0.1.25\"\n    ----\n\nfn main() {}\n"
+
+"##]],
         );
     }
 
