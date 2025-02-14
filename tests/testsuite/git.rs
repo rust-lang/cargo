@@ -528,6 +528,7 @@ this is dep1 this is dep2
 #[cargo_test]
 fn cargo_compile_with_short_ssh_git() {
     let url = "git@github.com:a/dep";
+    let well_formed_url = "ssh://git@github.com/a/dep";
 
     let p = project()
         .file(
@@ -565,9 +566,9 @@ fn cargo_compile_with_short_ssh_git() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  invalid url `{}`: relative URL without a base
+  invalid url `{}`: relative URL without a base; try using `{}` instead
 ",
-            url
+            url, well_formed_url
         ))
         .run();
 }
