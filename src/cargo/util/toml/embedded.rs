@@ -150,13 +150,12 @@ impl<'s> ScriptSource<'s> {
 
         let mut rest = source.content;
         while !rest.is_empty() {
-            let c = rest;
-            let c = c.trim_start_matches([' ', '\t']);
-            let c = c.trim_start_matches(['\r', '\n']);
-            if c == rest {
+            let without_spaces = rest.trim_start_matches([' ', '\t']);
+            let without_nl = without_spaces.trim_start_matches(['\r', '\n']);
+            if without_nl == rest {
                 break;
             }
-            rest = c;
+            rest = without_nl;
         }
         let fence_end = rest
             .char_indices()
