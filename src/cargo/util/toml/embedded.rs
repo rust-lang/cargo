@@ -148,17 +148,17 @@ impl<'s> ScriptSource<'s> {
 
         const FENCE_CHAR: char = '-';
 
-        let mut trimmed_content = source.content;
-        while !trimmed_content.is_empty() {
-            let c = trimmed_content;
+        let mut rest = source.content;
+        while !rest.is_empty() {
+            let c = rest;
             let c = c.trim_start_matches([' ', '\t']);
             let c = c.trim_start_matches(['\r', '\n']);
-            if c == trimmed_content {
+            if c == rest {
                 break;
             }
-            trimmed_content = c;
+            rest = c;
         }
-        let fence_end = trimmed_content
+        let fence_end = rest
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
             .unwrap_or(source.content.len());
@@ -171,7 +171,7 @@ impl<'s> ScriptSource<'s> {
                     "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
                 )
             }
-            _ => trimmed_content.split_at(fence_end),
+            _ => rest.split_at(fence_end),
         };
         let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
         let info = info.trim();
