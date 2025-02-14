@@ -140,27 +140,8 @@ impl<'s> ScriptSource<'s> {
             content: input,
         };
 
-        // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
-        // Shebang must start with `#!` literally, without any preceding whitespace.
-        // For simplicity we consider any line starting with `#!` a shebang,
-        // regardless of restrictions put on shebangs by specific platforms.
-        if let Some(rest) = source.content.strip_prefix("#!") {
-            // Ok, this is a shebang but if the next non-whitespace token is `[`,
-            // then it may be valid Rust code, so consider it Rust code.
-            //
-            // NOTE: rustc considers line and block comments to be whitespace but to avoid
-            // any more awareness of Rust grammar, we are excluding it.
-            if rest.trim_start().starts_with('[') {
-                return Ok(source);
-            }
-
-            // No other choice than to consider this a shebang.
-            let newline_end = source
-                .content
-                .find('\n')
-                .map(|pos| pos + 1)
-                .unwrap_or(source.content.len());
-            let (shebang, content) = source.content.split_at(newline_end);
+        if let Some(shebang_end) = strip_shebang(source.content) {
+            let (shebang, content) = source.content.split_at(shebang_end);
             source.shebang = Some(shebang);
             source.content = content;
         }
@@ -233,6 +214,26 @@ impl<'s> ScriptSource<'s> {
     pub fn content(&self) -> &'s str {
         self.content
     }
+}
+
+fn strip_shebang(input: &str) -> Option<usize> {
+    // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
+    // Shebang must start with `#!` literally, without any preceding whitespace.
+    // For simplicity we consider any line starting with `#!` a shebang,
+    // regardless of restrictions put on shebangs by specific platforms.
+    if let Some(rest) = input.strip_prefix("#!") {
+        // Ok, this is a shebang but if the next non-whitespace token is `[`,
+        // then it may be valid Rust code, so consider it Rust code.
+        //
+        // NOTE: rustc considers line and block comments to be whitespace but to avoid
+        // any more awareness of Rust grammar, we are excluding it.
+        if !rest.trim_start().starts_with('[') {
+            // No other choice than to consider this a shebang.
+            let newline_end = input.find('\n').map(|pos| pos + 1).unwrap_or(input.len());
+            return Some(newline_end);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
