@@ -176,6 +176,7 @@ impl<'s> ScriptSource<'s> {
             }
             _ => rest.split_at(fence_end),
         };
+        let nl_fence_pattern = format!("\n{fence_pattern}");
         let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
         let info = info.trim();
         if !info.is_empty() {
@@ -183,11 +184,11 @@ impl<'s> ScriptSource<'s> {
         }
         source.content = content;
 
-        let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
+        let Some(frontmatter_nl) = source.content.find(&nl_fence_pattern) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        source.frontmatter = Some(frontmatter);
-        source.content = content;
+        source.frontmatter = Some(&source.content[..frontmatter_nl + 1]);
+        source.content = &source.content[frontmatter_nl + nl_fence_pattern.len()..];
 
         let (line, content) = source
             .content
@@ -543,8 +544,8 @@ fn main() {}
             str![[r##"
 shebang: "#!/usr/bin/env cargo\n"
 info: None
-frontmatter: "Hello"
-content: "World\n---\n\nfn main() {}\n"
+frontmatter: "Hello---\nWorld\n"
+content: "\nfn main() {}\n"
 
 "##]],
         );
