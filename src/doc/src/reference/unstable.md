@@ -75,6 +75,7 @@ Each new feature described below should explain how to use it.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
     * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
+    * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
@@ -1740,6 +1741,31 @@ Controls how Cargo handles warnings. Allowed values are:
 * `warn`: warnings are emitted as warnings (default).
 * `allow`: warnings are hidden.
 * `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
+
+## feature unification
+
+* RFC: [#3692](https://github.com/rust-lang/rfcs/blob/master/text/3692-feature-unification.md)
+* Tracking Issue: [#14774](https://github.com/rust-lang/cargo/issues/14774)
+
+The `-Z feature-unification` enables the `resolver.feature-unification`
+configuration option to control how features are unified across a workspace.
+If the `-Z feature-unification` unstable flag is not enabled,
+then the `resolver.feature-unification` configuration will be ignored.
+
+### `resolver.feature-unification`
+
+* Type: string
+* Default: `"selected"`
+* Environment: `CARGO_RESOLVER_FEATURE_UNIFICATION`
+
+Specify which packages participate in [feature unification](../reference/features.html#feature-unification).
+
+* `selected`: Merge dependency features from all packages specified for the current build.
+* `workspace`: Merge dependency features across all workspace members,
+  regardless of which packages are specified for the current build.
+* `package` _(unimplemented)_: Dependency features are considered on a package-by-package basis,
+  preferring duplicate builds of dependencies when different sets of features are activated by the packages.
+
 # Stabilized and removed features
 
 ## Compile progress
