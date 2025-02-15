@@ -429,9 +429,7 @@ impl<'gctx> Workspace<'gctx> {
         if !self.gctx().cli_unstable().build_dir {
             return self.target_dir();
         }
-        self.build_dir
-            .clone()
-            .unwrap_or_else(|| self.default_target_dir())
+        self.build_dir.clone().unwrap_or_else(|| self.target_dir())
     }
 
     fn default_target_dir(&self) -> Filesystem {

@@ -114,7 +114,7 @@ pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> Ca
 pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
     let src = match unit.target.src_path() {
         TargetSourcePath::Path(path) => path.to_path_buf(),
-        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(ws.target_dir()),
+        TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(ws.build_dir()),
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {

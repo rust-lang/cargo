@@ -41,6 +41,7 @@ pub struct CleanContext<'gctx> {
 /// Cleans various caches.
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
+    let mut build_dir = ws.build_dir();
     let gctx = opts.gctx;
     let mut clean_ctx = CleanContext::new(gctx);
     clean_ctx.dry_run = opts.dry_run;
@@ -67,6 +68,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
             // that profile.
             let dir_name = profiles.get_dir_name();
             target_dir = target_dir.join(dir_name);
+            build_dir = build_dir.join(dir_name);
         }
 
         // If we have a spec, then we need to delete some packages, otherwise, just
@@ -75,7 +77,15 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            clean_ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+            let paths: &[PathBuf] = if gctx.cli_unstable().build_dir && build_dir != target_dir {
+                &[
+                    target_dir.into_path_unlocked(),
+                    build_dir.into_path_unlocked(),
+                ]
+            } else {
+                &[target_dir.into_path_unlocked()]
+            };
+            clean_ctx.remove_paths(paths)?;
         } else {
             clean_specs(
                 &mut clean_ctx,
@@ -222,7 +232,7 @@ fn clean_specs(
                         .rustc_outputs(mode, target.kind(), triple)?;
                     let (dir, uplift_dir) = match target.kind() {
                         TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
-                            (layout.examples(), Some(layout.examples()))
+                            (layout.build_examples(), Some(layout.examples()))
                         }
                         // Tests/benchmarks are never uplifted.
                         TargetKind::Test | TargetKind::Bench => (layout.deps(), None),
