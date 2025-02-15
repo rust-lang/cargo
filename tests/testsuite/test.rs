@@ -4736,9 +4736,12 @@ fn test_dep_with_dev() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[cargo_test(
+    nightly,
+    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
+)]
 fn cargo_test_doctest_xcompile_ignores() {
-    // Test for `ignore-...` syntax with -Zdoctest-xcompile.
+    // Check ignore-TARGET syntax.
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
@@ -4771,73 +4774,12 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
 ...
 "#]])
         .run();
-
-    // Should be the same with or without -Zdoctest-xcompile because `ignore-`
-    // syntax is always enabled.
-    #[cfg(not(target_arch = "x86_64"))]
-    p.cargo("test -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-        .with_stdout_data(str![[r#"
-...
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
-...
-"#]])
-        .run();
-
-    #[cfg(target_arch = "x86_64")]
-    p.cargo("test -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-        .with_stdout_data(str![[r#"
-...
-test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
-...
-"#]])
-        .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
-fn cargo_test_doctest_xcompile() {
-    if !cross_compile::can_run_on_host() {
-        return;
-    }
-    let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file(
-            "src/lib.rs",
-            r#"
-
-            ///```
-            ///assert!(1 == 1);
-            ///```
-            pub fn foo() -> u8 {
-                4
-            }
-            "#,
-        )
-        .build();
-
-    p.cargo("build").run();
-    p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_data(str![[r#"
-...
-running 0 tests
-...
-"#]])
-        .run();
-    p.cargo(&format!(
-        "test --target {} -Zdoctest-xcompile",
-        cross_compile::alternate()
-    ))
-    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_data(str![[r#"
-...
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
-...
-"#]])
-    .run();
-}
-
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[cargo_test(
+    nightly,
+    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
+)]
 fn cargo_test_doctest_xcompile_runner() {
     if !cross_compile::can_run_on_host() {
         return;
@@ -4906,25 +4848,24 @@ running 0 tests
 ...
 "#]])
         .run();
-    p.cargo(&format!(
-        "test --target {} -Zdoctest-xcompile",
-        cross_compile::alternate()
-    ))
-    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_data(str![[r#"
+    p.cargo(&format!("test --target {}", cross_compile::alternate()))
+        .with_stdout_data(str![[r#"
 ...
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 ...
 "#]])
-    .with_stderr_data(str![[r#"
+        .with_stderr_data(str![[r#"
 ...
 this is a runner
 ...
 "#]])
-    .run();
+        .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[cargo_test(
+    nightly,
+    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
+)]
 fn cargo_test_doctest_xcompile_no_runner() {
     if !cross_compile::can_run_on_host() {
         return;
@@ -4956,17 +4897,13 @@ running 0 tests
 ...
 "#]])
         .run();
-    p.cargo(&format!(
-        "test --target {} -Zdoctest-xcompile",
-        cross_compile::alternate()
-    ))
-    .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_data(str![[r#"
+    p.cargo(&format!("test --target {}", cross_compile::alternate()))
+        .with_stdout_data(str![[r#"
 ...
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 ...
 "#]])
-    .run();
+        .run();
 }
 
 #[cargo_test(nightly, reason = "-Zpanic-abort-tests in rustc is unstable")]

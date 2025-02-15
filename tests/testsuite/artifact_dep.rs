@@ -1246,7 +1246,7 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
 }
 
 #[cargo_test]
-fn no_cross_doctests_works_with_artifacts() {
+fn cross_doctests_works_with_artifacts() {
     if cross_compile::disabled() {
         return;
     }
@@ -1302,9 +1302,11 @@ fn no_cross_doctests_works_with_artifacts() {
     println!("c");
     let target = cross_compile::alternate();
 
-    // This will build the library, but does not build or run doc tests.
-    // This should probably be a warning or error.
-    p.cargo("test -Z bindeps -v --doc --target")
+    if !cross_compile::can_run_on_host() {
+        return;
+    }
+
+    p.cargo("test -Z bindeps -v --target")
         .arg(&target)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
@@ -1312,30 +1314,12 @@ fn no_cross_doctests_works_with_artifacts() {
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target [ALT_TARGET] [..]
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
-
-"#]])
-        .run();
-
-    if !cross_compile::can_run_on_host() {
-        return;
-    }
-
-    // This tests the library, but does not run the doc tests.
-    p.cargo("test -Z bindeps -v --target")
-        .arg(&target)
-        .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(str![[r#"
-[FRESH] bar v0.5.0 ([ROOT]/foo/bar)
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--test[..]
+[RUNNING] `rustc --crate-name foo [..]
+[RUNNING] `rustc --crate-name foo [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE]`
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
+[DOCTEST] foo
+[RUNNING] `rustdoc [..]--test src/lib.rs --test-run-directory [ROOT]/foo --target [ALT_TARGET] [..]
 
 "#]])
         .run();

@@ -452,6 +452,11 @@ fn cross_tests() {
             "src/lib.rs",
             &format!(
                 r#"
+                    //! ```
+                    //! extern crate foo;
+                    //! assert!(true);
+                    //! ```
+
                     use std::env;
                     pub fn foo() {{ assert_eq!(env::consts::ARCH, "{}"); }}
                     #[test] fn test_foo() {{ foo() }}
@@ -469,6 +474,7 @@ fn cross_tests() {
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
 [RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/deps/bar-[HASH][EXE])
+[DOCTEST] foo
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -485,103 +491,11 @@ test test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn no_cross_doctests() {
-    if cross_compile::disabled() {
-        return;
-    }
-
-    let p = project()
-        .file(
-            "src/lib.rs",
-            r#"
-                //! ```
-                //! extern crate foo;
-                //! assert!(true);
-                //! ```
-            "#,
-        )
-        .build();
-
-    let host_output = "\
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[DOCTEST] foo
-";
-
-    println!("a");
-    p.cargo("test").with_stderr_data(host_output).run();
-
-    println!("b");
-    let target = rustc_host();
-    p.cargo("test -v --target")
-        .arg(&target)
-        // Unordered since the two `rustc` invocations happen concurrently.
-        .with_stderr_data(
-            str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
-[RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE]`
-[DOCTEST] foo
-[RUNNING] `rustdoc [..]--target [HOST_TARGET][..]`
-
-"#]]
-            .unordered(),
-        )
-        .with_stdout_data(str![[r#"
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
-
-
 running 1 test
 test src/lib.rs - (line 2) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-
-"#]])
-        .run();
-
-    println!("c");
-    let target = cross_compile::alternate();
-
-    // This will build the library, but does not build or run doc tests.
-    // This should probably be a warning or error.
-    p.cargo("test -v --doc --target")
-        .arg(&target)
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
-
-"#]])
-        .run();
-
-    if !cross_compile::can_run_on_host() {
-        return;
-    }
-
-    // This tests the library, but does not run the doc tests.
-    p.cargo("test -v --target")
-        .arg(&target)
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE]`
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
 
 "#]])
         .run();
@@ -1218,7 +1132,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[cargo_test(
+    nightly,
+    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
+)]
 fn doctest_xcompile_linker() {
     if cross_compile::disabled() {
         return;
@@ -1249,10 +1166,9 @@ fn doctest_xcompile_linker() {
         .build();
 
     // Fails because `my-linker-tool` doesn't actually exist.
-    p.cargo("test --doc -v -Zdoctest-xcompile --target")
+    p.cargo("test --doc -v --target")
         .arg(&target)
         .with_status(101)
-        .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] [..]
