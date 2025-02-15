@@ -4738,8 +4738,7 @@ fn test_dep_with_dev() {
 
 #[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile_ignores() {
-    // -Zdoctest-xcompile also enables --enable-per-target-ignores which
-    // allows the ignore-TARGET syntax.
+    // Test for `ignore-...` syntax with -Zdoctest-xcompile.
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file(
@@ -4766,15 +4765,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
     #[cfg(target_arch = "x86_64")]
     p.cargo("test")
-        .with_status(101)
         .with_stdout_data(str![[r#"
 ...
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 ...
-"#]],
-        )
+"#]])
         .run();
 
+    // Should be the same with or without -Zdoctest-xcompile because `ignore-`
+    // syntax is always enabled.
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo(&["doctest-xcompile"])
