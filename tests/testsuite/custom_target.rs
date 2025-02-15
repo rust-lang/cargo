@@ -58,8 +58,8 @@ fn custom_target_minimal() {
         .run();
 
     // Ensure that the correct style of flag is passed to --target with doc tests.
-    p.cargo("test --doc --target src/../custom-target.json -v -Zdoctest-xcompile")
-        .masquerade_as_nightly_cargo(&["doctest-xcompile", "no_core", "lang_items"])
+    p.cargo("test --doc --target src/../custom-target.json -v")
+        .masquerade_as_nightly_cargo(&["no_core", "lang_items"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
