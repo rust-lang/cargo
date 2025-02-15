@@ -95,13 +95,13 @@ SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like `*`, `?` and `[]`. However, to avoid your shell accidentally 
 expanding glob patterns before Cargo handles them, you must use single quotes or
 double quotes around each pattern.
-{{/option}}
 
 Selecting more than one package with this option is unstable and available only
 on the
 [nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
 and requires the `-Z package-workspace` flag to enable.
 See <https://github.com/rust-lang/cargo/issues/10948> for more information.
+{{/option}}
 
 {{#option "`--workspace`" }}
 {{actionverb}} all members in the workspace.
