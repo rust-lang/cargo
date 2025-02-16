@@ -525,7 +525,8 @@ fn normalize_toml(
         normalized_toml.badges = original_toml.badges.clone();
     } else {
         if let Some(field) = original_toml.requires_package().next() {
-            bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
+            bail!("this virtual manifest specifies a `{field}` section, which is not allowed.\n\
+                    If you were trying to provide fields for workspaces, use `workspace.{field}` instead.")
         }
     }
 

@@ -2321,7 +2321,8 @@ fn ws_err_unused() {
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  this virtual manifest specifies a `{key}` section, which is not allowed
+  this virtual manifest specifies a `{key}` section, which is not allowed.
+  If you were trying to provide fields for workspaces, use `workspace.{key}` instead.
 ",
             ))
             .run();
