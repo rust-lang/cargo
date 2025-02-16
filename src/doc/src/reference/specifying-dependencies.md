@@ -50,7 +50,7 @@ This is different from [SemVer] which considers all pre-1.0.0 packages to be inc
 
 ### Caret requirements
 
-**Caret requirements** are the default version requirement strategy. 
+**Caret requirements** are the default version requirement strategy.
 This version strategy allows [SemVer] compatible updates.
 They are specified as version requirements with a leading caret (`^`).
 
@@ -213,7 +213,7 @@ regex = { git = "https://github.com/rust-lang/regex.git" }
 ```
 
 Cargo fetches the `git` repository at that location and traverses the file tree to find
-`Cargo.toml` file for the requested crate anywhere inside the `git` repository. 
+`Cargo.toml` file for the requested crate anywhere inside the `git` repository.
 For example, `regex-lite` and `regex-syntax` are members of `rust-lang/regex` repo
 and can be referred to by the repo's root URL (`https://github.com/rust-lang/regex.git`)
 regardless of where in the file tree they reside.
@@ -240,7 +240,7 @@ regex = { git = "https://github.com/rust-lang/regex.git", branch = "next" }
 
 Anything that is not a branch or a tag falls under `rev` key. This can be a commit
 hash like `rev = "4c59b707"`, or a named reference exposed by the remote
-repository such as `rev = "refs/pull/493/head"`. 
+repository such as `rev = "refs/pull/493/head"`.
 
 What references are available for the `rev` key varies by where the repo is hosted.  
 GitHub exposes a reference to the most recent commit of every pull request as in the example above.
@@ -280,7 +280,7 @@ The `version` key always implies that the package is available in a registry,
 regardless of the presence of `git` or `path` keys.
 
 The `version` key does _not_ affect which commit is used when Cargo retrieves the `git` dependency,
-but Cargo checks the version information in the dependency's `Cargo.toml` file 
+but Cargo checks the version information in the dependency's `Cargo.toml` file
 against the `version` key and raises an error if the check fails.
 
 In this example, Cargo retrieves the HEAD commit of the branch called `next` from Git and checks if the crate's version
@@ -291,7 +291,7 @@ is compatible with `version = "1.10.3"`:
 regex = { version = "1.10.3", git = "https://github.com/rust-lang/regex.git", branch = "next" }
 ```
 
-`version`, `git`, and `path` keys are considered separate locations for resolving the dependency. 
+`version`, `git`, and `path` keys are considered separate locations for resolving the dependency.
 See [Multiple locations](#multiple-locations) section below for detailed explanations.
 
 > **Note**: [crates.io] does not allow packages to be published with
@@ -519,7 +519,6 @@ manifest:
 cc = "1.0.3"
 ```
 
-
 You can also have target-specific build dependencies by using
 `build-dependencies` in the target section header instead of `dependencies`. For
 example:
@@ -646,7 +645,6 @@ cc.workspace = true
 [dev-dependencies]
 rand = { workspace = true, optional = true }
 ```
-
 
 [SemVer]: https://semver.org
 [crates.io]: https://crates.io/
