@@ -698,6 +698,7 @@ fn share_dependencies() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ADDING] dep1 v0.1.3 (available: v0.1.8)
+[NOTE] 1 package may have a higher, compatible version. To update it, run `cargo update <name> --precise <version>
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 (registry `dummy-registry`)
 [CHECKING] dep1 v0.1.3
