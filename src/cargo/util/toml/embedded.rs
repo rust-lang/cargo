@@ -140,44 +140,28 @@ impl<'s> ScriptSource<'s> {
             content: input,
         };
 
-        // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
-        // Shebang must start with `#!` literally, without any preceding whitespace.
-        // For simplicity we consider any line starting with `#!` a shebang,
-        // regardless of restrictions put on shebangs by specific platforms.
-        if let Some(rest) = source.content.strip_prefix("#!") {
-            // Ok, this is a shebang but if the next non-whitespace token is `[`,
-            // then it may be valid Rust code, so consider it Rust code.
-            //
-            // NOTE: rustc considers line and block comments to be whitespace but to avoid
-            // any more awareness of Rust grammar, we are excluding it.
-            if rest.trim_start().starts_with('[') {
-                return Ok(source);
-            }
-
-            // No other choice than to consider this a shebang.
-            let newline_end = source
-                .content
-                .find('\n')
-                .map(|pos| pos + 1)
-                .unwrap_or(source.content.len());
-            let (shebang, content) = source.content.split_at(newline_end);
+        if let Some(shebang_end) = strip_shebang(source.content) {
+            let (shebang, content) = source.content.split_at(shebang_end);
             source.shebang = Some(shebang);
             source.content = content;
         }
 
         const FENCE_CHAR: char = '-';
 
-        let mut trimmed_content = source.content;
-        while !trimmed_content.is_empty() {
-            let c = trimmed_content;
-            let c = c.trim_start_matches([' ', '\t']);
-            let c = c.trim_start_matches(['\r', '\n']);
-            if c == trimmed_content {
+        let mut rest = source.content;
+        while !rest.is_empty() {
+            let without_spaces = rest.trim_start_matches([' ', '\t']);
+            let without_nl = without_spaces.trim_start_matches(['\r', '\n']);
+            if without_nl == rest {
+                // nothing trimmed
                 break;
+            } else if without_nl == without_spaces {
+                // frontmatter must come after a newline
+                return Ok(source);
             }
-            trimmed_content = c;
+            rest = without_nl;
         }
-        let fence_end = trimmed_content
+        let fence_end = rest
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
             .unwrap_or(source.content.len());
@@ -190,8 +174,9 @@ impl<'s> ScriptSource<'s> {
                     "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
                 )
             }
-            _ => trimmed_content.split_at(fence_end),
+            _ => rest.split_at(fence_end),
         };
+        let nl_fence_pattern = format!("\n{fence_pattern}");
         let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
         let info = info.trim();
         if !info.is_empty() {
@@ -199,11 +184,11 @@ impl<'s> ScriptSource<'s> {
         }
         source.content = content;
 
-        let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
+        let Some(frontmatter_nl) = source.content.find(&nl_fence_pattern) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        source.frontmatter = Some(frontmatter);
-        source.content = content;
+        source.frontmatter = Some(&source.content[..frontmatter_nl + 1]);
+        source.content = &source.content[frontmatter_nl + nl_fence_pattern.len()..];
 
         let (line, content) = source
             .content
@@ -233,6 +218,26 @@ impl<'s> ScriptSource<'s> {
     pub fn content(&self) -> &'s str {
         self.content
     }
+}
+
+fn strip_shebang(input: &str) -> Option<usize> {
+    // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
+    // Shebang must start with `#!` literally, without any preceding whitespace.
+    // For simplicity we consider any line starting with `#!` a shebang,
+    // regardless of restrictions put on shebangs by specific platforms.
+    if let Some(rest) = input.strip_prefix("#!") {
+        // Ok, this is a shebang but if the next non-whitespace token is `[`,
+        // then it may be valid Rust code, so consider it Rust code.
+        //
+        // NOTE: rustc considers line and block comments to be whitespace but to avoid
+        // any more awareness of Rust grammar, we are excluding it.
+        if !rest.trim_start().starts_with('[') {
+            // No other choice than to consider this a shebang.
+            let newline_end = input.find('\n').map(|pos| pos + 1).unwrap_or(input.len());
+            return Some(newline_end);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -463,6 +468,86 @@ fn main() {}
 "#,
             ),
             str!["found 2 `-` in rust frontmatter, expected at least 3"],
+        );
+    }
+
+    #[test]
+    fn split_indent() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+    ---
+    [dependencies]
+    time="0.1.25"
+    ----
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: None
+content: "    ---\n    [dependencies]\n    time=\"0.1.25\"\n    ----\n\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_escaped() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+-----
+---
+---
+-----
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "---\n---\n"
+content: "\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_invalid_escaped() {
+        assert_err(
+            ScriptSource::parse(
+                r#"#!/usr/bin/env cargo
+---
+-----
+-----
+---
+
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `--`"],
+        );
+    }
+
+    #[test]
+    fn split_dashes_in_body() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+---
+Hello---
+World
+---
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "Hello---\nWorld\n"
+content: "\nfn main() {}\n"
+
+"##]],
         );
     }
 
