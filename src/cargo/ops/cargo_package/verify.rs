@@ -45,9 +45,11 @@ pub fn run_verify(
 
     tar.file().seek(SeekFrom::Start(0))?;
     let f = GzDecoder::new(tar.file());
-    let dst = tar
-        .parent()
-        .join(&format!("{}-{}", pkg.name(), pkg.version()));
+    let dst = ws.build_dir().as_path_unlocked().join(&format!(
+        "package/{}-{}",
+        pkg.name(),
+        pkg.version()
+    ));
     if dst.exists() {
         paths::remove_dir_all(&dst)?;
     }
@@ -63,7 +65,14 @@ pub fn run_verify(
     let mut src = PathSource::new(&dst, id, ws.gctx());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
-    let mut ws = Workspace::ephemeral(new_pkg, gctx, None, true)?;
+
+    let target_dir = if gctx.cli_unstable().build_dir {
+        Some(ws.build_dir())
+    } else {
+        None
+    };
+
+    let mut ws = Workspace::ephemeral(new_pkg, gctx, target_dir, true)?;
     if let Some(local_reg) = local_reg {
         ws.add_local_overlay(
             local_reg.upstream,

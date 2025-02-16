@@ -142,7 +142,7 @@ impl Drop for FileLock {
 ///
 /// [`flock`]: https://linux.die.net/man/2/flock
 /// [`LockFileEx`]: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Filesystem {
     root: PathBuf,
 }

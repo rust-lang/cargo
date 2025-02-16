@@ -217,7 +217,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
-            self.layout(unit.kind).examples().to_path_buf()
+            self.layout(unit.kind).build_examples().to_path_buf()
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
         } else {

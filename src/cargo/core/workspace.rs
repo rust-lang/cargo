@@ -67,6 +67,10 @@ pub struct Workspace<'gctx> {
     /// `None` if the default path of `root/target` should be used.
     target_dir: Option<Filesystem>,
 
+    /// Shared build directory for intermediate build artifacts.
+    /// This directory may be shared between multiple workspaces.
+    build_dir: Option<Filesystem>,
+
     /// List of members in this workspace with a listing of all their manifest
     /// paths. The packages themselves can be looked up through the `packages`
     /// set above.
@@ -209,6 +213,7 @@ impl<'gctx> Workspace<'gctx> {
     pub fn new(manifest_path: &Path, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), gctx);
         ws.target_dir = gctx.target_dir()?;
+        ws.build_dir = gctx.build_dir()?;
 
         if manifest_path.is_relative() {
             bail!(
@@ -238,6 +243,7 @@ impl<'gctx> Workspace<'gctx> {
             },
             root_manifest: None,
             target_dir: None,
+            build_dir: None,
             members: Vec::new(),
             member_ids: HashSet::new(),
             default_members: Vec::new(),
@@ -282,6 +288,7 @@ impl<'gctx> Workspace<'gctx> {
         } else {
             ws.gctx.target_dir()?
         };
+        ws.build_dir = ws.target_dir.clone();
         ws.members.push(ws.current_manifest.clone());
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());
@@ -416,6 +423,13 @@ impl<'gctx> Workspace<'gctx> {
         self.target_dir
             .clone()
             .unwrap_or_else(|| self.default_target_dir())
+    }
+
+    pub fn build_dir(&self) -> Filesystem {
+        if !self.gctx().cli_unstable().build_dir {
+            return self.target_dir();
+        }
+        self.build_dir.clone().unwrap_or_else(|| self.target_dir())
     }
 
     fn default_target_dir(&self) -> Filesystem {

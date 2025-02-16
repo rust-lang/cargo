@@ -297,7 +297,7 @@ fn rustc(
     let exec = exec.clone();
 
     let root_output = build_runner.files().host_dest().to_path_buf();
-    let target_dir = build_runner.bcx.ws.target_dir().into_path_unlocked();
+    let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -455,7 +455,7 @@ fn rustc(
                 &dep_info_loc,
                 &cwd,
                 &pkg_root,
-                &target_dir,
+                &build_dir,
                 &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
@@ -555,7 +555,7 @@ fn link_targets(
         let path = unit
             .pkg
             .manifest()
-            .metabuild_path(build_runner.bcx.ws.target_dir());
+            .metabuild_path(build_runner.bcx.ws.build_dir());
         target.set_src_path(TargetSourcePath::Path(path));
     }
 
