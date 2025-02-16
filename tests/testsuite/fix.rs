@@ -198,7 +198,7 @@ fn prepare_for_2018() {
 }
 
 #[cargo_test]
-fn fix_tests() {
+fn do_not_fix_tests() {
     let p = project()
         .file(
             "src/lib.rs",
@@ -218,6 +218,36 @@ fn fix_tests() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
+        .run();
+}
+
+#[cargo_test]
+fn fix_tests_with_edition() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {}
+
+                #[cfg(test)]
+                mod tests {
+                    #[test]
+                    fn it_works() {
+                        let mut x = 3;
+                        x;
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --edition-idioms --allow-no-vcs")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
