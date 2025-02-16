@@ -198,6 +198,46 @@ fn prepare_for_2018() {
 }
 
 #[cargo_test]
+fn fix_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {}
+
+                #[cfg(test)]
+                mod tests {
+                    #[test]
+                    fn it_works() {
+                        let mut x = 3;
+                        x;
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FIXED] src/lib.rs (1 fix)
+[WARNING] path statement with no effect
+ --> src/lib.rs:9:25
+  |
+9 |                         x;
+  |                         ^^
+  |
+  = [NOTE] `#[warn(path_statements)]` on by default
+
+[WARNING] `foo` (lib test) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
+        .run();
+}
+
+#[cargo_test]
 fn local_paths() {
     let p = project()
         .file(
