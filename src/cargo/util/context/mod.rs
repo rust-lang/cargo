@@ -2778,8 +2778,11 @@ pub struct TermConfig {
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
+    #[serde(default)]
     pub when: ProgressWhen,
     pub width: Option<usize>,
+    /// Communicate progress status with terminal
+    pub report: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -2812,10 +2815,12 @@ where
                 "auto" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Auto,
                     width: None,
+                    report: None,
                 })),
                 "never" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Never,
                     width: None,
+                    report: None,
                 })),
                 "always" => Err(E::custom("\"always\" progress requires a `width` key")),
                 _ => Err(E::unknown_variant(s, &["auto", "never"])),
@@ -2837,6 +2842,7 @@ where
             if let ProgressConfig {
                 when: ProgressWhen::Always,
                 width: None,
+                ..
             } = pc
             {
                 return Err(serde::de::Error::custom(

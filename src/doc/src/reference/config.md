@@ -198,6 +198,7 @@ hyperlinks = true      # whether cargo inserts links into output
 unicode = true         # whether cargo can render output using non-ASCII unicode characters
 progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
+progress.report = true # whether cargo reports progress to terminal emulator
 ```
 
 ## Environment variables
@@ -1360,6 +1361,13 @@ Controls whether or not progress bar is shown in the terminal. Possible values:
 * Environment: `CARGO_TERM_PROGRESS_WIDTH`
 
 Sets the width for progress bar.
+
+#### `term.progress.report`
+* Type: bool
+* Default: auto-detect
+* Environment: `CARGO_TERM_PROGRESS_REPORT`
+
+Report progess to the teminal emulator for display in places like the task bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
