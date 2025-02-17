@@ -1,9 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::{env, fs};
 
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
+use crate::core::compiler::{CompileKind, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
@@ -338,9 +337,8 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         self.check_yanked_install()?;
 
-        let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
         self.opts.build_config.dry_run = dry_run;
-        let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
+        let compile = ops::compile_without_warnings(&self.ws, &self.opts).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
                 drop(td.into_path());

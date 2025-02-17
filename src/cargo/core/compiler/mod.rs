@@ -104,53 +104,7 @@ use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
-/// A glorified callback for executing calls to rustc. Rather than calling rustc
-/// directly, we'll use an `Executor`, giving clients an opportunity to intercept
-/// the build calls.
-pub trait Executor: Send + Sync + 'static {
-    /// Called after a rustc process invocation is prepared up-front for a given
-    /// unit of work (may still be modified for runtime-known dependencies, when
-    /// the work is actually executed).
-    fn init(&self, _build_runner: &BuildRunner<'_, '_>, _unit: &Unit) {}
-
-    /// In case of an `Err`, Cargo will not continue with the build process for
-    /// this package.
-    fn exec(
-        &self,
-        cmd: &ProcessBuilder,
-        id: PackageId,
-        target: &Target,
-        mode: CompileMode,
-        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()>;
-
-    /// Queried when queuing each unit of work. If it returns true, then the
-    /// unit will always be rebuilt, independent of whether it needs to be.
-    fn force_rebuild(&self, _unit: &Unit) -> bool {
-        false
-    }
-}
-
-/// A `DefaultExecutor` calls rustc without doing anything else. It is Cargo's
-/// default behaviour.
-#[derive(Copy, Clone)]
-pub struct DefaultExecutor;
-
-impl Executor for DefaultExecutor {
-    fn exec(
-        &self,
-        cmd: &ProcessBuilder,
-        _id: PackageId,
-        _target: &Target,
-        _mode: CompileMode,
-        on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-        on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
-            .map(drop)
-    }
-}
+//    cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
 
 /// Builds up and enqueue a list of pending jobs onto the `job` queue.
 ///
@@ -161,13 +115,12 @@ impl Executor for DefaultExecutor {
 /// Note that **no actual work is executed as part of this**, that's all done
 /// next as part of [`JobQueue::execute`] function which will run everything
 /// in order with proper parallelism.
-#[tracing::instrument(skip(build_runner, jobs, plan, exec))]
+#[tracing::instrument(skip(build_runner, jobs, plan))]
 fn compile<'gctx>(
     build_runner: &mut BuildRunner<'_, 'gctx>,
     jobs: &mut JobQueue<'gctx>,
     plan: &mut BuildPlan,
     unit: &Unit,
-    exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
@@ -186,18 +139,14 @@ fn compile<'gctx>(
         // We run these targets later, so this is just a no-op for now.
         Job::new_fresh()
     } else if build_plan {
-        Job::new_dirty(
-            rustc(build_runner, unit, &exec.clone())?,
-            DirtyReason::FreshBuild,
-        )
+        Job::new_dirty(rustc(build_runner, unit)?, DirtyReason::FreshBuild)
     } else {
-        let force = exec.force_rebuild(unit) || force_rebuild;
-        let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
+        let mut job = fingerprint::prepare_target(build_runner, unit, force_rebuild)?;
         job.before(if job.freshness().is_dirty() {
             let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                 rustdoc(build_runner, unit)?
             } else {
-                rustc(build_runner, unit, exec)?
+                rustc(build_runner, unit)?
             };
             work.then(link_targets(build_runner, unit, false)?)
         } else {
@@ -224,7 +173,7 @@ fn compile<'gctx>(
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(build_runner, jobs, plan, &dep.unit, exec, false)?;
+        compile(build_runner, jobs, plan, &dep.unit, false)?;
     }
     if build_plan {
         plan.add(build_runner, unit)?;
@@ -255,11 +204,7 @@ fn make_failed_scrape_diagnostic(
 }
 
 /// Creates a unit of work invoking `rustc` for building the `unit`.
-fn rustc(
-    build_runner: &mut BuildRunner<'_, '_>,
-    unit: &Unit,
-    exec: &Arc<dyn Executor>,
-) -> CargoResult<Work> {
+fn rustc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(build_runner, unit)?;
     let build_plan = build_runner.bcx.build_config.build_plan;
 
@@ -292,9 +237,6 @@ fn rustc(
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mode = unit.mode;
-
-    exec.init(build_runner, unit);
-    let exec = exec.clone();
 
     let root_output = build_runner.files().host_dest().to_path_buf();
     let target_dir = build_runner.bcx.ws.target_dir().into_path_unlocked();
@@ -392,12 +334,8 @@ fn rustc(
         if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            let result = exec
-                .exec(
-                    &rustc,
-                    package_id,
-                    &target,
-                    mode,
+            let result = rustc
+                .execute(
                     &mut |line| on_stdout_line(state, line, package_id, &target),
                     &mut |line| {
                         on_stderr_line(

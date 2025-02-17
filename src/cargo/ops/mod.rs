@@ -2,7 +2,7 @@ use crate::sources::CRATES_IO_DOMAIN;
 
 pub use self::cargo_clean::{clean, CleanContext, CleanOptions};
 pub use self::cargo_compile::{
-    compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features, CompileOptions,
+    compile, compile_without_warnings, create_bcx, print, resolve_all_features, CompileOptions,
 };
 pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
 pub use self::cargo_doc::{doc, DocOptions, OutputFormat};

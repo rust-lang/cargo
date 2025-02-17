@@ -37,14 +37,13 @@
 
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{apply_env_config, standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
-use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -122,35 +121,27 @@ impl CompileOptions {
 
 /// Compiles!
 ///
-/// This uses the [`DefaultExecutor`]. To use a custom [`Executor`], see [`compile_with_exec`].
+/// See [`ops::cargo_compile`] for a higher-level view of the compile process.
+/// [`ops::cargo_compile`]: crate::ops::cargo_compile
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions) -> CargoResult<Compilation<'a>> {
-    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    compile_with_exec(ws, options, &exec)
-}
-
-/// Like [`compile`] but allows specifying a custom [`Executor`]
-/// that will be able to intercept build calls and add custom logic.
-///
-/// [`compile`] uses [`DefaultExecutor`] which just passes calls through.
-pub fn compile_with_exec<'a>(
-    ws: &Workspace<'a>,
-    options: &CompileOptions,
-    exec: &Arc<dyn Executor>,
-) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
-    let compilation = compile_ws(ws, options, exec)?;
+
+    let compilation = compile_without_warnings(ws, options)?;
+
     if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.warning_count > 0 {
         anyhow::bail!("warnings are denied by `build.warnings` configuration")
     }
     Ok(compilation)
 }
 
-/// Like [`compile_with_exec`] but without warnings from manifest parsing.
+/// Like [`compile`] but without warnings from manifest parsing.
+///
+/// See [`ops::cargo_compile`] for a higher-level view of the compile process.
+/// [`ops::cargo_compile`]: crate::ops::cargo_compile
 #[tracing::instrument(skip_all)]
-pub fn compile_ws<'a>(
+pub fn compile_without_warnings<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
-    exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let interner = UnitInterner::new();
     let bcx = create_bcx(ws, options, &interner)?;
@@ -163,7 +154,7 @@ pub fn compile_ws<'a>(
     if options.build_config.dry_run {
         build_runner.dry_run()
     } else {
-        build_runner.compile(exec)
+        build_runner.compile()
     }
 }
 

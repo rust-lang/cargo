@@ -436,6 +436,15 @@ impl ProcessBuilder {
         Ok(output)
     }
 
+    pub fn execute(
+        &self,
+        on_stdout_line: &mut dyn FnMut(&str) -> Result<()>,
+        on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
+    ) -> Result<()> {
+        self.exec_with_streaming(on_stdout_line, on_stderr_line, false)
+            .map(drop)
+    }
+
     /// Builds the command with an `@<path>` argfile that contains all the
     /// arguments. This is primarily served for rustc/rustdoc command family.
     fn build_command_with_argfile(&self) -> io::Result<(Command, NamedTempFile)> {

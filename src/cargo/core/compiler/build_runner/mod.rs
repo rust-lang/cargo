@@ -21,9 +21,7 @@ use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
 use super::unit_graph::UnitDep;
-use super::{
-    BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor, RustDocFingerprint,
-};
+use super::{BuildContext, Compilation, CompileKind, CompileMode, FileFlavor, RustDocFingerprint};
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
@@ -157,7 +155,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     ///
     /// [`ops::cargo_compile`]: crate::ops::cargo_compile
     #[tracing::instrument(skip_all)]
-    pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'gctx>> {
+    pub fn compile(mut self) -> CargoResult<Compilation<'gctx>> {
         // A shared lock is held during the duration of the build since rustc
         // needs to read from the `src` cache, and we don't want other
         // commands modifying the `src` cache while it is running.
@@ -189,7 +187,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
         for unit in &self.bcx.roots {
             let force_rebuild = self.bcx.build_config.force_rebuild;
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+            super::compile(&mut self, &mut queue, &mut plan, unit, force_rebuild)?;
         }
 
         // Now that we've got the full job queue and we've done all our

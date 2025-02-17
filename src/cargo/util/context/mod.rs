@@ -2068,7 +2068,7 @@ impl ConfigError {
         ConfigError {
             error: anyhow::Error::from(self)
                 .context(format!("could not load config key `{}`", key)),
-            definition: definition,
+            definition,
         }
     }
 }

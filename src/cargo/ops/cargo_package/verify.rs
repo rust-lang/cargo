@@ -7,7 +7,6 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -16,8 +15,6 @@ use tar::Archive;
 
 use crate::core::compiler::BuildConfig;
 use crate::core::compiler::CompileMode;
-use crate::core::compiler::DefaultExecutor;
-use crate::core::compiler::Executor;
 use crate::core::Feature;
 use crate::core::Package;
 use crate::core::SourceId;
@@ -85,8 +82,7 @@ pub fn run_verify(
         None
     };
 
-    let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    ops::compile_with_exec(
+    ops::compile(
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(
@@ -107,7 +103,6 @@ pub fn run_verify(
             rustdoc_document_private_items: false,
             honor_rust_version: None,
         },
-        &exec,
     )?;
 
     // Check that `build.rs` didn't modify any files in the `src` directory.
