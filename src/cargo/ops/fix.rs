@@ -4,27 +4,27 @@
 //! diagnostics with suggested fixes that can be applied to the files on the
 //! filesystem, and validate that those changes didn't break anything.
 //!
-//! Cargo begins by launching a `LockServer` thread in the background to
+//! Cargo begins by launching a [`LockServer`] thread in the background to
 //! listen for network connections to coordinate locking when multiple targets
 //! are built simultaneously. It ensures each package has only one fix running
 //! at once.
 //!
-//! The `RustfixDiagnosticServer` is launched in a background thread (in
+//! The [`RustfixDiagnosticServer`] is launched in a background thread (in
 //! `JobQueue`) to listen for network connections to coordinate displaying
 //! messages to the user on the console (so that multiple processes don't try
 //! to print at the same time).
 //!
 //! Cargo begins a normal `cargo check` operation with itself set as a proxy
-//! for rustc by setting `primary_unit_rustc` in the build config. When
+//! for rustc by setting `BuildConfig::primary_unit_rustc` in the build config. When
 //! cargo launches rustc to check a crate, it is actually launching itself.
-//! The `FIX_ENV_INTERNAL` environment variable is set so that cargo knows it is in
-//! fix-proxy-mode.
+//! The `FIX_ENV_INTERNAL` environment variable is set to the value of the [`LockServer`]'s
+//! address so that cargo knows it is in fix-proxy-mode.
 //!
 //! Each proxied cargo-as-rustc detects it is in fix-proxy-mode (via `FIX_ENV_INTERNAL`
 //! environment variable in `main`) and does the following:
 //!
-//! - Acquire a lock from the `LockServer` from the master cargo process.
-//! - Launches the real rustc (`rustfix_and_fix`), looking at the JSON output
+//! - Acquire a lock from the [`LockServer`] from the master cargo process.
+//! - Launches the real rustc ([`rustfix_and_fix`]), looking at the JSON output
 //!   for suggested fixes.
 //! - Uses the `rustfix` crate to apply the suggestions to the files on the
 //!   file system.
