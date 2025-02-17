@@ -334,53 +334,46 @@ fn rustc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Wor
         if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
-            let result = rustc
-                .execute(
-                    &mut |line| on_stdout_line(state, line, package_id, &target),
-                    &mut |line| {
-                        on_stderr_line(
-                            state,
-                            line,
-                            package_id,
-                            &manifest_path,
-                            &target,
-                            &mut output_options,
-                        )
-                    },
+            let on_stdout_line = &mut |line: &str| on_stdout_line(state, line, package_id, &target);
+            let on_stderr_line = &mut |line: &str| {
+                on_stderr_line(
+                    state,
+                    line,
+                    package_id,
+                    &manifest_path,
+                    &target,
+                    &mut output_options,
                 )
-                .map_err(|e| {
-                    if output_options.errors_seen == 0 {
-                        // If we didn't expect an error, do not require --verbose to fail.
-                        // This is intended to debug
-                        // https://github.com/rust-lang/crater/issues/733, where we are seeing
-                        // Cargo exit unsuccessfully while seeming to not show any errors.
-                        e
-                    } else {
-                        verbose_if_simple_exit_code(e)
-                    }
-                })
-                .with_context(|| {
-                    // adapted from rustc_errors/src/lib.rs
-                    let warnings = match output_options.warnings_seen {
-                        0 => String::new(),
-                        1 => "; 1 warning emitted".to_string(),
-                        count => format!("; {} warnings emitted", count),
-                    };
-                    let errors = match output_options.errors_seen {
-                        0 => String::new(),
-                        1 => " due to 1 previous error".to_string(),
-                        count => format!(" due to {} previous errors", count),
-                    };
-                    let name = descriptive_pkg_name(&name, &target, &mode);
-                    format!("could not compile {name}{errors}{warnings}")
-                });
+            };
 
-            if let Err(e) = result {
+            if let Err(mut err) = rustc.exec_with_streaming(on_stdout_line, on_stderr_line, false) {
+                // If we didn't expect an error, do not require --verbose to fail.
+                // This is intended to debug
+                // https://github.com/rust-lang/crater/issues/733, where we are seeing
+                // Cargo exit unsuccessfully while seeming to not show any errors.
+                if output_options.errors_seen != 0 {
+                    err = verbose_if_simple_exit_code(err);
+                }
+
                 if let Some(diagnostic) = failed_scrape_diagnostic {
                     state.warning(diagnostic)?;
                 }
 
-                return Err(e);
+                // adapted from rustc_errors/src/lib.rs
+                let warnings = match output_options.warnings_seen {
+                    0 => String::new(),
+                    1 => "; 1 warning emitted".to_string(),
+                    count => format!("; {} warnings emitted", count),
+                };
+                let errors = match output_options.errors_seen {
+                    0 => String::new(),
+                    1 => " due to 1 previous error".to_string(),
+                    count => format!(" due to {} previous errors", count),
+                };
+                let name = descriptive_pkg_name(&name, &target, &mode);
+                let err = err.context(format!("could not compile {name}{errors}{warnings}"));
+
+                return Err(err);
             }
 
             // Exec should never return with success *and* generate an error.
