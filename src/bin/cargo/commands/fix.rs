@@ -67,8 +67,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         args.get_one::<String>("profile").map(String::as_str),
         Some("test")
     );
-    let mode = CompileMode::Check { test };
-
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
     let root_manifest = args.root_manifest(gctx)?;
@@ -79,7 +77,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let lockfile_path = args.lockfile_path(gctx)?;
     ws.set_requested_lockfile_path(lockfile_path.clone());
 
-    let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
+    let mut opts = args.compile_options(
+        gctx,
+        CompileMode::Check { test },
+        Some(&ws),
+        ProfileChecking::LegacyTestOnly,
+    )?;
 
     if !opts.filter.is_specific() {
         // cargo fix with no target selection implies `--all-targets`.
