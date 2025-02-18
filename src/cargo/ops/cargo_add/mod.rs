@@ -43,6 +43,8 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate_spec::CrateSpec;
 
+const MAX_FEATURE_PRINTS: usize = 30;
+
 /// Information on what dependencies should be added
 #[derive(Clone, Debug)]
 pub struct AddOptions<'a> {
@@ -166,36 +168,44 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 write!(message, "no features available for crate {}", dep.name)?;
             } else {
                 if !deactivated.is_empty() {
-                    writeln!(
-                        message,
-                        "disabled features:\n    {}",
-                        deactivated
-                            .iter()
-                            .map(|s| s.to_string())
-                            .coalesce(|x, y| if x.len() + y.len() < 78 {
-                                Ok(format!("{x}, {y}"))
-                            } else {
-                                Err((x, y))
-                            })
-                            .into_iter()
-                            .format("\n    ")
-                    )?
+                    if deactivated.len() <= MAX_FEATURE_PRINTS {
+                        writeln!(
+                            message,
+                            "disabled features:\n    {}",
+                            deactivated
+                                .iter()
+                                .map(|s| s.to_string())
+                                .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                    Ok(format!("{x}, {y}"))
+                                } else {
+                                    Err((x, y))
+                                })
+                                .into_iter()
+                                .format("\n    ")
+                        )?;
+                    } else {
+                        writeln!(message, "{} disabled features available", deactivated.len())?;
+                    }
                 }
                 if !activated.is_empty() {
-                    writeln!(
-                        message,
-                        "enabled features:\n    {}",
-                        activated
-                            .iter()
-                            .map(|s| s.to_string())
-                            .coalesce(|x, y| if x.len() + y.len() < 78 {
-                                Ok(format!("{x}, {y}"))
-                            } else {
-                                Err((x, y))
-                            })
-                            .into_iter()
-                            .format("\n    ")
-                    )?
+                    if deactivated.len() + activated.len() <= MAX_FEATURE_PRINTS {
+                        writeln!(
+                            message,
+                            "enabled features:\n    {}",
+                            activated
+                                .iter()
+                                .map(|s| s.to_string())
+                                .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                    Ok(format!("{x}, {y}"))
+                                } else {
+                                    Err((x, y))
+                                })
+                                .into_iter()
+                                .format("\n    ")
+                        )?;
+                    } else {
+                        writeln!(message, "{} enabled features available", activated.len())?;
+                    }
                 }
             }
             anyhow::bail!(message.trim().to_owned());
@@ -1114,7 +1124,6 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
         writeln!(stderr, "{prefix}Features{suffix}:")?;
 
-        const MAX_FEATURE_PRINTS: usize = 30;
         let total_activated = activated.len();
         let total_deactivated = deactivated.len();
 
