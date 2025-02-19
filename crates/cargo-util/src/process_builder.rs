@@ -158,7 +158,7 @@ impl ProcessBuilder {
     }
 
     /// Gets an environment variable as the process will see it (will inherit from environment
-    /// unless explicitally unset).
+    /// unless explicitly unset).
     pub fn get_env(&self, var: &str) -> Option<OsString> {
         self.env
             .get(var)
