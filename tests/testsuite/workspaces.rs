@@ -2626,7 +2626,7 @@ foo v0.1.0 ([ROOT]/foo/sub/foo)
 }
 
 #[cargo_test]
-fn nonexistence_package_togother_with_workspace() {
+fn nonexistence_package_together_with_workspace() {
     let p = project()
         .file(
             "Cargo.toml",
