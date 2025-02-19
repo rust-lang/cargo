@@ -1,5 +1,29 @@
 # Changelog
 
+## Cargo 1.87 (2025-05-15)
+[ce948f46...HEAD](https://github.com/rust-lang/cargo/compare/ce948f46...HEAD)
+
+### Added
+
+### Changed
+
+- cargo-add: collapse large feature lists
+  [#15200](https://github.com/rust-lang/cargo/pull/15200)
+
+### Fixed
+
+- cargo-publish: Fix man page with malformed `{{#options}}` block
+  [#15191](https://github.com/rust-lang/cargo/pull/15191)
+
+### Nightly only
+
+- `-Zscript`: Handle more frontmatter parsing corner cases
+  [#15187](https://github.com/rust-lang/cargo/pull/15187)
+
+### Documentation
+
+### Internal
+
 ## Cargo 1.86 (2025-04-03)
 [d73d2caf...rust-1.86.0](https://github.com/rust-lang/cargo/compare/d73d2caf...rust-1.86.0)
 
