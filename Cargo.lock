@@ -457,7 +457,7 @@ version = "0.4.1"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "anstream",
  "anstyle",
