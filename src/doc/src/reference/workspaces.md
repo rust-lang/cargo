@@ -67,7 +67,7 @@ you want to keep all the packages organized in separate directories.
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["hello_world"]
-resolver = "2"
+resolver = "3"
 ```
 
 ```toml
