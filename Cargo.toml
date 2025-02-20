@@ -28,20 +28,20 @@ build-rs = { version = "0.3.0", path = "crates/build-rs" }
 bytesize = "1.3"
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
-cargo-credential-libsecret = { version = "0.4.12", path = "credential/cargo-credential-libsecret" }
-cargo-credential-macos-keychain = { version = "0.4.12", path = "credential/cargo-credential-macos-keychain" }
-cargo-credential-wincred = { version = "0.4.12", path = "credential/cargo-credential-wincred" }
+cargo-credential-libsecret = { version = "0.4.13", path = "credential/cargo-credential-libsecret" }
+cargo-credential-macos-keychain = { version = "0.4.13", path = "credential/cargo-credential-macos-keychain" }
+cargo-credential-wincred = { version = "0.4.13", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.2.0" }
-cargo-test-macro = { version = "0.4.1", path = "crates/cargo-test-macro" }
+cargo-test-macro = { version = "0.4.2", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.7.1", path = "crates/cargo-test-support" }
-cargo-util = { version = "0.2.19", path = "crates/cargo-util" }
-cargo-util-schemas = { version = "0.7.3", path = "crates/cargo-util-schemas" }
+cargo-util = { version = "0.2.20", path = "crates/cargo-util" }
+cargo-util-schemas = { version = "0.7.4", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.19.1"
 clap = "4.5.28"
 clap_complete = { version = "4.5.44", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.0", features = ["mac_os_10_7_support"] }
-crates-io = { version = "0.40.9", path = "crates/crates-io" }
+crates-io = { version = "0.40.10", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.47"
 curl-sys = "0.4.79"
@@ -138,7 +138,7 @@ name = "cargo"
 version = "0.88.0"
 edition.workspace = true
 license.workspace = true
-rust-version = "1.84"  # MSRV:1
+rust-version = "1.85"  # MSRV:1
 homepage = "https://doc.rust-lang.org/cargo/index.html"
 repository.workspace = true
 documentation = "https://docs.rs/cargo"
