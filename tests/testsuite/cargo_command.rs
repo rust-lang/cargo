@@ -391,10 +391,13 @@ fn cargo_subcommand_env() {
         .canonicalize()
         .unwrap();
     let envtest_bin = envtest_bin.to_str().unwrap();
+    // Previously, `$CARGO` would be left at `envtest_bin`. However, with the
+    // fix for #15099, `$CARGO` is now overwritten with the path to the current
+    // exe when it is detected to be a cargo binary.
     cargo_process("envtest")
         .env("PATH", &path)
         .env(cargo::CARGO_ENV, &envtest_bin)
-        .with_stdout_data(format!("{}\n", envtest_bin).raw().raw())
+        .with_stdout_data(format!("{}\n", cargo.display()).raw())
         .run();
 }
 

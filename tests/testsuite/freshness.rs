@@ -1,5 +1,6 @@
 //! Tests for fingerprinting (rebuild detection).
 
+use std::env::consts::EXE_SUFFIX;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::prelude::*;
@@ -3180,5 +3181,87 @@ fn use_mtime_cache_in_cargo_home() {
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 ...
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn overwrite_cargo_environment_variable() {
+    // If passed arguments `arg1 arg2 ...`, this program runs them as a command.
+    // If passed no arguments, this program simply prints `$CARGO`.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let mut args = std::env::args().skip(1);
+                    if let Some(arg1) = args.next() {
+                        let status = std::process::Command::new(arg1)
+                            .args(args)
+                            .status()
+                            .unwrap();
+                        assert!(status.success());
+                    } else {
+                        eprintln!("{}", std::env::var("CARGO").unwrap());
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    // Create two other cargo binaries in the project root, one with the wrong
+    // name and one with the right name.
+    let cargo_exe = cargo_test_support::cargo_exe();
+    let wrong_name_path = p.root().join(format!("wrong_name{EXE_SUFFIX}"));
+    let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
+    std::fs::hard_link(&cargo_exe, &wrong_name_path).unwrap();
+    std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
+
+    // The output of each of the following commands should be `path-to-cargo`:
+    // ```
+    // cargo run
+    // cargo run -- cargo run
+    // cargo run -- wrong_name run
+    // ```
+
+    let cargo = cargo_exe.display().to_string();
+    let wrong_name = wrong_name_path.display().to_string();
+    let stderr_cargo = format!(
+        "{}[EXE]\n",
+        cargo_exe
+            .canonicalize()
+            .unwrap()
+            .with_extension("")
+            .to_str()
+            .unwrap()
+    );
+
+    for cmd in [
+        "run",
+        &format!("run -- {cargo} run"),
+        &format!("run -- {wrong_name} run"),
+    ] {
+        p.cargo(cmd).with_stderr_contains(&stderr_cargo).run();
+    }
+
+    // The output of the following command should be `path-to-other-cargo`:
+    // ```
+    // cargo run -- other_cargo run
+    // ```
+
+    let other_cargo = other_cargo_path.display().to_string();
+    let stderr_other_cargo = format!(
+        "{}[EXE]\n",
+        other_cargo_path
+            .canonicalize()
+            .unwrap()
+            .with_extension("")
+            .to_str()
+            .unwrap()
+            .replace(p.root().parent().unwrap().to_str().unwrap(), "[ROOT]")
+    );
+
+    p.cargo(&format!("run -- {other_cargo} run"))
+        .with_stderr_contains(stderr_other_cargo)
         .run();
 }
