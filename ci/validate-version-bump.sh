@@ -19,4 +19,7 @@ head_sha=$(git rev-parse "${HEAD_SHA:-HEAD}")
 echo "Base revision is $base_sha"
 echo "Head revision is $head_sha"
 
-cargo bump-check --base-rev "$base_sha" --head-rev "$head_sha"
+echo "::group::Building xtask"
+cargo bump-check --help
+echo "::endgroup::"
+cargo bump-check --github --base-rev "$base_sha" --head-rev "$head_sha"
