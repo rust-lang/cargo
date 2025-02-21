@@ -114,7 +114,6 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     let base_commit = get_base_commit(gctx, args, &repo)?;
     let head_commit = get_head_commit(args, &repo)?;
     let referenced_commit = get_referenced_commit(&repo, &base_commit)?;
-    let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
     let status = |msg: &str| gctx.shell().status(STATUS, msg);
 
     let crates_not_check_against_channels = [
@@ -135,9 +134,8 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     status(&format!("head commit `{}`", head_commit.id()))?;
 
     let mut needs_bump = Vec::new();
-
+    let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
     check_crates_io(&ws, &changed_members, &mut needs_bump)?;
-
     if let Some(referenced_commit) = referenced_commit.as_ref() {
         status(&format!("compare against `{}`", referenced_commit.id()))?;
         for referenced_member in checkout_ws(&ws, &repo, referenced_commit)?.members() {
@@ -157,7 +155,6 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
             }
         }
     }
-
     if !needs_bump.is_empty() {
         needs_bump.sort();
         needs_bump.dedup();
