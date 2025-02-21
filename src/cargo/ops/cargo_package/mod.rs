@@ -1068,7 +1068,8 @@ impl<'a> TmpRegistry<'a> {
             v: Some(2),
         })?;
 
-        let file = cargo_util::registry::make_dep_path(package.name().as_str(), false);
+        let file =
+            cargo_util::registry::make_dep_path(&package.name().as_str().to_lowercase(), false);
         let mut dst = self.index_path().open_rw_exclusive_create(
             file,
             self.gctx,
