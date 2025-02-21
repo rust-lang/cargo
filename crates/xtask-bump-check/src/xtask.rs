@@ -10,6 +10,8 @@
 //!         but forgot to bump its version.
 //! ```
 
+#![allow(clippy::print_stdout)] // Fine for build utilities
+
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
@@ -56,6 +58,7 @@ pub fn cli() -> clap::Command {
         .arg(flag("locked", "Require Cargo.lock to be up-to-date").global(true))
         .arg(flag("offline", "Run without accessing the network").global(true))
         .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
+        .arg(flag("github", "Group output using GitHub's syntax"))
         .arg(
             Arg::new("unstable-features")
                 .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
@@ -114,7 +117,7 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     let base_commit = get_base_commit(gctx, args, &repo)?;
     let head_commit = get_head_commit(args, &repo)?;
     let referenced_commit = get_referenced_commit(&repo, &base_commit)?;
-    let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
+    let github = args.get_flag("github");
     let status = |msg: &str| gctx.shell().status(STATUS, msg);
 
     let crates_not_check_against_channels = [
@@ -135,9 +138,11 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     status(&format!("head commit `{}`", head_commit.id()))?;
 
     let mut needs_bump = Vec::new();
-
+    if github {
+        println!("::group::Checking for bumps of changed packages");
+    }
+    let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
     check_crates_io(&ws, &changed_members, &mut needs_bump)?;
-
     if let Some(referenced_commit) = referenced_commit.as_ref() {
         status(&format!("compare against `{}`", referenced_commit.id()))?;
         for referenced_member in checkout_ws(&ws, &repo, referenced_commit)?.members() {
@@ -157,7 +162,6 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
             }
         }
     }
-
     if !needs_bump.is_empty() {
         needs_bump.sort();
         needs_bump.dedup();
@@ -169,18 +173,14 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         msg.push_str("\nPlease bump at least one patch version in each corresponding Cargo.toml.");
         anyhow::bail!(msg)
     }
-
-    // Even when we test against baseline-rev, we still need to make sure a
-    // change doesn't violate SemVer rules against crates.io releases. The
-    // possibility of this happening is nearly zero but no harm to check twice.
-    let mut cmd = ProcessBuilder::new("cargo");
-    cmd.arg("semver-checks")
-        .arg("check-release")
-        .arg("--workspace");
-    gctx.shell().status("Running", &cmd)?;
-    cmd.exec()?;
+    if github {
+        println!("::endgroup::");
+    }
 
     if let Some(referenced_commit) = referenced_commit.as_ref() {
+        if github {
+            println!("::group::SemVer Checks against {}", referenced_commit.id());
+        }
         let mut cmd = ProcessBuilder::new("cargo");
         cmd.arg("semver-checks")
             .arg("--workspace")
@@ -192,6 +192,25 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         }
         gctx.shell().status("Running", &cmd)?;
         cmd.exec()?;
+        if github {
+            println!("::endgroup::");
+        }
+    }
+
+    // Even when we test against baseline-rev, we still need to make sure a
+    // change doesn't violate SemVer rules against crates.io releases. The
+    // possibility of this happening is nearly zero but no harm to check twice.
+    if github {
+        println!("::group::SemVer Checks against crates.io");
+    }
+    let mut cmd = ProcessBuilder::new("cargo");
+    cmd.arg("semver-checks")
+        .arg("check-release")
+        .arg("--workspace");
+    gctx.shell().status("Running", &cmd)?;
+    cmd.exec()?;
+    if github {
+        println!("::endgroup::");
     }
 
     status("no version bump needed for member crates.")?;
