@@ -1391,7 +1391,7 @@ fn resolver_bad_setting() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  `resolver` setting `foo` is not valid, valid options are "1" or "2"
+  `resolver` setting `foo` is not valid, valid options are "1", "2" or "3"
 
 "#]])
         .run();
