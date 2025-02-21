@@ -37,6 +37,18 @@
       packageNameTemplate: 'rust-lang/rust',
       datasourceTemplate: 'github-releases',
     },
+    {
+      customType: 'regex',
+      fileMatch: [
+        '^.github.workflows.main.yml$',
+      ],
+      matchStrings: [
+        'cargo-semver-checks.releases.download.v(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+      ],
+      depNameTemplate: 'cargo-semver-checks',
+      packageNameTemplate: 'obi1kenobi/cargo-semver-checks',
+      datasourceTemplate: 'github-releases',
+    },
   ],
   packageRules: [
     {
@@ -68,6 +80,20 @@
       minimumReleaseAge: '85 days',  // 2 releases back * 6 weeks per release * 7 days per week + 1
       internalChecksFilter: 'strict',
       groupName: 'msrv',
+    },
+    {
+      commitMessageTopic: 'cargo-semver-checks',
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchDepNames: [
+        'cargo-semver-checks',
+      ],
+      extractVersion: '^v(?<version>\\d+\\.\\d+\\.\\d+)',
+      schedule: [
+        '* * * * *',
+      ],
+      internalChecksFilter: 'strict',
     },
     // Goals:
     // - Rollup safe upgrades to reduce CI runner load
