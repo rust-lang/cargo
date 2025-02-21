@@ -177,22 +177,6 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         println!("::endgroup::");
     }
 
-    // Even when we test against baseline-rev, we still need to make sure a
-    // change doesn't violate SemVer rules against crates.io releases. The
-    // possibility of this happening is nearly zero but no harm to check twice.
-    if github {
-        println!("::group::SemVer Checks against crates.io");
-    }
-    let mut cmd = ProcessBuilder::new("cargo");
-    cmd.arg("semver-checks")
-        .arg("check-release")
-        .arg("--workspace");
-    gctx.shell().status("Running", &cmd)?;
-    cmd.exec()?;
-    if github {
-        println!("::endgroup::");
-    }
-
     if let Some(referenced_commit) = referenced_commit.as_ref() {
         if github {
             println!("::group::SemVer Checks against {}", referenced_commit.id());
@@ -211,6 +195,22 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         if github {
             println!("::endgroup::");
         }
+    }
+
+    // Even when we test against baseline-rev, we still need to make sure a
+    // change doesn't violate SemVer rules against crates.io releases. The
+    // possibility of this happening is nearly zero but no harm to check twice.
+    if github {
+        println!("::group::SemVer Checks against crates.io");
+    }
+    let mut cmd = ProcessBuilder::new("cargo");
+    cmd.arg("semver-checks")
+        .arg("check-release")
+        .arg("--workspace");
+    gctx.shell().status("Running", &cmd)?;
+    cmd.exec()?;
+    if github {
+        println!("::endgroup::");
     }
 
     status("no version bump needed for member crates.")?;
