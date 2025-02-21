@@ -287,8 +287,9 @@ impl<'a> UnitGenerator<'a, '_> {
                 }
                 CargoResult::Ok(())
             };
+
+            let mut msg = String::new();
             if !suggestion.is_empty() {
-                let mut msg = String::new();
                 write!(
                     msg,
                     "no {} target {} `{}`{}",
@@ -298,9 +299,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     suggestion,
                 )?;
                 append_targets_elsewhere(&mut msg, "\n")?;
-                anyhow::bail!(msg);
             } else {
-                let mut msg = String::new();
                 writeln!(
                     msg,
                     "no {} target {} `{}`.",
@@ -316,8 +315,8 @@ impl<'a> UnitGenerator<'a, '_> {
                         writeln!(msg, "    {}", target.name())?;
                     }
                 }
-                anyhow::bail!(msg);
             }
+            anyhow::bail!(msg);
         }
         Ok(proposals)
     }
