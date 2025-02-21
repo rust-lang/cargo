@@ -6478,19 +6478,13 @@ fn workspace_with_capitalized_member() {
     p.cargo("package -Zpackage-workspace --no-verify")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(reg.index_url())
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] DEP v0.1.0 ([ROOT]/foo/dep)
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `DEP` found
-  location searched: crates.io index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]]
             .unordered(),
