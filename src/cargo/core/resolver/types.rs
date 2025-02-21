@@ -122,7 +122,7 @@ impl ResolveBehavior {
             "2" => Ok(ResolveBehavior::V2),
             "3" => Ok(ResolveBehavior::V3),
             s => anyhow::bail!(
-                "`resolver` setting `{}` is not valid, valid options are \"1\" or \"2\"",
+                "`resolver` setting `{}` is not valid, valid options are \"1\", \"2\" or \"3\"",
                 s
             ),
         }
