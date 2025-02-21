@@ -584,19 +584,19 @@ impl Summaries {
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // This is the file we're loading from cache or the index data.
         // See module comment in `registry/mod.rs` for why this is structured the way it is.
-        let name = &name.to_lowercase();
-        let relative = make_dep_path(&name, false);
+        let lowered_name = &name.to_lowercase();
+        let relative = make_dep_path(&lowered_name, false);
 
         let mut cached_summaries = None;
         let mut index_version = None;
-        if let Some(contents) = cache_manager.get(name) {
+        if let Some(contents) = cache_manager.get(lowered_name) {
             match Summaries::parse_cache(contents) {
                 Ok((s, v)) => {
                     cached_summaries = Some(s);
                     index_version = Some(v);
                 }
                 Err(e) => {
-                    tracing::debug!("failed to parse {name:?} cache: {e}");
+                    tracing::debug!("failed to parse {lowered_name:?} cache: {e}");
                 }
             }
         }
@@ -609,7 +609,7 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                cache_manager.invalidate(name);
+                cache_manager.invalidate(lowered_name);
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -658,7 +658,7 @@ impl Summaries {
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
                     // invocations can use it.
-                    cache_manager.put(name, &cache_bytes);
+                    cache_manager.put(lowered_name, &cache_bytes);
 
                     // If we've got debug assertions enabled read back in the cached values
                     // and assert they match the expected result.
