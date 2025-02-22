@@ -29,7 +29,7 @@ fn verify_build_dir_is_disabled_by_feature_flag() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo(&[])
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
@@ -48,21 +48,27 @@ fn binary_with_debug() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
     assert_exists_patterns_with_base_dir(
         &p.root(),
         &[
-            &format!("target-dir/debug/deps/foo*{EXE_SUFFIX}"),
-            "target-dir/debug/deps/foo*.d",
+            // Check the pre-uplifted binary in the build-dir
+            &format!("build-dir/debug/deps/foo*{EXE_SUFFIX}"),
+            "build-dir/debug/deps/foo*.d",
+            // Verify the binary was copied to the target-dir
+            &format!("target-dir/debug/foo{EXE_SUFFIX}"),
+            "target-dir/debug/foo.d",
         ],
     );
     assert_not_exists(&p.root().join("target"));
@@ -77,25 +83,29 @@ fn binary_with_release() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build --release")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build --release -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "release");
+    assert_build_dir_layout(p.root().join("build-dir"), "release");
     assert_exists(&p.root().join(format!("target-dir/release/foo{EXE_SUFFIX}")));
     assert_exists_patterns_with_base_dir(
         &p.root(),
         &[
-            &format!("target-dir/release/deps/foo*{EXE_SUFFIX}"),
-            "target-dir/release/deps/foo*.d",
+            // Check the pre-uplifted binary in the build-dir
+            &format!("build-dir/release/deps/foo*{EXE_SUFFIX}"),
+            "build-dir/release/deps/foo*.d",
+            // Verify the binary was copied to the target-dir
+            &format!("target-dir/release/foo{EXE_SUFFIX}"),
+            "target-dir/release/foo.d",
         ],
     );
-    assert_not_exists(&p.root().join("target"));
 }
 
 #[cargo_test]
@@ -157,18 +167,20 @@ fn libs() {
                 r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
             )
             .build();
 
-        p.cargo("build")
-            .masquerade_as_nightly_cargo(&[])
+        p.cargo("build -Z build-dir")
+            .masquerade_as_nightly_cargo(&["build-dir"])
             .enable_mac_dsym()
             .run();
 
-        assert_build_dir_layout(p.root().join("target-dir"), "debug");
+        assert_build_dir_layout(p.root().join("build-dir"), "debug");
+
+        // Verify lib artifacts were copied into the artifact dir
         assert_exists_patterns_with_base_dir(&p.root().join("target-dir/debug"), &expected_files);
-        assert_not_exists(&p.root().join("target"));
     }
 }
 
@@ -178,8 +190,8 @@ fn should_default_to_target() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
@@ -193,19 +205,18 @@ fn should_respect_env_var() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("build")
-        .env("CARGO_TARGET_DIR", "target-dir")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .env("CARGO_BUILD_BUILD_DIR", "build-dir")
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
-    assert_exists(&p.root().join(format!("target-dir/debug/foo{EXE_SUFFIX}")));
-    assert_not_exists(&p.root().join("target"));
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    assert_exists(&p.root().join(format!("target/debug/foo{EXE_SUFFIX}")));
 }
 
 #[cargo_test]
-fn build_script_should_output_to_target_dir() {
+fn build_script_should_output_to_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -225,27 +236,28 @@ fn build_script_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
     assert_exists_patterns_with_base_dir(
         &p.root(),
         &[
-            &format!("target-dir/debug/build/foo-*/build-script-build{EXE_SUFFIX}"),
-            "target-dir/debug/build/foo-*/out/foo.txt", // Verify OUT_DIR
+            &format!("build-dir/debug/build/foo-*/build-script-build{EXE_SUFFIX}"),
+            "build-dir/debug/build/foo-*/out/foo.txt", // Verify OUT_DIR
         ],
     );
 }
 
 #[cargo_test]
-fn cargo_tmpdir_should_output_to_target_dir() {
+fn cargo_tmpdir_should_output_to_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -266,21 +278,22 @@ fn cargo_tmpdir_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("test")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("test -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
-    assert_exists(&p.root().join(format!("target-dir/tmp/foo.txt")));
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    assert_exists(&p.root().join(format!("build-dir/tmp/foo.txt")));
 }
 
 #[cargo_test]
-fn examples_should_output_to_target_dir() {
+fn examples_should_output_to_build_dir_and_uplift_to_target_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file("examples/foo.rs", r#"fn main() { }"#)
@@ -289,29 +302,32 @@ fn examples_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build --examples")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build --examples -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
     assert_exists_patterns_with_base_dir(
         &p.root(),
         &[
+            // uplifted (target-dir)
             &format!("target-dir/debug/examples/foo{EXE_SUFFIX}"),
             "target-dir/debug/examples/foo.d",
-            &format!("target-dir/debug/examples/foo*{EXE_SUFFIX}"),
-            "target-dir/debug/examples/foo*.d",
+            // pre-uplifted (build-dir)
+            &format!("build-dir/debug/examples/foo*{EXE_SUFFIX}"),
+            "build-dir/debug/examples/foo*.d",
         ],
     );
 }
 
 #[cargo_test]
-fn benches_should_output_to_target_dir() {
+fn benches_should_output_to_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file("benches/foo.rs", r#"fn main() { }"#)
@@ -320,21 +336,22 @@ fn benches_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build --bench=foo")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build --bench=foo -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
     assert_exists_patterns_with_base_dir(
         &p.root(),
         &[
-            &format!("target-dir/debug/deps/foo*{EXE_SUFFIX}"),
-            "target-dir/debug/deps/foo*.d",
+            &format!("build-dir/debug/deps/foo*{EXE_SUFFIX}"),
+            "build-dir/debug/deps/foo*.d",
         ],
     );
 }
@@ -348,12 +365,13 @@ fn cargo_doc_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("doc")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("doc -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
@@ -364,7 +382,7 @@ fn cargo_doc_should_output_to_target_dir() {
 }
 
 #[cargo_test]
-fn cargo_package_should_output_to_target_dir() {
+fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -372,27 +390,31 @@ fn cargo_package_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("package")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("package -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
 
-    let package_dir = p.root().join("target-dir/package");
-    assert_exists(&package_dir);
-    assert_exists(&package_dir.join("foo-0.0.1.crate"));
-    assert!(package_dir.join("foo-0.0.1.crate").is_file());
-    assert_exists(&package_dir.join("foo-0.0.1"));
-    assert!(package_dir.join("foo-0.0.1").is_dir());
+    let package_artifact_dir = p.root().join("target-dir/package");
+    assert_exists(&package_artifact_dir);
+    assert_exists(&package_artifact_dir.join("foo-0.0.1.crate"));
+    assert!(package_artifact_dir.join("foo-0.0.1.crate").is_file());
+
+    let package_build_dir = p.root().join("build-dir/package");
+    assert_exists(&package_build_dir);
+    assert_exists(&package_build_dir.join("foo-0.0.1"));
+    assert!(package_build_dir.join("foo-0.0.1").is_dir());
 }
 
 #[cargo_test]
-fn cargo_clean_should_clean_the_target_dir() {
+fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -400,23 +422,25 @@ fn cargo_clean_should_clean_the_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("target-dir"), "debug");
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
 
-    p.cargo("clean")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("clean -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
-    assert!(!p.root().join("target-dir").exists());
+    assert_not_exists(&p.root().join("build-dir"));
+    assert_not_exists(&p.root().join("target-dir"));
 }
 
 #[cargo_test]
@@ -428,12 +452,13 @@ fn timings_report_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("build --timings")
-        .masquerade_as_nightly_cargo(&[])
+    p.cargo("build --timings -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
         .run();
 
@@ -444,7 +469,7 @@ fn timings_report_should_output_to_target_dir() {
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
 )]
-fn future_incompat_should_output_to_target_dir() {
+fn future_incompat_should_output_to_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { let x = 1; }"#)
         .file(
@@ -452,16 +477,18 @@ fn future_incompat_should_output_to_target_dir() {
             r#"
             [build]
             target-dir = "target-dir"
+            build-dir = "build-dir"
             "#,
         )
         .build();
 
-    p.cargo("check")
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
         .arg("--future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .run();
 
-    assert_exists(&p.root().join("target-dir/.future-incompat-report.json"));
+    assert_exists(&p.root().join("build-dir/.future-incompat-report.json"));
 }
 
 #[track_caller]

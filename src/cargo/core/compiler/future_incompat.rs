@@ -91,7 +91,7 @@ pub struct Diagnostic {
     pub level: String,
 }
 
-/// The filename in the top-level `target` directory where we store
+/// The filename in the top-level `build-dir` directory where we store
 /// the report
 const FUTURE_INCOMPAT_FILE: &str = ".future-incompat-report.json";
 /// Max number of reports to save on disk.
@@ -166,7 +166,7 @@ impl OnDiskReports {
         }
         let on_disk = serde_json::to_vec(&self).unwrap();
         if let Err(e) = ws
-            .target_dir()
+            .build_dir()
             .open_rw_exclusive_create(
                 FUTURE_INCOMPAT_FILE,
                 ws.gctx(),
@@ -191,7 +191,7 @@ impl OnDiskReports {
 
     /// Loads the on-disk reports.
     pub fn load(ws: &Workspace<'_>) -> CargoResult<OnDiskReports> {
-        let report_file = match ws.target_dir().open_ro_shared(
+        let report_file = match ws.build_dir().open_ro_shared(
             FUTURE_INCOMPAT_FILE,
             ws.gctx(),
             "Future incompatible report",
