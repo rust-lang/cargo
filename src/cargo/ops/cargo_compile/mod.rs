@@ -374,6 +374,7 @@ pub fn create_bcx<'a, 'gctx>(
     let generator = UnitGenerator {
         ws,
         packages: &to_builds,
+        spec,
         target_data: &target_data,
         filter,
         requested_kinds: &build_config.requested_kinds,

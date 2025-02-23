@@ -48,6 +48,7 @@ struct Proposal<'a> {
 pub(super) struct UnitGenerator<'a, 'gctx> {
     pub ws: &'a Workspace<'gctx>,
     pub packages: &'a [&'a Package],
+    pub spec: &'a Packages,
     pub target_data: &'a RustcTargetData<'gctx>,
     pub filter: &'a CompileFilter,
     pub requested_kinds: &'a [CompileKind],
@@ -282,14 +283,31 @@ impl<'a> UnitGenerator<'a, '_> {
                 CargoResult::Ok(())
             };
 
+            let unmatched_packages = || match self.spec {
+                Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
+                    "default-run packages".to_owned()
+                }
+                Packages::Packages(packages) => {
+                    let first = packages
+                        .first()
+                        .expect("The number of packages must be at least 1");
+                    if packages.len() == 1 {
+                        format!("`{}` package", first)
+                    } else {
+                        format!("`{}`, ... packages", first)
+                    }
+                }
+            };
+
             let mut msg = String::new();
             if !suggestion.is_empty() {
                 write!(
                     msg,
-                    "no {} target {} `{}`{}{}",
+                    "no {} target {} `{}` in {}{}{}",
                     target_desc,
                     if is_glob { "matches pattern" } else { "named" },
                     target_name,
+                    unmatched_packages(),
                     suggestion,
                     if need_append_targets_elsewhere {
                         "\n"
@@ -301,10 +319,11 @@ impl<'a> UnitGenerator<'a, '_> {
             } else {
                 writeln!(
                     msg,
-                    "no {} target {} `{}`.",
+                    "no {} target {} `{}` in {}.",
                     target_desc,
                     if is_glob { "matches pattern" } else { "named" },
                     target_name,
+                    unmatched_packages()
                 )?;
 
                 append_targets_elsewhere(&mut msg)?;
