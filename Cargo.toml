@@ -234,6 +234,7 @@ cargo-credential-macos-keychain.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = { workspace = true, optional = true }
+openssl-sys = { workspace = true, optional = true } # HACK: for pinning to openssl v1.
 
 [target.'cfg(windows)'.dependencies]
 cargo-credential-wincred.workspace = true
