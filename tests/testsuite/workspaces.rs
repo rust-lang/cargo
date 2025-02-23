@@ -2797,7 +2797,7 @@ Available binaries:
     p.cargo("run -p crate1 --bin crate2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate2`
+[ERROR] no bin target named `crate2` in `crate1` package
 
 [HELP] a target with a similar name exists: `crate1`
 [HELP] Available bin in `crate2` package:
@@ -2809,7 +2809,7 @@ Available binaries:
     p.cargo("check -p crate1 -p pattern1 -p pattern2 --bin crate2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate2`
+[ERROR] no bin target named `crate2` in `crate1`, ... packages
 
 [HELP] a target with a similar name exists: `crate1`
 [HELP] Available bin in `crate2` package:
@@ -2821,7 +2821,7 @@ Available binaries:
     p.cargo("run --bin crate2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate2`
+[ERROR] no bin target named `crate2` in default-run packages
 
 [HELP] a target with a similar name exists: `crate1`
 [HELP] Available bin in `crate2` package:
@@ -2833,7 +2833,7 @@ Available binaries:
     p.cargo("check --bin pattern*")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target matches pattern `pattern*`.
+[ERROR] no bin target matches pattern `pattern*` in default-run packages.
 [HELP] Available bin in `pattern1` package:
     pattern1
 [HELP] Available bin in `pattern2` package:
@@ -2858,7 +2858,7 @@ Available binaries:
     p.cargo("run --bin crate2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate2`.
+[ERROR] no bin target named `crate2` in default-run packages.
 [HELP] Available bin in `crate2` package:
     crate2
 
