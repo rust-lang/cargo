@@ -1032,22 +1032,26 @@ impl<'a> TmpRegistry<'a> {
         let deps: Vec<_> = new_crate
             .deps
             .into_iter()
-            .map(|dep| RegistryDependency {
-                name: dep.name.into(),
-                req: dep.version_req.into(),
-                features: dep.features.into_iter().map(|x| x.into()).collect(),
-                optional: dep.optional,
-                default_features: dep.default_features,
-                target: dep.target.map(|x| x.into()),
-                kind: Some(dep.kind.into()),
-                registry: dep.registry.map(|x| x.into()),
-                package: None,
-                public: None,
-                artifact: dep
-                    .artifact
-                    .map(|xs| xs.into_iter().map(|x| x.into()).collect()),
-                bindep_target: dep.bindep_target.map(|x| x.into()),
-                lib: dep.lib,
+            .map(|dep| {
+                let name = dep.name.into();
+                let package = None;
+                RegistryDependency {
+                    name: name,
+                    req: dep.version_req.into(),
+                    features: dep.features.into_iter().map(|x| x.into()).collect(),
+                    optional: dep.optional,
+                    default_features: dep.default_features,
+                    target: dep.target.map(|x| x.into()),
+                    kind: Some(dep.kind.into()),
+                    registry: dep.registry.map(|x| x.into()),
+                    package: package,
+                    public: None,
+                    artifact: dep
+                        .artifact
+                        .map(|xs| xs.into_iter().map(|x| x.into()).collect()),
+                    bindep_target: dep.bindep_target.map(|x| x.into()),
+                    lib: dep.lib,
+                }
             })
             .collect();
 
