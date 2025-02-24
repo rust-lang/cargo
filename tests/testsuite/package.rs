@@ -6566,7 +6566,6 @@ fn workspace_with_renamed_member() {
     p.cargo("package -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(reg.index_url())
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [UPDATING] crates.io index
@@ -6588,15 +6587,8 @@ fn workspace_with_renamed_member() {
 [UNPACKING] obeli-sk-concepts v0.16.2 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [COMPILING] obeli-sk-val-json v0.16.2
 [COMPILING] obeli-sk-concepts v0.16.2
-error[E0433]: failed to resolve: use of undeclared crate or module `val_json`
- --> [ROOT]/home/.cargo/registry/src/-[HASH]/obeli-sk-concepts-0.16.2/src/lib.rs:1:16
-  |
-1 | pub fn foo() { val_json::foo() }
-  |                ^^^^^^^^ use of undeclared crate or module `val_json`
-
-For more information about this error, try `rustc --explain E0433`.
-[ERROR] could not compile `obeli-sk-concepts` (lib) due to 1 previous error
-[ERROR] failed to verify package tarball
+[COMPILING] obeli-sk-utils v0.16.2 ([ROOT]/foo/target/package/obeli-sk-utils-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),

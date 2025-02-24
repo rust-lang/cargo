@@ -1033,8 +1033,15 @@ impl<'a> TmpRegistry<'a> {
             .deps
             .into_iter()
             .map(|dep| {
-                let name = dep.name.into();
-                let package = None;
+                let name = dep
+                    .explicit_name_in_toml
+                    .clone()
+                    .unwrap_or_else(|| dep.name.clone())
+                    .into();
+                let package = dep
+                    .explicit_name_in_toml
+                    .as_ref()
+                    .map(|_| dep.name.clone().into());
                 RegistryDependency {
                     name: name,
                     req: dep.version_req.into(),
