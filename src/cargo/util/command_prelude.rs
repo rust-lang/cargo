@@ -335,9 +335,6 @@ pub trait CommandExt: Sized {
                         if is_embedded(path) {
                             return true;
                         }
-                        if path.is_file() && path.extension().is_none() {
-                            return true;
-                        }
                         false
                     }),
                 )),
