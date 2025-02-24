@@ -86,7 +86,7 @@ fn default_shows_progress() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
+    p.cargo("build")
         .without_status()
         .with_stderr_contains("[BUILDING] [====================>        ] 3/4: foo     ")
         .run();
