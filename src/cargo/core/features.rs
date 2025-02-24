@@ -764,6 +764,7 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     cargo_lints: bool = ("Enable the `[lints.cargo]` table"),
+    check_target_cfgs: bool = ("Enable unexpected cfgs checking in `[target.'cfg(...)']` tables"),
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
@@ -1267,6 +1268,7 @@ impl CliUnstable {
             "build-std" => self.build_std = Some(parse_list(v)),
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
+            "check-target-cfgs" => self.check_target_cfgs = parse_empty(k, v)?,
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
