@@ -91,6 +91,7 @@ impl FromStr for Prefix {
 #[derive(Clone, Copy)]
 pub enum DisplayDepth {
     MaxDisplayDepth(u32),
+    Public,
     Workspace,
 }
 
@@ -100,6 +101,7 @@ impl FromStr for DisplayDepth {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "workspace" => Ok(Self::Workspace),
+            "public" => Ok(Self::Public),
             s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -420,6 +422,12 @@ fn print_dependencies<'a>(
     let (max_display_depth, filter_non_workspace_member) = match display_depth {
         DisplayDepth::MaxDisplayDepth(max) => (max, false),
         DisplayDepth::Workspace => (u32::MAX, true),
+        DisplayDepth::Public => {
+            if !ws.gctx().cli_unstable().unstable_options {
+                anyhow::bail!("`--depth public` requires `-Zunstable-options`")
+            }
+            (u32::MAX, false)
+        }
     };
 
     // Current level exceeds maximum display depth. Skip.

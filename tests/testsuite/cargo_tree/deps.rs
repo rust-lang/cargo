@@ -1963,26 +1963,18 @@ fn depth_public() {
         .file("dep/src/lib.rs", "")
         .build();
 
-    p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stdout_data(str![[r#"
-dep v0.1.0 ([ROOT]/foo/dep)
-
-diamond v0.1.0 ([ROOT]/foo/diamond)
-├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
-│   └── dep v0.1.0 ([ROOT]/foo/dep)
-└── right-priv v0.1.0 ([ROOT]/foo/right-priv)
-    └── dep v0.1.0 ([ROOT]/foo/dep)
-
-left-pub v0.1.0 ([ROOT]/foo/left-pub) (*)
-
-right-priv v0.1.0 ([ROOT]/foo/right-priv) (*)
+    p.cargo("tree --depth public")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `--depth public` requires `-Zunstable-options`
 
 "#]])
         .run();
 
-    p.cargo("tree -p left-pub")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree --depth public -p left-pub")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 left-pub v0.1.0 ([ROOT]/foo/left-pub)
 └── dep v0.1.0 ([ROOT]/foo/dep)
@@ -1990,8 +1982,9 @@ left-pub v0.1.0 ([ROOT]/foo/left-pub)
 "#]])
         .run();
 
-    p.cargo("tree -p right-priv")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree --depth public -p right-priv")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 right-priv v0.1.0 ([ROOT]/foo/right-priv)
 └── dep v0.1.0 ([ROOT]/foo/dep)
@@ -1999,8 +1992,9 @@ right-priv v0.1.0 ([ROOT]/foo/right-priv)
 "#]])
         .run();
 
-    p.cargo("tree -p diamond")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree --depth public -p diamond")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 diamond v0.1.0 ([ROOT]/foo/diamond)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
@@ -2011,8 +2005,9 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
 "#]])
         .run();
 
-    p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
 
@@ -2029,8 +2024,9 @@ right-priv v0.1.0 ([ROOT]/foo/right-priv) (*)
 "#]])
         .run();
 
-    p.cargo("tree --invert dep")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree --depth public --invert dep")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)

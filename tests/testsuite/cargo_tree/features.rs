@@ -374,8 +374,9 @@ fn depth_public_no_features() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 ├── priv-defaultdep feature "default"
@@ -424,8 +425,9 @@ fn depth_public_transitive_features() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 ├── priv-defaultdep feature "default"
@@ -483,16 +485,18 @@ fn depth_public_cli() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 
 "#]])
         .run();
 
-    p.cargo("tree -e features --features pub-indirect")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree -e features --depth public --features pub-indirect")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 └── pub feature "default"
@@ -501,8 +505,9 @@ foo v0.1.0 ([ROOT]/foo)
 "#]])
         .run();
 
-    p.cargo("tree -e features --features priv-indirect")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
+    p.cargo("tree -e features --depth public --features priv-indirect")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 └── priv feature "default"
