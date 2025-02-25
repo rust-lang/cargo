@@ -2800,6 +2800,9 @@ Available binaries:
 [ERROR] no bin target named `crate2`
 
 [HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
 
 "#]])
         .run();
@@ -2810,6 +2813,9 @@ Available binaries:
 [ERROR] no bin target named `crate2`
 
 [HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
 
 "#]])
         .run();
@@ -2820,6 +2826,9 @@ Available binaries:
 [ERROR] no bin target named `crate2`
 
 [HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
 
 "#]])
         .run();
@@ -2828,8 +2837,10 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target matches pattern `pattern*`.
-Available bin targets:
-    crate1
+[HELP] Available bin in `pattern1` package:
+    pattern1
+[HELP] Available bin in `pattern2` package:
+    pattern2
 
 
 "#]])
@@ -2852,8 +2863,8 @@ Available bin targets:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2`.
-Available bin targets:
-    another
+[HELP] Available bin in `crate2` package:
+    crate2
 
 
 "#]])
