@@ -31,7 +31,7 @@
 //! [`CompileMode::RunCustomBuild`]: super::CompileMode
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, BuildRunner, Job, Unit, Work};
+use super::{fingerprint, get_dynamic_search_path, BuildRunner, Job, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
@@ -46,6 +46,7 @@ use cargo_util::paths;
 use cargo_util_schemas::manifest::RustVersion;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
@@ -74,11 +75,83 @@ pub enum Severity {
 
 pub type LogMessage = (Severity, String);
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum LibraryPath {
+    CargoArtifact(PathBuf),
+    External(PathBuf),
+}
+
+impl PartialOrd for LibraryPath {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for LibraryPath {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Self::External(p1), Self::External(p2))
+            | (Self::CargoArtifact(p1), Self::CargoArtifact(p2)) => p1.cmp(p2),
+            (Self::CargoArtifact(_), Self::External(_)) => std::cmp::Ordering::Less,
+            (Self::External(_), Self::CargoArtifact(_)) => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+impl LibraryPath {
+    fn new(p: PathBuf, script_out_dir: &Path, script_out_dir_when_generated: &Path) -> Self {
+        let search_path = get_dynamic_search_path(&p);
+        if search_path.starts_with(script_out_dir)
+            || search_path.starts_with(script_out_dir_when_generated)
+        {
+            Self::CargoArtifact(p)
+        } else {
+            Self::External(p)
+        }
+    }
+
+    pub fn into_path_buf(self) -> std::path::PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+
+    pub fn display(&self) -> std::path::Display<'_> {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p.display(),
+        }
+    }
+}
+
+impl AsRef<Path> for LibraryPath {
+    fn as_ref(&self) -> &Path {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
+impl AsRef<PathBuf> for LibraryPath {
+    fn as_ref(&self) -> &PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
+impl AsRef<OsStr> for LibraryPath {
+    fn as_ref(&self) -> &OsStr {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p.as_os_str(),
+        }
+    }
+}
+
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag.
-    pub library_paths: Vec<PathBuf>,
+    pub library_paths: Vec<LibraryPath>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
@@ -884,10 +957,16 @@ impl BuildOutput {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
                     library_links.extend(links.into_iter());
-                    library_paths.extend(paths.into_iter());
+                    library_paths.extend(paths.into_iter().map(|p| {
+                        LibraryPath::new(p, script_out_dir, script_out_dir_when_generated)
+                    }));
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
-                "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-link-search" => library_paths.push(LibraryPath::new(
+                    PathBuf::from(value),
+                    script_out_dir,
+                    script_out_dir_when_generated,
+                )),
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     if !targets.iter().any(|target| target.is_cdylib()) {
                         log_messages.push((
