@@ -72,6 +72,18 @@ impl Edges {
             indexes.push(edge)
         }
     }
+
+    fn all(&self) -> impl Iterator<Item = &Edge> + '_ {
+        self.0.values().flatten()
+    }
+
+    fn of_kind(&self, kind: &EdgeKind) -> &[Edge] {
+        self.0.get(kind).map(Vec::as_slice).unwrap_or_default()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 /// A graph of dependencies.
@@ -121,20 +133,16 @@ impl<'a> Graph<'a> {
 
     /// Returns a list of nodes the given node index points to for the given kind.
     pub fn edges(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
-        match self.edges[from].0.get(kind) {
-            Some(edges) => {
-                // Created a sorted list for consistent output.
-                let mut edges = edges.clone();
-                edges.sort_unstable_by(|a, b| self.nodes[a.node].cmp(&self.nodes[b.node]));
-                edges
-            }
-            None => Vec::new(),
-        }
+        let edges = self.edges[from].of_kind(kind);
+        // Created a sorted list for consistent output.
+        let mut edges = edges.to_owned();
+        edges.sort_unstable_by(|a, b| self.nodes[a.node()].cmp(&self.nodes[b.node()]));
+        edges
     }
 
     /// Returns `true` if the given node has any outgoing edges.
     pub fn has_outgoing_edges(&self, index: usize) -> bool {
-        !self.edges[index].0.is_empty()
+        !self.edges[index].is_empty()
     }
 
     /// Gets a node by index.
@@ -200,15 +208,13 @@ impl<'a> Graph<'a> {
             let new_from = new_graph.add_node(node);
             remap[index] = Some(new_from);
             // Visit dependencies.
-            for (_, edges) in &graph.edges[index].0 {
-                for edge in edges {
-                    let new_to_index = visit(graph, new_graph, remap, edge.node());
-                    let new_edge = Edge {
-                        kind: edge.kind(),
-                        node: new_to_index,
-                    };
-                    new_graph.edges[new_from].add_edge(new_edge);
-                }
+            for edge in graph.edges[index].all() {
+                let new_to_index = visit(graph, new_graph, remap, edge.node());
+                let new_edge = Edge {
+                    kind: edge.kind(),
+                    node: new_to_index,
+                };
+                new_graph.edges[new_from].add_edge(new_edge);
             }
             new_from
         }
@@ -225,14 +231,12 @@ impl<'a> Graph<'a> {
     pub fn invert(&mut self) {
         let mut new_edges = vec![Edges::new(); self.edges.len()];
         for (from_idx, node_edges) in self.edges.iter().enumerate() {
-            for (_, edges) in &node_edges.0 {
-                for edge in edges {
-                    let new_edge = Edge {
-                        kind: edge.kind(),
-                        node: from_idx,
-                    };
-                    new_edges[edge.node()].add_edge(new_edge);
-                }
+            for edge in node_edges.all() {
+                let new_edge = Edge {
+                    kind: edge.kind(),
+                    node: from_idx,
+                };
+                new_edges[edge.node()].add_edge(new_edge);
             }
         }
         self.edges = new_edges;
