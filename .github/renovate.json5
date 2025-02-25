@@ -8,8 +8,6 @@
   ignorePaths: [
     '**/tests/**',
   ],
-  // See rust-lang/cargo#13546 and openssl/openssl#23376 for the exclusion
-  ignoreDeps: ['openssl', 'openssl-src', 'openssl-sys'],
   customManagers: [
     {
       customType: 'regex',
