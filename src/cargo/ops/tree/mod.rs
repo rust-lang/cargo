@@ -282,7 +282,7 @@ fn print(
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
-        );
+        )?;
     }
 
     Ok(())
@@ -302,7 +302,7 @@ fn print_node<'a>(
     visited_deps: &mut HashSet<NodeId>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<NodeId>,
-) {
+) -> CargoResult<()> {
     let new = no_dedupe || visited_deps.insert(node_index);
 
     match prefix {
@@ -338,7 +338,7 @@ fn print_node<'a>(
     drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
-        return;
+        return Ok(());
     }
     print_stack.push(node_index);
 
@@ -362,9 +362,11 @@ fn print_node<'a>(
             levels_continue,
             print_stack,
             kind,
-        );
+        )?;
     }
     print_stack.pop();
+
+    Ok(())
 }
 
 /// Prints all the dependencies of a package for the given dependency kind.
@@ -382,10 +384,10 @@ fn print_dependencies<'a>(
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<NodeId>,
     kind: &EdgeKind,
-) {
+) -> CargoResult<()> {
     let deps = graph.edges_of_kind(node_index, kind);
     if deps.is_empty() {
-        return;
+        return Ok(());
     }
 
     let name = match kind {
@@ -413,7 +415,7 @@ fn print_dependencies<'a>(
 
     // Current level exceeds maximum display depth. Skip.
     if levels_continue.len() + 1 > max_display_depth as usize {
-        return;
+        return Ok(());
     }
 
     let mut it = deps
@@ -447,7 +449,9 @@ fn print_dependencies<'a>(
             visited_deps,
             levels_continue,
             print_stack,
-        );
+        )?;
         levels_continue.pop();
     }
+
+    Ok(())
 }
