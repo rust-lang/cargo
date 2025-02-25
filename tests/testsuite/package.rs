@@ -6493,6 +6493,110 @@ fn workspace_with_capitalized_member() {
 }
 
 #[cargo_test]
+fn workspace_with_renamed_member() {
+    let reg = registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["crates/*"]
+            "#,
+        )
+        .file(
+            "crates/val-json/Cargo.toml",
+            r#"
+            [package]
+            name = "obeli-sk-val-json"
+            version = "0.16.2"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+        "#,
+        )
+        .file("crates/val-json/src/lib.rs", "pub fn foo() {}")
+        .file(
+            "crates/concepts/Cargo.toml",
+            r#"
+            [package]
+            name = "obeli-sk-concepts"
+            version = "0.16.2"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            val-json = { package = "obeli-sk-val-json", path = "../val-json", version = "0.16.2" }
+        "#,
+        )
+        .file(
+            "crates/concepts/src/lib.rs",
+            "pub fn foo() { val_json::foo() }",
+        )
+        .file(
+            "crates/utils/Cargo.toml",
+            r#"
+            [package]
+            name = "obeli-sk-utils"
+            version = "0.16.2"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            concepts = { package = "obeli-sk-concepts", path = "../concepts", version = "0.16.2" }
+            val-json = { package = "obeli-sk-val-json", path = "../val-json", version = "0.16.2" }
+        "#,
+        )
+        .file(
+            "crates/utils/src/lib.rs",
+            "pub fn foo() { val_json::foo(); concepts::foo(); }",
+        )
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(reg.index_url())
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] obeli-sk-val-json v0.16.2 ([ROOT]/foo/crates/val-json)
+[PACKAGING] obeli-sk-concepts v0.16.2 ([ROOT]/foo/crates/concepts)
+[PACKAGING] obeli-sk-utils v0.16.2 ([ROOT]/foo/crates/utils)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] obeli-sk-val-json v0.16.2 ([ROOT]/foo/crates/val-json)
+[COMPILING] obeli-sk-val-json v0.16.2 ([ROOT]/foo/target/package/obeli-sk-val-json-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] obeli-sk-concepts v0.16.2 ([ROOT]/foo/crates/concepts)
+[UNPACKING] obeli-sk-val-json v0.16.2 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] obeli-sk-val-json v0.16.2
+[COMPILING] obeli-sk-concepts v0.16.2 ([ROOT]/foo/target/package/obeli-sk-concepts-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] obeli-sk-utils v0.16.2 ([ROOT]/foo/crates/utils)
+[UNPACKING] obeli-sk-concepts v0.16.2 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] obeli-sk-val-json v0.16.2
+[COMPILING] obeli-sk-concepts v0.16.2
+[COMPILING] obeli-sk-utils v0.16.2 ([ROOT]/foo/target/package/obeli-sk-utils-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn registry_not_in_publish_list() {
     let p = project()
         .file(
