@@ -247,15 +247,15 @@ impl<'a> UnitGenerator<'a, '_> {
         mode: CompileMode,
     ) -> CargoResult<Vec<Proposal<'a>>> {
         let is_glob = is_glob_pattern(target_name);
-        let proposals = if is_glob {
-            let pattern = build_glob(target_name)?;
-            let filter = |t: &Target| is_expected_kind(t) && pattern.matches(t.name());
-            self.filter_targets(filter, true, mode)
-        } else {
-            let filter = |t: &Target| t.name() == target_name && is_expected_kind(t);
-            self.filter_targets(filter, true, mode)
+        let pattern = build_glob(target_name)?;
+        let filter = |t: &Target| {
+            if is_glob {
+                is_expected_kind(t) && pattern.matches(t.name())
+            } else {
+                is_expected_kind(t) && t.name() == target_name
+            }
         };
-
+        let proposals = self.filter_targets(filter, true, mode);
         if proposals.is_empty() {
             let targets = self
                 .packages
