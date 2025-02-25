@@ -17,6 +17,7 @@ use crate::util::{closest_msg, CargoResult};
 
 use super::compile_filter::{CompileFilter, FilterRule, LibRule};
 use super::packages::build_glob;
+use super::Packages;
 
 /// A proposed target.
 ///
@@ -267,14 +268,37 @@ impl<'a> UnitGenerator<'a, '_> {
                 })
                 .collect::<Vec<_>>();
             let suggestion = closest_msg(target_name, targets.iter(), |t| t.name(), "target");
+            let targets_elsewhere = self.get_targets_from_other_packages(filter)?;
+            let need_append_targets_elsewhere = !targets_elsewhere.is_empty();
+            let append_targets_elsewhere = |msg: &mut String, prefix: &str| {
+                let mut available_msg = Vec::new();
+                for (package, targets) in targets_elsewhere {
+                    if !targets.is_empty() {
+                        available_msg.push(format!(
+                            "help: Available {target_desc} in `{package}` package:"
+                        ));
+                        for target in targets {
+                            available_msg.push(format!("    {target}"));
+                        }
+                    }
+                }
+                if !available_msg.is_empty() {
+                    write!(msg, "{prefix}{}", available_msg.join("\n"))?;
+                }
+                CargoResult::Ok(())
+            };
             if !suggestion.is_empty() {
-                anyhow::bail!(
+                let mut msg = String::new();
+                write!(
+                    msg,
                     "no {} target {} `{}`{}",
                     target_desc,
                     if is_glob { "matches pattern" } else { "named" },
                     target_name,
-                    suggestion
-                );
+                    suggestion,
+                )?;
+                append_targets_elsewhere(&mut msg, "\n")?;
+                anyhow::bail!(msg);
             } else {
                 let mut msg = String::new();
                 writeln!(
@@ -284,7 +308,9 @@ impl<'a> UnitGenerator<'a, '_> {
                     if is_glob { "matches pattern" } else { "named" },
                     target_name,
                 )?;
-                if !targets.is_empty() {
+
+                append_targets_elsewhere(&mut msg, "")?;
+                if !targets.is_empty() && !need_append_targets_elsewhere {
                     writeln!(msg, "Available {} targets:", target_desc)?;
                     for target in targets {
                         writeln!(msg, "    {}", target.name())?;
@@ -294,6 +320,32 @@ impl<'a> UnitGenerator<'a, '_> {
             }
         }
         Ok(proposals)
+    }
+
+    fn get_targets_from_other_packages(
+        &self,
+        filter_fn: impl Fn(&Target) -> bool,
+    ) -> CargoResult<Vec<(&str, Vec<&str>)>> {
+        let packages = Packages::All(Vec::new()).get_packages(self.ws)?;
+        let targets = packages
+            .into_iter()
+            .filter_map(|pkg| {
+                let mut targets: Vec<_> = pkg
+                    .manifest()
+                    .targets()
+                    .iter()
+                    .filter_map(|target| filter_fn(target).then(|| target.name()))
+                    .collect();
+                if targets.is_empty() {
+                    None
+                } else {
+                    targets.sort();
+                    Some((pkg.name().as_str(), targets))
+                }
+            })
+            .collect();
+
+        Ok(targets)
     }
 
     /// Returns a list of proposed targets based on command-line target selection flags.
