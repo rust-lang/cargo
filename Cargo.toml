@@ -69,8 +69,8 @@ libloading = "0.8.6"
 memchr = "2.7.4"
 miow = "0.6.0"
 opener = "0.7.2"
-openssl = "=0.10.57" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
-openssl-sys = "=0.9.92" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
+openssl = "0.10.57"
+openssl-sys = "0.9.92"
 os_info = { version = "3.10.0", default-features = false }
 pasetors = { version = "0.7.2", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
@@ -234,7 +234,6 @@ cargo-credential-macos-keychain.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = { workspace = true, optional = true }
-openssl-sys = { workspace = true, optional = true } # HACK: for pinning to openssl v1.
 
 [target.'cfg(windows)'.dependencies]
 cargo-credential-wincred.workspace = true
