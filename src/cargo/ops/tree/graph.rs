@@ -26,6 +26,22 @@ pub enum Node {
     },
 }
 
+#[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
+pub struct Edge {
+    kind: EdgeKind,
+    node: usize,
+}
+
+impl Edge {
+    pub fn kind(&self) -> EdgeKind {
+        self.kind
+    }
+
+    pub fn node(&self) -> usize {
+        self.node
+    }
+}
+
 /// The kind of edge, for separating dependencies into different sections.
 #[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
 pub enum EdgeKind {
@@ -42,7 +58,7 @@ pub enum EdgeKind {
 /// The value is a `Vec` because each edge kind can have multiple outgoing
 /// edges. For example, package "foo" can have multiple normal dependencies.
 #[derive(Clone)]
-struct Edges(HashMap<EdgeKind, Vec<usize>>);
+struct Edges(HashMap<EdgeKind, Vec<Edge>>);
 
 impl Edges {
     fn new() -> Edges {
@@ -50,10 +66,10 @@ impl Edges {
     }
 
     /// Adds an edge pointing to the given node.
-    fn add_edge(&mut self, kind: EdgeKind, index: usize) {
-        let indexes = self.0.entry(kind).or_default();
-        if !indexes.contains(&index) {
-            indexes.push(index)
+    fn add_edge(&mut self, edge: Edge) {
+        let indexes = self.0.entry(edge.kind()).or_default();
+        if !indexes.contains(&edge) {
+            indexes.push(edge)
         }
     }
 }
@@ -104,13 +120,13 @@ impl<'a> Graph<'a> {
     }
 
     /// Returns a list of nodes the given node index points to for the given kind.
-    pub fn connected_nodes(&self, from: usize, kind: &EdgeKind) -> Vec<usize> {
+    pub fn edges(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
         match self.edges[from].0.get(kind) {
-            Some(indexes) => {
+            Some(edges) => {
                 // Created a sorted list for consistent output.
-                let mut indexes = indexes.clone();
-                indexes.sort_unstable_by(|a, b| self.nodes[*a].cmp(&self.nodes[*b]));
-                indexes
+                let mut edges = edges.clone();
+                edges.sort_unstable_by(|a, b| self.nodes[a.node].cmp(&self.nodes[b.node]));
+                edges
             }
             None => Vec::new(),
         }
@@ -184,10 +200,14 @@ impl<'a> Graph<'a> {
             let new_from = new_graph.add_node(node);
             remap[index] = Some(new_from);
             // Visit dependencies.
-            for (edge_kind, edge_indexes) in &graph.edges[index].0 {
-                for edge_index in edge_indexes {
-                    let new_to_index = visit(graph, new_graph, remap, *edge_index);
-                    new_graph.edges[new_from].add_edge(*edge_kind, new_to_index);
+            for (_, edges) in &graph.edges[index].0 {
+                for edge in edges {
+                    let new_to_index = visit(graph, new_graph, remap, edge.node());
+                    let new_edge = Edge {
+                        kind: edge.kind(),
+                        node: new_to_index,
+                    };
+                    new_graph.edges[new_from].add_edge(new_edge);
                 }
             }
             new_from
@@ -205,9 +225,13 @@ impl<'a> Graph<'a> {
     pub fn invert(&mut self) {
         let mut new_edges = vec![Edges::new(); self.edges.len()];
         for (from_idx, node_edges) in self.edges.iter().enumerate() {
-            for (edge_kind, edge_indexes) in &node_edges.0 {
-                for edge_index in edge_indexes {
-                    new_edges[*edge_index].add_edge(*edge_kind, from_idx);
+            for (_, edges) in &node_edges.0 {
+                for edge in edges {
+                    let new_edge = Edge {
+                        kind: edge.kind(),
+                        node: from_idx,
+                    };
+                    new_edges[edge.node()].add_edge(new_edge);
                 }
             }
         }
@@ -454,10 +478,18 @@ fn add_pkg(
                 }
                 if !dep.uses_default_features() && dep.features().is_empty() {
                     // No features, use a direct connection.
-                    graph.edges[from_index].add_edge(EdgeKind::Dep(dep.kind()), dep_index);
+                    let new_edge = Edge {
+                        kind: EdgeKind::Dep(dep.kind()),
+                        node: dep_index,
+                    };
+                    graph.edges[from_index].add_edge(new_edge);
                 }
             } else {
-                graph.edges[from_index].add_edge(EdgeKind::Dep(dep.kind()), dep_index);
+                let new_edge = Edge {
+                    kind: EdgeKind::Dep(dep.kind()),
+                    node: dep_index,
+                };
+                graph.edges[from_index].add_edge(new_edge);
             }
         }
     }
@@ -500,9 +532,17 @@ fn add_feature(
         None => (true, graph.add_node(node)),
     };
     if let Some(from) = from {
-        graph.edges[from].add_edge(kind, node_index);
+        let from_edge = Edge {
+            kind,
+            node: node_index,
+        };
+        graph.edges[from].add_edge(from_edge);
     }
-    graph.edges[node_index].add_edge(EdgeKind::Feature, to);
+    let to_edge = Edge {
+        kind: EdgeKind::Feature,
+        node: to,
+    };
+    graph.edges[node_index].add_edge(to_edge);
     (missing, node_index)
 }
 
