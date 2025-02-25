@@ -391,6 +391,34 @@ Caused by:
 }
 
 #[cargo_test]
+fn syntactically_invalid_token() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", "\t\n悪")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  Token for registry `alternative` is invalid (defined in environment variable `CARGO_REGISTRIES_ALTERNATIVE_TOKEN`)
+
+Caused by:
+  token contains invalid characters.
+  Only printable ASCII characters are allowed as it is sent in a HTTPS header.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn incorrect_token_git() {
     let _registry = RegistryBuilder::new()
         .alternative()
