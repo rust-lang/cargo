@@ -383,7 +383,7 @@ fn print_dependencies<'a>(
     print_stack: &mut Vec<usize>,
     kind: &EdgeKind,
 ) {
-    let deps = graph.connected_nodes(node_index, kind);
+    let deps = graph.edges(node_index, kind);
     if deps.is_empty() {
         return;
     }
@@ -420,7 +420,7 @@ fn print_dependencies<'a>(
         .iter()
         .filter(|dep| {
             // Filter out packages to prune.
-            match graph.node(**dep) {
+            match graph.node(dep.node()) {
                 Node::Package { package_id, .. } => {
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
@@ -437,7 +437,7 @@ fn print_dependencies<'a>(
         print_node(
             ws,
             graph,
-            *dependency,
+            dependency.node(),
             format,
             symbols,
             pkgs_to_prune,
