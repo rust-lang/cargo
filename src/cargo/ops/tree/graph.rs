@@ -205,9 +205,9 @@ impl<'a> Graph<'a> {
     pub fn invert(&mut self) {
         let mut new_edges = vec![Edges::new(); self.edges.len()];
         for (from_idx, node_edges) in self.edges.iter().enumerate() {
-            for (kind, edges) in &node_edges.0 {
-                for edge_idx in edges {
-                    new_edges[*edge_idx].add_edge(*kind, from_idx);
+            for (edge_kind, edge_indexes) in &node_edges.0 {
+                for edge_index in edge_indexes {
+                    new_edges[*edge_index].add_edge(*edge_kind, from_idx);
                 }
             }
         }
