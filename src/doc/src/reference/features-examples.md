@@ -90,7 +90,7 @@ Some packages provide bindings to common C libraries (sometimes referred to as
 C library installed on the system, or to build it from source. For example,
 the [`openssl`] package has a [`vendored` feature][openssl-vendored] which
 enables the corresponding `vendored` feature of [`openssl-sys`]. The
-`openssl-sys` build script has some [conditional logic][openssl-sys-cfg] which
+`openssl-sys` [build script] has some [conditional logic][openssl-sys-cfg] which
 causes it to build from a local copy of the OpenSSL source code instead of
 using the version from the system.
 
@@ -162,7 +162,6 @@ features.
 The [`simd_support` feature][rand-simd_support] of the [`rand`] package is another example,
 which relies on a dependency that only builds on the nightly channel.
 
-[`wasm-bindgen`]: https://crates.io/crates/wasm-bindgen
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [wasm-bindgen-nightly]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/Cargo.toml#L27
 [wasm-bindgen-unsize]: https://github.com/rustwasm/wasm-bindgen/blob/0.2.69/src/closure.rs#L257-L269
