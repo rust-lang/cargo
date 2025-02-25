@@ -280,7 +280,7 @@ pub fn build<'a>(
 ) -> CargoResult<Graph<'a>> {
     let mut graph = Graph::new(package_map);
     let mut members_with_features = ws.members_with_features(specs, cli_features)?;
-    members_with_features.sort_unstable_by_key(|e| e.0.package_id());
+    members_with_features.sort_unstable_by_key(|(member, _)| member.package_id());
     for (member, cli_features) in members_with_features {
         let member_id = member.package_id();
         let features_for = FeaturesFor::from_for_host(member.proc_macro());
