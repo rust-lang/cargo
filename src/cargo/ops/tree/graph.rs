@@ -10,6 +10,17 @@ use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::CargoResult;
 use std::collections::{HashMap, HashSet};
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct NodeId {
+    index: usize,
+}
+
+impl NodeId {
+    fn with_index(index: usize) -> Self {
+        Self { index }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Node {
     Package {
@@ -20,7 +31,7 @@ pub enum Node {
     },
     Feature {
         /// Index of the package node this feature is for.
-        node_index: usize,
+        node_index: NodeId,
         /// Name of the feature.
         name: InternedString,
     },
@@ -29,7 +40,7 @@ pub enum Node {
 #[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
 pub struct Edge {
     kind: EdgeKind,
-    node: usize,
+    node: NodeId,
 }
 
 impl Edge {
@@ -37,7 +48,7 @@ impl Edge {
         self.kind
     }
 
-    pub fn node(&self) -> usize {
+    pub fn node(&self) -> NodeId {
         self.node
     }
 }
@@ -94,19 +105,19 @@ pub struct Graph<'a> {
     /// sync.
     edges: Vec<Edges>,
     /// Index maps a node to an index, for fast lookup.
-    index: HashMap<Node, usize>,
+    index: HashMap<Node, NodeId>,
     /// Map for looking up packages.
     package_map: HashMap<PackageId, &'a Package>,
     /// Set of indexes of feature nodes that were added via the command-line.
     ///
     /// For example `--features foo` will mark the "foo" node here.
-    cli_features: HashSet<usize>,
+    cli_features: HashSet<NodeId>,
     /// Map of dependency names, used for building internal feature map for
     /// `dep_name/feat_name` syntax.
     ///
     /// Key is the index of a package node, value is a map of `dep_name` to a
     /// set of `(pkg_node_index, is_optional)`.
-    dep_name_map: HashMap<usize, HashMap<InternedString, HashSet<(usize, bool)>>>,
+    dep_name_map: HashMap<NodeId, HashMap<InternedString, HashSet<(NodeId, bool)>>>,
 }
 
 impl<'a> Graph<'a> {
@@ -122,8 +133,8 @@ impl<'a> Graph<'a> {
     }
 
     /// Adds a new node to the graph, returning its new index.
-    fn add_node(&mut self, node: Node) -> usize {
-        let from_index = self.nodes.len();
+    fn add_node(&mut self, node: Node) -> NodeId {
+        let from_index = NodeId::with_index(self.nodes.len());
         self.nodes.push(node);
         self.edges.push(Edges::new());
         self.index.insert(self.node(from_index).clone(), from_index);
@@ -131,7 +142,7 @@ impl<'a> Graph<'a> {
     }
 
     /// Returns a list of nodes the given node index points to for the given kind.
-    pub fn edges_of_kind(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
+    pub fn edges_of_kind(&self, from: NodeId, kind: &EdgeKind) -> Vec<Edge> {
         let edges = self.edges(from).of_kind(kind);
         // Created a sorted list for consistent output.
         let mut edges = edges.to_owned();
@@ -139,27 +150,27 @@ impl<'a> Graph<'a> {
         edges
     }
 
-    fn edges(&self, from: usize) -> &Edges {
-        &self.edges[from]
+    fn edges(&self, from: NodeId) -> &Edges {
+        &self.edges[from.index]
     }
 
-    fn edges_mut(&mut self, from: usize) -> &mut Edges {
-        &mut self.edges[from]
+    fn edges_mut(&mut self, from: NodeId) -> &mut Edges {
+        &mut self.edges[from.index]
     }
 
     /// Returns `true` if the given node has any outgoing edges.
-    pub fn has_outgoing_edges(&self, index: usize) -> bool {
+    pub fn has_outgoing_edges(&self, index: NodeId) -> bool {
         !self.edges(index).is_empty()
     }
 
     /// Gets a node by index.
-    pub fn node(&self, index: usize) -> &Node {
-        &self.nodes[index]
+    pub fn node(&self, index: NodeId) -> &Node {
+        &self.nodes[index.index]
     }
 
     /// Given a slice of `PackageIds`, returns the indexes of all nodes that match.
-    pub fn indexes_from_ids(&self, package_ids: &[PackageId]) -> Vec<usize> {
-        let mut result: Vec<(&Node, usize)> = self
+    pub fn indexes_from_ids(&self, package_ids: &[PackageId]) -> Vec<NodeId> {
+        let mut result: Vec<(&Node, NodeId)> = self
             .nodes
             .iter()
             .enumerate()
@@ -167,7 +178,7 @@ impl<'a> Graph<'a> {
                 Node::Package { package_id, .. } => package_ids.contains(package_id),
                 _ => false,
             })
-            .map(|(i, node)| (node, i))
+            .map(|(i, node)| (node, NodeId::with_index(i)))
             .collect();
         // Sort for consistent output (the same command should always return
         // the same output). "unstable" since nodes should always be unique.
@@ -179,7 +190,7 @@ impl<'a> Graph<'a> {
         self.package_map[&id]
     }
 
-    fn package_id_for_index(&self, index: usize) -> PackageId {
+    fn package_id_for_index(&self, index: NodeId) -> PackageId {
         match self.node(index) {
             Node::Package { package_id, .. } => *package_id,
             Node::Feature { .. } => panic!("unexpected feature node"),
@@ -188,32 +199,32 @@ impl<'a> Graph<'a> {
 
     /// Returns `true` if the given feature node index is a feature enabled
     /// via the command-line.
-    pub fn is_cli_feature(&self, index: usize) -> bool {
+    pub fn is_cli_feature(&self, index: NodeId) -> bool {
         self.cli_features.contains(&index)
     }
 
     /// Returns a new graph by removing all nodes not reachable from the
     /// given nodes.
-    pub fn from_reachable(&self, roots: &[usize]) -> Graph<'a> {
+    pub fn from_reachable(&self, roots: &[NodeId]) -> Graph<'a> {
         // Graph built with features does not (yet) support --duplicates.
         assert!(self.dep_name_map.is_empty());
         let mut new_graph = Graph::new(self.package_map.clone());
         // Maps old index to new index. None if not yet visited.
-        let mut remap: Vec<Option<usize>> = vec![None; self.nodes.len()];
+        let mut remap: Vec<Option<NodeId>> = vec![None; self.nodes.len()];
 
         fn visit(
             graph: &Graph<'_>,
             new_graph: &mut Graph<'_>,
-            remap: &mut Vec<Option<usize>>,
-            index: usize,
-        ) -> usize {
-            if let Some(new_index) = remap[index] {
+            remap: &mut Vec<Option<NodeId>>,
+            index: NodeId,
+        ) -> NodeId {
+            if let Some(new_index) = remap[index.index] {
                 // Already visited.
                 return new_index;
             }
             let node = graph.node(index).clone();
             let new_from = new_graph.add_node(node);
-            remap[index] = Some(new_from);
+            remap[index.index] = Some(new_from);
             // Visit dependencies.
             for edge in graph.edges(index).all() {
                 let new_to_index = visit(graph, new_graph, remap, edge.node());
@@ -241,9 +252,9 @@ impl<'a> Graph<'a> {
             for edge in node_edges.all() {
                 let new_edge = Edge {
                     kind: edge.kind(),
-                    node: from_idx,
+                    node: NodeId::with_index(from_idx),
                 };
-                new_edges[edge.node()].add_edge(new_edge);
+                new_edges[edge.node().index].add_edge(new_edge);
             }
         }
         self.edges = new_edges;
@@ -251,22 +262,22 @@ impl<'a> Graph<'a> {
 
     /// Returns a list of nodes that are considered "duplicates" (same package
     /// name, with different versions/features/source/etc.).
-    pub fn find_duplicates(&self) -> Vec<usize> {
+    pub fn find_duplicates(&self) -> Vec<NodeId> {
         // Graph built with features does not (yet) support --duplicates.
         assert!(self.dep_name_map.is_empty());
 
-        // Collect a map of package name to Vec<(&Node, usize)>.
+        // Collect a map of package name to Vec<(&Node, NodeId)>.
         let mut packages = HashMap::new();
         for (i, node) in self.nodes.iter().enumerate() {
             if let Node::Package { package_id, .. } = node {
                 packages
                     .entry(package_id.name())
                     .or_insert_with(Vec::new)
-                    .push((node, i));
+                    .push((node, NodeId::with_index(i)));
             }
         }
 
-        let mut dupes: Vec<(&Node, usize)> = packages
+        let mut dupes: Vec<(&Node, NodeId)> = packages
             .into_iter()
             .filter(|(_name, indexes)| {
                 indexes
@@ -356,7 +367,7 @@ fn add_pkg(
     target_data: &RustcTargetData<'_>,
     requested_kind: CompileKind,
     opts: &TreeOptions,
-) -> usize {
+) -> NodeId {
     let node_features = resolved_features.activated_features(package_id, features_for);
     let node_kind = match features_for {
         FeaturesFor::HostDep => CompileKind::Host,
@@ -373,7 +384,7 @@ fn add_pkg(
     }
     let from_index = graph.add_node(node);
     // Compute the dep name map which is later used for foo/bar feature lookups.
-    let mut dep_name_map: HashMap<InternedString, HashSet<(usize, bool)>> = HashMap::new();
+    let mut dep_name_map: HashMap<InternedString, HashSet<(NodeId, bool)>> = HashMap::new();
     let mut deps: Vec<_> = resolve.deps(package_id).collect();
     deps.sort_unstable_by_key(|(dep_id, _)| *dep_id);
     let show_all_targets = opts.target == super::Target::All;
@@ -512,9 +523,9 @@ fn add_pkg(
 fn add_feature(
     graph: &mut Graph<'_>,
     name: InternedString,
-    from: Option<usize>,
+    from: Option<NodeId>,
     to: Edge,
-) -> (bool, usize) {
+) -> (bool, NodeId) {
     // `to` *must* point to a package node.
     assert!(matches! {graph.node(to.node()), Node::Package{..}});
     let node = Node::Feature {
@@ -547,7 +558,7 @@ fn add_feature(
 /// `--invert`.
 fn add_cli_features(
     graph: &mut Graph<'_>,
-    package_index: usize,
+    package_index: NodeId,
     cli_features: &CliFeatures,
     feature_map: &FeatureMap,
 ) {
@@ -596,7 +607,7 @@ fn add_cli_features(
                             "missing dep graph connection for CLI feature `{}` for member {:?}\n\
                              Please file a bug report at https://github.com/rust-lang/cargo/issues",
                             fv,
-                            graph.nodes.get(package_index)
+                            graph.nodes.get(package_index.index)
                         );
                     }
                 };
@@ -626,7 +637,7 @@ fn add_cli_features(
 /// for every package.
 fn add_internal_features(graph: &mut Graph<'_>, resolve: &Resolve) {
     // Collect features already activated by dependencies or command-line.
-    let feature_nodes: Vec<(PackageId, usize, usize, InternedString)> = graph
+    let feature_nodes: Vec<(PackageId, NodeId, NodeId, InternedString)> = graph
         .nodes
         .iter()
         .enumerate()
@@ -634,7 +645,7 @@ fn add_internal_features(graph: &mut Graph<'_>, resolve: &Resolve) {
             Node::Package { .. } => None,
             Node::Feature { node_index, name } => {
                 let package_id = graph.package_id_for_index(*node_index);
-                Some((package_id, *node_index, i, *name))
+                Some((package_id, *node_index, NodeId::with_index(i), *name))
             }
         })
         .collect();
@@ -660,8 +671,8 @@ fn add_feature_rec(
     resolve: &Resolve,
     feature_name: InternedString,
     package_id: PackageId,
-    from: usize,
-    package_index: usize,
+    from: NodeId,
+    package_index: NodeId,
 ) {
     let feature_map = resolve.summary(package_id).features();
     let Some(fvs) = feature_map.get(&feature_name) else {
