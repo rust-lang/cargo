@@ -419,14 +419,14 @@ fn print_dependencies<'a>(
         }
     }
 
-    let (max_display_depth, filter_non_workspace_member) = match display_depth {
-        DisplayDepth::MaxDisplayDepth(max) => (max, false),
-        DisplayDepth::Workspace => (u32::MAX, true),
+    let (max_display_depth, filter_non_workspace_member, filter_private) = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => (max, false, false),
+        DisplayDepth::Workspace => (u32::MAX, true, false),
         DisplayDepth::Public => {
             if !ws.gctx().cli_unstable().unstable_options {
                 anyhow::bail!("`--depth public` requires `-Zunstable-options`")
             }
-            (u32::MAX, false)
+            (u32::MAX, false, true)
         }
     };
 
@@ -444,9 +444,17 @@ fn print_dependencies<'a>(
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
                     }
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
                     !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
-                _ => true,
+                Node::Feature { .. } => {
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
+                    true
+                }
             }
         })
         .peekable();

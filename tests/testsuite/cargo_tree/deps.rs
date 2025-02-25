@@ -1987,7 +1987,6 @@ left-pub v0.1.0 ([ROOT]/foo/left-pub)
         .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 right-priv v0.1.0 ([ROOT]/foo/right-priv)
-└── dep v0.1.0 ([ROOT]/foo/dep)
 
 "#]])
         .run();
@@ -2000,7 +1999,6 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
 │   └── dep v0.1.0 ([ROOT]/foo/dep)
 └── right-priv v0.1.0 ([ROOT]/foo/right-priv)
-    └── dep v0.1.0 ([ROOT]/foo/dep)
 
 "#]])
         .run();
@@ -2015,7 +2013,6 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
 │   └── dep v0.1.0 ([ROOT]/foo/dep)
 └── right-priv v0.1.0 ([ROOT]/foo/right-priv)
-    └── dep v0.1.0 ([ROOT]/foo/dep)
 
 left-pub v0.1.0 ([ROOT]/foo/left-pub) (*)
 
@@ -2029,9 +2026,7 @@ right-priv v0.1.0 ([ROOT]/foo/right-priv) (*)
         .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
-├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
-│   └── diamond v0.1.0 ([ROOT]/foo/diamond)
-└── right-priv v0.1.0 ([ROOT]/foo/right-priv)
+└── left-pub v0.1.0 ([ROOT]/foo/left-pub)
     └── diamond v0.1.0 ([ROOT]/foo/diamond)
 
 "#]])

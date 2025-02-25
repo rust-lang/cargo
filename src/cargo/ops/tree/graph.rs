@@ -78,6 +78,7 @@ impl Node {
 pub struct Edge {
     kind: EdgeKind,
     node: NodeId,
+    public: bool,
 }
 
 impl Edge {
@@ -87,6 +88,10 @@ impl Edge {
 
     pub fn node(&self) -> NodeId {
         self.node
+    }
+
+    pub fn public(&self) -> bool {
+        self.public
     }
 }
 
@@ -105,7 +110,7 @@ pub enum EdgeKind {
 ///
 /// The value is a `Vec` because each edge kind can have multiple outgoing
 /// edges. For example, package "foo" can have multiple normal dependencies.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Edges(HashMap<EdgeKind, Vec<Edge>>);
 
 impl Edges {
@@ -135,6 +140,7 @@ impl Edges {
 }
 
 /// A graph of dependencies.
+#[derive(Debug)]
 pub struct Graph<'a> {
     nodes: Vec<Node>,
     /// The indexes of `edges` correspond to the `nodes`. That is, `edges[0]`
@@ -268,6 +274,7 @@ impl<'a> Graph<'a> {
                 let new_edge = Edge {
                     kind: edge.kind(),
                     node: new_to_index,
+                    public: edge.public(),
                 };
                 new_graph.edges_mut(new_from).add_edge(new_edge);
             }
@@ -290,6 +297,7 @@ impl<'a> Graph<'a> {
                 let new_edge = Edge {
                     kind: edge.kind(),
                     node: NodeId::new(from_idx, self.nodes[from_idx].name()),
+                    public: edge.public(),
                 };
                 new_edges[edge.node().index].add_edge(new_edge);
             }
@@ -514,6 +522,7 @@ fn add_pkg(
             let new_edge = Edge {
                 kind: EdgeKind::Dep(dep.kind()),
                 node: dep_index,
+                public: dep.is_public(),
             };
             if opts.graph_features {
                 // Add the dependency node with feature nodes in-between.
@@ -577,12 +586,14 @@ fn add_feature(
         let from_edge = Edge {
             kind: to.kind(),
             node: node_index,
+            public: to.public(),
         };
         graph.edges_mut(from).add_edge(from_edge);
     }
     let to_edge = Edge {
         kind: EdgeKind::Feature,
         node: to.node(),
+        public: true,
     };
     graph.edges_mut(node_index).add_edge(to_edge);
     (missing, node_index)
@@ -620,6 +631,7 @@ fn add_cli_features(
                 let feature_edge = Edge {
                     kind: EdgeKind::Feature,
                     node: package_index,
+                    public: true,
                 };
                 let index = add_feature(graph, feature, None, feature_edge).1;
                 graph.cli_features.insert(index);
@@ -654,6 +666,7 @@ fn add_cli_features(
                         let feature_edge = Edge {
                             kind: EdgeKind::Feature,
                             node: package_index,
+                            public: true,
                         };
                         let index = add_feature(graph, dep_name, None, feature_edge).1;
                         graph.cli_features.insert(index);
@@ -661,6 +674,7 @@ fn add_cli_features(
                     let dep_edge = Edge {
                         kind: EdgeKind::Feature,
                         node: dep_index,
+                        public: true,
                     };
                     let index = add_feature(graph, dep_feature, None, dep_edge).1;
                     graph.cli_features.insert(index);
@@ -721,6 +735,7 @@ fn add_feature_rec(
                 let feature_edge = Edge {
                     kind: EdgeKind::Feature,
                     node: package_index,
+                    public: true,
                 };
                 let (missing, feat_index) = add_feature(graph, *dep_name, Some(from), feature_edge);
                 // Don't recursive if the edge already exists to deal with cycles.
@@ -771,12 +786,14 @@ fn add_feature_rec(
                         let feature_edge = Edge {
                             kind: EdgeKind::Feature,
                             node: package_index,
+                            public: true,
                         };
                         add_feature(graph, *dep_name, Some(from), feature_edge);
                     }
                     let dep_edge = Edge {
                         kind: EdgeKind::Feature,
                         node: dep_index,
+                        public: true,
                     };
                     let (missing, feat_index) =
                         add_feature(graph, *dep_feature, Some(from), dep_edge);

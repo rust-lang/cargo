@@ -379,8 +379,6 @@ fn depth_public_no_features() {
         .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-├── priv-defaultdep feature "default"
-│   └── priv-defaultdep v1.0.0
 └── pub-defaultdep feature "default"
     └── pub-defaultdep v1.0.0
 
@@ -432,10 +430,6 @@ fn depth_public_transitive_features() {
 foo v0.1.0 ([ROOT]/foo)
 ├── priv-defaultdep feature "default"
 │   ├── priv-defaultdep v1.0.0
-│   │   └── optdep feature "default"
-│   │       ├── optdep v1.0.0
-│   │       └── optdep feature "f"
-│   │           └── optdep v1.0.0
 │   └── priv-defaultdep feature "f1"
 │       ├── priv-defaultdep v1.0.0 (*)
 │       └── priv-defaultdep feature "f2"
@@ -444,7 +438,10 @@ foo v0.1.0 ([ROOT]/foo)
 │               └── priv-defaultdep v1.0.0 (*)
 └── pub-defaultdep feature "default"
     ├── pub-defaultdep v1.0.0
-    │   └── optdep feature "default" (*)
+    │   └── optdep feature "default"
+    │       ├── optdep v1.0.0
+    │       └── optdep feature "f"
+    │           └── optdep v1.0.0
     └── pub-defaultdep feature "f1"
         ├── pub-defaultdep v1.0.0 (*)
         └── pub-defaultdep feature "f2"
@@ -510,8 +507,6 @@ foo v0.1.0 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── priv feature "default"
-    └── priv v1.0.0
 
 "#]])
         .run();
