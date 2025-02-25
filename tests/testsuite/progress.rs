@@ -53,28 +53,19 @@ fn bad_progress_config_missing_width() {
 }
 
 #[cargo_test]
-fn bad_progress_config_missing_when() {
+fn default_progress_is_auto() {
     let p = project()
         .file(
             ".cargo/config.toml",
             r#"
             [term]
-            progress = { width = 1000 }
+            progress = { width = 100 }
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `term.progress`
-
-Caused by:
-  missing field `when`
-
-"#]])
-        .run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]

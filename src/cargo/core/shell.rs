@@ -122,6 +122,23 @@ impl Shell {
         }
     }
 
+    /// Returns `true` if progress reporting is available on the current terminal.
+    ///
+    /// Determines whether the terminal supports OSC 9;4 progress notifications.
+    /// In addition, it verifies that the stderr is attached to a terminal (TTY).
+    #[allow(clippy::disallowed_methods)] // Directly read environment variables to detect terminal
+    pub fn is_progress_report_available(&self) -> bool {
+        let windows_terminal = std::env::var("WT_SESSION").is_ok();
+        let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());
+        let wezterm = std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into());
+
+        if let ShellOut::Stream { stderr_tty, .. } = self.output {
+            (windows_terminal || conemu || wezterm) && stderr_tty
+        } else {
+            false
+        }
+    }
+
     /// Gets a reference to the underlying stdout writer.
     pub fn out(&mut self) -> &mut dyn Write {
         if self.needs_clear {
