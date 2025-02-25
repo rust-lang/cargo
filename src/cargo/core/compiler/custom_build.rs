@@ -1124,7 +1124,7 @@ fn prepare_metabuild(
     let path = unit
         .pkg
         .manifest()
-        .metabuild_path(build_runner.bcx.ws.target_dir());
+        .metabuild_path(build_runner.bcx.ws.build_dir());
     paths::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())

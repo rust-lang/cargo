@@ -759,6 +759,7 @@ unstable_cli_options!(
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     bindeps: bool = ("Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates"),
+    build_dir: bool = ("Enable the `build.build-dir` option in .cargo/config.toml file"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
@@ -1264,6 +1265,7 @@ impl CliUnstable {
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,
+            "build-dir" => self.build_dir = parse_empty(k, v)?,
             "build-std" => self.build_std = Some(parse_list(v)),
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,

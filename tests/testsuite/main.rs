@@ -11,6 +11,7 @@ mod bad_manifest_path;
 mod bench;
 mod binary_name;
 mod build;
+mod build_dir;
 mod build_plan;
 mod build_script;
 mod build_script_env;
