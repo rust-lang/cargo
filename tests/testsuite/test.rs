@@ -3909,22 +3909,22 @@ test env_test ... ok
         .run();
 
     // Check that `cargo test` propagates the environment's $CARGO
-    let rustc = cargo_util::paths::resolve_executable("rustc".as_ref())
-        .unwrap()
-        .canonicalize()
-        .unwrap();
-    let stderr_rustc = format!(
+    let cargo_exe = cargo_test_support::cargo_exe();
+    let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
+    std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
+    let stderr_other_cargo = format!(
         "{}[EXE]",
-        rustc
+        other_cargo_path
+            .canonicalize()
+            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()
-            .replace(rustc_host, "[HOST_TARGET]")
+            .replace(p.root().parent().unwrap().to_str().unwrap(), "[ROOT]")
     );
-    p.cargo("test --lib -- --nocapture")
-        // we use rustc since $CARGO is only used if it points to a path that exists
-        .env(cargo::CARGO_ENV, rustc)
-        .with_stderr_contains(stderr_rustc)
+    p.process(other_cargo_path)
+        .args(&["test", "--lib", "--", "--nocapture"])
+        .with_stderr_contains(stderr_other_cargo)
         .with_stdout_data(str![[r#"
 ...
 test env_test ... ok
