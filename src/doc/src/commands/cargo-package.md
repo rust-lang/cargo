@@ -22,8 +22,8 @@ stored in the `target/package` directory. This performs the following steps:
     - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
       manifest.
     - `Cargo.lock` is always included. When missing, a new lock file will be
-      generated. [cargo-install(1)](cargo-install.html) will use the packaged lock file if
-      the `--locked` flag is used.
+      generated unless the `--exclude-lockfile` flag is used. [cargo-install(1)](cargo-install.html)
+      will use the packaged lock file if the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
@@ -92,6 +92,13 @@ or the license).</dd>
 
 <dt class="option-term" id="option-cargo-package---allow-dirty"><a class="option-anchor" href="#option-cargo-package---allow-dirty"></a><code>--allow-dirty</code></dt>
 <dd class="option-desc">Allow working directories with uncommitted VCS changes to be packaged.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---exclude-lockfile"><a class="option-anchor" href="#option-cargo-package---exclude-lockfile"></a><code>--exclude-lockfile</code></dt>
+<dd class="option-desc">Don’t include the lock file when packaging.</p>
+<p>This flag is not for general use.
+Some tools may expect a lock file to be present (e.g. <code>cargo install --locked</code>).
+Consider other options before using this.</dd>
 
 
 <dt class="option-term" id="option-cargo-package---index"><a class="option-anchor" href="#option-cargo-package---index"></a><code>--index</code> <em>index</em></dt>
