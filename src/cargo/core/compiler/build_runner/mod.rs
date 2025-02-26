@@ -309,7 +309,10 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
     fn collect_tests_and_executables(&mut self, unit: &Unit) -> CargoResult<()> {
         for output in self.outputs(unit)?.iter() {
-            if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary {
+            if matches!(
+                output.flavor,
+                FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom
+            ) {
                 continue;
             }
 
@@ -444,6 +447,16 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
         self.files().metadata(unit).unit_id()
+    }
+
+    /// Returns the list of SBOM output file paths for a given [`Unit`].
+    pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        Ok(self
+            .outputs(unit)?
+            .iter()
+            .filter(|o| o.flavor == FileFlavor::Sbom)
+            .map(|o| o.path.clone())
+            .collect())
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {

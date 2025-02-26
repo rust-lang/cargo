@@ -47,6 +47,7 @@ pub(crate) mod layout;
 mod links;
 mod lto;
 mod output_depinfo;
+mod output_sbom;
 pub mod rustdoc;
 pub mod standard_lib;
 mod timings;
@@ -60,7 +61,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
 use std::fs::{self, File};
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -85,6 +86,7 @@ use self::job_queue::{Job, JobQueue, JobState, Work};
 pub(crate) use self::layout::Layout;
 pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
+use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
@@ -307,6 +309,8 @@ fn rustc(
     let script_metadata = build_runner.find_build_script_metadata(unit);
     let is_local = unit.is_local();
     let artifact = unit.artifact;
+    let sbom_files = build_runner.sbom_output_files(unit)?;
+    let sbom = build_sbom(build_runner, unit)?;
 
     let hide_diagnostics_for_scrape_unit = build_runner.bcx.unit_can_fail_for_docscraping(unit)
         && !matches!(
@@ -392,6 +396,12 @@ fn rustc(
         if build_plan {
             state.build_plan(buildkey, rustc.clone(), outputs.clone());
         } else {
+            for file in sbom_files {
+                tracing::debug!("writing sbom to {}", file.display());
+                let outfile = BufWriter::new(paths::create(&file)?);
+                serde_json::to_writer(outfile, &sbom)?;
+            }
+
             let result = exec
                 .exec(
                     &rustc,
@@ -685,6 +695,7 @@ where
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
 fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
+    let gctx = build_runner.bcx.gctx;
     let is_primary = build_runner.is_primary_package(unit);
     let is_workspace = build_runner.bcx.ws.is_member(&unit.pkg);
 
@@ -700,7 +711,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.args(args);
     }
     base.args(&unit.rustflags);
-    if build_runner.bcx.gctx.cli_unstable().binary_dep_depinfo {
+    if gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
     }
     if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
@@ -709,6 +720,8 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
+        let file_list = std::env::join_paths(build_runner.sbom_output_files(unit)?)?;
+        base.env("CARGO_SBOM_PATH", file_list);
     }
 
     if unit.target.is_test() || unit.target.is_bench() {
