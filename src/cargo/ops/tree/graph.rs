@@ -131,7 +131,7 @@ impl<'a> Graph<'a> {
     }
 
     /// Returns a list of nodes the given node index points to for the given kind.
-    pub fn edges(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
+    pub fn edges_of_kind(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
         let edges = self.edges[from].of_kind(kind);
         // Created a sorted list for consistent output.
         let mut edges = edges.to_owned();
