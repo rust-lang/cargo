@@ -126,8 +126,7 @@ impl<'a> Graph<'a> {
         let from_index = self.nodes.len();
         self.nodes.push(node);
         self.edges.push(Edges::new());
-        self.index
-            .insert(self.nodes[from_index].clone(), from_index);
+        self.index.insert(self.node(from_index).clone(), from_index);
         from_index
     }
 
@@ -136,7 +135,7 @@ impl<'a> Graph<'a> {
         let edges = self.edges[from].of_kind(kind);
         // Created a sorted list for consistent output.
         let mut edges = edges.to_owned();
-        edges.sort_unstable_by(|a, b| self.nodes[a.node()].cmp(&self.nodes[b.node()]));
+        edges.sort_unstable_by(|a, b| self.node(a.node()).cmp(&self.node(b.node())));
         edges
     }
 
@@ -173,8 +172,8 @@ impl<'a> Graph<'a> {
     }
 
     fn package_id_for_index(&self, index: usize) -> PackageId {
-        match self.nodes[index] {
-            Node::Package { package_id, .. } => package_id,
+        match self.node(index) {
+            Node::Package { package_id, .. } => *package_id,
             Node::Feature { .. } => panic!("unexpected feature node"),
         }
     }
@@ -509,7 +508,7 @@ fn add_feature(
     to: Edge,
 ) -> (bool, usize) {
     // `to` *must* point to a package node.
-    assert!(matches! {graph.nodes[to.node()], Node::Package{..}});
+    assert!(matches! {graph.node(to.node()), Node::Package{..}});
     let node = Node::Feature {
         node_index: to.node(),
         name,
