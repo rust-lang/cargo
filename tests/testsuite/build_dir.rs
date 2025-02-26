@@ -12,7 +12,7 @@
 use std::path::PathBuf;
 
 use cargo_test_support::prelude::*;
-use cargo_test_support::project;
+use cargo_test_support::{paths, project};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 
 #[cargo_test]
@@ -489,6 +489,153 @@ fn future_incompat_should_output_to_build_dir() {
         .run();
 
     assert_exists(&p.root().join("build-dir/.future-incompat-report.json"));
+}
+
+#[cargo_test]
+fn template_workspace_root() {
+    let p = project();
+    let root = p.root();
+    let p = p
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [build]
+                build-dir = "{}/build-dir"
+                target-dir = "target-dir"
+                "#,
+                root.display()
+            ),
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+    // Verify the binary was uplifted to the target-dir
+    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+}
+
+#[cargo_test]
+fn template_cargo_cache_home() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [build]
+                build-dir = "{}/build-dir"
+                target-dir = "target-dir"
+                "#,
+                paths::home().join(".cargo").display()
+            ),
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    assert_build_dir_layout(paths::home().join(".cargo/build-dir"), "debug");
+    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+    // Verify the binary was uplifted to the target-dir
+    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+}
+
+#[cargo_test]
+fn template_workspace_manfiest_path_hash() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+            edition = "2015"
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "foo/a7/0a942ddb7da6b4/build-dir"
+            target-dir = "target-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    let foo_dir = p.root().join("foo");
+    assert_exists(&foo_dir);
+    let hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
+
+    let build_dir = hash_dir.as_path().join("build-dir");
+    assert_build_dir_layout(build_dir, "debug");
+    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+    // Verify the binary was uplifted to the target-dir
+    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+}
+
+fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
+    // Since the hash will change between test runs simply find the first directories and assume
+    // that is the hash dir. The format is a 2 char directory followed by the remaining hash in the
+    // inner directory (ie. `34/f9d02eb8411c05`)
+    let mut dirs = std::fs::read_dir(hash_dir).unwrap().into_iter();
+    let outer_hash_dir = dirs.next().unwrap().unwrap();
+    // Validate there are no other directories in `hash_dir`
+    assert!(
+        dirs.next().is_none(),
+        "Found multiple dir entries in {hash_dir:?}"
+    );
+    // Validate the outer hash dir hash is a directory and has the correct hash length
+    assert!(
+        outer_hash_dir.path().is_dir(),
+        "{outer_hash_dir:?} was not a directory"
+    );
+    assert_eq!(
+        outer_hash_dir.path().file_name().unwrap().len(),
+        2,
+        "Path {:?} should have been 2 chars",
+        outer_hash_dir.path().file_name()
+    );
+
+    let mut dirs = std::fs::read_dir(outer_hash_dir.path())
+        .unwrap()
+        .into_iter();
+    let inner_hash_dir = dirs.next().unwrap().unwrap();
+    // Validate there are no other directories in first hash dir
+    assert!(
+        dirs.next().is_none(),
+        "Found multiple dir entries in {outer_hash_dir:?}"
+    );
+    // Validate the outer hash dir hash is a directory and has the correct hash length
+    assert!(
+        inner_hash_dir.path().is_dir(),
+        "{inner_hash_dir:?} was not a directory"
+    );
+    assert_eq!(
+        inner_hash_dir.path().file_name().unwrap().len(),
+        14,
+        "Path {:?} should have been 2 chars",
+        inner_hash_dir.path().file_name()
+    );
+    return inner_hash_dir.path();
 }
 
 #[track_caller]
