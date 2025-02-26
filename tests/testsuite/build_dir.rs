@@ -491,6 +491,111 @@ fn future_incompat_should_output_to_build_dir() {
     assert_exists(&p.root().join("build-dir/.future-incompat-report.json"));
 }
 
+mod templating {
+    use cargo_test_support::paths;
+
+    use super::*;
+
+    #[cargo_test]
+    fn workspace_root() {
+        let p = project()
+            .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+            .file(
+                ".cargo/config.toml",
+                r#"
+                [build]
+                build-dir = "{workspace-root}/build-dir"
+                target-dir = "target-dir"
+                "#,
+            )
+            .build();
+
+        p.cargo("build -Z build-dir")
+            .masquerade_as_nightly_cargo(&["build-dir"])
+            .enable_mac_dsym()
+            .run();
+
+        assert_build_dir_layout(p.root().join("build-dir"), "debug");
+        assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+        // Verify the binary was uplifted to the target-dir
+        assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+    }
+
+    #[cargo_test]
+    fn cargo_cache() {
+        let p = project()
+            .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+            .file(
+                ".cargo/config.toml",
+                r#"
+                [build]
+                build-dir = "{cargo-cache}/build-dir"
+                target-dir = "target-dir"
+                "#,
+            )
+            .build();
+
+        p.cargo("build -Z build-dir")
+            .masquerade_as_nightly_cargo(&["build-dir"])
+            .enable_mac_dsym()
+            .run();
+
+        assert_build_dir_layout(paths::home().join(".cargo/build-dir"), "debug");
+        assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+        // Verify the binary was uplifted to the target-dir
+        assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+    }
+
+    #[cargo_test]
+    fn workspace_manfiest_path_hash() {
+        let p = project()
+            .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                authors = []
+                edition = "2015"
+                "#,
+            )
+            .file(
+                ".cargo/config.toml",
+                r#"
+                [build]
+                build-dir = "foo/{workspace-manifest-path-hash}/build-dir"
+                target-dir = "target-dir"
+                "#,
+            )
+            .build();
+
+        p.cargo("build -Z build-dir")
+            .masquerade_as_nightly_cargo(&["build-dir"])
+            .enable_mac_dsym()
+            .run();
+
+        let foo_dir = p.root().join("foo");
+        assert_exists(&foo_dir);
+
+        // Since the hash will change between test runs simply find the first directory in `foo`
+        // and assume that is the hash dir.
+        let mut dirs = std::fs::read_dir(foo_dir).unwrap().into_iter();
+        let hash_dir = dirs.next().unwrap().unwrap();
+        // Validate there are no other directories in `foo`
+        assert!(dirs.next().is_none());
+
+        let build_dir = hash_dir.path().join("build-dir");
+        assert_build_dir_layout(build_dir, "debug");
+        assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+
+        // Verify the binary was uplifted to the target-dir
+        assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+    }
+}
+
 #[track_caller]
 fn assert_build_dir_layout(path: PathBuf, profile: &str) {
     assert_dir_layout(path, profile, true);
