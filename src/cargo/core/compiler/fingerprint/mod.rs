@@ -1517,7 +1517,12 @@ fn calculate_normal(
     let outputs = build_runner
         .outputs(unit)?
         .iter()
-        .filter(|output| !matches!(output.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
+        .filter(|output| {
+            !matches!(
+                output.flavor,
+                FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom
+            )
+        })
         .map(|output| output.path.clone())
         .collect();
 

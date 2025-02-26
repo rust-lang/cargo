@@ -2692,6 +2692,8 @@ pub struct CargoBuildConfig {
     pub out_dir: Option<ConfigRelativePath>,
     pub artifact_dir: Option<ConfigRelativePath>,
     pub warnings: Option<WarningHandling>,
+    /// Unstable feature `-Zsbom`.
+    pub sbom: Option<bool>,
 }
 
 /// Whether warnings should warn, be allowed, or cause an error.
