@@ -10,14 +10,40 @@ use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::CargoResult;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone)]
 pub struct NodeId {
     index: usize,
 }
 
 impl NodeId {
-    fn with_index(index: usize) -> Self {
+    fn new(index: usize) -> Self {
         Self { index }
+    }
+}
+
+impl PartialEq for NodeId {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+
+impl Eq for NodeId {}
+
+impl PartialOrd for NodeId {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NodeId {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.index.cmp(&other.index)
+    }
+}
+
+impl std::hash::Hash for NodeId {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.index.hash(state)
     }
 }
 
@@ -134,7 +160,7 @@ impl<'a> Graph<'a> {
 
     /// Adds a new node to the graph, returning its new index.
     fn add_node(&mut self, node: Node) -> NodeId {
-        let from_index = NodeId::with_index(self.nodes.len());
+        let from_index = NodeId::new(self.nodes.len());
         self.nodes.push(node);
         self.edges.push(Edges::new());
         self.index.insert(self.node(from_index).clone(), from_index);
@@ -178,7 +204,7 @@ impl<'a> Graph<'a> {
                 Node::Package { package_id, .. } => package_ids.contains(package_id),
                 _ => false,
             })
-            .map(|(i, node)| (node, NodeId::with_index(i)))
+            .map(|(i, node)| (node, NodeId::new(i)))
             .collect();
         // Sort for consistent output (the same command should always return
         // the same output). "unstable" since nodes should always be unique.
@@ -252,7 +278,7 @@ impl<'a> Graph<'a> {
             for edge in node_edges.all() {
                 let new_edge = Edge {
                     kind: edge.kind(),
-                    node: NodeId::with_index(from_idx),
+                    node: NodeId::new(from_idx),
                 };
                 new_edges[edge.node().index].add_edge(new_edge);
             }
@@ -273,7 +299,7 @@ impl<'a> Graph<'a> {
                 packages
                     .entry(package_id.name())
                     .or_insert_with(Vec::new)
-                    .push((node, NodeId::with_index(i)));
+                    .push((node, NodeId::new(i)));
             }
         }
 
@@ -645,7 +671,7 @@ fn add_internal_features(graph: &mut Graph<'_>, resolve: &Resolve) {
             Node::Package { .. } => None,
             Node::Feature { node_index, name } => {
                 let package_id = graph.package_id_for_index(*node_index);
-                Some((package_id, *node_index, NodeId::with_index(i), *name))
+                Some((package_id, *node_index, NodeId::new(i), *name))
             }
         })
         .collect();
