@@ -13,11 +13,13 @@ use std::collections::{HashMap, HashSet};
 #[derive(Debug, Copy, Clone)]
 pub struct NodeId {
     index: usize,
+    #[allow(dead_code)] // intended for `derive(Debug)`
+    debug: InternedString,
 }
 
 impl NodeId {
-    fn new(index: usize) -> Self {
-        Self { index }
+    fn new(index: usize, debug: InternedString) -> Self {
+        Self { index, debug }
     }
 }
 
@@ -61,6 +63,15 @@ pub enum Node {
         /// Name of the feature.
         name: InternedString,
     },
+}
+
+impl Node {
+    fn name(&self) -> InternedString {
+        match self {
+            Self::Package { package_id, .. } => package_id.name(),
+            Self::Feature { name, .. } => *name,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
@@ -160,7 +171,7 @@ impl<'a> Graph<'a> {
 
     /// Adds a new node to the graph, returning its new index.
     fn add_node(&mut self, node: Node) -> NodeId {
-        let from_index = NodeId::new(self.nodes.len());
+        let from_index = NodeId::new(self.nodes.len(), node.name());
         self.nodes.push(node);
         self.edges.push(Edges::new());
         self.index.insert(self.node(from_index).clone(), from_index);
@@ -204,7 +215,7 @@ impl<'a> Graph<'a> {
                 Node::Package { package_id, .. } => package_ids.contains(package_id),
                 _ => false,
             })
-            .map(|(i, node)| (node, NodeId::new(i)))
+            .map(|(i, node)| (node, NodeId::new(i, node.name())))
             .collect();
         // Sort for consistent output (the same command should always return
         // the same output). "unstable" since nodes should always be unique.
@@ -278,7 +289,7 @@ impl<'a> Graph<'a> {
             for edge in node_edges.all() {
                 let new_edge = Edge {
                     kind: edge.kind(),
-                    node: NodeId::new(from_idx),
+                    node: NodeId::new(from_idx, self.nodes[from_idx].name()),
                 };
                 new_edges[edge.node().index].add_edge(new_edge);
             }
@@ -299,7 +310,7 @@ impl<'a> Graph<'a> {
                 packages
                     .entry(package_id.name())
                     .or_insert_with(Vec::new)
-                    .push((node, NodeId::new(i)));
+                    .push((node, NodeId::new(i, node.name())));
             }
         }
 
@@ -671,7 +682,7 @@ fn add_internal_features(graph: &mut Graph<'_>, resolve: &Resolve) {
             Node::Package { .. } => None,
             Node::Feature { node_index, name } => {
                 let package_id = graph.package_id_for_index(*node_index);
-                Some((package_id, *node_index, NodeId::new(i), *name))
+                Some((package_id, *node_index, NodeId::new(i, *name), *name))
             }
         })
         .collect();
