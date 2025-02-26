@@ -132,16 +132,24 @@ impl<'a> Graph<'a> {
 
     /// Returns a list of nodes the given node index points to for the given kind.
     pub fn edges_of_kind(&self, from: usize, kind: &EdgeKind) -> Vec<Edge> {
-        let edges = self.edges[from].of_kind(kind);
+        let edges = self.edges(from).of_kind(kind);
         // Created a sorted list for consistent output.
         let mut edges = edges.to_owned();
         edges.sort_unstable_by(|a, b| self.node(a.node()).cmp(&self.node(b.node())));
         edges
     }
 
+    fn edges(&self, from: usize) -> &Edges {
+        &self.edges[from]
+    }
+
+    fn edges_mut(&mut self, from: usize) -> &mut Edges {
+        &mut self.edges[from]
+    }
+
     /// Returns `true` if the given node has any outgoing edges.
     pub fn has_outgoing_edges(&self, index: usize) -> bool {
-        !self.edges[index].is_empty()
+        !self.edges(index).is_empty()
     }
 
     /// Gets a node by index.
@@ -207,13 +215,13 @@ impl<'a> Graph<'a> {
             let new_from = new_graph.add_node(node);
             remap[index] = Some(new_from);
             // Visit dependencies.
-            for edge in graph.edges[index].all() {
+            for edge in graph.edges(index).all() {
                 let new_to_index = visit(graph, new_graph, remap, edge.node());
                 let new_edge = Edge {
                     kind: edge.kind(),
                     node: new_to_index,
                 };
-                new_graph.edges[new_from].add_edge(new_edge);
+                new_graph.edges_mut(new_from).add_edge(new_edge);
             }
             new_from
         }
@@ -473,10 +481,10 @@ fn add_pkg(
                 }
                 if !dep.uses_default_features() && dep.features().is_empty() {
                     // No features, use a direct connection.
-                    graph.edges[from_index].add_edge(new_edge);
+                    graph.edges_mut(from_index).add_edge(new_edge);
                 }
             } else {
-                graph.edges[from_index].add_edge(new_edge);
+                graph.edges_mut(from_index).add_edge(new_edge);
             }
         }
     }
@@ -522,13 +530,13 @@ fn add_feature(
             kind: to.kind(),
             node: node_index,
         };
-        graph.edges[from].add_edge(from_edge);
+        graph.edges_mut(from).add_edge(from_edge);
     }
     let to_edge = Edge {
         kind: EdgeKind::Feature,
         node: to.node(),
     };
-    graph.edges[node_index].add_edge(to_edge);
+    graph.edges_mut(node_index).add_edge(to_edge);
     (missing, node_index)
 }
 
