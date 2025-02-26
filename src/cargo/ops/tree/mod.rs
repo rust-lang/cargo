@@ -383,7 +383,7 @@ fn print_dependencies<'a>(
     print_stack: &mut Vec<usize>,
     kind: &EdgeKind,
 ) {
-    let deps = graph.edges(node_index, kind);
+    let deps = graph.edges_of_kind(node_index, kind);
     if deps.is_empty() {
         return;
     }
