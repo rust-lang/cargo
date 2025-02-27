@@ -6646,17 +6646,21 @@ fn workspace_with_dot_rs_dir() {
     p.cargo("package -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(reg.index_url())
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [PACKAGING] foo v0.16.2 ([ROOT]/foo/crates/foo.rs)
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  Unable to update [ROOT]/foo/crates/foo.rs
-
-Caused by:
-  Single file packages cannot be used as dependencies
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] bar v0.16.2 ([ROOT]/foo/crates/bar.rs)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.16.2 ([ROOT]/foo/crates/foo.rs)
+[COMPILING] foo v0.16.2 ([ROOT]/foo/target/package/foo-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] bar v0.16.2 ([ROOT]/foo/crates/bar.rs)
+[UNPACKING] foo v0.16.2 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] foo v0.16.2
+[COMPILING] bar v0.16.2 ([ROOT]/foo/target/package/bar-0.16.2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
