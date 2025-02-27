@@ -2,10 +2,12 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
       line-height: 18px;
     }
+    .dimmed { opacity: 0.7; }
     tspan {
       font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       white-space: pre;
@@ -24,7 +26,7 @@
 </tspan>
     <tspan x="10px" y="82px"><tspan>│       └── c v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>└── b v1.0.0 (*)</tspan>
+    <tspan x="10px" y="100px"><tspan>└── b v1.0.0 </tspan><tspan class="fg-yellow dimmed">(*)</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>

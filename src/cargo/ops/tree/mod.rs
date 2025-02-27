@@ -333,7 +333,7 @@ fn print_node<'a>(
     let star = if (new && !in_cycle) || !has_deps {
         ""
     } else {
-        " (*)"
+        color_print::cstr!(" <yellow,dim>(*)</>")
     };
     drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
