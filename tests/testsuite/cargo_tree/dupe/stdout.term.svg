@@ -20,13 +20,13 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan>foo v0.1.0 ([ROOT]/foo)</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan>├── a v1.0.0</tspan>
+    <tspan x="10px" y="46px"><tspan class="dimmed">├──</tspan><tspan> a v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>│   └── b v1.0.0</tspan>
+    <tspan x="10px" y="64px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="dimmed">└──</tspan><tspan> b v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>│       └── c v1.0.0</tspan>
+    <tspan x="10px" y="82px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed">└──</tspan><tspan> c v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>└── b v1.0.0 </tspan><tspan class="fg-yellow dimmed">(*)</tspan>
+    <tspan x="10px" y="100px"><tspan class="dimmed">└──</tspan><tspan> b v1.0.0 </tspan><tspan class="fg-yellow dimmed">(*)</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>
