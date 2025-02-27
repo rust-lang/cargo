@@ -6597,6 +6597,74 @@ fn workspace_with_renamed_member() {
 }
 
 #[cargo_test]
+fn workspace_with_dot_rs_dir() {
+    let reg = registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["crates/*"]
+            "#,
+        )
+        .file(
+            "crates/foo.rs/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.16.2"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+        "#,
+        )
+        .file("crates/foo.rs/src/lib.rs", "pub fn foo() {}")
+        .file(
+            "crates/bar.rs/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.16.2"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            foo = { path = "../foo.rs", version = "0.16.2" }
+        "#,
+        )
+        .file("crates/bar.rs/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(reg.index_url())
+        .with_status(101)
+        .with_stderr_data(
+            str![[r#"
+[PACKAGING] foo v0.16.2 ([ROOT]/foo/crates/foo.rs)
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  Unable to update [ROOT]/foo/crates/foo.rs
+
+Caused by:
+  Single file packages cannot be used as dependencies
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn registry_not_in_publish_list() {
     let p = project()
         .file(
