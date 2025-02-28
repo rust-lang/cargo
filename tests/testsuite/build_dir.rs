@@ -493,20 +493,15 @@ fn future_incompat_should_output_to_build_dir() {
 
 #[cargo_test]
 fn template_workspace_root() {
-    let p = project();
-    let root = p.root();
-    let p = p
+    let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
             ".cargo/config.toml",
-            &format!(
-                r#"
-                [build]
-                build-dir = "{}/build-dir"
-                target-dir = "target-dir"
-                "#,
-                root.display()
-            ),
+            r#"
+            [build]
+            build-dir = "{workspace-root}/build-dir"
+            target-dir = "target-dir"
+            "#,
         )
         .build();
 
@@ -528,14 +523,11 @@ fn template_cargo_cache_home() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
             ".cargo/config.toml",
-            &format!(
-                r#"
-                [build]
-                build-dir = "{}/build-dir"
-                target-dir = "target-dir"
-                "#,
-                paths::home().join(".cargo").display()
-            ),
+            r#"
+            [build]
+            build-dir = "{cargo-cache-home}/build-dir"
+            target-dir = "target-dir"
+            "#,
         )
         .build();
 
@@ -569,7 +561,7 @@ fn template_workspace_manfiest_path_hash() {
             ".cargo/config.toml",
             r#"
             [build]
-            build-dir = "foo/a7/0a942ddb7da6b4/build-dir"
+            build-dir = "foo/{workspace-manifest-path-hash}/build-dir"
             target-dir = "target-dir"
             "#,
         )
