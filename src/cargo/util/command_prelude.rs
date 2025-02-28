@@ -353,10 +353,6 @@ pub trait CommandExt: Sized {
                             None => return false,
                         };
 
-                        // allow directories
-                        if path.is_dir() {
-                            return true;
-                        }
                         // allow `Cargo.lock` file
                         file_name == OsStr::new("Cargo.lock")
                     }),
