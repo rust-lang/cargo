@@ -5,7 +5,8 @@ use crate::ops;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{human_readable_bytes, GlobalContext, Progress, ProgressStyle};
+use crate::util::HumanBytes;
+use crate::util::{GlobalContext, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
 use std::collections::{HashMap, HashSet};
@@ -457,13 +458,8 @@ impl<'gctx> CleanContext<'gctx> {
         let byte_count = if self.total_bytes_removed == 0 {
             String::new()
         } else {
-            // Don't show a fractional number of bytes.
-            if self.total_bytes_removed < 1024 {
-                format!(", {}B total", self.total_bytes_removed)
-            } else {
-                let (bytes, unit) = human_readable_bytes(self.total_bytes_removed);
-                format!(", {bytes:.1}{unit} total")
-            }
+            let bytes = HumanBytes(self.total_bytes_removed);
+            format!(", {bytes:.1} total")
         };
         // I think displaying the number of directories removed isn't
         // particularly interesting to the user. However, if there are 0

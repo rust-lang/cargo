@@ -9,7 +9,6 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
-use bytesize::ByteSize;
 use cargo_util_schemas::manifest::RustVersion;
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
@@ -35,6 +34,7 @@ use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
+use crate::util::HumanBytes;
 use crate::util::{self, internal, GlobalContext, Progress, ProgressStyle};
 
 /// Information about a package that is available somewhere in the file system.
@@ -914,7 +914,8 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
         // have a great view into the progress of the extraction. Let's prepare
         // the user for this CPU-heavy step if it looks like it'll take some
         // time to do so.
-        if dl.total.get() < ByteSize::kb(400).0 {
+        let kib_400 = 1024 * 400;
+        if dl.total.get() < kib_400 {
             self.tick(WhyTick::DownloadFinished)?;
         } else {
             self.tick(WhyTick::Extracting(&dl.id.name()))?;
@@ -1113,7 +1114,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
                     }
                 }
                 if remaining > 0 && dur > Duration::from_millis(500) {
-                    msg.push_str(&format!(", remaining bytes: {}", ByteSize(remaining)));
+                    msg.push_str(&format!(", remaining bytes: {:.1}", HumanBytes(remaining)));
                 }
             }
         }
@@ -1153,20 +1154,21 @@ impl<'a, 'gctx> Drop for Downloads<'a, 'gctx> {
             "crates"
         };
         let mut status = format!(
-            "{} {} ({}) in {}",
+            "{} {} ({:.1}) in {}",
             self.downloads_finished,
             crate_string,
-            ByteSize(self.downloaded_bytes),
+            HumanBytes(self.downloaded_bytes),
             util::elapsed(self.start.elapsed())
         );
         // print the size of largest crate if it was >1mb
         // however don't print if only a single crate was downloaded
         // because it is obvious that it will be the largest then
-        if self.largest.0 > ByteSize::mb(1).0 && self.downloads_finished > 1 {
+        let mib_1 = 1024 * 1024;
+        if self.largest.0 > mib_1 && self.downloads_finished > 1 {
             status.push_str(&format!(
-                " (largest was `{}` at {})",
+                " (largest was `{}` at {:.1})",
                 self.largest.1,
-                ByteSize(self.largest.0),
+                HumanBytes(self.largest.0),
             ));
         }
         // Clear progress before displaying final summary.

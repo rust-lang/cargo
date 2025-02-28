@@ -6,9 +6,8 @@ use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
 use crate::util::errors::CargoResult;
-use crate::util::{
-    human_readable_bytes, network, GlobalContext, IntoUrl, MetricsCounter, Progress,
-};
+use crate::util::HumanBytes;
+use crate::util::{network, GlobalContext, IntoUrl, MetricsCounter, Progress};
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
@@ -914,8 +913,8 @@ pub fn with_fetch_options(
                         counter.add(stats.received_bytes(), now);
                         last_update = now;
                     }
-                    let (rate, unit) = human_readable_bytes(counter.rate() as u64);
-                    format!(", {:.2}{}/s", rate, unit)
+                    let rate = HumanBytes(counter.rate() as u64);
+                    format!(", {rate:.2}/s")
                 };
                 progress
                     .tick(stats.indexed_objects(), stats.total_objects(), &msg)

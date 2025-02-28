@@ -3424,7 +3424,7 @@ fn verify_packaged_status_line(
     uncompressed_size: u64,
     compressed_size: u64,
 ) {
-    use cargo::util::human_readable_bytes;
+    use cargo::util::HumanBytes;
 
     let stderr = String::from_utf8(output.stderr).unwrap();
     let mut packaged_lines = stderr
@@ -3438,12 +3438,9 @@ fn verify_packaged_status_line(
         "Only one `Packaged` status line should appear in stderr"
     );
     let size_info = packaged_line.trim().trim_start_matches("Packaged").trim();
-    let uncompressed = human_readable_bytes(uncompressed_size);
-    let compressed = human_readable_bytes(compressed_size);
-    let expected = format!(
-        "{} files, {:.1}{} ({:.1}{} compressed)",
-        num_files, uncompressed.0, uncompressed.1, compressed.0, compressed.1
-    );
+    let uncompressed = HumanBytes(uncompressed_size);
+    let compressed = HumanBytes(compressed_size);
+    let expected = format!("{num_files} files, {uncompressed:.1} ({compressed:.1} compressed)");
     assert_eq!(size_info, expected);
 }
 

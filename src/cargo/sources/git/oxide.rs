@@ -2,7 +2,8 @@
 //! `utils` closely for now. One day it can be renamed into `utils` once `git2` isn't required anymore.
 
 use crate::util::network::http::HttpTimeout;
-use crate::util::{human_readable_bytes, network, MetricsCounter, Progress};
+use crate::util::HumanBytes;
+use crate::util::{network, MetricsCounter, Progress};
 use crate::{CargoResult, GlobalContext};
 use cargo_util::paths;
 use gix::bstr::{BString, ByteSlice};
@@ -148,8 +149,8 @@ fn translate_progress_to_bar(
                 counter.add(received_bytes, now);
                 last_percentage_update = now;
             }
-            let (rate, unit) = human_readable_bytes(counter.rate() as u64);
-            let msg = format!(", {rate:.2}{unit}/s");
+            let rate = HumanBytes(counter.rate() as u64);
+            let msg = format!(", {rate:.2}/s");
 
             progress_bar.tick(
                 (total_objects * (num_phases - 2)) + objects,

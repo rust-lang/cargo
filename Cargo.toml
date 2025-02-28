@@ -25,7 +25,6 @@ anyhow = "1.0.95"
 base64 = "0.22.1"
 blake3 = "1.5.5"
 build-rs = { version = "0.3.0", path = "crates/build-rs" }
-bytesize = "1.3"
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
 cargo-credential-libsecret = { version = "0.4.13", path = "credential/cargo-credential-libsecret" }
@@ -157,7 +156,6 @@ anstyle.workspace = true
 anyhow.workspace = true
 base64.workspace = true
 blake3.workspace = true
-bytesize.workspace = true
 cargo-credential.workspace = true
 cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
