@@ -1,0 +1,107 @@
+<svg width="740px" height="794px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan>foo v0.1.0 ([ROOT]/foo)</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan>├── normal_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan>│   └── normal_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan>│       └── normal_b feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan>│           └── normal_b v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>│               └── normal_c feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan>│                   └── normal_c v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>│               [build-dependencies]</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>│               └── normal_b_build_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>│                   └── normal_b_build_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>│                       └── normal_b_build_a_normal_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>│                           └── normal_b_build_a_normal_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan>└── normal_d feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan>    └── normal_d v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>[build-dependencies]</tspan>
+</tspan>
+    <tspan x="10px" y="298px"><tspan>├── build_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="316px"><tspan>│   └── build_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>│       └── build_b feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="352px"><tspan>│           └── build_b v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="370px"><tspan>│               └── build_c feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="388px"><tspan>│                   └── build_c v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="406px"><tspan>│               [build-dependencies]</tspan>
+</tspan>
+    <tspan x="10px" y="424px"><tspan>│               └── build_b_build_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="442px"><tspan>│                   └── build_b_build_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="460px"><tspan>│                       └── build_b_build_a_normal_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="478px"><tspan>│                           └── build_b_build_a_normal_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="496px"><tspan>└── build_d feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="514px"><tspan>    └── build_d v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="532px"><tspan>[dev-dependencies]</tspan>
+</tspan>
+    <tspan x="10px" y="550px"><tspan>├── dev_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="568px"><tspan>│   └── dev_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="586px"><tspan>│       └── dev_b feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="604px"><tspan>│           └── dev_b v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="622px"><tspan>│               └── dev_c feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="640px"><tspan>│                   └── dev_c v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="658px"><tspan>│               [build-dependencies]</tspan>
+</tspan>
+    <tspan x="10px" y="676px"><tspan>│               └── dev_b_build_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="694px"><tspan>│                   └── dev_b_build_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="712px"><tspan>│                       └── dev_b_build_a_normal_a feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="730px"><tspan>│                           └── dev_b_build_a_normal_a v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="748px"><tspan>└── dev_d feature "default"</tspan>
+</tspan>
+    <tspan x="10px" y="766px"><tspan>    └── dev_d v1.0.0</tspan>
+</tspan>
+    <tspan x="10px" y="784px">
+</tspan>
+  </text>
+
+</svg>
