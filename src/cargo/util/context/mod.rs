@@ -490,9 +490,25 @@ impl GlobalContext {
                     paths::resolve_executable(&argv0)
                 }
 
+                // Determines whether `path` is a cargo binary.
+                // See: https://github.com/rust-lang/cargo/issues/15099#issuecomment-2666737150
+                fn is_cargo(path: &Path) -> bool {
+                    path.file_stem() == Some(OsStr::new("cargo"))
+                }
+
+                let from_current_exe = from_current_exe();
+                if from_current_exe.as_deref().is_ok_and(is_cargo) {
+                    return from_current_exe;
+                }
+
+                let from_argv = from_argv();
+                if from_argv.as_deref().is_ok_and(is_cargo) {
+                    return from_argv;
+                }
+
                 let exe = from_env()
-                    .or_else(|_| from_current_exe())
-                    .or_else(|_| from_argv())
+                    .or(from_current_exe)
+                    .or(from_argv)
                     .context("couldn't get the path to cargo executable")?;
                 Ok(exe)
             })
