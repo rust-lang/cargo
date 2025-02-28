@@ -623,7 +623,7 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[ERROR] no example target named `a`.
+[ERROR] no example target named `a` in default-run packages.
 Available example targets:
     do_magic
 
@@ -655,7 +655,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     p.cargo("run --example a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `a`.
+[ERROR] no example target named `a` in default-run packages.
 Available example targets:
     do_magic
 
@@ -743,7 +743,7 @@ fn run_with_filename() {
     p.cargo("run --bin bin.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `bin.rs`.
+[ERROR] no bin target named `bin.rs` in default-run packages.
 Available bin targets:
     a
 
@@ -754,7 +754,7 @@ Available bin targets:
     p.cargo("run --bin a.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `a.rs`
+[ERROR] no bin target named `a.rs` in default-run packages
 
 [HELP] a target with a similar name exists: `a`
 
@@ -764,7 +764,7 @@ Available bin targets:
     p.cargo("run --example example.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `example.rs`.
+[ERROR] no example target named `example.rs` in default-run packages.
 Available example targets:
     a
 
@@ -775,7 +775,7 @@ Available example targets:
     p.cargo("run --example a.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `a.rs`
+[ERROR] no example target named `a.rs` in default-run packages
 
 [HELP] a target with a similar name exists: `a`
 

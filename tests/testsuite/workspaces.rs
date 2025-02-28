@@ -2716,3 +2716,152 @@ fn nonexistence_package_together_with_workspace() {
 "#]])
         .run();
 }
+
+// See rust-lang/cargo#14544
+#[cargo_test]
+fn print_available_targets_within_virtual_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "pattern1", "pattern2"]
+
+        default-members = ["crate1"]
+        "#,
+        )
+        .file("crate1/src/main.rs", "fn main(){}")
+        .file(
+            "crate1/Cargo.toml",
+            r#"
+        [package]
+        name = "crate1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate2/src/main.rs", "fn main(){}")
+        .file(
+            "crate2/Cargo.toml",
+            r#"
+        [package]
+        name = "crate2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("pattern1/src/main.rs", "fn main(){}")
+        .file(
+            "pattern1/Cargo.toml",
+            r#"
+        [package]
+        name = "pattern1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("pattern2/src/main.rs", "fn main(){}")
+        .file(
+            "pattern2/Cargo.toml",
+            r#"
+        [package]
+        name = "pattern2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("another/src/main.rs", "fn main(){}")
+        .file(
+            "another/Cargo.toml",
+            r#"
+        [package]
+        name = "another"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        );
+
+    let p = p.build();
+    p.cargo("run --bin")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] "--bin" takes one argument.
+Available binaries:
+    crate1
+
+
+"#]])
+        .run();
+
+    p.cargo("run -p crate1 --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in `crate1` package
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("check -p crate1 -p pattern1 -p pattern2 --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in `crate1`, ... packages
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("run --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in default-run packages
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] Available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("check --bin pattern*")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target matches pattern `pattern*` in default-run packages.
+[HELP] Available bin in `pattern1` package:
+    pattern1
+[HELP] Available bin in `pattern2` package:
+    pattern2
+
+"#]])
+        .run();
+
+    // This another branch that none of similar name exists, and print available targets in the
+    // default-members.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "another"]
+
+        default-members = ["another"]
+        "#,
+    );
+
+    p.cargo("run --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in default-run packages.
+[HELP] Available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+}

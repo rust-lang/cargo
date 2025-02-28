@@ -1337,7 +1337,7 @@ fn cargo_compile_with_filename() {
     p.cargo("build --bin bin.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `bin.rs`.
+[ERROR] no bin target named `bin.rs` in default-run packages.
 Available bin targets:
     a
 
@@ -1348,7 +1348,7 @@ Available bin targets:
     p.cargo("build --bin a.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `a.rs`
+[ERROR] no bin target named `a.rs` in default-run packages
 
 [HELP] a target with a similar name exists: `a`
 
@@ -1358,7 +1358,7 @@ Available bin targets:
     p.cargo("build --example example.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `example.rs`.
+[ERROR] no example target named `example.rs` in default-run packages.
 Available example targets:
     a
 
@@ -1369,7 +1369,7 @@ Available example targets:
     p.cargo("build --example a.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `a.rs`
+[ERROR] no example target named `a.rs` in default-run packages
 
 [HELP] a target with a similar name exists: `a`
 
@@ -5906,7 +5906,7 @@ fn target_filters_workspace() {
     ws.cargo("build -v --example ex")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `ex`
+[ERROR] no example target named `ex` in default-run packages
 
 [HELP] a target with a similar name exists: `ex1`
 
@@ -5916,7 +5916,7 @@ fn target_filters_workspace() {
     ws.cargo("build -v --example 'ex??'")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target matches pattern `ex??`
+[ERROR] no example target matches pattern `ex??` in default-run packages
 
 [HELP] a target with a similar name exists: `ex1`
 
