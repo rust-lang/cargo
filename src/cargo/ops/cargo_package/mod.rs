@@ -22,13 +22,13 @@ use crate::sources::{PathSource, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
-use crate::util::human_readable_bytes;
 use crate::util::restricted_names;
 use crate::util::toml::prepare_for_publish;
 use crate::util::FileLock;
 use crate::util::Filesystem;
 use crate::util::GlobalContext;
 use crate::util::Graph;
+use crate::util::HumanBytes;
 use crate::{drop_println, ops};
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
@@ -129,13 +129,10 @@ fn create_package(
         .with_context(|| format!("could not learn metadata for: `{}`", dst_path.display()))?;
     let compressed_size = dst_metadata.len();
 
-    let uncompressed = human_readable_bytes(uncompressed_size);
-    let compressed = human_readable_bytes(compressed_size);
+    let uncompressed = HumanBytes(uncompressed_size);
+    let compressed = HumanBytes(compressed_size);
 
-    let message = format!(
-        "{} files, {:.1}{} ({:.1}{} compressed)",
-        filecount, uncompressed.0, uncompressed.1, compressed.0, compressed.1,
-    );
+    let message = format!("{filecount} files, {uncompressed:.1} ({compressed:.1} compressed)");
     // It doesn't really matter if this fails.
     drop(gctx.shell().status("Packaged", message));
 

@@ -114,8 +114,8 @@ fn always_shows_progress() {
     p.cargo("check")
         .with_stderr_data(
             str![[r#"
-[DOWNLOADING] [..] crate                                                                              
-[DOWNLOADED] 3 crates ([..]KB) in [..]s
+[DOWNLOADING] [..] crate [..]
+[DOWNLOADED] 3 crates ([..]) in [..]s
 [BUILDING] [..] [..]/4: [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 ...

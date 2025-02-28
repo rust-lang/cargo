@@ -86,12 +86,26 @@ pub fn elapsed(duration: Duration) -> String {
 }
 
 /// Formats a number of bytes into a human readable SI-prefixed size.
-/// Returns a tuple of `(quantity, units)`.
-pub fn human_readable_bytes(bytes: u64) -> (f32, &'static str) {
-    static UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
-    let bytes = bytes as f32;
-    let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
-    (bytes / 1024_f32.powi(i as i32), UNITS[i])
+pub struct HumanBytes(pub u64);
+
+impl std::fmt::Display for HumanBytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+        let bytes = self.0 as f32;
+        let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
+        let unit = UNITS[i];
+        let size = bytes / 1024_f32.powi(i as i32);
+
+        // Don't show a fractional number of bytes.
+        if i == 0 {
+            return write!(f, "{size}{unit}");
+        }
+
+        let Some(precision) = f.precision() else {
+            return write!(f, "{size}{unit}");
+        };
+        write!(f, "{size:.precision$}{unit}",)
+    }
 }
 
 pub fn indented_lines(text: &str) -> String {
@@ -162,32 +176,30 @@ pub fn get_umask() -> u32 {
 mod test {
     use super::*;
 
+    #[track_caller]
+    fn t(bytes: u64, expected: &str) {
+        assert_eq!(&HumanBytes(bytes).to_string(), expected);
+    }
+
     #[test]
     fn test_human_readable_bytes() {
-        assert_eq!(human_readable_bytes(0), (0., "B"));
-        assert_eq!(human_readable_bytes(8), (8., "B"));
-        assert_eq!(human_readable_bytes(1000), (1000., "B"));
-        assert_eq!(human_readable_bytes(1024), (1., "KiB"));
-        assert_eq!(human_readable_bytes(1024 * 420 + 512), (420.5, "KiB"));
-        assert_eq!(human_readable_bytes(1024 * 1024), (1., "MiB"));
+        t(0, "0B");
+        t(8, "8B");
+        t(1000, "1000B");
+        t(1024, "1KiB");
+        t(1024 * 420 + 512, "420.5KiB");
+        t(1024 * 1024, "1MiB");
+        t(1024 * 1024 + 1024 * 256, "1.25MiB");
+        t(1024 * 1024 * 1024, "1GiB");
+        t((1024. * 1024. * 1024. * 1.2345) as u64, "1.2345GiB");
+        t(1024 * 1024 * 1024 * 1024, "1TiB");
+        t(1024 * 1024 * 1024 * 1024 * 1024, "1PiB");
+        t(1024 * 1024 * 1024 * 1024 * 1024 * 1024, "1EiB");
+        t(u64::MAX, "16EiB");
+
         assert_eq!(
-            human_readable_bytes(1024 * 1024 + 1024 * 256),
-            (1.25, "MiB")
+            &format!("{:.3}", HumanBytes((1024. * 1.23456) as u64)),
+            "1.234KiB"
         );
-        assert_eq!(human_readable_bytes(1024 * 1024 * 1024), (1., "GiB"));
-        assert_eq!(
-            human_readable_bytes((1024. * 1024. * 1024. * 1.2345) as u64),
-            (1.2345, "GiB")
-        );
-        assert_eq!(human_readable_bytes(1024 * 1024 * 1024 * 1024), (1., "TiB"));
-        assert_eq!(
-            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024),
-            (1., "PiB")
-        );
-        assert_eq!(
-            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024 * 1024),
-            (1., "EiB")
-        );
-        assert_eq!(human_readable_bytes(u64::MAX), (16., "EiB"));
     }
 }
