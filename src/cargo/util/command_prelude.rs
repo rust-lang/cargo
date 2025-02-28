@@ -345,7 +345,18 @@ pub trait CommandExt: Sized {
         self._arg(
             opt("lockfile-path", "Path to Cargo.lock (unstable)")
                 .value_name("PATH")
-                .help_heading(heading::MANIFEST_OPTIONS),
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any().filter(|path: &Path| {
+                        let file_name = match path.file_name() {
+                            Some(name) => name,
+                            None => return false,
+                        };
+
+                        // allow `Cargo.lock` file
+                        file_name == OsStr::new("Cargo.lock")
+                    }),
+                )),
         )
     }
 
