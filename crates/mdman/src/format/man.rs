@@ -251,6 +251,9 @@ impl<'e> ManRenderer<'e> {
                                         range.start
                                     );
                                 }
+                                LinkType::WikiLink { .. } => {
+                                    panic!("wikilink unsupported");
+                                }
                             }
                         }
                         Tag::Image { .. } => {
@@ -260,7 +263,9 @@ impl<'e> ManRenderer<'e> {
                         | Tag::MetadataBlock { .. }
                         | Tag::DefinitionList
                         | Tag::DefinitionListTitle
-                        | Tag::DefinitionListDefinition => {}
+                        | Tag::DefinitionListDefinition
+                        | Tag::Superscript
+                        | Tag::Subscript => {}
                     }
                 }
                 Event::End(tag_end) => {
@@ -326,7 +331,9 @@ impl<'e> ManRenderer<'e> {
                         | TagEnd::MetadataBlock(..)
                         | TagEnd::DefinitionListDefinition
                         | TagEnd::DefinitionListTitle
-                        | TagEnd::DefinitionList => {}
+                        | TagEnd::DefinitionList
+                        | TagEnd::Superscript
+                        | TagEnd::Subscript => {}
                     }
                 }
                 Event::Text(t) => {
