@@ -154,8 +154,15 @@ _cargo()
 					local opt_var=opt__${cmd//-/_}
 				fi
 				if [[ -z "${!opt_var-}" ]]; then
-					# Fallback to filename completion.
-					_filedir
+					# Forward to subcommands completion if bash-completion >= 2.12 is available
+					if [[ $BASH_COMPLETION_VERSINFO && (${BASH_COMPLETION_VERSINFO[0]} -gt 2 || (${BASH_COMPLETION_VERSINFO[0]} -eq 2 && ${BASH_COMPLETION_VERSINFO[1]} -ge 12)) ]]; then
+						COMP_WORDS[cmd_i]="cargo-$cmd"
+						_comp_command_offset "$cmd_i"
+						COMP_WORDS[cmd_i]="$cmd"
+					else
+						# Fallback to filename completion.
+						_filedir
+					fi
 				else
 					COMPREPLY=( $( compgen -W "${!opt_var}" -- "$cur" ) )
 				fi
