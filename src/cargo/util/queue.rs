@@ -17,7 +17,6 @@ pub struct Queue<T> {
     state: Mutex<State<T>>,
     popper_cv: Condvar,
     bounded_cv: Condvar,
-    bound: usize,
 }
 
 struct State<T> {
@@ -29,11 +28,10 @@ impl<T> Queue<T> {
     pub fn new(bound: usize) -> Queue<T> {
         Queue {
             state: Mutex::new(State {
-                items: VecDeque::new(),
+                items: VecDeque::with_capacity(bound),
             }),
             popper_cv: Condvar::new(),
             bounded_cv: Condvar::new(),
-            bound,
         }
     }
 
@@ -46,9 +44,10 @@ impl<T> Queue<T> {
     /// Pushes an item onto the queue, blocking if the queue is full.
     pub fn push_bounded(&self, item: T) {
         let locked_state = self.state.lock().unwrap();
+        let cap_max = locked_state.items.capacity();
         let mut state = self
             .bounded_cv
-            .wait_while(locked_state, |s| s.items.len() >= self.bound)
+            .wait_while(locked_state, |s| s.items.len() >= cap_max)
             .unwrap();
         state.items.push_back(item);
         self.popper_cv.notify_one();
@@ -64,7 +63,7 @@ impl<T> Queue<T> {
             None
         } else {
             let value = state.items.pop_front()?;
-            if state.items.len() < self.bound {
+            if state.items.len() < state.items.capacity() {
                 // Assumes threads cannot be canceled.
                 self.bounded_cv.notify_one();
             }
