@@ -125,12 +125,11 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
     }
 
     /// See [`Message::Warning`].
-    pub fn warning(&self, warning: String) -> CargoResult<()> {
+    pub fn warning(&self, warning: String) {
         self.messages.push_bounded(Message::Warning {
             id: self.id,
             warning,
         });
-        Ok(())
     }
 
     /// A method used to signal to the coordinator thread that the rmeta file

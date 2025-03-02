@@ -449,7 +449,7 @@ fn rustc(
 
             if let Err(e) = result {
                 if let Some(diagnostic) = failed_scrape_diagnostic {
-                    state.warning(diagnostic)?;
+                    state.warning(diagnostic);
                 }
 
                 return Err(e);
@@ -920,7 +920,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
 
         if let Err(e) = result {
             if let Some(diagnostic) = failed_scrape_diagnostic {
-                state.warning(diagnostic)?;
+                state.warning(diagnostic);
             }
 
             return Err(e);
