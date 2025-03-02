@@ -198,6 +198,76 @@ fn prepare_for_2018() {
 }
 
 #[cargo_test]
+fn do_not_fix_tests() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {}
+
+                #[cfg(test)]
+                mod tests {
+                    #[test]
+                    fn it_works() {
+                        let mut x = 3;
+                        x;
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
+        .run();
+}
+
+#[cargo_test]
+fn fix_tests_with_edition() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {}
+
+                #[cfg(test)]
+                mod tests {
+                    #[test]
+                    fn it_works() {
+                        let mut x = 3;
+                        x;
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --edition-idioms --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FIXED] src/lib.rs (1 fix)
+[WARNING] path statement with no effect
+ --> src/lib.rs:9:25
+  |
+9 |                         x;
+  |                         ^^
+  |
+  = [NOTE] `#[warn(path_statements)]` on by default
+
+[WARNING] `foo` (lib test) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
+        .run();
+}
+
+#[cargo_test]
 fn local_paths() {
     let p = project()
         .file(
@@ -705,19 +775,6 @@ fn does_not_warn_about_dirty_ignored_files() {
     p.change_file("bar", "");
 
     p.cargo("fix").run();
-}
-
-#[cargo_test]
-fn fix_all_targets_by_default() {
-    let p = project()
-        .file("src/lib.rs", "pub fn foo() { let mut x = 3; let _ = x; }")
-        .file("tests/foo.rs", "pub fn foo() { let mut x = 3; let _ = x; }")
-        .build();
-    p.cargo("fix --allow-no-vcs")
-        .env("__CARGO_FIX_YOLO", "1")
-        .run();
-    assert!(!p.read_file("src/lib.rs").contains("let mut x"));
-    assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
 }
 
 #[cargo_test]
