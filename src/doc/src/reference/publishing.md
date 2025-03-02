@@ -114,7 +114,6 @@ If you’d rather explicitly list the files to include, Cargo also supports an
 # ...
 include = [
     "**/*.rs",
-    "Cargo.toml",
 ]
 ```
 
