@@ -16,5 +16,4 @@ for a list of what is available.
 
 [Registry Web API]: registry-web-api.md
 [Registry Index]: registry-index.md
-[`cargo publish`]: ../commands/cargo-publish.md
 [`cargo package`]: ../commands/cargo-package.md
