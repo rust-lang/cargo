@@ -450,7 +450,7 @@ Note that metadata is only passed to immediate dependents, not transitive
 dependents.
 
 > **MSRV:** 1.77 is required for `cargo::metadata=KEY=VALUE`.
-> To support older versions, use `cargo:KEY=VAUE` (unsupported directives are assumed to be metadata keys).
+> To support older versions, use `cargo:KEY=VALUE` (unsupported directives are assumed to be metadata keys).
 
 [using-another-sys]: build-script-examples.md#using-another-sys-crate
 
