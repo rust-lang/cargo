@@ -79,7 +79,7 @@ pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::crate_type::CrateType;
 pub use self::custom_build::LinkArgTarget;
-pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
+pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts, LibraryPath};
 pub(crate) use self::fingerprint::DirtyReason;
 pub use self::job_queue::Freshness;
 use self::job_queue::{Job, JobQueue, JobState, Work};
@@ -495,6 +495,8 @@ fn rustc(
         target: &Target,
         current_id: PackageId,
     ) -> CargoResult<()> {
+        let mut library_paths = vec![];
+
         for key in build_scripts.to_link.iter() {
             let output = build_script_outputs.get(key.1).ok_or_else(|| {
                 internal(format!(
@@ -502,9 +504,25 @@ fn rustc(
                     key.0, key.1
                 ))
             })?;
-            for path in output.library_paths.iter() {
-                rustc.arg("-L").arg(path);
-            }
+            library_paths.extend(output.library_paths.iter());
+        }
+
+        library_paths.sort_by_key(|p| match p {
+            LibraryPath::CargoArtifact(_) => 0,
+            LibraryPath::External(_) => 1,
+        });
+
+        for path in library_paths.iter() {
+            rustc.arg("-L").arg(path);
+        }
+
+        for key in build_scripts.to_link.iter() {
+            let output = build_script_outputs.get(key.1).ok_or_else(|| {
+                internal(format!(
+                    "couldn't find build script output for {}/{}",
+                    key.0, key.1
+                ))
+            })?;
 
             if key.0 == current_id {
                 if pass_l_flag {
@@ -650,13 +668,20 @@ fn add_plugin_deps(
             .get(*metadata)
             .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", pkg_id)))?;
         search_path.append(&mut filter_dynamic_search_path(
-            output.library_paths.iter(),
+            output.library_paths.iter().map(AsRef::as_ref),
             root_output,
         ));
     }
     let search_path = paths::join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
     Ok(())
+}
+
+fn get_dynamic_search_path(path: &PathBuf) -> &Path {
+    match path.to_str().and_then(|s| s.split_once("=")) {
+        Some(("native" | "crate" | "dependency" | "framework" | "all", path)) => Path::new(path),
+        _ => path,
+    }
 }
 
 // Determine paths to add to the dynamic search path from -L entries
@@ -670,10 +695,7 @@ where
 {
     let mut search_path = vec![];
     for dir in paths {
-        let dir = match dir.to_str().and_then(|s| s.split_once("=")) {
-            Some(("native" | "crate" | "dependency" | "framework" | "all", path)) => path.into(),
-            _ => dir.clone(),
-        };
+        let dir = get_dynamic_search_path(dir).to_path_buf();
         if dir.starts_with(&root_output) {
             search_path.push(dir);
         } else {
