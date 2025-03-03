@@ -408,8 +408,8 @@ The following files are always included:
 
 * The `Cargo.toml` file of the package itself is always included, it does not
   need to be listed in `include`.
-* A minimized `Cargo.lock` is automatically included if the package contains a
-  binary or example target, see [`cargo package`] for more information.
+* A minimized `Cargo.lock` is automatically included.
+  See [`cargo package`] for more information.
 * If a [`license-file`](#the-license-and-license-file-fields) is specified, it
   is always included.
 
