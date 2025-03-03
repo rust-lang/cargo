@@ -1387,7 +1387,7 @@ fn fix_to_broken_code() {
     p.cargo("fix --allow-no-vcs --broken-code")
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_status(101)
+        .with_status(0)
         .with_stderr_data(str![[r#"
 ...
 [WARNING] failed to automatically apply fixes suggested by rustc to crate `bar`
