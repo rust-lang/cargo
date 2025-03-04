@@ -3,7 +3,6 @@
 //! [yank]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#yank
 //! [unyank]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#unyank
 
-use anyhow::bail;
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_credential::Secret;
@@ -18,7 +17,7 @@ use super::RegistryOrIndex;
 pub fn yank(
     gctx: &GlobalContext,
     krate: Option<String>,
-    version: Option<String>,
+    version: String,
     token: Option<Secret<String>>,
     reg_or_index: Option<RegistryOrIndex>,
     undo: bool,
@@ -30,9 +29,6 @@ pub fn yank(
             let ws = Workspace::new(&manifest_path, gctx)?;
             ws.current()?.package_id().name().to_string()
         }
-    };
-    let Some(version) = version else {
-        bail!("a version must be specified to yank")
     };
 
     let message = if undo {
