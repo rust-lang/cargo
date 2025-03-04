@@ -482,7 +482,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         load: &mut dyn RegistryData,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        if self.gctx.offline() {
+        if !self.gctx.network_allowed() {
             // This should only return `Poll::Ready(Ok(()))` if there is at least 1 match.
             //
             // If there are 0 matches it should fall through and try again with online.

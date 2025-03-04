@@ -376,7 +376,7 @@ impl<'gctx> HttpRegistry<'gctx> {
         } else if self.gctx.cli_unstable().no_index_update {
             trace!("using local {} in no_index_update mode", path.display());
             true
-        } else if self.gctx.offline() {
+        } else if !self.gctx.network_allowed() {
             trace!("using local {} in offline mode", path.display());
             true
         } else if self.fresh.contains(path) {
@@ -511,7 +511,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             return Poll::Ready(Ok(LoadResponse::NotFound));
         }
 
-        if self.gctx.offline() || self.gctx.cli_unstable().no_index_update {
+        if !self.gctx.network_allowed() || self.gctx.cli_unstable().no_index_update {
             // Return NotFound in offline mode when the file doesn't exist in the cache.
             // If this results in resolution failure, the resolver will suggest
             // removing the --offline flag.
