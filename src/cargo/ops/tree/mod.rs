@@ -300,7 +300,7 @@ fn print_node<'a>(
     no_dedupe: bool,
     display_depth: DisplayDepth,
     visited_deps: &mut HashSet<NodeId>,
-    levels_continue: &mut Vec<bool>,
+    levels_continue: &mut Vec<(anstyle::Style, bool)>,
     print_stack: &mut Vec<NodeId>,
 ) {
     let new = no_dedupe || visited_deps.insert(node_index);
@@ -308,10 +308,10 @@ fn print_node<'a>(
     match prefix {
         Prefix::Depth => drop_print!(ws.gctx(), "{}", levels_continue.len()),
         Prefix::Indent => {
-            if let Some((last_continues, rest)) = levels_continue.split_last() {
-                for continues in rest {
+            if let Some(((last_style, last_continues), rest)) = levels_continue.split_last() {
+                for (style, continues) in rest {
                     let c = if *continues { symbols.down } else { " " };
-                    drop_print!(ws.gctx(), "{}   ", c);
+                    drop_print!(ws.gctx(), "{style}{c}{style:#}   ");
                 }
 
                 let c = if *last_continues {
@@ -319,7 +319,12 @@ fn print_node<'a>(
                 } else {
                     symbols.ell
                 };
-                drop_print!(ws.gctx(), "{0}{1}{1} ", c, symbols.right);
+                drop_print!(
+                    ws.gctx(),
+                    "{last_style}{0}{1}{1}{last_style:#} ",
+                    c,
+                    symbols.right
+                );
             }
         }
         Prefix::None => {}
@@ -333,7 +338,7 @@ fn print_node<'a>(
     let star = if (new && !in_cycle) || !has_deps {
         ""
     } else {
-        " (*)"
+        color_print::cstr!(" <yellow,dim>(*)</>")
     };
     drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
@@ -379,7 +384,7 @@ fn print_dependencies<'a>(
     no_dedupe: bool,
     display_depth: DisplayDepth,
     visited_deps: &mut HashSet<NodeId>,
-    levels_continue: &mut Vec<bool>,
+    levels_continue: &mut Vec<(anstyle::Style, bool)>,
     print_stack: &mut Vec<NodeId>,
     kind: &EdgeKind,
 ) {
@@ -390,19 +395,23 @@ fn print_dependencies<'a>(
 
     let name = match kind {
         EdgeKind::Dep(DepKind::Normal) => None,
-        EdgeKind::Dep(DepKind::Build) => Some("[build-dependencies]"),
-        EdgeKind::Dep(DepKind::Development) => Some("[dev-dependencies]"),
+        EdgeKind::Dep(DepKind::Build) => {
+            Some(color_print::cstr!("<blue,bold>[build-dependencies]</>"))
+        }
+        EdgeKind::Dep(DepKind::Development) => {
+            Some(color_print::cstr!("<cyan,bold>[dev-dependencies]</>"))
+        }
         EdgeKind::Feature => None,
     };
 
     if let Prefix::Indent = prefix {
         if let Some(name) = name {
-            for continues in &**levels_continue {
+            for (style, continues) in &**levels_continue {
                 let c = if *continues { symbols.down } else { " " };
-                drop_print!(ws.gctx(), "{}   ", c);
+                drop_print!(ws.gctx(), "{style}{c}{style:#}   ");
             }
 
-            drop_println!(ws.gctx(), "{}", name);
+            drop_println!(ws.gctx(), "{name}");
         }
     }
 
@@ -433,7 +442,8 @@ fn print_dependencies<'a>(
         .peekable();
 
     while let Some(dependency) = it.next() {
-        levels_continue.push(it.peek().is_some());
+        let style = edge_line_color(dependency.kind());
+        levels_continue.push((style, it.peek().is_some()));
         print_node(
             ws,
             graph,
@@ -449,5 +459,18 @@ fn print_dependencies<'a>(
             print_stack,
         );
         levels_continue.pop();
+    }
+}
+
+fn edge_line_color(kind: EdgeKind) -> anstyle::Style {
+    match kind {
+        EdgeKind::Dep(DepKind::Normal) => anstyle::Style::new() | anstyle::Effects::DIMMED,
+        EdgeKind::Dep(DepKind::Build) => {
+            anstyle::AnsiColor::Blue.on_default() | anstyle::Effects::BOLD
+        }
+        EdgeKind::Dep(DepKind::Development) => {
+            anstyle::AnsiColor::Cyan.on_default() | anstyle::Effects::BOLD
+        }
+        EdgeKind::Feature => anstyle::AnsiColor::Magenta.on_default() | anstyle::Effects::DIMMED,
     }
 }
