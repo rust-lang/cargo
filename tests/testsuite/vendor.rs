@@ -1965,17 +1965,18 @@ fn dont_delete_non_registry_sources_with_respect_source_config() {
 
     add_crates_io_vendor_config(&p);
     p.cargo("vendor --respect-source-config new-vendor-dir")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to sync
+   Vendoring log v0.3.5 ([ROOT]/foo/vendor/log) to new-vendor-dir/log
+To use vendored sources, add this to your .cargo/config.toml for this project:
 
-Caused by:
-  failed to load pkg lockfile
 
-Caused by:
-  no matching package named `log` found
-  location searched: directory source `[ROOT]/foo/vendor` (which is replacing registry `crates-io`)
-  required by package `foo v0.1.0 ([ROOT]/foo)`
+"#]])
+        .with_stdout_data(str![[r#"
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "new-vendor-dir"
 
 "#]])
         .run();
