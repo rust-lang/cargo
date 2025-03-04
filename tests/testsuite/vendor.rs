@@ -1939,3 +1939,45 @@ fn vendor_crate_with_ws_inherit() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn dont_delete_non_registry_sources_with_respect_source_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    p.cargo("vendor --respect-source-config").run();
+    let lock = p.read_file("vendor/log/Cargo.toml");
+    assert!(lock.contains("version = \"0.3.5\""));
+
+    add_crates_io_vendor_config(&p);
+    p.cargo("vendor --respect-source-config new-vendor-dir")
+        .with_stderr_data(str![[r#"
+   Vendoring log v0.3.5 ([ROOT]/foo/vendor/log) to new-vendor-dir/log
+To use vendored sources, add this to your .cargo/config.toml for this project:
+
+
+"#]])
+        .with_stdout_data(str![[r#"
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "new-vendor-dir"
+
+"#]])
+        .run();
+}
