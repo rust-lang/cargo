@@ -659,6 +659,13 @@ fn add_plugin_deps(
     Ok(())
 }
 
+fn get_dynamic_search_path(path: &Path) -> &Path {
+    match path.to_str().and_then(|s| s.split_once("=")) {
+        Some(("native" | "crate" | "dependency" | "framework" | "all", path)) => Path::new(path),
+        _ => path,
+    }
+}
+
 // Determine paths to add to the dynamic search path from -L entries
 //
 // Strip off prefixes like "native=" or "framework=" and filter out directories
@@ -670,10 +677,7 @@ where
 {
     let mut search_path = vec![];
     for dir in paths {
-        let dir = match dir.to_str().and_then(|s| s.split_once("=")) {
-            Some(("native" | "crate" | "dependency" | "framework" | "all", path)) => path.into(),
-            _ => dir.clone(),
-        };
+        let dir = get_dynamic_search_path(dir).to_path_buf();
         if dir.starts_with(&root_output) {
             search_path.push(dir);
         } else {
