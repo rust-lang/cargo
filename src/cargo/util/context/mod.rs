@@ -1174,14 +1174,6 @@ impl GlobalContext {
         }
     }
 
-    pub fn offline(&self) -> bool {
-        self.offline
-    }
-
-    pub fn frozen(&self) -> bool {
-        self.frozen
-    }
-
     pub fn set_locked(&mut self, locked: bool) {
         self.locked = locked;
     }
