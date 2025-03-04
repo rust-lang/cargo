@@ -393,13 +393,13 @@ pub(super) fn activation_error(
     );
 
     if let Some(gctx) = gctx {
-        if gctx.offline() {
+        if let Some(offline_flag) = gctx.offline_flag() {
             let _ = write!(
                 &mut hints,
-                "\nAs a reminder, you're using offline mode (--offline) \
+                "\nAs a reminder, you're using offline mode ({offline_flag}) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
-                 without the offline flag.",
+                 without `{offline_flag}`.",
             );
         }
     }

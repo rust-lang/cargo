@@ -189,7 +189,7 @@ impl<'gctx> InstallablePackage<'gctx> {
             lockfile_path.clone(),
         )?;
 
-        if gctx.locked() {
+        if !gctx.lock_update_allowed() {
             // When --lockfile-path is set, check that passed lock file exists
             // (unlike the usual flag behavior, lockfile won't be created as we imply --locked)
             if let Some(requested_lockfile_path) = ws.requested_lockfile_path() {

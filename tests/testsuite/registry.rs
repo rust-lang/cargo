@@ -2431,14 +2431,10 @@ fn disallow_network_http() {
     p.cargo("check --frozen")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[ERROR] failed to get `foo` as a dependency of package `bar v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  attempting to make an HTTP request, but --frozen was specified
+[ERROR] no matching package named `foo` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v0.5.0 ([ROOT]/foo)`
+As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
 
 "#]])
         .run();
@@ -2467,19 +2463,10 @@ fn disallow_network_git() {
     p.cargo("check --frozen")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `foo` as a dependency of package `bar v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  Unable to update registry `crates-io`
-
-Caused by:
-  failed to update replaced source registry `crates-io`
-
-Caused by:
-  attempting to make an HTTP request, but --frozen was specified
+[ERROR] no matching package named `foo` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v0.5.0 ([ROOT]/foo)`
+As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
 
 "#]])
         .run();

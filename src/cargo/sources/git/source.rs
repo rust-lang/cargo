@@ -299,10 +299,16 @@ impl<'gctx> Source for GitSource<'gctx> {
             // If we're in offline mode, we're not locked, and we have a
             // database, then try to resolve our reference with the preexisting
             // repository.
-            (Revision::Deferred(git_ref), Some(db)) if self.gctx.offline() => {
+            (Revision::Deferred(git_ref), Some(db)) if !self.gctx.network_allowed() => {
+                let offline_flag = self
+                    .gctx
+                    .offline_flag()
+                    .expect("always present when `!network_allowed`");
                 let rev = db.resolve(&git_ref).with_context(|| {
-                    "failed to lookup reference in preexisting repository, and \
-                         can't check for updates in offline mode (--offline)"
+                    format!(
+                        "failed to lookup reference in preexisting repository, and \
+                         can't check for updates in offline mode ({offline_flag})"
+                    )
                 })?;
                 (db, rev)
             }
@@ -312,9 +318,9 @@ impl<'gctx> Source for GitSource<'gctx> {
             // situation that we have a locked revision but the database
             // doesn't have it.
             (locked_rev, db) => {
-                if self.gctx.offline() {
+                if let Some(offline_flag) = self.gctx.offline_flag() {
                     anyhow::bail!(
-                        "can't checkout from '{}': you are in the offline mode (--offline)",
+                        "can't checkout from '{}': you are in the offline mode ({offline_flag})",
                         self.remote.url()
                     );
                 }

@@ -1161,19 +1161,17 @@ impl GlobalContext {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen() && !self.offline()
+        !self.offline_flag().is_some()
     }
 
-    pub fn offline(&self) -> bool {
-        self.offline
-    }
-
-    pub fn frozen(&self) -> bool {
-        self.frozen
-    }
-
-    pub fn locked(&self) -> bool {
-        self.locked
+    pub fn offline_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.offline {
+            Some("--offline")
+        } else {
+            None
+        }
     }
 
     pub fn set_locked(&mut self, locked: bool) {
@@ -1181,7 +1179,17 @@ impl GlobalContext {
     }
 
     pub fn lock_update_allowed(&self) -> bool {
-        !self.frozen && !self.locked
+        !self.locked_flag().is_some()
+    }
+
+    pub fn locked_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.locked {
+            Some("--locked")
+        } else {
+            None
+        }
     }
 
     /// Loads configuration from the filesystem.
