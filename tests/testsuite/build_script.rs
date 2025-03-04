@@ -6170,7 +6170,7 @@ fn linker_search_path_preference() {
 
     p.cargo("build -v").with_stderr_data(str![[r#"
 ...
-[RUNNING] `rustc --crate-name foo [..] -L /usr/lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L /lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1 -L /usr/lib3 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.2 -L /lib3 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.1 -L /usr/lib2 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.1 -L /lib2 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.2`
+[RUNNING] `rustc --crate-name foo [..] -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.2 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.1 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.1 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.2 -L /usr/lib -L /lib -L /usr/lib3 -L /lib3 -L /usr/lib2 -L /lib2`
 ...
 "#]]).run();
 }

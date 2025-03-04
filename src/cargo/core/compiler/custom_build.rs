@@ -31,7 +31,7 @@
 //! [`CompileMode::RunCustomBuild`]: super::CompileMode
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, BuildRunner, Job, Unit, Work};
+use super::{fingerprint, get_dynamic_search_path, BuildRunner, Job, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
@@ -74,11 +74,76 @@ pub enum Severity {
 
 pub type LogMessage = (Severity, String);
 
+/// Represents a path added to the library search path.
+///
+/// We need to keep track of requests to add search paths within the cargo build directory
+/// separately from paths outside of Cargo. The reason is that we want to give precedence to linking
+/// against libraries within the Cargo build directory even if a similar library exists in the
+/// system (e.g. crate A adds `/usr/lib` to the search path and then a later build of crate B adds
+/// `target/debug/...` to satisfy its request to link against the library B that it built, but B is
+/// also found in `/usr/lib`).
+///
+/// There's some nuance here because we want to preserve relative order of paths of the same type.
+/// For example, if the build process would in declaration order emit the following linker line:
+/// ```bash
+/// -L/usr/lib -Ltarget/debug/build/crate1/libs -L/lib -Ltarget/debug/build/crate2/libs)
+/// ```
+///
+/// we want the linker to actually receive:
+/// ```bash
+/// -Ltarget/debug/build/crate1/libs -Ltarget/debug/build/crate2/libs) -L/usr/lib -L/lib
+/// ```
+///
+/// so that the library search paths within the crate artifacts directory come first but retain
+/// relative ordering while the system library paths come after while still retaining relative
+/// ordering among them; ordering is the order they are emitted within the build process,
+/// not lexicographic order.
+///
+/// WARNING: Even though this type implements PartialOrd + Ord, this is a lexicographic ordering.
+/// The linker line will require an explicit sorting algorithm. PartialOrd + Ord is derived because
+/// BuildOutput requires it but that ordering is different from the one for the linker search path,
+/// at least today. It may be worth reconsidering & perhaps it's ok if BuildOutput doesn't have
+/// a lexicographic ordering for the library_paths? I'm not sure the consequence of that.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LibraryPath {
+    /// The path is pointing within the output folder of the crate and takes priority over
+    /// external paths when passed to the linker.
+    CargoArtifact(PathBuf),
+    /// The path is pointing outside of the crate's build location. The linker will always
+    /// receive such paths after `CargoArtifact`.
+    External(PathBuf),
+}
+
+impl LibraryPath {
+    fn new(p: PathBuf, script_out_dir: &Path) -> Self {
+        let search_path = get_dynamic_search_path(&p);
+        if search_path.starts_with(script_out_dir) {
+            Self::CargoArtifact(p)
+        } else {
+            Self::External(p)
+        }
+    }
+
+    pub fn into_path_buf(self) -> PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
+impl AsRef<PathBuf> for LibraryPath {
+    fn as_ref(&self) -> &PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag.
-    pub library_paths: Vec<PathBuf>,
+    pub library_paths: Vec<LibraryPath>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
@@ -237,7 +302,7 @@ fn emit_build_output(
     let library_paths = output
         .library_paths
         .iter()
-        .map(|l| l.display().to_string())
+        .map(|l| l.as_ref().display().to_string())
         .collect::<Vec<_>>();
 
     let msg = machine_message::BuildScript {
@@ -884,10 +949,16 @@ impl BuildOutput {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
                     library_links.extend(links.into_iter());
-                    library_paths.extend(paths.into_iter());
+                    library_paths.extend(
+                        paths
+                            .into_iter()
+                            .map(|p| LibraryPath::new(p, script_out_dir)),
+                    );
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
-                "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-link-search" => {
+                    library_paths.push(LibraryPath::new(PathBuf::from(value), script_out_dir))
+                }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     if !targets.iter().any(|target| target.is_cdylib()) {
                         log_messages.push((

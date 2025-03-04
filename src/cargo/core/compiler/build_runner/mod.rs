@@ -301,7 +301,9 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 .extend(output.env.iter().cloned());
 
             for dir in output.library_paths.iter() {
-                self.compilation.native_dirs.insert(dir.clone());
+                self.compilation
+                    .native_dirs
+                    .insert(dir.clone().into_path_buf());
             }
         }
         Ok(self.compilation)
