@@ -6087,3 +6087,90 @@ fn directory_with_leading_underscore() {
         .with_status(0)
         .run();
 }
+
+#[cargo_test]
+fn linker_search_path_preference() {
+    // This isn't strictly the exact scenario that causes the issue, but it's the shortest demonstration
+    // of the issue.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = "build.rs"
+
+                [dependencies]
+                a = { path = "a" }
+                b = { path = "b" }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    let out_dir = std::env::var("OUT_DIR").unwrap();
+                    println!("cargo::rustc-link-search=/usr/lib");
+                    println!("cargo::rustc-link-search={}/libs2", out_dir);
+                    println!("cargo::rustc-link-search=/lib");
+                    println!("cargo::rustc-link-search={}/libs1", out_dir);
+                }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2024"
+                build = "build.rs"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "a/build.rs",
+            r#"
+                fn main() {
+                    let out_dir = std::env::var("OUT_DIR").unwrap();
+                    println!("cargo::rustc-link-search=/usr/lib3");
+                    println!("cargo::rustc-link-search={}/libsA.2", out_dir);
+                    println!("cargo::rustc-link-search=/lib3");
+                    println!("cargo::rustc-link-search={}/libsA.1", out_dir);
+                }
+            "#,
+        )
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2024"
+                build = "build.rs"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "b/build.rs",
+            r#"
+                fn main() {
+                    let out_dir = std::env::var("OUT_DIR").unwrap();
+                    println!("cargo::rustc-link-search=/usr/lib2");
+                    println!("cargo::rustc-link-search={}/libsB.1", out_dir);
+                    println!("cargo::rustc-link-search=/lib2");
+                    println!("cargo::rustc-link-search={}/libsB.2", out_dir);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name foo [..] -L /usr/lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L /lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1 -L /usr/lib3 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.2 -L /lib3 -L [ROOT]/foo/target/debug/build/a-[HASH]/out/libsA.1 -L /usr/lib2 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.1 -L /lib2 -L [ROOT]/foo/target/debug/build/b-[HASH]/out/libsB.2`
+...
+"#]]).run();
+}
