@@ -198,12 +198,8 @@ fn validate_locked_and_frozen_options(
 ) -> Result<(), anyhow::Error> {
     // Only in workspace, we can use --frozen or --locked.
     if !in_workspace {
-        if gctx.locked() {
-            bail!("the option `--locked` can only be used within a workspace");
-        }
-
-        if gctx.frozen() {
-            bail!("the option `--frozen` can only be used within a workspace");
+        if let Some(locked_flag) = gctx.locked_flag() {
+            bail!("the option `{locked_flag}` can only be used within a workspace");
         }
     }
     Ok(())

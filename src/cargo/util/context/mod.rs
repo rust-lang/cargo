@@ -1191,7 +1191,17 @@ impl GlobalContext {
     }
 
     pub fn lock_update_allowed(&self) -> bool {
-        !self.frozen && !self.locked
+        !self.locked_flag().is_some()
+    }
+
+    pub fn locked_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.locked {
+            Some("--locked")
+        } else {
+            None
+        }
     }
 
     /// Loads configuration from the filesystem.
