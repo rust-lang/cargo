@@ -54,14 +54,26 @@ fn resolve_crate<'k>(
             }
 
             match version {
-                None => Ok((Some(name), embedded_version)),
+                None => {
+                    if embedded_version.starts_with('v') {
+                        Ok((Some(name), &embedded_version[1..]))
+                    } else {
+                        Ok((Some(name), embedded_version))
+                    }
+                }
                 Some(_) => {
                     anyhow::bail!("cannot specify both `@{embedded_version}` and `--version`");
                 }
             }
         }
         None => match version {
-            Some(version) => Ok((krate, version)),
+            Some(version) => {
+                if version.starts_with('v') {
+                    Ok((krate, &version[1..]))
+                } else {
+                    Ok((krate, version))
+                }
+            }
             None => {
                 anyhow::bail!("`--version` is required");
             }
