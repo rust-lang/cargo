@@ -1161,7 +1161,17 @@ impl GlobalContext {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen() && !self.offline()
+        !self.offline_flag().is_some()
+    }
+
+    pub fn offline_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.offline {
+            Some("--offline")
+        } else {
+            None
+        }
     }
 
     pub fn offline(&self) -> bool {
