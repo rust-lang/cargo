@@ -30,14 +30,11 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         args.get_one::<String>("crate").map(String::as_str),
         args.get_one::<String>("version").map(String::as_str),
     )?;
-    if version.is_none() {
-        return Err(anyhow::format_err!("`--version` is required").into());
-    }
 
     ops::yank(
         gctx,
         krate.map(|s| s.to_string()),
-        version.map(|s| s.to_string()),
+        version.to_string(),
         args.get_one::<String>("token").cloned().map(Secret::from),
         args.registry_or_index(gctx)?,
         args.flag("undo"),
@@ -46,19 +43,28 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 }
 
 fn resolve_crate<'k>(
-    mut krate: Option<&'k str>,
-    mut version: Option<&'k str>,
-) -> crate::CargoResult<(Option<&'k str>, Option<&'k str>)> {
-    if let Some((k, v)) = krate.and_then(|k| k.split_once('@')) {
-        if version.is_some() {
-            anyhow::bail!("cannot specify both `@{v}` and `--version`");
+    krate: Option<&'k str>,
+    version: Option<&'k str>,
+) -> crate::CargoResult<(Option<&'k str>, &'k str)> {
+    match krate.and_then(|k| k.split_once('@')) {
+        Some((name, embedded_version)) => {
+            if name.is_empty() {
+                // by convention, arguments starting with `@` are response files
+                anyhow::bail!("missing crate name for `@{embedded_version}`");
+            }
+
+            match version {
+                None => Ok((Some(name), embedded_version)),
+                Some(_) => {
+                    anyhow::bail!("cannot specify both `@{embedded_version}` and `--version`");
+                }
+            }
         }
-        if k.is_empty() {
-            // by convention, arguments starting with `@` are response files
-            anyhow::bail!("missing crate name for `@{v}`");
-        }
-        krate = Some(k);
-        version = Some(v);
+        None => match version {
+            Some(version) => Ok((krate, version)),
+            None => {
+                anyhow::bail!("`--version` is required");
+            }
+        },
     }
-    Ok((krate, version))
 }
