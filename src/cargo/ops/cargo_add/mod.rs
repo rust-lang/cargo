@@ -251,11 +251,11 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         }
     }
 
-    if options.gctx.locked() {
+    if let Some(locked_flag) = options.gctx.locked_flag() {
         let new_raw_manifest = manifest.to_string();
         if original_raw_manifest != new_raw_manifest {
             anyhow::bail!(
-                "the manifest file {} needs to be updated but --locked was passed to prevent this",
+                "the manifest file {} needs to be updated but {locked_flag} was passed to prevent this",
                 manifest.path.display()
             );
         }

@@ -25,15 +25,9 @@ pub fn http_handle(gctx: &GlobalContext) -> CargoResult<Easy> {
 }
 
 pub fn http_handle_and_timeout(gctx: &GlobalContext) -> CargoResult<(Easy, HttpTimeout)> {
-    if gctx.frozen() {
+    if let Some(offline_flag) = gctx.offline_flag() {
         bail!(
-            "attempting to make an HTTP request, but --frozen was \
-             specified"
-        )
-    }
-    if gctx.offline() {
-        bail!(
-            "attempting to make an HTTP request, but --offline was \
+            "attempting to make an HTTP request, but {offline_flag} was \
              specified"
         )
     }

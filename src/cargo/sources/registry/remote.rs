@@ -345,7 +345,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         }
         self.mark_updated();
 
-        if self.gctx.offline() {
+        if !self.gctx.network_allowed() {
             return Ok(());
         }
         if self.gctx.cli_unstable().no_index_update {

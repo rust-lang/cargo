@@ -955,14 +955,11 @@ pub fn fetch(
     gctx: &GlobalContext,
     remote_kind: RemoteKind,
 ) -> CargoResult<()> {
-    if gctx.frozen() {
+    if let Some(offline_flag) = gctx.offline_flag() {
         anyhow::bail!(
-            "attempting to update a git repository, but --frozen \
+            "attempting to update a git repository, but {offline_flag} \
              was specified"
         )
-    }
-    if !gctx.network_allowed() {
-        anyhow::bail!("can't update a git repository in the offline mode")
     }
 
     let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), gctx);
