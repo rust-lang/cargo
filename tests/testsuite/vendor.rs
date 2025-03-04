@@ -1939,3 +1939,44 @@ fn vendor_crate_with_ws_inherit() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn dont_delete_non_registry_sources_with_respect_source_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    p.cargo("vendor --respect-source-config").run();
+    let lock = p.read_file("vendor/log/Cargo.toml");
+    assert!(lock.contains("version = \"0.3.5\""));
+
+    add_crates_io_vendor_config(&p);
+    p.cargo("vendor --respect-source-config new-vendor-dir")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to sync
+
+Caused by:
+  failed to load pkg lockfile
+
+Caused by:
+  no matching package named `log` found
+  location searched: directory source `[ROOT]/foo/vendor` (which is replacing registry `crates-io`)
+  required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
