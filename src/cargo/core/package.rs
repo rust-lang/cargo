@@ -5,7 +5,7 @@ use std::fmt;
 use std::hash;
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
@@ -42,7 +42,7 @@ use crate::util::{self, internal, GlobalContext, Progress, ProgressStyle};
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
 #[derive(Clone)]
 pub struct Package {
-    inner: Rc<PackageInner>,
+    inner: Arc<PackageInner>,
 }
 
 #[derive(Clone)]
@@ -101,7 +101,7 @@ impl Package {
     /// Creates a package from a manifest and its location.
     pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
-            inner: Rc::new(PackageInner {
+            inner: Arc::new(PackageInner {
                 manifest,
                 manifest_path: manifest_path.to_path_buf(),
             }),
@@ -118,7 +118,7 @@ impl Package {
     }
     /// Gets the manifest.
     pub fn manifest_mut(&mut self) -> &mut Manifest {
-        &mut Rc::make_mut(&mut self.inner).manifest
+        &mut Arc::make_mut(&mut self.inner).manifest
     }
     /// Gets the path to the manifest.
     pub fn manifest_path(&self) -> &Path {
@@ -179,7 +179,7 @@ impl Package {
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Package {
         Package {
-            inner: Rc::new(PackageInner {
+            inner: Arc::new(PackageInner {
                 manifest: self.manifest().clone().map_source(to_replace, replace_with),
                 manifest_path: self.manifest_path().to_owned(),
             }),
