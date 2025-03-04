@@ -74,14 +74,18 @@ fn explicit_version_prefixing_v() {
 
     p.cargo("yank --version v0.0.1")
         .replace_crates_io(registry.index_url())
+        .run();
+
+    p.cargo("yank --undo --version v0.0.1")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[YANK] foo@v0.0.1
-[ERROR] failed to yank from the registry at [ROOTURL]/api
+      Unyank foo@0.0.1
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
 
 Caused by:
-  [37] Could not read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/foo/v0.0.1/yank)
+  EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();
@@ -186,14 +190,18 @@ fn inline_version_prefixing_v() {
 
     p.cargo("yank foo@v0.0.1")
         .replace_crates_io(registry.index_url())
+        .run();
+
+    p.cargo("yank --undo foo@v0.0.1")
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[YANK] foo@v0.0.1
-[ERROR] failed to yank from the registry at [ROOTURL]/api
+      Unyank foo@0.0.1
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
 
 Caused by:
-  [37] Could not read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/foo/v0.0.1/yank)
+  EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();
