@@ -6120,7 +6120,7 @@ fn linker_search_path_preference() {
 
     p.cargo("build -v").with_stderr_data(str![[r#"
 ...
-[RUNNING] `rustc --crate-name foo [..] -L /usr/lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L /lib -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1`
+[RUNNING] `rustc --crate-name foo [..] -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1 -L /usr/lib -L /lib`
 ...
 "#]]).run();
 }
