@@ -163,7 +163,7 @@ fn inherit_own_workspace_fields() {
 [PACKAGING] foo v1.2.3 ([ROOT]/foo)
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.2.3 ([ROOT]/foo)
-[COMPILING] foo v1.2.3 ([ROOT]/foo/target/package/foo-1.2.3)
+[CHECKING] foo v1.2.3 ([ROOT]/foo/target/package/foo-1.2.3)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v1.2.3 ([ROOT]/foo)
 [UPLOADED] foo v1.2.3 to registry `crates-io`
@@ -329,8 +329,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.2.0 ([ROOT]/foo)
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
@@ -496,8 +496,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.2.0 ([ROOT]/foo)
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
@@ -758,7 +758,7 @@ fn inherit_workspace_fields() {
 `license` should be used if the package license can be expressed with a standard SPDX expression.
 `license-file` should be used if the package uses a non-standard license.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
-[COMPILING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
+[CHECKING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)
 [UPLOADED] bar v1.2.3 to registry `crates-io`
@@ -931,8 +931,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.2.0 ([ROOT]/foo/bar)
-[COMPILING] dep v0.1.2
-[COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
+[CHECKING] dep v0.1.2
+[CHECKING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo/bar)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
