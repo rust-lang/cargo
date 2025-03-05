@@ -91,6 +91,7 @@ impl FromStr for Prefix {
 #[derive(Clone, Copy)]
 pub enum DisplayDepth {
     MaxDisplayDepth(u32),
+    Public,
     Workspace,
 }
 
@@ -100,6 +101,7 @@ impl FromStr for DisplayDepth {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "workspace" => Ok(Self::Workspace),
+            "public" => Ok(Self::Public),
             s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -282,7 +284,7 @@ fn print(
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
-        );
+        )?;
     }
 
     Ok(())
@@ -302,7 +304,7 @@ fn print_node<'a>(
     visited_deps: &mut HashSet<NodeId>,
     levels_continue: &mut Vec<(anstyle::Style, bool)>,
     print_stack: &mut Vec<NodeId>,
-) {
+) -> CargoResult<()> {
     let new = no_dedupe || visited_deps.insert(node_index);
 
     match prefix {
@@ -343,7 +345,7 @@ fn print_node<'a>(
     drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
-        return;
+        return Ok(());
     }
     print_stack.push(node_index);
 
@@ -367,9 +369,11 @@ fn print_node<'a>(
             levels_continue,
             print_stack,
             kind,
-        );
+        )?;
     }
     print_stack.pop();
+
+    Ok(())
 }
 
 /// Prints all the dependencies of a package for the given dependency kind.
@@ -387,10 +391,10 @@ fn print_dependencies<'a>(
     levels_continue: &mut Vec<(anstyle::Style, bool)>,
     print_stack: &mut Vec<NodeId>,
     kind: &EdgeKind,
-) {
+) -> CargoResult<()> {
     let deps = graph.edges_of_kind(node_index, kind);
     if deps.is_empty() {
-        return;
+        return Ok(());
     }
 
     let name = match kind {
@@ -415,14 +419,20 @@ fn print_dependencies<'a>(
         }
     }
 
-    let (max_display_depth, filter_non_workspace_member) = match display_depth {
-        DisplayDepth::MaxDisplayDepth(max) => (max, false),
-        DisplayDepth::Workspace => (u32::MAX, true),
+    let (max_display_depth, filter_non_workspace_member, filter_private) = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => (max, false, false),
+        DisplayDepth::Workspace => (u32::MAX, true, false),
+        DisplayDepth::Public => {
+            if !ws.gctx().cli_unstable().unstable_options {
+                anyhow::bail!("`--depth public` requires `-Zunstable-options`")
+            }
+            (u32::MAX, false, true)
+        }
     };
 
     // Current level exceeds maximum display depth. Skip.
     if levels_continue.len() + 1 > max_display_depth as usize {
-        return;
+        return Ok(());
     }
 
     let mut it = deps
@@ -434,9 +444,17 @@ fn print_dependencies<'a>(
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
                     }
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
                     !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
-                _ => true,
+                Node::Feature { .. } => {
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
+                    true
+                }
             }
         })
         .peekable();
@@ -457,9 +475,11 @@ fn print_dependencies<'a>(
             visited_deps,
             levels_continue,
             print_stack,
-        );
+        )?;
         levels_continue.pop();
     }
+
+    Ok(())
 }
 
 fn edge_line_color(kind: EdgeKind) -> anstyle::Style {
