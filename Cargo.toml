@@ -81,7 +81,7 @@ rand = "0.9.0"
 regex = "1.11.1"
 rusqlite = { version = "0.33.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
-rustc-stable-hash = "0.1.1"
+rustc-stable-hash = "0.1.2"
 rustfix = { version = "0.9.0", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.0.0-alpha.17"
