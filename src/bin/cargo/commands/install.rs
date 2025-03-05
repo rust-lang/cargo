@@ -65,7 +65,11 @@ pub fn cli() -> Command {
         .arg(
             opt("path", "Filesystem path to local crate to install from")
                 .value_name("PATH")
-                .conflicts_with_all(&["git", "index", "registry"]),
+                .conflicts_with_all(&["git", "index", "registry"])
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any()
+                        .filter(|path| path.join("Cargo.toml").exists()),
+                )),
         )
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
