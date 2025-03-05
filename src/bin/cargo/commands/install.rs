@@ -1,4 +1,5 @@
 use crate::command_prelude::*;
+use crate::util::toml::is_embedded;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -12,6 +13,8 @@ use itertools::Itertools;
 use semver::VersionReq;
 
 use cargo_util::paths;
+use std::ffi::OsStr;
+use std::path::Path;
 
 pub fn cli() -> Command {
     subcommand("install")
@@ -65,7 +68,21 @@ pub fn cli() -> Command {
         .arg(
             opt("path", "Filesystem path to local crate to install from")
                 .value_name("PATH")
-                .conflicts_with_all(&["git", "index", "registry"]),
+                .conflicts_with_all(&["git", "index", "registry"])
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any().filter(|path: &Path| {
+                        if path.is_dir() {
+                            return path.join("Cargo.toml").exists();
+                        }
+                        if path.file_name() == Some(OsStr::new("Cargo.toml")) {
+                            return true;
+                        }
+                        if is_embedded(path) {
+                            return true;
+                        }
+                        false
+                    }),
+                )),
         )
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
