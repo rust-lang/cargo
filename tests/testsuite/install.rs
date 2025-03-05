@@ -1617,6 +1617,21 @@ fn vers_precise() {
 }
 
 #[cargo_test]
+fn vers_precise_prefixing_v() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo --vers v0.1.1")
+        .with_status(1)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'v0.1.1' for '--version <VERSION>': unexpected character 'v' while parsing major version number
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn version_precise() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");
@@ -1625,6 +1640,21 @@ fn version_precise() {
         .with_stderr_data(str![[r#"
 ...
 [DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn version_precise_prefixing_v() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo --version v0.1.1")
+        .with_status(1)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'v0.1.1' for '--version <VERSION>': unexpected character 'v' while parsing major version number
 ...
 "#]])
         .run();
@@ -1645,6 +1675,21 @@ fn inline_version_precise() {
 }
 
 #[cargo_test]
+fn inline_version_precise_prefixing_v() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    cargo_process("install foo@v0.1.1")
+        .with_status(1)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'foo@v0.1.1' for '[CRATE[@<VER>]]...': unexpected character 'v' while parsing major version number
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn inline_version_multiple() {
     pkg("foo", "0.1.0");
     pkg("foo", "0.1.1");
@@ -1659,6 +1704,25 @@ fn inline_version_multiple() {
 [DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
 ...
 [DOWNLOADED] bar v0.2.1 (registry `dummy-registry`)
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_multiple_prefixing_v() {
+    pkg("foo", "0.1.0");
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+    pkg("bar", "0.2.0");
+    pkg("bar", "0.2.1");
+    pkg("bar", "0.2.2");
+
+    cargo_process("install foo@v0.1.1 bar@v0.2.1")
+        .with_status(1)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'foo@v0.1.1' for '[CRATE[@<VER>]]...': unexpected character 'v' while parsing major version number
 ...
 "#]])
         .run();
