@@ -354,9 +354,5 @@ The "login" endpoint is not an actual API request. It exists solely for the
 browser to log in and retrieve an API token.
 
 [`cargo login`]: ../commands/cargo-login.md
-[`cargo package`]: ../commands/cargo-package.md
-[`cargo publish`]: ../commands/cargo-publish.md
-[alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
-[config]: config.md
 [crates.io]: https://crates.io/
 [publishing documentation]: publishing.md#cargo-owner

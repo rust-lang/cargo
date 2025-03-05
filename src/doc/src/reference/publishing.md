@@ -284,7 +284,6 @@ request the org owner to do so.
 [`cargo publish`]: ../commands/cargo-publish.md
 [`categories`]: manifest.md#the-categories-field
 [`description`]: manifest.md#the-description-field
-[`documentation`]: manifest.md#the-documentation-field
 [`homepage`]: manifest.md#the-homepage-field
 [`keywords`]: manifest.md#the-keywords-field
 [`license` or `license-file`]: manifest.md#the-license-and-license-file-fields
