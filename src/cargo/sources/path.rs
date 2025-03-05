@@ -622,15 +622,29 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
 
         ignore_should_package(relative_path, is_dir)
     };
-
-    // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
-    if no_include_option {
-        if let Some(repo) = git_repo {
-            return list_files_gix(pkg, &repo, &filter, gctx);
+    let mut ret = match git_repo {
+        Some(repo) if no_include_option => {
+            // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
+            list_files_gix(pkg, &repo, &filter, gctx)?
+        }
+        _ => {
+            let mut ret = Vec::new();
+            list_files_walk(pkg.root(), &mut ret, true, &filter, gctx)?;
+            ret
+        }
+    };
+    for target in pkg.manifest().targets() {
+        let Some(path) = target.src_path().path() else {
+            continue;
+        };
+        let path = path.canonicalize()?;
+        if !path.starts_with(pkg.root()) {
+            // The target "root" is not included in the package root
+            // Unwrapping is ok because we know path is to a file
+            let target_root = path.parent().unwrap();
+            list_files_walk(target_root, &mut ret, false, &(|_, _| true), gctx)?;
         }
     }
-    let mut ret = Vec::new();
-    list_files_walk(pkg.root(), &mut ret, true, &filter, gctx)?;
     Ok(ret)
 }
 
