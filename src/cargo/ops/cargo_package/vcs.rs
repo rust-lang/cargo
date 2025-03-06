@@ -49,7 +49,10 @@ pub fn check_repo_state(
 ) -> CargoResult<Option<VcsInfo>> {
     let Ok(repo) = git2::Repository::discover(p.root()) else {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!("no (git) VCS found for `{}`", p.root().display()))
+            shell.warn(format_args!(
+                "no (git) VCS found for `{}`",
+                p.root().display()
+            ))
         })?;
         // No Git repo found. Have to assume it is clean.
         return Ok(None);
@@ -69,7 +72,7 @@ pub fn check_repo_state(
     let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
     let Ok(status) = repo.status_file(&path) else {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!(
+            shell.warn(format_args!(
                 "no (git) Cargo.toml found at `{}` in workdir `{}`",
                 path.display(),
                 workdir.display()
@@ -82,7 +85,7 @@ pub fn check_repo_state(
 
     if !(status & git2::Status::IGNORED).is_empty() {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!(
+            shell.warn(format_args!(
                 "found (git) Cargo.toml ignored at `{}` in workdir `{}`",
                 path.display(),
                 workdir.display()
