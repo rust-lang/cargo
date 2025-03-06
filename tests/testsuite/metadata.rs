@@ -4954,3 +4954,34 @@ local-time = 1979-05-27
         )
         .run();
 }
+
+#[cargo_test]
+fn metadata_ignores_build_target_configuration() -> anyhow::Result<()> {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [target.'cfg(something)'.dependencies]
+                foobar = "0.0.1"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    Package::new("foobar", "0.0.1").publish();
+
+    let output1 = p
+        .cargo("metadata -q --format-version 1")
+        .exec_with_output()?;
+    let output2 = p
+        .cargo("metadata -q --format-version 1")
+        .env("CARGO_BUILD_TARGET", rustc_host())
+        .exec_with_output()?;
+    assert!(
+        output1.stdout != output2.stdout,
+        "metadata should change when `CARGO_BUILD_TARGET` is set",
+    );
+    Ok(())
+}
