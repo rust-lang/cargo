@@ -10,6 +10,7 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -44,9 +45,10 @@ pub struct GitVcsInfo {
 pub fn check_repo_state(
     p: &Package,
     src_files: &[PathEntry],
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
+    let gctx = ws.gctx();
     let Ok(repo) = git2::Repository::discover(p.root()) else {
         gctx.shell().verbose(|shell| {
             shell.warn(format_args!(
@@ -103,7 +105,7 @@ pub fn check_repo_state(
         path.display(),
         workdir.display(),
     );
-    let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
+    let Some(git) = git(ws, p, src_files, &repo, &opts)? else {
         // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
@@ -166,8 +168,8 @@ fn warn_symlink_checked_out_as_plain_text_file(
 
 /// The real git status check starts from here.
 fn git(
+    ws: &Workspace<'_>,
     pkg: &Package,
-    gctx: &GlobalContext,
     src_files: &[PathEntry],
     repo: &git2::Repository,
     opts: &PackageOpts<'_>,
@@ -188,12 +190,12 @@ fn git(
     // Find the intersection of dirty in git, and the src_files that would
     // be packaged. This is a lazy n^2 check, but seems fine with
     // thousands of files.
-    let cwd = gctx.cwd();
+    let cwd = ws.gctx().cwd();
     let mut dirty_src_files: Vec<_> = src_files
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
         .map(|p| p.as_ref())
-        .chain(dirty_files_outside_pkg_root(pkg, repo, src_files)?.iter())
+        .chain(dirty_files_outside_pkg_root(ws, pkg, repo, src_files)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -232,11 +234,13 @@ fn git(
 ///
 /// * `package.readme` and `package.license-file` pointing to paths outside package root
 /// * symlinks targets reside outside package root
+/// * Any change in the root workspace manifest, regardless of what has changed.
 ///
 /// This is required because those paths may link to a file outside the
 /// current package root, but still under the git workdir, affecting the
 /// final packaged `.crate` file.
 fn dirty_files_outside_pkg_root(
+    ws: &Workspace<'_>,
     pkg: &Package,
     repo: &git2::Repository,
     src_files: &[PathEntry],
@@ -255,8 +259,9 @@ fn dirty_files_outside_pkg_root(
     for rel_path in src_files
         .iter()
         .filter(|p| p.is_symlink_or_under_symlink())
-        .map(|p| p.as_ref())
-        .chain(metadata_paths.iter())
+        .map(|p| p.as_ref().as_path())
+        .chain(metadata_paths.iter().map(AsRef::as_ref))
+        .chain([ws.root_manifest()])
         // If inside package root. Don't bother checking git status.
         .filter(|p| paths::strip_prefix_canonical(p, pkg_root).is_err())
         // Handle files outside package root but under git workdir,

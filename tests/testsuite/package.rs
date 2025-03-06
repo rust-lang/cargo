@@ -1212,15 +1212,6 @@ fn vcs_status_check_for_each_workspace_member() {
     });
     git::commit(&repo);
 
-    p.change_file(
-        "Cargo.toml",
-        r#"
-            [workspace]
-            members = ["isengard", "mordor"]
-            [workspace.package]
-            edition = "2021"
-        "#,
-    );
     // Dirty file outside won't affect packaging.
     p.change_file("hobbit", "changed!");
     p.change_file("mordor/src/lib.rs", "changed!");
@@ -1357,7 +1348,8 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     p.change_file("original-dir/file", "after");
     // * Changes in files outside pkg root that `license-file`/`readme` point to
     p.change_file("LICENSE", "after");
-    // * When workspace inheritance is involved and changed
+    // * When workspace root manifest has changned,
+    //   no matter whether workspace inheritance is involved.
     p.change_file(
         "Cargo.toml",
         r#"
@@ -1378,8 +1370,9 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     p.cargo("package --workspace --no-verify")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] 4 files in the working directory contain changes that were not yet committed into git:
+[ERROR] 5 files in the working directory contain changes that were not yet committed into git:
 
+Cargo.toml
 LICENSE
 README.md
 lib.rs
