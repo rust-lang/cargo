@@ -1224,7 +1224,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 name = "bar"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
-                
+
                 [dependencies]
                 baz = { path = "../baz/" }
                 artifact = { path = "../artifact/", artifact = "bin" }
@@ -1474,13 +1474,13 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 name = "artifact"
                 version = "0.5.0"
                 authors = []
-                
+
                 [lib]
                 crate-type = ["staticlib", "cdylib", "rlib"]
-                
+
                 [[bin]]
                 name = "bar-name"
-                
+
                 [[bin]]
                 name = "baz-name"
             "#,
@@ -1494,10 +1494,10 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                 name = "bin-only-artifact"
                 version = "0.5.0"
                 authors = []
-                
+
                 [[bin]]
                 name = "a-name"
-                
+
                 [[bin]]
                 name = "b-name"
             "#,
@@ -4343,7 +4343,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                 name = "bar"
                 version = "0.5.0"
                 authors = ["wycats@example.com"]
-                
+
                 [dependencies]
                 baz = { path = "../baz/" }
                 baz-renamed = { path = "../baz/" }
