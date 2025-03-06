@@ -350,3 +350,164 @@ foo v0.1.0 ([ROOT]/foo)
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn depth_public_no_features() {
+    Package::new("pub-defaultdep", "1.0.0").publish();
+    Package::new("priv-defaultdep", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pub-defaultdep = { version = "1.0.0", public = true }
+            priv-defaultdep = "1.0.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── pub-defaultdep feature "default"
+    └── pub-defaultdep v1.0.0
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn depth_public_transitive_features() {
+    Package::new("pub-defaultdep", "1.0.0")
+        .feature("default", &["f1"])
+        .feature("f1", &["f2"])
+        .feature("f2", &["optdep"])
+        .add_dep(Dependency::new("optdep", "1.0").optional(true).public(true))
+        .publish();
+    Package::new("priv-defaultdep", "1.0.0")
+        .feature("default", &["f1"])
+        .feature("f1", &["f2"])
+        .feature("f2", &["optdep"])
+        .add_dep(Dependency::new("optdep", "1.0").optional(true))
+        .publish();
+    Package::new("optdep", "1.0.0")
+        .feature("default", &["f"])
+        .feature("f", &[])
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pub-defaultdep = { version = "1.0.0", public = true }
+            priv-defaultdep = { version = "1.0.0", public = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── priv-defaultdep feature "default"
+│   ├── priv-defaultdep v1.0.0
+│   └── priv-defaultdep feature "f1"
+│       ├── priv-defaultdep v1.0.0 (*)
+│       └── priv-defaultdep feature "f2"
+│           ├── priv-defaultdep v1.0.0 (*)
+│           └── priv-defaultdep feature "optdep"
+│               └── priv-defaultdep v1.0.0 (*)
+└── pub-defaultdep feature "default"
+    ├── pub-defaultdep v1.0.0
+    │   └── optdep feature "default"
+    │       ├── optdep v1.0.0
+    │       └── optdep feature "f"
+    │           └── optdep v1.0.0
+    └── pub-defaultdep feature "f1"
+        ├── pub-defaultdep v1.0.0 (*)
+        └── pub-defaultdep feature "f2"
+            ├── pub-defaultdep v1.0.0 (*)
+            └── pub-defaultdep feature "optdep"
+                └── pub-defaultdep v1.0.0 (*)
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn depth_public_cli() {
+    Package::new("priv", "1.0.0").feature("f", &[]).publish();
+    Package::new("pub", "1.0.0").feature("f", &[]).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            priv-indirect = ["priv"]
+            priv = ["dep:priv", "priv?/f"]
+            pub-indirect = ["pub"]
+            pub = ["dep:pub", "priv?/f"]
+
+            [dependencies]
+            priv = { version = "1.0.0", optional = true }
+            pub = { version = "1.0.0", optional = true, public = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -e features --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
+        .run();
+
+    p.cargo("tree -e features --depth public --features pub-indirect")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── pub feature "default"
+    └── pub v1.0.0
+
+"#]])
+        .run();
+
+    p.cargo("tree -e features --depth public --features priv-indirect")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
+        .run();
+}

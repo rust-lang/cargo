@@ -1901,6 +1901,138 @@ c v0.1.0 ([ROOT]/foo/c) (*)
         .run();
 }
 
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn depth_public() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["diamond", "left-pub", "right-priv", "dep"]
+            "#,
+        )
+        .file(
+            "diamond/Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "diamond"
+            version = "0.1.0"
+
+            [dependencies]
+            left-pub = { path = "../left-pub", public = true }
+            right-priv = { path = "../right-priv", public = true }
+            "#,
+        )
+        .file("diamond/src/lib.rs", "")
+        .file(
+            "left-pub/Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "left-pub"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = { path = "../dep", public = true }
+            "#,
+        )
+        .file("left-pub/src/lib.rs", "")
+        .file(
+            "right-priv/Cargo.toml",
+            r#"
+            [package]
+            name = "right-priv"
+            version = "0.1.0"
+
+            [dependencies]
+            dep = { path = "../dep" }
+            "#,
+        )
+        .file("right-priv/src/lib.rs", "")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree --depth public")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `--depth public` requires `-Zunstable-options`
+
+"#]])
+        .run();
+
+    p.cargo("tree --depth public -p left-pub")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+left-pub v0.1.0 ([ROOT]/foo/left-pub)
+└── dep v0.1.0 ([ROOT]/foo/dep)
+
+"#]])
+        .run();
+
+    p.cargo("tree --depth public -p right-priv")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+right-priv v0.1.0 ([ROOT]/foo/right-priv)
+
+"#]])
+        .run();
+
+    p.cargo("tree --depth public -p diamond")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+diamond v0.1.0 ([ROOT]/foo/diamond)
+├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
+│   └── dep v0.1.0 ([ROOT]/foo/dep)
+└── right-priv v0.1.0 ([ROOT]/foo/right-priv)
+
+"#]])
+        .run();
+
+    p.cargo("tree --depth public")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+dep v0.1.0 ([ROOT]/foo/dep)
+
+diamond v0.1.0 ([ROOT]/foo/diamond)
+├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
+│   └── dep v0.1.0 ([ROOT]/foo/dep)
+└── right-priv v0.1.0 ([ROOT]/foo/right-priv)
+
+left-pub v0.1.0 ([ROOT]/foo/left-pub) (*)
+
+right-priv v0.1.0 ([ROOT]/foo/right-priv) (*)
+
+"#]])
+        .run();
+
+    p.cargo("tree --depth public --invert dep")
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .with_stdout_data(str![[r#"
+dep v0.1.0 ([ROOT]/foo/dep)
+└── left-pub v0.1.0 ([ROOT]/foo/left-pub)
+    └── diamond v0.1.0 ([ROOT]/foo/diamond)
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn prune() {
     let p = make_simple_proj();
