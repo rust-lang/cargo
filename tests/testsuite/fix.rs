@@ -805,7 +805,7 @@ fn does_not_warn_about_dirty_ignored_files() {
 }
 
 #[cargo_test]
-fn fix_all_targets_by_default() {
+fn do_not_fix_tests_by_default() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() { let mut x = 3; let _ = x; }")
         .file("tests/foo.rs", "pub fn foo() { let mut x = 3; let _ = x; }")
@@ -814,7 +814,7 @@ fn fix_all_targets_by_default() {
         .env("__CARGO_FIX_YOLO", "1")
         .run();
     assert!(!p.read_file("src/lib.rs").contains("let mut x"));
-    assert!(!p.read_file("tests/foo.rs").contains("let mut x"));
+    assert!(p.read_file("tests/foo.rs").contains("let mut x"));
 }
 
 #[cargo_test]
@@ -1424,7 +1424,7 @@ fn fix_to_broken_code() {
     p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
-    p.cargo("fix --allow-no-vcs --broken-code")
+    p.cargo("fix --all-targets --allow-no-vcs --broken-code")
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_status(101)
