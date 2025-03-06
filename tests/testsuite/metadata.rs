@@ -4980,8 +4980,8 @@ fn metadata_ignores_build_target_configuration() -> anyhow::Result<()> {
         .env("CARGO_BUILD_TARGET", rustc_host())
         .exec_with_output()?;
     assert!(
-        output1.stdout != output2.stdout,
-        "metadata should change when `CARGO_BUILD_TARGET` is set",
+        output1.stdout == output2.stdout,
+        "metadata should not change when `CARGO_BUILD_TARGET` is set",
     );
     Ok(())
 }

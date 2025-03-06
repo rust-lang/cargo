@@ -29,6 +29,20 @@ pub enum CompileKind {
     Target(CompileTarget),
 }
 
+/// Fallback behavior in the
+/// [`CompileKind::from_requested_targets_with_fallback`] function when
+/// no targets are specified.
+pub enum CompileKindFallback {
+    /// The build configuration is consulted to find the default target, such as
+    /// `$CARGO_BUILD_TARGET` or reading `build.target`.
+    BuildConfig,
+
+    /// Only the host should be returned when targets aren't explicitly
+    /// specified. This is used by `cargo metadata` for example where "only
+    /// host" has a special meaning in terms of the returned metadata.
+    JustHost,
+}
+
 impl CompileKind {
     pub fn is_host(&self) -> bool {
         matches!(self, CompileKind::Host)
@@ -54,6 +68,21 @@ impl CompileKind {
         gctx: &GlobalContext,
         targets: &[String],
     ) -> CargoResult<Vec<CompileKind>> {
+        CompileKind::from_requested_targets_with_fallback(
+            gctx,
+            targets,
+            CompileKindFallback::BuildConfig,
+        )
+    }
+
+    /// Same as [`CompileKind::from_requested_targets`] except that if `targets`
+    /// doesn't explicitly mention anything the behavior of what to return is
+    /// controlled by the `fallback` argument.
+    pub fn from_requested_targets_with_fallback(
+        gctx: &GlobalContext,
+        targets: &[String],
+        fallback: CompileKindFallback,
+    ) -> CargoResult<Vec<CompileKind>> {
         let dedup = |targets: &[String]| {
             Ok(targets
                 .iter()
@@ -70,9 +99,11 @@ impl CompileKind {
             return dedup(targets);
         }
 
-        let kinds = match &gctx.build_config()?.target {
-            None => Ok(vec![CompileKind::Host]),
-            Some(build_target_config) => dedup(&build_target_config.values(gctx)?),
+        let kinds = match (fallback, &gctx.build_config()?.target) {
+            (_, None) | (CompileKindFallback::JustHost, _) => Ok(vec![CompileKind::Host]),
+            (CompileKindFallback::BuildConfig, Some(build_target_config)) => {
+                dedup(&build_target_config.values(gctx)?)
+            }
         };
 
         kinds
