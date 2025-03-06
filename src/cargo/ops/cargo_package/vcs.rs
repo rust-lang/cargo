@@ -100,16 +100,17 @@ pub fn check_repo_state(
         path.display(),
         workdir.display(),
     );
-    let path_in_vcs = path
-        .parent()
-        .and_then(|p| p.to_str())
-        .unwrap_or("")
-        .replace("\\", "/");
     let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
         // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
     };
+
+    let path_in_vcs = path
+        .parent()
+        .and_then(|p| p.to_str())
+        .unwrap_or("")
+        .replace("\\", "/");
 
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 }
