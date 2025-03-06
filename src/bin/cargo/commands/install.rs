@@ -279,7 +279,13 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             ),
         }
     } else {
-        match v.trim().parse::<semver::Version>() {
+        let trimmed = if v.starts_with('v') {
+            &v[1..].trim()
+        } else {
+            v.trim()
+        };
+
+        match trimmed.parse::<semver::Version>() {
             Ok(v) => Ok(v.to_exact_req()),
             Err(e) => {
                 let mut msg = e.to_string();

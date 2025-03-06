@@ -1622,10 +1622,9 @@ fn vers_precise_prefixing_v() {
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --vers v0.1.1")
-        .with_status(1)
-        .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] invalid value 'v0.1.1' for '--version <VERSION>': unexpected character 'v' while parsing major version number
+...
+[DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
 ...
 "#]])
         .run();
@@ -1651,10 +1650,9 @@ fn version_precise_prefixing_v() {
     pkg("foo", "0.1.2");
 
     cargo_process("install foo --version v0.1.1")
-        .with_status(1)
-        .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] invalid value 'v0.1.1' for '--version <VERSION>': unexpected character 'v' while parsing major version number
+...
+[DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
 ...
 "#]])
         .run();
@@ -1680,10 +1678,9 @@ fn inline_version_precise_prefixing_v() {
     pkg("foo", "0.1.2");
 
     cargo_process("install foo@v0.1.1")
-        .with_status(1)
-        .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] invalid value 'foo@v0.1.1' for '[CRATE[@<VER>]]...': unexpected character 'v' while parsing major version number
+...
+[DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
 ...
 "#]])
         .run();
@@ -1719,10 +1716,11 @@ fn inline_version_multiple_prefixing_v() {
     pkg("bar", "0.2.2");
 
     cargo_process("install foo@v0.1.1 bar@v0.2.1")
-        .with_status(1)
-        .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] invalid value 'foo@v0.1.1' for '[CRATE[@<VER>]]...': unexpected character 'v' while parsing major version number
+...
+[DOWNLOADED] foo v0.1.1 (registry `dummy-registry`)
+...
+[DOWNLOADED] bar v0.2.1 (registry `dummy-registry`)
 ...
 "#]])
         .run();
