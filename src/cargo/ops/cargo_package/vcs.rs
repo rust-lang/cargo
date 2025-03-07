@@ -247,7 +247,7 @@ fn dirty_files_outside_pkg_root(
         .map(|path| paths::normalize_path(&pkg_root.join(path)))
         .collect();
 
-    let mut dirty_symlinks = HashSet::new();
+    let mut dirty_files = HashSet::new();
     for rel_path in src_files
         .iter()
         .filter(|p| p.is_symlink_or_under_symlink())
@@ -259,10 +259,10 @@ fn dirty_files_outside_pkg_root(
         .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
     {
         if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-            dirty_symlinks.insert(workdir.join(rel_path));
+            dirty_files.insert(workdir.join(rel_path));
         }
     }
-    Ok(dirty_symlinks)
+    Ok(dirty_files)
 }
 
 /// Helper to collect dirty statuses for a single repo.
