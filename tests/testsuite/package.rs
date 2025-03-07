@@ -1465,9 +1465,13 @@ fn dirty_ws_lockfile_dirty() {
     // lockfile is untracked.
     p.cargo("generate-lockfile").run();
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.lock
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1522,10 +1526,13 @@ dependencies = [
 "#]])
         .run();
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[UPDATING] `dummy-registry` index
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.lock
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1534,10 +1541,13 @@ dependencies = [
     p.cargo("clean").run();
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[UPDATING] `dummy-registry` index
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.lock
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
