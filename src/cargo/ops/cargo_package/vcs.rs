@@ -10,6 +10,8 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::Package;
+use crate::core::Workspace;
+use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -44,12 +46,16 @@ pub struct GitVcsInfo {
 pub fn check_repo_state(
     p: &Package,
     src_files: &[PathEntry],
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
+    let gctx = ws.gctx();
     let Ok(repo) = git2::Repository::discover(p.root()) else {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!("no (git) VCS found for `{}`", p.root().display()))
+            shell.warn(format_args!(
+                "no (git) VCS found for `{}`",
+                p.root().display()
+            ))
         })?;
         // No Git repo found. Have to assume it is clean.
         return Ok(None);
@@ -69,7 +75,7 @@ pub fn check_repo_state(
     let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
     let Ok(status) = repo.status_file(&path) else {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!(
+            shell.warn(format_args!(
                 "no (git) Cargo.toml found at `{}` in workdir `{}`",
                 path.display(),
                 workdir.display()
@@ -82,7 +88,7 @@ pub fn check_repo_state(
 
     if !(status & git2::Status::IGNORED).is_empty() {
         gctx.shell().verbose(|shell| {
-            shell.warn(format!(
+            shell.warn(format_args!(
                 "found (git) Cargo.toml ignored at `{}` in workdir `{}`",
                 path.display(),
                 workdir.display()
@@ -100,16 +106,17 @@ pub fn check_repo_state(
         path.display(),
         workdir.display(),
     );
+    let Some(git) = git(ws, p, src_files, &repo, &opts)? else {
+        // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
+        // then don't generate the corresponding file in order to maintain consistency with past behavior.
+        return Ok(None);
+    };
+
     let path_in_vcs = path
         .parent()
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .replace("\\", "/");
-    let Some(git) = git(p, gctx, src_files, &repo, &opts)? else {
-        // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
-        // then don't generate the corresponding file in order to maintain consistency with past behavior.
-        return Ok(None);
-    };
 
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 }
@@ -162,8 +169,8 @@ fn warn_symlink_checked_out_as_plain_text_file(
 
 /// The real git status check starts from here.
 fn git(
+    ws: &Workspace<'_>,
     pkg: &Package,
-    gctx: &GlobalContext,
     src_files: &[PathEntry],
     repo: &git2::Repository,
     opts: &PackageOpts<'_>,
@@ -184,12 +191,12 @@ fn git(
     // Find the intersection of dirty in git, and the src_files that would
     // be packaged. This is a lazy n^2 check, but seems fine with
     // thousands of files.
-    let cwd = gctx.cwd();
+    let cwd = ws.gctx().cwd();
     let mut dirty_src_files: Vec<_> = src_files
         .iter()
         .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
         .map(|p| p.as_ref())
-        .chain(dirty_files_outside_pkg_root(pkg, repo, src_files)?.iter())
+        .chain(dirty_files_outside_pkg_root(ws, pkg, repo, src_files)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -228,17 +235,26 @@ fn git(
 ///
 /// * `package.readme` and `package.license-file` pointing to paths outside package root
 /// * symlinks targets reside outside package root
+/// * Any change in the root workspace manifest, regardless of what has changed.
+/// * Changes in the lockfile [^1].
 ///
 /// This is required because those paths may link to a file outside the
 /// current package root, but still under the git workdir, affecting the
 /// final packaged `.crate` file.
+///
+/// [^1]: Lockfile might be re-generated if it is too out of sync with the manifest.
+///       Therefore, even you have a modified lockfile,
+///       you might still get a new fresh one that matches what is in git index.
 fn dirty_files_outside_pkg_root(
+    ws: &Workspace<'_>,
     pkg: &Package,
     repo: &git2::Repository,
     src_files: &[PathEntry],
 ) -> CargoResult<HashSet<PathBuf>> {
     let pkg_root = pkg.root();
     let workdir = repo.workdir().unwrap();
+
+    let mut dirty_files = HashSet::new();
 
     let meta = pkg.manifest().metadata();
     let metadata_paths: Vec<_> = [&meta.license_file, &meta.readme]
@@ -247,22 +263,51 @@ fn dirty_files_outside_pkg_root(
         .map(|path| paths::normalize_path(&pkg_root.join(path)))
         .collect();
 
-    let mut dirty_symlinks = HashSet::new();
+    // Unlike other files, lockfile is allowed to be missing,
+    // and can be generated during packaging.
+    // We skip checking when it is missing in both workdir and git index,
+    // otherwise cargo will fail with git2 not found error.
+    let lockfile_path = ws.lock_root().as_path_unlocked().join(LOCKFILE_NAME);
+    let lockfile_path = if lockfile_path.exists() {
+        Some(lockfile_path)
+    } else if let Ok(rel_path) = paths::normalize_path(&lockfile_path).strip_prefix(workdir) {
+        // We don't canonicalize here because non-existing path can't be canonicalized.
+        match repo.status_file(&rel_path) {
+            Ok(s) if s != git2::Status::CURRENT => {
+                dirty_files.insert(lockfile_path);
+            }
+            // Unmodified
+            Ok(_) => {}
+            Err(e) => {
+                debug!(
+                    "check git status failed for `{}` in workdir `{}`: {e}",
+                    rel_path.display(),
+                    workdir.display(),
+                );
+            }
+        }
+        None
+    } else {
+        None
+    };
+
     for rel_path in src_files
         .iter()
         .filter(|p| p.is_symlink_or_under_symlink())
-        .map(|p| p.as_ref())
-        .chain(metadata_paths.iter())
+        .map(|p| p.as_ref().as_path())
+        .chain(metadata_paths.iter().map(AsRef::as_ref))
+        .chain([ws.root_manifest()])
+        .chain(lockfile_path.as_deref().into_iter())
         // If inside package root. Don't bother checking git status.
         .filter(|p| paths::strip_prefix_canonical(p, pkg_root).is_err())
         // Handle files outside package root but under git workdir,
         .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
     {
         if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-            dirty_symlinks.insert(workdir.join(rel_path));
+            dirty_files.insert(workdir.join(rel_path));
         }
     }
-    Ok(dirty_symlinks)
+    Ok(dirty_files)
 }
 
 /// Helper to collect dirty statuses for a single repo.
