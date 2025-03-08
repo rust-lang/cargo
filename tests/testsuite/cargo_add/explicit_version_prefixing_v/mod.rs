@@ -21,7 +21,7 @@ fn case() {
         .arg_line("my-package@v0.2.0")
         .current_dir(cwd)
         .assert()
-        .failure()
+        .success()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 

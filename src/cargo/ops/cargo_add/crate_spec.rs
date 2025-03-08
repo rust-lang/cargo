@@ -30,14 +30,22 @@ impl CrateSpec {
 
         PackageName::new(name)?;
 
-        if let Some(version) = version {
-            semver::VersionReq::parse(version)
-                .with_context(|| format!("invalid version requirement `{version}`"))?;
+        let trimmed = version.map(|s| {
+            if s.starts_with('v') {
+                s[1..].to_string()
+            } else {
+                s.to_string()
+            }
+        });
+
+        if let Some(trimmed) = &trimmed {
+            semver::VersionReq::parse(trimmed)
+                .with_context(|| format!("invalid version requirement `{trimmed}`"))?;
         }
 
         let id = Self {
             name: name.to_owned(),
-            version_req: version.map(|s| s.to_owned()),
+            version_req: trimmed,
         };
 
         Ok(id)

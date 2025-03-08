@@ -4,3 +4,6 @@
 name = "cargo-list-test-fixture"
 version = "0.0.0"
 edition = "2015"
+
+[dependencies]
+my-package = "0.2.0"
