@@ -10,6 +10,7 @@ use std::str;
 use cargo_test_support::basic_manifest;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
+use cargo_test_support::rustc_host;
 use cargo_test_support::str;
 use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{
@@ -576,6 +577,7 @@ fn full_did_you_mean() {
 
 #[cargo_test]
 fn overwrite_cargo_environment_variable() {
+    let rustc_host = rustc_host();
     // If passed arguments `arg1 arg2 ...`, this program runs them as a command.
     // If passed no arguments, this program simply prints `$CARGO`.
     let p = project()
@@ -626,6 +628,7 @@ fn overwrite_cargo_environment_variable() {
             .with_extension("")
             .to_str()
             .unwrap()
+            .replace(rustc_host, "[HOST_TARGET]")
     );
 
     for cmd in [
