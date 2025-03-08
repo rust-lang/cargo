@@ -21,6 +21,7 @@ mod dev_existing_path_base;
 mod dev_prefer_existing_version;
 mod dry_run;
 mod empty_dep_name;
+mod explicit_version_prefixing_v;
 mod features;
 mod features_activated_over_limit;
 mod features_deactivated_over_limit;
