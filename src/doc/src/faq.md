@@ -255,8 +255,8 @@ issue](https://github.com/rust-lang/cargo/issues/new)!
 
 Have you seen the error message above?
 
-This is one of the most annoying error message for Cargo users. There are several
-situations may lead us to a version conflict. Below we'll walk through possible
+This is one of the most annoying error messages for Cargo users. There are several
+situations which may lead to a version conflict. Below we'll walk through possible
 causes and provide diagnostic techniques to help you out there:
 
 - The project and its dependencies use [links] to repeatedly link the local
