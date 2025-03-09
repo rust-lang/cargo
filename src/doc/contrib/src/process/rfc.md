@@ -42,18 +42,18 @@ When adding a table to a manifest,
 - Should it be inheritable?
 - Ensure the package table and the inheritable table under `workspace` align
 - Care is needed to ensure a `workspace = true` field doesn't conflict with other entries
-  - e.g. [RFC 3389] had to explicitly exclude ever supporing a `workspace` linter
+  - e.g. [RFC 3389] had to explicitly exclude ever supporting a `workspace` linter
 
 When adding a field,
 - Is it inheritable?
-  - Consider whether sharing of the field would be driven by requirements or is a manifestion of the current implementation.
+  - Consider whether sharing of the field would be driven by requirements or is a manifestation of the current implementation.
     For example, in most cases, dependency sources (e.g. `version` field) should be aligned across a workspace
     However, frequently dependency `features` will vary across a workspace.
 - When inheriting, can specify it in your package?
 - How does specifying a field in both `workspace` and a package interact?
   - e.g. dependency sources cannot be overridden
   - e.g. dependency `features` get merged
-  - e.g. depedency `default-features` has been hard to get right ([#12162][cargo#12162])
+  - e.g. dependency `default-features` has been hard to get right ([#12162][cargo#12162])
 
 When working extending `dependencies` tables:
 - How does this affect `cargo add` or `cargo remove`?

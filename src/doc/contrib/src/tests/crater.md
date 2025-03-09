@@ -38,7 +38,7 @@ Roughly the steps are:
    git commit
    ```
 
-5. Create an PR on rust-lang/rust.
+5. Create a PR on rust-lang/rust.
 
    Push your submodule changes to GitHub and make a PR.
    Start the PR title with `[EXPERIMENT]` to make it clear what the PR is for and assign yourself or @ghost.

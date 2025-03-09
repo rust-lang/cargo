@@ -15,7 +15,7 @@ Generally,
 - Fields should only be present when needed, saving space and parse time
   - Also, we can always switch to always outputting the fields but its harder to stop outputting them
   - `#[serde(skip_serializing_if = "Default::default")]` should be applied liberally
-- For output, prefer [jsonlines](https://jsonlines.org/) as it allows streaming output and flexibility to mix content (e.g. adding diagnostics to output that didn't prevously have it
+- For output, prefer [jsonlines](https://jsonlines.org/) as it allows streaming output and flexibility to mix content (e.g. adding diagnostics to output that didn't previously have it
 - `#[serde(deny_unknown_fields)]` should not be used to allow evolution of formats, including feature gating
 
 ## Schema Evolution Strategies
