@@ -298,6 +298,7 @@ impl LocalManifest {
     }
 
     /// Write changes back to the file.
+    /// Write changes back to the file.
     pub fn write(&self) -> CargoResult<()> {
         let mut manifest = self.manifest.data.to_string();
         let raw = match self.embedded.as_ref() {
@@ -323,9 +324,16 @@ impl LocalManifest {
         };
         let new_contents_bytes = raw.as_bytes();
 
-        cargo_util::paths::write_atomic(&self.path, new_contents_bytes)
-    }
+        // Check if the path is a symlink and follow it if it is
+        let actual_path = if self.path.is_symlink() {
+            std::fs::read_link(&self.path)?
+        } else {
+            self.path.clone()
+        };
 
+        // Write to the actual target path instead of the symlink
+        cargo_util::paths::write_atomic(&actual_path, new_contents_bytes)
+    }
     /// Lookup a dependency.
     pub fn get_dependency_versions<'s>(
         &'s self,

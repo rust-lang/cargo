@@ -47,6 +47,5 @@ fn symlink_case() {
 
     project.cargo("add test-dep").run();
 
-    // The bug: symlink is replaced by a regular file
-    assert!(!project.root().join("Cargo.toml").is_symlink());
+    assert!(project.root().join("Cargo.toml").is_symlink());
 }
