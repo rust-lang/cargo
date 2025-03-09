@@ -189,7 +189,7 @@ These incompatibilities usually manifest as a compile-time error, but
 sometimes they will only appear as a runtime misbehavior. For example, let's
 say there is a common library named `foo` that ends up appearing with both
 version `1.0.0` and `2.0.0` in the resolve graph. If [`downcast_ref`] is used
-on a object created by a library using version `1.0.0`, and the code calling
+on an object created by a library using version `1.0.0`, and the code calling
 `downcast_ref` is downcasting to a type from version `2.0.0`, the downcast
 will fail at runtime.
 

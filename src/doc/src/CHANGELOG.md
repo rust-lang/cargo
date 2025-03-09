@@ -950,7 +950,7 @@
   [#14211](https://github.com/rust-lang/cargo/pull/14211)
 - Use `std::fs::absolute` instead of reimplementing it 
   [#14075](https://github.com/rust-lang/cargo/pull/14075)
-- Remove unecessary feature activations from cargo.
+- Remove unnecessary feature activations from cargo.
   [#14122](https://github.com/rust-lang/cargo/pull/14122)
   [#14160](https://github.com/rust-lang/cargo/pull/14160)
 - Revert #13630 as rustc ignores `-C strip` on MSVC.
@@ -3172,7 +3172,7 @@
 
 ### Nightly only
 
-- Implemented a initial support of asymmetric token authentication for registries.
+- Implemented initial support of asymmetric token authentication for registries.
   ([RFC 3231](https://github.com/rust-lang/rfcs/blob/master/text/3231-cargo-asymmetric-tokens.md))
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#registry-auth))
   [#10771](https://github.com/rust-lang/cargo/pull/10771)
@@ -3306,7 +3306,7 @@
   [#11227](https://github.com/rust-lang/cargo/pull/11227)
 - Added support for git dependencies having git submodules with relative paths.
   [#11106](https://github.com/rust-lang/cargo/pull/11106)
-- Cargo now sends requests with a `Accept-Encoding` header to registries.
+- Cargo now sends requests with an `Accept-Encoding` header to registries.
   [#11292](https://github.com/rust-lang/cargo/pull/11292)
 - Cargo now forwards non-UTF8 arguments to external subcommands.
   [#11118](https://github.com/rust-lang/cargo/pull/11118)
