@@ -101,4 +101,3 @@ that the argument to `cargo update` is actually a
 short specification.
 
 [def-manifest]:  ../appendix/glossary.md#manifest  '"manifest" (glossary entry)'
-[def-package]:   ../appendix/glossary.md#package   '"package" (glossary entry)'

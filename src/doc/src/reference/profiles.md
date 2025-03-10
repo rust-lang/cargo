@@ -382,18 +382,18 @@ The profile used depends on the command, the command-line flags like
 | Command | Default Profile |
 |---------|-----------------|
 | [`cargo run`], [`cargo build`],<br>[`cargo check`], [`cargo rustc`] | [`dev` profile](#dev) |
-| [`cargo test`] | [`test` profile](#test)
-| [`cargo bench`] | [`bench` profile](#bench)
-| [`cargo install`] | [`release` profile](#release)
+| [`cargo test`] | [`test` profile](#test) |
+| [`cargo bench`] | [`bench` profile](#bench) |
+| [`cargo install`] | [`release` profile](#release) |
 
 You can switch to a different profile using the `--profile=NAME` option which will used the given profile.
 The `--release` flag is equivalent to `--profile=release`.
 
-The selected profile applies to all Cargo targets, 
+The selected profile applies to all Cargo targets,
 including [library](./cargo-targets.md#library),
-[binary](./cargo-targets.md#binaries), 
-[example](./cargo-targets.md#examples), 
-[test](./cargo-targets.md#tests), 
+[binary](./cargo-targets.md#binaries),
+[example](./cargo-targets.md#examples),
+[test](./cargo-targets.md#tests),
 and [benchmark](./cargo-targets.md#benchmarks).
 
 The profile for specific packages can be specified with
