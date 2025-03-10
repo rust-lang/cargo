@@ -53,6 +53,45 @@ Caused by:
 }
 
 #[cargo_test]
+fn explicit_version_prefixing_v() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank --version v0.0.1")
+        .replace_crates_io(registry.index_url())
+        .run();
+
+    p.cargo("yank --undo --version v0.0.1")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+      Unyank foo@0.0.1
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
+
+Caused by:
+  EOF while parsing a value at line 1 column 0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn explicit_version_with_asymmetric() {
     let registry = registry::RegistryBuilder::new()
         .http_api()
@@ -115,6 +154,45 @@ fn inline_version() {
         .run();
 
     p.cargo("yank --undo foo@0.0.1")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+      Unyank foo@0.0.1
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
+
+Caused by:
+  EOF while parsing a value at line 1 column 0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn inline_version_prefixing_v() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank foo@v0.0.1")
+        .replace_crates_io(registry.index_url())
+        .run();
+
+    p.cargo("yank --undo foo@v0.0.1")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
