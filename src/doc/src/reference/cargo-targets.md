@@ -186,7 +186,6 @@ bench = true           # Is benchmarked by default.
 doc = true             # Is documented by default.
 proc-macro = false     # Set to `true` for a proc-macro library.
 harness = true         # Use libtest harness.
-edition = "2015"       # The edition of the target.
 crate-type = ["lib"]   # The crate types to generate.
 required-features = [] # Features required to build this target (N/A for lib).
 ```
@@ -309,9 +308,9 @@ required-features = ["postgres", "tools"]
 
 The `edition` field defines the [Rust edition] the target will use. If not
 specified, it defaults to the [`edition` field][package-edition] for the
-`[package]`. This field should usually not be set, and is only intended for
-advanced scenarios such as incrementally transitioning a large package to a
-new edition.
+`[package]`.
+
+> **Note:** This field is deprecated and will be removed in a future Edition
 
 ## Target auto-discovery
 
