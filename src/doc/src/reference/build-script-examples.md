@@ -252,7 +252,7 @@ void hello() {
 // Note the lack of the `#[link]` attribute. We’re delegating the responsibility
 // of selecting what to link over to the build script rather than hard-coding
 // it in the source file.
-extern { fn hello(); }
+unsafe extern { fn hello(); }
 
 fn main() {
     unsafe { hello(); }
@@ -327,7 +327,7 @@ Let's round out the example with a basic FFI binding:
 
 use std::os::raw::{c_uint, c_ulong};
 
-extern "C" {
+unsafe extern "C" {
     pub fn crc32(crc: c_ulong, buf: *const u8, len: c_uint) -> c_ulong;
 }
 
