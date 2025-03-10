@@ -24,6 +24,7 @@ mod optional_dep_feature;
 mod optional_dep_feature_formatting;
 mod optional_feature;
 mod package;
+mod preserve_carriage_returns;
 mod remove_basic;
 mod script;
 mod script_last;
