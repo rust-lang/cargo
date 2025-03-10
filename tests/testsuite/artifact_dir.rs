@@ -389,7 +389,7 @@ fn check_dir_contents(
     expected_win_msvc: &[&str],
     expected_win_gnu: &[&str],
 ) {
-    let expected = if cfg!(target_os = "windows") {
+    let expected = if cfg!(any(target_os = "windows", target_os = "cygwin")) {
         if cfg!(target_env = "msvc") {
             expected_win_msvc
         } else {
