@@ -5404,6 +5404,7 @@ fn target_edition() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--edition=2018 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
