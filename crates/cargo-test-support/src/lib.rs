@@ -504,8 +504,20 @@ impl Project {
     /// p.cargo("build --bin foo").run();
     /// ```
     pub fn cargo(&self, cmd: &str) -> Execs {
+        self.cargo_with_working_dir(cmd, &self.root())
+    }
+
+    /// Creates a `ProcessBuilder` to run cargo in a given directory.
+    /// [`Project::cargo`] is preferred when executing from the project root.
+    ///
+    /// Arguments can be separated by spaces.
+    ///
+    /// For `cargo run`, see [`Project::rename_run`].
+    pub fn cargo_with_working_dir(&self, cmd: &str, dir: &PathBuf) -> Execs {
         let cargo = cargo_exe();
-        let mut execs = self.process(&cargo);
+        let mut p = process(&cargo);
+        p.cwd(dir);
+        let mut execs = execs().with_process_builder(p);
         if let Some(ref mut p) = execs.process_builder {
             p.env("CARGO", cargo);
             p.arg_line(cmd);

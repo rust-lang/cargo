@@ -652,13 +652,38 @@ impl GlobalContext {
     /// Falls back to the target directory if not specified.
     ///
     /// Callers should prefer [`Workspace::build_dir`] instead.
-    pub fn build_dir(&self) -> CargoResult<Option<Filesystem>> {
+    pub fn build_dir(&self, workspace_manifest_path: &PathBuf) -> CargoResult<Option<Filesystem>> {
         if !self.cli_unstable().build_dir {
             return self.target_dir();
         }
         if let Some(val) = &self.build_config()?.build_dir {
-            let path = val.resolve_path(self);
+            let workspace_manifest_path = paths::resolve_symlinks(workspace_manifest_path)?;
 
+            let replacements = vec![
+                (
+                    "{workspace-root}",
+                    workspace_manifest_path
+                        .parent()
+                        .unwrap()
+                        .to_str()
+                        .context("workspace root was not valid utf-8")?
+                        .to_string(),
+                ),
+                (
+                    "{cargo-cache-home}",
+                    self.home()
+                        .as_path_unlocked()
+                        .to_str()
+                        .context("cargo home was not valid utf-8")?
+                        .to_string(),
+                ),
+                ("{workspace-manifest-path-hash}", {
+                    let hash = crate::util::hex::short_hash(&workspace_manifest_path);
+                    format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
+                }),
+            ];
+
+            let path = val.resolve_templated_path(self, replacements);
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.raw_value().is_empty() {
                 bail!(
