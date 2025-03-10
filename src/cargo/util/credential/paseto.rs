@@ -9,7 +9,6 @@ use pasetors::{
     keys::{AsymmetricKeyPair, AsymmetricPublicKey, AsymmetricSecretKey, Generate},
     paserk::FormatAsPaserk,
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
 
 use crate::{
@@ -103,10 +102,10 @@ impl<'a> Credential for PasetoCredential<'a> {
                     .expose();
                 let kip: pasetors::paserk::Id = (&public).into();
 
-                let iat = OffsetDateTime::now_utc();
+                let iat = jiff::Timestamp::now();
 
                 let message = Message {
-                    iat: &iat.format(&Rfc3339).unwrap(),
+                    iat: &iat.to_string(),
                     sub: secret_key_subject.as_deref(),
                     mutation: match operation {
                         Operation::Publish { .. } => Some("publish"),

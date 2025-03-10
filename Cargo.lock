@@ -367,7 +367,6 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror 2.0.11",
- "time",
  "toml",
  "toml_edit",
  "tracing",
@@ -385,12 +384,12 @@ name = "cargo-credential"
 version = "0.4.8"
 dependencies = [
  "anyhow",
+ "jiff 0.2.3",
  "libc",
  "serde",
  "serde_json",
  "snapbox",
  "thiserror 2.0.11",
- "time",
  "windows-sys 0.59.0",
 ]
 
@@ -463,13 +462,13 @@ dependencies = [
  "git2",
  "glob",
  "itertools 0.14.0",
+ "jiff 0.2.3",
  "pasetors",
  "regex",
  "serde",
  "serde_json",
  "snapbox",
  "tar",
- "time",
  "toml",
  "url",
  "walkdir",
@@ -917,7 +916,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b42b6fa04a440b495c8b04d0e71b707c585f83cb9cb28cf8cd0d976c315e31b4"
 dependencies = [
  "powerfmt",
- "serde",
 ]
 
 [[package]]
