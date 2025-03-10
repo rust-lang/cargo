@@ -727,6 +727,26 @@ pub fn strip_prefix_canonical(
     canon_path.strip_prefix(canon_base).map(|p| p.to_path_buf())
 }
 
+/// Resolves all symlinks in a path.
+///
+/// This differs from the [`std::fs::canonicalize`] as `canonicalize` may change the
+/// structure of the path while this function will not.
+/// For example in Windows `canonicalize` will prefix the path with `\\?\`.
+///
+/// This is useful when the structure matters. (ie. when hashing a path)
+pub fn resolve_symlinks(path: &PathBuf) -> Result<PathBuf> {
+    let mut resolved = PathBuf::new();
+
+    for part in path {
+        resolved = resolved.join(part);
+        if resolved.is_symlink() {
+            resolved = resolved.read_link()?;
+        }
+    }
+
+    return Ok(resolved);
+}
+
 /// Creates an excluded from cache directory atomically with its parents as needed.
 ///
 /// The atomicity only covers creating the leaf directory and exclusion from cache. Any missing

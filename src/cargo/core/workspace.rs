@@ -213,7 +213,6 @@ impl<'gctx> Workspace<'gctx> {
     pub fn new(manifest_path: &Path, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), gctx);
         ws.target_dir = gctx.target_dir()?;
-        ws.build_dir = gctx.build_dir()?;
 
         if manifest_path.is_relative() {
             bail!(
@@ -223,6 +222,12 @@ impl<'gctx> Workspace<'gctx> {
         } else {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
+
+        ws.build_dir = gctx.build_dir(
+            ws.root_manifest
+                .as_ref()
+                .unwrap_or(&manifest_path.to_path_buf()),
+        )?;
 
         ws.custom_metadata = ws
             .load_workspace_config()?
