@@ -79,7 +79,7 @@ fn setup_logger() -> Option<ChromeFlushGuard> {
         .with(fmt_layer)
         .with(profile_layer);
     registry.init();
-    tracing::trace!(start = humantime::format_rfc3339(std::time::SystemTime::now()).to_string());
+    tracing::trace!(start = jiff::Timestamp::now().to_string());
     profile_guard
 }
 
