@@ -100,7 +100,11 @@ Example uses:
                 .value_name("PATH")
                 .help("Filesystem path to local crate to add")
                 .group("selected")
-                .conflicts_with("git"),
+                .conflicts_with("git")
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any()
+                        .filter(|path| path.join("Cargo.toml").exists()),
+                )),
             clap::Arg::new("base")
                 .long("base")
                 .action(ArgAction::Set)
