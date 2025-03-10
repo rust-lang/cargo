@@ -15,7 +15,7 @@ use cargo_util::paths;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 /// Tracking information for the entire build.
 ///
@@ -117,7 +117,7 @@ impl<'gctx> Timings<'gctx> {
                 (pkg_desc, targets)
             })
             .collect();
-        let start_str = humantime::format_rfc3339_seconds(SystemTime::now()).to_string();
+        let start_str = jiff::Timestamp::now().to_string();
         let profile = bcx.build_config.requested_profile.to_string();
         let last_cpu_state = if enabled {
             match State::current() {

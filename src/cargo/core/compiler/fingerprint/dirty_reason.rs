@@ -102,12 +102,9 @@ impl fmt::Display for FileTimeDiff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s_diff = self.new_time.seconds() - self.old_time.seconds();
         if s_diff >= 1 {
-            fmt::Display::fmt(
-                &humantime::Duration::from(std::time::Duration::from_secs(s_diff as u64)),
-                f,
-            )
+            write!(f, "{:#}", jiff::SignedDuration::from_secs(s_diff))
         } else {
-            // format nanoseconds as it is, humantime would display ms, us and ns
+            // format nanoseconds as it is, jiff would display ms, us and ns
             let ns_diff = self.new_time.nanoseconds() - self.old_time.nanoseconds();
             write!(f, "{ns_diff}ns")
         }
