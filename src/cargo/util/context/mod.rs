@@ -2830,6 +2830,7 @@ pub struct TermConfig {
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
+    #[serde(default)]
     pub when: ProgressWhen,
     pub width: Option<usize>,
 }
