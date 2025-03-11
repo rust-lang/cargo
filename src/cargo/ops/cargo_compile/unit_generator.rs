@@ -275,7 +275,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 for (package, targets) in &targets_elsewhere {
                     if !targets.is_empty() {
                         available_msg.push(format!(
-                            "help: Available {target_desc} in `{package}` package:"
+                            "help: available {target_desc} in `{package}` package:"
                         ));
                         for target in targets {
                             available_msg.push(format!("    {target}"));
@@ -314,7 +314,7 @@ impl<'a> UnitGenerator<'a, '_> {
             if !targets_elsewhere.is_empty() {
                 append_targets_elsewhere(&mut msg)?;
             } else if suggestion.is_empty() && !targets.is_empty() {
-                write!(msg, "\nAvailable {} targets:", target_desc)?;
+                write!(msg, "\navailable {} targets:", target_desc)?;
                 for target in targets {
                     write!(msg, "\n    {}", target.name())?;
                 }

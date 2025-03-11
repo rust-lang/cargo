@@ -624,7 +624,7 @@ automatically infer them to be a target, such as in subfolders.
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [ERROR] no example target named `a` in default-run packages
-Available example targets:
+available example targets:
     do_magic
 
 "#]])
@@ -655,7 +655,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a` in default-run packages
-Available example targets:
+available example targets:
     do_magic
 
 "#]])
@@ -742,7 +742,7 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-Available bin targets:
+available bin targets:
     a
 
 "#]])
@@ -762,7 +762,7 @@ Available bin targets:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-Available example targets:
+available example targets:
     a
 
 "#]])
@@ -844,7 +844,7 @@ fn ambiguous_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate1/ambiguous` in default-run packages
-Available bin targets:
+available bin targets:
     ambiguous
     ambiguous
     ambiguous
@@ -937,7 +937,7 @@ Available binaries:
 [ERROR] no bin target named `crate2` in `crate1` package
 
 [HELP] a target with a similar name exists: `crate1`
-[HELP] Available bin in `crate2` package:
+[HELP] available bin in `crate2` package:
     crate2
 
 "#]])
@@ -949,7 +949,7 @@ Available binaries:
 [ERROR] no bin target named `crate2` in `crate1`, ... packages
 
 [HELP] a target with a similar name exists: `crate1`
-[HELP] Available bin in `crate2` package:
+[HELP] available bin in `crate2` package:
     crate2
 
 "#]])
@@ -961,7 +961,7 @@ Available binaries:
 [ERROR] no bin target named `crate2` in default-run packages
 
 [HELP] a target with a similar name exists: `crate1`
-[HELP] Available bin in `crate2` package:
+[HELP] available bin in `crate2` package:
     crate2
 
 "#]])
@@ -971,9 +971,9 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target matches pattern `pattern*` in default-run packages
-[HELP] Available bin in `pattern1` package:
+[HELP] available bin in `pattern1` package:
     pattern1
-[HELP] Available bin in `pattern2` package:
+[HELP] available bin in `pattern2` package:
     pattern2
 
 "#]])
@@ -996,7 +996,7 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2` in default-run packages
-[HELP] Available bin in `crate2` package:
+[HELP] available bin in `crate2` package:
     crate2
 
 "#]])
