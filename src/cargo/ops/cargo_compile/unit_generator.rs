@@ -307,24 +307,16 @@ impl<'a> UnitGenerator<'a, '_> {
             let named = if is_glob { "matches pattern" } else { "named" };
 
             let mut msg = String::new();
-            if !suggestion.is_empty() {
-                write!(
-                    msg,
-                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}{suggestion}",
-                )?;
+            write!(
+                msg,
+                "no {target_desc} target {named} `{target_name}` in {unmatched_packages}{suggestion}",
+            )?;
+            if !targets_elsewhere.is_empty() {
                 append_targets_elsewhere(&mut msg)?;
-            } else {
-                write!(
-                    msg,
-                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}",
-                )?;
-
-                append_targets_elsewhere(&mut msg)?;
-                if !targets.is_empty() && targets_elsewhere.is_empty() {
-                    write!(msg, "\nAvailable {} targets:", target_desc)?;
-                    for target in targets {
-                        write!(msg, "\n    {}", target.name())?;
-                    }
+            } else if suggestion.is_empty() && !targets.is_empty() {
+                write!(msg, "\nAvailable {} targets:", target_desc)?;
+                for target in targets {
+                    write!(msg, "\n    {}", target.name())?;
                 }
             }
             anyhow::bail!(msg);
