@@ -836,6 +836,11 @@ fn ambiguous_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` can run at most one executable, but multiple were specified
+[HELP] available targets:
+    bin `ambiguous` in package `crate1`
+    bin `ambiguous` in package `crate2`
+    bin `ambiguous` in package `crate3`
+    bin `ambiguous` in package `crate4`
 
 "#]])
         .run();
@@ -1014,6 +1019,9 @@ fn either_name_or_example() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` can run at most one executable, but multiple were specified
+[HELP] available targets:
+    bin `a` in package `foo`
+    example `b` in package `foo`
 
 "#]])
         .run();
