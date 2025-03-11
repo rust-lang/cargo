@@ -314,7 +314,7 @@ impl<'a> UnitGenerator<'a, '_> {
             if !targets_elsewhere.is_empty() {
                 append_targets_elsewhere(&mut msg)?;
             } else if suggestion.is_empty() && !targets.is_empty() {
-                write!(msg, "\navailable {} targets:", target_desc)?;
+                write!(msg, "\nhelp: available {} targets:", target_desc)?;
                 for target in targets {
                     write!(msg, "\n    {}", target.name())?;
                 }

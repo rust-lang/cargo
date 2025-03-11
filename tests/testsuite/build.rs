@@ -1338,7 +1338,7 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-available bin targets:
+[HELP] available bin targets:
     a
 
 "#]])
@@ -1358,7 +1358,7 @@ available bin targets:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-available example targets:
+[HELP] available example targets:
     a
 
 "#]])

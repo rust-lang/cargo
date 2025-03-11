@@ -624,7 +624,7 @@ automatically infer them to be a target, such as in subfolders.
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [ERROR] no example target named `a` in default-run packages
-available example targets:
+[HELP] available example targets:
     do_magic
 
 "#]])
@@ -655,7 +655,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a` in default-run packages
-available example targets:
+[HELP] available example targets:
     do_magic
 
 "#]])
@@ -742,7 +742,7 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-available bin targets:
+[HELP] available bin targets:
     a
 
 "#]])
@@ -762,7 +762,7 @@ available bin targets:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-available example targets:
+[HELP] available example targets:
     a
 
 "#]])
@@ -844,7 +844,7 @@ fn ambiguous_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate1/ambiguous` in default-run packages
-available bin targets:
+[HELP] available bin targets:
     ambiguous
     ambiguous
     ambiguous
