@@ -2016,7 +2016,7 @@ fn error_loading_which_lock() {
 [ERROR] failed to sync
 
 Caused by:
-  failed to load pkg lockfile
+  failed to load lockfile for [ROOT]/foo/b
 
 Caused by:
   could not execute process `does-not-exist -vV` (never executed)
@@ -2056,7 +2056,7 @@ fn error_downloading() {
 [ERROR] failed to sync
 
 Caused by:
-  failed to download packages
+  failed to download packages for [ROOT]/foo
 
 Caused by:
   failed to download from `[ROOTURL]/dl/bar/1.0.0/download`
