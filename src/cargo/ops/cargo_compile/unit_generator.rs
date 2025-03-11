@@ -289,7 +289,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 CargoResult::Ok(())
             };
 
-            let unmatched_packages = || match self.spec {
+            let unmatched_packages = match self.spec {
                 Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
                     "default-run packages".to_owned()
                 }
@@ -305,26 +305,21 @@ impl<'a> UnitGenerator<'a, '_> {
                 }
             };
 
+            let named = if is_glob { "matches pattern" } else { "named" };
+
             let mut msg = String::new();
             if !suggestion.is_empty() {
                 write!(
                     msg,
                     "no {} target {} `{}` in {}{}",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                    unmatched_packages(),
-                    suggestion,
+                    target_desc, named, target_name, unmatched_packages, suggestion,
                 )?;
                 append_targets_elsewhere(&mut msg, "\n")?;
             } else {
                 writeln!(
                     msg,
                     "no {} target {} `{}` in {}.",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                    unmatched_packages()
+                    target_desc, named, target_name, unmatched_packages
                 )?;
 
                 append_targets_elsewhere(&mut msg, "")?;
