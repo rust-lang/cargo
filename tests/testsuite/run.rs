@@ -783,6 +783,82 @@ Available example targets:
         .run();
 }
 
+#[cargo_test]
+fn ambiguous_bin_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "crate3", "crate4"]
+        "#,
+        )
+        .file("crate1/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate1/Cargo.toml",
+            r#"
+        [package]
+        name = "crate1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate2/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate2/Cargo.toml",
+            r#"
+        [package]
+        name = "crate2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate3/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate3/Cargo.toml",
+            r#"
+        [package]
+        name = "crate3"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate4/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate4/Cargo.toml",
+            r#"
+        [package]
+        name = "crate4"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        );
+    let p = p.build();
+
+    p.cargo("run --bin ambiguous")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `cargo run` can run at most one executable, but multiple were specified
+
+"#]])
+        .run();
+
+    p.cargo("run --bin crate1/ambiguous")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate1/ambiguous` in default-run packages.
+Available bin targets:
+    ambiguous
+    ambiguous
+    ambiguous
+    ambiguous
+
+
+"#]])
+        .run();
+}
+
 // See rust-lang/cargo#14544
 #[cargo_test]
 fn print_available_targets_within_virtual_workspace() {
