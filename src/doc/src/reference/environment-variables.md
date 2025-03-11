@@ -163,8 +163,6 @@ In summary, the supported environment variables are:
 [`build.incremental`]: config.md#buildincremental
 [`build.dep-info-basedir`]: config.md#builddep-info-basedir
 [`doc.browser`]: config.md#docbrowser
-[`cargo-new.name`]: config.md#cargo-newname
-[`cargo-new.email`]: config.md#cargo-newemail
 [`cargo-new.vcs`]: config.md#cargo-newvcs
 [`future-incompat-report.frequency`]: config.md#future-incompat-reportfrequency
 [`http.debug`]: config.md#httpdebug

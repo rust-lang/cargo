@@ -124,11 +124,11 @@ one detailed below.
 * [`cargo::rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) --- Enables compile-time `cfg`
   settings.
 * [`cargo::rustc-check-cfg=CHECK_CFG`](#rustc-check-cfg) -- Register custom `cfg`s as
-  expected for compile-time checking of configs. 
+  expected for compile-time checking of configs.
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
 * [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
-- [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
+* [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
 * [`cargo::warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
 * [`cargo::metadata=KEY=VALUE`](#the-links-manifest-key) --- Metadata, used by `links`
@@ -256,7 +256,7 @@ identifier, the value should be a string.
 ### `cargo::rustc-check-cfg=CHECK_CFG` {#rustc-check-cfg}
 
 Add to the list of expected config names and values that is used when checking
-the _reachable_ cfg expressions with the [`unexpected_cfgs`][unexpected-cfgs] lint.
+the *reachable* cfg expressions with the [`unexpected_cfgs`][unexpected-cfgs] lint.
 
 The syntax of `CHECK_CFG` mirrors the `rustc` [`--check-cfg` flag][option-check-cfg], see
 [Checking conditional configurations][checking-conditional-configurations] for more details.
@@ -439,11 +439,11 @@ key-value pairs. This metadata is set with the `cargo::metadata=KEY=VALUE`
 instruction.
 
 The metadata is passed to the build scripts of **dependent** packages. For
-example, if the package `foo` depends on `bar`, which links `baz`, then if 
+example, if the package `foo` depends on `bar`, which links `baz`, then if
 `bar` generates `key=value` as part of its build script metadata, then the
 build script of `foo` will have the environment variables `DEP_BAZ_KEY=value`
 (note that the value of the `links` key is used).
-See the ["Using another `sys` crate"][using-another-sys] for an example of 
+See the ["Using another `sys` crate"][using-another-sys] for an example of
 how this can be used.
 
 Note that metadata is only passed to immediate dependents, not transitive

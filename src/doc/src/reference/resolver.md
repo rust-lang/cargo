@@ -390,7 +390,6 @@ situations:
 
 [build-dependencies]: specifying-dependencies.md#build-dependencies
 [dev-dependencies]: specifying-dependencies.md#development-dependencies
-[resolver-field]: features.md#resolver-versions
 
 ### `links`
 
@@ -466,7 +465,6 @@ all platforms are enabled. In other words, the resolver ignores the platform
 or `cfg` expression.
 
 [build]: specifying-dependencies.md#build-dependencies
-[dev-dependencies]: specifying-dependencies.md#development-dependencies
 [Platform-specific dependencies]: specifying-dependencies.md#platform-specific-dependencies
 
 ### dev-dependency cycles
@@ -646,8 +644,6 @@ currently attempt to "deduplicate" in this situation.
 The use of open-ended version requirements like `>=0.6` is discouraged in Cargo.
 But, if you run into this situation, the [`cargo update`] command with the
 `--precise` flag can be used to manually remove such duplications.
-
-[`cargo update`]: ../commands/cargo-update.md
 
 ### Why wasn't a newer version selected?
 

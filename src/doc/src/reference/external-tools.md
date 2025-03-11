@@ -12,7 +12,6 @@ facilities:
 
 * support for custom subcommands.
 
-
 ## Information about package structure
 
 You can use [`cargo metadata`] command to get information about package
@@ -63,7 +62,6 @@ messages.
 > **MSRV:** 1.77 is required for `package_id` to be a Package ID Specification. Before that, it was opaque.
 
 [build command documentation]: ../commands/cargo-build.md
-[cargo_metadata]: https://crates.io/crates/cargo_metadata
 [Package ID Specifications]: ./pkgid-spec.md
 
 ### Compiler messages
@@ -203,7 +201,6 @@ following structure:
     */
     "fresh": true
 }
-
 ```
 
 ### Build script output
@@ -258,7 +255,7 @@ The "build-finished" message is emitted at the end of the build.
     /* Whether or not the build finished successfully. */
     "success": true,
 }
-````
+```
 
 This message can be helpful for tools to know when to stop reading JSON
 messages. Commands such as `cargo test` or `cargo run` can produce additional
@@ -305,5 +302,4 @@ Instead, it is encouraged to use the CLI interface to drive Cargo. The [`cargo
 metadata`] command can be used to obtain information about the current project
 (the [`cargo_metadata`] crate provides a Rust interface to this command).
 
-[`cargo metadata`]: ../commands/cargo-metadata.md
 [`cargo_metadata`]: https://crates.io/crates/cargo_metadata
