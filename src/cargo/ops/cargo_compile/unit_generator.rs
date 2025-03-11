@@ -311,15 +311,13 @@ impl<'a> UnitGenerator<'a, '_> {
             if !suggestion.is_empty() {
                 write!(
                     msg,
-                    "no {} target {} `{}` in {}{}",
-                    target_desc, named, target_name, unmatched_packages, suggestion,
+                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}{suggestion}",
                 )?;
                 append_targets_elsewhere(&mut msg, "\n")?;
             } else {
                 writeln!(
                     msg,
-                    "no {} target {} `{}` in {}.",
-                    target_desc, named, target_name, unmatched_packages
+                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}.",
                 )?;
 
                 append_targets_elsewhere(&mut msg, "")?;
