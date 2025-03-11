@@ -1341,7 +1341,6 @@ fn cargo_compile_with_filename() {
 Available bin targets:
     a
 
-
 "#]])
         .run();
 
@@ -1361,7 +1360,6 @@ Available bin targets:
 [ERROR] no example target named `example.rs` in default-run packages
 Available example targets:
     a
-
 
 "#]])
         .run();

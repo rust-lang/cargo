@@ -627,7 +627,6 @@ https://github.com/rust-lang/cargo/issues/5330
 Available example targets:
     do_magic
 
-
 "#]])
         .run();
 }
@@ -658,7 +657,6 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
 [ERROR] no example target named `a` in default-run packages
 Available example targets:
     do_magic
-
 
 "#]])
         .run();
@@ -747,7 +745,6 @@ fn run_with_filename() {
 Available bin targets:
     a
 
-
 "#]])
         .run();
 
@@ -767,7 +764,6 @@ Available bin targets:
 [ERROR] no example target named `example.rs` in default-run packages
 Available example targets:
     a
-
 
 "#]])
         .run();
@@ -853,7 +849,6 @@ Available bin targets:
     ambiguous
     ambiguous
     ambiguous
-
 
 "#]])
         .run();
