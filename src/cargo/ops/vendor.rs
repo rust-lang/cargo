@@ -144,12 +144,12 @@ fn sync(
     // attempt. If anything fails here we basically just move on to the next
     // crate to work with.
     for ws in workspaces {
-        let (packages, resolve) =
-            ops::resolve_ws(ws, dry_run).context("failed to load pkg lockfile")?;
+        let (packages, resolve) = ops::resolve_ws(ws, dry_run)
+            .with_context(|| format!("failed to load lockfile for {}", ws.root().display()))?;
 
         packages
             .get_many(resolve.iter())
-            .context("failed to download packages")?;
+            .with_context(|| format!("failed to download packages for {}", ws.root().display()))?;
 
         for pkg in resolve.iter() {
             let sid = if opts.respect_source_config {
@@ -187,12 +187,12 @@ fn sync(
     // Next up let's actually download all crates and start storing internal
     // tables about them.
     for ws in workspaces {
-        let (packages, resolve) =
-            ops::resolve_ws(ws, dry_run).context("failed to load pkg lockfile")?;
+        let (packages, resolve) = ops::resolve_ws(ws, dry_run)
+            .with_context(|| format!("failed to load lockfile for {}", ws.root().display()))?;
 
         packages
             .get_many(resolve.iter())
-            .context("failed to download packages")?;
+            .with_context(|| format!("failed to download packages for {}", ws.root().display()))?;
 
         for pkg in resolve.iter() {
             // No need to vendor path crates since they're already in the
