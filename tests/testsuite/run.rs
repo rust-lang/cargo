@@ -623,7 +623,7 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[ERROR] no example target named `a` in default-run packages.
+[ERROR] no example target named `a` in default-run packages
 Available example targets:
     do_magic
 
@@ -655,7 +655,7 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     p.cargo("run --example a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `a` in default-run packages.
+[ERROR] no example target named `a` in default-run packages
 Available example targets:
     do_magic
 
@@ -743,7 +743,7 @@ fn run_with_filename() {
     p.cargo("run --bin bin.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `bin.rs` in default-run packages.
+[ERROR] no bin target named `bin.rs` in default-run packages
 Available bin targets:
     a
 
@@ -764,7 +764,7 @@ Available bin targets:
     p.cargo("run --example example.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `example.rs` in default-run packages.
+[ERROR] no example target named `example.rs` in default-run packages
 Available example targets:
     a
 
@@ -847,7 +847,7 @@ fn ambiguous_bin_name() {
     p.cargo("run --bin crate1/ambiguous")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate1/ambiguous` in default-run packages.
+[ERROR] no bin target named `crate1/ambiguous` in default-run packages
 Available bin targets:
     ambiguous
     ambiguous
@@ -975,7 +975,7 @@ Available binaries:
     p.cargo("check --bin pattern*")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target matches pattern `pattern*` in default-run packages.
+[ERROR] no bin target matches pattern `pattern*` in default-run packages
 [HELP] Available bin in `pattern1` package:
     pattern1
 [HELP] Available bin in `pattern2` package:
@@ -1000,7 +1000,7 @@ Available binaries:
     p.cargo("run --bin crate2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `crate2` in default-run packages.
+[ERROR] no bin target named `crate2` in default-run packages
 [HELP] Available bin in `crate2` package:
     crate2
 

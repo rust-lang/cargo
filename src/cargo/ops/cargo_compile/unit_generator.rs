@@ -317,7 +317,7 @@ impl<'a> UnitGenerator<'a, '_> {
             } else {
                 writeln!(
                     msg,
-                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}.",
+                    "no {target_desc} target {named} `{target_name}` in {unmatched_packages}",
                 )?;
 
                 append_targets_elsewhere(&mut msg, "")?;

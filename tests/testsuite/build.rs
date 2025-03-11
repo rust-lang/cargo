@@ -1337,7 +1337,7 @@ fn cargo_compile_with_filename() {
     p.cargo("build --bin bin.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `bin.rs` in default-run packages.
+[ERROR] no bin target named `bin.rs` in default-run packages
 Available bin targets:
     a
 
@@ -1358,7 +1358,7 @@ Available bin targets:
     p.cargo("build --example example.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `example.rs` in default-run packages.
+[ERROR] no example target named `example.rs` in default-run packages
 Available example targets:
     a
 

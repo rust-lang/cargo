@@ -2447,7 +2447,7 @@ fn bad_example() {
     p.cargo("run --example foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `foo` in default-run packages.
+[ERROR] no example target named `foo` in default-run packages
 
 
 "#]])
@@ -2455,7 +2455,7 @@ fn bad_example() {
     p.cargo("run --bin foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `foo` in default-run packages.
+[ERROR] no bin target named `foo` in default-run packages
 
 
 "#]])
