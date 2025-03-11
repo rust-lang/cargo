@@ -270,10 +270,9 @@ impl<'a> UnitGenerator<'a, '_> {
                 .collect::<Vec<_>>();
             let suggestion = closest_msg(target_name, targets.iter(), |t| t.name(), "target");
             let targets_elsewhere = self.get_targets_from_other_packages(filter)?;
-            let need_append_targets_elsewhere = !targets_elsewhere.is_empty();
             let append_targets_elsewhere = |msg: &mut String| {
                 let mut available_msg = Vec::new();
-                for (package, targets) in targets_elsewhere {
+                for (package, targets) in &targets_elsewhere {
                     if !targets.is_empty() {
                         available_msg.push(format!(
                             "help: Available {target_desc} in `{package}` package:"
@@ -321,7 +320,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 )?;
 
                 append_targets_elsewhere(&mut msg)?;
-                if !targets.is_empty() && !need_append_targets_elsewhere {
+                if !targets.is_empty() && targets_elsewhere.is_empty() {
                     write!(msg, "\nAvailable {} targets:", target_desc)?;
                     for target in targets {
                         write!(msg, "\n    {}", target.name())?;
