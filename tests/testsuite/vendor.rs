@@ -1981,3 +1981,89 @@ directory = "new-vendor-dir"
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn error_loading_which_lock() {
+    // Tests an error message to make sure it is clear which
+    // manifest/workspace caused the problem. In this particular case, it was
+    // because the 2024 edition wants to know which rust version is in use.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2024"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config -s b/Cargo.toml")
+        .env("RUSTC", "does-not-exist")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to sync
+
+Caused by:
+  failed to load pkg lockfile
+
+Caused by:
+  could not execute process `does-not-exist -vV` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn error_downloading() {
+    // Tests the error message when downloading packages.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "1.0.0").publish();
+    p.cargo("generate-lockfile").run();
+    std::fs::remove_file(cargo_test_support::paths::root().join("dl/bar/1.0.0/download")).unwrap();
+    p.cargo("vendor --respect-source-config")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[DOWNLOADING] crates ...
+[ERROR] failed to sync
+
+Caused by:
+  failed to download packages
+
+Caused by:
+  failed to download from `[ROOTURL]/dl/bar/1.0.0/download`
+
+Caused by:
+  [37] Could[..]t read a file:// file (Couldn't open file [ROOT]/dl/bar/1.0.0/download)
+
+"#]])
+        .run();
+}
