@@ -259,16 +259,20 @@ impl<'a> UnitGenerator<'a, '_> {
         };
         let proposals = self.filter_targets(filter, true, mode);
         if proposals.is_empty() {
-            let targets = self
-                .packages
-                .iter()
-                .flat_map(|pkg| {
-                    pkg.targets()
-                        .iter()
-                        .filter(|target| is_expected_kind(target))
-                })
-                .collect::<Vec<_>>();
-            let suggestion = closest_msg(target_name, targets.iter(), |t| t.name(), "target");
+            let mut targets = std::collections::BTreeMap::new();
+            for (pkg, target) in self.packages.iter().flat_map(|pkg| {
+                pkg.targets()
+                    .iter()
+                    .filter(|target| is_expected_kind(target))
+                    .map(move |t| (pkg, t))
+            }) {
+                targets
+                    .entry(target.name())
+                    .or_insert_with(Vec::new)
+                    .push((pkg, target));
+            }
+
+            let suggestion = closest_msg(target_name, targets.keys(), |t| t, "target");
             let targets_elsewhere = self.get_targets_from_other_packages(filter)?;
             let append_targets_elsewhere = |msg: &mut String| {
                 let mut available_msg = Vec::new();
@@ -315,8 +319,15 @@ impl<'a> UnitGenerator<'a, '_> {
                 append_targets_elsewhere(&mut msg)?;
             } else if suggestion.is_empty() && !targets.is_empty() {
                 write!(msg, "\nhelp: available {} targets:", target_desc)?;
-                for target in targets {
-                    write!(msg, "\n    {}", target.name())?;
+                for (target_name, pkgs) in targets {
+                    if pkgs.len() == 1 {
+                        write!(msg, "\n    {target_name}")?;
+                    } else {
+                        for (pkg, _) in pkgs {
+                            let pkg_name = pkg.name();
+                            write!(msg, "\n    {target_name} in package {pkg_name}")?;
+                        }
+                    }
                 }
             }
             anyhow::bail!(msg);

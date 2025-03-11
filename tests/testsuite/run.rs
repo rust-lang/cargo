@@ -845,10 +845,10 @@ fn ambiguous_bin_name() {
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate1/ambiguous` in default-run packages
 [HELP] available bin targets:
-    ambiguous
-    ambiguous
-    ambiguous
-    ambiguous
+    ambiguous in package crate1
+    ambiguous in package crate2
+    ambiguous in package crate3
+    ambiguous in package crate4
 
 "#]])
         .run();
