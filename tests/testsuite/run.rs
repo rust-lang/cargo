@@ -623,10 +623,9 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[ERROR] no example target named `a` in default-run packages.
-Available example targets:
+[ERROR] no example target named `a` in default-run packages
+[HELP] available example targets:
     do_magic
-
 
 "#]])
         .run();
@@ -655,10 +654,9 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
     p.cargo("run --example a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `a` in default-run packages.
-Available example targets:
+[ERROR] no example target named `a` in default-run packages
+[HELP] available example targets:
     do_magic
-
 
 "#]])
         .run();
@@ -743,10 +741,9 @@ fn run_with_filename() {
     p.cargo("run --bin bin.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no bin target named `bin.rs` in default-run packages.
-Available bin targets:
+[ERROR] no bin target named `bin.rs` in default-run packages
+[HELP] available bin targets:
     a
-
 
 "#]])
         .run();
@@ -764,10 +761,9 @@ Available bin targets:
     p.cargo("run --example example.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no example target named `example.rs` in default-run packages.
-Available example targets:
+[ERROR] no example target named `example.rs` in default-run packages
+[HELP] available example targets:
     a
-
 
 "#]])
         .run();
@@ -784,6 +780,235 @@ Available example targets:
 }
 
 #[cargo_test]
+fn ambiguous_bin_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "crate3", "crate4"]
+        "#,
+        )
+        .file("crate1/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate1/Cargo.toml",
+            r#"
+        [package]
+        name = "crate1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate2/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate2/Cargo.toml",
+            r#"
+        [package]
+        name = "crate2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate3/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate3/Cargo.toml",
+            r#"
+        [package]
+        name = "crate3"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate4/src/bin/ambiguous.rs", "fn main(){}")
+        .file(
+            "crate4/Cargo.toml",
+            r#"
+        [package]
+        name = "crate4"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        );
+    let p = p.build();
+
+    p.cargo("run --bin ambiguous")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `cargo run` can run at most one executable, but multiple were specified
+[HELP] available targets:
+    bin `ambiguous` in package `crate1`
+    bin `ambiguous` in package `crate2`
+    bin `ambiguous` in package `crate3`
+    bin `ambiguous` in package `crate4`
+
+"#]])
+        .run();
+
+    p.cargo("run --bin crate1/ambiguous")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate1/ambiguous` in default-run packages
+[HELP] available bin targets:
+    ambiguous in package crate1
+    ambiguous in package crate2
+    ambiguous in package crate3
+    ambiguous in package crate4
+
+"#]])
+        .run();
+}
+
+// See rust-lang/cargo#14544
+#[cargo_test]
+fn print_available_targets_within_virtual_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "pattern1", "pattern2"]
+
+        default-members = ["crate1"]
+        "#,
+        )
+        .file("crate1/src/main.rs", "fn main(){}")
+        .file(
+            "crate1/Cargo.toml",
+            r#"
+        [package]
+        name = "crate1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("crate2/src/main.rs", "fn main(){}")
+        .file(
+            "crate2/Cargo.toml",
+            r#"
+        [package]
+        name = "crate2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("pattern1/src/main.rs", "fn main(){}")
+        .file(
+            "pattern1/Cargo.toml",
+            r#"
+        [package]
+        name = "pattern1"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("pattern2/src/main.rs", "fn main(){}")
+        .file(
+            "pattern2/Cargo.toml",
+            r#"
+        [package]
+        name = "pattern2"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        )
+        .file("another/src/main.rs", "fn main(){}")
+        .file(
+            "another/Cargo.toml",
+            r#"
+        [package]
+        name = "another"
+        version = "0.1.0"
+        edition = "2024"
+    "#,
+        );
+
+    let p = p.build();
+    p.cargo("run --bin")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] "--bin" takes one argument.
+Available binaries:
+    crate1
+
+
+"#]])
+        .run();
+
+    p.cargo("run -p crate1 --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in `crate1` package
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("check -p crate1 -p pattern1 -p pattern2 --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in `crate1`, ... packages
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("run --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in default-run packages
+
+[HELP] a target with a similar name exists: `crate1`
+[HELP] available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+
+    p.cargo("check --bin pattern*")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target matches pattern `pattern*` in default-run packages
+[HELP] available bin in `pattern1` package:
+    pattern1
+[HELP] available bin in `pattern2` package:
+    pattern2
+
+"#]])
+        .run();
+
+    // This another branch that none of similar name exists, and print available targets in the
+    // default-members.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+        [workspace]
+        resolver = "3"
+        members = ["crate1", "crate2", "another"]
+
+        default-members = ["another"]
+        "#,
+    );
+
+    p.cargo("run --bin crate2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `crate2` in default-run packages
+[HELP] available bin in `crate2` package:
+    crate2
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn either_name_or_example() {
     let p = project()
         .file("src/bin/a.rs", r#"fn main() { println!("hello a.rs"); }"#)
@@ -794,6 +1019,9 @@ fn either_name_or_example() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` can run at most one executable, but multiple were specified
+[HELP] available targets:
+    bin `a` in package `foo`
+    example `b` in package `foo`
 
 "#]])
         .run();

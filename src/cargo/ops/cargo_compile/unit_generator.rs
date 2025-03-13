@@ -259,24 +259,27 @@ impl<'a> UnitGenerator<'a, '_> {
         };
         let proposals = self.filter_targets(filter, true, mode);
         if proposals.is_empty() {
-            let targets = self
-                .packages
-                .iter()
-                .flat_map(|pkg| {
-                    pkg.targets()
-                        .iter()
-                        .filter(|target| is_expected_kind(target))
-                })
-                .collect::<Vec<_>>();
-            let suggestion = closest_msg(target_name, targets.iter(), |t| t.name(), "target");
+            let mut targets = std::collections::BTreeMap::new();
+            for (pkg, target) in self.packages.iter().flat_map(|pkg| {
+                pkg.targets()
+                    .iter()
+                    .filter(|target| is_expected_kind(target))
+                    .map(move |t| (pkg, t))
+            }) {
+                targets
+                    .entry(target.name())
+                    .or_insert_with(Vec::new)
+                    .push((pkg, target));
+            }
+
+            let suggestion = closest_msg(target_name, targets.keys(), |t| t, "target");
             let targets_elsewhere = self.get_targets_from_other_packages(filter)?;
-            let need_append_targets_elsewhere = !targets_elsewhere.is_empty();
-            let append_targets_elsewhere = |msg: &mut String, prefix: &str| {
+            let append_targets_elsewhere = |msg: &mut String| {
                 let mut available_msg = Vec::new();
-                for (package, targets) in targets_elsewhere {
+                for (package, targets) in &targets_elsewhere {
                     if !targets.is_empty() {
                         available_msg.push(format!(
-                            "help: Available {target_desc} in `{package}` package:"
+                            "help: available {target_desc} in `{package}` package:"
                         ));
                         for target in targets {
                             available_msg.push(format!("    {target}"));
@@ -284,12 +287,12 @@ impl<'a> UnitGenerator<'a, '_> {
                     }
                 }
                 if !available_msg.is_empty() {
-                    write!(msg, "{prefix}{}", available_msg.join("\n"))?;
+                    write!(msg, "\n{}", available_msg.join("\n"))?;
                 }
                 CargoResult::Ok(())
             };
 
-            let unmatched_packages = || match self.spec {
+            let unmatched_packages = match self.spec {
                 Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
                     "default-run packages".to_owned()
                 }
@@ -305,33 +308,25 @@ impl<'a> UnitGenerator<'a, '_> {
                 }
             };
 
-            let mut msg = String::new();
-            if !suggestion.is_empty() {
-                write!(
-                    msg,
-                    "no {} target {} `{}` in {}{}",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                    unmatched_packages(),
-                    suggestion,
-                )?;
-                append_targets_elsewhere(&mut msg, "\n")?;
-            } else {
-                writeln!(
-                    msg,
-                    "no {} target {} `{}` in {}.",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                    unmatched_packages()
-                )?;
+            let named = if is_glob { "matches pattern" } else { "named" };
 
-                append_targets_elsewhere(&mut msg, "")?;
-                if !targets.is_empty() && !need_append_targets_elsewhere {
-                    writeln!(msg, "Available {} targets:", target_desc)?;
-                    for target in targets {
-                        writeln!(msg, "    {}", target.name())?;
+            let mut msg = String::new();
+            write!(
+                msg,
+                "no {target_desc} target {named} `{target_name}` in {unmatched_packages}{suggestion}",
+            )?;
+            if !targets_elsewhere.is_empty() {
+                append_targets_elsewhere(&mut msg)?;
+            } else if suggestion.is_empty() && !targets.is_empty() {
+                write!(msg, "\nhelp: available {} targets:", target_desc)?;
+                for (target_name, pkgs) in targets {
+                    if pkgs.len() == 1 {
+                        write!(msg, "\n    {target_name}")?;
+                    } else {
+                        for (pkg, _) in pkgs {
+                            let pkg_name = pkg.name();
+                            write!(msg, "\n    {target_name} in package {pkg_name}")?;
+                        }
                     }
                 }
             }

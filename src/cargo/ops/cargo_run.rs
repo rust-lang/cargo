@@ -1,4 +1,5 @@
 use std::ffi::OsString;
+use std::fmt::Write as _;
 use std::iter;
 use std::path::Path;
 
@@ -69,10 +70,20 @@ pub fn run(
                 names.join(", ")
             )
         } else {
-            anyhow::bail!(
-                "`cargo run` can run at most one executable, but \
+            let mut message = "`cargo run` can run at most one executable, but \
                  multiple were specified"
-            )
+                .to_owned();
+            write!(&mut message, "\nhelp: available targets:")?;
+            for (pkg, bin) in &bins {
+                write!(
+                    &mut message,
+                    "\n    {} `{}` in package `{}`",
+                    bin.kind().description(),
+                    bin.name(),
+                    pkg.name()
+                )?;
+            }
+            anyhow::bail!(message)
         }
     }
 
