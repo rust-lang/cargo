@@ -53,11 +53,29 @@ fn single_package() {
     p.cargo("package --list=json -Zunstable-options")
         .masquerade_as_nightly_cargo(&["package --list=json"])
         .with_stderr_data(str![""])
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(
+            str![[r#"
 {
-  "path+[ROOTURL]/foo#0.0.0": ""
+  "path+[ROOTURL]/foo#0.0.0": {
+    "Cargo.lock": {
+      "source": "generated"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "Cargo.toml.orig": {
+      "original_path": "[ROOT]/foo/Cargo.toml",
+      "source": "copied"
+    },
+    "src/lib.rs": {
+      "original_path": "[ROOT]/foo/src/lib.rs",
+      "source": "existing"
+    }
+  }
 }
-"#]].is_json())
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -100,12 +118,45 @@ fn workspace() {
     p.cargo("package --list=json -Zunstable-options")
         .masquerade_as_nightly_cargo(&["package --list=json"])
         .with_stderr_data(str![""])
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(
+            str![[r#"
 {
-  "path+[ROOTURL]/foo/gondor#0.0.0": "",
-  "path+[ROOTURL]/foo/rohan#0.0.0": ""
+  "path+[ROOTURL]/foo/gondor#0.0.0": {
+    "Cargo.lock": {
+      "source": "generated"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "Cargo.toml.orig": {
+      "original_path": "[ROOT]/foo/gondor/Cargo.toml",
+      "source": "copied"
+    },
+    "src/lib.rs": {
+      "original_path": "[ROOT]/foo/gondor/src/lib.rs",
+      "source": "existing"
+    }
+  },
+  "path+[ROOTURL]/foo/rohan#0.0.0": {
+    "Cargo.lock": {
+      "source": "generated"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "Cargo.toml.orig": {
+      "original_path": "[ROOT]/foo/rohan/Cargo.toml",
+      "source": "copied"
+    },
+    "src/lib.rs": {
+      "original_path": "[ROOT]/foo/rohan/src/lib.rs",
+      "source": "existing"
+    }
+  }
 }
-"#]].is_json())
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -146,10 +197,44 @@ fn show_copied_files() {
     p.cargo("package --list=json -Zunstable-options")
         .masquerade_as_nightly_cargo(&["package --list=json"])
         .with_stderr_data(str![""])
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(
+            str![[r#"
 {
-  "path+[ROOTURL]/foo/gondor#0.0.0": ""
+  "path+[ROOTURL]/foo/gondor#0.0.0": {
+    "Cargo.lock": {
+      "source": "generated"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "Cargo.toml.orig": {
+      "original_path": "[ROOT]/foo/gondor/Cargo.toml",
+      "source": "copied"
+    },
+    "LICENSE": {
+      "original_path": "[ROOT]/foo/LICENSE",
+      "source": "copied"
+    },
+    "README.md": {
+      "original_path": "[ROOT]/foo/README.md",
+      "source": "copied"
+    },
+    "main.rs": {
+      "original_path": "[ROOT]/foo/gondor/main.rs",
+      "source": "existing"
+    },
+    "src/lib.rs": {
+      "original_path": "[ROOT]/foo/lib.rs",
+      "source": "copied"
+    },
+    "symlink-dir/file": {
+      "original_path": "[ROOT]/foo/original-dir/file",
+      "source": "copied"
+    }
+  }
 }
-"#]].is_json())
+"#]]
+            .is_json(),
+        )
         .run();
 }

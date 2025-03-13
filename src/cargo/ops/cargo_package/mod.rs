@@ -88,10 +88,49 @@ struct ArchiveFile {
 }
 
 enum FileContents {
-    /// Absolute path to the file on disk to add to the archive.
-    OnDisk(PathBuf),
+    /// An absolute file path that exists on disk and is added to the archive as-is.
+    Existing(PathBuf),
+    /// A file copied from another location,
+    ///
+    /// The associated file path points to a resolved symlink target
+    /// or a normalized path outside the package root.
+    Copied(PathBuf),
     /// Generates a file.
     Generated(GeneratedFile),
+}
+
+impl serde::ser::Serialize for FileContents {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        use serde::ser::SerializeMap as _;
+        match self {
+            FileContents::Existing(path) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("source", "existing")?;
+                map.serialize_entry("original_path", path)?;
+                map.end()
+            }
+            FileContents::Copied(path) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("source", "copied")?;
+                map.serialize_entry("original_path", path)?;
+                map.end()
+            }
+            FileContents::Generated(_) => {
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("source", "generated")?;
+                map.end()
+            }
+        }
+    }
+}
+
+impl FileContents {
+    fn with_copied_path(path: PathBuf) -> FileContents {
+        FileContents::Copied(dunce::canonicalize(&path).unwrap_or(path))
+    }
 }
 
 enum GeneratedFile {
@@ -261,7 +300,9 @@ fn do_package<'a>(
                     }
                 }
                 PackageListFormat::Json => {
-                    json_output.insert(pkg.package_id().to_spec(), "");
+                    let ar_files =
+                        BTreeMap::from_iter(ar_files.into_iter().map(|f| (f.rel_str, f.contents)));
+                    json_output.insert(pkg.package_id().to_spec(), ar_files);
                 }
             }
         } else {
@@ -449,7 +490,11 @@ fn build_ar_list(
                     .push(ArchiveFile {
                         rel_path: rel_path.to_owned(),
                         rel_str: rel_str.to_owned(),
-                        contents: FileContents::OnDisk(src_file.to_path_buf()),
+                        contents: if src_file.is_symlink_or_under_symlink() {
+                            FileContents::with_copied_path(src_file.to_path_buf())
+                        } else {
+                            FileContents::Existing(src_file.to_path_buf())
+                        },
                     });
             }
         }
@@ -464,7 +509,7 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                 rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
-                contents: FileContents::OnDisk(pkg.manifest_path().to_owned()),
+                contents: FileContents::with_copied_path(pkg.manifest_path().to_owned()),
             });
         result
             .entry(UncasedAscii::new("Cargo.toml"))
@@ -579,7 +624,7 @@ fn check_for_file_and_add(
                         .to_str()
                         .expect("everything was utf8")
                         .to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
+                    contents: FileContents::Existing(abs_file_path),
                 })
             }
         }
@@ -602,7 +647,7 @@ fn check_for_file_and_add(
                 result.push(ArchiveFile {
                     rel_path: PathBuf::from(file_name),
                     rel_str: file_name.to_str().unwrap().to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
+                    contents: FileContents::with_copied_path(abs_file_path),
                 })
             }
         }
@@ -789,7 +834,7 @@ fn tar(
             .verbose(|shell| shell.status("Archiving", &rel_str))?;
         let mut header = Header::new_gnu();
         match contents {
-            FileContents::OnDisk(disk_path) => {
+            FileContents::Existing(disk_path) | FileContents::Copied(disk_path) => {
                 let mut file = File::open(&disk_path).with_context(|| {
                     format!("failed to open for archiving: `{}`", disk_path.display())
                 })?;
