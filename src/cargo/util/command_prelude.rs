@@ -25,6 +25,7 @@ use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
 use semver::Version;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -246,7 +247,11 @@ pub trait CommandExt: Sized {
                 "Space or comma separated list of features to activate",
             )
             .short('F')
-            .help_heading(heading::FEATURE_SELECTION),
+            .help_heading(heading::FEATURE_SELECTION)
+            .add(clap_complete::ArgValueCandidates::new(|| {
+                let candidates = get_feature_candidates();
+                candidates.unwrap_or_default()
+            })),
         )
         ._arg(
             flag("all-features", "Activate all available features")
@@ -1104,6 +1109,81 @@ pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCan
     } else {
         Ok(vec![])
     }
+}
+
+fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+
+    let manifest_path = match find_root_manifest_for_wd(gctx.cwd()) {
+        Ok(path) => path,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let ws = match Workspace::new(&manifest_path, &gctx) {
+        Ok(ws) => ws,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let current_dir = std::env::current_dir()?;
+
+    let current_pkg = ws
+        .members()
+        .find(|pkg| current_dir.starts_with(pkg.root()))
+        .or_else(|| ws.members().next())
+        .cloned();
+
+    let mut features = HashSet::new();
+
+    if let Some(package) = current_pkg {
+        for feature_name in package.summary().features().keys() {
+            features.insert(feature_name.as_str().to_string());
+        }
+
+        for dep in package.dependencies() {
+            if dep.is_optional() {
+                features.insert(dep.name_in_toml().to_string());
+            }
+        }
+
+        let mut package_features = std::collections::HashMap::new();
+
+        for pkg in ws.members() {
+            let pkg_name = pkg.name().as_str().to_string();
+            let pkg_features: Vec<String> = pkg
+                .summary()
+                .features()
+                .keys()
+                .map(|k| k.as_str().to_string())
+                .collect();
+
+            package_features.insert(pkg_name, pkg_features);
+        }
+
+        for dep in package.dependencies() {
+            let dep_name = dep.package_name().as_str().to_string();
+
+            if let Some(dep_features) = package_features.get(&dep_name) {
+                for feat in dep_features {
+                    features.insert(format!("{}/{}", dep_name, feat));
+                }
+            }
+        }
+    } else {
+        // If we couldn't determine the current package, collect features from all workspace members
+        for pkg in ws.members() {
+            for feature_name in pkg.summary().features().keys() {
+                features.insert(feature_name.as_str().to_string());
+            }
+        }
+    }
+
+    // always include the default feature
+    features.insert("default".to_string());
+
+    Ok(features
+        .into_iter()
+        .map(|name| clap_complete::CompletionCandidate::new(name))
+        .collect())
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
