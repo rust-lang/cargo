@@ -330,7 +330,7 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "home 0.5.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.11",
  "http-auth",
  "ignore",
  "im-rc",
@@ -1739,7 +1739,7 @@ checksum = "c40f12bb65a8299be0cfb90fe718e3be236b7a94b434877012980863a883a99f"
 dependencies = [
  "bstr",
  "gix-trace",
- "home 0.5.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.11",
  "once_cell",
  "thiserror 2.0.11",
 ]
@@ -2143,15 +2143,15 @@ dependencies = [
 [[package]]
 name = "home"
 version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
 dependencies = [
  "windows-sys 0.59.0",
 ]
 
 [[package]]
 name = "home"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
+version = "0.5.12"
 dependencies = [
  "windows-sys 0.59.0",
 ]
