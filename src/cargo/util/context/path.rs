@@ -32,6 +32,25 @@ impl ConfigRelativePath {
         self.0.definition.root(gctx).join(&self.0.val)
     }
 
+    /// Same as [`Self::resolve_path`] but will make string replacements
+    /// before resolving the path.
+    ///
+    /// `replacements` should be an an [`IntoIterator`] of tuples with the "from" and "to" for the
+    /// string replacement
+    pub fn resolve_templated_path(
+        &self,
+        gctx: &GlobalContext,
+        replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> PathBuf {
+        let mut value = self.0.val.clone();
+
+        for (from, to) in replacements {
+            value = value.replace(from.as_ref(), to.as_ref());
+        }
+
+        self.0.definition.root(gctx).join(&value)
+    }
+
     /// Resolves this configuration-relative path to either an absolute path or
     /// something appropriate to execute from `PATH`.
     ///

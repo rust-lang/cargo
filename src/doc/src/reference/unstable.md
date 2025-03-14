@@ -260,6 +260,13 @@ build-dir = "out"
 
 The path to where internal files used as part of the build are placed.
 
+This option supports path templating.
+
+Avaiable template variables:
+* `{workspace-root}` resolves to root of the current workspace.
+* `{cargo-cache-home}` resolves to `CARGO_HOME`
+* `{workspace-manifest-path-hash}` resolves to a hash of the manifest path
+
 
 ## root-dir
 * Original Issue: [#9887](https://github.com/rust-lang/cargo/issues/9887)
