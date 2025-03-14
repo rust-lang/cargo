@@ -162,7 +162,8 @@ is ignored and should not be used in version requirements.
 > [#10599]).
 >
 > Avoid constraining the upper bound of a version to be anything less than the
-> next semver incompatible version (e.g. avoid `">=2.0, <2.4"` or `"2.0.*"`),
+> next semver incompatible version
+> (e.g. avoid `">=2.0, <2.4"`, `"2.0.*"`, or `~2.0`),
 > as other packages in the dependency tree may
 > require a newer version, leading to an unresolvable error (see [#9029]).
 > Consider whether controlling the version in your [`Cargo.lock`] would be more
