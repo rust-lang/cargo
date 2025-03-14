@@ -7474,3 +7474,146 @@ This might cause the `.crate` file to include incorrect or incomplete files
         ],
     );
 }
+
+#[cargo_test]
+fn exclude_lockfile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list --exclude-lockfile")
+        .with_stdout_data(str![[r#"
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+
+"#]])
+        .with_stderr_data("")
+        .run();
+
+    p.cargo("package --exclude-lockfile")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        (),
+    );
+}
+
+// A failing case from <https://github.com/rust-lang/cargo/issues/15059>
+#[cargo_test]
+fn unpublished_cyclic_dev_dependencies() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+
+                [dev-dependencies]
+                foo = { path = ".", version = "0.0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify --exclude-lockfile")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        // no Cargo.lock
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        (),
+    );
+}
+
+// A failing case from <https://github.com/rust-lang/cargo/issues/15059>
+#[cargo_test]
+fn unpublished_dependency() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+
+                [dependencies]
+                dep = { path = "./dep", version = "0.0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify -p foo --exclude-lockfile")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        // no Cargo.lock
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        (),
+    );
+}

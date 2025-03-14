@@ -27,8 +27,9 @@ DESCRIPTION
              manifest.
 
           o  Cargo.lock is always included. When missing, a new lock file will
-             be generated. cargo-install(1) will use the packaged lock file if
-             the --locked flag is used.
+             be generated unless the --exclude-lockfile flag is used.
+             cargo-install(1) will use the packaged lock file if the --locked
+             flag is used.
 
           o  A .cargo_vcs_info.json file is included that contains information
              about the current VCS checkout hash if available, as well as a
@@ -95,6 +96,13 @@ OPTIONS
        --allow-dirty
            Allow working directories with uncommitted VCS changes to be
            packaged.
+
+       --exclude-lockfile
+           Don’t include the lock file when packaging.
+
+           This flag is not for general use. Some tools may expect a lock file
+           to be present (e.g. cargo install --locked). Consider other options
+           before using this.
 
        --index index
            The URL of the registry index to use.
