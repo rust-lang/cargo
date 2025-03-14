@@ -162,19 +162,19 @@ is ignored and should not be used in version requirements.
 > [#10599]).
 >
 > Avoid constraining the upper bound of a version to be anything less than the
-> next semver incompatible version
-> (e.g. avoid `">=2.0, <2.4"`) as other packages in the dependency tree may
+> next semver incompatible version (e.g. avoid `">=2.0, <2.4"` or `"2.0.*"`),
+> as other packages in the dependency tree may
 > require a newer version, leading to an unresolvable error (see [#9029]).
 > Consider whether controlling the version in your [`Cargo.lock`] would be more
 > appropriate.
 >
 > In some instances this won't matter or the benefits might outweigh the cost, including:
-> - When no one else depends on your package e.g. it only has a `[[bin]]`
+> - When no one else depends on your package; e.g. it only has a `[[bin]]`
 > - When depending on a pre-release package and wishing to avoid breaking
->   changes then a fully specified `"=1.2.3-alpha.3"` might be warranted (see
+>   changes, then a fully specified `"=1.2.3-alpha.3"` might be warranted (see
 >   [#2222])
 > - When a library re-exports a proc-macro but the proc-macro generates code that
->   calls into the re-exporting library then a fully specified `=1.2.3` might be
+>   calls into the re-exporting library, then a fully specified `=1.2.3` might be
 >   warranted to ensure the proc-macro isn't newer than the re-exporting library
 >   and generating code that uses parts of the API that don't exist within the
 >   current version
