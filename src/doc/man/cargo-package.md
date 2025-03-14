@@ -81,8 +81,45 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 
 {{#options}}
 
-{{#option "`-l`" "`--list`" }}
+{{#option "`-l`" "`--list`_[fmt]_" }}
 Print files included in a package without making one.
+
+Specifying an output format (rather than the default) is unstable and requires
+`-Zunstable-options`. Valid output formats:
+
+- `json` (unstable, requires `-Zunstable-options`): Emit machine-readable JSON
+  information about each file.
+  ```javascript
+  {
+    /* The Package ID Spec of the package. */
+    "path+file:///home/foo#0.0.0": {
+      /* Relative path in the archive file. */
+      "Cargo.toml.orig": {
+        /* An absolute path to the actual file content. */
+        "original_path": "/home/foo/Cargo.toml",
+        /* The source of the file.
+           - "existing" for file that exists on disk as-is.
+           - "generate" for file being generated during packaging
+           - "copied" for file copied from another location.
+             The associated path points to a resolved symlink target
+             or a normalized path outside the package root.
+        */
+        "source": "copied"
+      },
+      "Cargo.toml": {
+        "source": "generated"
+      },
+      "LICENSE": {
+        "original_path": "/home/LICENSE",
+        "source": "copied"
+      },
+      "main.rs": {
+        "original_path": "/home/foo/main.rs",
+        "source": "existing"
+      },
+    }
+  }
+  ```
 {{/option}}
 
 {{#option "`--no-verify`" }}

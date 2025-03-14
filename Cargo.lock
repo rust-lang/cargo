@@ -322,6 +322,7 @@ dependencies = [
  "crates-io",
  "curl",
  "curl-sys",
+ "dunce",
  "filetime",
  "flate2",
  "git2",

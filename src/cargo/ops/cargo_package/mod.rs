@@ -1,4 +1,6 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -40,10 +42,27 @@ use unicase::Ascii as UncasedAscii;
 mod vcs;
 mod verify;
 
+#[derive(Debug, Clone)]
+pub enum PackageListFormat {
+    PathPerLine,
+    Json,
+}
+
+impl std::str::FromStr for PackageListFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageListFormat, anyhow::Error> {
+        match s {
+            "json" => Ok(PackageListFormat::Json),
+            f => bail!("unknown package list format `{f}`"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
     pub gctx: &'gctx GlobalContext,
-    pub list: bool,
+    pub list: Option<PackageListFormat>,
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
@@ -69,16 +88,55 @@ struct ArchiveFile {
 }
 
 enum FileContents {
-    /// Absolute path to the file on disk to add to the archive.
-    OnDisk(PathBuf),
+    /// An absolute file path that exists on disk and is added to the archive as-is.
+    Existing(PathBuf),
+    /// A file copied from another location,
+    ///
+    /// The associated file path points to a resolved symlink target
+    /// or a normalized path outside the package root.
+    Copied(PathBuf),
     /// Generates a file.
     Generated(GeneratedFile),
+}
+
+impl serde::ser::Serialize for FileContents {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        use serde::ser::SerializeMap as _;
+        match self {
+            FileContents::Existing(path) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("source", "existing")?;
+                map.serialize_entry("original_path", path)?;
+                map.end()
+            }
+            FileContents::Copied(path) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("source", "copied")?;
+                map.serialize_entry("original_path", path)?;
+                map.end()
+            }
+            FileContents::Generated(_) => {
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("source", "generated")?;
+                map.end()
+            }
+        }
+    }
+}
+
+impl FileContents {
+    fn with_copied_path(path: PathBuf) -> FileContents {
+        FileContents::Copied(dunce::canonicalize(&path).unwrap_or(path))
+    }
 }
 
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
     Manifest,
-    /// Generates `Cargo.lock` in some cases (like if there is a binary).
+    /// Generates `Cargo.lock`.
     Lockfile,
     /// Adds a `.cargo_vcs_info.json` file if in a git repo.
     VcsInfo(vcs::VcsInfo),
@@ -225,6 +283,7 @@ fn do_package<'a>(
     // be added to our local overlay before we can create lockfiles that depend on them.
     let sorted_pkgs = deps.sort();
     let mut outputs: Vec<(Package, PackageOpts<'_>, FileLock)> = Vec::new();
+    let mut json_output = BTreeMap::new();
     for (pkg, cli_features) in sorted_pkgs {
         let opts = PackageOpts {
             cli_features: cli_features.clone(),
@@ -233,9 +292,18 @@ fn do_package<'a>(
         };
         let ar_files = prepare_archive(ws, &pkg, &opts)?;
 
-        if opts.list {
-            for ar_file in &ar_files {
-                drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+        if let Some(list) = &opts.list {
+            match list {
+                PackageListFormat::PathPerLine => {
+                    for ar_file in &ar_files {
+                        drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+                    }
+                }
+                PackageListFormat::Json => {
+                    let ar_files =
+                        BTreeMap::from_iter(ar_files.into_iter().map(|f| (f.rel_str, f.contents)));
+                    json_output.insert(pkg.package_id().to_spec(), ar_files);
+                }
             }
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
@@ -246,6 +314,10 @@ fn do_package<'a>(
             }
             outputs.push((pkg, opts, tarball));
         }
+    }
+
+    if let Some(PackageListFormat::Json) = opts.list {
+        ws.gctx().shell().print_json(&json_output)?;
     }
 
     // Verify all packages in the workspace. This can be done in any order, since the dependencies
@@ -418,7 +490,11 @@ fn build_ar_list(
                     .push(ArchiveFile {
                         rel_path: rel_path.to_owned(),
                         rel_str: rel_str.to_owned(),
-                        contents: FileContents::OnDisk(src_file.to_path_buf()),
+                        contents: if src_file.is_symlink_or_under_symlink() {
+                            FileContents::with_copied_path(src_file.to_path_buf())
+                        } else {
+                            FileContents::Existing(src_file.to_path_buf())
+                        },
                     });
             }
         }
@@ -433,7 +509,7 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                 rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
-                contents: FileContents::OnDisk(pkg.manifest_path().to_owned()),
+                contents: FileContents::with_copied_path(pkg.manifest_path().to_owned()),
             });
         result
             .entry(UncasedAscii::new("Cargo.toml"))
@@ -548,7 +624,7 @@ fn check_for_file_and_add(
                         .to_str()
                         .expect("everything was utf8")
                         .to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
+                    contents: FileContents::Existing(abs_file_path),
                 })
             }
         }
@@ -571,7 +647,7 @@ fn check_for_file_and_add(
                 result.push(ArchiveFile {
                     rel_path: PathBuf::from(file_name),
                     rel_str: file_name.to_str().unwrap().to_string(),
-                    contents: FileContents::OnDisk(abs_file_path),
+                    contents: FileContents::with_copied_path(abs_file_path),
                 })
             }
         }
@@ -758,7 +834,7 @@ fn tar(
             .verbose(|shell| shell.status("Archiving", &rel_str))?;
         let mut header = Header::new_gnu();
         match contents {
-            FileContents::OnDisk(disk_path) => {
+            FileContents::Existing(disk_path) | FileContents::Copied(disk_path) => {
                 let mut file = File::open(&disk_path).with_context(|| {
                     format!("failed to open for archiving: `{}`", disk_path.display())
                 })?;

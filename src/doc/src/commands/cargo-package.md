@@ -77,8 +77,45 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 <dl>
 
 <dt class="option-term" id="option-cargo-package--l"><a class="option-anchor" href="#option-cargo-package--l"></a><code>-l</code></dt>
-<dt class="option-term" id="option-cargo-package---list"><a class="option-anchor" href="#option-cargo-package---list"></a><code>--list</code></dt>
-<dd class="option-desc">Print files included in a package without making one.</dd>
+<dt class="option-term" id="option-cargo-package---list[fmt]"><a class="option-anchor" href="#option-cargo-package---list[fmt]"></a><code>--list</code><em>[fmt]</em></dt>
+<dd class="option-desc">Print files included in a package without making one.</p>
+<p>Specifying an output format (rather than the default) is unstable and requires
+<code>-Zunstable-options</code>. Valid output formats:</p>
+<ul>
+<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
+information about each file.
+<pre><code class="language-javascript">{
+  /* The Package ID Spec of the package. */
+  "path+file:///home/foo#0.0.0": {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* An absolute path to the actual file content. */
+      "original_path": "/home/foo/Cargo.toml",
+      /* The source of the file.
+         - "existing" for file that exists on disk as-is.
+         - "generate" for file being generated during packaging
+         - "copied" for file copied from another location.
+           The associated path points to a resolved symlink target
+           or a normalized path outside the package root.
+      */
+      "source": "copied"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "LICENSE": {
+      "original_path": "/home/LICENSE",
+      "source": "copied"
+    },
+    "main.rs": {
+      "original_path": "/home/foo/main.rs",
+      "source": "existing"
+    },
+  }
+}
+</code></pre>
+</li>
+</ul></dd>
 
 
 <dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"></a><code>--no-verify</code></dt>

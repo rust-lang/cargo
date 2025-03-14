@@ -143,7 +143,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         &PackageOpts {
             gctx: opts.gctx,
             verify: opts.verify,
-            list: false,
+            list: None,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
             // `package_with_dep_graph` ignores this field in favor of

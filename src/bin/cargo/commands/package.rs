@@ -1,6 +1,8 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, PackageOpts};
+use cargo::ops;
+use cargo::ops::PackageListFormat;
+use cargo::ops::PackageOpts;
 
 pub fn cli() -> Command {
     subcommand("package")
@@ -8,11 +10,12 @@ pub fn cli() -> Command {
         .arg_index("Registry index URL to prepare the package for (unstable)")
         .arg_registry("Registry to prepare the package for (unstable)")
         .arg(
-            flag(
+            optional_opt(
                 "list",
-                "Print files included in a package without making one",
+                "Print files included in a package without making one: (unstable) json",
             )
-            .short('l'),
+            .short('l')
+            .value_name("FMT"),
         )
         .arg(flag(
             "no-verify",
@@ -71,12 +74,24 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     }
     let specs = args.packages_from_flags()?;
 
+    let list = if args._contains("list") {
+        if let Some(list) = args._value_of("list") {
+            gctx.cli_unstable()
+                .fail_if_stable_opt("--list=<FMT>", 11666)?;
+            Some(list.parse()?)
+        } else {
+            Some(PackageListFormat::PathPerLine)
+        }
+    } else {
+        None
+    };
+
     ops::package(
         &ws,
         &PackageOpts {
             gctx,
             verify: !args.flag("no-verify"),
-            list: args.flag("list"),
+            list,
             check_metadata: !args.flag("no-metadata"),
             allow_dirty: args.flag("allow-dirty"),
             to_package: specs,

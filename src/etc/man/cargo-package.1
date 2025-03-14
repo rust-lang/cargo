@@ -106,9 +106,51 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 .SS "Package Options"
 .sp
 \fB\-l\fR, 
-\fB\-\-list\fR
+\fB\-\-list\fR\fI[fmt]\fR
 .RS 4
 Print files included in a package without making one.
+.sp
+Specifying an output format (rather than the default) is unstable and requires
+\fB\-Zunstable\-options\fR\&. Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBjson\fR (unstable, requires \fB\-Zunstable\-options\fR): Emit machine\-readable JSON
+information about each file.
+.sp
+.RS 4
+.nf
+{
+  /* The Package ID Spec of the package. */
+  "path+file:///home/foo#0.0.0": {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* An absolute path to the actual file content. */
+      "original_path": "/home/foo/Cargo.toml",
+      /* The source of the file.
+         \- "existing" for file that exists on disk as\-is.
+         \- "generate" for file being generated during packaging
+         \- "copied" for file copied from another location.
+           The associated path points to a resolved symlink target
+           or a normalized path outside the package root.
+      */
+      "source": "copied"
+    },
+    "Cargo.toml": {
+      "source": "generated"
+    },
+    "LICENSE": {
+      "original_path": "/home/LICENSE",
+      "source": "copied"
+    },
+    "main.rs": {
+      "original_path": "/home/foo/main.rs",
+      "source": "existing"
+    },
+  }
+}
+.fi
+.RE
+.RE
 .RE
 .sp
 \fB\-\-no\-verify\fR
