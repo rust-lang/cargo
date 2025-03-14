@@ -149,6 +149,57 @@ to this registry, but if we are packaging multiple inter\-dependent crates,
 lock\-files will be generated under the assumption that dependencies will be
 published to this registry.
 .RE
+.sp
+\fB\-\-message\-format\fR \fIfmt\fR
+.RS 4
+Specifies the output message format.
+Currently, it only works with \fB\-\-list\fR and affects the file listing format.
+This is unstable and requires \fB\-Zunstable\-options\fR\&.
+Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBhuman\fR (default): Display in a file\-per\-line format.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBjson\fR: Emit machine\-readable JSON information about each package.
+One package per JSON line (Newline delimited JSON).
+.sp
+.RS 4
+.nf
+{
+  /* The Package ID Spec of the package. */
+  "id": "path+file:///home/foo#0.0.0",
+  /* Files of this package */
+  "files" {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* Where the file is from.
+         \- "generate" for file being generated during packaging
+         \- "copy" for file being copied from another location.
+      */
+      "kind": "copy",
+      /* For the "copy" kind,
+         it is an absolute path to the actual file content.
+         For the "generate" kind,
+         it is the original file the generated one is based on.
+      */
+      "path": "/home/foo/Cargo.toml"
+    },
+    "Cargo.toml": {
+      "kind": "generate",
+      "path": "/home/foo/Cargo.toml"
+    },
+    "src/main.rs": {
+      "kind": "copy",
+      "path": "/home/foo/src/main.rs"
+    }
+  }
+}
+.fi
+.RE
+.RE
+.RE
 .SS "Package Selection"
 By default, when no package selection options are given, the packages selected
 depend on the selected manifest file (based on the current working directory if
