@@ -123,6 +123,7 @@ Each new feature described below should explain how to use it.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
+    * [package list JSON format](#package-list-json-format) --- JSON format for `cargo package --list`.
 
 ## allow-features
 
@@ -1881,6 +1882,16 @@ Specify which packages participate in [feature unification](../reference/feature
   regardless of which packages are specified for the current build.
 * `package` _(unimplemented)_: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
+
+## package list JSON format
+
+* Tracking Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
+
+The `--list json` flag value in `cargo package` emits machine-readable JSON 
+information about each file included in a package.
+Requires `-Zunstable-options`.
+See [`cargo package --list`](../commands/cargo-package.md#option-cargo-package---list[fmt])
+for more information.
 
 # Stabilized and removed features
 
