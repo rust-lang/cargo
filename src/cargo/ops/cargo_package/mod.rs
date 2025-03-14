@@ -136,7 +136,7 @@ impl FileContents {
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
     Manifest,
-    /// Generates `Cargo.lock` in some cases (like if there is a binary).
+    /// Generates `Cargo.lock`.
     Lockfile,
     /// Adds a `.cargo_vcs_info.json` file if in a git repo.
     VcsInfo(vcs::VcsInfo),
