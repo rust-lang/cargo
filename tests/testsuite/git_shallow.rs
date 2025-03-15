@@ -7,6 +7,7 @@ use crate::git_gc::find_index;
 enum Backend {
     Git2,
     Gitoxide,
+    GitCli,
 }
 
 impl Backend {
@@ -14,6 +15,7 @@ impl Backend {
         match self {
             Backend::Git2 => "",
             Backend::Gitoxide => "-Zgitoxide=fetch",
+            Backend::GitCli => "--git=git",
         }
     }
 }
