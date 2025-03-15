@@ -681,7 +681,17 @@ impl GlobalContext {
                 }),
             ];
 
-            let path = val.resolve_templated_path(self, replacements);
+            let path = val
+                .resolve_templated_path(self, replacements)
+                .map_err(|e| match e {
+                    path::ResolveTemplateError::UnexpectedVariable {
+                        variable,
+                        raw_template,
+                    } => anyhow!(
+                        "unexpected variable `{variable}` in build.build-dir path `{raw_template}`"
+                    ),
+                })?;
+
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.raw_value().is_empty() {
                 bail!(

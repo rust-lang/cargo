@@ -12,7 +12,7 @@
 use std::path::PathBuf;
 
 use cargo_test_support::prelude::*;
-use cargo_test_support::{paths, project};
+use cargo_test_support::{paths, project, str};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 
 #[cargo_test]
@@ -508,6 +508,11 @@ fn template_should_error_for_invalid_variables() {
     p.cargo("build -Z build-dir")
         .masquerade_as_nightly_cargo(&["build-dir"])
         .enable_mac_dsym()
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected variable `fake` in build.build-dir path `{fake}/build-dir`
+
+"#]])
         .run();
 }
 

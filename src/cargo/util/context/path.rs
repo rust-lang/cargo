@@ -1,4 +1,5 @@
 use super::{GlobalContext, StringList, Value};
+use regex::Regex;
 use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
@@ -41,14 +42,23 @@ impl ConfigRelativePath {
         &self,
         gctx: &GlobalContext,
         replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
-    ) -> PathBuf {
+    ) -> Result<PathBuf, ResolveTemplateError> {
         let mut value = self.0.val.clone();
 
         for (from, to) in replacements {
             value = value.replace(from.as_ref(), to.as_ref());
         }
 
-        self.0.definition.root(gctx).join(&value)
+        // Check for expected variables
+        let re = Regex::new(r"\{(.*)\}").unwrap();
+        if let Some(caps) = re.captures(&value) {
+            return Err(ResolveTemplateError::UnexpectedVariable {
+                variable: caps[1].to_string(),
+                raw_template: self.0.val.clone(),
+            });
+        };
+
+        Ok(self.0.definition.root(gctx).join(&value))
     }
 
     /// Resolves this configuration-relative path to either an absolute path or
@@ -121,4 +131,12 @@ impl PathAndArgs {
             args,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ResolveTemplateError {
+    UnexpectedVariable {
+        variable: String,
+        raw_template: String,
+    },
 }
