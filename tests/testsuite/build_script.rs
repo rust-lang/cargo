@@ -6087,3 +6087,40 @@ fn directory_with_leading_underscore() {
         .with_status(0)
         .run();
 }
+
+#[cargo_test]
+fn linker_search_path_preference() {
+    // This isn't strictly the exact scenario that causes the issue, but it's the shortest demonstration
+    // of the issue.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    let out_dir = std::env::var("OUT_DIR").unwrap();
+                    println!("cargo::rustc-link-search=/usr/lib");
+                    println!("cargo::rustc-link-search={}/libs2", out_dir);
+                    println!("cargo::rustc-link-search=/lib");
+                    println!("cargo::rustc-link-search={}/libs1", out_dir);
+                }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v").with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name foo [..] -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs2 -L [ROOT]/foo/target/debug/build/foo-[HASH]/out/libs1 -L /usr/lib -L /lib`
+...
+"#]]).run();
+}
