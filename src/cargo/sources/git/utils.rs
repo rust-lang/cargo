@@ -21,6 +21,7 @@ use std::process::Command;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+use gix::protocol::fetch::Shallow;
 use tracing::{debug, info};
 use url::Url;
 
@@ -1031,7 +1032,7 @@ pub fn fetch(
     }
 
     let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
-        fetch_with_cli(repo, remote_url, &refspecs, tags, gctx)
+        fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
@@ -1075,6 +1076,7 @@ fn fetch_with_cli(
     url: &str,
     refspecs: &[String],
     tags: bool,
+    shallow: Shallow,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let mut cmd = ProcessBuilder::new("git");
@@ -1084,6 +1086,28 @@ fn fetch_with_cli(
     } else {
         cmd.arg("--no-tags");
     }
+
+    match shallow {
+        Shallow::NoChange => {},
+        Shallow::Deepen(deepen) => {
+            cmd.arg(format!("--deepen={deepen}"));
+        },
+        Shallow::DepthAtRemote(depth) => {
+            cmd.arg(format!("--depth={depth}"));
+        },
+        Shallow::Exclude { remote_refs, since_cutoff } => {
+            for remote_ref in  remote_refs  {
+                cmd.arg(format!("--shalow-exclude={remote_ref:?}"));
+            }
+            if let Some(cutoff) = since_cutoff {
+                cmd.arg(format!("--shallow-since={cutoff}"));
+            }
+        },
+        Shallow::Since { cutoff } => {
+            cmd.arg(format!("--shallow-since={cutoff}"));
+        },
+    }
+
     match gctx.shell().verbosity() {
         Verbosity::Normal => {}
         Verbosity::Verbose => {
@@ -1119,7 +1143,7 @@ fn fetch_with_gitoxide(
     remote_url: &str,
     refspecs: Vec<String>,
     tags: bool,
-    shallow: gix::remote::fetch::Shallow,
+    shallow: Shallow,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let git2_repo = repo;
@@ -1227,7 +1251,7 @@ fn fetch_with_libgit2(
     remote_url: &str,
     refspecs: Vec<String>,
     tags: bool,
-    shallow: gix::remote::fetch::Shallow,
+    shallow: Shallow,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     debug!("doing a fetch for {remote_url}");
