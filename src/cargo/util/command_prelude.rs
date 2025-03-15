@@ -2,7 +2,7 @@ use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::core::{shell, Edition, Package, Target, TargetKind, Workspace};
+use crate::core::{profiles::Profiles, shell, Edition, Package, Target, TargetKind, Workspace};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -274,7 +274,11 @@ pub trait CommandExt: Sized {
         self._arg(
             opt("profile", profile)
                 .value_name("PROFILE-NAME")
-                .help_heading(heading::COMPILATION_OPTIONS),
+                .help_heading(heading::COMPILATION_OPTIONS)
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let candidates = get_profile_candidates();
+                    candidates.unwrap_or_default()
+                })),
         )
     }
 
@@ -1104,6 +1108,53 @@ pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCan
     } else {
         Ok(vec![])
     }
+}
+
+fn get_profile_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+    if let Ok(ws) = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx) {
+        if let Ok(profiles) = Profiles::new(&ws, InternedString::new("dev")) {
+            let mut candidates = Vec::new();
+
+            for name in profiles.profile_names() {
+                if let Ok(profile_instance) = Profiles::new(&ws, name) {
+                    let base_profile = profile_instance.base_profile();
+
+                    let mut description = String::from(if base_profile.opt_level.as_str() == "0" {
+                        "unoptimized"
+                    } else {
+                        "optimized"
+                    });
+
+                    if base_profile.debuginfo.is_turned_on() {
+                        description.push_str(" + debuginfo");
+                    }
+
+                    if matches!(name.as_str(), "test" | "bench") {
+                        description.push_str(" with tests enabled");
+                    }
+
+                    candidates.push(
+                        clap_complete::CompletionCandidate::new(name.to_string())
+                            .help(Some(description.into())),
+                    );
+                }
+            }
+
+            return Ok(candidates);
+        }
+    }
+
+    Ok(vec![
+        clap_complete::CompletionCandidate::new("dev".to_string())
+            .help(Some("unoptimized + debuginfo".into())),
+        clap_complete::CompletionCandidate::new("release".to_string())
+            .help(Some("optimized".into())),
+        clap_complete::CompletionCandidate::new("test".to_string())
+            .help(Some("unoptimized + debuginfo with tests enabled".into())),
+        clap_complete::CompletionCandidate::new("bench".to_string())
+            .help(Some("optimized with tests enabled".into())),
+    ])
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
