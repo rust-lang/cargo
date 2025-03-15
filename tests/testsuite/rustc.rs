@@ -855,3 +855,53 @@ fn precedence() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn build_with_duplicate_crate_types() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p
+        .cargo("rustc -v --crate-type staticlib --crate-type staticlib")
+        .with_stderr_data(str![[r#"
+[WARNING] output filename collision.
+The lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/deps/libfoo-[HASH].a
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[WARNING] output filename collision.
+The lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/libfoo.a
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]future-incompat --crate-type staticlib --crate-type staticlib --emit[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("rustc -v --crate-type staticlib --crate-type staticlib")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[WARNING] output filename collision.
+The lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/deps/libfoo-[HASH].a
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[WARNING] output filename collision.
+The lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/libfoo.a
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+
+thread 'main' panicked at src/cargo/core/compiler/fingerprint/mod.rs:1180:13:
+assertion failed: mtimes.insert(output.clone(), mtime).is_none()
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+"#]])
+            .run();
+}
