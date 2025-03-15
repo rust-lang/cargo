@@ -492,6 +492,26 @@ fn future_incompat_should_output_to_build_dir() {
 }
 
 #[cargo_test]
+fn template_should_error_for_invalid_variables() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "{fake}/build-dir"
+            target-dir = "target-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+}
+
+#[cargo_test]
 fn template_workspace_root() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
