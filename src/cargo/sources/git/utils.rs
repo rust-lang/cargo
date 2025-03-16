@@ -12,6 +12,7 @@ use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
 use git2::{ErrorClass, ObjectType, Oid};
+use gix::protocol::fetch::Shallow;
 use serde::ser;
 use serde::Serialize;
 use std::borrow::Cow;
@@ -21,7 +22,6 @@ use std::process::Command;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use gix::protocol::fetch::Shallow;
 use tracing::{debug, info};
 use url::Url;
 
@@ -1088,24 +1088,13 @@ fn fetch_with_cli(
     }
 
     match shallow {
-        Shallow::NoChange => {},
-        Shallow::Deepen(deepen) => {
-            cmd.arg(format!("--deepen={deepen}"));
-        },
+        Shallow::NoChange => {}
         Shallow::DepthAtRemote(depth) => {
             cmd.arg(format!("--depth={depth}"));
-        },
-        Shallow::Exclude { remote_refs, since_cutoff } => {
-            for remote_ref in  remote_refs  {
-                cmd.arg(format!("--shalow-exclude={remote_ref:?}"));
-            }
-            if let Some(cutoff) = since_cutoff {
-                cmd.arg(format!("--shallow-since={cutoff}"));
-            }
-        },
-        Shallow::Since { cutoff } => {
-            cmd.arg(format!("--shallow-since={cutoff}"));
-        },
+        }
+        Shallow::Deepen(_) | Shallow::Exclude { .. } | Shallow::Since { .. } => {
+            unimplemented!("Cargo only supports Shallow::NoChange and Shallow::DepthAtRemote")
+        }
     }
 
     match gctx.shell().verbosity() {
