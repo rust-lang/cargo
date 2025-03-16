@@ -855,3 +855,25 @@ fn precedence() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn build_with_duplicate_crate_types() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustc -v --crate-type staticlib --crate-type staticlib")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..] --crate-type staticlib --emit[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("rustc -v --crate-type staticlib --crate-type staticlib")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
