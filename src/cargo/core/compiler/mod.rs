@@ -360,6 +360,7 @@ fn rustc(
                     pass_l_flag,
                     &target,
                     current_id,
+                    mode,
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
@@ -494,6 +495,7 @@ fn rustc(
         pass_l_flag: bool,
         target: &Target,
         current_id: PackageId,
+        mode: CompileMode,
     ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
             let output = build_script_outputs.get(key.1).ok_or_else(|| {
@@ -520,7 +522,9 @@ fn rustc(
                 // clause should have been kept in the `if` block above. For
                 // now, continue allowing it for cdylib only.
                 // See https://github.com/rust-lang/cargo/issues/9562
-                if lt.applies_to(target) && (key.0 == current_id || *lt == LinkArgTarget::Cdylib) {
+                if lt.applies_to(target, mode)
+                    && (key.0 == current_id || *lt == LinkArgTarget::Cdylib)
+                {
                     rustc.arg("-C").arg(format!("link-arg={}", arg));
                 }
             }

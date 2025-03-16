@@ -443,3 +443,40 @@ fn cdylib_both_forms() {
 "#]])
         .run();
 }
+
+// https://github.com/rust-lang/cargo/issues/12663
+#[cargo_test]
+fn cdylib_extra_link_args_should_not_apply_to_unit_tests() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["lib", "cdylib"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #[test]
+                fn noop() {}
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    // This would fail if cargo passed `-lhack` to building the test because `hack` doesn't exist.
+                    println!("cargo::rustc-link-arg-cdylib=-lhack");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("test --lib").run();
+}
