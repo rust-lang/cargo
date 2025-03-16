@@ -839,7 +839,7 @@ fn list_files_gix(
             files.push(PathEntry {
                 path: file_path,
                 ty,
-                // Git index doesn't include files from symlink diretory,
+                // Git index doesn't include files from symlink directory,
                 // symlink dirs are handled in `list_files_walk`.
                 under_symlink_dir: false,
             });

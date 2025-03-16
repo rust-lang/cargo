@@ -160,7 +160,7 @@ fn matches_exact_prerelease(cmp: &Comparator, ver: &Version) -> bool {
     }
 
     // If the comparator has a prerelease tag like =3.0.0-alpha.24,
-    // then it shoud be only exactly match 3.0.0-alpha.24.
+    // then it should be only exactly match 3.0.0-alpha.24.
     if !cmp.pre.is_empty() {
         return false;
     }

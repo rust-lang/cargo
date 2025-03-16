@@ -1367,7 +1367,7 @@ Sets the width for progress bar.
 * Default: auto-detect
 * Environment: `CARGO_TERM_PROGRESS_TERM_INTEGRATION`
 
-Report progress to the teminal emulator for display in places like the task bar.
+Report progress to the terminal emulator for display in places like the task bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
