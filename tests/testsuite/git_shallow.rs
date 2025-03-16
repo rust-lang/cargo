@@ -15,7 +15,7 @@ impl Backend {
         match self {
             Backend::Git2 => "",
             Backend::Gitoxide => "-Zgitoxide=fetch",
-            Backend::GitCli => "--git=git",
+            Backend::GitCli => "-Zgit=git",
         }
     }
 }
@@ -42,6 +42,11 @@ fn gitoxide_fetch_shallow_dep_two_revs() {
 #[cargo_test]
 fn git2_fetch_complete_dep_two_revs() {
     fetch_dep_two_revs(Backend::Git2, RepoMode::Complete)
+}
+
+#[cargo_test]
+fn git_cli_fetch_complete_dep_two_revs() {
+    fetch_dep_two_revs(Backend::GitCli, RepoMode::Shallow);
 }
 
 fn fetch_dep_two_revs(backend: Backend, mode: RepoMode) {
