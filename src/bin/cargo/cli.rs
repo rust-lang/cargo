@@ -691,7 +691,30 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 }))
             }).collect()
         })))
+        .add(clap_complete::engine::SubcommandCandidates::new(|| {
+            get_toolchains_from_rustup()
+                .into_iter()
+                .map(|t| clap_complete::CompletionCandidate::new(t))
+                .collect()
+        }))
         .subcommands(commands::builtin())
+}
+
+fn get_toolchains_from_rustup() -> Vec<String> {
+    let output = std::process::Command::new("rustup")
+        .arg("toolchain")
+        .arg("list")
+        .arg("-q")
+        .output()
+        .unwrap();
+
+    if !output.status.success() {
+        return vec![];
+    }
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    stdout.lines().map(|line| format!("+{}", line)).collect()
 }
 
 #[test]
