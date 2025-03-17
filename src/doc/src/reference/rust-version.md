@@ -19,11 +19,10 @@ identifiers such as -nightly will be ignored while checking the Rust version.
 
 **Diagnostics:**
 
-When your package is compiled on an unsupported toolchain, Cargo will provide
-clearer diagnostics about the insufficient toolchain version by always erroring
-during compilation, rather than reporting invalid syntax or missing functionality
+When your package is compiled on an unsupported toolchain, Cargo will report that as an error to the user. This makes the support expectations clear and avoids reporting a less direct diagnostic like invalid syntax or missing functionality
 in the standard library. This affects all [Cargo targets](cargo-targets.md) in the
 package, including binaries, examples, test suites, benchmarks, etc.
+A user can opt-in to an unsupported build of a package with the `--ignore-rust-version` flag.
 
 
 **Development aid:**
