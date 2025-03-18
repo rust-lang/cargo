@@ -105,7 +105,7 @@ one detailed below.
   to re-run the script.
 * [`cargo::rustc-link-arg=FLAG`](#rustc-link-arg) --- Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
-* [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
+* [`cargo::rustc-link-arg-cdylib=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
 * [`cargo::rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) --- Passes custom
   flags to a linker for the binary `BIN`.
@@ -147,12 +147,15 @@ linker script.
 
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
-### `cargo::rustc-cdylib-link-arg=FLAG` {#rustc-cdylib-link-arg}
+### `cargo::rustc-link-arg-cdylib=FLAG` {#rustc-cdylib-link-arg}
 
-The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
+The `rustc-link-arg-cdylib` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 `cdylib` library target. Its usage is highly platform specific. It is useful
 to set the shared library version or the runtime-path.
+
+For historical reasons, the `cargo::rustc-cdylib-link-arg` form is an alias
+for `cargo::rustc-link-arg-cdylib`, and has the same meaning.
 
 ### `cargo::rustc-link-arg-bin=BIN=FLAG` {#rustc-link-arg-bin}
 
