@@ -2030,6 +2030,7 @@ fn edition_change_invalidates() {
     p.cargo("build -Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2038,6 +2039,7 @@ fn edition_change_invalidates() {
     p.cargo("build -Zchecksum-freshness -v")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
 [FRESH] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
