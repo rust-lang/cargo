@@ -105,6 +105,8 @@ one detailed below.
   to re-run the script.
 * [`cargo::rustc-link-arg=FLAG`](#rustc-link-arg) --- Passes custom flags to a
   linker for benchmarks, binaries, `cdylib` crates, examples, and tests.
+* [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
+  flags to a linker for cdylib crates.
 * [`cargo::rustc-link-arg-bin=BIN=FLAG`](#rustc-link-arg-bin) --- Passes custom
   flags to a linker for the binary `BIN`.
 * [`cargo::rustc-link-arg-bins=FLAG`](#rustc-link-arg-bins) --- Passes custom
@@ -126,8 +128,6 @@ one detailed below.
 * [`cargo::rustc-check-cfg=CHECK_CFG`](#rustc-check-cfg) -- Register custom `cfg`s as
   expected for compile-time checking of configs. 
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
-* [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
-  flags to a linker for cdylib crates.
 - [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
 * [`cargo::warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
@@ -147,6 +147,13 @@ linker script.
 
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
+### `cargo::rustc-cdylib-link-arg=FLAG` {#rustc-cdylib-link-arg}
+
+The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+`cdylib` library target. Its usage is highly platform specific. It is useful
+to set the shared library version or the runtime-path.
+
 ### `cargo::rustc-link-arg-bin=BIN=FLAG` {#rustc-link-arg-bin}
 
 The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
@@ -160,6 +167,24 @@ The `rustc-link-arg-bins` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 binary target. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
+
+### `cargo::rustc-link-arg-tests=FLAG` {#rustc-link-arg-tests}
+
+The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a
+tests target.
+
+### `cargo::rustc-link-arg-examples=FLAG` {#rustc-link-arg-examples}
+
+The `rustc-link-arg-examples` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building an examples
+target.
+
+### `cargo::rustc-link-arg-benches=FLAG` {#rustc-link-arg-benches}
+
+The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
+link-arg=FLAG` option][link-arg] to the compiler, but only when building a benchmark
+target.
 
 ### `cargo::rustc-link-lib=LIB` {#rustc-link-lib}
 
@@ -184,24 +209,6 @@ The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 
 [option-link]: ../../rustc/command-line-arguments.md#option-l-link-lib
 [FFI]: ../../nomicon/ffi.md
-
-### `cargo::rustc-link-arg-tests=FLAG` {#rustc-link-arg-tests}
-
-The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a
-tests target.
-
-### `cargo::rustc-link-arg-examples=FLAG` {#rustc-link-arg-examples}
-
-The `rustc-link-arg-examples` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building an examples
-target.
-
-### `cargo::rustc-link-arg-benches=FLAG` {#rustc-link-arg-benches}
-
-The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a benchmark
-target.
 
 ### `cargo::rustc-link-search=[KIND=]PATH` {#rustc-link-search}
 
@@ -306,13 +313,6 @@ Cargo][env-cargo].
 
 [env-macro]: ../../std/macro.env.html
 [env-cargo]: environment-variables.md#environment-variables-cargo-sets-for-crates
-
-### `cargo::rustc-cdylib-link-arg=FLAG` {#rustc-cdylib-link-arg}
-
-The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a
-`cdylib` library target. Its usage is highly platform specific. It is useful
-to set the shared library version or the runtime-path.
 
 ### `cargo::error=MESSAGE` {#cargo-error}
 
