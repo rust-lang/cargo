@@ -159,7 +159,7 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
-[COMPILING] rustc-std-workspace-std [..]
+[COMPILING] [..]
 ...
 [COMPILING] test v0.0.0 ([..])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
