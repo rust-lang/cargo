@@ -8,7 +8,7 @@
 //! a [`FutureIncompatReport`], Cargo gathers and forwards it as a
 //! `Message::FutureIncompatReport` to the main thread.
 //!
-//! To have the correct layout of strucutures for deserializing a report
+//! To have the correct layout of structures for deserializing a report
 //! emitted by the compiler, most of structure definitions, for example
 //! [`FutureIncompatReport`], are copied either partially or entirely from
 //! [compiler/rustc_errors/src/json.rs][2] in rust-lang/rust repository.
