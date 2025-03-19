@@ -261,8 +261,7 @@ impl<'gctx> Progress<'gctx> {
     /// * `cur` should be how far along the progress is.
     /// * `max` is the maximum value for the progress bar.
     /// * `msg` is a small piece of text to display at the end of the progress
-    ///   bar. It will be truncated with `...` if it does not fit on the
-    ///   terminal.
+    ///   bar. It will be truncated with `…` if it does not fit on the terminal.
     ///
     /// This may not actually update the display if `tick` is being called too
     /// quickly.
@@ -521,7 +520,7 @@ impl Format {
     fn render(&self, string: &mut String, msg: &str) {
         let mut avail_msg_len = self.max_width - string.len() - 15;
         let mut ellipsis_pos = 0;
-        if avail_msg_len <= 3 {
+        if avail_msg_len <= 1 {
             return;
         }
         for c in msg.chars() {
@@ -529,12 +528,12 @@ impl Format {
             if avail_msg_len >= display_width {
                 avail_msg_len -= display_width;
                 string.push(c);
-                if avail_msg_len >= 3 {
+                if avail_msg_len >= 1 {
                     ellipsis_pos = string.len();
                 }
             } else {
                 string.truncate(ellipsis_pos);
-                string.push_str("...");
+                string.push_str("…");
                 break;
             }
         }
@@ -610,7 +609,7 @@ fn test_progress_status() {
     );
     assert_eq!(
         format.progress_status(3, 4, ": msg that's just fit"),
-        Some("[=============>     ] 3/4: msg that's just...".to_string())
+        Some("[=============>     ] 3/4: msg that's just f…".to_string())
     );
 
     // combining diacritics have width zero and thus can fit max_width.
@@ -623,16 +622,16 @@ fn test_progress_status() {
     // some non-ASCII ellipsize test
     assert_eq!(
         format.progress_status(3, 4, "_123456789123456e\u{301}\u{301}8\u{301}90a"),
-        Some("[=============>     ] 3/4_123456789123456e\u{301}\u{301}...".to_string())
+        Some("[=============>     ] 3/4_123456789123456e\u{301}\u{301}8\u{301}9…".to_string())
     );
     assert_eq!(
         format.progress_status(3, 4, "：每個漢字佔據了兩個字元"),
-        Some("[=============>     ] 3/4：每個漢字佔據了...".to_string())
+        Some("[=============>     ] 3/4：每個漢字佔據了兩…".to_string())
     );
     assert_eq!(
         // handle breaking at middle of character
         format.progress_status(3, 4, "：-每個漢字佔據了兩個字元"),
-        Some("[=============>     ] 3/4：-每個漢字佔據了...".to_string())
+        Some("[=============>     ] 3/4：-每個漢字佔據了兩…".to_string())
     );
 }
 
