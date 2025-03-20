@@ -1341,7 +1341,7 @@ fn get_packages() -> CargoResult<Vec<Package>> {
     Ok(packages)
 }
 
-fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
+pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
     let cwd = std::env::current_dir()?;
     let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
 

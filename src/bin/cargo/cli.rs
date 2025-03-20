@@ -11,6 +11,7 @@ use std::fmt::Write;
 
 use super::commands;
 use super::list_commands;
+use super::user_defined_aliases;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
@@ -691,11 +692,13 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 }))
             }).collect()
         })))
-        .add(clap_complete::engine::SubcommandCandidates::new(|| {
-            get_toolchains_from_rustup()
+        .add(clap_complete::engine::SubcommandCandidates::new(move || {
+            let mut candidates = get_toolchains_from_rustup()
                 .into_iter()
                 .map(|t| clap_complete::CompletionCandidate::new(t))
-                .collect()
+                .collect::<Vec<_>>();
+            candidates.extend(get_alias_candidates());
+            candidates
         }))
         .subcommands(commands::builtin())
 }
@@ -715,6 +718,35 @@ fn get_toolchains_from_rustup() -> Vec<String> {
     let stdout = String::from_utf8(output.stdout).unwrap();
 
     stdout.lines().map(|line| format!("+{}", line)).collect()
+}
+
+fn get_alias_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    if let Ok(gctx) = new_gctx_for_completions() {
+        let alias_map = user_defined_aliases(&gctx);
+        return alias_map
+            .iter()
+            .map(|(alias, cmd_info)| {
+                let help_text = match cmd_info {
+                    CommandInfo::Alias { target } => {
+                        let cmd_str = target
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        format!("alias for {}", cmd_str)
+                    }
+                    CommandInfo::BuiltIn { .. } => {
+                        unreachable!("BuiltIn command shouldn't appear in alias map")
+                    }
+                    CommandInfo::External { .. } => {
+                        unreachable!("External command shouldn't appear in alias map")
+                    }
+                };
+                clap_complete::CompletionCandidate::new(alias.clone()).help(Some(help_text.into()))
+            })
+            .collect();
+    }
+    Vec::new()
 }
 
 #[test]
