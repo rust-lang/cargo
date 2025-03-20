@@ -39,7 +39,7 @@
 </tspan>
     <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                    Do not print cargo log messages</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
+    <tspan x="10px" y="208px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring [possible values: auto, always, never]</tspan>
 </tspan>
     <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
 </tspan>
