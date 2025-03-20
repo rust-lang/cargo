@@ -361,7 +361,19 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_message_format(self) -> Self {
-        self._arg(multi_opt("message-format", "FMT", "Error format"))
+        self._arg(
+            multi_opt("message-format", "FMT", "Error format")
+                .value_parser([
+                    "human",
+                    "short",
+                    "json",
+                    "json-diagnostic-short",
+                    "json-diagnostic-rendered-ansi",
+                    "json-render-diagnostics",
+                ])
+                .value_delimiter(',')
+                .ignore_case(true),
+        )
     }
 
     fn arg_build_plan(self) -> Self {

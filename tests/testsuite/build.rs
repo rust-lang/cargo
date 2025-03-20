@@ -4066,9 +4066,12 @@ fn wrong_message_format_option() {
         .build();
 
     p.cargo("build --message-format XML")
-        .with_status(101)
+        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] invalid message format specifier: `xml`
+[ERROR] invalid value 'XML' for '--message-format <FMT>'
+  [possible values: human, short, json, json-diagnostic-short, json-diagnostic-rendered-ansi, json-render-diagnostics]
+
+For more information, try '--help'.
 
 "#]])
         .run();

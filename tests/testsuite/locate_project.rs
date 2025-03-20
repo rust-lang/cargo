@@ -44,10 +44,13 @@ fn message_format() {
 
     p.cargo("locate-project --message-format cryptic")
         .with_stderr_data(str![[r#"
-[ERROR] invalid message format specifier: `cryptic`
+[ERROR] invalid value 'cryptic' for '--message-format <FMT>'
+  [possible values: json, plain]
+
+For more information, try '--help'.
 
 "#]])
-        .with_status(101)
+        .with_status(1)
         .run();
 }
 

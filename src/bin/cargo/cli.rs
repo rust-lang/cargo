@@ -633,9 +633,11 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
         )
         .arg(flag("quiet", "Do not print cargo log messages").short('q').global(true))
         .arg(
-            opt("color", "Coloring: auto, always, never")
+            opt("color", "Coloring")
                 .value_name("WHEN")
-                .global(true),
+                .global(true)
+                .value_parser(["auto", "always", "never"])
+                .ignore_case(true),
         )
         .arg(
             Arg::new("directory")
