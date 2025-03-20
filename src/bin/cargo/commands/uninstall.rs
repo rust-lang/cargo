@@ -45,7 +45,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     Ok(())
 }
 
-fn get_installed_crates() -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_installed_crates() -> Vec<clap_complete::CompletionCandidate> {
     get_installed_crates_().unwrap_or_default()
 }
 
