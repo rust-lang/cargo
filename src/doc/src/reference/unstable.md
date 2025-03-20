@@ -265,7 +265,7 @@ This option supports path templating.
 Avaiable template variables:
 * `{workspace-root}` resolves to root of the current workspace.
 * `{cargo-cache-home}` resolves to `CARGO_HOME`
-* `{workspace-manifest-path-hash}` resolves to a hash of the manifest path
+* `{workspace-path-hash}` resolves to a hash of the manifest path
 
 
 ## root-dir

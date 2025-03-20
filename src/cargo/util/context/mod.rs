@@ -675,7 +675,7 @@ impl GlobalContext {
                         .context("cargo home was not valid utf-8")?
                         .to_string(),
                 ),
-                ("{workspace-manifest-path-hash}", {
+                ("{workspace-path-hash}", {
                     let hash = crate::util::hex::short_hash(&workspace_manifest_path);
                     format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
                 }),
