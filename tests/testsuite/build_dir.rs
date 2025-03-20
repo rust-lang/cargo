@@ -586,7 +586,7 @@ fn template_workspace_manfiest_path_hash() {
             ".cargo/config.toml",
             r#"
             [build]
-            build-dir = "foo/{workspace-manifest-path-hash}/build-dir"
+            build-dir = "foo/{workspace-path-hash}/build-dir"
             target-dir = "target-dir"
             "#,
         )
