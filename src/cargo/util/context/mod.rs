@@ -676,7 +676,16 @@ impl GlobalContext {
                         .to_string(),
                 ),
                 ("{workspace-path-hash}", {
-                    let hash = crate::util::hex::short_hash(&workspace_manifest_path);
+                    // We include the version in the hash to prevent external tools from relying on
+                    // our hash implmentation. Note that we explictly do not include the prerelease
+                    // and build parts of the semver to avoid a new hash for every nightly version.
+                    let version = crate::version::version().semver();
+                    let hash = crate::util::hex::short_hash(&(
+                        version.major,
+                        version.minor,
+                        version.patch,
+                        workspace_manifest_path,
+                    ));
                     format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
                 }),
             ];

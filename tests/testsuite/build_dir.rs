@@ -610,7 +610,7 @@ fn template_workspace_path_hash() {
 }
 
 #[cargo_test]
-fn template_workspace_path_hash_should_not_change_between_cargo_versions() {
+fn template_workspace_path_hash_should_change_between_cargo_versions() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -661,10 +661,10 @@ fn template_workspace_path_hash_should_not_change_between_cargo_versions() {
     let second_run_build_dir = hash_dir.as_path().join("build-dir");
     assert_build_dir_layout(second_run_build_dir.clone(), "debug");
 
-    // Finally check that the build-dir is in the same location between both Cargo versions
-    assert_eq!(
+    // Finally check that the build-dir is in different location between both Cargo versions
+    assert_ne!(
         first_run_build_dir, second_run_build_dir,
-        "The workspace path hash generated between 2 Cargo versions did not match"
+        "The workspace path hash generated between 2 Cargo versions matched when it should not"
     );
 }
 

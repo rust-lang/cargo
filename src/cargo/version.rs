@@ -35,6 +35,13 @@ pub struct VersionInfo {
     pub description: Option<String>,
 }
 
+impl VersionInfo {
+    /// The Cargo version as a [`semver::Version`].
+    pub fn semver(&self) -> semver::Version {
+        semver::Version::parse(&self.version).expect("Cargo version was not a valid semver version")
+    }
+}
+
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.version)?;
