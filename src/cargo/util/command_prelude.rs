@@ -2,7 +2,7 @@ use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::core::{shell, Edition, Package, Target, TargetKind, Workspace};
+use crate::core::{shell, Edition, Package, PackageId, Target, TargetKind, Workspace};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -23,7 +23,7 @@ use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
 use semver::Version;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -90,17 +90,33 @@ pub trait CommandExt: Sized {
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
         let name = self._name();
+        // Use the specialized functions based on the command name
+        match name.as_str() {
+            "build" => self.arg_package_spec_with_completer(package, get_ws_member_candidates),
+            "tree" => self.arg_package_spec_with_completer(package, get_dependency_graph_candidates),
+            "uninstall" => self.arg_package_spec_with_completer(package, get_installed_package_candidates),
+            _ => self._arg(
+                optional_multi_opt("package", "SPEC", package)
+                    .short('p')
+                    .help_heading(heading::PACKAGE_SELECTION),
+            ),
+        }
+    }
+
+    // Internal generic function for package arg with custom completer
+    fn arg_package_spec_with_completer<F>(
+        self, 
+        package: &'static str, 
+        completer: F
+    ) -> Self 
+    where 
+        F: Fn() -> Vec<clap_complete::CompletionCandidate> + 'static + Clone + Send + std::marker::Sync,
+    {
         self._arg(
             optional_multi_opt("package", "SPEC", package)
                 .short('p')
                 .help_heading(heading::PACKAGE_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(move || {
-                    if ["build", "tree"].contains(&name.as_str()) {
-                        get_ws_member_candidates()
-                    } else {
-                        vec![]
-                    }
-                })),
+                .add(clap_complete::ArgValueCandidates::new(completer)),
         )
     }
 
@@ -1338,6 +1354,53 @@ fn get_ws_member_packages() -> CargoResult<Vec<Package>> {
     let packages = ws.members().map(|pkg| pkg.to_owned()).collect::<Vec<_>>();
 
     Ok(packages)
+}
+
+fn get_dependency_graph_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_packages()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|pkg| {
+            clap_complete::CompletionCandidate::new(pkg.name().as_str()).help(
+                pkg.manifest()
+                    .metadata()
+                    .description
+                    .to_owned()
+                    .map(From::from),
+            )
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_installed_package_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    match get_installed_packages() {
+        Ok(packages) => packages
+            .into_iter()
+            .map(|(pkg_id, bins)| {
+                let bin_list = bins.iter().collect::<Vec<_>>().join(", ");
+                let help = if bins.len() == 1 {
+                    format!("Installed binary: {}", bin_list)
+                } else {
+                    format!("Installed binaries: {}", bin_list)
+                };
+                clap_complete::CompletionCandidate::new(pkg_id.name().as_str()).help(Some(help.into()))
+            })
+            .collect(),
+        Err(_) => vec![],
+    }
+}
+
+fn get_installed_packages() -> CargoResult<Vec<(PackageId, BTreeSet<String>)>> {
+    let gctx = new_gctx_for_completions()?;
+    let root = ops::resolve_root(None, &gctx)?;
+    let tracker = ops::InstallTracker::load(&gctx, &root)?;
+    
+    let installed = tracker
+        .all_installed_bins()
+        .map(|(pkg_id, bins)| (*pkg_id, bins.clone()))
+        .collect();
+    
+    Ok(installed)
 }
 
 fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
