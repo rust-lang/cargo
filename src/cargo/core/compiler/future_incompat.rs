@@ -140,16 +140,10 @@ impl OnDiskReports {
         mut self,
         ws: &Workspace<'_>,
         suggestion_message: String,
-        per_package_reports: &[FutureIncompatReportPackage],
+        per_package: BTreeMap<String, String>,
     ) -> u32 {
-        let per_package = render_report(per_package_reports);
-
-        if let Some(existing_report) = self
-            .reports
-            .iter()
-            .find(|existing| existing.per_package == per_package)
-        {
-            return existing_report.id;
+        if let Some(existing_id) = self.has_report(&per_package) {
+            return existing_id;
         }
 
         let report = OnDiskReport {
@@ -187,6 +181,14 @@ impl OnDiskReports {
         }
 
         saved_id
+    }
+
+    /// Returns the ID of a report if it is already on disk.
+    fn has_report(&self, rendered_per_package: &BTreeMap<String, String>) -> Option<u32> {
+        self.reports
+            .iter()
+            .find(|existing| &existing.per_package == rendered_per_package)
+            .map(|report| report.id)
     }
 
     /// Loads the on-disk reports.
@@ -408,7 +410,14 @@ pub fn save_and_display_report(
             OnDiskReports::default()
         }
     };
-    let report_id = current_reports.next_id;
+
+    let rendered_report = render_report(per_package_future_incompat_reports);
+
+    // If the report is already on disk, then it will reuse the same ID,
+    // otherwise prepare for the next ID.
+    let report_id = current_reports
+        .has_report(&rendered_report)
+        .unwrap_or(current_reports.next_id);
 
     // Get a list of unique and sorted package name/versions.
     let package_ids: BTreeSet<_> = per_package_future_incompat_reports
@@ -481,11 +490,8 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         update_message = update_message,
     );
 
-    let saved_report_id = current_reports.save_report(
-        bcx.ws,
-        suggestion_message.clone(),
-        per_package_future_incompat_reports,
-    );
+    let saved_report_id =
+        current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
     if bcx.build_config.future_incompat_report {
         drop(bcx.gctx.shell().note(&suggestion_message));

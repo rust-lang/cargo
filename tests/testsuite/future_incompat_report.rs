@@ -102,7 +102,7 @@ fix to the maintainers (e.g. by creating a pull request):
 
   - foo@0.0.0
   - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 2 --package foo@0.0.0`
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package foo@0.0.0`
 
 - If waiting for an upstream fix is not an option, you can use the `[patch]`
 section in `Cargo.toml` to use your own version of the dependency. For more
@@ -192,7 +192,7 @@ fix to the maintainers (e.g. by creating a pull request):
 
   - bar@1.0.0
   - Repository: https://example.com/
-  - Detailed warning command: `cargo report future-incompatibilities --id 2 --package bar@1.0.0`
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
 
 - If waiting for an upstream fix is not an option, you can use the `[patch]`
 section in `Cargo.toml` to use your own version of the dependency. For more
@@ -708,7 +708,7 @@ fix to the maintainers (e.g. by creating a pull request):
 
   - bar@1.0.0
   - Repository: https://example.com/
-  - Detailed warning command: `cargo report future-incompatibilities --id 2 --package bar@1.0.0`
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
 
 - If waiting for an upstream fix is not an option, you can use the `[patch]`
 section in `Cargo.toml` to use your own version of the dependency. For more
