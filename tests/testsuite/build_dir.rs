@@ -569,7 +569,7 @@ fn template_cargo_cache_home() {
 }
 
 #[cargo_test]
-fn template_workspace_manfiest_path_hash() {
+fn template_workspace_path_hash() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
