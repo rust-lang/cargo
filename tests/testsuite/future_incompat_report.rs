@@ -63,16 +63,180 @@ fn dependency_project() -> Project {
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
 )]
-fn output_on_stable() {
+fn incompat_in_local_crate() {
+    // A simple example where a local crate triggers a future-incompatibility warning.
     let p = local_project();
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
-...
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
 [WARNING] unused variable: `x`
 ...
+
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 [NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+"#]])
+        .run();
+
+    p.cargo("check --future-incompat-report")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
+        .with_stderr_data(str![[r#"
+[WARNING] unused variable: `x`
+...
+
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
+[NOTE] 
+To solve this problem, you can try the following approaches:
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - foo@0.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 2 --package foo@0.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+        
+[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+
+"#]])
+    .run();
+
+    p.cargo("report future-incompatibilities --id 1")
+        .with_stdout_data(str![[r#"
+The following warnings were discovered during the build. These warnings are an
+indication that the packages contain code that will become an error in a
+future release of Rust. These warnings typically cover changes to close
+soundness problems, unintended or undocumented behavior, or critical problems
+that cannot be fixed in a backwards-compatible fashion, and are not expected
+to be in wide use.
+
+Each warning should contain a link for more information on what the warning
+means and how to resolve it.
+
+
+To solve this problem, you can try the following approaches:
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - foo@0.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package foo@0.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+        
+The package `foo v0.0.0 ([ROOT]/foo)` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
+
+"#]])
+        .run();
+}
+
+#[cargo_test(
+    nightly,
+    reason = "-Zfuture-incompat-test requires nightly (permanently)"
+)]
+fn incompat_in_dependency() {
+    // A simple example where a remote dependency triggers a future-incompatibility warning.
+    let p = dependency_project();
+
+    p.cargo("check")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
+[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+"#]])
+        .run();
+
+    p.cargo("check --future-incompat-report")
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
+[NOTE] 
+To solve this problem, you can try the following approaches:
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - bar@1.0.0
+  - Repository: https://example.com/
+  - Detailed warning command: `cargo report future-incompatibilities --id 2 --package bar@1.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+        
+[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+
+"#]])
+        .run();
+
+    p.cargo("report future-incompatibilities --id 1")
+        .with_stdout_data(str![[r#"
+The following warnings were discovered during the build. These warnings are an
+indication that the packages contain code that will become an error in a
+future release of Rust. These warnings typically cover changes to close
+soundness problems, unintended or undocumented behavior, or critical problems
+that cannot be fixed in a backwards-compatible fashion, and are not expected
+to be in wide use.
+
+Each warning should contain a link for more information on what the warning
+means and how to resolve it.
+
+
+To solve this problem, you can try the following approaches:
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - bar@1.0.0
+  - Repository: https://example.com/
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+        
+The package `bar v1.0.0` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
 
 "#]])
         .run();
