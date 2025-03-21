@@ -483,7 +483,7 @@ You may want to consider updating them to a newer version to see if the issue ha
             "
 To solve this problem, you can try the following approaches:
 
-{update_message}
+{update_message}\
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a

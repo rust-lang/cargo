@@ -149,7 +149,6 @@ fn incompat_in_dependency() {
 [NOTE] 
 To solve this problem, you can try the following approaches:
 
-
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a
@@ -183,7 +182,6 @@ means and how to resolve it.
 
 
 To solve this problem, you can try the following approaches:
-
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
@@ -634,7 +632,6 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]].unordered())
@@ -661,7 +658,6 @@ You may want to consider updating them to a newer version to see if the issue ha
 
 big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
-
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
@@ -724,7 +720,6 @@ fn correct_report_id_when_cached() {
 [NOTE] 
 To solve this problem, you can try the following approaches:
 
-
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a
@@ -751,7 +746,6 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [NOTE] 
 To solve this problem, you can try the following approaches:
-
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
