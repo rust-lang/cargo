@@ -91,24 +91,6 @@ fn incompat_in_local_crate() {
 [WARNING] `foo` (lib) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
-[NOTE] 
-To solve this problem, you can try the following approaches:
-
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - foo@0.0.0
-  - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package foo@0.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -126,23 +108,6 @@ to be in wide use.
 Each warning should contain a link for more information on what the warning
 means and how to resolve it.
 
-
-To solve this problem, you can try the following approaches:
-
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - foo@0.0.0
-  - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package foo@0.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 
 The package `foo v0.0.0 ([ROOT]/foo)` currently triggers the following future incompatibility lints:
 > [WARNING] unused variable: `x`
@@ -352,7 +317,7 @@ frequency = 'never'
 ...
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 ...
-  - foo@0.0.0
+[NOTE] this report can be shown with `cargo report future-incompatibilities --id [..]`
 ...
 ")
             .run();

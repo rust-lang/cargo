@@ -70,6 +70,8 @@ pub struct FutureIncompatReport {
 /// Structure used for collecting reports in-memory.
 pub struct FutureIncompatReportPackage {
     pub package_id: PackageId,
+    /// Whether or not this is a local package, or a remote dependency.
+    pub is_local: bool,
     pub items: Vec<FutureBreakageItem>,
 }
 
@@ -470,8 +472,15 @@ You may want to consider updating them to a newer version to see if the issue ha
         .collect::<Vec<_>>()
         .join("\n");
 
-    let suggestion_message = format!(
-        "
+    let all_is_local = per_package_future_incompat_reports
+        .iter()
+        .all(|report| report.is_local);
+
+    let suggestion_message = if all_is_local {
+        String::new()
+    } else {
+        format!(
+            "
 To solve this problem, you can try the following approaches:
 
 {update_message}
@@ -486,15 +495,18 @@ section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 ",
-        upstream_info = upstream_info,
-        update_message = update_message,
-    );
+            upstream_info = upstream_info,
+            update_message = update_message,
+        )
+    };
 
     let saved_report_id =
         current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
     if bcx.build_config.future_incompat_report {
-        drop(bcx.gctx.shell().note(&suggestion_message));
+        if !suggestion_message.is_empty() {
+            drop(bcx.gctx.shell().note(&suggestion_message));
+        }
         drop(bcx.gctx.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
