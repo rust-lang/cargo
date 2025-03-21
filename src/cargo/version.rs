@@ -58,28 +58,30 @@ pub fn version() -> VersionInfo {
         };
     }
 
-    // This is the version set in bootstrap, which we use to match rustc.
-    let version = option_env_str!("CFG_RELEASE").unwrap_or_else(|| {
-        // If cargo is not being built by bootstrap, then we just use the
-        // version from cargo's own `Cargo.toml`.
-        //
-        // There are two versions at play here:
-        //   - version of cargo-the-binary, which you see when you type `cargo --version`
-        //   - version of cargo-the-library, which you download from crates.io for use
-        //     in your packages.
-        //
-        // The library is permanently unstable, so it always has a 0 major
-        // version. However, the CLI now reports a stable 1.x version
-        // (starting in 1.26) which stays in sync with rustc's version.
-        //
-        // Coincidentally, the minor version for cargo-the-library is always
-        // +1 of rustc's minor version (that is, `rustc 1.11.0` corresponds to
-        // `cargo `0.12.0`). The versions always get bumped in lockstep, so
-        // this should continue to hold.
-        let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
-        let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
-        format!("1.{}.{}", minor, patch)
-    });
+    let version = version_for_testing()
+        // This is the version set in bootstrap, which we use to match rustc.
+        .or_else(|| option_env_str!("CFG_RELEASE"))
+        .unwrap_or_else(|| {
+            // If cargo is not being built by bootstrap, then we just use the
+            // version from cargo's own `Cargo.toml`.
+            //
+            // There are two versions at play here:
+            //   - version of cargo-the-binary, which you see when you type `cargo --version`
+            //   - version of cargo-the-library, which you download from crates.io for use
+            //     in your packages.
+            //
+            // The library is permanently unstable, so it always has a 0 major
+            // version. However, the CLI now reports a stable 1.x version
+            // (starting in 1.26) which stays in sync with rustc's version.
+            //
+            // Coincidentally, the minor version for cargo-the-library is always
+            // +1 of rustc's minor version (that is, `rustc 1.11.0` corresponds to
+            // `cargo `0.12.0`). The versions always get bumped in lockstep, so
+            // this should continue to hold.
+            let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
+            let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+            format!("1.{}.{}", minor, patch)
+        });
 
     let release_channel = option_env_str!("CFG_RELEASE_CHANNEL");
     let commit_info = option_env_str!("CARGO_COMMIT_HASH").map(|commit_hash| CommitInfo {
@@ -95,4 +97,12 @@ pub fn version() -> VersionInfo {
         commit_info,
         description,
     }
+}
+
+/// Provides a way for tests to inject an abitrary version for testing purposes.
+///
+// __CARGO_TEST_CARGO_VERSION should not be relied on outside of tests.
+#[allow(clippy::disallowed_methods)]
+fn version_for_testing() -> Option<String> {
+    std::env::var("__CARGO_TEST_CARGO_VERSION").ok()
 }
