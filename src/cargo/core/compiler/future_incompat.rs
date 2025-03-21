@@ -485,7 +485,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        ",
+",
         upstream_info = upstream_info,
         update_message = update_message,
     );

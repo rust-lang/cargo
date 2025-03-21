@@ -108,7 +108,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -143,7 +143,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 The package `foo v0.0.0 ([ROOT]/foo)` currently triggers the following future incompatibility lints:
 > [WARNING] unused variable: `x`
 ...
@@ -198,7 +198,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -233,7 +233,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 The package `bar v1.0.0` currently triggers the following future incompatibility lints:
 > [WARNING] unused variable: `x`
 ...
@@ -686,7 +686,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -714,7 +714,7 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        
+
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
