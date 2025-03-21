@@ -553,6 +553,7 @@ fn suggestions_for_updates() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 with_updates = "1"
@@ -591,25 +592,111 @@ fn suggestions_for_updates() {
         .masquerade_as_nightly_cargo(&["future-incompat-test"])
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
-...
+[DOWNLOADING] crates ...
+[DOWNLOADED] without_updates v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] with_updates v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] big_update v1.0.0 (registry `dummy-registry`)
+[CHECKING] with_updates v1.0.0
+[CHECKING] big_update v1.0.0
+[CHECKING] without_updates v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: big_update v1.0.0, with_updates v1.0.0, without_updates v1.0.0
+[NOTE] 
+To solve this problem, you can try the following approaches:
+
+
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
 big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
-...
-"#]])
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - big_update@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
+
+  - with_updates@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
+
+  - without_updates@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+
+[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+
+"#]].unordered())
         .run();
 
     p.cargo("report future-incompatibilities")
         .with_stdout_data(str![[r#"
-...
+The following warnings were discovered during the build. These warnings are an
+indication that the packages contain code that will become an error in a
+future release of Rust. These warnings typically cover changes to close
+soundness problems, unintended or undocumented behavior, or critical problems
+that cannot be fixed in a backwards-compatible fashion, and are not expected
+to be in wide use.
+
+Each warning should contain a link for more information on what the warning
+means and how to resolve it.
+
+
+To solve this problem, you can try the following approaches:
+
+
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
 big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+
+
+- If the issue is not solved by updating the dependencies, a fix has to be
+implemented by those dependencies. You can help with that by notifying the
+maintainers of this problem (e.g. by creating a bug report) or by proposing a
+fix to the maintainers (e.g. by creating a pull request):
+
+  - big_update@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
+
+  - with_updates@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
+
+  - without_updates@1.0.0
+  - Repository: <not found>
+  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
+
+- If waiting for an upstream fix is not an option, you can use the `[patch]`
+section in `Cargo.toml` to use your own version of the dependency. For more
+information, see:
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+
+The package `big_update v1.0.0` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
 ...
+
+The package `with_updates v1.0.0` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
+
+The package `without_updates v1.0.0` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
+
 "#]])
         .run();
 }
