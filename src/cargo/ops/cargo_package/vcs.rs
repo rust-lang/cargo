@@ -11,7 +11,6 @@ use tracing::debug;
 
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::PathEntry;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -236,15 +235,10 @@ fn git(
 /// * `package.readme` and `package.license-file` pointing to paths outside package root
 /// * symlinks targets reside outside package root
 /// * Any change in the root workspace manifest, regardless of what has changed.
-/// * Changes in the lockfile [^1].
 ///
 /// This is required because those paths may link to a file outside the
 /// current package root, but still under the git workdir, affecting the
 /// final packaged `.crate` file.
-///
-/// [^1]: Lockfile might be re-generated if it is too out of sync with the manifest.
-///       Therefore, even you have a modified lockfile,
-///       you might still get a new fresh one that matches what is in git index.
 fn dirty_files_outside_pkg_root(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -263,41 +257,12 @@ fn dirty_files_outside_pkg_root(
         .map(|path| paths::normalize_path(&pkg_root.join(path)))
         .collect();
 
-    // Unlike other files, lockfile is allowed to be missing,
-    // and can be generated during packaging.
-    // We skip checking when it is missing in both workdir and git index,
-    // otherwise cargo will fail with git2 not found error.
-    let lockfile_path = ws.lock_root().as_path_unlocked().join(LOCKFILE_NAME);
-    let lockfile_path = if lockfile_path.exists() {
-        Some(lockfile_path)
-    } else if let Ok(rel_path) = paths::normalize_path(&lockfile_path).strip_prefix(workdir) {
-        // We don't canonicalize here because non-existing path can't be canonicalized.
-        match repo.status_file(&rel_path) {
-            Ok(s) if s != git2::Status::CURRENT => {
-                dirty_files.insert(lockfile_path);
-            }
-            // Unmodified
-            Ok(_) => {}
-            Err(e) => {
-                debug!(
-                    "check git status failed for `{}` in workdir `{}`: {e}",
-                    rel_path.display(),
-                    workdir.display(),
-                );
-            }
-        }
-        None
-    } else {
-        None
-    };
-
     for rel_path in src_files
         .iter()
         .filter(|p| p.is_symlink_or_under_symlink())
         .map(|p| p.as_ref().as_path())
         .chain(metadata_paths.iter().map(AsRef::as_ref))
         .chain([ws.root_manifest()])
-        .chain(lockfile_path.as_deref().into_iter())
         // If inside package root. Don't bother checking git status.
         .filter(|p| paths::strip_prefix_canonical(p, pkg_root).is_err())
         // Handle files outside package root but under git workdir,
