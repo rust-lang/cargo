@@ -123,6 +123,7 @@ Each new feature described below should explain how to use it.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
+    * [check-target-cfgs](#check-target-cfgs) --- Allows checking unexpected cfgs in `[target.'cfg(...)']`
 
 ## allow-features
 
@@ -1888,6 +1889,28 @@ Specify which packages participate in [feature unification](../reference/feature
   regardless of which packages are specified for the current build.
 * `package` _(unimplemented)_: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
+
+## check-target-cfgs
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
+on `rustc --print=check-cfg`.
+
+```sh
+cargo check -Zcargo-lints -Zcheck-target-cfgs
+```
+
+It follows the lint Rust `unexpected_cfgs` lint configuration:
+
+```toml
+[target.'cfg(foo)'.dependencies]
+cfg-if = "1.0"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(foo)']
+```
 
 # Stabilized and removed features
 
