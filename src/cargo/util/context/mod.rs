@@ -85,11 +85,11 @@ use cargo_credential::Secret;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
+use jiff::Timestamp;
 use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
-use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
 
@@ -155,7 +155,7 @@ enum WhyLoad {
 #[derive(Debug)]
 pub struct CredentialCacheValue {
     pub token_value: Secret<String>,
-    pub expiration: Option<OffsetDateTime>,
+    pub expiration: Option<Timestamp>,
     pub operation_independent: bool,
 }
 

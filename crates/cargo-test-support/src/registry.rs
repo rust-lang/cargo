@@ -49,6 +49,7 @@ use cargo_util::paths::append;
 use cargo_util::Sha256;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use jiff::{SignedDuration, Timestamp};
 use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
 use pasetors::paserk::FormatAsPaserk;
 use pasetors::token::UntrustedToken;
@@ -58,10 +59,9 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::thread::{self, JoinHandle};
 use tar::{Builder, Header};
-use time::format_description::well_known::Rfc3339;
-use time::{Duration, OffsetDateTime};
 use url::Url;
 
 /// Path to the local index for psuedo-crates.io.
@@ -910,9 +910,9 @@ impl HttpServer {
             v: Option<u8>,
         }
         let message: Message<'_> = t!(serde_json::from_str(trusted_token.payload()).ok());
-        let token_time = t!(OffsetDateTime::parse(message.iat, &Rfc3339).ok());
-        let now = OffsetDateTime::now_utc();
-        if (now - token_time) > Duration::MINUTE {
+        let token_time = t!(Timestamp::from_str(message.iat).ok());
+        let now = Timestamp::now();
+        if now.duration_since(token_time) > SignedDuration::from_mins(1) {
             return false;
         }
         if private_key_subject.as_deref() != message.sub {
