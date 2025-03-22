@@ -5076,7 +5076,7 @@ fn cdylib_not_lifted() {
 
     p.cargo("build").run();
 
-    let files = if cfg!(windows) {
+    let files = if cfg!(any(windows, target_os = "cygwin")) {
         if cfg!(target_env = "msvc") {
             vec!["foo.dll.lib", "foo.dll.exp", "foo.dll"]
         } else {
@@ -5115,7 +5115,7 @@ fn cdylib_final_outputs() {
 
     p.cargo("build").run();
 
-    let files = if cfg!(windows) {
+    let files = if cfg!(any(windows, target_os = "cygwin")) {
         if cfg!(target_env = "msvc") {
             vec!["foo_bar.dll.lib", "foo_bar.dll"]
         } else {
