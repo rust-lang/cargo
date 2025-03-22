@@ -25,6 +25,7 @@ use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
 use semver::Version;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -246,7 +247,11 @@ pub trait CommandExt: Sized {
                 "Space or comma separated list of features to activate",
             )
             .short('F')
-            .help_heading(heading::FEATURE_SELECTION),
+            .help_heading(heading::FEATURE_SELECTION)
+            .add(clap_complete::ArgValueCandidates::new(|| {
+                let candidates = get_feature_candidates();
+                candidates.unwrap_or_default()
+            })),
         )
         ._arg(
             flag("all-features", "Activate all available features")
@@ -1116,6 +1121,59 @@ pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCan
     } else {
         Ok(vec![])
     }
+}
+
+fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+
+    let manifest_path = match find_root_manifest_for_wd(gctx.cwd()) {
+        Ok(path) => path,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let ws = match Workspace::new(&manifest_path, &gctx) {
+        Ok(ws) => ws,
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let mut features = HashSet::new();
+
+    // Process all packages in the workspace, collect features from all packages since --package could be used to select any of them
+    for package in ws.members() {
+        for feature_name in package.summary().features().keys() {
+            features.insert(feature_name.as_str().to_string());
+        }
+
+        // Add optional dependencies as they can be enabled as features, these might not be in the features map if they are not explicitly referenced
+        for dep in package.dependencies() {
+            if dep.is_optional() {
+                features.insert(dep.name_in_toml().to_string());
+            }
+        }
+
+        // Add qualified features for dependencies
+        for dep in package.dependencies() {
+            let dep_name = dep.package_name().as_str().to_string();
+
+            // try to find this dependency in the workspace
+            if let Some(dep_pkg) = ws.members().find(|p| p.name().as_str() == dep_name) {
+                for feat in dep_pkg.summary().features().keys() {
+                    features.insert(format!("{}/{}", dep_name, feat));
+                }
+            }
+        }
+    }
+
+    // always include the default feature
+    features.insert("default".to_string());
+
+    let mut sorted_features: Vec<_> = features.into_iter().collect();
+    sorted_features.sort();
+
+    Ok(sorted_features
+        .into_iter()
+        .map(|name| clap_complete::CompletionCandidate::new(name))
+        .collect())
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
