@@ -1124,55 +1124,30 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
         Err(_) => return Ok(Vec::new()),
     };
 
-    let current_dir = std::env::current_dir()?;
-
-    let current_pkg = ws
-        .members()
-        .find(|pkg| current_dir.starts_with(pkg.root()))
-        .or_else(|| ws.members().next())
-        .cloned();
-
     let mut features = HashSet::new();
 
-    if let Some(package) = current_pkg {
+    // Process all packages in the workspace, collect features from all packages since --package could be used to select any of them
+    for package in ws.members() {
         for feature_name in package.summary().features().keys() {
             features.insert(feature_name.as_str().to_string());
         }
 
+        // Add optional dependencies as they can be enabled as features, these might not be in the features map if they are not explicitly referenced
         for dep in package.dependencies() {
             if dep.is_optional() {
                 features.insert(dep.name_in_toml().to_string());
             }
         }
 
-        let mut package_features = std::collections::HashMap::new();
-
-        for pkg in ws.members() {
-            let pkg_name = pkg.name().as_str().to_string();
-            let pkg_features: Vec<String> = pkg
-                .summary()
-                .features()
-                .keys()
-                .map(|k| k.as_str().to_string())
-                .collect();
-
-            package_features.insert(pkg_name, pkg_features);
-        }
-
+        // Add qualified features for dependencies
         for dep in package.dependencies() {
             let dep_name = dep.package_name().as_str().to_string();
 
-            if let Some(dep_features) = package_features.get(&dep_name) {
-                for feat in dep_features {
+            // try to find this dependency in the workspace
+            if let Some(dep_pkg) = ws.members().find(|p| p.name().as_str() == dep_name) {
+                for feat in dep_pkg.summary().features().keys() {
                     features.insert(format!("{}/{}", dep_name, feat));
                 }
-            }
-        }
-    } else {
-        // If we couldn't determine the current package, collect features from all workspace members
-        for pkg in ws.members() {
-            for feature_name in pkg.summary().features().keys() {
-                features.insert(feature_name.as_str().to_string());
             }
         }
     }
@@ -1180,7 +1155,10 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
     // always include the default feature
     features.insert("default".to_string());
 
-    Ok(features
+    let mut sorted_features: Vec<_> = features.into_iter().collect();
+    sorted_features.sort();
+
+    Ok(sorted_features
         .into_iter()
         .map(|name| clap_complete::CompletionCandidate::new(name))
         .collect())
