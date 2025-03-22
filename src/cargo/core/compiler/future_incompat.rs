@@ -70,6 +70,8 @@ pub struct FutureIncompatReport {
 /// Structure used for collecting reports in-memory.
 pub struct FutureIncompatReportPackage {
     pub package_id: PackageId,
+    /// Whether or not this is a local package, or a remote dependency.
+    pub is_local: bool,
     pub items: Vec<FutureBreakageItem>,
 }
 
@@ -140,16 +142,10 @@ impl OnDiskReports {
         mut self,
         ws: &Workspace<'_>,
         suggestion_message: String,
-        per_package_reports: &[FutureIncompatReportPackage],
+        per_package: BTreeMap<String, String>,
     ) -> u32 {
-        let per_package = render_report(per_package_reports);
-
-        if let Some(existing_report) = self
-            .reports
-            .iter()
-            .find(|existing| existing.per_package == per_package)
-        {
-            return existing_report.id;
+        if let Some(existing_id) = self.has_report(&per_package) {
+            return existing_id;
         }
 
         let report = OnDiskReport {
@@ -187,6 +183,14 @@ impl OnDiskReports {
         }
 
         saved_id
+    }
+
+    /// Returns the ID of a report if it is already on disk.
+    fn has_report(&self, rendered_per_package: &BTreeMap<String, String>) -> Option<u32> {
+        self.reports
+            .iter()
+            .find(|existing| &existing.per_package == rendered_per_package)
+            .map(|report| report.id)
     }
 
     /// Loads the on-disk reports.
@@ -408,7 +412,14 @@ pub fn save_and_display_report(
             OnDiskReports::default()
         }
     };
-    let report_id = current_reports.next_id;
+
+    let rendered_report = render_report(per_package_future_incompat_reports);
+
+    // If the report is already on disk, then it will reuse the same ID,
+    // otherwise prepare for the next ID.
+    let report_id = current_reports
+        .has_report(&rendered_report)
+        .unwrap_or(current_reports.next_id);
 
     // Get a list of unique and sorted package name/versions.
     let package_ids: BTreeSet<_> = per_package_future_incompat_reports
@@ -461,11 +472,18 @@ You may want to consider updating them to a newer version to see if the issue ha
         .collect::<Vec<_>>()
         .join("\n");
 
-    let suggestion_message = format!(
-        "
+    let all_is_local = per_package_future_incompat_reports
+        .iter()
+        .all(|report| report.is_local);
+
+    let suggestion_message = if all_is_local {
+        String::new()
+    } else {
+        format!(
+            "
 To solve this problem, you can try the following approaches:
 
-{update_message}
+{update_message}\
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a
@@ -476,19 +494,19 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-        ",
-        upstream_info = upstream_info,
-        update_message = update_message,
-    );
+",
+            upstream_info = upstream_info,
+            update_message = update_message,
+        )
+    };
 
-    let saved_report_id = current_reports.save_report(
-        bcx.ws,
-        suggestion_message.clone(),
-        per_package_future_incompat_reports,
-    );
+    let saved_report_id =
+        current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
     if bcx.build_config.future_incompat_report {
-        drop(bcx.gctx.shell().note(&suggestion_message));
+        if !suggestion_message.is_empty() {
+            drop(bcx.gctx.shell().note(&suggestion_message));
+        }
         drop(bcx.gctx.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
