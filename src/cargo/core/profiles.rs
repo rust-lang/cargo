@@ -391,6 +391,11 @@ impl Profiles {
             .get(name)
             .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
     }
+
+    /// Returns an iterator over all profile names known to Cargo.
+    pub fn profile_names(&self) -> impl Iterator<Item = InternedString> + '_ {
+        self.by_name.keys().copied()
+    }
 }
 
 /// An object used for handling the profile hierarchy.
