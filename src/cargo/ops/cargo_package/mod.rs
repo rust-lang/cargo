@@ -106,9 +106,13 @@ enum FileContents {
 
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
-    Manifest,
-    /// Generates `Cargo.lock` in some cases (like if there is a binary).
-    Lockfile,
+    ///
+    /// Associated path is the original manifest path.
+    Manifest(PathBuf),
+    /// Generates `Cargo.lock`.
+    ///
+    /// Associated path is the path to the original lock file, if existing.
+    Lockfile(Option<PathBuf>),
     /// Adds a `.cargo_vcs_info.json` file if in a git repo.
     VcsInfo(vcs::VcsInfo),
 }
@@ -481,7 +485,9 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from("Cargo.toml"),
                 rel_str: "Cargo.toml".to_string(),
-                contents: FileContents::Generated(GeneratedFile::Manifest),
+                contents: FileContents::Generated(GeneratedFile::Manifest(
+                    pkg.manifest_path().to_owned(),
+                )),
             });
     } else {
         ws.gctx().shell().warn(&format!(
@@ -491,6 +497,8 @@ fn build_ar_list(
     }
 
     if include_lockfile {
+        let lockfile_path = ws.lock_root().as_path_unlocked().join(LOCKFILE_NAME);
+        let lockfile_path = lockfile_path.exists().then_some(lockfile_path);
         let rel_str = "Cargo.lock";
         result
             .entry(UncasedAscii::new(rel_str))
@@ -498,7 +506,7 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from(rel_str),
                 rel_str: rel_str.to_string(),
-                contents: FileContents::Generated(GeneratedFile::Lockfile),
+                contents: FileContents::Generated(GeneratedFile::Lockfile(lockfile_path)),
             });
     }
 
@@ -817,8 +825,10 @@ fn tar(
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
-                    GeneratedFile::Manifest => publish_pkg.manifest().to_normalized_contents()?,
-                    GeneratedFile::Lockfile => build_lock(ws, &publish_pkg, local_reg)?,
+                    GeneratedFile::Manifest(_) => {
+                        publish_pkg.manifest().to_normalized_contents()?
+                    }
+                    GeneratedFile::Lockfile(_) => build_lock(ws, &publish_pkg, local_reg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
                 header.set_entry_type(EntryType::file());
