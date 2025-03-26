@@ -26,7 +26,7 @@ fn gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `--message-format` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/11666 for more information about the `--message-format` flag.
+See https://github.com/rust-lang/cargo/issues/15353 for more information about the `--message-format` flag.
 
 "#]])
         .run();
