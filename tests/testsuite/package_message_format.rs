@@ -117,7 +117,26 @@ fn single_package() {
         .with_stdout_data(
             str![[r#"
 [
-  {}
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo#0.0.0"
+  }
 ]
 "#]]
             .is_json()
@@ -133,7 +152,27 @@ fn single_package() {
         .with_stdout_data(
             str![[r#"
 [
-  {}
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/Cargo.lock"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo#0.0.0"
+  }
 ]
 "#]]
             .is_json()
@@ -184,8 +223,46 @@ fn workspace() {
         .with_stdout_data(
             str![[r#"
 [
-  {},
-  {}
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/gondor/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/gondor/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/gondor/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo/gondor#0.0.0"
+  },
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/rohan/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/rohan/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/rohan/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo/rohan#0.0.0"
+  }
 ]
 "#]]
             .is_json()
@@ -201,8 +278,48 @@ fn workspace() {
         .with_stdout_data(
             str![[r#"
 [
-  {},
-  {}
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/Cargo.lock"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/gondor/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/gondor/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/gondor/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo/gondor#0.0.0"
+  },
+  {
+    "files": {
+      "Cargo.lock": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/Cargo.lock"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "[ROOT]/foo/rohan/Cargo.toml"
+      },
+      "Cargo.toml.orig": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/rohan/Cargo.toml"
+      },
+      "src/lib.rs": {
+        "kind": "copy",
+        "path": "[ROOT]/foo/rohan/src/lib.rs"
+      }
+    },
+    "id": "path+[ROOTURL]/foo/rohan#0.0.0"
+  }
 ]
 "#]]
             .is_json()

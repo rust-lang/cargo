@@ -1,4 +1,6 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -32,6 +34,7 @@ use crate::util::HumanBytes;
 use crate::{drop_println, ops};
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
+use cargo_util_schemas::messages;
 use flate2::{Compression, GzBuilder};
 use tar::{Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
@@ -277,7 +280,23 @@ fn do_package<'a>(
                     }
                 }
                 PackageMessageFormat::Json => {
-                    let _ = ws.gctx().shell().print_json(&HashMap::<(), ()>::new());
+                    let message = messages::PackageList {
+                        id: pkg.package_id().to_spec(),
+                        files: BTreeMap::from_iter(ar_files.into_iter().map(|f| {
+                            let file = match f.contents {
+                                FileContents::OnDisk(path) => messages::PackageFile::Copy { path },
+                                FileContents::Generated(
+                                    GeneratedFile::Manifest(path)
+                                    | GeneratedFile::Lockfile(Some(path)),
+                                ) => messages::PackageFile::Generate { path: Some(path) },
+                                FileContents::Generated(
+                                    GeneratedFile::VcsInfo(_) | GeneratedFile::Lockfile(None),
+                                ) => messages::PackageFile::Generate { path: None },
+                            };
+                            (f.rel_path, file)
+                        })),
+                    };
+                    let _ = ws.gctx().shell().print_json(&message);
                 }
             }
         } else {
