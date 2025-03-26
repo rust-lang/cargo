@@ -144,6 +144,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             gctx: opts.gctx,
             verify: opts.verify,
             list: false,
+            fmt: ops::PackageMessageFormat::Human,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
             include_lockfile: true,

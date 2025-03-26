@@ -116,6 +116,48 @@ lock-files will be generated under the assumption that dependencies will be
 published to this registry.
 {{/option}}
 
+{{#option "`--message-format` _fmt_" }}
+Specifies the output message format.
+Currently, it only works with `--list` and affects the file listing format.
+This is unstable and requires `-Zunstable-options`.
+Valid output formats:
+
+- `human` (default): Display in a file-per-line format.
+- `json`: Emit machine-readable JSON information about each package.
+  One package per JSON line (Newline delimited JSON).
+  ```javascript
+  {
+    /* The Package ID Spec of the package. */
+    "id": "path+file:///home/foo#0.0.0",
+    /* Files of this package */
+    "files" {
+      /* Relative path in the archive file. */
+      "Cargo.toml.orig": {
+        /* Where the file is from.
+           - "generate" for file being generated during packaging
+           - "copy" for file being copied from another location.
+        */
+        "kind": "copy",
+        /* For the "copy" kind,
+           it is an absolute path to the actual file content.
+           For the "generate" kind,
+           it is the original file the generated one is based on.
+        */
+        "path": "/home/foo/Cargo.toml"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "/home/foo/Cargo.toml"
+      },
+      "src/main.rs": {
+        "kind": "copy",
+        "path": "/home/foo/src/main.rs"
+      }
+    }
+  }
+  ```
+{{/option}}
+
 {{/options}}
 
 {{> section-package-selection }}

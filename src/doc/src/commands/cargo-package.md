@@ -113,6 +113,49 @@ lock-files will be generated under the assumption that dependencies will be
 published to this registry.</dd>
 
 
+<dt class="option-term" id="option-cargo-package---message-format"><a class="option-anchor" href="#option-cargo-package---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dd class="option-desc">Specifies the output message format.
+Currently, it only works with <code>--list</code> and affects the file listing format.
+This is unstable and requires <code>-Zunstable-options</code>.
+Valid output formats:</p>
+<ul>
+<li><code>human</code> (default): Display in a file-per-line format.</li>
+<li><code>json</code>: Emit machine-readable JSON information about each package.
+One package per JSON line (Newline delimited JSON).
+<pre><code class="language-javascript">{
+  /* The Package ID Spec of the package. */
+  "id": "path+file:///home/foo#0.0.0",
+  /* Files of this package */
+  "files" {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* Where the file is from.
+         - "generate" for file being generated during packaging
+         - "copy" for file being copied from another location.
+      */
+      "kind": "copy",
+      /* For the "copy" kind,
+         it is an absolute path to the actual file content.
+         For the "generate" kind,
+         it is the original file the generated one is based on.
+      */
+      "path": "/home/foo/Cargo.toml"
+    },
+    "Cargo.toml": {
+      "kind": "generate",
+      "path": "/home/foo/Cargo.toml"
+    },
+    "src/main.rs": {
+      "kind": "copy",
+      "path": "/home/foo/src/main.rs"
+    }
+  }
+}
+</code></pre>
+</li>
+</ul></dd>
+
+
 </dl>
 
 ### Package Selection
