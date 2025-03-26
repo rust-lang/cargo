@@ -86,7 +86,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let fmt = if let Some(fmt) = args._value_of("message-format") {
         gctx.cli_unstable()
-            .fail_if_stable_opt("--message-format", 11666)?;
+            .fail_if_stable_opt("--message-format", 15353)?;
         fmt.parse()?
     } else {
         PackageMessageFormat::Human

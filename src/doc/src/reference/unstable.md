@@ -1892,7 +1892,8 @@ Specify which packages participate in [feature unification](../reference/feature
 
 ## Package message format
 
-* Tracking Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
+* Original Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
+* Tracking Issue: [#15353](https://github.com/rust-lang/cargo/issues/15353)
 
 The `--message-format` flag in `cargo package` controls the output message format.
 Currently, it only works with the `--list` flag and affects the file listing format,
