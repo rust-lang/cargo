@@ -3890,8 +3890,6 @@ fn cargo_test_env() {
     let cargo = format!(
         "{}[EXE]",
         cargo_exe()
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()
@@ -3913,8 +3911,6 @@ test env_test ... ok
     let stderr_other_cargo = format!(
         "{}[EXE]",
         other_cargo_path
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()

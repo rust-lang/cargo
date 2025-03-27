@@ -375,7 +375,7 @@ fn cargo_subcommand_env() {
     p.cargo("build").run();
     assert!(p.bin("cargo-envtest").is_file());
 
-    let cargo = cargo_exe().canonicalize().unwrap();
+    let cargo = cargo_exe();
     let mut path = path();
     path.push(target_dir.clone());
     let path = env::join_paths(path.iter()).unwrap();
@@ -388,9 +388,7 @@ fn cargo_subcommand_env() {
     // Check that subcommands inherit an overridden $CARGO
     let envtest_bin = target_dir
         .join("cargo-envtest")
-        .with_extension(std::env::consts::EXE_EXTENSION)
-        .canonicalize()
-        .unwrap();
+        .with_extension(std::env::consts::EXE_EXTENSION);
     let envtest_bin = envtest_bin.to_str().unwrap();
     // Previously, `$CARGO` would be left at `envtest_bin`. However, with the
     // fix for #15099, `$CARGO` is now overwritten with the path to the current
@@ -623,8 +621,6 @@ fn overwrite_cargo_environment_variable() {
     let stderr_cargo = format!(
         "{}[EXE]\n",
         cargo_exe
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()
@@ -648,8 +644,6 @@ fn overwrite_cargo_environment_variable() {
     let stderr_other_cargo = format!(
         "{}[EXE]\n",
         other_cargo_path
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()

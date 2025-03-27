@@ -77,7 +77,6 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::try_canonicalize;
 use crate::util::{internal, CanonicalUrl};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
@@ -457,11 +456,10 @@ impl GlobalContext {
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = try_canonicalize(
-                        self.get_env_os(crate::CARGO_ENV)
-                            .map(PathBuf::from)
-                            .ok_or_else(|| anyhow!("$CARGO not set"))?,
-                    )?;
+                    let exe = self
+                        .get_env_os(crate::CARGO_ENV)
+                        .map(PathBuf::from)
+                        .ok_or_else(|| anyhow!("$CARGO not set"))?;
                     Ok(exe)
                 };
 
@@ -470,7 +468,7 @@ impl GlobalContext {
                     // The method varies per operating system and might fail; in particular,
                     // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
-                    let exe = try_canonicalize(env::current_exe()?)?;
+                    let exe = env::current_exe()?;
                     Ok(exe)
                 }
 
@@ -481,8 +479,6 @@ impl GlobalContext {
                     // Otherwise, it has multiple components and is either:
                     // - a relative path (e.g., `./cargo`, `target/debug/cargo`), or
                     // - an absolute path (e.g., `/usr/local/bin/cargo`).
-                    // In either case, `Path::canonicalize` will return the full absolute path
-                    // to the target if it exists.
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
