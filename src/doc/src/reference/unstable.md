@@ -98,6 +98,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
     * [output-format](#output-format-for-rustdoc) --- Allows documentation to also be emitted in the experimental [JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
+    * [rustdoc-depinfo](#rustdoc-depinfo) --- Use dep-info files in rustdoc rebuild detection.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
@@ -1900,6 +1901,14 @@ Currently, it only works with the `--list` flag and affects the file listing for
 Requires `-Zunstable-options`.
 See [`cargo package --message-format`](../commands/cargo-package.md#option-cargo-package---message-format)
 for more information.
+
+## rustdoc depinfo
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+The `-Z rustdoc-depinfo` flag leverages rustdoc's dep-info files to determine
+whether documentations are required to re-generate. This can be combined with
+`-Z checksum-freshness` to detect checksum changes rather than file mtime.
 
 # Stabilized and removed features
 
