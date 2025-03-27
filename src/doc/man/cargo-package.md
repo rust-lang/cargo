@@ -27,8 +27,8 @@ stored in the `target/package` directory. This performs the following steps:
     - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
       manifest.
     - `Cargo.lock` is always included. When missing, a new lock file will be
-      generated. {{man "cargo-install" 1}} will use the packaged lock file if
-      the `--locked` flag is used.
+      generated unless the `--exclude-lockfile` flag is used. {{man "cargo-install" 1}}
+      will use the packaged lock file if the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
@@ -98,6 +98,14 @@ or the license).
 Allow working directories with uncommitted VCS changes to be packaged.
 {{/option}}
 
+{{#option "`--exclude-lockfile`" }}
+Don't include the lock file when packaging.
+
+This flag is not for general use.
+Some tools may expect a lock file to be present (e.g. `cargo install --locked`).
+Consider other options before using this.
+{{/option}}
+
 {{> options-index }}
 
 {{#option "`--registry` _registry_"}}
@@ -106,6 +114,48 @@ about configuration of registry names. The packages will not be published
 to this registry, but if we are packaging multiple inter-dependent crates,
 lock-files will be generated under the assumption that dependencies will be
 published to this registry.
+{{/option}}
+
+{{#option "`--message-format` _fmt_" }}
+Specifies the output message format.
+Currently, it only works with `--list` and affects the file listing format.
+This is unstable and requires `-Zunstable-options`.
+Valid output formats:
+
+- `human` (default): Display in a file-per-line format.
+- `json`: Emit machine-readable JSON information about each package.
+  One package per JSON line (Newline delimited JSON).
+  ```javascript
+  {
+    /* The Package ID Spec of the package. */
+    "id": "path+file:///home/foo#0.0.0",
+    /* Files of this package */
+    "files" {
+      /* Relative path in the archive file. */
+      "Cargo.toml.orig": {
+        /* Where the file is from.
+           - "generate" for file being generated during packaging
+           - "copy" for file being copied from another location.
+        */
+        "kind": "copy",
+        /* For the "copy" kind,
+           it is an absolute path to the actual file content.
+           For the "generate" kind,
+           it is the original file the generated one is based on.
+        */
+        "path": "/home/foo/Cargo.toml"
+      },
+      "Cargo.toml": {
+        "kind": "generate",
+        "path": "/home/foo/Cargo.toml"
+      },
+      "src/main.rs": {
+        "kind": "copy",
+        "path": "/home/foo/src/main.rs"
+      }
+    }
+  }
+  ```
 {{/option}}
 
 {{/options}}

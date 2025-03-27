@@ -197,7 +197,7 @@ macro_rules! metadata_envs {
     }
 }
 
-// Metadata enviromental variables that are emitted to rustc. Usable by `env!()`
+// Metadata environmental variables that are emitted to rustc. Usable by `env!()`
 // If these change we need to trigger a rebuild.
 // NOTE: The env var name will be prefixed with `CARGO_PKG_`
 metadata_envs! {

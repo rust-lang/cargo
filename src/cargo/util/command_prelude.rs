@@ -2,7 +2,7 @@ use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::core::{shell, Edition, Package, Target, TargetKind, Workspace};
+use crate::core::{profiles::Profiles, shell, Edition, Package, Target, TargetKind, Workspace};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -279,7 +279,11 @@ pub trait CommandExt: Sized {
         self._arg(
             opt("profile", profile)
                 .value_name("PROFILE-NAME")
-                .help_heading(heading::COMPILATION_OPTIONS),
+                .help_heading(heading::COMPILATION_OPTIONS)
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let candidates = get_profile_candidates();
+                    candidates
+                })),
         )
     }
 
@@ -366,7 +370,19 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_message_format(self) -> Self {
-        self._arg(multi_opt("message-format", "FMT", "Error format"))
+        self._arg(
+            multi_opt("message-format", "FMT", "Error format")
+                .value_parser([
+                    "human",
+                    "short",
+                    "json",
+                    "json-diagnostic-short",
+                    "json-diagnostic-rendered-ansi",
+                    "json-render-diagnostics",
+                ])
+                .value_delimiter(',')
+                .ignore_case(true),
+        )
     }
 
     fn arg_build_plan(self) -> Self {
@@ -1118,7 +1134,6 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
         Ok(path) => path,
         Err(_) => return Ok(Vec::new()),
     };
-
     let ws = match Workspace::new(&manifest_path, &gctx) {
         Ok(ws) => ws,
         Err(_) => return Ok(Vec::new()),
@@ -1142,7 +1157,6 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
         // Add qualified features for dependencies
         for dep in package.dependencies() {
             let dep_name = dep.package_name().as_str().to_string();
-
             // try to find this dependency in the workspace
             if let Some(dep_pkg) = ws.members().find(|p| p.name().as_str() == dep_name) {
                 for feat in dep_pkg.summary().features().keys() {
@@ -1162,6 +1176,53 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
         .into_iter()
         .map(|name| clap_complete::CompletionCandidate::new(name))
         .collect())
+}
+
+fn get_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    match get_workspace_profile_candidates() {
+        Ok(candidates) if !candidates.is_empty() => candidates,
+        // fallback to default profile candidates
+        _ => default_profile_candidates(),
+    }
+}
+
+fn get_workspace_profile_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+    let profiles = Profiles::new(&ws, InternedString::new("dev"))?;
+
+    let mut candidates = Vec::new();
+    for name in profiles.profile_names() {
+        let Ok(profile_instance) = Profiles::new(&ws, name) else {
+            continue;
+        };
+        let base_profile = profile_instance.base_profile();
+
+        let mut description = String::from(if base_profile.opt_level.as_str() == "0" {
+            "unoptimized"
+        } else {
+            "optimized"
+        });
+
+        if base_profile.debuginfo.is_turned_on() {
+            description.push_str(" + debuginfo");
+        }
+
+        candidates
+            .push(clap_complete::CompletionCandidate::new(&name).help(Some(description.into())));
+    }
+
+    Ok(candidates)
+}
+
+fn default_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    vec![
+        clap_complete::CompletionCandidate::new("dev").help(Some("unoptimized + debuginfo".into())),
+        clap_complete::CompletionCandidate::new("release").help(Some("optimized".into())),
+        clap_complete::CompletionCandidate::new("test")
+            .help(Some("unoptimized + debuginfo".into())),
+        clap_complete::CompletionCandidate::new("bench").help(Some("optimized".into())),
+    ]
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
@@ -1399,7 +1460,7 @@ fn get_packages() -> CargoResult<Vec<Package>> {
     Ok(packages)
 }
 
-fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
+pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
     let cwd = std::env::current_dir()?;
     let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
 

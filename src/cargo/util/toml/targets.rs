@@ -76,24 +76,28 @@ pub(super) fn to_targets(
         normalized_toml.bin.as_deref().unwrap_or_default(),
         package_root,
         edition,
+        warnings,
     )?);
 
     targets.extend(to_example_targets(
         normalized_toml.example.as_deref().unwrap_or_default(),
         package_root,
         edition,
+        warnings,
     )?);
 
     targets.extend(to_test_targets(
         normalized_toml.test.as_deref().unwrap_or_default(),
         package_root,
         edition,
+        warnings,
     )?);
 
     targets.extend(to_bench_targets(
         normalized_toml.bench.as_deref().unwrap_or_default(),
         package_root,
         edition,
+        warnings,
     )?);
 
     // processing the custom build script
@@ -259,7 +263,7 @@ fn to_lib_target(
     };
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
-    configure(lib, &mut target)?;
+    configure(lib, &mut target, TARGET_KIND_HUMAN_LIB, warnings)?;
     target.set_name_inferred(original_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }
@@ -348,6 +352,7 @@ fn to_bin_targets(
     bins: &[TomlBinTarget],
     package_root: &Path,
     edition: Edition,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in bins {
@@ -371,7 +376,7 @@ fn to_bin_targets(
             edition,
         );
 
-        configure(bin, &mut target)?;
+        configure(bin, &mut target, TARGET_KIND_HUMAN_BIN, warnings)?;
         result.push(target);
     }
     Ok(result)
@@ -430,6 +435,7 @@ fn to_example_targets(
     targets: &[TomlExampleTarget],
     package_root: &Path,
     edition: Edition,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_EXAMPLE)?;
 
@@ -448,7 +454,7 @@ fn to_example_targets(
             toml.required_features.clone(),
             edition,
         );
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, TARGET_KIND_HUMAN_EXAMPLE, warnings)?;
         result.push(target);
     }
 
@@ -487,6 +493,7 @@ fn to_test_targets(
     targets: &[TomlTestTarget],
     package_root: &Path,
     edition: Edition,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_TEST)?;
 
@@ -499,7 +506,7 @@ fn to_test_targets(
             toml.required_features.clone(),
             edition,
         );
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, TARGET_KIND_HUMAN_TEST, warnings)?;
         result.push(target);
     }
     Ok(result)
@@ -554,6 +561,7 @@ fn to_bench_targets(
     targets: &[TomlBenchTarget],
     package_root: &Path,
     edition: Edition,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_BENCH)?;
 
@@ -566,7 +574,7 @@ fn to_bench_targets(
             toml.required_features.clone(),
             edition,
         );
-        configure(&toml, &mut target)?;
+        configure(&toml, &mut target, TARGET_KIND_HUMAN_BENCH, warnings)?;
         result.push(target);
     }
 
@@ -892,7 +900,12 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     Ok(())
 }
 
-fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
+fn configure(
+    toml: &TomlTarget,
+    target: &mut Target,
+    target_kind_human: &str,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     let t2 = target.clone();
     target
         .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
@@ -909,6 +922,10 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
         .set_for_host(toml.proc_macro().unwrap_or_else(|| t2.for_host()));
 
     if let Some(edition) = toml.edition.clone() {
+        let name = target.name();
+        warnings.push(format!(
+            "`edition` is set on {target_kind_human} `{name}` which is deprecated"
+        ));
         target.set_edition(
             edition
                 .parse()

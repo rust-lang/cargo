@@ -403,3 +403,80 @@ fn build_script_extra_link_arg_examples() {
         )
         .run();
 }
+
+#[cargo_test]
+fn cdylib_both_forms() {
+    // Cargo accepts two different forms for the cdylib link instruction,
+    // which have the same meaning.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["cdylib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::rustc-cdylib-link-arg=--bogus-flag-one");
+                    println!("cargo::rustc-link-arg-cdylib=--bogus-flag-two");
+                }
+            "#,
+        )
+        .build();
+    p.cargo("build -v")
+        .without_status()
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]--crate-type cdylib [..]-C link-arg=--bogus-flag-one -C link-arg=--bogus-flag-two[..]
+...
+"#]])
+        .run();
+}
+
+// https://github.com/rust-lang/cargo/issues/12663
+#[cargo_test]
+fn cdylib_extra_link_args_should_not_apply_to_unit_tests() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["lib", "cdylib"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #[test]
+                fn noop() {}
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    // This would fail if cargo passed `-lhack` to building the test because `hack` doesn't exist.
+                    println!("cargo::rustc-link-arg-cdylib=-lhack");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("test --lib").run();
+}

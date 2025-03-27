@@ -144,8 +144,10 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             gctx: opts.gctx,
             verify: opts.verify,
             list: false,
+            fmt: ops::PackageMessageFormat::Human,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
+            include_lockfile: true,
             // `package_with_dep_graph` ignores this field in favor of
             // the already-resolved list of packages
             to_package: ops::Packages::Default,

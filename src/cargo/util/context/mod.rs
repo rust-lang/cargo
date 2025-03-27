@@ -77,7 +77,6 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::try_canonicalize;
 use crate::util::{internal, CanonicalUrl};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
@@ -457,11 +456,10 @@ impl GlobalContext {
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = try_canonicalize(
-                        self.get_env_os(crate::CARGO_ENV)
-                            .map(PathBuf::from)
-                            .ok_or_else(|| anyhow!("$CARGO not set"))?,
-                    )?;
+                    let exe = self
+                        .get_env_os(crate::CARGO_ENV)
+                        .map(PathBuf::from)
+                        .ok_or_else(|| anyhow!("$CARGO not set"))?;
                     Ok(exe)
                 };
 
@@ -470,7 +468,7 @@ impl GlobalContext {
                     // The method varies per operating system and might fail; in particular,
                     // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
-                    let exe = try_canonicalize(env::current_exe()?)?;
+                    let exe = env::current_exe()?;
                     Ok(exe)
                 }
 
@@ -481,8 +479,6 @@ impl GlobalContext {
                     // Otherwise, it has multiple components and is either:
                     // - a relative path (e.g., `./cargo`, `target/debug/cargo`), or
                     // - an absolute path (e.g., `/usr/local/bin/cargo`).
-                    // In either case, `Path::canonicalize` will return the full absolute path
-                    // to the target if it exists.
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
@@ -652,12 +648,45 @@ impl GlobalContext {
     /// Falls back to the target directory if not specified.
     ///
     /// Callers should prefer [`Workspace::build_dir`] instead.
-    pub fn build_dir(&self) -> CargoResult<Option<Filesystem>> {
+    pub fn build_dir(&self, workspace_manifest_path: &PathBuf) -> CargoResult<Option<Filesystem>> {
         if !self.cli_unstable().build_dir {
             return self.target_dir();
         }
         if let Some(val) = &self.build_config()?.build_dir {
-            let path = val.resolve_path(self);
+            let replacements = vec![
+                (
+                    "{workspace-root}",
+                    workspace_manifest_path
+                        .parent()
+                        .unwrap()
+                        .to_str()
+                        .context("workspace root was not valid utf-8")?
+                        .to_string(),
+                ),
+                (
+                    "{cargo-cache-home}",
+                    self.home()
+                        .as_path_unlocked()
+                        .to_str()
+                        .context("cargo home was not valid utf-8")?
+                        .to_string(),
+                ),
+                ("{workspace-path-hash}", {
+                    let hash = crate::util::hex::short_hash(&workspace_manifest_path);
+                    format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
+                }),
+            ];
+
+            let path = val
+                .resolve_templated_path(self, replacements)
+                .map_err(|e| match e {
+                    path::ResolveTemplateError::UnexpectedVariable {
+                        variable,
+                        raw_template,
+                    } => anyhow!(
+                        "unexpected variable `{variable}` in build.build-dir path `{raw_template}`"
+                    ),
+                })?;
 
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.raw_value().is_empty() {

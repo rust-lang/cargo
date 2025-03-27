@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.5.11"
+version = "0.5.12"
 authors = ["Brian Anderson <andersrb@gmail.com>"]
 rust-version.workspace = true
 documentation = "https://docs.rs/home"

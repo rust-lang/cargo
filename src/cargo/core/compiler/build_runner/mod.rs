@@ -262,7 +262,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                         }
 
                         for (lt, arg) in &output.linker_args {
-                            if lt.applies_to(&unit.target) {
+                            if lt.applies_to(&unit.target, unit.mode) {
                                 args.push("-C".into());
                                 args.push(format!("link-arg={}", arg).into());
                             }

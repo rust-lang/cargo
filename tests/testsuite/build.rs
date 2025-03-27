@@ -4066,9 +4066,12 @@ fn wrong_message_format_option() {
         .build();
 
     p.cargo("build --message-format XML")
-        .with_status(101)
+        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] invalid message format specifier: `xml`
+[ERROR] invalid value 'XML' for '--message-format <FMT>'
+  [possible values: human, short, json, json-diagnostic-short, json-diagnostic-rendered-ansi, json-render-diagnostics]
+
+For more information, try '--help'.
 
 "#]])
         .run();
@@ -5404,6 +5407,7 @@ fn target_edition() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--edition=2018 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

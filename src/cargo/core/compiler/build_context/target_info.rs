@@ -97,7 +97,7 @@ pub struct FileType {
 }
 
 impl FileType {
-    /// The filename for this `FileType` crated by rustc.
+    /// The filename for this `FileType` created by rustc.
     pub fn output_filename(&self, target: &Target, metadata: Option<&str>) -> String {
         match metadata {
             Some(metadata) => format!(
@@ -438,7 +438,8 @@ impl TargetInfo {
                 });
             } else if suffix == ".dll"
                 && (target_triple.ends_with("windows-gnu")
-                    || target_triple.ends_with("windows-gnullvm"))
+                    || target_triple.ends_with("windows-gnullvm")
+                    || target_triple.ends_with("cygwin"))
             {
                 // See https://cygwin.com/cygwin-ug-net/dll.html for more
                 // information about GNU import libraries.
@@ -628,7 +629,7 @@ impl TargetInfo {
 
     /// Checks if a target maybe support std.
     ///
-    /// If no explictly stated in target spec json, we treat it as "maybe support".
+    /// If no explicitly stated in target spec json, we treat it as "maybe support".
     ///
     /// This is only useful for `-Zbuild-std` to determine the default set of
     /// crates it is going to build.

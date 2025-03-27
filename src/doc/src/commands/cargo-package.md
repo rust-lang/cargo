@@ -22,8 +22,8 @@ stored in the `target/package` directory. This performs the following steps:
     - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
       manifest.
     - `Cargo.lock` is always included. When missing, a new lock file will be
-      generated. [cargo-install(1)](cargo-install.html) will use the packaged lock file if
-      the `--locked` flag is used.
+      generated unless the `--exclude-lockfile` flag is used. [cargo-install(1)](cargo-install.html)
+      will use the packaged lock file if the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
@@ -94,6 +94,13 @@ or the license).</dd>
 <dd class="option-desc">Allow working directories with uncommitted VCS changes to be packaged.</dd>
 
 
+<dt class="option-term" id="option-cargo-package---exclude-lockfile"><a class="option-anchor" href="#option-cargo-package---exclude-lockfile"></a><code>--exclude-lockfile</code></dt>
+<dd class="option-desc">Don’t include the lock file when packaging.</p>
+<p>This flag is not for general use.
+Some tools may expect a lock file to be present (e.g. <code>cargo install --locked</code>).
+Consider other options before using this.</dd>
+
+
 <dt class="option-term" id="option-cargo-package---index"><a class="option-anchor" href="#option-cargo-package---index"></a><code>--index</code> <em>index</em></dt>
 <dd class="option-desc">The URL of the registry index to use.</dd>
 
@@ -104,6 +111,49 @@ about configuration of registry names. The packages will not be published
 to this registry, but if we are packaging multiple inter-dependent crates,
 lock-files will be generated under the assumption that dependencies will be
 published to this registry.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---message-format"><a class="option-anchor" href="#option-cargo-package---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dd class="option-desc">Specifies the output message format.
+Currently, it only works with <code>--list</code> and affects the file listing format.
+This is unstable and requires <code>-Zunstable-options</code>.
+Valid output formats:</p>
+<ul>
+<li><code>human</code> (default): Display in a file-per-line format.</li>
+<li><code>json</code>: Emit machine-readable JSON information about each package.
+One package per JSON line (Newline delimited JSON).
+<pre><code class="language-javascript">{
+  /* The Package ID Spec of the package. */
+  "id": "path+file:///home/foo#0.0.0",
+  /* Files of this package */
+  "files" {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* Where the file is from.
+         - "generate" for file being generated during packaging
+         - "copy" for file being copied from another location.
+      */
+      "kind": "copy",
+      /* For the "copy" kind,
+         it is an absolute path to the actual file content.
+         For the "generate" kind,
+         it is the original file the generated one is based on.
+      */
+      "path": "/home/foo/Cargo.toml"
+    },
+    "Cargo.toml": {
+      "kind": "generate",
+      "path": "/home/foo/Cargo.toml"
+    },
+    "src/main.rs": {
+      "kind": "copy",
+      "path": "/home/foo/src/main.rs"
+    }
+  }
+}
+</code></pre>
+</li>
+</ul></dd>
 
 
 </dl>

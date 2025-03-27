@@ -3890,8 +3890,6 @@ fn cargo_test_env() {
     let cargo = format!(
         "{}[EXE]",
         cargo_exe()
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()
@@ -3913,8 +3911,6 @@ test env_test ... ok
     let stderr_other_cargo = format!(
         "{}[EXE]",
         other_cargo_path
-            .canonicalize()
-            .unwrap()
             .with_extension("")
             .to_str()
             .unwrap()
@@ -4740,7 +4736,9 @@ fn test_dep_with_dev() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+// #[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[cargo_test]
+#[ignore = "waiting for https://github.com/rust-lang/rust/pull/138877"]
 fn cargo_test_doctest_xcompile_ignores() {
     // -Zdoctest-xcompile also enables --enable-per-target-ignores which
     // allows the ignore-TARGET syntax.

@@ -700,9 +700,15 @@ impl<'gctx> DrainState<'gctx> {
                 }
             }
             Message::FutureIncompatReport(id, items) => {
-                let package_id = self.active[&id].pkg.package_id();
+                let unit = &self.active[&id];
+                let package_id = unit.pkg.package_id();
+                let is_local = unit.is_local();
                 self.per_package_future_incompat_reports
-                    .push(FutureIncompatReportPackage { package_id, items });
+                    .push(FutureIncompatReportPackage {
+                        package_id,
+                        is_local,
+                        items,
+                    });
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.context("failed to acquire jobserver token")?;

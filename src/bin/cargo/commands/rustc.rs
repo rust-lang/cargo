@@ -92,14 +92,17 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         return Ok(());
     }
 
-    let crate_types = args
-        .get_many::<String>(CRATE_TYPE_ARG_NAME)
-        .into_iter()
-        .flatten()
-        .flat_map(|s| s.split(','))
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect::<Vec<String>>();
+    let crate_types = {
+        let mut seen = std::collections::HashSet::new();
+        args.get_many::<String>(CRATE_TYPE_ARG_NAME)
+            .into_iter()
+            .flatten()
+            .flat_map(|s| s.split(','))
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .filter(|s| seen.insert(s.clone()))
+            .collect::<Vec<String>>()
+    };
 
     compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
         None

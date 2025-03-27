@@ -181,12 +181,9 @@ fn custom_build_env_vars() {
         )
         .file("bar/src/lib.rs", "pub fn hello() {}");
 
-    let cargo = cargo_exe().canonicalize().unwrap();
+    let cargo = cargo_exe();
     let cargo = cargo.to_str().unwrap();
-    let rustc = paths::resolve_executable("rustc".as_ref())
-        .unwrap()
-        .canonicalize()
-        .unwrap();
+    let rustc = paths::resolve_executable("rustc".as_ref()).unwrap();
     let rustc = rustc.to_str().unwrap();
     let file_content = format!(
         r##"

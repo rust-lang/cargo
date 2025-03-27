@@ -8,11 +8,10 @@ pub fn cli() -> Command {
         .about("Print a JSON representation of a Cargo.toml file's location")
         .arg(flag("workspace", "Locate Cargo.toml of the workspace root"))
         .arg(
-            opt(
-                "message-format",
-                "Output representation [possible values: json, plain]",
-            )
-            .value_name("FMT"),
+            opt("message-format", "Output representation")
+                .value_name("FMT")
+                .value_parser(["json", "plain"])
+                .ignore_case(true),
         )
         .arg_silent_suggestion()
         .arg_manifest_path()

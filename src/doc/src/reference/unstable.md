@@ -123,6 +123,7 @@ Each new feature described below should explain how to use it.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
+    * [Package message format](#package-message-format) --- Message format for `cargo package`.
 
 ## allow-features
 
@@ -259,6 +260,13 @@ build-dir = "out"
 * Environment: `CARGO_BUILD_BUILD_DIR`
 
 The path to where internal files used as part of the build are placed.
+
+This option supports path templating.
+
+Avaiable template variables:
+* `{workspace-root}` resolves to root of the current workspace.
+* `{cargo-cache-home}` resolves to `CARGO_HOME`
+* `{workspace-path-hash}` resolves to a hash of the manifest path
 
 
 ## root-dir
@@ -1881,6 +1889,17 @@ Specify which packages participate in [feature unification](../reference/feature
   regardless of which packages are specified for the current build.
 * `package` _(unimplemented)_: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
+
+## Package message format
+
+* Original Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
+* Tracking Issue: [#15353](https://github.com/rust-lang/cargo/issues/15353)
+
+The `--message-format` flag in `cargo package` controls the output message format.
+Currently, it only works with the `--list` flag and affects the file listing format,
+Requires `-Zunstable-options`.
+See [`cargo package --message-format`](../commands/cargo-package.md#option-cargo-package---message-format)
+for more information.
 
 # Stabilized and removed features
 

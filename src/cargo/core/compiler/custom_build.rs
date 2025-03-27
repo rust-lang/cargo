@@ -37,6 +37,7 @@ use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
+use crate::util::command_prelude::CompileMode;
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};
@@ -196,10 +197,11 @@ pub enum LinkArgTarget {
 
 impl LinkArgTarget {
     /// Checks if this link type applies to a given [`Target`].
-    pub fn applies_to(&self, target: &Target) -> bool {
+    pub fn applies_to(&self, target: &Target, mode: CompileMode) -> bool {
+        let is_test = mode.is_any_test();
         match self {
             LinkArgTarget::All => true,
-            LinkArgTarget::Cdylib => target.is_cdylib(),
+            LinkArgTarget::Cdylib => !is_test && target.is_cdylib(),
             LinkArgTarget::Bin => target.is_bin(),
             LinkArgTarget::SingleBin(name) => target.is_bin() && target.name() == name,
             LinkArgTarget::Test => target.is_test(),

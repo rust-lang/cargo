@@ -1,4 +1,6 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -32,6 +34,7 @@ use crate::util::HumanBytes;
 use crate::{drop_println, ops};
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
+use cargo_util_schemas::messages;
 use flate2::{Compression, GzBuilder};
 use tar::{Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
@@ -40,12 +43,41 @@ use unicase::Ascii as UncasedAscii;
 mod vcs;
 mod verify;
 
+/// Message format for `cargo package`.
+///
+/// Currently only affect the output of the `--list` flag.
+#[derive(Debug, Clone)]
+pub enum PackageMessageFormat {
+    Human,
+    Json,
+}
+
+impl PackageMessageFormat {
+    pub const POSSIBLE_VALUES: [&str; 2] = ["human", "json"];
+
+    pub const DEFAULT: &str = "human";
+}
+
+impl std::str::FromStr for PackageMessageFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<PackageMessageFormat, anyhow::Error> {
+        match s {
+            "human" => Ok(PackageMessageFormat::Human),
+            "json" => Ok(PackageMessageFormat::Json),
+            f => bail!("unknown message format `{f}`"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
     pub gctx: &'gctx GlobalContext,
     pub list: bool,
+    pub fmt: PackageMessageFormat,
     pub check_metadata: bool,
     pub allow_dirty: bool,
+    pub include_lockfile: bool,
     pub verify: bool,
     pub jobs: Option<JobsConfig>,
     pub keep_going: bool,
@@ -77,9 +109,13 @@ enum FileContents {
 
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
-    Manifest,
-    /// Generates `Cargo.lock` in some cases (like if there is a binary).
-    Lockfile,
+    ///
+    /// Associated path is the original manifest path.
+    Manifest(PathBuf),
+    /// Generates `Cargo.lock`.
+    ///
+    /// Associated path is the path to the original lock file, if existing.
+    Lockfile(Option<PathBuf>),
     /// Adds a `.cargo_vcs_info.json` file if in a git repo.
     VcsInfo(vcs::VcsInfo),
 }
@@ -191,6 +227,7 @@ fn do_package<'a>(
         .as_path_unlocked()
         .join(LOCKFILE_NAME)
         .exists()
+        && opts.include_lockfile
     {
         // Make sure the Cargo.lock is up-to-date and valid.
         let dry_run = false;
@@ -234,8 +271,33 @@ fn do_package<'a>(
         let ar_files = prepare_archive(ws, &pkg, &opts)?;
 
         if opts.list {
-            for ar_file in &ar_files {
-                drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+            match opts.fmt {
+                PackageMessageFormat::Human => {
+                    // While this form is called "human",
+                    // it keeps the old file-per-line format for compatibility.
+                    for ar_file in &ar_files {
+                        drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+                    }
+                }
+                PackageMessageFormat::Json => {
+                    let message = messages::PackageList {
+                        id: pkg.package_id().to_spec(),
+                        files: BTreeMap::from_iter(ar_files.into_iter().map(|f| {
+                            let file = match f.contents {
+                                FileContents::OnDisk(path) => messages::PackageFile::Copy { path },
+                                FileContents::Generated(
+                                    GeneratedFile::Manifest(path)
+                                    | GeneratedFile::Lockfile(Some(path)),
+                                ) => messages::PackageFile::Generate { path: Some(path) },
+                                FileContents::Generated(
+                                    GeneratedFile::VcsInfo(_) | GeneratedFile::Lockfile(None),
+                                ) => messages::PackageFile::Generate { path: None },
+                            };
+                            (f.rel_path, file)
+                        })),
+                    };
+                    let _ = ws.gctx().shell().print_json(&message);
+                }
             }
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
@@ -386,7 +448,7 @@ fn prepare_archive(
     // Check (git) repository state, getting the current commit hash.
     let vcs_info = vcs::check_repo_state(pkg, &src_files, ws, &opts)?;
 
-    build_ar_list(ws, pkg, src_files, vcs_info)
+    build_ar_list(ws, pkg, src_files, vcs_info, opts.include_lockfile)
 }
 
 /// Builds list of files to archive.
@@ -396,6 +458,7 @@ fn build_ar_list(
     pkg: &Package,
     src_files: Vec<PathEntry>,
     vcs_info: Option<vcs::VcsInfo>,
+    include_lockfile: bool,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::new();
     let root = pkg.root();
@@ -441,7 +504,9 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from("Cargo.toml"),
                 rel_str: "Cargo.toml".to_string(),
-                contents: FileContents::Generated(GeneratedFile::Manifest),
+                contents: FileContents::Generated(GeneratedFile::Manifest(
+                    pkg.manifest_path().to_owned(),
+                )),
             });
     } else {
         ws.gctx().shell().warn(&format!(
@@ -450,15 +515,19 @@ fn build_ar_list(
         ))?;
     }
 
-    let rel_str = "Cargo.lock";
-    result
-        .entry(UncasedAscii::new(rel_str))
-        .or_insert_with(Vec::new)
-        .push(ArchiveFile {
-            rel_path: PathBuf::from(rel_str),
-            rel_str: rel_str.to_string(),
-            contents: FileContents::Generated(GeneratedFile::Lockfile),
-        });
+    if include_lockfile {
+        let lockfile_path = ws.lock_root().as_path_unlocked().join(LOCKFILE_NAME);
+        let lockfile_path = lockfile_path.exists().then_some(lockfile_path);
+        let rel_str = "Cargo.lock";
+        result
+            .entry(UncasedAscii::new(rel_str))
+            .or_insert_with(Vec::new)
+            .push(ArchiveFile {
+                rel_path: PathBuf::from(rel_str),
+                rel_str: rel_str.to_string(),
+                contents: FileContents::Generated(GeneratedFile::Lockfile(lockfile_path)),
+            });
+    }
 
     if let Some(vcs_info) = vcs_info {
         let rel_str = VCS_INFO_FILE;
@@ -775,8 +844,10 @@ fn tar(
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
-                    GeneratedFile::Manifest => publish_pkg.manifest().to_normalized_contents()?,
-                    GeneratedFile::Lockfile => build_lock(ws, &publish_pkg, local_reg)?,
+                    GeneratedFile::Manifest(_) => {
+                        publish_pkg.manifest().to_normalized_contents()?
+                    }
+                    GeneratedFile::Lockfile(_) => build_lock(ws, &publish_pkg, local_reg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
                 header.set_entry_type(EntryType::file());
