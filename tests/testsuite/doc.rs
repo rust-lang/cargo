@@ -2897,3 +2897,20 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rustdoc_depinfo_gated() {
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+
+"#]])
+        .run();
+}
