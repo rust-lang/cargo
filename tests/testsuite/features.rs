@@ -1851,13 +1851,16 @@ fn warn_if_default_features() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] `[features]` defines a feature named `default-features`
+[NOTE] only a feature named `default` will be enabled by default
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
