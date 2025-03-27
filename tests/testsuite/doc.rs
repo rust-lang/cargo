@@ -2914,3 +2914,268 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rebuild_tracks_target_src_outside_package_root() {
+    let p = cargo_test_support::project_in("parent")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+                [lib]
+                path = "../lib.rs"
+            "#,
+        )
+        .file("../lib.rs", "//! # depinfo-before")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.change_file("../lib.rs", "//! # depinfo-after");
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(!doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rebuild_tracks_include_str() {
+    let p = cargo_test_support::project_in("parent")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", r#"#![doc = include_str!("../../README")]"#)
+        .file("../README", "# depinfo-before")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.change_file("../README", "# depinfo-after");
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(!doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rebuild_tracks_path_attr() {
+    let p = cargo_test_support::project_in("parent")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", r#"#[path = "../../bar.rs"] pub mod bar;"#)
+        .file("../bar.rs", "//! # depinfo-before")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.change_file("../bar.rs", "//! # depinfo-after");
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(!doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rebuild_tracks_env() {
+    let env = "__RUSTDOC_INJECTED";
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", &format!(r#"#![doc = env!("{env}")]"#))
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .env(env, "# depinfo-before")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo")
+        .env(env, "# depinfo-after")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(!doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+fn rebuild_tracks_env_in_dep() {
+    let env = "__RUSTDOC_INJECTED";
+    Package::new("bar", "0.1.0")
+        .file("src/lib.rs", &format!(r#"#![doc = env!("{env}")]"#))
+        .publish();
+
+    let env = "__RUSTDOC_INJECTED";
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo")
+        .env(env, "# depinfo-before")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[CHECKING] bar v0.1.0
+[DOCUMENTING] bar v0.1.0
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/bar/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo")
+        .env(env, "# depinfo-after")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DIRTY] bar v0.1.0: the environment variable __RUSTDOC_INJECTED changed
+[CHECKING] bar v0.1.0
+[RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] foo v0.0.0 ([ROOT]/foo): the dependency bar was rebuilt
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/bar/index.html");
+    assert!(!doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(
+    nightly,
+    reason = "`rustdoc --emit` is unstable; requires -Zchecksum-hash-algorithm"
+)]
+fn rebuild_tracks_checksum() {
+    let p = cargo_test_support::project_in("parent")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", r#"#![doc = include_str!("../../README")]"#)
+        .file("../README", "# depinfo-before")
+        .build();
+
+    p.cargo("doc -Zrustdoc-depinfo -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo", "checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-before"));
+
+    p.change_file("../README", "# depinfo-after");
+    // Change mtime into the future
+    p.root().move_into_the_future();
+
+    p.cargo("doc --verbose -Zrustdoc-depinfo -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the precalculated components changed
+[DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
+[RUNNING] `rustdoc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/index.html");
+    assert!(doc_html.contains("depinfo-after"));
+}
