@@ -234,14 +234,14 @@ pub fn create_bcx<'a, 'gctx>(
         | CompileMode::RunCustomBuild => {
             if ws.gctx().get_env("RUST_FLAGS").is_ok() {
                 gctx.shell().warn(
-                    "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
+                    "Ignoring incorrect environment variable `RUST_FLAGS`; Rust flags are passed via `RUSTFLAGS`.",
                 )?;
             }
         }
         CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
             if ws.gctx().get_env("RUSTDOC_FLAGS").is_ok() {
                 gctx.shell().warn(
-                    "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
+                    "Ignoring incorrect environment variable `RUSTDOC_FLAGS`; Rust flags are passed via `RUSTDOCFLAGS`."
                 )?;
             }
         }
