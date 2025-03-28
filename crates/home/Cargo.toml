@@ -1,8 +1,8 @@
 [package]
 name = "home"
-version = "0.5.12"
+version = "0.5.13"
 authors = ["Brian Anderson <andersrb@gmail.com>"]
-rust-version.workspace = true
+rust-version = "1.71"
 documentation = "https://docs.rs/home"
 edition.workspace = true
 include = [
