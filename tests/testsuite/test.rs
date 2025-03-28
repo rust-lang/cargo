@@ -4736,9 +4736,7 @@ fn test_dep_with_dev() {
         .run();
 }
 
-// #[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
-#[cargo_test]
-#[ignore = "waiting for https://github.com/rust-lang/rust/pull/138877"]
+#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
 fn cargo_test_doctest_xcompile_ignores() {
     // -Zdoctest-xcompile also enables --enable-per-target-ignores which
     // allows the ignore-TARGET syntax.
