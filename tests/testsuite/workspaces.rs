@@ -2716,3 +2716,124 @@ fn nonexistence_package_together_with_workspace() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+#[cfg_attr(not(windows), ignore = "testing windows canonicalization only")]
+fn workspace_glob_with_canonical_wd() {
+    // Tests the behavior of having a glob include with a canonical current
+    // working directory. On Windows this had issues with a verbatum path.
+    //
+    // Note that verbatim path handling is still unreliable in some
+    // situations, see https://github.com/rust-lang/cargo/issues/9770.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["crates/*"]
+            "#,
+        )
+        .file("crates/foo/Cargo.toml", &basic_manifest("foo", "1.0.0"))
+        .file(
+            "crates/foo/src/main.rs",
+            "fn main() { println!(\"hello world\"); }",
+        )
+        .build();
+
+    let cwd = p.root().canonicalize().unwrap();
+    // Ensure that canonicalize is giving us a verbatim path.
+    let std::path::Component::Prefix(prefix) = cwd.components().next().unwrap() else {
+        panic!("expected component")
+    };
+    assert!(matches!(prefix.kind(), std::path::Prefix::VerbatimDisk(_)));
+
+    p.cargo("metadata")
+        .cwd(&cwd)
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo/crates/foo#1.0.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "//?/[ROOT]/foo/crates/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": true,
+          "doctest": false,
+          "edition": "2015",
+          "kind": [
+            "bin"
+          ],
+          "name": "foo",
+          "src_path": "//?/[ROOT]/foo/crates/foo/src/main.rs",
+          "test": true
+        }
+      ],
+      "version": "1.0.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "path+[ROOTURL]/foo/crates/foo#1.0.0"
+      }
+    ],
+    "root": null
+  },
+  "target_directory": "//?/[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo/crates/foo#1.0.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo/crates/foo#1.0.0"
+  ],
+  "workspace_root": "//?/[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+
+    // Also checks that linking works in verbatim cwd.
+    p.cargo("run")
+        .cwd(&cwd)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v1.0.0 ([ROOT]/foo/crates/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+hello world
+
+"#]])
+        .run();
+}
