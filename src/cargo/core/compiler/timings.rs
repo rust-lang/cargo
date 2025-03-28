@@ -679,8 +679,61 @@ h1 {
   border-bottom: 1px solid var(--h1-border-bottom);
 }
 
+#pipeline-graph {
+  background-color: var(--canvas-background);
+}
+
 .graph {
   display: block;
+}
+
+.graph line, .graph polyline {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.graph text {
+  fill: currentColor;
+  stroke-width: 0;
+  dominant-baseline: central;
+}
+
+.graph .grid, .dep-line {
+  stroke-dasharray: 2;
+}
+
+.graph .grid {
+  color: var(--canvas-grid);
+}
+
+.dep-line {
+  color: var(--canvas-dep-line);
+  fill: none;
+}
+
+.dep-line.hl {
+  color: var(--canvas-dep-line-highlighted);
+}
+
+.axis {
+  color: var(--canvas-axes);
+}
+
+.box rect {
+  fill: var(--canvas-not-custom-build);
+}
+
+.box rect.rmeta {
+  fill: var(--canvas-block);
+}
+
+.box.run-custom-build rect {
+  fill: var(--canvas-custom-build);
+}
+
+.box text {
+  font-size: 14px;
+  pointer-events: none;
 }
 
 .my-table {
@@ -789,10 +842,7 @@ static HTML_CANVAS: &str = r#"
   </tr>
 </table>
 
-<div id="pipeline-container" class="canvas-container">
- <canvas id="pipeline-graph" class="graph" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
- <canvas id="pipeline-graph-lines" style="position: absolute; left: 0; top: 0; z-index: 1; pointer-events:none;"></canvas>
-</div>
+<svg id="pipeline-graph" class="graph"></svg>
 <div class="canvas-container">
   <canvas id="timing-graph" class="graph"></canvas>
 </div>
