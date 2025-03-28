@@ -81,8 +81,11 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
-    if !opts.filter.is_specific() {
-        // cargo fix with no target selection implies `--all-targets`.
+    let edition = args.flag("edition") || args.flag("edition-idioms");
+    if !opts.filter.is_specific() && edition {
+        // When `cargo fix` is run without specifying targets but with `--edition` or `--edition-idioms`,
+        // it should default to fixing all targets.
+        // See: https://github.com/rust-lang/cargo/issues/13527
         opts.filter = ops::CompileFilter::new_all_targets();
     }
 
