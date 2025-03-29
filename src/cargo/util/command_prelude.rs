@@ -1143,22 +1143,6 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
                     .help(Some(format!("(from {})", package_name).into())),
             );
         }
-
-        // Add qualified features for dependencies
-        for dep in package.dependencies() {
-            let dep_name = dep.name_in_toml();
-
-            // Try to find this dependency in the workspace
-            if let Some(dep_pkg) = ws.members().find(|p| p.name() == dep_name) {
-                for feat in dep_pkg.summary().features().keys() {
-                    let qualified_name = format!("{}/{}", dep_name, feat);
-                    feature_candidates.push(
-                        clap_complete::CompletionCandidate::new(qualified_name)
-                            .help(Some(format!("(from {})", dep_pkg.name()).into())),
-                    );
-                }
-            }
-        }
     }
 
     Ok(feature_candidates)
