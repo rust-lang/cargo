@@ -1494,7 +1494,9 @@ fn calculate_normal(
 
     // Afterwards calculate our own fingerprint information.
     let build_root = build_root(build_runner);
-    let local = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+    let is_any_doc_gen = unit.mode.is_doc() || unit.mode.is_doc_scrape();
+    let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
+    let local = if is_any_doc_gen && !rustdoc_depinfo_enabled {
         // rustdoc does not have dep-info files.
         let fingerprint = pkg_fingerprint(build_runner.bcx, &unit.pkg).with_context(|| {
             format!(
