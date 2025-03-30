@@ -338,8 +338,9 @@ fn auto_gc_config() {
         .file(
             ".cargo/config.toml",
             r#"
-                [gc.auto]
-                frequency = "always"
+                [cache]
+                auto-clean-frequency = "always"
+                [cache.global-clean]
                 max-src-age = "1 day"
                 max-crate-age = "3 days"
                 max-index-age = "3 days"
@@ -407,13 +408,13 @@ fn auto_gc_config() {
 
 #[cargo_test]
 fn frequency() {
-    // gc.auto.frequency settings
+    // cache.auto-clean-frequency settings
     let p = basic_foo_bar_project();
     p.change_file(
         ".cargo/config.toml",
         r#"
-            [gc.auto]
-            frequency = "never"
+            [cache]
+            auto-clean-frequency = "never"
         "#,
     );
     // Populate data in the past.
@@ -437,7 +438,7 @@ fn frequency() {
 
     // Try again with a setting that allows it to run.
     p.cargo("check -Zgc")
-        .env("CARGO_GC_AUTO_FREQUENCY", "1 day")
+        .env("CARGO_CACHE_AUTO_CLEAN_FREQUENCY", "1 day")
         .masquerade_as_nightly_cargo(&["gc"])
         .run();
     assert_eq!(get_index_names().len(), 0);
@@ -1258,7 +1259,7 @@ fn package_cache_lock_during_build() {
     p_foo2
         .cargo("check -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .env("CARGO_GC_AUTO_FREQUENCY", "always")
+        .env("CARGO_CACHE_AUTO_CLEAN_FREQUENCY", "always")
         .env("CARGO_LOG", "gc=debug")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index

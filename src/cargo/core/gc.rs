@@ -91,7 +91,7 @@ fn auto_gc_inner(gctx: &GlobalContext) -> CargoResult<()> {
     Ok(())
 }
 
-/// Automatic garbage collection settings from the `gc.auto` config table.
+/// Cache cleaning settings from the `cache.global-clean` config table.
 ///
 /// NOTE: Not all of these options may get stabilized. Some of them are very
 /// low-level details, and may not be something typical users need.
@@ -99,9 +99,7 @@ fn auto_gc_inner(gctx: &GlobalContext) -> CargoResult<()> {
 /// If any of these options are `None`, the built-in default is used.
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
-struct AutoConfig {
-    /// The maximum frequency that automatic garbage collection happens.
-    frequency: Option<String>,
+struct GlobalCleanConfig {
     /// Anything older than this duration will be deleted in the source cache.
     max_src_age: Option<String>,
     /// Anything older than this duration will be deleted in the compressed crate cache.
@@ -173,49 +171,49 @@ impl GcOpts {
     /// Updates the configuration of this [`GcOpts`] to incorporate the
     /// settings from config.
     pub fn update_for_auto_gc(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
-        let auto_config = gctx
-            .get::<Option<AutoConfig>>("gc.auto")?
+        let config = gctx
+            .get::<Option<GlobalCleanConfig>>("cache.global-clean")?
             .unwrap_or_default();
-        self.update_for_auto_gc_config(&auto_config)
+        self.update_for_auto_gc_config(&config)
     }
 
-    fn update_for_auto_gc_config(&mut self, auto_config: &AutoConfig) -> CargoResult<()> {
+    fn update_for_auto_gc_config(&mut self, config: &GlobalCleanConfig) -> CargoResult<()> {
         self.max_src_age = newer_time_span_for_config(
             self.max_src_age,
-            "gc.auto.max-src-age",
-            auto_config
+            "cache.global-clean.max-src-age",
+            config
                 .max_src_age
                 .as_deref()
                 .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
         )?;
         self.max_crate_age = newer_time_span_for_config(
             self.max_crate_age,
-            "gc.auto.max-crate-age",
-            auto_config
+            "cache.global-clean.max-crate-age",
+            config
                 .max_crate_age
                 .as_deref()
                 .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
         )?;
         self.max_index_age = newer_time_span_for_config(
             self.max_index_age,
-            "gc.auto.max-index-age",
-            auto_config
+            "cache.global-clean.max-index-age",
+            config
                 .max_index_age
                 .as_deref()
                 .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
         )?;
         self.max_git_co_age = newer_time_span_for_config(
             self.max_git_co_age,
-            "gc.auto.max-git-co-age",
-            auto_config
+            "cache.global-clean.max-git-co-age",
+            config
                 .max_git_co_age
                 .as_deref()
                 .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
         )?;
         self.max_git_db_age = newer_time_span_for_config(
             self.max_git_db_age,
-            "gc.auto.max-git-db-age",
-            auto_config
+            "cache.global-clean.max-git-db-age",
+            config
                 .max_git_db_age
                 .as_deref()
                 .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
@@ -255,30 +253,28 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     /// Performs automatic garbage cleaning.
     ///
     /// This returns immediately without doing work if garbage collection has
-    /// been performed recently (since `gc.auto.frequency`).
+    /// been performed recently (since `cache.auto-clean-frequency`).
     fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
         if !self.gctx.cli_unstable().gc {
             return Ok(());
         }
-        let auto_config = self
+        let freq = self
             .gctx
-            .get::<Option<AutoConfig>>("gc.auto")?
-            .unwrap_or_default();
-        let Some(freq) = parse_frequency(
-            auto_config
-                .frequency
-                .as_deref()
-                .unwrap_or(DEFAULT_AUTO_FREQUENCY),
-        )?
-        else {
+            .get::<Option<String>>("cache.auto-clean-frequency")?;
+        let Some(freq) = parse_frequency(freq.as_deref().unwrap_or(DEFAULT_AUTO_FREQUENCY))? else {
             tracing::trace!(target: "gc", "auto gc disabled");
             return Ok(());
         };
         if !self.global_cache_tracker.should_run_auto_gc(freq)? {
             return Ok(());
         }
+        let config = self
+            .gctx
+            .get::<Option<GlobalCleanConfig>>("cache.global-clean")?
+            .unwrap_or_default();
+
         let mut gc_opts = GcOpts::default();
-        gc_opts.update_for_auto_gc_config(&auto_config)?;
+        gc_opts.update_for_auto_gc_config(&config)?;
         self.gc(clean_ctx, &gc_opts)?;
         if !clean_ctx.dry_run {
             self.global_cache_tracker.set_last_auto_gc()?;
@@ -337,7 +333,7 @@ fn parse_frequency(frequency: &str) -> CargoResult<Option<Duration>> {
     }
     let duration = maybe_parse_time_span(frequency).ok_or_else(|| {
         format_err!(
-            "config option `gc.auto.frequency` expected a value of \"always\", \"never\", \
+            "config option `cache.auto-clean-frequency` expected a value of \"always\", \"never\", \
              or \"N seconds/minutes/days/weeks/months\", got: {frequency:?}"
         )
     })?;
@@ -460,17 +456,18 @@ mod tests {
         assert_eq!(maybe_parse_time_span(" 1 day"), None);
         assert_eq!(maybe_parse_time_span("1  second"), None);
 
-        let e = parse_time_span_for_config("gc.auto.max-src-age", "-1 days").unwrap_err();
+        let e =
+            parse_time_span_for_config("cache.global-clean.max-src-age", "-1 days").unwrap_err();
         assert_eq!(
             e.to_string(),
-            "config option `gc.auto.max-src-age` \
+            "config option `cache.global-clean.max-src-age` \
              expected a value of the form \"N seconds/minutes/days/weeks/months\", \
              got: \"-1 days\""
         );
         let e = parse_frequency("abc").unwrap_err();
         assert_eq!(
             e.to_string(),
-            "config option `gc.auto.frequency` \
+            "config option `cache.auto-clean-frequency` \
              expected a value of \"always\", \"never\", or \"N seconds/minutes/days/weeks/months\", \
              got: \"abc\""
         );
