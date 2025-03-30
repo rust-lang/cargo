@@ -1601,7 +1601,7 @@ cargo build -Zgc
 Automatic deletion happens on commands that are already doing a significant amount of work,
 such as all of the build commands (`cargo build`, `cargo test`, `cargo check`, etc.), and `cargo fetch`.
 The deletion happens just after resolution and packages have been downloaded.
-Automatic deletion is only done once per day (see `gc.auto.frequency` to configure).
+Automatic deletion is only done once per day (see `cache.auto-clean-frequency` to configure).
 Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting artifacts that may need to be used if you are offline for a long period of time.
 
 #### Automatic gc configuration
@@ -1612,11 +1612,14 @@ The settings available are:
 ```toml
 # Example config.toml file.
 
-# This table defines the behavior for automatic garbage collection.
-[gc.auto]
-# The maximum frequency that automatic garbage collection happens.
-# Can be "never" to disable automatic-gc, or "always" to run on every command.
-frequency = "1 day"
+# This table defines settings for cargo's caches.
+[cache]
+# The maximum frequency that automatic cleaning of the cache happens.
+# Can be "never" to disable, or "always" to run on every command.
+auto-clean-frequency = "1 day"
+
+# Sub-table for defining specific settings for cleaning the global cache.
+[cache.global-clean]
 # Anything older than this duration will be deleted in the source cache.
 max-src-age = "1 month"
 # Anything older than this duration will be deleted in the compressed crate cache.
