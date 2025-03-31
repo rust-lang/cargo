@@ -1,5 +1,35 @@
 # Changelog
 
+## Cargo 1.88 (2025-06-26)
+[a6c604d1...HEAD](https://github.com/rust-lang/cargo/compare/a6c604d1...HEAD)
+
+### Added
+
+### Changed
+
+- Don't canonicalize executable path for the `CARGO` environment variable.
+  [#15355](https://github.com/rust-lang/cargo/pull/15355)
+
+### Fixed
+
+- cargo-tree: Make output more deterministic
+  [#15369](https://github.com/rust-lang/cargo/pull/15369)
+
+### Nightly only
+
+- 🔥 `-Zrustdoc-depinfo`: A new unstable flag leveraging rustdoc’s dep-info
+  files to determine whether documentations are required to re-generate.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-depinfo))
+  [#15359](https://github.com/rust-lang/cargo/pull/15359)
+  [#15371](https://github.com/rust-lang/cargo/pull/15371)
+- `-Zgc`: Rename the `gc` config table to `[cache]`.
+  Low-level settings is now under `[cache.global-clean]`.
+  [#15367](https://github.com/rust-lang/cargo/pull/15367)
+
+### Documentation
+
+### Internal
+
 ## Cargo 1.87 (2025-05-15)
 [ce948f46...rust-1.87.0](https://github.com/rust-lang/cargo/compare/ce948f46...rust-1.87.0)
 
