@@ -1907,7 +1907,8 @@ for more information.
 
 ## rustdoc depinfo
 
-* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+* Original Issue: [#12266](https://github.com/rust-lang/cargo/issues/12266)
+* Tracking Issue: [#15370](https://github.com/rust-lang/cargo/issues/15370)
 
 The `-Z rustdoc-depinfo` flag leverages rustdoc's dep-info files to determine
 whether documentations are required to re-generate. This can be combined with
