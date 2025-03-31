@@ -478,7 +478,7 @@ fn add_pkg(
             continue;
         }
 
-        deps.sort_unstable_by_key(|dep| dep.name_in_toml());
+        deps.sort_unstable_by_key(|dep| (dep.kind(), dep.name_in_toml()));
         let dep_pkg = graph.package_map[&dep_id];
 
         for dep in deps {
