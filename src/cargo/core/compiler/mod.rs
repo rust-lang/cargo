@@ -763,6 +763,19 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_error_format_and_color(build_runner, &mut rustdoc);
     add_allow_features(build_runner, &mut rustdoc);
 
+    if build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo {
+        // invocation-specific is required for keeping the original rustdoc emission
+        let mut arg = OsString::from("--emit=invocation-specific,dep-info=");
+        arg.push(rustdoc_dep_info_loc(build_runner, unit));
+        rustdoc.arg(arg);
+
+        if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
+            rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
+        }
+
+        rustdoc.arg("-Zunstable-options");
+    }
+
     if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
         trim_paths_args_rustdoc(&mut rustdoc, build_runner, unit, trim_paths)?;
     }
@@ -838,6 +851,20 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let target = Target::clone(&unit.target);
+
+    let rustdoc_dep_info_loc = rustdoc_dep_info_loc(build_runner, unit);
+    let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
+    let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
+    let pkg_root = unit.pkg.root().to_path_buf();
+    let cwd = rustdoc
+        .get_cwd()
+        .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
+        .to_path_buf();
+    let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
+    let is_local = unit.is_local();
+    let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
+    let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
+
     let mut output_options = OutputOptions::new(build_runner, unit);
     let script_metadata = build_runner.find_build_script_metadata(unit);
     let scrape_outputs = if should_include_scrape_units(build_runner.bcx, unit) {
@@ -903,6 +930,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             paths::remove_dir_all(crate_dir)?;
         }
         state.running(&rustdoc);
+        let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
 
         let result = rustdoc
             .exec_with_streaming(
@@ -928,6 +956,29 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             }
 
             return Err(e);
+        }
+
+        if rustdoc_depinfo_enabled && rustdoc_dep_info_loc.exists() {
+            fingerprint::translate_dep_info(
+                &rustdoc_dep_info_loc,
+                &dep_info_loc,
+                &cwd,
+                &pkg_root,
+                &build_dir,
+                &rustdoc,
+                // Should we track source file for doc gen?
+                is_local,
+                &env_config,
+            )
+            .with_context(|| {
+                internal(format_args!(
+                    "could not parse/generate dep info at: {}",
+                    rustdoc_dep_info_loc.display()
+                ))
+            })?;
+            // This mtime shift allows Cargo to detect if a source file was
+            // modified in the middle of the build.
+            paths::set_file_time_no_err(dep_info_loc, timestamp);
         }
 
         Ok(())
@@ -2011,4 +2062,11 @@ fn scrape_output_path(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoR
     build_runner
         .outputs(unit)
         .map(|outputs| outputs[0].path.clone())
+}
+
+/// Gets the dep-info file emitted by rustdoc.
+fn rustdoc_dep_info_loc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> PathBuf {
+    let mut loc = build_runner.files().fingerprint_file_path(unit, "");
+    loc.set_extension("d");
+    loc
 }
