@@ -79,7 +79,7 @@ proptest = "1.6.0"
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
 rand = "0.9.0"
 regex = "1.11.1"
-rusqlite = { version = "0.33.0", features = ["bundled"] }
+rusqlite = { version = "0.34.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
 rustfix = { version = "0.9.0", path = "crates/rustfix" }
