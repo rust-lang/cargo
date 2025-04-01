@@ -2,8 +2,11 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::{compare::assert_ui, registry::RegistryBuilder, Project};
 use cargo_test_support::{current_dir, file};
 
+use super::init_registry_without_token;
+
 #[cargo_test]
 fn case() {
+    init_registry_without_token();
     let _ = RegistryBuilder::new()
         .alternative()
         .no_configure_token()

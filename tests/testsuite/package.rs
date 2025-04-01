@@ -6065,6 +6065,7 @@ src/main.rs
 
 #[cargo_test]
 fn workspace_with_local_deps_index_mismatch() {
+    registry::init();
     let alt_reg = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
@@ -6123,12 +6124,12 @@ fn workspace_with_local_deps_index_mismatch() {
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
-[UPDATING] crates.io index
+[UPDATING] `dummy-registry` index
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
   no matching package named `level2` found
-  location searched: crates.io index
+  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
   required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
