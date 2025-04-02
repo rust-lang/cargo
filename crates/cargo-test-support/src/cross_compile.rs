@@ -27,6 +27,12 @@ pub fn disabled() -> bool {
         _ => {}
     }
 
+    // It requires setting `target.linker` for cross-compilation to work on aarch64,
+    // so not going to bother now.
+    if cfg!(all(target_arch = "aarch64", target_os = "linux")) {
+        return true;
+    }
+
     // Cross tests are only tested to work on macos, linux, and MSVC windows.
     if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(target_env = "msvc")) {
         return true;

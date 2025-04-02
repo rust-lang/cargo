@@ -130,6 +130,14 @@ jobs:
           os: ubuntu-latest
           rust: nightly
           other: i686-unknown-linux-gnu
+        - name: Linux aarch64 stable
+          os: ubuntu-24.04-arm
+          rust: stable
+          other: TODO # cross-compile tests are disabled, this shouldn't matter.
+        - name: Linux aarch64 nightly
+          os: ubuntu-24.04-arm
+          rust: nightly
+          other: TODO # cross-compile tests are disabled, this shouldn't matter.
         - name: macOS aarch64 stable
           os: macos-14
           rust: stable
@@ -161,6 +169,7 @@ jobs:
     - run: rustup update --no-self-update stable
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
+      if: matrix.os != 'ubuntu-24.04-arm' # cross-compile tests are disabled on ARM machines
     - run: rustup target add wasm32-unknown-unknown
     - run: rustup target add aarch64-unknown-none # need this for build-std mock tests
       if: startsWith(matrix.rust, 'nightly')
