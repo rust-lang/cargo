@@ -52,6 +52,11 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
             .collect(),
         resolve,
         target_directory: ws.target_dir().into_path_unlocked(),
+        build_directory: ws
+            .gctx()
+            .cli_unstable()
+            .build_dir
+            .then(|| ws.build_dir().into_path_unlocked()),
         version: VERSION,
         workspace_root: ws.root().to_path_buf(),
         metadata: ws.custom_metadata().cloned(),
@@ -68,6 +73,8 @@ pub struct ExportInfo {
     workspace_default_members: Vec<PackageIdSpec>,
     resolve: Option<MetadataResolve>,
     target_directory: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build_directory: Option<PathBuf>,
     version: u32,
     workspace_root: PathBuf,
     metadata: Option<toml::Value>,

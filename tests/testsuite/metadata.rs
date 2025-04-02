@@ -4294,6 +4294,44 @@ fn dep_kinds_workspace() {
         .run();
 }
 
+#[cargo_test]
+fn build_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "build_directory": "[ROOT]/foo/build-dir",
+  "metadata": null,
+  "packages": "{...}",
+  "resolve": "{...}",
+  "target_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.0.1"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.0.1"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
 // Creating non-utf8 path is an OS-specific pain, so let's run this only on
 // linux, where arbitrary bytes work.
 #[cfg(target_os = "linux")]
