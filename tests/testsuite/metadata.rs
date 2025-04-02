@@ -4312,6 +4312,7 @@ fn build_dir() {
         .with_stdout_data(
             str![[r#"
 {
+  "build_directory": "[ROOT]/foo/build-dir",
   "metadata": null,
   "packages": "{...}",
   "resolve": "{...}",
