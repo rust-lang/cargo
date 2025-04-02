@@ -613,9 +613,19 @@ impl TargetInfo {
                 }
             }
         }
-        if !result.is_empty() && !crate_types.iter().any(|ct| ct.requires_upstream_objects()) {
-            // Only add rmeta if pipelining.
-            result.push(FileType::new_rmeta());
+        if !result.is_empty() {
+            if !crate_types.iter().any(|ct| ct.requires_upstream_objects()) {
+                // Only add rmeta if pipelining...
+                result.push(FileType::new_rmeta());
+            } else if crate_types
+                .iter()
+                .any(|ct| ct.benefits_from_split_metadata())
+            {
+                // ...or when we apply -Zembed-metadata=no to the unit.
+                // TODO: should we thread through the information if we use
+                // embed-metadata?
+                result.push(FileType::new_rmeta());
+            }
         }
         Ok((result, unsupported))
     }
