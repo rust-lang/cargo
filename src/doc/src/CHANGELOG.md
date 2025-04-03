@@ -176,10 +176,18 @@
   [#15290](https://github.com/rust-lang/cargo/pull/15290)
 - Dont check cargo-util semver until 1.86 is released 
   [#15222](https://github.com/rust-lang/cargo/pull/15222)
+- Redox OS is part of the unix family 
+  [#15307](https://github.com/rust-lang/cargo/pull/15307)
+- cargo-tree: Abstract the concept of a NodeId 
+  [#15237](https://github.com/rust-lang/cargo/pull/15237)
+- cargo-tree: Abstract the concept of an edge 
+  [#15233](https://github.com/rust-lang/cargo/pull/15233)
 - ci: Auto-update cargo-semver-checks 
   [#15212](https://github.com/rust-lang/cargo/pull/15212)
 - ci: Visually group output in Github 
   [#15218](https://github.com/rust-lang/cargo/pull/15218)
+- manifest: Centralize Cargo target descriptions 
+  [#15291](https://github.com/rust-lang/cargo/pull/15291)
 - Update dependencies.
   [#15250](https://github.com/rust-lang/cargo/pull/15250)
   [#15249](https://github.com/rust-lang/cargo/pull/15249)
@@ -189,15 +197,6 @@
   [#15211](https://github.com/rust-lang/cargo/pull/15211)
   [#15217](https://github.com/rust-lang/cargo/pull/15217)
   [#15268](https://github.com/rust-lang/cargo/pull/15268)
-
-- Redox OS is part of the unix family 
-  [#15307](https://github.com/rust-lang/cargo/pull/15307)
-- refactor(toml): Centralize target descriptions 
-  [#15291](https://github.com/rust-lang/cargo/pull/15291)
-- Abstract the concept of a NodeId 
-  [#15237](https://github.com/rust-lang/cargo/pull/15237)
-- Abstract the concept of an edge 
-  [#15233](https://github.com/rust-lang/cargo/pull/15233)
 
 ## Cargo 1.86 (2025-04-03)
 [d73d2caf...rust-1.86.0](https://github.com/rust-lang/cargo/compare/d73d2caf...rust-1.86.0)
