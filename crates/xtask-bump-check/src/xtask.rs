@@ -205,16 +205,6 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     let mut cmd = ProcessBuilder::new("cargo");
     cmd.arg("semver-checks")
         .arg("check-release")
-        // Don't check cargo-util util 1.86 is released.
-        // While it does have a SemVer breakage,
-        // it is unlikely people use it with turbo-fish syntax.
-        // And cargo-util is essentially for internal use.
-        //
-        // See:
-        //
-        // * https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/check-version-bump.20failure
-        // * https://forge.rust-lang.org/policies/crate-ownership.html#internal-use
-        .args(&["--exclude", "cargo-util"])
         .arg("--workspace");
 
     gctx.shell().status("Running", &cmd)?;
