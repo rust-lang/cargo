@@ -68,7 +68,7 @@ libloading = "0.8.6"
 memchr = "2.7.4"
 miow = "0.6.0"
 opener = "0.7.2"
-openssl = "0.10.57"
+openssl = "0.10.72"
 openssl-sys = "0.9.92"
 os_info = { version = "3.10.0", default-features = false }
 pasetors = { version = "0.7.2", features = ["v3", "paserk", "std", "serde"] }
