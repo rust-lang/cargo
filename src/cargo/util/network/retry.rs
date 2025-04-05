@@ -108,9 +108,11 @@ impl<'a> Retry<'a> {
                     .downcast_ref::<HttpNotSuccessful>()
                     .map(|http_err| http_err.display_short())
                     .unwrap_or_else(|| e.root_cause().to_string());
+                let left_retries = self.max_retries - self.retries;
                 let msg = format!(
-                    "spurious network error ({} tries remaining): {err_msg}",
-                    self.max_retries - self.retries,
+                    "spurious network error ({} {} remaining): {err_msg}",
+                    left_retries,
+                    if left_retries != 1 { "tries" } else { "try" }
                 );
                 if let Err(e) = self.gctx.shell().warn(msg) {
                     return RetryResult::Err(e);
