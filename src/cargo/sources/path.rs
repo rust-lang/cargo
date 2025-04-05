@@ -652,7 +652,7 @@ fn discover_gix_repo(root: &Path) -> CargoResult<Option<gix::Repository>> {
     let index = repo
         .index_or_empty()
         .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
-    let repo_root = repo.work_dir().ok_or_else(|| {
+    let repo_root = repo.workdir().ok_or_else(|| {
         anyhow::format_err!(
             "did not expect repo at {} to be bare",
             repo.path().display()
@@ -702,7 +702,7 @@ fn list_files_gix(
         .emit_empty_directories(false);
     let index = repo.index_or_empty()?;
     let root = repo
-        .work_dir()
+        .workdir()
         .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
     assert!(
         root.is_absolute(),
