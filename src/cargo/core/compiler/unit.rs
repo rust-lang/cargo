@@ -125,6 +125,12 @@ impl UnitInner {
         self.mode.is_any_test() || self.target.kind().requires_upstream_objects()
     }
 
+    /// Returns whether compilation of this unit could benefit from splitting metadata
+    /// into a .rmeta file.
+    pub fn benefits_from_split_metadata(&self) -> bool {
+        matches!(self.mode, CompileMode::Build) && self.target.kind().benefits_from_split_metadata()
+    }
+
     /// Returns whether or not this is a "local" package.
     ///
     /// A "local" package is one that the user can likely edit, or otherwise
