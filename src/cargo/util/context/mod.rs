@@ -2608,6 +2608,7 @@ pub struct CargoHttpConfig {
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
     pub cainfo: Option<ConfigRelativePath>,
+    pub proxy_cainfo: Option<ConfigRelativePath>,
     pub check_revoke: Option<bool>,
     pub user_agent: Option<String>,
     pub debug: Option<bool>,

@@ -107,6 +107,7 @@ ssl-version.min = "tlsv1.1" # minimum TLS version
 timeout = 30                # timeout for each HTTP request, in seconds
 low-speed-limit = 10        # network timeout threshold (bytes/sec)
 cainfo = "cert.pem"         # path to Certificate Authority (CA) bundle
+proxy-cainfo = "cert.pem"   # path to proxy Certificate Authority (CA) bundle
 check-revoke = true         # check for SSL certificate revocation
 multiplexing = true         # HTTP/2 multiplexing
 user-agent = "…"            # the user-agent header
@@ -707,6 +708,14 @@ Sets the timeout for each HTTP request, in seconds.
 
 Path to a Certificate Authority (CA) bundle file, used to verify TLS
 certificates. If not specified, Cargo attempts to use the system certificates.
+
+#### `http.proxy-cainfo`
+* Type: string (path)
+* Default: none
+* Environment: `CARGO_HTTP_PROXY_CAINFO`
+
+Path to a Certificate Authority (CA) bundle file, used to verify proxy TLS
+certificates.
 
 #### `http.check-revoke`
 * Type: boolean
