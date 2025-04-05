@@ -95,6 +95,9 @@ ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
 [future-incompat-report]
 frequency = 'always' # when to display a notification about a future incompat report
 
+[cache]
+auto-clean-frequency = "1 day"   # How often to perform automatic cache cleaning
+
 [cargo-new]
 vcs = "none"              # VCS to use ('git', 'hg', 'pijul', 'fossil', 'none')
 
@@ -663,6 +666,41 @@ Controls how often we display a notification to the terminal when a future incom
 
 * `always` (default): Always display a notification when a command (e.g. `cargo build`) produces a future incompat report
 * `never`: Never display a notification
+
+### `[cache]`
+
+The `[cache]` table defines settings for cargo's caches.
+
+#### Global caches
+
+When running `cargo` commands, Cargo will automatically track which files you are using within the global cache.
+Periodically, Cargo will delete files that have not been used for some period of time.
+It will delete files that have to be downloaded from the network if they have not been used in 3 months. Files that can be generated without network access will be deleted if they have not been used in 1 month.
+
+The automatic deletion of files only occurs when running commands that are already doing a significant amount of work, such as all of the build commands (`cargo build`, `cargo test`, `cargo check`, etc.), and `cargo fetch`.
+
+Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting artifacts that may need to be used if you are offline for a long period of time.
+
+> **Note**: This tracking is currently only implemented for the global cache in Cargo's home directory.
+> This includes registry indexes and source files downloaded from registries and git dependencies.
+> Support for tracking build artifacts is not yet implemented, and tracked in [cargo#13136](https://github.com/rust-lang/cargo/issues/13136).
+>
+> Additionally, there is an unstable feature to support *manually* triggering cache cleaning, and to further customize the configuration options.
+> See the [Unstable chapter](unstable.md#gc) for more information.
+
+#### `cache.auto-clean-frequency`
+* Type: string
+* Default: `"1 day"`
+* Environment: `CARGO_CACHE_AUTO_CLEAN_FREQUENCY`
+
+This option defines how often Cargo will automatically delete unused files in the global cache.
+This does *not* define how old the files must be, those thresholds are described [above](#global-caches).
+
+It supports the following settings:
+
+* `"never"` --- Never deletes old files.
+* `"always"` --- Checks to delete old files every time Cargo runs.
+* An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months" --- Checks to delete old files at most the given time frame.
 
 ### `[http]`
 
