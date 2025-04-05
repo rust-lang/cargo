@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "cargo"
-version = "0.87.0"
+version = "0.87.1"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -507,7 +507,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "schemars",
  "semver",

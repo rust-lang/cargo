@@ -1341,7 +1341,7 @@ struct Foo;
 impl Trait for Foo {}
 
 fn main() {
-    let obj: Box<dyn Trait> = Box::new(Foo); // Error: cannot be made into an object
+    let obj: Box<dyn Trait> = Box::new(Foo); // Error: the trait `Trait` is not dyn compatible
 }
 ```
 
