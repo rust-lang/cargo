@@ -226,6 +226,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         section,
         dry_run,
         honor_rust_version,
+        verbose: args.verbose() != 0, // just one verbosity level for add.
     };
     add(&ws, &options)?;
 
