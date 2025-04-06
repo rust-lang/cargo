@@ -674,13 +674,8 @@ fn template_workspace_path_hash_should_handle_symlink() {
     let symlink_hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
     verify_layouts(&p, &symlink_hash_dir);
 
-    // Verify the current behavior:
-    // unix: hash dir created from the symlinked and non-symlinked dirs are the same.
-    #[cfg(unix)]
+    // Verify the hash dir created from the symlinked and non-symlinked dirs are the same.
     assert_eq!(original_hash_dir, symlink_hash_dir);
-    // windows: hash dir created from the symlinked and non-symlinked dirs are different.
-    #[cfg(windows)]
-    assert_ne!(original_hash_dir, symlink_hash_dir);
 
     fn verify_layouts(p: &Project, build_dir_parent: &PathBuf) {
         let build_dir = build_dir_parent.as_path().join("build-dir");
