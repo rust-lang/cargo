@@ -569,7 +569,7 @@ fn template_cargo_cache_home() {
 }
 
 #[cargo_test]
-fn template_workspace_manfiest_path_hash() {
+fn template_workspace_path_hash() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -607,6 +607,65 @@ fn template_workspace_manfiest_path_hash() {
 
     // Verify the binary was uplifted to the target-dir
     assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+}
+
+#[cargo_test]
+fn template_workspace_path_hash_should_change_between_cargo_versions() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+            edition = "2015"
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "foo/{workspace-path-hash}/build-dir"
+            target-dir = "target-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .env("__CARGO_TEST_CARGO_VERSION", "1.0.0")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    let foo_dir = p.root().join("foo");
+    assert_exists(&foo_dir);
+    let hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
+
+    let first_run_build_dir = hash_dir.as_path().join("build-dir");
+    assert_build_dir_layout(first_run_build_dir.clone(), "debug");
+
+    // Remove the build-dir since we already know the hash and it makes
+    // finding the directory in the next run simpler.
+    foo_dir.as_path().rm_rf();
+
+    // Run Cargo build again with a different Cargo version
+    p.cargo("build -Z build-dir")
+        .env("__CARGO_TEST_CARGO_VERSION", "1.1.0")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    let hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
+    let second_run_build_dir = hash_dir.as_path().join("build-dir");
+    assert_build_dir_layout(second_run_build_dir.clone(), "debug");
+
+    // Finally check that the build-dir is in different location between both Cargo versions
+    assert_ne!(
+        first_run_build_dir, second_run_build_dir,
+        "The workspace path hash generated between 2 Cargo versions matched when it should not"
+    );
 }
 
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
