@@ -7,13 +7,16 @@ use anyhow::bail;
 use cargo_util::paths::normalize_path;
 use cargo_util::ProcessBuilder;
 use std::fmt::Write;
+use std::path::Path;
 use std::path::PathBuf;
+
+const ITEM_INDENT: &str = "    ";
 
 fn get_available_targets<'a>(
     filter_fn: fn(&Target) -> bool,
     ws: &'a Workspace<'_>,
     options: &'a CompileOptions,
-) -> CargoResult<Vec<&'a str>> {
+) -> CargoResult<Vec<(&'a str, &'a Path)>> {
     let packages = options.spec.get_packages(ws)?;
 
     let mut targets: Vec<_> = packages
@@ -24,7 +27,12 @@ fn get_available_targets<'a>(
                 .iter()
                 .filter(|target| filter_fn(target))
         })
-        .map(Target::name)
+        .map(|target| {
+            (
+                target.name(),
+                target.src_path().path().expect("Target is not a `Metabuild` but one of `Bin` | `Test` | `Bench` | `ExampleBin`")
+            )
+        })
         .collect();
 
     targets.sort();
@@ -48,8 +56,10 @@ fn print_available_targets(
         writeln!(output, "No {} available.", plural_name)?;
     } else {
         writeln!(output, "Available {}:", plural_name)?;
-        for target in targets {
-            writeln!(output, "    {}", target)?;
+        let mut shell = ws.gctx().shell();
+        for (name, src_path) in targets {
+            let link = shell.err_file_hyperlink(src_path);
+            writeln!(output, "{ITEM_INDENT}{link}{}{link:#}", name)?;
         }
     }
     bail!("{}", output)
@@ -58,7 +68,7 @@ fn print_available_targets(
 pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
     let packages = ws
         .members()
-        .map(|pkg| pkg.name().as_str())
+        .map(|pkg| (pkg.name().as_str(), pkg.manifest_path()))
         .collect::<Vec<_>>();
 
     let mut output = "\"--package <SPEC>\" requires a SPEC format value, \
@@ -72,8 +82,10 @@ pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
         writeln!(output, "No packages available.")?;
     } else {
         writeln!(output, "Possible packages/workspace members:")?;
-        for package in packages {
-            writeln!(output, "    {}", package)?;
+        let mut shell = ws.gctx().shell();
+        for (name, manifest_path) in packages {
+            let link = shell.err_file_hyperlink(manifest_path);
+            writeln!(output, "{ITEM_INDENT}{link}{}{link:#}", name)?;
         }
     }
     bail!("{}", output)
