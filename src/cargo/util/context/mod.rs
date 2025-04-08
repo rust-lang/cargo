@@ -672,7 +672,8 @@ impl GlobalContext {
                         .to_string(),
                 ),
                 ("{workspace-path-hash}", {
-                    let hash = crate::util::hex::short_hash(&workspace_manifest_path);
+                    let real_path = std::fs::canonicalize(workspace_manifest_path)?;
+                    let hash = crate::util::hex::short_hash(&real_path);
                     format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
                 }),
             ];

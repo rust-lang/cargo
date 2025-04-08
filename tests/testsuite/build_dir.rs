@@ -11,8 +11,8 @@
 
 use std::path::PathBuf;
 
-use cargo_test_support::prelude::*;
 use cargo_test_support::{paths, project, str};
+use cargo_test_support::{prelude::*, Project};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 
 #[cargo_test]
@@ -569,7 +569,7 @@ fn template_cargo_cache_home() {
 }
 
 #[cargo_test]
-fn template_workspace_manfiest_path_hash() {
+fn template_workspace_path_hash() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
@@ -607,6 +607,81 @@ fn template_workspace_manfiest_path_hash() {
 
     // Verify the binary was uplifted to the target-dir
     assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+}
+
+/// Verify that the {workspace-path-hash} does not changes if cargo is run from inside of
+/// a symlinked directory.
+/// The test approach is to build a project twice from the non-symlinked directory and a symlinked
+/// directory and then compare the build-dir paths.
+#[cargo_test]
+fn template_workspace_path_hash_should_handle_symlink() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+             [package]
+             name = "foo"
+             version = "1.0.0"
+             authors = []
+             edition = "2015"
+             "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+             [build]
+             build-dir = "foo/{workspace-path-hash}/build-dir"
+             "#,
+        )
+        .build();
+
+    // Build from the non-symlinked directory
+    p.cargo("check -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    // Parse and verify the hash dir created from the non-symlinked dir
+    let foo_dir = p.root().join("foo");
+    assert_exists(&foo_dir);
+    let original_hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
+    verify_layouts(&p, &original_hash_dir);
+
+    // Create a symlink of the project root.
+    let mut symlinked_dir = p.root().clone();
+    symlinked_dir.pop();
+    symlinked_dir = symlinked_dir.join("symlink-dir");
+    symlink(p.root(), &symlinked_dir).unwrap();
+
+    // Remove the foo dir (which contains the build-dir) before we rebuild from a symlinked dir.
+    foo_dir.rm_rf();
+
+    // Run cargo from the symlinked dir
+    p.cargo("check -Z build-dir")
+        .cwd(&symlinked_dir)
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .enable_mac_dsym()
+        .run();
+
+    // Parse and verify the hash created from the symlinked dir
+    assert_exists(&foo_dir);
+    let symlink_hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
+    verify_layouts(&p, &symlink_hash_dir);
+
+    // Verify the hash dir created from the symlinked and non-symlinked dirs are the same.
+    assert_eq!(original_hash_dir, symlink_hash_dir);
+
+    fn verify_layouts(p: &Project, build_dir_parent: &PathBuf) {
+        let build_dir = build_dir_parent.as_path().join("build-dir");
+        assert_build_dir_layout(build_dir, "debug");
+        assert_artifact_dir_layout(p.root().join("target"), "debug");
+    }
 }
 
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
