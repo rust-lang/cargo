@@ -139,7 +139,6 @@ explaining the format of the entry.
             // https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
-            // May be omitted since Cargo 1.84.
             "features": ["i128_support"],
             // Boolean of whether or not this is an optional dependency.
             // Since Cargo 1.84, defaults to `false` if not specified.
