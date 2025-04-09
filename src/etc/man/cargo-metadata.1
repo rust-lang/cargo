@@ -320,8 +320,10 @@ The JSON output has the following format:
         */
         "root": "file:///path/to/my\-package#0.1.0",
     },
-    /* The absolute path to the build directory where Cargo places its output. */
+    /* The absolute path to the target directory where Cargo places its output. */
     "target_directory": "/path/to/my\-package/target",
+    /* The absolute path to the build directory where Cargo places intermediate build artifacts. (unstable) */
+    "build_directory": "/path/to/my\-package/build\-dir",
     /* The version of the schema for this metadata structure.
        This will be changed if incompatible changes are ever made.
     */
