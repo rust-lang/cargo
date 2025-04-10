@@ -1426,6 +1426,59 @@ edition = "2021"
 }
 
 #[cargo_test]
+fn dirty_file_outside_pkg_root_inside_submodule() {
+    if !symlink_supported() {
+        return;
+    }
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard"]
+                resolver = "2"
+            "#,
+        )
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition = "2015"
+                homepage = "saruman"
+                description = "saruman"
+                license = "ISC"
+            "#,
+        )
+        .file("isengard/src/lib.rs", "")
+    });
+    let submodule = git::new("submodule", |p| {
+        p.no_manifest().file("file.txt", "from-submodule")
+    });
+    git::add_submodule(
+        &repo,
+        &submodule.root().to_url().to_string(),
+        Path::new("submodule"),
+    );
+    p.symlink("submodule/file.txt", "isengard/src/file.txt");
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file("submodule/file.txt", "changed");
+
+    p.cargo("package --workspace --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+submodule/file.txt
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn issue_13695_allow_dirty_vcs_info() {
     let p = project()
         .file(

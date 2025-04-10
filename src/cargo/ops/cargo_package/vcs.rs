@@ -268,8 +268,41 @@ fn dirty_files_outside_pkg_root(
         // Handle files outside package root but under git workdir,
         .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
     {
-        if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-            dirty_files.insert(workdir.join(rel_path));
+        match repo.status_file(&rel_path) {
+            Ok(git2::Status::CURRENT) => {}
+            Ok(_) => {
+                dirty_files.insert(workdir.join(rel_path));
+            }
+            Err(e) => {
+                if e.code() == git2::ErrorCode::NotFound {
+                    // Object not found means this file might be inside a subrepo/submodule.
+                    // Let's check its status from that repo.
+                    let abs_path = workdir.join(&rel_path);
+                    if let Ok(repo) = git2::Repository::discover(&abs_path) {
+                        let is_dirty = if repo.workdir() == Some(workdir) {
+                            false
+                        } else if let Ok(path) =
+                            paths::strip_prefix_canonical(&abs_path, repo.workdir().unwrap())
+                        {
+                            repo.status_file(&path) != Ok(git2::Status::CURRENT)
+                        } else {
+                            false
+                        };
+                        if is_dirty {
+                            dirty_files.insert(abs_path);
+                        }
+                    }
+                }
+
+                // Dirtiness check for symlinks is mostly informational.
+                // To avoid adding more complicated logic,
+                // for now we ignore the status check failure.
+                debug!(
+                    "failed to get status from file `{}` in git repo at `{}`: {e}",
+                    rel_path.display(),
+                    workdir.display()
+                );
+            }
         }
     }
     Ok(dirty_files)
