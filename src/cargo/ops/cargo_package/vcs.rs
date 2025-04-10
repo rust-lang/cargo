@@ -274,9 +274,28 @@ fn dirty_files_outside_pkg_root(
                 dirty_files.insert(workdir.join(rel_path));
             }
             Err(e) => {
+                if e.code() == git2::ErrorCode::NotFound {
+                    // Object not found means this file might be inside a subrepo/submodule.
+                    // Let's check its status from that repo.
+                    let abs_path = workdir.join(&rel_path);
+                    if let Ok(repo) = git2::Repository::discover(&abs_path) {
+                        let is_dirty = if repo.workdir() == Some(workdir) {
+                            false
+                        } else if let Ok(path) =
+                            paths::strip_prefix_canonical(&abs_path, repo.workdir().unwrap())
+                        {
+                            repo.status_file(&path) != Ok(git2::Status::CURRENT)
+                        } else {
+                            false
+                        };
+                        if is_dirty {
+                            dirty_files.insert(abs_path);
+                        }
+                    }
+                }
+
                 // Dirtiness check for symlinks is mostly informational.
-                // And changes in submodule would fail git-status as well (see #15384).
-                // To avoid adding complicated logic to handle that,
+                // To avoid adding more complicated logic,
                 // for now we ignore the status check failure.
                 debug!(
                     "failed to get status from file `{}` in git repo at `{}`: {e}",

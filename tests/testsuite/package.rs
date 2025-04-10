@@ -1463,13 +1463,16 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     p.symlink("submodule/file.txt", "isengard/src/file.txt");
     git::add(&repo);
     git::commit(&repo);
-    // This dirtyness should be detected in the future.
     p.change_file("submodule/file.txt", "changed");
 
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+submodule/file.txt
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
