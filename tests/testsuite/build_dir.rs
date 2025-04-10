@@ -684,6 +684,39 @@ fn template_workspace_path_hash_should_handle_symlink() {
     }
 }
 
+#[cargo_test]
+fn template_should_handle_ignore_unmatched_brackets() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "foo/{bar"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .run();
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "foo/}bar"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .run();
+}
+
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
     // Since the hash will change between test runs simply find the first directories and assume
     // that is the hash dir. The format is a 2 char directory followed by the remaining hash in the
