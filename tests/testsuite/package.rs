@@ -1467,9 +1467,9 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     p.change_file("submodule/file.txt", "changed");
 
     p.cargo("package --workspace --no-verify")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] attempt to get status of nonexistent file 'submodule/file.txt'; class=Invalid (3); code=NotFound (-3)
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();

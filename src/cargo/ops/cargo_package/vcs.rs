@@ -268,8 +268,22 @@ fn dirty_files_outside_pkg_root(
         // Handle files outside package root but under git workdir,
         .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
     {
-        if repo.status_file(&rel_path)? != git2::Status::CURRENT {
-            dirty_files.insert(workdir.join(rel_path));
+        match repo.status_file(&rel_path) {
+            Ok(git2::Status::CURRENT) => {}
+            Ok(_) => {
+                dirty_files.insert(workdir.join(rel_path));
+            }
+            Err(e) => {
+                // Dirtiness check for symlinks is mostly informational.
+                // And changes in submodule would fail git-status as well (see #15384).
+                // To avoid adding complicated logic to handle that,
+                // for now we ignore the status check failure.
+                debug!(
+                    "failed to get status from file `{}` in git repo at `{}`: {e}",
+                    rel_path.display(),
+                    workdir.display()
+                );
+            }
         }
     }
     Ok(dirty_files)
