@@ -57,7 +57,7 @@ The build will automatically use vendored versions of the following libraries. H
 * [`libcurl`](https://curl.se/libcurl/) — Used for network transfers.
 * [`libgit2`](https://libgit2.org/) — Used for fetching git dependencies.
 * [`libssh2`](https://www.libssh2.org/) — Used for SSH access to git repositories.
-* [`libz`](https://zlib.net/) (aka zlib) — Used for data compression.
+* [`libz`](https://zlib.net/) (AKA zlib) — Used by the above C libraries for data compression. (Rust code uses [`zlib-rs`](https://github.com/trifectatechfoundation/zlib-rs) instead.)
 
 It is recommended to use the vendored versions as they are the versions that are tested to work with Cargo.
 

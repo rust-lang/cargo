@@ -187,7 +187,7 @@ The [`default` features](#the-default-feature) can be disabled using
 
 ```toml
 [dependencies]
-flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
+flate2 = { version = "1.0.3", default-features = false, features = ["zlib-rs"] }
 ```
 
 > **Note**: This may not ensure the default features are disabled. If another

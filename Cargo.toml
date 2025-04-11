@@ -45,7 +45,7 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.47"
 curl-sys = "0.4.79"
 filetime = "0.2.25"
-flate2 = { version = "1.0.35", default-features = false, features = ["zlib"] }
+flate2 = { version = "1.1.1", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.0"
 git2-curl = "0.21.0"
 gix = { version = "0.70.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "parallel", "dirwalk"] }
