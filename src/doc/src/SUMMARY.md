@@ -14,6 +14,7 @@
     * [Package Layout](guide/project-layout.md)
     * [Cargo.toml vs Cargo.lock](guide/cargo-toml-vs-cargo-lock.md)
     * [Tests](guide/tests.md)
+    * [Creating a Workspace](guide/creating-a-new-workspace.md)
     * [Continuous Integration](guide/continuous-integration.md)
     * [Publishing on crates.io](reference/publishing.md)
     * [Cargo Home](guide/cargo-home.md)
