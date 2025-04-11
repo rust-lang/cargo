@@ -1,6 +1,6 @@
 [package]
 name = "build-rs"
-version = "0.3.0"
+version = "0.3.1"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
