@@ -517,6 +517,29 @@ fn template_should_error_for_invalid_variables() {
 }
 
 #[cargo_test]
+fn template_should_suggest_nearest_variable() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "{workspace-ro}/build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected variable `workspace-ro` in build.build-dir path `{workspace-ro}/build-dir`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn template_workspace_root() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
