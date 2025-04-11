@@ -11,9 +11,10 @@ use cargo_credential::{
 };
 
 use core::fmt;
+use jiff::Timestamp;
 use serde::Deserialize;
 use std::error::Error;
-use time::{Duration, OffsetDateTime};
+use std::time::Duration;
 use url::Url;
 
 use crate::core::SourceId;
@@ -619,7 +620,7 @@ fn auth_token_optional(
     if let Some(cached_token) = cache.get(url) {
         if cached_token
             .expiration
-            .map(|exp| OffsetDateTime::now_utc() + Duration::minutes(1) < exp)
+            .map(|exp| Timestamp::now() + Duration::from_secs(60) < exp)
             .unwrap_or(true)
         {
             if cached_token.operation_independent || matches!(operation, Operation::Read) {

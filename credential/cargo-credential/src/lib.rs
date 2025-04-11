@@ -43,9 +43,9 @@
 #![allow(clippy::print_stderr)]
 #![allow(clippy::print_stdout)]
 
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, io};
-use time::OffsetDateTime;
 
 mod error;
 mod secret;
@@ -202,8 +202,8 @@ pub enum CacheControl {
     Never,
     /// Cache this result and use it for subsequent requests in the current Cargo invocation until the specified time.
     Expires {
-        #[serde(with = "time::serde::timestamp")]
-        expiration: OffsetDateTime,
+        #[serde(with = "jiff::fmt::serde::timestamp::second::required")]
+        expiration: Timestamp,
     },
     /// Cache this result and use it for all subsequent requests in the current Cargo invocation.
     Session,
@@ -320,7 +320,7 @@ mod tests {
     #[test]
     fn cache_control() {
         let cc = CacheControl::Expires {
-            expiration: OffsetDateTime::from_unix_timestamp(1693928537).unwrap(),
+            expiration: Timestamp::from_second(1693928537).unwrap(),
         };
         let json = serde_json::to_string(&cc).unwrap();
         assert_eq!(json, r#"{"cache":"expires","expiration":1693928537}"#);

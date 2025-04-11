@@ -20,13 +20,13 @@ flate2.workspace = true
 git2.workspace = true
 glob.workspace = true
 itertools.workspace = true
+jiff.workspace = true
 pasetors.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 snapbox.workspace = true
 tar.workspace = true
-time.workspace = true
 toml.workspace = true
 url.workspace = true
 walkdir.workspace = true
