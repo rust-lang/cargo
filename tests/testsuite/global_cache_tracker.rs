@@ -188,25 +188,6 @@ fn rustup_cargo() -> Execs {
 }
 
 #[cargo_test]
-fn auto_gc_gated() {
-    // Requires -Zgc to run auto-gc.
-    let p = basic_foo_bar_project();
-    p.cargo("check")
-        .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
-        .run();
-    // Check that it created a database.
-    let gctx = GlobalContextBuilder::new().build();
-    assert!(GlobalCacheTracker::db_path(&gctx)
-        .into_path_unlocked()
-        .exists());
-    assert_eq!(get_index_names().len(), 1);
-
-    // Again in the future, shouldn't auto-gc.
-    p.cargo("check").run();
-    assert_eq!(get_index_names().len(), 1);
-}
-
-#[cargo_test]
 fn clean_gc_gated() {
     cargo_process("clean gc")
         .with_status(101)
@@ -287,8 +268,7 @@ fn auto_gc_defaults() {
         .file("src/lib.rs", "")
         .build();
     // Populate the last-use data.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     assert_eq!(get_registry_names("src"), ["new-1.0.0", "old-1.0.0"]);
@@ -311,8 +291,7 @@ fn auto_gc_defaults() {
             new = "1.0"
         "#,
     );
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(2))
         .run();
     assert_eq!(get_registry_names("src"), ["new-1.0.0"]);
@@ -322,11 +301,76 @@ fn auto_gc_defaults() {
     );
 
     // Run again after the .crate should have aged out.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("check").run();
     assert_eq!(get_registry_names("src"), ["new-1.0.0"]);
     assert_eq!(get_registry_names("cache"), ["new-1.0.0.crate"]);
+}
+
+#[cargo_test]
+fn auto_gc_config_gated() {
+    // gc.auto config options should be ignored without -Zgc
+    Package::new("old", "1.0.0").publish();
+    Package::new("new", "1.0.0").publish();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [gc.auto]
+                frequency = "always"
+                max-src-age = "1 day"
+                max-crate-age = "3 days"
+                max-index-age = "3 days"
+                max-git-co-age = "1 day"
+                max-git-db-age = "3 days"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                old = "1.0"
+                new = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    // Populate the last-use data.
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    assert_eq!(get_registry_names("src"), ["new-1.0.0", "old-1.0.0"]);
+    assert_eq!(
+        get_registry_names("cache"),
+        ["new-1.0.0.crate", "old-1.0.0.crate"]
+    );
+
+    // Run again with just one package. Without -Zgc, it should use the
+    // defaults and ignore the config. Nothing should get deleted since the
+    // defaults are much greater than 4 days.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [dependencies]
+            new = "1.0"
+        "#,
+    );
+
+    p.cargo("check").run();
+    assert_eq!(get_registry_names("src"), ["new-1.0.0", "old-1.0.0"]);
+    assert_eq!(
+        get_registry_names("cache"),
+        ["new-1.0.0.crate", "old-1.0.0.crate"]
+    );
 }
 
 #[cargo_test]
@@ -364,8 +408,7 @@ fn auto_gc_config() {
         .file("src/lib.rs", "")
         .build();
     // Populate the last-use data.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
         .run();
     assert_eq!(get_registry_names("src"), ["new-1.0.0", "old-1.0.0"]);
@@ -418,8 +461,7 @@ fn frequency() {
         "#,
     );
     // Populate data in the past.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     assert_eq!(get_index_names().len(), 1);
@@ -429,17 +471,14 @@ fn frequency() {
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.2.0"));
 
     // Try after the default expiration time, with "never" it shouldn't gc.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("check").run();
     assert_eq!(get_index_names().len(), 1);
     assert_eq!(get_registry_names("src"), ["bar-1.0.0"]);
     assert_eq!(get_registry_names("cache"), ["bar-1.0.0.crate"]);
 
     // Try again with a setting that allows it to run.
-    p.cargo("check -Zgc")
+    p.cargo("check")
         .env("CARGO_CACHE_AUTO_CLEAN_FREQUENCY", "1 day")
-        .masquerade_as_nightly_cargo(&["gc"])
         .run();
     assert_eq!(get_index_names().len(), 0);
     assert_eq!(get_registry_names("src").len(), 0);
@@ -450,8 +489,7 @@ fn frequency() {
 fn auto_gc_index() {
     // Deletes the index if it hasn't been used in a while.
     let p = basic_foo_bar_project();
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     assert_eq!(get_index_names().len(), 1);
@@ -466,16 +504,13 @@ fn auto_gc_index() {
             edition = "2015"
         "#,
     );
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(2))
         .run();
     assert_eq!(get_index_names().len(), 1);
 
     // After it expires, it should be deleted.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("check").run();
     assert_eq!(get_index_names().len(), 0);
 }
 
@@ -514,8 +549,7 @@ fn auto_gc_git() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(6))
         .run();
     let db_names = get_git_db_names();
@@ -530,8 +564,7 @@ fn auto_gc_git() {
     git_project.change_file("src/lib.rs", "// modified");
     git::add(&git_repo);
     git::commit(&git_repo);
-    p.cargo("update -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("update")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(6))
         .run();
     assert_eq!(get_git_db_names().len(), 1);
@@ -541,8 +574,7 @@ fn auto_gc_git() {
     assert_eq!(get_git_checkout_names(&db_names[0]), both);
 
     // In the future, using the second checkout should delete the first.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     assert_eq!(get_git_db_names().len(), 1);
@@ -553,9 +585,7 @@ fn auto_gc_git() {
 
     // After three months, the db should get deleted.
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.2.0"));
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("check").run();
     assert_eq!(get_git_db_names().len(), 0);
     assert_eq!(get_git_checkout_names(&db_names[0]).len(), 0);
 }
@@ -588,8 +618,6 @@ fn auto_gc_various_commands() {
             .build();
         // Populate the last-use data.
         p.cargo(cmd)
-            .arg("-Zgc")
-            .masquerade_as_nightly_cargo(&["gc"])
             .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
             .run();
         let gctx = GlobalContextBuilder::new().build();
@@ -607,10 +635,7 @@ fn auto_gc_various_commands() {
 
         // After everything is aged out, it should all be deleted.
         p.change_file("Cargo.toml", &basic_manifest("foo", "0.2.0"));
-        p.cargo(cmd)
-            .arg("-Zgc")
-            .masquerade_as_nightly_cargo(&["gc"])
-            .run();
+        p.cargo(cmd).run();
         let lock = gctx
             .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
             .unwrap();
@@ -673,10 +698,7 @@ fn updates_last_use_various_commands() {
             .file("src/lib.rs", "")
             .build();
         // Populate the last-use data.
-        p.cargo(cmd)
-            .arg("-Zgc")
-            .masquerade_as_nightly_cargo(&["gc"])
-            .run();
+        p.cargo(cmd).run();
         let gctx = GlobalContextBuilder::new().build();
         let lock = gctx
             .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
@@ -723,8 +745,7 @@ fn both_git_and_http_index_cleans() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("update -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("update")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     let gctx = GlobalContextBuilder::new().build();
@@ -756,8 +777,7 @@ fn clean_gc_dry_run() {
     // Basic `clean --gc --dry-run` test.
     let p = basic_foo_bar_project();
     // Populate the last-use data.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
 
@@ -810,8 +830,7 @@ fn clean_default_gc() {
     // `clean gc` without options should also gc
     let p = basic_foo_bar_project();
     // Populate the last-use data.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     p.cargo("clean gc -v -Zgc")
@@ -855,9 +874,7 @@ fn tracks_sizes() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("fetch").run();
 
     // Check that the crate sizes are the same as on disk.
     let gctx = GlobalContextBuilder::new().build();
@@ -1085,9 +1102,7 @@ fn max_size_untracked_src_from_use() {
     let (gctx, p) = max_size_untracked_prepare();
 
     // Run a command that will update the db with an unknown src size.
-    p.cargo("tree -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("tree").run();
     // Check that it is None.
     let lock = gctx
         .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
@@ -1241,8 +1256,7 @@ fn package_cache_lock_during_build() {
 
     // Start a build that will pause once the build starts.
     let mut foo_child = p_foo
-        .cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+        .cargo("check")
         .build_command()
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1257,8 +1271,7 @@ fn package_cache_lock_during_build() {
     //
     // Also verify that auto-gc gets disabled.
     p_foo2
-        .cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+        .cargo("check")
         .env("CARGO_CACHE_AUTO_CLEAN_FREQUENCY", "always")
         .env("CARGO_LOG", "gc=debug")
         .with_stderr_data(str![[r#"
@@ -1311,9 +1324,7 @@ fn read_only_locking_auto_gc() {
     // Tests the behavior for auto-gc on a read-only directory.
     let p = basic_foo_bar_project();
     // Populate cache.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("fetch").run();
     let cargo_home = paths::home().join(".cargo");
     let mut perms = std::fs::metadata(&cargo_home).unwrap().permissions();
     // Test when it can't update auto-gc db.
@@ -1353,8 +1364,7 @@ fn read_only_locking_auto_gc() {
 fn delete_index_also_deletes_crates() {
     // Checks that when an index is delete that src and cache directories also get deleted.
     let p = basic_foo_bar_project();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
 
@@ -1397,9 +1407,7 @@ fn clean_syncs_missing_files() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("fetch").run();
 
     // Verify things are tracked.
     let gctx = GlobalContextBuilder::new().build();
@@ -1445,15 +1453,13 @@ fn clean_syncs_missing_files() {
 fn offline_doesnt_auto_gc() {
     // When running offline, auto-gc shouldn't run.
     let p = basic_foo_bar_project();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     // Remove the dependency.
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.1.0"));
     // Run offline, make sure it doesn't delete anything
-    p.cargo("check --offline -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check --offline")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1463,8 +1469,7 @@ fn offline_doesnt_auto_gc() {
     assert_eq!(get_registry_names("src"), ["bar-1.0.0"]);
     assert_eq!(get_registry_names("cache"), ["bar-1.0.0.crate"]);
     // Run online, make sure auto-gc runs.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1479,8 +1484,7 @@ fn can_handle_future_schema() -> anyhow::Result<()> {
     // It should work when a future version of cargo has made schema changes
     // to the database.
     let p = basic_foo_bar_project();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     // Modify the schema to pretend this is done by a future version of cargo.
@@ -1531,8 +1535,7 @@ fn clean_max_git_age() {
         .file("src/lib.rs", "")
         .build();
     // Populate last-use tracking.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
         .run();
     // Update git_a to create a separate checkout.
@@ -1540,8 +1543,7 @@ fn clean_max_git_age() {
     git::add(&git_a_repo);
     git::commit(&git_a_repo);
     // Update last-use tracking, where the first git checkout will stay "old".
-    p.cargo("update -p git_a -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("update -p git_a")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/git_a`
@@ -1612,14 +1614,12 @@ fn clean_max_src_crate_age() {
     // --max-src-age and --max-crate-age flags
     let p = basic_foo_bar_project();
     // Populate last-use tracking.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
         .run();
     // Update bar to create a separate copy with a different timestamp.
     Package::new("bar", "1.0.1").publish();
-    p.cargo("update -p bar -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("update -p bar")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1628,8 +1628,7 @@ fn clean_max_src_crate_age() {
 
 "#]])
         .run();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
         .with_stderr_data(str![[r#"
 [DOWNLOADING] crates ...
@@ -1718,8 +1717,7 @@ fn clean_max_git_size() {
         .file("src/lib.rs", "")
         .build();
     // Fetch and populate db.
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(3))
         .run();
 
@@ -1736,8 +1734,7 @@ fn clean_max_git_size() {
     git_project.change_file("src/lib.rs", "// modified");
     git::add(&git_repo);
     git::commit(&git_repo);
-    p.cargo("update -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("update")
         // Use a different time so that the first checkout timestamp is less
         // than the second.
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
@@ -1860,9 +1857,7 @@ fn clean_max_git_size_deletes_co_from_db() {
 fn handles_missing_index() {
     // Checks behavior when index is missing.
     let p = basic_foo_bar_project();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("fetch").run();
     paths::home().join(".cargo/registry/index").rm_rf();
     cargo_process("clean gc -v --max-download-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
@@ -1903,9 +1898,7 @@ fn handles_missing_git_db() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("fetch").run();
     paths::home().join(".cargo/git/db").rm_rf();
     cargo_process("clean gc -v --max-git-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
@@ -1922,8 +1915,7 @@ fn clean_gc_quiet_is_quiet() {
     // Checks that --quiet works with `cargo clean gc`, since there was a
     // subtle issue with how the flag is defined as a global flag.
     let p = basic_foo_bar_project();
-    p.cargo("fetch -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("fetch")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     p.cargo("clean gc --quiet -Zgc --dry-run")
@@ -1969,8 +1961,7 @@ fn compatible_with_older_cargo() {
         .file("src/lib.rs", "")
         .build();
     // Populate the last-use data.
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
+    p.cargo("check")
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
     assert_eq!(
@@ -1996,6 +1987,7 @@ fn compatible_with_older_cargo() {
             middle = "1.0"
         "#,
     );
+    // TODO: Remove -Zgc after 1.82 is stabilized.
     rustup_cargo()
         .args(&["+stable", "check", "-Zgc"])
         .cwd(p.root())
@@ -2022,9 +2014,7 @@ fn compatible_with_older_cargo() {
             new = "1.0"
         "#,
     );
-    p.cargo("check -Zgc")
-        .masquerade_as_nightly_cargo(&["gc"])
-        .run();
+    p.cargo("check").run();
     assert_eq!(get_registry_names("src"), ["new-1.0.0"]);
     assert_eq!(
         get_registry_names("cache"),
@@ -2060,9 +2050,8 @@ fn forward_compatible() {
         .build();
 
     rustup_cargo()
-        .args(&["+stable", "check", "-Zgc"])
+        .args(&["+stable", "check"])
         .cwd(p.root())
-        .masquerade_as_nightly_cargo(&["gc"])
         .run();
 
     let config = GlobalContextBuilder::new().build();
