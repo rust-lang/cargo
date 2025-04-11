@@ -48,6 +48,7 @@ filetime = "0.2.25"
 flate2 = { version = "1.0.35", default-features = false, features = ["zlib"] }
 git2 = "0.20.0"
 git2-curl = "0.21.0"
+# When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
 gix = { version = "0.71.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "parallel", "dirwalk"] }
 glob = "0.3.2"
 handlebars = { version = "6.3.1", features = ["dir_source"] }
@@ -252,6 +253,9 @@ features = [
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
 cargo-test-support.workspace = true
 gix = { workspace = true, features = ["revision"] }
+# When building Cargo for tests, a safety-measure in `gix` needs to be disabled
+# to allow sending credentials over HTTP connections.
+gix-transport = { version = "0.46.0", features = ["http-client-insecure-credentials"] }
 same-file.workspace = true
 snapbox.workspace = true
 

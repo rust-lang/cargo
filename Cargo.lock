@@ -327,6 +327,7 @@ dependencies = [
  "git2",
  "git2-curl",
  "gix",
+ "gix-transport",
  "glob",
  "hex",
  "hmac",
