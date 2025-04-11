@@ -77,13 +77,14 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::{internal, CanonicalUrl};
+use crate::util::{closest_msg, internal, CanonicalUrl};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_credential::Secret;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
+use itertools::Itertools;
 use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
@@ -678,15 +679,27 @@ impl GlobalContext {
                 }),
             ];
 
+            let template_variables = replacements
+                .iter()
+                .map(|(key, _)| key[1..key.len() - 1].to_string())
+                .collect_vec();
+
             let path = val
                 .resolve_templated_path(self, replacements)
                 .map_err(|e| match e {
                     path::ResolveTemplateError::UnexpectedVariable {
                         variable,
                         raw_template,
-                    } => anyhow!(
-                        "unexpected variable `{variable}` in build.build-dir path `{raw_template}`"
-                    ),
+                    } => {
+                        let mut suggestion = closest_msg(&variable, template_variables.iter(), |key| key, "template variable");
+                        if suggestion == "" {
+                            let variables = template_variables.iter().map(|v| format!("`{{{v}}}`")).join(", ");
+                            suggestion = format!("\n\nhelp: available template variables are {variables}");
+                        }
+                        anyhow!(
+                            "unexpected variable `{variable}` in build.build-dir path `{raw_template}`{suggestion}"
+                        )
+                    },
                     path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
                         let (btype, literal) = match bracket_type {
                             path::BracketType::Opening => ("opening", "{"),

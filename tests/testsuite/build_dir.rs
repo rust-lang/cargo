@@ -512,6 +512,8 @@ fn template_should_error_for_invalid_variables() {
         .with_stderr_data(str![[r#"
 [ERROR] unexpected variable `fake` in build.build-dir path `{fake}/build-dir`
 
+[HELP] available template variables are `{workspace-root}`, `{cargo-cache-home}`, `{workspace-path-hash}`
+
 "#]])
         .run();
 }
@@ -534,6 +536,8 @@ fn template_should_suggest_nearest_variable() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] unexpected variable `workspace-ro` in build.build-dir path `{workspace-ro}/build-dir`
+
+[HELP] a template variable with a similar name exists: `workspace-root`
 
 "#]])
         .run();
