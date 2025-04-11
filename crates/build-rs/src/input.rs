@@ -162,7 +162,7 @@ mod cfg {
     #[doc = requires_msrv!("1.85")]
     #[track_caller]
     pub fn cargo_cfg_feature() -> Vec<String> {
-        to_strings(var_or_panic(&cargo_cfg_var("target_feature")), ',')
+        to_strings(var_or_panic(&cargo_cfg_var("feature")), ',')
     }
 
     #[cfg(any())]
