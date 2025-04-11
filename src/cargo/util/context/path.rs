@@ -58,6 +58,20 @@ impl ConfigRelativePath {
             });
         };
 
+        if value.contains("{") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Opening,
+                raw_template: self.0.val.clone(),
+            });
+        }
+
+        if value.contains("}") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Closing,
+                raw_template: self.0.val.clone(),
+            });
+        }
+
         Ok(self.0.definition.root(gctx).join(&value))
     }
 
@@ -139,4 +153,14 @@ pub enum ResolveTemplateError {
         variable: String,
         raw_template: String,
     },
+    UnexpectedBracket {
+        bracket_type: BracketType,
+        raw_template: String,
+    },
+}
+
+#[derive(Debug)]
+pub enum BracketType {
+    Opening,
+    Closing,
 }

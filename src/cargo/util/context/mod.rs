@@ -687,6 +687,16 @@ impl GlobalContext {
                     } => anyhow!(
                         "unexpected variable `{variable}` in build.build-dir path `{raw_template}`"
                     ),
+                    path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                        let (btype, literal) = match bracket_type {
+                            path::BracketType::Opening => ("opening", "{"),
+                            path::BracketType::Closing => ("closing", "}"),
+                        };
+
+                        anyhow!(
+                            "unexpected {btype} bracket `{literal}` in build.build-dir path `{raw_template}`"
+                        )
+                    }
                 })?;
 
             // Check if the target directory is set to an empty string in the config.toml file.

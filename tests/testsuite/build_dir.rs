@@ -685,7 +685,7 @@ fn template_workspace_path_hash_should_handle_symlink() {
 }
 
 #[cargo_test]
-fn template_should_handle_ignore_unmatched_brackets() {
+fn template_should_handle_reject_unmatched_brackets() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -699,6 +699,11 @@ fn template_should_handle_ignore_unmatched_brackets() {
 
     p.cargo("build -Z build-dir")
         .masquerade_as_nightly_cargo(&["build-dir"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected opening bracket `{` in build.build-dir path `foo/{bar`
+
+"#]])
         .run();
 
     let p = project()
@@ -714,6 +719,11 @@ fn template_should_handle_ignore_unmatched_brackets() {
 
     p.cargo("build -Z build-dir")
         .masquerade_as_nightly_cargo(&["build-dir"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected closing bracket `}` in build.build-dir path `foo/}bar`
+
+"#]])
         .run();
 }
 
