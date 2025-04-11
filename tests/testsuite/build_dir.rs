@@ -512,6 +512,33 @@ fn template_should_error_for_invalid_variables() {
         .with_stderr_data(str![[r#"
 [ERROR] unexpected variable `fake` in build.build-dir path `{fake}/build-dir`
 
+[HELP] available template variables are `{workspace-root}`, `{cargo-cache-home}`, `{workspace-path-hash}`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn template_should_suggest_nearest_variable() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "{workspace-ro}/build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z build-dir")
+        .masquerade_as_nightly_cargo(&["build-dir"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected variable `workspace-ro` in build.build-dir path `{workspace-ro}/build-dir`
+
+[HELP] a template variable with a similar name exists: `workspace-root`
+
 "#]])
         .run();
 }
