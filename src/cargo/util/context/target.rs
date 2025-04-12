@@ -1,5 +1,5 @@
 use super::{ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::{BuildOutput, LinkArgTarget};
+use crate::core::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -167,7 +167,9 @@ fn parse_links_overrides(
                     let flags = value.string(key)?;
                     let whence = format!("target config `{}.{}` (in {})", target_key, key, flags.1);
                     let (paths, links) = BuildOutput::parse_rustc_flags(flags.0, &whence)?;
-                    output.library_paths.extend(paths);
+                    output
+                        .library_paths
+                        .extend(paths.into_iter().map(LibraryPath::External));
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
@@ -178,9 +180,11 @@ fn parse_links_overrides(
                 }
                 "rustc-link-search" => {
                     let list = value.list(key)?;
-                    output
-                        .library_paths
-                        .extend(list.iter().map(|v| PathBuf::from(&v.0)));
+                    output.library_paths.extend(
+                        list.iter()
+                            .map(|v| PathBuf::from(&v.0))
+                            .map(LibraryPath::External),
+                    );
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     let args = extra_link_args(LinkArgTarget::Cdylib, key, value)?;
