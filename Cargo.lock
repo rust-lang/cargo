@@ -3422,13 +3422,14 @@ checksum = "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08"
 
 [[package]]
 name = "rustfix"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "proptest",
  "serde",
  "serde_json",
  "similar",
+ "snapbox",
  "tempfile",
  "thiserror 2.0.11",
  "tracing",

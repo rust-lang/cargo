@@ -22,16 +22,16 @@
 
 #![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
 
-use anyhow::{anyhow, ensure, Context, Error};
+use anyhow::{anyhow, Context, Error};
 use rustfix::apply_suggestions;
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Output};
 use tempfile::tempdir;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
@@ -151,7 +151,7 @@ fn diff(expected: &str, actual: &str) -> String {
     res
 }
 
-fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Error> {
+fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) {
     let file: &Path = file.as_ref();
     let json_file = file.with_extension("json");
     let fixed_file = file.with_extension("fixed.rs");
@@ -162,26 +162,25 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
         rustfix::Filter::MachineApplicableOnly
     };
 
-    debug!("next up: {:?}", file);
-    let code = fs::read_to_string(file)?;
+    let code = fs::read_to_string(file).unwrap();
     let errors = compile_and_get_json_errors(file)
-        .with_context(|| format!("could not compile {}", file.display()))?;
+        .with_context(|| format!("could not compile {}", file.display())).unwrap();
     let suggestions =
         rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
-            .context("could not load suggestions")?;
+            .context("could not load suggestions").unwrap();
 
     if std::env::var(settings::RECORD_JSON).is_ok() {
-        fs::write(file.with_extension("recorded.json"), &errors)?;
+        fs::write(file.with_extension("recorded.json"), &errors).unwrap();
     }
 
     if std::env::var(settings::CHECK_JSON).is_ok() {
         let expected_json = fs::read_to_string(&json_file)
-            .with_context(|| format!("could not load json fixtures for {}", file.display()))?;
+            .with_context(|| format!("could not load json fixtures for {}", file.display())).unwrap();
         let expected_suggestions =
             rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
-                .context("could not load expected suggestions")?;
+                .context("could not load expected suggestions").unwrap();
 
-        ensure!(
+        assert!(
             expected_suggestions == suggestions,
             "got unexpected suggestions from clippy:\n{}",
             diff(
@@ -192,86 +191,58 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let fixed = apply_suggestions(&code, &suggestions)
-        .with_context(|| format!("could not apply suggestions to {}", file.display()))?
+        .with_context(|| format!("could not apply suggestions to {}", file.display())).unwrap()
         .replace('\r', "");
 
     if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
-        fs::write(file.with_extension("recorded.rs"), &fixed)?;
+        fs::write(file.with_extension("recorded.rs"), &fixed).unwrap();
     }
 
     if let Some(bless_name) = std::env::var_os(settings::BLESS) {
         if bless_name == file.file_name().unwrap() {
-            std::fs::write(&json_file, &errors)?;
-            std::fs::write(&fixed_file, &fixed)?;
+            std::fs::write(&json_file, &errors).unwrap();
+            std::fs::write(&fixed_file, &fixed).unwrap();
         }
     }
 
     let expected_fixed = fs::read_to_string(&fixed_file)
-        .with_context(|| format!("could read fixed file for {}", file.display()))?
+        .with_context(|| format!("could read fixed file for {}", file.display())).unwrap()
         .replace('\r', "");
-    ensure!(
+    assert!(
         fixed.trim() == expected_fixed.trim(),
         "file {} doesn't look fixed:\n{}",
         file.display(),
         diff(fixed.trim(), expected_fixed.trim())
     );
 
-    compiles_without_errors(&fixed_file)?;
+    compiles_without_errors(&fixed_file).unwrap();
 
-    Ok(())
 }
 
-fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Error> {
-    Ok(fs::read_dir(p)?
-        .map(|e| e.unwrap().path())
-        .filter(|p| p.is_file())
-        .filter(|p| {
-            let x = p.to_string_lossy();
-            x.ends_with(".rs") && !x.ends_with(".fixed.rs") && !x.ends_with(".recorded.rs")
-        })
-        .collect())
-}
-
-fn assert_fixtures(dir: &str, mode: &str) {
-    let files = get_fixture_files(dir)
-        .with_context(|| format!("couldn't load dir `{dir}`"))
-        .unwrap();
-    let mut failures = 0;
-
-    let is_not_nightly = !version().1;
-
-    for file in &files {
-        if file
-            .file_stem()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .ends_with(".nightly")
-            && is_not_nightly
-        {
-            info!("skipped: {file:?}");
-            continue;
+macro_rules! run_test {
+    ($name:ident, $file:expr) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $name() {
+            let (_, nightly) = version();
+            if !$file.ends_with(".nightly.rs") || nightly {
+                let file = Path::new(concat!("./tests/everything/", $file));
+                assert!(file.is_file(), "could not load {}", $file);
+                test_rustfix_with_file(file, fixmode::EVERYTHING);
+            }
         }
-        if let Err(err) = test_rustfix_with_file(file, mode) {
-            println!("failed: {}", file.display());
-            warn!("{:?}", err);
-            failures += 1;
-        }
-        info!("passed: {:?}", file);
-    }
-
-    if failures > 0 {
-        panic!(
-            "{} out of {} fixture asserts failed\n\
-             (run with `env RUST_LOG=parse_and_replace=info` to get more details)",
-            failures,
-            files.len(),
-        );
-    }
+    };
 }
 
-#[test]
-fn everything() {
-    tracing_subscriber::fmt::init();
-    assert_fixtures("./tests/everything", fixmode::EVERYTHING);
+run_test! {
+    closure_immutable_outer_variable,
+    "closure-immutable-outer-variable.rs"
 }
+run_test! {dedup_suggestions, "dedup-suggestions.rs"}
+run_test! {E0178, "E0178.rs"}
+run_test! {handle_insert_only, "handle-insert-only.rs"}
+run_test! {lt_generic_comp, "lt-generic-comp.rs"}
+run_test! {multiple_solutions, "multiple-solutions.nightly.rs"}
+run_test! {replace_only_one_char, "replace-only-one-char.rs"}
+run_test! {str_lit_type_mismatch, "str-lit-type-mismatch.rs"}
+run_test! {use_insert, "use-insert.rs"}
