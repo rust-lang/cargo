@@ -7,23 +7,18 @@
 //! compares the result with the corresponding `.fixed.rs` file. If they don't
 //! match, then the test fails.
 //!
-//! There are several debugging environment variables for this test that you can set:
+//! The files ending in `.nightly.rs` will run only on the nightly toolchain
 //!
-//! - `RUST_LOG=parse_and_replace=debug`: Print debug information.
-//! - `RUSTFIX_TEST_BLESS=test-name.rs`: When given the name of a test, this
-//!   will overwrite the `.json` and `.fixed.rs` files with the expected
-//!   values. This can be used when adding a new test.
-//! - `RUSTFIX_TEST_RECORD_JSON=1`:  Records the JSON output to
-//!   `*.recorded.json` files. You can then move that to `.json` or whatever
-//!   you need.
-//! - `RUSTFIX_TEST_RECORD_FIXED_RUST=1`: Records the fixed result to
-//!   `*.recorded.rs` files. You can then move that to `.rs` or whatever you
-//!   need.
+//! To override snapshots, run `SNAPSHOTS=overwrite cargo test`.
+//! See [`snapbox::assert::Action`] for different actions.
 
 #![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
 
 use anyhow::{anyhow, Context, Error};
 use rustfix::apply_suggestions;
+use serde_json::Value;
+use snapbox::data::DataFormat;
+use snapbox::{Assert, Data};
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
@@ -31,18 +26,9 @@ use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 use tempfile::tempdir;
-use tracing::info;
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
-}
-
-mod settings {
-    // can be set as env var to debug
-    pub const CHECK_JSON: &str = "RUSTFIX_TEST_CHECK_JSON";
-    pub const RECORD_JSON: &str = "RUSTFIX_TEST_RECORD_JSON";
-    pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
-    pub const BLESS: &str = "RUSTFIX_TEST_BLESS";
 }
 
 static mut VERSION: (u32, bool) = (0, false);
@@ -108,53 +94,19 @@ fn compiles_without_errors(file: &Path) -> Result<(), Error> {
 
     match res.status.code() {
         Some(0) => Ok(()),
-        _ => {
-            info!(
-                "file {:?} failed to compile:\n{}",
-                file,
-                String::from_utf8(res.stderr)?
-            );
-            Err(anyhow!(
-                "failed with status {:?} (`env RUST_LOG=parse_and_replace=info` for more info)",
-                res.status.code(),
-            ))
-        }
+        _ => Err(anyhow!(
+            "file {:?} failed compile with status {:?}:\n {}",
+            file,
+            res.status.code(),
+            String::from_utf8(res.stderr)?
+        )),
     }
-}
-
-fn diff(expected: &str, actual: &str) -> String {
-    use similar::{ChangeTag, TextDiff};
-    use std::fmt::Write;
-
-    let mut res = String::new();
-    let diff = TextDiff::from_lines(expected.trim(), actual.trim());
-
-    let mut different = false;
-    for op in diff.ops() {
-        for change in diff.iter_changes(op) {
-            let prefix = match change.tag() {
-                ChangeTag::Equal => continue,
-                ChangeTag::Insert => "+",
-                ChangeTag::Delete => "-",
-            };
-            if !different {
-                writeln!(&mut res, "differences found (+ == actual, - == expected):").unwrap();
-                different = true;
-            }
-            write!(&mut res, "{} {}", prefix, change.value()).unwrap();
-        }
-    }
-    if different {
-        write!(&mut res, "").unwrap();
-    }
-
-    res
 }
 
 fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) {
     let file: &Path = file.as_ref();
     let json_file = file.with_extension("json");
-    let fixed_file = file.with_extension("fixed.rs");
+    let expected_fixed_file = file.with_extension("fixed.rs");
 
     let filter_suggestions = if mode == fixmode::EVERYTHING {
         rustfix::Filter::Everything
@@ -163,60 +115,51 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) {
     };
 
     let code = fs::read_to_string(file).unwrap();
-    let errors = compile_and_get_json_errors(file)
-        .with_context(|| format!("could not compile {}", file.display())).unwrap();
+
+    let json = compile_and_get_json_errors(file)
+        .with_context(|| format!("could not compile {}", file.display()))
+        .unwrap();
+
     let suggestions =
-        rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
-            .context("could not load suggestions").unwrap();
-
-    if std::env::var(settings::RECORD_JSON).is_ok() {
-        fs::write(file.with_extension("recorded.json"), &errors).unwrap();
-    }
-
-    if std::env::var(settings::CHECK_JSON).is_ok() {
-        let expected_json = fs::read_to_string(&json_file)
-            .with_context(|| format!("could not load json fixtures for {}", file.display())).unwrap();
-        let expected_suggestions =
-            rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
-                .context("could not load expected suggestions").unwrap();
-
-        assert!(
-            expected_suggestions == suggestions,
-            "got unexpected suggestions from clippy:\n{}",
-            diff(
-                &format!("{:?}", expected_suggestions),
-                &format!("{:?}", suggestions)
-            )
-        );
-    }
+        rustfix::get_suggestions_from_json(&json, &HashSet::new(), filter_suggestions)
+            .context("could not load suggestions")
+            .unwrap();
 
     let fixed = apply_suggestions(&code, &suggestions)
-        .with_context(|| format!("could not apply suggestions to {}", file.display())).unwrap()
+        .with_context(|| format!("could not apply suggestions to {}", file.display()))
+        .unwrap()
         .replace('\r', "");
 
-    if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
-        fs::write(file.with_extension("recorded.rs"), &fixed).unwrap();
-    }
-
-    if let Some(bless_name) = std::env::var_os(settings::BLESS) {
-        if bless_name == file.file_name().unwrap() {
-            std::fs::write(&json_file, &errors).unwrap();
-            std::fs::write(&fixed_file, &fixed).unwrap();
-        }
-    }
-
-    let expected_fixed = fs::read_to_string(&fixed_file)
-        .with_context(|| format!("could read fixed file for {}", file.display())).unwrap()
-        .replace('\r', "");
-    assert!(
-        fixed.trim() == expected_fixed.trim(),
-        "file {} doesn't look fixed:\n{}",
-        file.display(),
-        diff(fixed.trim(), expected_fixed.trim())
+    let assert = Assert::new().action_env(snapbox::assert::DEFAULT_ACTION_ENV);
+    let (actual_fix, expected_fix) = assert.normalize(
+        Data::text(&fixed),
+        Data::read_from(expected_fixed_file.as_path(), Some(DataFormat::Text)),
     );
 
-    compiles_without_errors(&fixed_file).unwrap();
+    if actual_fix != expected_fix {
+        let fixed_assert = assert.try_eq(Some(&"Current Fix"), actual_fix, expected_fix);
+        assert!(fixed_assert.is_ok(), "{}", fixed_assert.err().unwrap());
 
+        let expected_json = Data::read_from(json_file.as_path(), Some(DataFormat::Text));
+
+        let pretty_json = json
+            .split("\n")
+            .filter(|j| !j.is_empty())
+            .map(|j| {
+                serde_json::to_string_pretty(&serde_json::from_str::<Value>(j).unwrap()).unwrap()
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        let json_assert = assert.try_eq(
+            Some(&"Compiler Error"),
+            Data::text(pretty_json),
+            expected_json,
+        );
+        assert!(json_assert.is_ok(), "{}", json_assert.err().unwrap());
+    }
+
+    compiles_without_errors(&expected_fixed_file).unwrap();
 }
 
 macro_rules! run_test {
