@@ -185,7 +185,7 @@ run_test! {dedup_suggestions, "dedup-suggestions.rs"}
 run_test! {E0178, "E0178.rs"}
 run_test! {handle_insert_only, "handle-insert-only.rs"}
 run_test! {lt_generic_comp, "lt-generic-comp.rs"}
-run_test! {multiple_solutions, "multiple-solutions.nightly.rs"}
+run_test! {multiple_solutions, "multiple-solutions.rs"}
 run_test! {replace_only_one_char, "replace-only-one-char.rs"}
 run_test! {str_lit_type_mismatch, "str-lit-type-mismatch.rs"}
 run_test! {use_insert, "use-insert.rs"}
