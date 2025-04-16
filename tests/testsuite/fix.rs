@@ -1424,10 +1424,9 @@ fn fix_to_broken_code() {
     p.cargo("build").cwd("foo").run();
 
     // Attempt to fix code, but our shim will always fail the second compile
-    p.cargo("fix --all-targets --allow-no-vcs --broken-code")
+    p.cargo("fix --allow-no-vcs --broken-code")
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_status(101)
         .with_stderr_data(str![[r#"
 ...
 [WARNING] failed to automatically apply fixes suggested by rustc to crate `bar`
