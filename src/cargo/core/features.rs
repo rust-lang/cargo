@@ -1279,10 +1279,8 @@ impl CliUnstable {
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "gc" => self.gc = parse_empty(k, v)?,
             "git" => {
-                self.git = v.map_or_else(
-                    || Ok(Some(GitFeatures::all())),
-                    |v| parse_git(v.split(',')),
-                )?
+                self.git =
+                    v.map_or_else(|| Ok(Some(GitFeatures::all())), |v| parse_git(v.split(',')))?
             }
             "gitoxide" => {
                 self.gitoxide = v.map_or_else(
@@ -1297,7 +1295,7 @@ impl CliUnstable {
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
-            "package-workspace" => self.package_workspace= parse_empty(k, v)?,
+            "package-workspace" => self.package_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "public-dependency" => self.public_dependency = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
@@ -1315,10 +1313,13 @@ impl CliUnstable {
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "warnings" => self.warnings = parse_empty(k, v)?,
-            _ => bail!("\
+            _ => bail!(
+                "\
             unknown `-Z` flag specified: {k}\n\n\
-            For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html\n\
-            If you intended to use an unstable rustc feature, try setting `RUSTFLAGS=\"-Z{k}\"`"),
+            For available unstable features, see \
+            https://doc.rust-lang.org/nightly/cargo/reference/unstable.html\n\
+            If you intended to use an unstable rustc feature, try setting `RUSTFLAGS=\"-Z{k}\"`"
+            ),
         }
 
         Ok(())
