@@ -36,7 +36,7 @@ impl ConfigRelativePath {
     /// Same as [`Self::resolve_path`] but will make string replacements
     /// before resolving the path.
     ///
-    /// `replacements` should be an an [`IntoIterator`] of tuples with the "from" and "to" for the
+    /// `replacements` should be an [`IntoIterator`] of tuples with the "from" and "to" for the
     /// string replacement
     pub fn resolve_templated_path(
         &self,
