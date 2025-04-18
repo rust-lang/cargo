@@ -541,7 +541,7 @@ pub(crate) fn prepare_transmit(
             .map(|(feat, values)| {
                 (
                     feat.to_string(),
-                    values.iter().map(|fv| fv.to_string()).collect(),
+                    values.enables().iter().map(|fv| fv.to_string()).collect(),
                 )
             })
             .collect::<BTreeMap<String, Vec<String>>>(),
