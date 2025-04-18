@@ -26,6 +26,7 @@ use crate::core::Package;
 use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Summary;
+use crate::core::Verbosity;
 use crate::core::Workspace;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
@@ -60,6 +61,7 @@ pub struct AddOptions<'a> {
     pub dry_run: bool,
     /// Whether the minimum supported Rust version should be considered during resolution
     pub honor_rust_version: Option<bool>,
+    pub verbose: bool,
 }
 
 /// Add dependencies to a manifest
@@ -168,7 +170,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 write!(message, "no features available for crate {}", dep.name)?;
             } else {
                 if !deactivated.is_empty() {
-                    if deactivated.len() <= MAX_FEATURE_PRINTS {
+                    if options.verbose || deactivated.len() <= MAX_FEATURE_PRINTS {
                         writeln!(
                             message,
                             "disabled features:\n    {}",
@@ -188,7 +190,8 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     }
                 }
                 if !activated.is_empty() {
-                    if deactivated.len() + activated.len() <= MAX_FEATURE_PRINTS {
+                    if options.verbose || deactivated.len() + activated.len() <= MAX_FEATURE_PRINTS
+                    {
                         writeln!(
                             message,
                             "enabled features:\n    {}",
@@ -1113,6 +1116,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
         return Ok(());
     }
 
+    let verbose = shell.verbosity() == Verbosity::Verbose;
     let stderr = shell.err();
     let good = style::GOOD;
     let error = style::ERROR;
@@ -1127,7 +1131,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
         let total_activated = activated.len();
         let total_deactivated = deactivated.len();
 
-        if total_activated <= MAX_FEATURE_PRINTS {
+        if verbose || total_activated <= MAX_FEATURE_PRINTS {
             for feat in activated {
                 writeln!(stderr, "{prefix}{good}+{good:#} {feat}")?;
             }
@@ -1135,7 +1139,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
             writeln!(stderr, "{prefix}{total_activated} activated features")?;
         }
 
-        if total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
+        if verbose || total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
             for feat in deactivated {
                 writeln!(stderr, "{prefix}{error}-{error:#} {feat}")?;
             }
