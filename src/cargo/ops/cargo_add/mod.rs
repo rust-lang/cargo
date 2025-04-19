@@ -29,6 +29,7 @@ use crate::core::Summary;
 use crate::core::Workspace;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::edit_distance;
 use crate::util::style;
 use crate::util::toml::lookup_path_base;
 use crate::util::toml_mut::dependency::Dependency;
@@ -167,6 +168,17 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             if activated.is_empty() && deactivated.is_empty() {
                 write!(message, "no features available for crate {}", dep.name)?;
             } else {
+                for unknown_feature in &unknown_features {
+                    let suggested_feature_msg = edit_distance::closest_msg(
+                        unknown_feature,
+                        deactivated.iter().chain(activated.iter()),
+                        |dep| *dep,
+                        "feature",
+                    );
+                    if !suggested_feature_msg.is_empty() {
+                        writeln!(message, "{suggested_feature_msg}")?;
+                    }
+                }
                 if !deactivated.is_empty() {
                     if deactivated.len() <= MAX_FEATURE_PRINTS {
                         writeln!(
