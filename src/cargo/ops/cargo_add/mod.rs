@@ -171,7 +171,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                 for unknown_feature in &unknown_features {
                     let suggested_feature_msg = edit_distance::closest_msg(
                         unknown_feature,
-                        deactivated.iter(),
+                        deactivated.iter().chain(activated.iter()),
                         |dep| *dep,
                         "feature",
                     );
