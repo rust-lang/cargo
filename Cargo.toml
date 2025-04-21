@@ -216,6 +216,7 @@ tracing = { workspace = true, features = ["attributes"] }
 tracing-subscriber.workspace = true
 unicase.workspace = true
 unicode-width.workspace = true
+unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 

@@ -376,6 +376,7 @@ dependencies = [
  "tracing-subscriber",
  "unicase",
  "unicode-width",
+ "unicode-xid",
  "url",
  "walkdir",
  "windows-sys 0.59.0",
