@@ -397,6 +397,19 @@ fn bad_version() {
 }
 
 #[cargo_test]
+fn missing_at_symbol_before_version() {
+    pkg("foo", "0.0.1");
+    cargo_process("install foo=0.2.0")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] could not find `foo=0.2.0` in registry `crates-io` with version `*`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn bad_paths() {
     cargo_process("install")
         .with_status(101)
