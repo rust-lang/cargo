@@ -11,6 +11,8 @@ pub enum CfgExpr {
     All(Vec<CfgExpr>),
     Any(Vec<CfgExpr>),
     Value(Cfg),
+    True,
+    False,
 }
 
 /// A cfg value.
@@ -147,6 +149,8 @@ impl CfgExpr {
             CfgExpr::All(ref e) => e.iter().all(|e| e.matches(cfg)),
             CfgExpr::Any(ref e) => e.iter().any(|e| e.matches(cfg)),
             CfgExpr::Value(ref e) => cfg.contains(e),
+            CfgExpr::True => true,
+            CfgExpr::False => false,
         }
     }
 }
@@ -174,6 +178,8 @@ impl fmt::Display for CfgExpr {
             CfgExpr::All(ref e) => write!(f, "all({})", CommaSep(e)),
             CfgExpr::Any(ref e) => write!(f, "any({})", CommaSep(e)),
             CfgExpr::Value(ref e) => write!(f, "{}", e),
+            CfgExpr::True => write!(f, "true"),
+            CfgExpr::False => write!(f, "false"),
         }
     }
 }
@@ -229,7 +235,11 @@ impl<'a> Parser<'a> {
                 self.eat(&Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
             }
-            Some(Ok(..)) => self.cfg().map(CfgExpr::Value),
+            Some(Ok(..)) => self.cfg().map(|v| match v {
+                Cfg::Name(n) if n == "true" => CfgExpr::True,
+                Cfg::Name(n) if n == "false" => CfgExpr::False,
+                v => CfgExpr::Value(v),
+            }),
             Some(Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
             None => Err(ParseError::new(
                 self.t.orig,
