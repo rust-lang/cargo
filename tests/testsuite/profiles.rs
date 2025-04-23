@@ -705,6 +705,79 @@ fn do_not_strip_debuginfo_with_requested_debug() {
 }
 
 #[cargo_test]
+fn force_frame_pointers_on_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [profile.dev]
+            force-frame-pointers = true
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C force-frame-pointers=on [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn force_frame_pointers_off_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [profile.dev]
+            force-frame-pointers = false
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stdout_does_not_contain(str!["force-frame-pointers"])
+        .with_stderr_does_not_contain(str!["force-frame-pointers"])
+        .run();
+}
+
+#[cargo_test]
+fn force_frame_pointers_unspecified_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stdout_does_not_contain(str!["force-frame-pointers"])
+        .with_stderr_does_not_contain(str!["force-frame-pointers"])
+        .run();
+}
+
+#[cargo_test]
 fn rustflags_works() {
     let p = project()
         .file(

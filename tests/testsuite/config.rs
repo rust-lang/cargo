@@ -1662,6 +1662,7 @@ fn all_profile_options() {
         dir_name: Some(String::from("dir_name")),
         inherits: Some(String::from("debug")),
         strip: Some(cargo_toml::StringOrBool::String("symbols".to_string())),
+        force_frame_pointers: Some(true),
         package: None,
         build_override: None,
         rustflags: None,

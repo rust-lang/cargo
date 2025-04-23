@@ -1106,6 +1106,7 @@ fn build_base_args(
         ref panic,
         incremental,
         strip,
+        force_frame_pointers,
         rustflags: profile_rustflags,
         trim_paths,
         ..
@@ -1283,6 +1284,10 @@ fn build_base_args(
     let strip = strip.into_inner();
     if strip != StripInner::None {
         cmd.arg("-C").arg(format!("strip={}", strip));
+    }
+
+    if force_frame_pointers {
+        cmd.arg("-C").arg("force-frame-pointers=on");
     }
 
     if unit.is_std {
