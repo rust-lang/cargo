@@ -2,10 +2,12 @@
 //!
 //! [`--unit-graph`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unit-graph
 
+use cargo_util_schemas::core::PackageIdSpec;
+
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{PackageId, Target};
+use crate::core::Target;
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use crate::GlobalContext;
@@ -47,7 +49,7 @@ struct SerializedUnitGraph<'a> {
 
 #[derive(serde::Serialize)]
 struct SerializedUnit<'a> {
-    pkg_id: PackageId,
+    pkg_id: PackageIdSpec,
     target: &'a Target,
     profile: &'a Profile,
     platform: CompileKind,
@@ -109,7 +111,7 @@ pub fn emit_serialized_unit_graph(
                 })
                 .collect();
             SerializedUnit {
-                pkg_id: unit.pkg.package_id(),
+                pkg_id: unit.pkg.package_id().to_spec(),
                 target: &unit.target,
                 profile: &unit.profile,
                 platform: unit.kind,
