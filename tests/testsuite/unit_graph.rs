@@ -68,7 +68,7 @@ fn simple() {
         "feata"
       ],
       "mode": "build",
-      "pkg_id": "a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "pkg_id": "registry+https://github.com/rust-lang/crates.io-index#a@1.0.0",
       "platform": null,
       "profile": {
         "codegen_backend": null,
@@ -113,7 +113,7 @@ fn simple() {
         "featb"
       ],
       "mode": "build",
-      "pkg_id": "b 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "pkg_id": "registry+https://github.com/rust-lang/crates.io-index#b@1.0.0",
       "platform": null,
       "profile": {
         "codegen_backend": null,
@@ -151,7 +151,7 @@ fn simple() {
         "featc"
       ],
       "mode": "build",
-      "pkg_id": "c 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "pkg_id": "registry+https://github.com/rust-lang/crates.io-index#c@1.0.0",
       "platform": null,
       "profile": {
         "codegen_backend": null,
@@ -194,7 +194,7 @@ fn simple() {
       ],
       "features": [],
       "mode": "build",
-      "pkg_id": "foo 0.1.0 (path+[ROOTURL]/foo)",
+      "pkg_id": "path+[ROOTURL]/foo#0.1.0",
       "platform": null,
       "profile": {
         "codegen_backend": null,
