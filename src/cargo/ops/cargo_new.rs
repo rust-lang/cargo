@@ -434,6 +434,9 @@ fn calculate_new_project_kind(
 pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
     let path = &opts.path;
     let name = get_name(path, opts)?;
+    let name = format_project_name(name);
+    let name = name.as_str();
+
     gctx.shell()
         .status("Creating", format!("{} `{}` package", opts.kind, name))?;
 
@@ -496,6 +499,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     let name = get_name(path, opts)?;
     let name = format_project_name(name);
     let name = name.as_str();
+
     let mut src_paths_types = vec![];
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
