@@ -75,6 +75,8 @@ fn namespaced_invalid_feature() {
 Caused by:
   feature `bar` includes `baz` which is neither a dependency nor another feature
 
+  [HELP] a feature with a similar name exists: `bar`
+
 "#]])
         .run();
 }
