@@ -37,6 +37,38 @@ Caused by:
 }
 
 #[cargo_test]
+fn feature_activates_typoed_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [features]
+                bar = ["baz"]
+                jaz = []
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `bar` includes `baz` which is neither a dependency nor another feature
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn empty_feature_name() {
     let p = project()
         .file(
@@ -197,6 +229,56 @@ failed to select a version for `bar` which could resolve this conflict
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dependency_activates_typoed_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                path = "bar"
+                features = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [features]
+                baz = []
+"#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
+versions that meet the requirements `*` are: 0.0.1
+
+the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
+
+
+failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
