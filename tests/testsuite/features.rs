@@ -6,7 +6,7 @@ use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
-fn invalid1() {
+fn feature_activates_missing_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -120,7 +120,7 @@ foo v0.0.1 ([ROOT]/foo) [bar,baz]
 }
 
 #[cargo_test]
-fn invalid3() {
+fn feature_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -155,7 +155,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid4() {
+fn dependency_activates_missing_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -203,7 +203,7 @@ failed to select a version for `bar` which could resolve this conflict
 }
 
 #[cargo_test]
-fn invalid5() {
+fn optional_dev_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -235,7 +235,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid6() {
+fn feature_activates_missing_dep_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -269,7 +269,7 @@ fn invalid6() {
 }
 
 #[cargo_test]
-fn invalid7() {
+fn feature_activates_feature_inside_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -304,7 +304,7 @@ fn invalid7() {
 }
 
 #[cargo_test]
-fn invalid8() {
+fn dependency_activates_dep_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -339,7 +339,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid9() {
+fn cli_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -370,7 +370,7 @@ fn invalid9() {
 }
 
 #[cargo_test]
-fn invalid10() {
+fn dependency_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
