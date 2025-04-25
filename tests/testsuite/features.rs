@@ -6,7 +6,7 @@ use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
-fn invalid1() {
+fn feature_activates_missing_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -31,6 +31,42 @@ fn invalid1() {
 
 Caused by:
   feature `bar` includes `baz` which is neither a dependency nor another feature
+
+  [HELP] a feature with a similar name exists: `bar`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_activates_typoed_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [features]
+                bar = ["baz"]
+                jaz = []
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `bar` includes `baz` which is neither a dependency nor another feature
+
+  [HELP] a feature with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -120,7 +156,7 @@ foo v0.0.1 ([ROOT]/foo) [bar,baz]
 }
 
 #[cargo_test]
-fn invalid3() {
+fn feature_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -155,7 +191,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid4() {
+fn dependency_activates_missing_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -183,7 +219,7 @@ fn invalid4() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
+package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
 
 
 failed to select a version for `bar` which could resolve this conflict
@@ -196,14 +232,65 @@ failed to select a version for `bar` which could resolve this conflict
     p.cargo("check --features test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
+[ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
 
 "#]])
         .run();
 }
 
 #[cargo_test]
-fn invalid5() {
+fn dependency_activates_typoed_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                path = "bar"
+                features = ["bar"]
+            "#,
+        )
+        .file("src/main.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [features]
+                baz = []
+"#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
+versions that meet the requirements `*` are: 0.0.1
+
+package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+ package `bar` does have feature `baz`
+
+
+failed to select a version for `bar` which could resolve this conflict
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn optional_dev_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -235,7 +322,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid6() {
+fn feature_activates_missing_dep_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -269,7 +356,7 @@ fn invalid6() {
 }
 
 #[cargo_test]
-fn invalid7() {
+fn feature_activates_feature_inside_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -304,7 +391,7 @@ fn invalid7() {
 }
 
 #[cargo_test]
-fn invalid8() {
+fn dependency_activates_dep_feature() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -339,7 +426,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn invalid9() {
+fn cli_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -362,7 +449,9 @@ fn invalid9() {
     p.cargo("check --features bar")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
+[ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
 
 "#]])
         .with_status(101)
@@ -370,7 +459,7 @@ fn invalid9() {
 }
 
 #[cargo_test]
-fn invalid10() {
+fn dependency_activates_required_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -411,8 +500,8 @@ fn invalid10() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
- It has a required dependency with that name, but only optional dependencies can be used as features.
+package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
+ A required dependency with that name exists, but only optional dependencies can be used as features.
 
 
 failed to select a version for `bar` which could resolve this conflict

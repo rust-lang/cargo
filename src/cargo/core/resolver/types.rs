@@ -339,10 +339,10 @@ pub enum ConflictReason {
     /// we're only allowed one per dependency graph.
     Links(InternedString),
 
-    /// A dependency listed features that weren't actually available on the
+    /// A dependency listed a feature that wasn't actually available on the
     /// candidate. For example we tried to activate feature `foo` but the
     /// candidate we're activating didn't actually have the feature `foo`.
-    MissingFeatures(InternedString),
+    MissingFeature(InternedString),
 
     /// A dependency listed a feature that ended up being a required dependency.
     /// For example we tried to activate feature `foo` but the
@@ -360,8 +360,8 @@ impl ConflictReason {
         matches!(self, ConflictReason::Links(_))
     }
 
-    pub fn is_missing_features(&self) -> bool {
-        matches!(self, ConflictReason::MissingFeatures(_))
+    pub fn is_missing_feature(&self) -> bool {
+        matches!(self, ConflictReason::MissingFeature(_))
     }
 
     pub fn is_required_dependency_as_features(&self) -> bool {

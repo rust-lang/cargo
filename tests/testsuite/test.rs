@@ -4007,7 +4007,7 @@ fn cyclical_dep_with_missing_feature() {
     ... required by package `foo v0.1.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.1.0
 
-the package `foo` depends on `foo`, with features: `missing` but `foo` does not have these features.
+package `foo` depends on `foo` with feature `missing` but `foo` does not have that feature.
 
 
 failed to select a version for `foo` which could resolve this conflict

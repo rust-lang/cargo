@@ -5,7 +5,7 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
-use crate::util::edit_distance::edit_distance;
+use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
@@ -137,7 +137,7 @@ pub(super) fn activation_error(
                     has_semver = true;
                 }
                 ConflictReason::Links(link) => {
-                    msg.push_str("\n\nthe package `");
+                    msg.push_str("\n\npackage `");
                     msg.push_str(&*dep.package_name());
                     msg.push_str("` links to the native library `");
                     msg.push_str(link);
@@ -150,46 +150,54 @@ pub(super) fn activation_error(
                     msg.push_str(link);
                     msg.push_str("\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
                 }
-                ConflictReason::MissingFeatures(features) => {
-                    msg.push_str("\n\nthe package `");
+                ConflictReason::MissingFeature(feature) => {
+                    msg.push_str("\n\npackage `");
                     msg.push_str(&*p.name());
                     msg.push_str("` depends on `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("`, with features: `");
-                    msg.push_str(features);
+                    msg.push_str("` with feature `");
+                    msg.push_str(feature);
                     msg.push_str("` but `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("` does not have these features.\n");
+                    msg.push_str("` does not have that feature.\n");
+                    let latest = candidates.last().expect("in the non-empty branch");
+                    if let Some(closest) = closest(feature, latest.features().keys(), |k| k) {
+                        msg.push_str(" package `");
+                        msg.push_str(&*dep.package_name());
+                        msg.push_str("` does have feature `");
+                        msg.push_str(closest);
+                        msg.push_str("`\n");
+                    }
                     // p == parent so the full path is redundant.
                 }
-                ConflictReason::RequiredDependencyAsFeature(features) => {
-                    msg.push_str("\n\nthe package `");
+                ConflictReason::RequiredDependencyAsFeature(feature) => {
+                    msg.push_str("\n\npackage `");
                     msg.push_str(&*p.name());
                     msg.push_str("` depends on `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("`, with features: `");
-                    msg.push_str(features);
+                    msg.push_str("` with feature `");
+                    msg.push_str(feature);
                     msg.push_str("` but `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("` does not have these features.\n");
+                    msg.push_str("` does not have that feature.\n");
                     msg.push_str(
-                        " It has a required dependency with that name, \
+                        " A required dependency with that name exists, \
                          but only optional dependencies can be used as features.\n",
                     );
                     // p == parent so the full path is redundant.
                 }
-                ConflictReason::NonImplicitDependencyAsFeature(features) => {
-                    msg.push_str("\n\nthe package `");
+                ConflictReason::NonImplicitDependencyAsFeature(feature) => {
+                    msg.push_str("\n\npackage `");
                     msg.push_str(&*p.name());
                     msg.push_str("` depends on `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("`, with features: `");
-                    msg.push_str(features);
+                    msg.push_str("` with feature `");
+                    msg.push_str(feature);
                     msg.push_str("` but `");
                     msg.push_str(&*dep.package_name());
-                    msg.push_str("` does not have these features.\n");
+                    msg.push_str("` does not have that feature.\n");
                     msg.push_str(
-                        " It has an optional dependency with that name, \
+                        " An optional dependency with that name exists, \
                          but that dependency uses the \"dep:\" \
                          syntax in the features table, so it does not have an \
                          implicit feature with that name.\n",

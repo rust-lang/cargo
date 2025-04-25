@@ -1032,7 +1032,7 @@ fn links_duplicates() {
     ... required by package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
-the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
 Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
@@ -1159,7 +1159,7 @@ fn links_duplicates_deep_dependency() {
     ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
-the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
 Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
@@ -4767,7 +4767,7 @@ fn links_duplicates_with_cycle() {
     ... required by package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
-the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
 Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 

@@ -524,15 +524,13 @@ impl RequirementError {
                                 "feature",
                             );
                             ActivateError::Fatal(anyhow::format_err!(
-                                "Package `{}` does not have the feature `{}`{}",
+                                "package `{}` does not have the feature `{}`{}",
                                 summary.package_id(),
                                 feat,
                                 closest
                             ))
                         }
-                        Some(p) => {
-                            ActivateError::Conflict(p, ConflictReason::MissingFeatures(feat))
-                        }
+                        Some(p) => ActivateError::Conflict(p, ConflictReason::MissingFeature(feat)),
                     };
                 }
                 if deps.iter().any(|dep| dep.is_optional()) {
@@ -555,9 +553,11 @@ impl RequirementError {
                             }
                             ActivateError::Fatal(anyhow::format_err!(
                                 "\
-Package `{}` does not have feature `{}`. It has an optional dependency \
-with that name, but that dependency uses the \"dep:\" \
-syntax in the features table, so it does not have an implicit feature with that name.{}",
+package `{}` does not have feature `{}`
+
+help: an optional dependency \
+with that name exists, but the `features` table includes it with the \"dep:\" \
+syntax so it does not have an implicit feature with that name{}",
                                 summary.package_id(),
                                 feat,
                                 suggestion
@@ -571,8 +571,9 @@ syntax in the features table, so it does not have an implicit feature with that 
                 } else {
                     match parent {
                         None => ActivateError::Fatal(anyhow::format_err!(
-                            "Package `{}` does not have feature `{}`. It has a required dependency \
-                             with that name, but only optional dependencies can be used as features.",
+                            "package `{}` does not have feature `{}`
+
+help: a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.",
                             summary.package_id(),
                             feat,
                         )),
@@ -592,9 +593,7 @@ syntax in the features table, so it does not have an implicit feature with that 
                     )),
                     // This code path currently isn't used, since `foo/bar`
                     // and `dep:` syntax is not allowed in a dependency.
-                    Some(p) => {
-                        ActivateError::Conflict(p, ConflictReason::MissingFeatures(dep_name))
-                    }
+                    Some(p) => ActivateError::Conflict(p, ConflictReason::MissingFeature(dep_name)),
                 }
             }
             RequirementError::Cycle(feat) => ActivateError::Fatal(anyhow::format_err!(

@@ -75,6 +75,8 @@ fn namespaced_invalid_feature() {
 Caused by:
   feature `bar` includes `baz` which is neither a dependency nor another feature
 
+  [HELP] a feature with a similar name exists: `bar`
+
 "#]])
         .run();
 }
@@ -417,7 +419,9 @@ regex
 
     p.cargo("run --features lazy_static")
         .with_stderr_data(str![[r#"
-[ERROR] Package `foo v0.1.0 ([ROOT]/foo)` does not have feature `lazy_static`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+[ERROR] package `foo v0.1.0 ([ROOT]/foo)` does not have feature `lazy_static`
+
+[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
 Dependency `lazy_static` would be enabled by these features:
 	- `regex`
 

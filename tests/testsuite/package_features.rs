@@ -338,7 +338,7 @@ f3f4
     p.cargo("run -p bar --features f1,f2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Package `foo v0.1.0 ([ROOT]/foo)` does not have the feature `f2`
+[ERROR] package `foo v0.1.0 ([ROOT]/foo)` does not have the feature `f2`
 
 [HELP] a feature with a similar name exists: `f1`
 
@@ -406,7 +406,7 @@ fn feature_default_resolver() {
     p.cargo("check --features testt")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have the feature `testt`
+[ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have the feature `testt`
 
 [HELP] a feature with a similar name exists: `test`
 
@@ -458,7 +458,9 @@ fn command_line_optional_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+[ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
 Dependency `bar` would be enabled by these features:
 	- `foo`
 
@@ -496,7 +498,9 @@ fn command_line_optional_dep_three_options() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+[ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
 Dependency `bar` would be enabled by these features:
 	- `f1`
 	- `f2`
@@ -537,7 +541,9 @@ fn command_line_optional_dep_many_options() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+[ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
 Dependency `bar` would be enabled by these features:
 	- `f1`
 	- `f2`
@@ -583,7 +589,9 @@ fn command_line_optional_dep_many_paths() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`. It has an optional dependency with that name, but that dependency uses the "dep:" syntax in the features table, so it does not have an implicit feature with that name.
+[ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
 Dependency `bar` would be enabled by these features:
 	- `f1`
 	- `f2`
@@ -820,7 +828,7 @@ m1-feature set
         .cwd("member2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Package `member1 v0.1.0 ([ROOT]/foo/member1)` does not have the feature `m2-feature`
+[ERROR] package `member1 v0.1.0 ([ROOT]/foo/member1)` does not have the feature `m2-feature`
 
 [HELP] a feature with a similar name exists: `m1-feature`
 
