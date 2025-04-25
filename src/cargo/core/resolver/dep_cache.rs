@@ -530,9 +530,7 @@ impl RequirementError {
                                 closest
                             ))
                         }
-                        Some(p) => {
-                            ActivateError::Conflict(p, ConflictReason::MissingFeatures(feat))
-                        }
+                        Some(p) => ActivateError::Conflict(p, ConflictReason::MissingFeature(feat)),
                     };
                 }
                 if deps.iter().any(|dep| dep.is_optional()) {
@@ -595,9 +593,7 @@ help: a depednency with that name exists but it is required dependency and only 
                     )),
                     // This code path currently isn't used, since `foo/bar`
                     // and `dep:` syntax is not allowed in a dependency.
-                    Some(p) => {
-                        ActivateError::Conflict(p, ConflictReason::MissingFeatures(dep_name))
-                    }
+                    Some(p) => ActivateError::Conflict(p, ConflictReason::MissingFeature(dep_name)),
                 }
             }
             RequirementError::Cycle(feat) => ActivateError::Fatal(anyhow::format_err!(

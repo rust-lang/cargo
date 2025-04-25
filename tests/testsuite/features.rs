@@ -219,7 +219,7 @@ fn dependency_activates_missing_feature() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
+package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
 
 
 failed to select a version for `bar` which could resolve this conflict
@@ -279,7 +279,7 @@ fn dependency_activates_typoed_feature() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
+package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
 
 
 failed to select a version for `bar` which could resolve this conflict
@@ -499,8 +499,8 @@ fn dependency_activates_required_dependency() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
- It has a required dependency with that name, but only optional dependencies can be used as features.
+package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
+ A required dependency with that name exists, but only optional dependencies can be used as features.
 
 
 failed to select a version for `bar` which could resolve this conflict
