@@ -280,6 +280,7 @@ fn dependency_activates_typoed_feature() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+ package `bar` does have feature `baz`
 
 
 failed to select a version for `bar` which could resolve this conflict

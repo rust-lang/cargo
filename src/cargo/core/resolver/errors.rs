@@ -5,7 +5,7 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
-use crate::util::edit_distance::edit_distance;
+use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
@@ -160,6 +160,14 @@ pub(super) fn activation_error(
                     msg.push_str("` but `");
                     msg.push_str(&*dep.package_name());
                     msg.push_str("` does not have that feature.\n");
+                    let latest = candidates.last().expect("in the non-empty branch");
+                    if let Some(closest) = closest(feature, latest.features().keys(), |k| k) {
+                        msg.push_str(" package `");
+                        msg.push_str(&*dep.package_name());
+                        msg.push_str("` does have feature `");
+                        msg.push_str(closest);
+                        msg.push_str("`\n");
+                    }
                     // p == parent so the full path is redundant.
                 }
                 ConflictReason::RequiredDependencyAsFeature(feature) => {
