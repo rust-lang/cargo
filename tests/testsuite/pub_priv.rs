@@ -340,7 +340,7 @@ fn allow_priv_in_tests() {
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn allow_priv_in_benchs() {
+fn allow_priv_in_benches() {
     Package::new("priv_dep", "0.1.0")
         .file("src/lib.rs", "pub struct FromPriv;")
         .publish();

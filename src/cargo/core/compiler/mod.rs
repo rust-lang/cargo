@@ -183,7 +183,7 @@ fn compile<'gctx>(
     }
 
     // If we are in `--compile-time-deps` and the given unit is not a compile time
-    // dependency, skip compling the unit and jumps to dependencies, which still
+    // dependency, skip compiling the unit and jumps to dependencies, which still
     // have chances to be compile time dependencies
     if !unit.skip_non_compile_time_dep {
         // Build up the work to be done to compile this unit, enqueuing it once
@@ -1615,7 +1615,7 @@ fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     arg_feature.push("))");
 
     // In addition to the package features, we also include the `test` cfg (since
-    // compiler-team#785, as to be able to someday apply yt conditionally), as well
+    // compiler-team#785, as to be able to someday apply it conditionally), as well
     // the `docsrs` cfg from the docs.rs service.
     //
     // We include `docsrs` here (in Cargo) instead of rustc, since there is a much closer

@@ -385,7 +385,7 @@ fn rustc_cfg_with_and_without_value() {
 }
 
 #[cargo_test]
-fn rerun_if_env_is_exsited_config() {
+fn rerun_if_env_exists_in_config() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(

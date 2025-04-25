@@ -297,7 +297,7 @@ fn source_replacement_with_registry_url() {
 }
 
 #[cargo_test]
-fn source_replacement_with_no_package_in_directoy() {
+fn source_replacement_with_no_package_in_directory() {
     let p = project()
         .file(
             "Cargo.toml",

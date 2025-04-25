@@ -698,7 +698,7 @@ fn use_dev_deps_if_explicitly_enabled() {
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn only_scrape_documented_targets() {
-    // package bar has doc = false and should not be eligible for documtation.
+    // package bar has doc = false and should not be eligible for documentation.
     let p = project()
         .file(
             "Cargo.toml",

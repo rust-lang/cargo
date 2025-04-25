@@ -103,8 +103,8 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
     let mut crates = Vec::new();
     let sbom_graph = build_sbom_graph(build_runner, root);
 
-    // Build set of indicies for each node in the graph for fast lookup.
-    let indicies: HashMap<&Unit, SbomIndex> = sbom_graph
+    // Build set of indices for each node in the graph for fast lookup.
+    let indices: HashMap<&Unit, SbomIndex> = sbom_graph
         .keys()
         .enumerate()
         .map(|(i, dep)| (*dep, SbomIndex(i)))
@@ -115,7 +115,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
         let mut krate = SbomCrate::new(unit);
         for (dep, kind) in edges {
             krate.dependencies.push(SbomDependency {
-                index: indicies[dep],
+                index: indices[dep],
                 kind: kind,
             });
         }
@@ -128,7 +128,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
     Ok(Sbom {
         version: SbomFormatVersion(1),
         crates,
-        root: indicies[root],
+        root: indices[root],
         rustc,
         target,
     })

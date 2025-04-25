@@ -69,8 +69,8 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
     } else if let Some(code) = expanded_args.get_one::<String>("explain") {
         // Don't let config errors get in the way of parsing arguments
         let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);
-        let mut procss = gctx.load_global_rustc(None)?.process();
-        procss.arg("--explain").arg(code).exec()?;
+        let mut process = gctx.load_global_rustc(None)?.process();
+        process.arg("--explain").arg(code).exec()?;
     } else if expanded_args.flag("list") {
         // Don't let config errors get in the way of parsing arguments
         let _ = configure_gctx(gctx, &expanded_args, None, global_args, None);

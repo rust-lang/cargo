@@ -1730,7 +1730,7 @@ pub fn to_real_manifest(
             normalized_package.links.as_deref(),
             rust_version.clone(),
         );
-        // editon2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
+        // edition2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
         // need to check whether `dep_name` is stripped as unused dependency
         if let Err(ref err) = summary {
             if let Some(missing_dep) = err.downcast_ref::<MissingDependencyError>() {
@@ -2501,7 +2501,7 @@ fn validate_profiles(
     Ok(())
 }
 
-/// Checks stytax validity and unstable feature gate for a given profile.
+/// Checks syntax validity and unstable feature gate for a given profile.
 pub fn validate_profile(
     root: &manifest::TomlProfile,
     name: &str,

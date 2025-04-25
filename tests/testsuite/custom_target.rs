@@ -256,7 +256,7 @@ fn custom_target_ignores_filepath() {
 "#]])
         .run();
 
-    // But not the second time, even though the path to the custom target is dfferent.
+    // But not the second time, even though the path to the custom target is different.
     p.cargo("build --lib --target b/custom-target.json")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

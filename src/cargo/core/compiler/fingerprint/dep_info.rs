@@ -756,7 +756,7 @@ mod encoded_dep_info {
             0x72, 0x75, 0x73, 0x74, // path bytes: "rust"
             0x00, 0x00, 0x00, 0x00, // # of env vars
         ];
-        // Cargo can't recognize v0 after `-Zchecksum-freshess` added.
+        // Cargo can't recognize v0 after `-Zchecksum-freshness` added.
         assert!(EncodedDepInfo::parse(&data).is_none());
     }
 }

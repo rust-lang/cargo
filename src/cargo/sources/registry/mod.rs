@@ -661,7 +661,7 @@ impl<'gctx> RegistrySource<'gctx> {
     /// Unpacks the `.crate` tarball of the package in a given directory.
     ///
     /// Returns the path to the crate tarball directory,
-    /// whch is always `<unpack_dir>/<pkg>-<version>`.
+    /// which is always `<unpack_dir>/<pkg>-<version>`.
     ///
     /// This holds an assumption that the associated tarball already exists.
     pub fn unpack_package_in(

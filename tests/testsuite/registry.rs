@@ -3085,7 +3085,7 @@ fn readonly_registry_still_works() {
 }
 
 #[cargo_test(ignore_windows = "On Windows setting file attributes is a bit complicated")]
-fn unaccessible_registry_cache_still_works() {
+fn inaccessible_registry_cache_still_works() {
     Package::new("foo", "0.1.0").publish();
     Package::new("fo2", "0.1.0").publish();
 
