@@ -232,7 +232,7 @@ failed to select a version for `bar` which could resolve this conflict
     p.cargo("check --features test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
+[ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
 
 "#]])
         .run();
@@ -448,7 +448,9 @@ fn cli_activates_required_dependency() {
     p.cargo("check --features bar")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
+[ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`
+
+[HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
 
 "#]])
         .with_status(101)
