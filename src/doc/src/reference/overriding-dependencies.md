@@ -345,7 +345,7 @@ that they cannot change the structure of the dependency graph. When a
 path replacement is used then the previous set of dependencies
 must all match exactly to the new `Cargo.toml` specification. For example this
 means that path overrides cannot be used to test out adding a dependency to a
-crate, instead `[patch]` must be used in that situation. As a result usage of a
+crate. Instead, `[patch]` must be used in that situation. As a result, usage of a
 path override is typically isolated to quick bug fixes rather than larger
 changes.
 
