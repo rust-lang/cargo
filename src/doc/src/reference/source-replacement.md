@@ -26,7 +26,7 @@ dependencies through the usage of [the `[patch]` key][overriding
 dependencies], and private registry support is described in [the Registries
 chapter][registries].
 
-When using source replacement, running commands like `cargo publish` that need to
+When using source replacement, running commands that need to
 contact the registry requires passing the `--registry` option. This helps avoid
 any ambiguity about which registry to contact, and will use the authentication
 token for the specified registry.
