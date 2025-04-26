@@ -238,12 +238,10 @@ fn run_doc_tests(
         }
 
         if doctest_xcompile {
-            p.arg("-Zunstable-options");
-            p.arg("--enable-per-target-ignores");
             if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
-                p.arg("--runtool").arg(runtool);
+                p.arg("--test-runtool").arg(runtool);
                 for arg in runtool_args {
-                    p.arg("--runtool-arg").arg(arg);
+                    p.arg("--test-runtool-arg").arg(arg);
                 }
             }
             if let Some(linker) = linker {

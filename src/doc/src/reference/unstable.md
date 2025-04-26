@@ -285,8 +285,7 @@ This flag changes `cargo test`'s behavior when handling doctests when
 a target is passed. Currently, if a target is passed that is different
 from the host cargo will simply skip testing doctests. If this flag is
 present, cargo will continue as normal, passing the tests to doctest,
-while also passing it a `--target` option, as well as enabling
-`-Zunstable-features --enable-per-target-ignores` and passing along
+while also passing it a `--target` option, as well as passing along
 information from `.cargo/config.toml`. See the rustc issue for more information.
 
 ```sh
