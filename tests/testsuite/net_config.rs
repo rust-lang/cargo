@@ -35,7 +35,7 @@ fn net_retry_loads_from_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[WARNING] spurious network error (1 tries remaining): [..]
+[WARNING] spurious network error (1 try remaining): [..]
 ...
 "#]])
         .run();
@@ -71,7 +71,7 @@ fn net_retry_git_outputs_warning() {
         .with_stderr_data(str![[r#"
 ...
 [WARNING] spurious network error (2 tries remaining): [..]
-[WARNING] spurious network error (1 tries remaining): [..]
+[WARNING] spurious network error (1 try remaining): [..]
 ...
 "#]])
         .run();
