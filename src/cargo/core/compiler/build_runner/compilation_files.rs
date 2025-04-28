@@ -199,8 +199,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     }
 
     /// Gets the short hash based only on the `PackageId`.
-    /// Used for the metadata when `metadata` returns `None`.
-    pub fn target_short_hash(&self, unit: &Unit) -> String {
+    /// Used for the metadata when `c_extra_filename` returns `None`.
+    fn target_short_hash(&self, unit: &Unit) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
         util::short_hash(&(METADATA_VERSION, hashable))
     }
