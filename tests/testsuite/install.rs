@@ -397,6 +397,20 @@ fn bad_version() {
 }
 
 #[cargo_test]
+fn missing_at_symbol_before_version() {
+    pkg("foo", "0.0.1");
+    cargo_process("install foo=0.2.0")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid character `=` in package name: `foo=0.2.0`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+
+[HELP] if this is meant to be a package name followed by a version, insert an `@` like `foo@=0.2.0`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn bad_paths() {
     cargo_process("install")
         .with_status(101)

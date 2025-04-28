@@ -65,6 +65,7 @@ mod locked_unchanged;
 mod lockfile_updated;
 mod manifest_path_package;
 mod merge_activated_features;
+mod missing_at_in_crate_spec;
 mod multiple_conflicts_with_features;
 mod multiple_conflicts_with_rename;
 mod namever;

@@ -8,6 +8,7 @@ use cargo::ops;
 use cargo::util::IntoUrl;
 use cargo::util::VersionExt;
 use cargo::CargoResult;
+use cargo_util_schemas::manifest::PackageName;
 use itertools::Itertools;
 use semver::VersionReq;
 
@@ -133,6 +134,22 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         .collect::<crate::CargoResult<Vec<_>>>()?;
 
     for (crate_name, _) in krates.iter() {
+        let package_name = PackageName::new(crate_name);
+        if !crate_name.contains("@") && package_name.is_err() {
+            for (idx, ch) in crate_name.char_indices() {
+                if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-') {
+                    let mut suggested_crate_name = crate_name.to_string();
+                    suggested_crate_name.insert_str(idx, "@");
+                    if let Ok((_, Some(_))) = parse_crate(&suggested_crate_name.as_str()) {
+                        let err = package_name.unwrap_err();
+                        return Err(
+                            anyhow::format_err!("{err}\n\n\
+                                help: if this is meant to be a package name followed by a version, insert an `@` like `{suggested_crate_name}`").into());
+                    }
+                }
+            }
+        }
+
         if let Some(toolchain) = crate_name.strip_prefix("+") {
             return Err(anyhow!(
                 "invalid character `+` in package name: `+{toolchain}`

@@ -28,7 +28,23 @@ impl CrateSpec {
             .map(|(n, v)| (n, Some(v)))
             .unwrap_or((pkg_id, None));
 
-        PackageName::new(name)?;
+        let package_name = PackageName::new(name);
+        if !pkg_id.contains("@") && package_name.is_err() {
+            for (idx, ch) in pkg_id.char_indices() {
+                if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-') {
+                    let mut suggested_pkg_id = pkg_id.to_string();
+                    suggested_pkg_id.insert_str(idx, "@");
+                    if let Ok(_) = CrateSpec::resolve(&suggested_pkg_id.as_str()) {
+                        let err = package_name.unwrap_err();
+                        return Err(
+                            anyhow::format_err!("{err}\n\n\
+                                help: if this is meant to be a package name followed by a version, insert an `@` like `{suggested_pkg_id}`").into());
+                    }
+                }
+            }
+        }
+
+        package_name?;
 
         if let Some(version) = version {
             semver::VersionReq::parse(version)
