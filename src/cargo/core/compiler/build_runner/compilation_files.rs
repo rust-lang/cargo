@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use itertools::{Either, Itertools};
 use lazycell::LazyCell;
 use tracing::debug;
 
@@ -88,9 +89,15 @@ impl fmt::Debug for UnitHash {
 /// mangled symbols need to be stable between different builds with different
 /// settings. For example, profile-guided optimizations need to swap
 /// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
+///
+/// [`Metadata::host_independent_hash`] is a simple hash that excludes any metadata
+/// that may differ across hosts. It is used when cross-compiling as the dependency
+/// hash for host crates like build scripts and proc macros, in order to improve
+/// reproducability across build platforms.
 #[derive(Copy, Clone, Debug)]
 pub struct Metadata {
     unit_id: UnitHash,
+    host_independent_hash: UnitHash,
     c_metadata: UnitHash,
     c_extra_filename: Option<UnitHash>,
 }
@@ -617,11 +624,19 @@ fn compute_metadata(
     metas: &mut HashMap<Unit, Metadata>,
 ) -> Metadata {
     let bcx = &build_runner.bcx;
-    let deps_metadata = build_runner
+    let (deps_metadata, deps_metadata_cross_host) = build_runner
         .unit_deps(unit)
         .iter()
-        .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
-        .collect::<Vec<_>>();
+        .partition_map::<Vec<_>, Vec<_>, _, _, _>(|dep| {
+            let meta = *metadata_of(&dep.unit, build_runner, metas);
+            let is_cross_compile_host_dep =
+                matches!(unit.kind, CompileKind::Target(_)) && dep.unit.kind.is_host();
+            if !is_cross_compile_host_dep {
+                Either::Left(meta)
+            } else {
+                Either::Right(meta)
+            }
+        });
     let use_extra_filename = use_extra_filename(bcx, unit);
 
     let mut shared_hasher = StableHasher::new();
@@ -643,6 +658,19 @@ fn compute_metadata(
         .package_id()
         .stable_hash(ws_root)
         .hash(&mut shared_hasher);
+
+    // Mix in only the host-independent target-metadata of any host dependencies
+    // of this target-kind dependency. This ensures that cross-compile targets
+    // like wasm do not mix in host-specific metadata, and are more likely to be
+    // reproducible regardless of build platform.
+    let mut dep_host_independent_hashes = deps_metadata_cross_host
+        .iter()
+        .map(|m| m.host_independent_hash)
+        .collect::<Vec<_>>();
+    dep_host_independent_hashes.sort();
+    dep_host_independent_hashes.hash(&mut shared_hasher);
+
+    let host_independent_hasher = shared_hasher.clone();
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
@@ -751,6 +779,7 @@ fn compute_metadata(
         }
     }
 
+    let host_independent_hash = UnitHash(Hasher::finish(&host_independent_hasher));
     let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
     let c_extra_filename = UnitHash(Hasher::finish(&c_extra_filename_hasher));
     let unit_id = c_extra_filename;
@@ -759,6 +788,7 @@ fn compute_metadata(
 
     Metadata {
         unit_id,
+        host_independent_hash,
         c_metadata,
         c_extra_filename,
     }
