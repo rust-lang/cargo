@@ -159,19 +159,19 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             activated.retain(|f| !unknown_features.contains(f));
 
             let mut message = format!(
-                "unrecognized feature{} for crate {}: {}\n",
+                "unrecognized feature{} for crate {}: {}",
                 if unknown_features.len() == 1 { "" } else { "s" },
                 dep.name,
                 unknown_features.iter().format(", "),
             );
             if activated.is_empty() && deactivated.is_empty() {
-                write!(message, "no features available for crate {}", dep.name)?;
+                write!(message, "\n\nno features available for crate {}", dep.name)?;
             } else {
                 if !deactivated.is_empty() {
                     if deactivated.len() <= MAX_FEATURE_PRINTS {
-                        writeln!(
+                        write!(
                             message,
-                            "disabled features:\n    {}",
+                            "\n\ndisabled features:\n    {}",
                             deactivated
                                 .iter()
                                 .map(|s| s.to_string())
@@ -184,14 +184,18 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                                 .format("\n    ")
                         )?;
                     } else {
-                        writeln!(message, "{} disabled features available", deactivated.len())?;
+                        write!(
+                            message,
+                            "\n\n{} disabled features available",
+                            deactivated.len()
+                        )?;
                     }
                 }
                 if !activated.is_empty() {
                     if deactivated.len() + activated.len() <= MAX_FEATURE_PRINTS {
                         writeln!(
                             message,
-                            "enabled features:\n    {}",
+                            "\n\nenabled features:\n    {}",
                             activated
                                 .iter()
                                 .map(|s| s.to_string())
@@ -204,7 +208,11 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                                 .format("\n    ")
                         )?;
                     } else {
-                        writeln!(message, "{} enabled features available", activated.len())?;
+                        writeln!(
+                            message,
+                            "\n\n{} enabled features available",
+                            activated.len()
+                        )?;
                     }
                 }
             }
