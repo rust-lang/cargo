@@ -1789,12 +1789,18 @@ fn crate_authors_env_vars() {
                 extern crate foo;
 
                 static AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
+                static AUTHORZ: &'static str = env!("CARGO_PKG_AUTHORZ");
 
                 fn main() {
                     let s = "wycats@example.com:neikos@example.com";
                     assert_eq!(AUTHORS, foo::authors());
                     println!("{}", AUTHORS);
                     assert_eq!(s, AUTHORS);
+
+                    let s = "wycats@example.com\x01neikos@example.com";
+                    assert_eq!(AUTHORZ, foo::authorz());
+                    println!("{}", AUTHORZ);
+                    assert_eq!(s, AUTHORZ);
                 }
             "#,
         )
@@ -1803,6 +1809,9 @@ fn crate_authors_env_vars() {
             r#"
                 pub fn authors() -> String {
                     format!("{}", env!("CARGO_PKG_AUTHORS"))
+                }
+                pub fn authorz() -> String {
+                    format!("{}", env!("CARGO_PKG_AUTHORZ"))
                 }
             "#,
         )

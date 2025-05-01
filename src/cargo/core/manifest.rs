@@ -207,6 +207,7 @@ metadata_envs! {
     (license, "CARGO_PKG_LICENSE"),
     (license_file, "CARGO_PKG_LICENSE_FILE"),
     (authors, "CARGO_PKG_AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
+    (authors, "CARGO_PKG_AUTHORZ", |m: &ManifestMetadata| m.authors.join("\x01")),
     (rust_version, "CARGO_PKG_RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
     (readme, "CARGO_PKG_README"),
 }
