@@ -5806,6 +5806,77 @@ features = ["foo"]
     );
 }
 
+#[cargo_test]
+fn workspace_with_local_dev_deps() {
+    let crates_io = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["main", "dev_dep"]
+            resolver = "3"
+
+            [workspace.dependencies]
+            dev_dep = { path = "dev_dep", version = "0.0.1" }
+        "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2024"
+            authors = []
+            license = "MIT"
+            description = "main"
+
+            [dev-dependencies]
+            dev_dep.workspace = true
+        "#,
+        )
+        .file(
+            "dev_dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dev_dep"
+            version = "0.0.1"
+            edition = "2024"
+            authors = []
+            license = "MIT"
+            description = "main"
+        "#,
+        )
+        .file("main/src/lib.rs", "")
+        .file("dev_dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(crates_io.index_url())
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] dev_dep v0.0.1 ([ROOT]/foo/dev_dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dev_dep v0.0.1 ([ROOT]/foo/dev_dep)
+[COMPILING] dev_dep v0.0.1 ([ROOT]/foo/target/package/dev_dep-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 fn workspace_with_local_deps_packaging_one_fails_project() -> Project {
     project()
         .file(

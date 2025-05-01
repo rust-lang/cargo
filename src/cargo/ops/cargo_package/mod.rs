@@ -239,18 +239,17 @@ fn do_package<'a>(
     let deps = local_deps(pkgs.iter().map(|(p, f)| ((*p).clone(), f.clone())));
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
 
-    // The publish registry doesn't matter unless there are local dependencies,
-    // so only try to get one if we need it. If they explicitly passed a
-    // registry on the CLI, we check it no matter what.
-    let sid = if deps.has_no_dependencies() && opts.reg_or_index.is_none() {
-        None
-    } else {
-        let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
-        debug!("packaging for registry {}", sid);
-        Some(sid)
-    };
-
     let mut local_reg = if ws.gctx().cli_unstable().package_workspace {
+        // The publish registry doesn't matter unless there are local dependencies,
+        // so only try to get one if we need it. If they explicitly passed a
+        // registry on the CLI, we check it no matter what.
+        let sid = if deps.has_no_dependencies() && opts.reg_or_index.is_none() {
+            None
+        } else {
+            let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
+            debug!("packaging for registry {}", sid);
+            Some(sid)
+        };
         let reg_dir = ws.build_dir().join("package").join("tmp-registry");
         sid.map(|sid| TmpRegistry::new(ws.gctx(), reg_dir, sid))
             .transpose()?
@@ -407,9 +406,14 @@ fn local_deps<T>(packages: impl Iterator<Item = (Package, T)>) -> LocalDependenc
     for (pkg, _payload) in packages.values() {
         graph.add(pkg.package_id());
         for dep in pkg.dependencies() {
-            // Ignore local dev-dependencies because they aren't needed for intra-workspace
-            // lockfile generation or verification as they get stripped on publish.
-            if dep.kind() == DepKind::Development || !dep.source_id().is_path() {
+            // We're only interested in local (i.e. living in this workspace) dependencies.
+            if !dep.source_id().is_path() {
+                continue;
+            }
+
+            // If local dev-dependencies don't have a version specified, they get stripped
+            // on publish so we should ignore them.
+            if dep.kind() == DepKind::Development && !dep.specified_req() {
                 continue;
             };
 
