@@ -406,9 +406,14 @@ fn local_deps<T>(packages: impl Iterator<Item = (Package, T)>) -> LocalDependenc
     for (pkg, _payload) in packages.values() {
         graph.add(pkg.package_id());
         for dep in pkg.dependencies() {
-            // Ignore local dev-dependencies because they aren't needed for intra-workspace
-            // lockfile generation or verification as they get stripped on publish.
-            if dep.kind() == DepKind::Development || !dep.source_id().is_path() {
+            // We're only interested in local (i.e. living in this workspace) dependencies.
+            if !dep.source_id().is_path() {
+                continue;
+            }
+
+            // If local dev-dependencies don't have a version specified, they get stripped
+            // on publish so we should ignore them.
+            if dep.kind() == DepKind::Development && !dep.specified_req() {
                 continue;
             };
 

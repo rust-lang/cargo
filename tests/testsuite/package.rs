@@ -5865,15 +5865,15 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dev_dep` found
-  location searched: crates.io index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dev_dep v0.0.1 ([ROOT]/foo/dev_dep)
+[COMPILING] dev_dep v0.0.1 ([ROOT]/foo/target/package/dev_dep-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .with_status(101)
         .run();
 }
 
