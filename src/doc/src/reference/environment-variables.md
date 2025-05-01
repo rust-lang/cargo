@@ -235,6 +235,7 @@ corresponding environment variable is set to the empty string, `""`.
 * `CARGO_PKG_VERSION_PATCH` --- The patch version of your package.
 * `CARGO_PKG_VERSION_PRE` --- The pre-release version of your package.
 * `CARGO_PKG_AUTHORS` --- Colon separated list of authors from the manifest of your package.
+* `CARGO_PKG_AUTHORZ` --- `\x01` separated list of authors from the manifest of your package.
 * `CARGO_PKG_NAME` --- The name of your package.
 * `CARGO_PKG_DESCRIPTION` --- The description from the manifest of your package.
 * `CARGO_PKG_HOMEPAGE` --- The home page from the manifest of your package.

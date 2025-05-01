@@ -50,6 +50,7 @@ fn smoke_test_inputs() {
     dbg!(cargo_manifest_path());
     dbg!(cargo_manifest_links());
     dbg!(cargo_pkg_authors());
+    dbg!(cargo_pkg_authorz());
     dbg!(cargo_pkg_description());
     dbg!(cargo_pkg_homepage());
     dbg!(cargo_pkg_license());
