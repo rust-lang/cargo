@@ -89,7 +89,7 @@
 //! `[lints]` table[^6]                        | ✓           |                     |                        |
 //! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                     |                        |
 //!
-//! [^1]: Build script and bin dependencies are not included.
+//! [^1]: Bin dependencies are not included.
 //!
 //! [^3]: See below for details on mtime tracking.
 //!
