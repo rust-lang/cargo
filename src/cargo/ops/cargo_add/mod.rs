@@ -930,7 +930,7 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
 /// Track presentation-layer information with the editable representation of a `[dependencies]`
 /// entry (Dependency)
 pub struct DependencyUI {
-    /// Editable representation of a `[depednencies]` entry
+    /// Editable representation of a `[dependencies]` entry
     dep: Dependency,
     /// The version of the crate that we pulled `available_features` from
     available_version: Option<semver::Version>,
