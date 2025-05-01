@@ -25,13 +25,13 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> unrecognized features for crate your-face: eees100, eees101</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>disabled features:</tspan>
+    <tspan x="10px" y="82px">
 </tspan>
-    <tspan x="10px" y="100px"><tspan>    eyes040, eyes041, eyes042, eyes043, eyes044, eyes045, eyes046, eyes047, eyes048</tspan>
+    <tspan x="10px" y="100px"><tspan>help: a feature with a similar name exists: `eyes000`</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>    eyes049</tspan>
+    <tspan x="10px" y="118px">
 </tspan>
-    <tspan x="10px" y="136px"><tspan>40 enabled features available</tspan>
+    <tspan x="10px" y="136px"><tspan>help: a feature with a similar name exists: `eyes001`</tspan>
 </tspan>
     <tspan x="10px" y="154px">
 </tspan>
