@@ -17,6 +17,10 @@ fetch` unless the lock file changes.
 If the lock file is not available, then this command will generate the lock
 file before fetching the dependencies.
 
+If the lock file is not compatible with the current `Cargo.toml`, then this
+command will initiate dependency resolution from the current `Cargo.toml` file,
+and update the lock file.
+
 If `--target` is not specified, then all target dependencies are fetched.
 
 See also the [cargo-prefetch](https://crates.io/crates/cargo-prefetch)
