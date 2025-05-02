@@ -1,3 +1,75 @@
+accessibilityJob: false
+alwaysRunPostSteps: false
+autosplit: true
+cacheDirectories:
+    - node_modules
+cacheKey: '{{ checksum "package-lock.json" }}'
+captureScreenRecordingForScenarios: false
+combineTasksInMatrixMode: false
+concurrency: 1
+cypress: false
+errorCategorizedOnFailureOnly: false
+globalTimeout: 90
+jobID: 61f1e04f-5b6b-41dd-bd26-c63e763577b7
+jobLabel:
+    - selenium-Nightwatch
+    - linux
+    - autosplit
+key: ""
+maxRetries: 1
+maxRetriesPreSteps: 0
+mergeArtifacts: true
+parallelism: 1
+partialReports:
+    email:
+        customInfo: []
+        to: []
+    frameworkName: extent
+    location: reports/
+    type: json
+postDirectives:
+    commands: []
+    shell: ""
+    workingDirectory: ""
+pre:
+    - npm install
+preDirectives:
+    commands: []
+    maxRetries: 0
+    shell: ""
+    workingDirectory: ""
+project:
+    id: ""
+    name: ""
+    type: ""
+quickRunMode: true
+report: true
+retryOnFailure: true
+runson: linux
+sourcePayload:
+    link: https://github.com/LambdaTest/Hyperexecute-Nightwatch-Sample.git
+    platform: git
+    ref: main
+testDiscovery:
+    command: grep -B1 'desiredCapabilities' nightwatch.json | sed 's/-//g' | grep -vE 'desiredCapabilities' | grep -vE 'skip_testcases_on_fail' | awk '{print$1}' | sed 's/://g' | sed 's/"//g'
+    mode: dynamic
+    type: raw
+testRunnerCommand: ./node_modules/.bin/nightwatch -e $test
+testSuiteStep: 90
+testSuiteTimeout: 90
+testSuites: []
+triggerMode: false
+unzipPayload: false
+uploadArtifacts:
+    - email:
+        customInfo: []
+        to: []
+      name: Reports
+      path:
+        - reports/
+user: ""
+version: "0.1"
+waitForArtefactsUpload: false
 # cargo-publish(1)
 ## NAME
 
