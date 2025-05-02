@@ -1816,10 +1816,10 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 
 ### How to use native-completions feature:
 - bash:
-  Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to your .bashrc.
+  Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to `~/.local/share/bash-completion/completions/cargo`.
 
 - zsh:
-  Add `source <(CARGO_COMPLETE=zsh cargo +nightly)` to your .zshrc.
+  Add `source <(CARGO_COMPLETE=zsh cargo +nightly)` to your `.zshrc`.
   
 - fish:
   Add `source (CARGO_COMPLETE=fish cargo +nightly | psub)` to `$XDG_CONFIG_HOME/fish/completions/cargo.fish`
