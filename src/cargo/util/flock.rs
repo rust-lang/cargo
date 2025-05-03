@@ -12,6 +12,7 @@ use std::io;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
+use crate::core::Verbosity;
 use crate::util::errors::CargoResult;
 use crate::util::style;
 use crate::util::GlobalContext;
@@ -392,18 +393,20 @@ fn acquire(
     lock_try: &dyn Fn() -> io::Result<()>,
     lock_block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
-    if cfg!(debug_assertions) {
-        // Force borrow to catch invalid borrows outside of contention situations
-        gctx.shell().verbosity();
-    }
+    let verbose = gctx.shell().verbosity() == Verbosity::Verbose;
     if try_acquire(path, lock_try)? {
         return Ok(());
     }
-    let msg = format!("waiting for file lock on {}", msg);
+    let path = path.display();
+    let msg = if verbose {
+        format!("waiting for file lock on {msg} ({path})")
+    } else {
+        format!("waiting for file lock on {msg}")
+    };
     gctx.shell()
         .status_with_color("Blocking", &msg, &style::NOTE)?;
 
-    lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
+    lock_block().with_context(|| format!("failed to lock file: {path}"))?;
     Ok(())
 }
 
