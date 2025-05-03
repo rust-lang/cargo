@@ -237,12 +237,10 @@ fn bad_version() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[YANK] foo@bar
-[ERROR] failed to yank from the registry at [ROOTURL]/api
+[ERROR] invalid version `bar`
 
 Caused by:
-  [37] Couldn't read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/foo/bar/yank)
+  unexpected character 'b' while parsing major version number
 
 "#]])
         .run();
@@ -272,12 +270,12 @@ fn prefixed_v_in_version() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[YANK] bar@v0.0.1
-[ERROR] failed to yank from the registry at [ROOTURL]/api
+[ERROR] the version provided, `v0.0.1` is not a valid SemVer version
+
+[HELP] try changing the version to `0.0.1`
 
 Caused by:
-  [37] Couldn't read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/bar/v0.0.1/yank)
+  unexpected character 'v' while parsing major version number
 
 "#]])
         .run();
