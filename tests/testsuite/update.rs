@@ -2737,7 +2737,9 @@ fn prefixed_v_in_version() {
     p.cargo("update bar --precise v1.0.1")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid version format for precise version `v1.0.1`
+[ERROR] the version provided, `v1.0.1` is not a valid SemVer version
+
+[HELP] try changing the version to `1.0.1`
 
 Caused by:
   unexpected character 'v' while parsing major version number

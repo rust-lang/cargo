@@ -523,8 +523,16 @@ impl SourceId {
         version: semver::Version,
         precise: &str,
     ) -> CargoResult<SourceId> {
-        let precise = semver::Version::parse(precise)
-            .with_context(|| format!("invalid version format for precise version `{precise}`"))?;
+        let precise = semver::Version::parse(precise).with_context(|| {
+            if let Some(stripped) = precise.strip_prefix("v") {
+                return format!(
+                    "the version provided, `{precise}` is not a \
+                    valid SemVer version\n\n\
+                    help: try changing the version to `{stripped}`",
+                );
+            }
+            format!("invalid version format for precise version `{precise}`")
+        })?;
 
         Ok(SourceId::wrap(SourceIdInner {
             precise: Some(Precise::Updated {
