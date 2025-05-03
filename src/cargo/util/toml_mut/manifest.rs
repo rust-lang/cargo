@@ -452,7 +452,7 @@ impl LocalManifest {
         Ok(())
     }
 
-    /// Allow mutating depedencies, wherever they live.
+    /// Allow mutating dependencies, wherever they live.
     /// Copied from cargo-edit.
     pub fn get_dependency_tables_mut(
         &mut self,

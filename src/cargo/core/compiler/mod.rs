@@ -1488,7 +1488,7 @@ fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     arg_feature.push("))");
 
     // In addition to the package features, we also include the `test` cfg (since
-    // compiler-team#785, as to be able to someday apply yt conditionaly), as well
+    // compiler-team#785, as to be able to someday apply yt conditionally), as well
     // the `docsrs` cfg from the docs.rs service.
     //
     // We include `docsrs` here (in Cargo) instead of rustc, since there is a much closer
