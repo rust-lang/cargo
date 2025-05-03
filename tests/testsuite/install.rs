@@ -2906,7 +2906,9 @@ fn prefixed_v_in_version() {
     cargo_process("install foo@v0.0.1")
         .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] invalid value 'foo@v0.0.1' for '[CRATE[@<VER>]]...': unexpected character 'v' while parsing major version number
+[ERROR] invalid value 'foo@v0.0.1' for '[CRATE[@<VER>]]...': the version provided, `v0.0.1` is not a valid SemVer requirement
+
+[HELP] try changing the version to `0.0.1`
 
 For more information, try '--help'.
 
