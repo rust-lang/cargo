@@ -212,3 +212,73 @@ fn inline_and_explicit_version() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn bad_version() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank foo@bar")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[YANK] foo@bar
+[ERROR] failed to yank from the registry at [ROOTURL]/api
+
+Caused by:
+  [37] Couldn't read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/foo/bar/yank)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn prefixed_v_in_version() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank bar@v0.0.1")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[YANK] bar@v0.0.1
+[ERROR] failed to yank from the registry at [ROOTURL]/api
+
+Caused by:
+  [37] Couldn't read a file:// file (Couldn't open file [ROOT]/api/api/v1/crates/bar/v0.0.1/yank)
+
+"#]])
+        .run();
+}
