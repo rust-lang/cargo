@@ -264,7 +264,7 @@ The path to where internal files used as part of the build are placed.
 
 This option supports path templating.
 
-Avaiable template variables:
+Available template variables:
 * `{workspace-root}` resolves to root of the current workspace.
 * `{cargo-cache-home}` resolves to `CARGO_HOME`
 * `{workspace-path-hash}` resolves to a hash of the manifest path

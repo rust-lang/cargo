@@ -5420,7 +5420,7 @@ fn rerun_if_published_directory() {
 
     p.cargo("check").run();
 
-    // Delete regitry src to make directories being recreated with the latest timestamp.
+    // Delete registry src to make directories being recreated with the latest timestamp.
     cargo_home().join("registry/src").rm_rf();
 
     p.cargo("check --verbose")
