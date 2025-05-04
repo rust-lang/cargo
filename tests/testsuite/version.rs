@@ -112,10 +112,7 @@ fn version_with_long_path() {
     // Create a project with an extremely long path
     let long_dir = "a".repeat(200);
     let p = project()
-        .file(
-            format!(".cargo/{}/config.toml", long_dir),
-            "",
-        )
+        .file(format!(".cargo/{}/config.toml", long_dir), "")
         .build();
 
     // Should still work with long paths
