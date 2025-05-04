@@ -2180,16 +2180,11 @@ fn install_git_with_rev_in_url() {
     url.push_str("#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4");
 
     cargo_process("install --locked --git")
-        .arg(url.to_string())
+        .arg(url)
         .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4`
-[WARNING] spurious network error (3 tries remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
-[WARNING] spurious network error (2 tries remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
-[WARNING] spurious network error (1 try remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
-[ERROR] failed to clone into: [ROOT]/home/.cargo/git/db/foo-[HASH]
+[ERROR] invalid git url to install from
 
-Caused by:
-  failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
+[HELP] use `--rev <SHA>` to specify a commit
 
 "#]])
         .with_status(101)
