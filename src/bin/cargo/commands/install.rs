@@ -178,6 +178,14 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let source = if let Some(url) = args.get_one::<String>("git") {
         let url = url.into_url()?;
+        if url.fragment().is_some() {
+            return Err(anyhow::format_err!(
+                "invalid git url to install from: URL fragments are not supported\n\n\
+                    help: remove the fragment, or use `--rev`, `--branch`, or `--tag` to select a git reference"
+            )
+            .into());
+        }
+
         let gitref = if let Some(branch) = args.get_one::<String>("branch") {
             GitReference::Branch(branch.clone())
         } else if let Some(tag) = args.get_one::<String>("tag") {
