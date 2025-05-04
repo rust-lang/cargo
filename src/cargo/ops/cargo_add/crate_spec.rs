@@ -47,8 +47,16 @@ impl CrateSpec {
         package_name?;
 
         if let Some(version) = version {
-            semver::VersionReq::parse(version)
-                .with_context(|| format!("invalid version requirement `{version}`"))?;
+            semver::VersionReq::parse(version).with_context(|| {
+                if let Some(stripped) = version.strip_prefix("v") {
+                    return format!(
+                        "the version provided, `{version}` is not a \
+                         valid SemVer requirement\n\n\
+                         help: changing the package to `{name}@{stripped}`",
+                    );
+                }
+                format!("invalid version requirement `{version}`")
+            })?;
         }
 
         let id = Self {

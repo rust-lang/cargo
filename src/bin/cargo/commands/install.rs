@@ -286,6 +286,12 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
         .next()
         .ok_or_else(|| format_err!("no version provided for the `--version` flag"))?;
 
+    if let Some(stripped) = v.strip_prefix("v") {
+        bail!(
+            "the version provided, `{v}` is not a valid SemVer requirement\n\n\
+            help: try changing the version to `{stripped}`",
+        )
+    }
     let is_req = "<>=^~".contains(first) || v.contains('*');
     if is_req {
         match v.parse::<VersionReq>() {

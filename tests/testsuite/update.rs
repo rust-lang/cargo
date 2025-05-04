@@ -2709,3 +2709,41 @@ fn update_breaking_pre_release_upgrade() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn prefixed_v_in_version() {
+    Package::new("bar", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name  =  "foo"
+        version  =  "0.0.1"
+        edition  =  "2015"
+        authors  =  []
+
+        [dependencies]
+        bar = "1.0.0"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("bar", "1.0.1").publish();
+    p.cargo("update bar --precise v1.0.1")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the version provided, `v1.0.1` is not a valid SemVer version
+
+[HELP] try changing the version to `1.0.1`
+
+Caused by:
+  unexpected character 'v' while parsing major version number
+
+"#]])
+        .run();
+}

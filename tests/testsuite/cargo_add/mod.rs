@@ -126,6 +126,7 @@ mod path_base_unstable;
 mod path_dev;
 mod path_inferred_name;
 mod path_inferred_name_conflicts_full_feature;
+mod prefixed_v_in_version;
 mod preserve_dep_std_table;
 mod preserve_features_sorted;
 mod preserve_features_table;

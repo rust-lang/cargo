@@ -212,3 +212,71 @@ fn inline_and_explicit_version() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn bad_version() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank foo@bar")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid version `bar`
+
+Caused by:
+  unexpected character 'b' while parsing major version number
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn prefixed_v_in_version() {
+    let registry = registry::init();
+    setup("foo", "0.0.1");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("yank bar@v0.0.1")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the version provided, `v0.0.1` is not a valid SemVer version
+
+[HELP] try changing the version to `0.0.1`
+
+Caused by:
+  unexpected character 'v' while parsing major version number
+
+"#]])
+        .run();
+}
