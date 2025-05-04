@@ -2170,6 +2170,33 @@ fn git_install_reads_workspace_manifest() {
 }
 
 #[cargo_test]
+fn install_git_with_rev_in_url() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut url = p.url().to_string();
+    url.push_str("#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4");
+
+    cargo_process("install --locked --git")
+        .arg(url.to_string())
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4`
+[WARNING] spurious network error (3 tries remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
+[WARNING] spurious network error (2 tries remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
+[WARNING] spurious network error (1 try remaining): failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
+[ERROR] failed to clone into: [ROOT]/home/.cargo/git/db/foo-[HASH]
+
+Caused by:
+  failed to resolve path '[ROOT]/foo#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4': No such file or directory; class=Os (2)
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn install_git_with_symlink_home() {
     // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
     // symlink, and uses an build script.
