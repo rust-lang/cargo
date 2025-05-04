@@ -2407,16 +2407,6 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 .or_else(|| orig.rev.clone().map(GitReference::Rev))
                 .unwrap_or(GitReference::DefaultBranch);
             let loc = git.into_url()?;
-
-            if let Some(fragment) = loc.fragment() {
-                let msg = format!(
-                    "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
-                        If you were trying to specify a specific git revision, \
-                        use `rev = \"{fragment}\"` in the dependency declaration.",
-                );
-                manifest_ctx.warnings.push(msg);
-            }
-
             SourceId::for_git(&loc, reference)
         }
         (None, Some(path), _, _) => {

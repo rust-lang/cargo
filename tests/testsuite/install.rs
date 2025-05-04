@@ -2350,13 +2350,16 @@ fn install_git_with_rev_in_url() {
     url.push('#');
     url.push_str(&rev);
 
-    cargo_process("install --locked --git").arg(url).run();
-    assert_has_installed_exe(paths::cargo_home(), "foo");
-    let crates_toml = fs::read_to_string(paths::home().join(".cargo/.crates.toml")).unwrap();
-    assert!(
-        crates_toml.contains(&format!("git+{}#{rev}#{rev}", p.url())),
-        "{crates_toml}"
-    );
+    cargo_process("install --locked --git")
+        .arg(url)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid url `[ROOTURL]/foo#[..]` to create a git reference: URL fragments are not supported
+
+[HELP] remove the fragment, or use `--rev`, `--branch`, or `--tag` to select a git reference
+
+"#]])
+        .with_status(101)
+        .run();
 }
 
 #[cargo_test]
