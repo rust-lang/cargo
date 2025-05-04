@@ -2334,6 +2334,32 @@ invalid potential workspace manifest: `[ROOT]/home/.cargo/git/checkouts/foo-[HAS
 }
 
 #[cargo_test]
+fn install_git_with_rev_in_url() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let rev = p.revparse_head();
+    // The malformed URL is passed to libgit2 as a path containing `#`.
+    // Create that path so the clone succeeds and the install can be tracked.
+    let fragment_path = paths::root().join(format!("foo#{rev}"));
+    git2::Repository::clone(p.url().as_str(), &fragment_path).unwrap();
+
+    let mut url = p.url().to_string();
+    url.push('#');
+    url.push_str(&rev);
+
+    cargo_process("install --locked --git").arg(url).run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    let crates_toml = fs::read_to_string(paths::home().join(".cargo/.crates.toml")).unwrap();
+    assert!(
+        crates_toml.contains(&format!("git+{}#{rev}#{rev}", p.url())),
+        "{crates_toml}"
+    );
+}
+
+#[cargo_test]
 fn install_git_with_symlink_home() {
     // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
     // symlink, and uses an build script.
