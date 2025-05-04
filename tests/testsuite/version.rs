@@ -99,9 +99,9 @@ fn version_with_custom_format() {
     // Test with invalid flag
     p.cargo("version --invalid-flag")
         .with_status(1)
-        .with_stderr_data(
+        .with_stderr(
             "[ERROR] unexpected argument '--invalid-flag' found\n\n\
-             Usage: cargo version [OPTIONS]\n\n\
+             Usage: cargo[EXE] version [OPTIONS]\n\n\
              For more information, try '--help'.\n",
         )
         .run();
