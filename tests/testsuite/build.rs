@@ -6749,3 +6749,91 @@ fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
     let not_the_same = !same_file::is_same_file(bin, renamed_bin).unwrap();
     assert!(not_the_same, "renamed uplifted artifact must be unmodified");
 }
+
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &[]))
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file(
+            "bar/src/bar.rs",
+            r#"
+                pub fn gimme() -> &'static str {
+                    "test passed"
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z no-embed-metadata")
+        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+        .arg("-v")
+        .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
+        .with_stderr_contains(
+            "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rmeta[..]`",
+        )
+        .run();
+}
+
+// Make sure that cargo passes --extern=<dep>.rmeta even if <dep>
+// is compiled as a dylib.
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata_dylib_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &[]))
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+                pub fn gimme() -> &'static str {
+                    "test passed"
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z no-embed-metadata")
+        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+        .arg("-v")
+        .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
+        .with_stderr_contains(
+            "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/deps/libbar.rmeta[..]`",
+        )
+        .run();
+}

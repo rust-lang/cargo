@@ -230,7 +230,7 @@ fn clean_specs(
 
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
-                        .rustc_outputs(mode, target.kind(), triple)?;
+                        .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
                     let (dir, uplift_dir) = match target.kind() {
                         TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
                             (layout.build_examples(), Some(layout.examples()))

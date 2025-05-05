@@ -1131,13 +1131,31 @@ fn build_base_args(
 
     if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
-    } else if !unit.requires_upstream_objects() {
-        // Always produce metadata files for rlib outputs. Metadata may be used
-        // in this session for a pipelined compilation, or it may be used in a
-        // future Cargo session as part of a pipelined compile.
-        cmd.arg("--emit=dep-info,metadata,link");
+    } else if build_runner.bcx.gctx.cli_unstable().no_embed_metadata {
+        // Nightly rustc supports the -Zembed-metadata=no flag, which tells it to avoid including
+        // full metadata in rlib/dylib artifacts, to save space on disk. In this case, metadata
+        // will only be stored in .rmeta files.
+        // When we use this flag, we should also pass --emit=metadata to all artifacts that
+        // contain useful metadata (rlib/dylib/proc macros), so that a .rmeta file is actually
+        // generated. If we didn't do this, the full metadata would not get written anywhere.
+        // However, we do not want to pass --emit=metadata to artifacts that never produce useful
+        // metadata, such as binaries, because that would just unnecessarily create empty .rmeta
+        // files on disk.
+        if unit.benefits_from_no_embed_metadata() {
+            cmd.arg("--emit=dep-info,metadata,link");
+            cmd.args(&["-Z", "embed-metadata=no"]);
+        } else {
+            cmd.arg("--emit=dep-info,link");
+        }
     } else {
-        cmd.arg("--emit=dep-info,link");
+        // If we don't use -Zembed-metadata=no, we emit .rmeta files only for rlib outputs.
+        // This metadata may be used in this session for a pipelined compilation, or it may
+        // be used in a future Cargo session as part of a pipelined compile.
+        if !unit.requires_upstream_objects() {
+            cmd.arg("--emit=dep-info,metadata,link");
+        } else {
+            cmd.arg("--emit=dep-info,link");
+        }
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
@@ -1636,6 +1654,8 @@ pub fn extern_args(
     let mut result = Vec::new();
     let deps = build_runner.unit_deps(unit);
 
+    let no_embed_metadata = build_runner.bcx.gctx.cli_unstable().no_embed_metadata;
+
     // Closure to add one dependency to `result`.
     let mut link_to =
         |dep: &UnitDep, extern_crate_name: InternedString, noprelude: bool| -> CargoResult<()> {
@@ -1683,6 +1703,12 @@ pub fn extern_args(
                 // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
                 for output in outputs.iter() {
                     if output.flavor == FileFlavor::Linkable {
+                        pass(&output.path);
+                    }
+                    // If we use -Zembed-metadata=no, we also need to pass the path to the
+                    // corresponding .rmeta file to the linkable artifact, because the
+                    // normal dependency (rlib) doesn't contain the full metadata.
+                    else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
                         pass(&output.path);
                     }
                 }
