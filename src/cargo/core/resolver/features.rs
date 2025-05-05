@@ -802,6 +802,63 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             }
         }
 
+        /// Returns the `FeaturesFor` needed for this dependency.
+        ///
+        /// This includes the `FeaturesFor` for artifact dependencies, which
+        /// might specify multiple targets.
+        fn artifact_features_for(
+            this: &mut FeatureResolver<'_, '_>,
+            pkg_id: PackageId,
+            dep: &Dependency,
+            lib_fk: FeaturesFor,
+        ) -> CargoResult<Vec<FeaturesFor>> {
+            let Some(artifact) = dep.artifact() else {
+                return Ok(vec![lib_fk]);
+            };
+            let mut result = Vec::new();
+            let host_triple = this.target_data.rustc.host;
+            // Not all targets may be queried before resolution since artifact
+            // dependencies and per-pkg-targets are not immediately known.
+            let mut activate_target = |target| {
+                let name = dep.name_in_toml();
+                this.target_data
+                    .merge_compile_kind(CompileKind::Target(target))
+                    .with_context(|| {
+                        format!(
+                            "failed to determine target information for target `{target}`.\n  \
+                             Artifact dependency `{name}` in package `{pkg_id}` requires building \
+                             for `{target}`",
+                            target = target.rustc_target()
+                        )
+                    })
+            };
+
+            if let Some(target) = artifact.target() {
+                match target {
+                    ArtifactTarget::Force(target) => {
+                        activate_target(target)?;
+                        result.push(FeaturesFor::ArtifactDep(target))
+                    }
+                    // FIXME: this needs to interact with the `default-target`
+                    // and `forced-target` values of the dependency
+                    ArtifactTarget::BuildDependencyAssumeTarget => {
+                        for kind in this.requested_targets {
+                            let target = match kind {
+                                CompileKind::Host => CompileTarget::new(&host_triple).unwrap(),
+                                CompileKind::Target(target) => *target,
+                            };
+                            activate_target(target)?;
+                            result.push(FeaturesFor::ArtifactDep(target));
+                        }
+                    }
+                }
+            }
+            if artifact.is_lib() || artifact.target().is_none() {
+                result.push(lib_fk);
+            }
+            Ok(result)
+        }
+
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
@@ -850,79 +907,15 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         // for various targets which are either specified in the manifest
                         // or on the cargo command-line.
                         let lib_fk = if fk == FeaturesFor::default() {
-                            (self.track_for_host && (dep.is_build() || self.has_proc_macro_lib(dep_id)))
-                                .then(|| FeaturesFor::HostDep)
-                                .unwrap_or_default()
+                            (self.track_for_host
+                                && (dep.is_build() || self.has_proc_macro_lib(dep_id)))
+                            .then(|| FeaturesFor::HostDep)
+                            .unwrap_or_default()
                         } else {
                             fk
                         };
 
-                        // `artifact_target_keys` are produced to fulfil the needs of artifacts that have a target specification.
-                        let artifact_target_keys = dep
-                            .artifact()
-                            .map(|artifact| {
-                                let host_triple = self.target_data.rustc.host;
-                                // not all targets may be queried before resolution since artifact dependencies
-                                // and per-pkg-targets are not immediately known.
-                                let mut activate_target = |target| {
-                                    let name = dep.name_in_toml();
-                                    self.target_data
-                                        .merge_compile_kind(CompileKind::Target(target))
-                                        .with_context(|| format!("failed to determine target information for target `{target}`.\n  \
-                                        Artifact dependency `{name}` in package `{pkg_id}` requires building for `{target}`", target = target.rustc_target()))
-                                };
-                                CargoResult::Ok((
-                                    artifact.is_lib(),
-                                    artifact
-                                        .target()
-                                        .map(|target| {
-                                            CargoResult::Ok(match target {
-                                                ArtifactTarget::Force(target) => {
-                                                    activate_target(target)?;
-                                                    vec![FeaturesFor::ArtifactDep(target)]
-                                                }
-                                                // FIXME: this needs to interact with the `default-target` and `forced-target` values
-                                                // of the dependency
-                                                ArtifactTarget::BuildDependencyAssumeTarget => self
-                                                    .requested_targets
-                                                    .iter()
-                                                    .map(|kind| match kind {
-                                                        CompileKind::Host => {
-                                                            CompileTarget::new(&host_triple)
-                                                                .unwrap()
-                                                        }
-                                                        CompileKind::Target(target) => *target,
-                                                    })
-                                                    .map(|target| {
-                                                        activate_target(target)?;
-                                                        Ok(FeaturesFor::ArtifactDep(target))
-                                                    })
-                                                    .collect::<CargoResult<_>>()?,
-                                            })
-                                        })
-                                        .transpose()?,
-                                ))
-                            })
-                            .transpose()?;
-
-                        let dep_fks = match artifact_target_keys {
-                            // The artifact is also a library and does specify custom
-                            // targets.
-                            // The library's feature key needs to be used alongside
-                            // the keys artifact targets.
-                            Some((is_lib, Some(mut dep_fks))) if is_lib => {
-                                dep_fks.push(lib_fk);
-                                dep_fks
-                            }
-                            // The artifact is not a library, but does specify
-                            // custom targets.
-                            // Use only these targets feature keys.
-                            Some((_, Some(dep_fks))) => dep_fks,
-                            // There is no artifact in the current dependency
-                            // or there is no target specified on the artifact.
-                            // Use the standard feature key without any alteration.
-                            Some((_, None)) | None => vec![lib_fk],
-                        };
+                        let dep_fks = artifact_features_for(self, pkg_id, dep, lib_fk)?;
                         Ok(dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk)))
                     })
                     .flatten_ok()
