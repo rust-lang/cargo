@@ -534,6 +534,29 @@ fn fail_with_multiple_packages() {
 }
 
 #[cargo_test]
+fn fail_with_bad_bin_no_package() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() { println!("hello a.rs"); }
+            "#,
+        )
+        .build();
+
+    p.cargo("rustc --bin main")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no bin target named `main`
+[HELP] available bin targets:
+    foo
+...
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn fail_with_glob() {
     let p = project()
         .file(
