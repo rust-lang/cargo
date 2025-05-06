@@ -296,16 +296,11 @@ impl<'a> UnitGenerator<'a, '_> {
                 Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
                     " in default-run packages".to_owned()
                 }
-                Packages::Packages(packages) => {
-                    let first = packages
-                        .first()
-                        .expect("The number of packages must be at least 1");
-                    if packages.len() == 1 {
-                        format!(" in `{}` package", first)
-                    } else {
-                        format!(" in `{}`, ... packages", first)
-                    }
-                }
+                Packages::Packages(packages) => match packages.len() {
+                    0 => String::new(),
+                    1 => format!(" in `{}` package", packages[0]),
+                    _ => format!(" in `{}`, ... packages", packages[0]),
+                },
             };
 
             let named = if is_glob { "matches pattern" } else { "named" };

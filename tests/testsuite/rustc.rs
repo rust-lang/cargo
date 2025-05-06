@@ -547,9 +547,9 @@ fn fail_with_bad_bin_no_package() {
     p.cargo("rustc --bin main")
         .with_status(101)
         .with_stderr_data(str![[r#"
-
-thread 'main' panicked [..]:
-The number of packages must be at least 1
+[ERROR] no bin target named `main`
+[HELP] available bin targets:
+    foo
 ...
 
 "#]])
