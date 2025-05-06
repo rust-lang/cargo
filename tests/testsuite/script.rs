@@ -1886,3 +1886,56 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn ignore_surrounding_workspace() {
+    let p = cargo_test_support::project()
+        .file(
+            std::path::Path::new(".cargo").join("config.toml"),
+            r#"
+[registries.test-reg]
+index = "https://github.com/rust-lang/crates.io-index"
+"#,
+        )
+        .file(
+            std::path::Path::new("inner").join("Cargo.toml"),
+            r#"
+[package]
+name = "inner"
+version = "0.1.0"
+
+[dependencies]
+serde = { version = "1.0", registry = "test-reg" }
+"#,
+        )
+        .file(std::path::Path::new("inner").join("src").join("lib.rs"), "")
+        .file(std::path::Path::new("script").join("echo.rs"), ECHO_SCRIPT)
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = [
+    "inner",
+]
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript -v script/echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[ERROR] failed to load manifest for workspace member `[ROOT]/foo/inner`
+referenced by workspace at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse manifest at `[ROOT]/foo/inner/Cargo.toml`
+
+Caused by:
+  registry index was not found in any configuration: `test-reg`
+
+"#]])
+        .with_status(101)
+        .run();
+}
