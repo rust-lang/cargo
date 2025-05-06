@@ -294,16 +294,16 @@ impl<'a> UnitGenerator<'a, '_> {
 
             let unmatched_packages = match self.spec {
                 Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
-                    "default-run packages".to_owned()
+                    " in default-run packages".to_owned()
                 }
                 Packages::Packages(packages) => {
                     let first = packages
                         .first()
                         .expect("The number of packages must be at least 1");
                     if packages.len() == 1 {
-                        format!("`{}` package", first)
+                        format!(" in `{}` package", first)
                     } else {
-                        format!("`{}`, ... packages", first)
+                        format!(" in `{}`, ... packages", first)
                     }
                 }
             };
@@ -313,7 +313,7 @@ impl<'a> UnitGenerator<'a, '_> {
             let mut msg = String::new();
             write!(
                 msg,
-                "no {target_desc} target {named} `{target_name}` in {unmatched_packages}{suggestion}",
+                "no {target_desc} target {named} `{target_name}`{unmatched_packages}{suggestion}",
             )?;
             if !targets_elsewhere.is_empty() {
                 append_targets_elsewhere(&mut msg)?;
