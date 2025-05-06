@@ -36,7 +36,8 @@ const SIMPLE_SPEC: &str = r#"
 }
 "#;
 
-#[cargo_test(nightly, reason = "requires features no_core, lang_items")]
+#[ignore = "1-86 beta betaport"]
+#[cargo_test]
 fn custom_target_minimal() {
     let p = project()
         .file(
