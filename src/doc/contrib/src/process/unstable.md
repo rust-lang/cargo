@@ -32,7 +32,7 @@ something is only partially implemented, it may have both
 [S-accepted] to finish the rest of the work.
 
 [tracking issue]: https://github.com/rust-lang/cargo/labels/C-tracking-issue
-[tracking issue template]: https://github.com/rust-lang/cargo/issues/new?labels=C-tracking-issue&template=tracking_issue.md
+[tracking issue template]: https://github.com/rust-lang/cargo/issues/new?labels=C-tracking-issue&template=tracking_issue.yml
 [S-needs-mentor]: https://github.com/rust-lang/cargo/labels/S-needs-mentor
 [S-accepted]: https://github.com/rust-lang/cargo/labels/S-accepted
 [S-waiting-on-feedback]: https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback
