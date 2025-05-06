@@ -108,6 +108,7 @@ Each new feature described below should explain how to use it.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
+    * [feature-metadata](#feature-metadata) --- Table syntax for feature definitions.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1730,6 +1731,21 @@ If a built-in path base name is also declared in the configuration, then Cargo
 will prefer the value in the configuration. The allows Cargo to add new built-in
 path bases without compatibility issues (as existing uses will shadow the
 built-in name).
+
+## feature-metadata
+
+* Tracking Issue: [#14157](https://github.com/rust-lang/cargo/issues/14157)
+
+This allows to use a table when defining features, with a required `enables` key:
+
+```toml
+[features]
+# same as `foo = []`
+foo = { enables = [] }
+```
+
+This is equivalent to the array-of-strings syntax.
+Support for other keys should be added later.
 
 ## lockfile-path
 * Original Issue: [#5707](https://github.com/rust-lang/cargo/issues/5707)

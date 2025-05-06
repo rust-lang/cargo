@@ -41,7 +41,7 @@ pub struct TomlManifest {
     pub package: Option<Box<TomlPackage>>,
     pub project: Option<Box<TomlPackage>>,
     pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
+    pub features: Option<BTreeMap<FeatureName, FeatureDefinition>>,
     pub lib: Option<TomlLibTarget>,
     pub bin: Option<Vec<TomlBinTarget>>,
     pub example: Option<Vec<TomlExampleTarget>>,
@@ -110,7 +110,7 @@ impl TomlManifest {
             .or(self.build_dependencies2.as_ref())
     }
 
-    pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
+    pub fn features(&self) -> Option<&BTreeMap<FeatureName, FeatureDefinition>> {
         self.features.as_ref()
     }
 
@@ -1491,6 +1491,63 @@ impl TomlPlatform {
             .as_ref()
             .or(self.build_dependencies2.as_ref())
     }
+}
+
+/// Definition of a feature.
+#[derive(Clone, Debug, Serialize)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[serde(untagged)]
+pub enum FeatureDefinition {
+    /// Features that this feature enables.
+    Array(Vec<String>),
+    /// Unstable feature `feature-metadata`. Metadata of this feature.
+    Metadata(FeatureMetadata),
+}
+
+// Implementing `Deserialize` manually allows for a better error message when the `enables` key is
+// missing.
+impl<'de> de::Deserialize<'de> for FeatureDefinition {
+    fn deserialize<D>(d: D) -> Result<FeatureDefinition, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .seq(|seq| {
+                seq.deserialize::<Vec<String>>()
+                    .map(FeatureDefinition::Array)
+            })
+            .map(|seq| {
+                seq.deserialize::<FeatureMetadata>()
+                    .map(FeatureDefinition::Metadata)
+            })
+            .deserialize(d)
+    }
+}
+
+impl FeatureDefinition {
+    /// Returns the features that this feature enables.
+    pub fn enables(&self) -> &[String] {
+        match self {
+            Self::Array(features) => features,
+            Self::Metadata(FeatureMetadata {
+                enables: features, ..
+            }) => features,
+        }
+    }
+}
+
+/// Unstable feature `feature-metadata`. Metadata of a feature.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub struct FeatureMetadata {
+    /// Features that this feature enables.
+    pub enables: Vec<String>,
+
+    /// This is here to provide a way to see the "unused manifest keys" when deserializing
+    #[serde(skip_serializing)]
+    #[serde(flatten)]
+    #[cfg_attr(feature = "unstable-schema", schemars(skip))]
+    pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
 #[derive(Serialize, Debug, Clone)]

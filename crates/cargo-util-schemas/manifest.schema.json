@@ -51,10 +51,7 @@
         "null"
       ],
       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+        "$ref": "#/$defs/FeatureDefinition"
       }
     },
     "lib": {
@@ -597,6 +594,38 @@
       ]
     },
     "TomlValue": true,
+    "FeatureDefinition": {
+      "description": "Definition of a feature.",
+      "anyOf": [
+        {
+          "description": "Features that this feature enables.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "description": "Unstable feature `feature-metadata`. Metadata of this feature.",
+          "$ref": "#/$defs/FeatureMetadata"
+        }
+      ]
+    },
+    "FeatureMetadata": {
+      "description": "Unstable feature `feature-metadata`. Metadata of a feature.",
+      "type": "object",
+      "properties": {
+        "enables": {
+          "description": "Features that this feature enables.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "enables"
+      ]
+    },
     "TomlTarget": {
       "type": "object",
       "properties": {
