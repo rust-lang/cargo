@@ -25,7 +25,7 @@ fn path() -> Vec<std::path::PathBuf> {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect()
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn basic_rs() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -48,7 +48,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn basic_path() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
@@ -94,8 +94,8 @@ fn path_required() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 #[cfg(unix)]
+#[cargo_test]
 fn manifest_precedence_over_plugins() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -125,8 +125,8 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 #[cfg(unix)]
+#[cargo_test]
 fn warn_when_plugin_masks_manifest_on_stable() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -182,7 +182,7 @@ fn requires_z_flag() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -212,7 +212,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -242,7 +242,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn rebuild() {
     let script = r#"#!/usr/bin/env cargo-eval
 
@@ -302,7 +302,7 @@ msg = hello
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn use_cargo_home_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
@@ -366,7 +366,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn default_programmatic_verbosity() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -384,7 +384,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn quiet() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -402,7 +402,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -430,7 +430,7 @@ line: 4
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_escaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -454,7 +454,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_unescaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -478,7 +478,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_same_flags() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -502,7 +502,7 @@ args: ["--help"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_name_has_weird_chars() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -526,7 +526,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_name_has_leading_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -550,7 +550,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_name_is_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("42.rs", script).build();
@@ -685,7 +685,7 @@ fn did_you_mean_command_stable() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -722,7 +722,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_path_dep() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -758,7 +758,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_no_build_rs() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -786,7 +786,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_no_autobins() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -814,7 +814,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn test_no_autolib() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -1242,7 +1242,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1266,7 +1266,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn no_local_lockfile() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1330,7 +1330,7 @@ fn cmd_check_requires_z_flag() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_check_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1379,7 +1379,7 @@ fn cmd_check_with_missing_script() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_build_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1398,7 +1398,7 @@ fn cmd_build_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_test_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1426,7 +1426,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_clean_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1615,7 +1615,7 @@ fn cmd_read_manifest_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_run_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1696,7 +1696,7 @@ fn cmd_verify_project_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_pkgid_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1736,7 +1736,7 @@ fn cmd_pkgid_with_embedded_no_lock_file() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn cmd_pkgid_with_embedded_dep() {
     Package::new("dep", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -1769,7 +1769,7 @@ registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn script_as_dep() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1857,7 +1857,7 @@ fn cmd_publish_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn manifest_path_env() {
     let p = cargo_test_support::project()
         .file(

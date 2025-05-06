@@ -407,7 +407,7 @@ fn new_with_bad_edition() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn lockfile_constant_during_new() {
     cargo_process("new foo").run();
 
