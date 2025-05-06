@@ -1923,19 +1923,17 @@ members = [
 
     p.cargo("-Zscript -v script/echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#""#]])
-        .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2024`
-[ERROR] failed to load manifest for workspace member `[ROOT]/foo/inner`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse manifest at `[ROOT]/foo/inner/Cargo.toml`
-
-Caused by:
-  registry index was not found in any configuration: `test-reg`
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+args: []
 
 "#]])
-        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] echo v0.0.0 ([ROOT]/foo/script/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
         .run();
 }

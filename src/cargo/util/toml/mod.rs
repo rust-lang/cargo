@@ -13,6 +13,7 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
+    TomlWorkspace,
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
@@ -80,7 +81,8 @@ pub fn read_manifest(
         let empty = Vec::new();
         let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
-        let workspace_config = to_workspace_config(&original_toml, path, gctx, &mut warnings)?;
+        let workspace_config =
+            to_workspace_config(&original_toml, path, is_embedded, gctx, &mut warnings)?;
         if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
             let package_root = path.parent().unwrap();
             gctx.ws_roots
@@ -211,9 +213,14 @@ fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
 fn to_workspace_config(
     original_toml: &manifest::TomlManifest,
     manifest_file: &Path,
+    is_embedded: bool,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
 ) -> CargoResult<WorkspaceConfig> {
+    if is_embedded {
+        let ws_root_config = to_workspace_root_config(&TomlWorkspace::default(), manifest_file);
+        return Ok(WorkspaceConfig::Root(ws_root_config));
+    }
     let workspace_config = match (
         original_toml.workspace.as_ref(),
         original_toml.package().and_then(|p| p.workspace.as_ref()),
