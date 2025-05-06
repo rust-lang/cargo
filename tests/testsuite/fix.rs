@@ -966,7 +966,7 @@ fn prepare_for_already_on_latest_unstable() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+#[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
     if Edition::LATEST_UNSTABLE.is_some() {
