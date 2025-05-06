@@ -91,6 +91,7 @@ Each new feature described below should explain how to use it.
     * [checksum-freshness](#checksum-freshness) --- When passed, the decision as to whether a crate needs to be rebuilt is made using file checksums instead of the file mtime.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
+    * [no-embed-metadata](#no-embed-metadata) --- Passes `-Zembed-metadata=no` to the compiler, which avoid embedding metadata into rlib and dylib artifacts, to save disk space.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
     * [gc](#gc) --- Global cache garbage collection.
     * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
@@ -1895,6 +1896,23 @@ for more information.
 The `-Z rustdoc-depinfo` flag leverages rustdoc's dep-info files to determine
 whether documentations are required to re-generate. This can be combined with
 `-Z checksum-freshness` to detect checksum changes rather than file mtime.
+
+## no-embed-metadata
+* Original Pull Request: [#15378](https://github.com/rust-lang/cargo/pull/15378)
+* Tracking Issue: [#15495](https://github.com/rust-lang/cargo/issues/15495)
+
+The default behavior of Rust is to embed crate metadata into `rlib` and `dylib` artifacts.
+Since Cargo also passes `--emit=metadata` to these intermediate artifacts to enable pipelined
+compilation, this means that a lot of metadata ends up being duplicated on disk, which wastes
+disk space in the target directory.
+
+This feature tells Cargo to pass the `-Zembed-metadata=no` flag to the compiler, which instructs
+it not to embed metadata within rlib and dylib artifacts. In this case, the metadata will only
+be stored in `.rmeta` files.
+
+```console
+cargo +nightly -Zno-embed-metadata build
+```
 
 # Stabilized and removed features
 

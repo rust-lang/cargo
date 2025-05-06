@@ -570,9 +570,10 @@ impl TargetInfo {
         mode: CompileMode,
         target_kind: &TargetKind,
         target_triple: &str,
+        gctx: &GlobalContext,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         match mode {
-            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_triple),
+            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_triple, gctx),
             CompileMode::Test | CompileMode::Bench => {
                 match self.file_types(&CrateType::Bin, FileFlavor::Normal, target_triple)? {
                     Some(fts) => Ok((fts, Vec::new())),
@@ -593,6 +594,7 @@ impl TargetInfo {
         &self,
         target_kind: &TargetKind,
         target_triple: &str,
+        gctx: &GlobalContext,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         let mut unsupported = Vec::new();
         let mut result = Vec::new();
@@ -613,9 +615,18 @@ impl TargetInfo {
                 }
             }
         }
-        if !result.is_empty() && !crate_types.iter().any(|ct| ct.requires_upstream_objects()) {
-            // Only add rmeta if pipelining.
-            result.push(FileType::new_rmeta());
+        if !result.is_empty() {
+            if gctx.cli_unstable().no_embed_metadata
+                && crate_types
+                    .iter()
+                    .any(|ct| ct.benefits_from_no_embed_metadata())
+            {
+                // Add .rmeta when we apply -Zembed-metadata=no to the unit.
+                result.push(FileType::new_rmeta());
+            } else if !crate_types.iter().any(|ct| ct.requires_upstream_objects()) {
+                // Only add rmeta if pipelining
+                result.push(FileType::new_rmeta());
+            }
         }
         Ok((result, unsupported))
     }

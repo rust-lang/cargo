@@ -363,6 +363,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 CompileMode::Build,
                 &TargetKind::Bin,
                 bcx.target_data.short_name(&kind),
+                bcx.gctx,
             )
             .expect("target must support `bin`");
 
@@ -540,7 +541,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let info = bcx.target_data.info(unit.kind);
         let triple = bcx.target_data.short_name(&unit.kind);
         let (file_types, unsupported) =
-            info.rustc_outputs(unit.mode, unit.target.kind(), triple)?;
+            info.rustc_outputs(unit.mode, unit.target.kind(), triple, bcx.gctx)?;
         if file_types.is_empty() {
             if !unsupported.is_empty() {
                 let unsupported_strs: Vec<_> = unsupported.iter().map(|ct| ct.as_str()).collect();

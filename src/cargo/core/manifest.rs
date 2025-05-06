@@ -279,6 +279,17 @@ impl TargetKind {
         }
     }
 
+    /// Returns whether production of this artifact could benefit from splitting metadata
+    /// into a .rmeta file.
+    pub fn benefits_from_no_embed_metadata(&self) -> bool {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
+                kinds.iter().any(|k| k.benefits_from_no_embed_metadata())
+            }
+            _ => false,
+        }
+    }
+
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<CrateType> {
         match self {

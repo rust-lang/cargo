@@ -783,6 +783,7 @@ unstable_cli_options!(
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     next_lockfile_bump: bool,
+    no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     package_workspace: bool = ("Handle intra-workspace dependencies when packaging"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
@@ -1294,6 +1295,7 @@ impl CliUnstable {
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
+            "no-embed-metadata" => self.no_embed_metadata = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "package-workspace" => self.package_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
