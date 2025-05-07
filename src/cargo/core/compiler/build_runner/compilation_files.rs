@@ -624,6 +624,11 @@ fn compute_metadata(
     metas: &mut HashMap<Unit, Metadata>,
 ) -> Metadata {
     let bcx = &build_runner.bcx;
+    // Get the metadata from deps, partitioned such that we have a separate list
+    // of dependencies that are host dependencies of cross-compilation targets.
+    // IOW, when cross-compiling, we treat the build scripts and proc macros
+    // separately. This will allow us to exclude host-dependent metadata from
+    // symbols of e.g. wasm targets.
     let (deps_metadata, deps_metadata_cross_host) = build_runner
         .unit_deps(unit)
         .iter()
@@ -754,6 +759,7 @@ fn compute_metadata(
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
     let mut c_extra_filename_hasher = shared_hasher.clone();
+
     // Mix in the target-metadata of all the dependencies of this target.
     let mut dep_c_extra_filename_hashes = deps_metadata
         .iter()
@@ -761,6 +767,17 @@ fn compute_metadata(
         .collect::<Vec<_>>();
     dep_c_extra_filename_hashes.sort();
     dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
+
+    // Also the the host dependencies of cross-compiled target units. So
+    // filenames of cross-compiled artifacts will contain host metadata, but
+    // symbols will not.
+    let mut dep_c_extra_filename_cross_host = deps_metadata_cross_host
+        .iter()
+        .map(|m| m.c_extra_filename)
+        .collect::<Vec<_>>();
+    dep_c_extra_filename_cross_host.sort();
+    dep_c_extra_filename_cross_host.hash(&mut shared_hasher);
+
     // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
     //
     // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
