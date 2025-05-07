@@ -646,7 +646,8 @@ fn check_std() {
         .run();
 }
 
-#[cargo_test(build_std_mock)]
+#[ignore = "1-86 beta betaport"]
+#[cargo_test]
 fn doctest() {
     let setup = setup();
 

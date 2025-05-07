@@ -4740,9 +4740,8 @@ fn test_dep_with_dev() {
         .run();
 }
 
-// #[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[ignore = "1-86 beta betaport"]
 #[cargo_test]
-#[ignore = "waiting for https://github.com/rust-lang/rust/pull/138877"]
 fn cargo_test_doctest_xcompile_ignores() {
     // -Zdoctest-xcompile also enables --enable-per-target-ignores which
     // allows the ignore-TARGET syntax.
@@ -4802,7 +4801,8 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[ignore = "1-86 beta betaport"]
+#[cargo_test]
 fn cargo_test_doctest_xcompile() {
     if !cross_compile::can_run_on_host() {
         return;
@@ -4844,7 +4844,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[ignore = "1-86 beta betaport"]
+#[cargo_test]
 fn cargo_test_doctest_xcompile_runner() {
     if !cross_compile::can_run_on_host() {
         return;
@@ -4931,7 +4932,8 @@ this is a runner
     .run();
 }
 
-#[cargo_test(nightly, reason = "-Zdoctest-xcompile is unstable")]
+#[ignore = "1-86 beta betaport"]
+#[cargo_test]
 fn cargo_test_doctest_xcompile_no_runner() {
     if !cross_compile::can_run_on_host() {
         return;

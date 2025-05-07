@@ -5513,6 +5513,7 @@ fn test_with_dep_metadata() {
     p.cargo("test --lib").run();
 }
 
+#[ignore = "1-86 beta betaport"]
 #[cargo_test]
 fn duplicate_script_with_extra_env() {
     // Test where a build script is run twice, that emits different rustc-env
