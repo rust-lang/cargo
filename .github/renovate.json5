@@ -11,8 +11,8 @@
   customManagers: [
     {
       customType: 'regex',
-      fileMatch: [
-        'Cargo.toml$',
+      managerFilePatterns: [
+        '/Cargo.toml$/',
       ],
       matchStrings: [
         '\\bMSRV:1\\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
@@ -24,8 +24,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'Cargo.toml$',
+      managerFilePatterns: [
+        '/Cargo.toml$/',
       ],
       matchStrings: [
         '\\bMSRV:3\\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
@@ -37,8 +37,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        '^.github.workflows.main.yml$',
+      managerFilePatterns: [
+        '/^.github.workflows.main.yml$/',
       ],
       matchStrings: [
         'cargo-semver-checks.releases.download.v(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
