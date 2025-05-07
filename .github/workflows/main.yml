@@ -27,6 +27,7 @@ jobs:
       - lockfile
       - resolver
       - rustfmt
+      - schema
       - test
       - test_gitoxide
     permissions:
