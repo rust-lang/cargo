@@ -1057,6 +1057,19 @@ impl HttpServer {
         }
     }
 
+    /// Return too many requests (HTTP 429)
+    pub fn too_many_requests(&self, _req: &Request, delay: std::time::Duration) -> Response {
+        Response {
+            code: 429,
+            headers: vec![format!("Retry-After: {}", delay.as_secs())],
+            body: format!(
+                "too many requests, try again in {} seconds",
+                delay.as_secs()
+            )
+            .into_bytes(),
+        }
+    }
+
     /// Serve the download endpoint
     pub fn dl(&self, req: &Request) -> Response {
         let file = self
