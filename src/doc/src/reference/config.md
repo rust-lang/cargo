@@ -711,7 +711,7 @@ certificates. If not specified, Cargo attempts to use the system certificates.
 
 #### `http.proxy-cainfo`
 * Type: string (path)
-* Default: none
+* Default: falls back to `http.cainfo` if not set
 * Environment: `CARGO_HTTP_PROXY_CAINFO`
 
 Path to a Certificate Authority (CA) bundle file, used to verify proxy TLS
