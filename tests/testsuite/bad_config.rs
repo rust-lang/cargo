@@ -2642,7 +2642,7 @@ fn bad_dependency() {
 }
 
 #[cargo_test]
-fn bad_boolean_dependency() {
+fn bad_dependency_true_literal() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2664,6 +2664,8 @@ fn bad_boolean_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid type: boolean `true`, expected a version string like "0.9.8" or a detailed dependency like { version = "0.9.8" }
+[NOTE] if you meant to use a workspace member, you can write
+ dep.workspace = true
  --> Cargo.toml:9:23
   |
 9 |                 bar = true
