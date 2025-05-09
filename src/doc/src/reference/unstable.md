@@ -1816,7 +1816,7 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 
 ### How to use native-completions feature:
 - bash:
-  Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to `~/.local/share/bash-completion/completions/cargo`.
+  Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to `$XDG_DATA_HOME/bash-completion/completions/cargo`, or `~/.local/share/bash-completion/completions/cargo` if `XDG_DATA_HOME` is not set.
 
 - zsh:
   Add `source <(CARGO_COMPLETE=zsh cargo +nightly)` to your `.zshrc`.
