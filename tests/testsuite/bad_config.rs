@@ -2642,6 +2642,39 @@ fn bad_dependency() {
 }
 
 #[cargo_test]
+fn bad_boolean_dependency() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: boolean `true`, expected a version string like "0.9.8" or a detailed dependency like { version = "0.9.8" }
+ --> Cargo.toml:9:23
+  |
+9 |                 bar = true
+  |                       ^^^^
+  |
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn bad_debuginfo() {
     let p = project()
         .file(
