@@ -18,7 +18,7 @@ use the standard library's definition - they use the definition here.
 environment variable on Windows. If you are still using this crate for the
 purpose of getting a home directory, you are strongly encouraged to switch to
 using the standard library's [`home_dir`] instead. It is planned to have the
-deprecation notice removed in 1.86.
+deprecation notice removed in 1.87.
 
 This crate further provides two functions, `cargo_home` and
 `rustup_home`, which are the canonical way to determine the location
