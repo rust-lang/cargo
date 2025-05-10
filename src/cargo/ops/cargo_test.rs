@@ -176,7 +176,6 @@ fn run_doc_tests(
 ) -> Result<Vec<UnitTestError>, CliError> {
     let gctx = ws.gctx();
     let mut errors = Vec::new();
-    let doctest_xcompile = gctx.cli_unstable().doctest_xcompile;
     let color = gctx.shell().color_choice();
 
     for doctest_info in &compilation.to_doc_test {
@@ -188,28 +187,6 @@ fn run_doc_tests(
             script_meta,
             env,
         } = doctest_info;
-
-        if !doctest_xcompile {
-            match unit.kind {
-                CompileKind::Host => {}
-                CompileKind::Target(target) => {
-                    if target.short_name() != compilation.host {
-                        // Skip doctests, -Zdoctest-xcompile not enabled.
-                        gctx.shell().verbose(|shell| {
-                            shell.note(format!(
-                                "skipping doctests for {} ({}), \
-                                 cross-compilation doctests are not yet supported\n\
-                                 See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
-                                 for more information.",
-                                unit.pkg,
-                                unit.target.description_named()
-                            ))
-                        })?;
-                        continue;
-                    }
-                }
-            }
-        }
 
         gctx.shell().status("Doc-tests", unit.target.name())?;
         let mut p = compilation.rustdoc_process(unit, *script_meta)?;
@@ -237,18 +214,16 @@ fn run_doc_tests(
             p.arg("--target").arg(target.rustc_target());
         }
 
-        if doctest_xcompile {
-            if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
-                p.arg("--test-runtool").arg(runtool);
-                for arg in runtool_args {
-                    p.arg("--test-runtool-arg").arg(arg);
-                }
+        if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
+            p.arg("--test-runtool").arg(runtool);
+            for arg in runtool_args {
+                p.arg("--test-runtool-arg").arg(arg);
             }
-            if let Some(linker) = linker {
-                let mut joined = OsString::from("linker=");
-                joined.push(linker);
-                p.arg("-C").arg(joined);
-            }
+        }
+        if let Some(linker) = linker {
+            let mut joined = OsString::from("linker=");
+            joined.push(linker);
+            p.arg("-C").arg(joined);
         }
 
         if unit.profile.panic != PanicStrategy::Unwind {

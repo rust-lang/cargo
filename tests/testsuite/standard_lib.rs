@@ -663,7 +663,7 @@ fn doctest() {
         )
         .build();
 
-    p.cargo("test --doc -v -Zdoctest-xcompile")
+    p.cargo("test --doc -v")
         .build_std(&setup)
         .with_stdout_data(str![[r#"
 
