@@ -26,7 +26,16 @@ label = "O-windows"
 
 [shortcut]
 
+# Enable issue transfers within the org
+# Documentation at: https://forge.rust-lang.org/triagebot/transfer.html
 [transfer]
+
+# Prevents mentions in commits to avoid users being spammed
+[no-mentions]
+
+# Enable `@rustbot note` functionality
+# Documentation at: https://forge.rust-lang.org/triagebot/note.html
+[note]
 
 [merge-conflicts]
 remove = []
