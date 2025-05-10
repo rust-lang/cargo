@@ -3,14 +3,16 @@ use crate::core::SourceId;
 use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
-use crate::sources::PathEntry;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::{try_canonicalize, CargoResult, GlobalContext};
+
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
+use walkdir::WalkDir;
+
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
@@ -263,8 +265,29 @@ fn sync(
         )?;
 
         let _ = fs::remove_dir_all(&dst);
-        let pathsource = PathSource::new(src, id.source_id(), gctx);
-        let paths = pathsource.list_files(pkg)?;
+
+        let paths: Vec<_> = if id.source_id().is_registry() {
+            // To avoid exclude rules in PathSource mess up files from registry source,
+            // just copy whatever we extracted from .crate tarballs.
+            WalkDir::new(src)
+                .into_iter()
+                // It is safe to skip erros,
+                // since we'll hit them during fs::copy later anyway.
+                .filter_map(|e| e.ok())
+                // There should be no symlink in tarballs on crates.io,
+                // but be wrong for local registries.
+                // Hence be conservative and include symlinks.
+                .filter(|e| e.file_type().is_file() || e.file_type().is_symlink())
+                .map(|e| e.into_path())
+                .collect()
+        } else {
+            PathSource::new(src, id.source_id(), gctx)
+                .list_files(pkg)?
+                .into_iter()
+                .map(|p| p.into_path_buf())
+                .collect()
+        };
+
         let mut map = BTreeMap::new();
         cp_sources(pkg, src, &paths, &dst, &mut map, &mut tmp_buf, gctx)
             .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
@@ -358,14 +381,13 @@ fn sync(
 fn cp_sources(
     pkg: &Package,
     src: &Path,
-    paths: &[PathEntry],
+    paths: &[PathBuf],
     dst: &Path,
     cksums: &mut BTreeMap<String, String>,
     tmp_buf: &mut [u8],
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     for p in paths {
-        let p = p.as_ref();
         let relative = p.strip_prefix(&src).unwrap();
 
         match relative.to_str() {
