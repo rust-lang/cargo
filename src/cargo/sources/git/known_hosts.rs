@@ -23,6 +23,7 @@
 //! and revoked markers. See "FIXME" comments littered in this file.
 
 use crate::util::context::{Definition, GlobalContext, Value};
+use crate::util::restricted_names::is_glob_pattern;
 use crate::CargoResult;
 use base64::engine::general_purpose::STANDARD;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
@@ -588,7 +589,19 @@ impl KnownHost {
         }
         for pattern in self.patterns.split(',') {
             let pattern = pattern.to_lowercase();
-            // FIXME: support * and ? wildcards
+            let is_glob = is_glob_pattern(&pattern);
+
+            if is_glob {
+                match glob::Pattern::new(&pattern) {
+                    Ok(glob) => match_found |= glob.matches(&host),
+                    Err(e) => {
+                        tracing::warn!(
+                            "failed to interpret hostname `{pattern}` as glob pattern: {e}"
+                        )
+                    }
+                }
+            }
+
             if let Some(pattern) = pattern.strip_prefix('!') {
                 if pattern == host {
                     return false;
@@ -696,13 +709,16 @@ mod tests {
         |1|QxzZoTXIWLhUsuHAXjuDMIV3FjQ=|M6NCOIkjiWdCWqkh5+Q+/uFLGjs= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIHgN3O21U4LWtP5OzjTzPnUnSDmCNDvyvlaj6Hi65JC eric@host
         # Negation isn't terribly useful without globs.
         neg.example.com,!neg.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOXfUnaAHTlo1Qi//rNk26OcmHikmkns1Z6WW/UuuS3K eric@host
+        # Glob patterns
+        *.asterisk.glob.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO6/wm8Z5aVL2cDyALY6zE7KVW0s64utWTUmbAvvSKlI eric@host
+        test?.question.glob.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKceiey2vuK/WB/kLsiGa85xw897JzvGGaHmkAZbVHf3 eric@host
     "#;
 
     #[test]
     fn known_hosts_parse() {
         let kh_path = Path::new("/home/abc/.known_hosts");
         let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
-        assert_eq!(khs.len(), 12);
+        assert_eq!(khs.len(), 14);
         match &khs[0].location {
             KnownHostLocation::File { path, lineno } => {
                 assert_eq!(path, kh_path);
@@ -740,6 +756,12 @@ mod tests {
         assert!(khs[10].host_matches("hashed.example.com"));
         assert!(!khs[10].host_matches("example.com"));
         assert!(!khs[11].host_matches("neg.example.com"));
+
+        // Glob patterns
+        assert!(khs[12].host_matches("matches.asterisk.glob.example.com"));
+        assert!(!khs[12].host_matches("matches.not.glob.example.com"));
+        assert!(khs[13].host_matches("test3.question.glob.example.com"));
+        assert!(!khs[13].host_matches("test120.question.glob.example.com"));
     }
 
     #[test]
