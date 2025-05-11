@@ -368,26 +368,9 @@ fn cp_sources(
         let p = p.as_ref();
         let relative = p.strip_prefix(&src).unwrap();
 
-        match relative.to_str() {
-            // Skip git config files as they're not relevant to builds most of
-            // the time and if we respect them (e.g.  in git) then it'll
-            // probably mess with the checksums when a vendor dir is checked
-            // into someone else's source control
-            Some(".gitattributes" | ".gitignore" | ".git") => continue,
-
-            // Temporary Cargo files
-            Some(".cargo-ok") => continue,
-
-            // Skip patch-style orig/rej files. Published crates on crates.io
-            // have `Cargo.toml.orig` which we don't want to use here and
-            // otherwise these are rarely used as part of the build process.
-            Some(filename) => {
-                if filename.ends_with(".orig") || filename.ends_with(".rej") {
-                    continue;
-                }
-            }
-            _ => {}
-        };
+        if !vendor_this(relative) {
+            continue;
+        }
 
         // Join pathname components individually to make sure that the joined
         // path uses the correct directory separators everywhere, since
@@ -576,5 +559,27 @@ fn copy_and_checksum<T: Read>(
         cksum.update(data);
         dst.write_all(data)
             .with_context(|| format!("failed to write to {:?}", dst_path))?;
+    }
+}
+
+/// Filters files we want to vendor.
+///
+/// `relative` is a path relative to the package root.
+fn vendor_this(relative: &Path) -> bool {
+    match relative.to_str() {
+        // Skip git config files as they're not relevant to builds most of
+        // the time and if we respect them (e.g.  in git) then it'll
+        // probably mess with the checksums when a vendor dir is checked
+        // into someone else's source control
+        Some(".gitattributes" | ".gitignore" | ".git") => false,
+
+        // Temporary Cargo files
+        Some(".cargo-ok") => false,
+
+        // Skip patch-style orig/rej files. Published crates on crates.io
+        // have `Cargo.toml.orig` which we don't want to use here and
+        // otherwise these are rarely used as part of the build process.
+        Some(p) if p.ends_with(".orig") || p.ends_with(".rej") => false,
+        _ => true,
     }
 }
