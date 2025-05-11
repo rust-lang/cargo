@@ -3,7 +3,6 @@ use crate::core::SourceId;
 use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
-use crate::sources::PathEntry;
 use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -255,8 +254,8 @@ fn sync(
                 _ => unreachable!("not registry source: {sid}"),
             };
 
-            let mut compute_file_cksums = |root| {
-                let walkdir = WalkDir::new(root)
+            let walkdir = |root| {
+                WalkDir::new(root)
                     .into_iter()
                     // It is safe to skip errors,
                     // since we'll hit them during copying/reading later anyway.
@@ -264,8 +263,10 @@ fn sync(
                     // There should be no symlink in tarballs on crates.io,
                     // but might be wrong for local registries.
                     // Hence here be conservative and include symlinks.
-                    .filter(|e| e.file_type().is_file() || e.file_type().is_symlink());
-                for e in walkdir {
+                    .filter(|e| e.file_type().is_file() || e.file_type().is_symlink())
+            };
+            let mut compute_file_cksums = |root| {
+                for e in walkdir(root) {
                     let path = e.path();
                     let relative = path.strip_prefix(&dst).unwrap();
                     let cksum = Sha256::new()
@@ -289,11 +290,24 @@ fn sync(
                     .tempdir_in(vendor_dir)?;
                 let unpacked_src =
                     registry.unpack_package_in(id, staging_dir.path(), &vendor_this)?;
-                fs::rename(&unpacked_src, &dst)?;
-                compute_file_cksums(&dst)?;
+                if let Err(e) = fs::rename(&unpacked_src, &dst) {
+                    // This fallback is mainly for Windows 10 versions earlier than 1607.
+                    // The destination of `fs::rename` can't be a diretory in older versions.
+                    // Can be removed once the minimal supported Windows version gets bumped.
+                    tracing::warn!("failed to `mv {unpacked_src:?} {dst:?}`: {e}");
+                    let paths: Vec<_> = walkdir(&unpacked_src).map(|e| e.into_path()).collect();
+                    cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
+                        .with_context(|| format!("failed to copy vendored sources for {id}"))?;
+                } else {
+                    compute_file_cksums(&dst)?;
+                }
             }
         } else {
-            let paths = PathSource::new(src, sid, gctx).list_files(pkg)?;
+            let paths = PathSource::new(src, sid, gctx)
+                .list_files(pkg)?
+                .into_iter()
+                .map(|p| p.into_path_buf())
+                .collect::<Vec<_>>();
             cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
                 .with_context(|| format!("failed to copy vendored sources for {id}"))?;
         }
@@ -387,14 +401,13 @@ fn sync(
 fn cp_sources(
     pkg: &Package,
     src: &Path,
-    paths: &[PathEntry],
+    paths: &[PathBuf],
     dst: &Path,
     cksums: &mut BTreeMap<String, String>,
     tmp_buf: &mut [u8],
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     for p in paths {
-        let p = p.as_ref();
         let relative = p.strip_prefix(&src).unwrap();
 
         if !vendor_this(relative) {
