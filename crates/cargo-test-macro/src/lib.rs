@@ -282,7 +282,8 @@ fn check_command(command_path: &Path, args: &[&str]) -> bool {
             //   environments like Docker. Consider installing it if Cargo
             //   gains more hg support, but otherwise it isn't critical.
             // * lldb is not pre-installed on Ubuntu and Windows, so skip.
-            if is_ci() && !matches!(command_name.as_str(), "hg" | "lldb") {
+            // * rcs is not installed on GitHub runners nor on Windows, skip.
+            if is_ci() && !matches!(command_name.as_str(), "hg" | "lldb" | "rcs") {
                 panic!("expected command `{command_name}` to be somewhere in PATH: {e}",);
             }
             return false;

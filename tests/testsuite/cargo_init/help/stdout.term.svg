@@ -39,7 +39,7 @@
 </tspan>
     <tspan x="10px" y="190px"><tspan>                                 overriding a global configuration. [possible values: git, hg,</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>                                 pijul, fossil, none]</tspan>
+    <tspan x="10px" y="208px"><tspan>                                 pijul, fossil, rcs, none]</tspan>
 </tspan>
     <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--bin</tspan><tspan>                      Use a binary (application) template [default]</tspan>
 </tspan>

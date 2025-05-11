@@ -20,7 +20,7 @@ Set the package name. Defaults to the directory name.
 
 {{#option "`--vcs` _vcs_" }}
 Initialize a new VCS repository for the given version control system (git,
-hg, pijul, or fossil) or do not initialize any version control at all
+hg, pijul, fossil, or rcs) or do not initialize any version control at all
 (none). If not specified, defaults to `git` or the configuration value
 `cargo-new.vcs`, or `none` if already inside a VCS repository.
 {{/option}}

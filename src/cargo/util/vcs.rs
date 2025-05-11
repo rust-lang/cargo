@@ -22,13 +22,16 @@ pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
         }
     }
 
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+    in_git_repo(path, cwd)
+        || HgRepo::discover(path, cwd).is_ok()
+        || RcsRepo::discover(path, cwd).is_ok()
 }
 
 pub struct HgRepo;
 pub struct GitRepo;
 pub struct PijulRepo;
 pub struct FossilRepo;
+pub struct RcsRepo;
 
 impl GitRepo {
     pub fn init(path: &Path, _: &Path) -> CargoResult<GitRepo> {
@@ -100,5 +103,46 @@ impl FossilRepo {
             .exec()?;
 
         Ok(FossilRepo)
+    }
+}
+
+impl RcsRepo {
+    pub fn init(path: &Path, _cwd: &Path) -> CargoResult<RcsRepo> {
+        paths::create_dir_all(path.join("RCS"))?;
+        Ok(RcsRepo)
+    }
+
+    pub fn late_init(path: &Path) -> CargoResult<()> {
+        for entry in walkdir::WalkDir::new(path)
+            .into_iter()
+            .filter_entry(|e| e.file_name() != "RCS")
+            .filter_map(|e| e.ok())
+        {
+            let p = entry.path();
+            if p.is_file() {
+                if let Some(parent) = p.parent() {
+                    ProcessBuilder::new("ci")
+                        .cwd(parent)
+                        .arg("-i")
+                        .arg("-l")
+                        .arg("-q")
+                        .arg("-t-''")
+                        .arg(entry.file_name())
+                        .exec()?;
+                }
+            } else if p.is_dir() {
+                paths::create_dir_all(p.join("RCS"))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn discover(path: &Path, _cwd: &Path) -> CargoResult<RcsRepo> {
+        ProcessBuilder::new("rlog")
+            .cwd(&path)
+            .arg("Cargo.toml")
+            .exec_with_output()?;
+        Ok(RcsRepo {})
     }
 }

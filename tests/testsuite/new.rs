@@ -131,6 +131,21 @@ fn simple_hg() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
+#[cargo_test(requires = "rcs")]
+fn simple_rcs() {
+    cargo_process("new --lib foo --vcs rcs").run();
+
+    assert!(paths::root().is_dir());
+    assert!(paths::root().join("foo/RCS").is_dir());
+    assert!(paths::root().join("foo/RCS/Cargo.toml,v").is_file());
+    assert!(paths::root().join("foo/Cargo.toml").is_file());
+    assert!(paths::root().join("foo/src/RCS").is_dir());
+    assert!(paths::root().join("foo/src/RCS/lib.rs,v").is_file());
+    assert!(paths::root().join("foo/src/lib.rs").is_file());
+
+    cargo_process("build").cwd(&paths::root().join("foo")).run();
+}
+
 #[cargo_test]
 fn no_argument() {
     cargo_process("new")

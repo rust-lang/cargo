@@ -1,7 +1,7 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo, RcsRepo};
 use crate::util::{restricted_names, GlobalContext};
 use anyhow::{anyhow, Context as _};
 use cargo_util::paths::{self, write_atomic};
@@ -22,6 +22,7 @@ pub enum VersionControl {
     Hg,
     Pijul,
     Fossil,
+    Rcs,
     NoVcs,
 }
 
@@ -34,6 +35,7 @@ impl FromStr for VersionControl {
             "hg" => Ok(VersionControl::Hg),
             "pijul" => Ok(VersionControl::Pijul),
             "fossil" => Ok(VersionControl::Fossil),
+            "rcs" => Ok(VersionControl::Rcs),
             "none" => Ok(VersionControl::NoVcs),
             other => anyhow::bail!("unknown vcs specification: `{}`", other),
         }
@@ -542,11 +544,16 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
             num_detected_vcses += 1;
         }
 
+        if path.join("RCS").exists() {
+            version_control = Some(VersionControl::Rcs);
+            num_detected_vcses += 1;
+        }
+
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vcses > 1 {
             anyhow::bail!(
-                "more than one of .hg, .git, .pijul, .fossil configurations \
+                "more than one of .hg, .git, .pijul, .fossil, RCS configurations \
                  found and the ignore file can't be filled in as \
                  a result. specify --vcs to override detection"
             );
@@ -688,7 +695,7 @@ fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -
             base_path.join(".fossil-settings/ignore-glob"),
             base_path.join(".fossil-settings/clean-glob"),
         ],
-        VersionControl::NoVcs => return Ok(()),
+        VersionControl::Rcs | VersionControl::NoVcs => return Ok(()),
     } {
         let ignore: String = match paths::open(&fp_ignore) {
             Err(err) => match err.downcast_ref::<std::io::Error>() {
@@ -729,6 +736,11 @@ fn init_vcs(path: &Path, vcs: VersionControl, gctx: &GlobalContext) -> CargoResu
         VersionControl::Fossil => {
             if !path.join(".fossil").exists() {
                 FossilRepo::init(path, gctx.cwd())?;
+            }
+        }
+        VersionControl::Rcs => {
+            if !path.join("RCS").exists() {
+                RcsRepo::init(path, gctx.cwd())?;
             }
         }
         VersionControl::NoVcs => {
@@ -912,6 +924,10 @@ mod tests {
             &e,
             &mut gctx.shell(),
         );
+    }
+
+    if vcs == VersionControl::Rcs {
+        RcsRepo::late_init(path)?;
     }
 
     gctx.shell().note(
