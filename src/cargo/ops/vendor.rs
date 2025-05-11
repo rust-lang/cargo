@@ -40,7 +40,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
         extra_workspaces.push(ws);
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
-    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
     let vendor_config = sync(gctx, &workspaces, opts).context("failed to sync")?;
 
     if gctx.shell().verbosity() != Verbosity::Quiet {
@@ -145,17 +145,10 @@ fn sync(
     let mut source_replacement_cache =
         SourceReplacementCache::new(gctx, opts.respect_source_config)?;
 
-    // First up attempt to work around rust-lang/cargo#5956. Apparently build
-    // artifacts sprout up in Cargo's global cache for whatever reason, although
-    // it's unsure what tool is causing these issues at this time. For now we
-    // apply a heavy-hammer approach which is to delete Cargo's unpacked version
-    // of each crate to start off with. After we do this we'll re-resolve and
-    // redownload again, which should trigger Cargo to re-extract all the
-    // crates.
-    //
-    // Note that errors are largely ignored here as this is a best-effort
-    // attempt. If anything fails here we basically just move on to the next
-    // crate to work with.
+    let mut checksums = HashMap::new();
+    let mut ids = BTreeMap::new();
+
+    // Let's download all crates and start storing internal tables about them.
     for ws in workspaces {
         let (packages, resolve) = ops::resolve_ws(ws, dry_run)
             .with_context(|| format!("failed to load lockfile for {}", ws.root().display()))?;
@@ -165,14 +158,11 @@ fn sync(
             .with_context(|| format!("failed to download packages for {}", ws.root().display()))?;
 
         for pkg in resolve.iter() {
-            let sid = if opts.respect_source_config {
-                source_replacement_cache.get(pkg.source_id())?
-            } else {
-                pkg.source_id()
-            };
+            let sid = source_replacement_cache.get(pkg.source_id())?;
 
-            // Don't delete actual source code!
+            // Don't vendor path crates since they're already in the repository
             if sid.is_path() {
+                // And don't delete actual source code!
                 if let Ok(path) = sid.url().to_file_path() {
                     if let Ok(path) = try_canonicalize(path) {
                         to_remove.remove(&path);
@@ -180,39 +170,7 @@ fn sync(
                 }
                 continue;
             }
-            if sid.is_git() {
-                continue;
-            }
 
-            // Only delete sources that are safe to delete, i.e. they are caches.
-            if sid.is_registry() {
-                if let Ok(pkg) = packages.get_one(pkg) {
-                    drop(fs::remove_dir_all(pkg.root()));
-                }
-                continue;
-            }
-        }
-    }
-
-    let mut checksums = HashMap::new();
-    let mut ids = BTreeMap::new();
-
-    // Next up let's actually download all crates and start storing internal
-    // tables about them.
-    for ws in workspaces {
-        let (packages, resolve) = ops::resolve_ws(ws, dry_run)
-            .with_context(|| format!("failed to load lockfile for {}", ws.root().display()))?;
-
-        packages
-            .get_many(resolve.iter())
-            .with_context(|| format!("failed to download packages for {}", ws.root().display()))?;
-
-        for pkg in resolve.iter() {
-            // No need to vendor path crates since they're already in the
-            // repository
-            if pkg.source_id().is_path() {
-                continue;
-            }
             ids.insert(
                 pkg,
                 packages
