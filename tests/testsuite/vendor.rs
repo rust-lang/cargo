@@ -213,12 +213,13 @@ fn package_exclude() {
 
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/bar/.cargo-checksum.json");
+    // Everything is included because `cargo-vendor`
+    // do direct extractions from tarballs
+    // (Some are excluded like `.git` or `.cargo-ok` though.)
     assert!(csum.contains(".include"));
-    assert!(!csum.contains(".exclude"));
-    assert!(!csum.contains(".dotdir/exclude"));
-    // Gitignore doesn't re-include a file in an excluded parent directory,
-    // even if negating it explicitly.
-    assert!(!csum.contains(".dotdir/include"));
+    assert!(csum.contains(".exclude"));
+    assert!(csum.contains(".dotdir/exclude"));
+    assert!(csum.contains(".dotdir/include"));
 }
 
 #[cargo_test]
