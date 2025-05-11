@@ -111,14 +111,14 @@ fn sync(
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
     let dry_run = false;
-    let canonical_destination = try_canonicalize(opts.destination);
-    let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
-    let dest_dir_already_exists = canonical_destination.exists();
+    let vendor_dir = try_canonicalize(opts.destination);
+    let vendor_dir = vendor_dir.as_deref().unwrap_or(opts.destination);
+    let vendor_dir_already_exists = vendor_dir.exists();
 
-    paths::create_dir_all(&canonical_destination)?;
+    paths::create_dir_all(&vendor_dir)?;
     let mut to_remove = HashSet::new();
     if !opts.no_delete {
-        for entry in canonical_destination.read_dir()? {
+        for entry in vendor_dir.read_dir()? {
             let entry = entry?;
             if !entry
                 .file_name()
@@ -247,7 +247,7 @@ fn sync(
         };
 
         sources.insert(id.source_id());
-        let dst = canonical_destination.join(&dst_name);
+        let dst = vendor_dir.join(&dst_name);
         to_remove.remove(&dst);
         let cksum = dst.join(".cargo-checksum.json");
         // Registries are the only immutable sources,
@@ -265,14 +265,14 @@ fn sync(
         let _ = fs::remove_dir_all(&dst);
         let pathsource = PathSource::new(src, id.source_id(), gctx);
         let paths = pathsource.list_files(pkg)?;
-        let mut map = BTreeMap::new();
-        cp_sources(pkg, src, &paths, &dst, &mut map, &mut tmp_buf, gctx)
+        let mut file_cksums = BTreeMap::new();
+        cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
             .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
 
         // Finally, emit the metadata about this package
         let json = serde_json::json!({
             "package": checksums.get(id),
-            "files": map,
+            "files": file_cksums,
         });
 
         paths::write(&cksum, json.to_string())?;
@@ -347,9 +347,9 @@ fn sync(
                 directory: opts.destination.to_string_lossy().replace("\\", "/"),
             },
         );
-    } else if !dest_dir_already_exists {
+    } else if !vendor_dir_already_exists {
         // Nothing to vendor. Remove the destination dir we've just created.
-        paths::remove_dir(canonical_destination)?;
+        paths::remove_dir(vendor_dir)?;
     }
 
     Ok(VendorConfig { source: config })
