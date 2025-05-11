@@ -417,7 +417,7 @@ fn cp_sources(
                 &dst,
                 &mut dst_opts,
                 &mut contents.as_bytes(),
-                "Generated Cargo.toml",
+                Path::new("Generated Cargo.toml"),
                 tmp_buf,
             )?
         } else {
@@ -430,13 +430,7 @@ fn cp_sources(
                     .with_context(|| format!("failed to stat {:?}", p))?;
                 dst_opts.mode(src_metadata.mode());
             }
-            copy_and_checksum(
-                &dst,
-                &mut dst_opts,
-                &mut src,
-                &p.display().to_string(),
-                tmp_buf,
-            )?
+            copy_and_checksum(&dst, &mut dst_opts, &mut src, &p, tmp_buf)?
         };
 
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
@@ -562,7 +556,7 @@ fn copy_and_checksum<T: Read>(
     dst_path: &Path,
     dst_opts: &mut OpenOptions,
     contents: &mut T,
-    contents_path: &str,
+    contents_path: &Path,
     buf: &mut [u8],
 ) -> CargoResult<String> {
     let mut dst = dst_opts
