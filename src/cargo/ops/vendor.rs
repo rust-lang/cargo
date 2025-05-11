@@ -4,13 +4,18 @@ use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::PathEntry;
+use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::{try_canonicalize, CargoResult, GlobalContext};
+
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
+use cargo_util_schemas::core::SourceKind;
 use serde::Serialize;
+use walkdir::WalkDir;
+
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
@@ -86,9 +91,16 @@ struct SourceReplacementCache<'gctx> {
 }
 
 impl SourceReplacementCache<'_> {
-    fn new(gctx: &GlobalContext) -> CargoResult<SourceReplacementCache<'_>> {
+    fn new(
+        gctx: &GlobalContext,
+        respect_source_config: bool,
+    ) -> CargoResult<SourceReplacementCache<'_>> {
         Ok(SourceReplacementCache {
-            map: SourceConfigMap::new(gctx)?,
+            map: if respect_source_config {
+                SourceConfigMap::new(gctx)
+            } else {
+                SourceConfigMap::empty(gctx)
+            }?,
             cache: Default::default(),
         })
     }
@@ -130,7 +142,8 @@ fn sync(
         }
     }
 
-    let mut source_replacement_cache = SourceReplacementCache::new(gctx)?;
+    let mut source_replacement_cache =
+        SourceReplacementCache::new(gctx, opts.respect_source_config)?;
 
     // First up attempt to work around rust-lang/cargo#5956. Apparently build
     // artifacts sprout up in Cargo's global cache for whatever reason, although
@@ -263,11 +276,69 @@ fn sync(
         )?;
 
         let _ = fs::remove_dir_all(&dst);
-        let pathsource = PathSource::new(src, id.source_id(), gctx);
-        let paths = pathsource.list_files(pkg)?;
+
         let mut file_cksums = BTreeMap::new();
-        cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
-            .with_context(|| format!("failed to copy over vendored sources for: {}", id))?;
+
+        // Need this mapping anyway because we will directly consult registry sources,
+        // otherwise builtin source replacement (sparse registry) won't be respected.
+        let sid = source_replacement_cache.get(id.source_id())?;
+
+        if sid.is_registry() {
+            // To keep the unpacked source from registry in a pristine state,
+            // we'll do a direct extraction into the vendor directory.
+            let registry = match sid.kind() {
+                SourceKind::Registry | SourceKind::SparseRegistry => {
+                    RegistrySource::remote(sid, &Default::default(), gctx)?
+                }
+                SourceKind::LocalRegistry => {
+                    let path = sid.url().to_file_path().expect("local path");
+                    RegistrySource::local(sid, &path, &Default::default(), gctx)
+                }
+                _ => unreachable!("not registry source: {sid}"),
+            };
+
+            let mut compute_file_cksums = |root| {
+                let walkdir = WalkDir::new(root)
+                    .into_iter()
+                    // It is safe to skip errors,
+                    // since we'll hit them during copying/reading later anyway.
+                    .filter_map(|e| e.ok())
+                    // There should be no symlink in tarballs on crates.io,
+                    // but might be wrong for local registries.
+                    // Hence here be conservative and include symlinks.
+                    .filter(|e| e.file_type().is_file() || e.file_type().is_symlink());
+                for e in walkdir {
+                    let path = e.path();
+                    let relative = path.strip_prefix(&dst).unwrap();
+                    let cksum = Sha256::new()
+                        .update_path(path)
+                        .map(Sha256::finish_hex)
+                        .with_context(|| format!("failed to checksum `{}`", path.display()))?;
+                    file_cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
+                }
+                Ok::<_, anyhow::Error>(())
+            };
+            if dir_has_version_suffix {
+                registry.unpack_package_in(id, &vendor_dir, &vendor_this)?;
+                compute_file_cksums(&dst)?;
+            } else {
+                // Due to the extra sanity check in registry unpack
+                // (ensure it contain only one top-level directory with name `pkg-version`),
+                // we can only unpack a directory with version suffix,
+                // and move it to the no suffix directory.
+                let staging_dir = tempfile::Builder::new()
+                    .prefix(".vendor-staging")
+                    .tempdir_in(vendor_dir)?;
+                let unpacked_src =
+                    registry.unpack_package_in(id, staging_dir.path(), &vendor_this)?;
+                fs::rename(&unpacked_src, &dst)?;
+                compute_file_cksums(&dst)?;
+            }
+        } else {
+            let paths = PathSource::new(src, sid, gctx).list_files(pkg)?;
+            cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
+                .with_context(|| format!("failed to copy vendored sources for {id}"))?;
+        }
 
         // Finally, emit the metadata about this package
         let json = serde_json::json!({
