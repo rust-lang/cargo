@@ -1,19 +1,57 @@
 # Changelog
 
 ## Cargo 1.88 (2025-06-26)
-[a6c604d1...HEAD](https://github.com/rust-lang/cargo/compare/a6c604d1...HEAD)
+[a6c604d1...rust-1.88.0](https://github.com/rust-lang/cargo/compare/a6c604d1...rust-1.88.0)
 
 ### Added
+
+- 🎉 Stabilize automatic garbage collection for global caches.
+
+  When building, Cargo downloads and caches crates needed as dependencies.
+  Historically, these downloaded files would never be cleaned up, leading to an
+  unbounded amount of disk usage in Cargo's home directory. In this version,
+  Cargo introduces a garbage collection mechanism to automatically clean up old
+  files (e.g. .crate files). Cargo will remove files downloaded from the network
+  if not accessed in 3 months, and files obtained from the local system if not
+  accessed in 1 month. Note that this automatic garbage collection will not take
+  place if running offline (using `--offline` or `--frozen`).
+
+  Cargo 1.78 and newer track the access information needed for this garbage
+  collection. If you regularly use versions of Cargo older than 1.78, in
+  addition to running current versions of Cargo, and you expect to have some
+  crates accessed exclusively by the older versions of Cargo and don't want to
+  re-download those crates every ~3 months, you may wish to set
+  `cache.auto-clean-frequency = "never"` in the Cargo configuration.
+  ([docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#cache))
+  [#14287](https://github.com/rust-lang/cargo/pull/14287)
+- Allow boolean literals as cfg predicates in Cargo.toml and configurations.
+  For example, `[target.'cfg(not(false))'.dependencies]` is a valid cfg predicate.
+  ([RFC 3695](https://github.com/rust-lang/rfcs/pull/3695))
+  [#14649](https://github.com/rust-lang/cargo/pull/14649)
 
 ### Changed
 
 - Don't canonicalize executable path for the `CARGO` environment variable.
   [#15355](https://github.com/rust-lang/cargo/pull/15355)
+- Print target and package names formatted as file hyperlinks.
+  [#15405](https://github.com/rust-lang/cargo/pull/15405)
+- Make sure library search paths inside `OUT_DIR` precede external paths.
+  [#15221](https://github.com/rust-lang/cargo/pull/15221)
+- Suggest similar looking feature names when feature is missing.
+  [#15454](https://github.com/rust-lang/cargo/pull/15454)
+- Use `zlib-rs` for gzip (de)compression for `.crate` tarballs.
+  [#15417](https://github.com/rust-lang/cargo/pull/15417)
 
 ### Fixed
 
+- build-rs: Correct name of `CARGO_CFG_FEATURE`
+  [#15420](https://github.com/rust-lang/cargo/pull/15420)
 - cargo-tree: Make output more deterministic
   [#15369](https://github.com/rust-lang/cargo/pull/15369)
+- cargo-package: dont fail the entire command when the dirtiness check failed,
+  as git status check is mostly informational.
+  [#15416](https://github.com/rust-lang/cargo/pull/15416)
+  [#15419](https://github.com/rust-lang/cargo/pull/15419)
 
 ### Nightly only
 
@@ -22,13 +60,53 @@
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-depinfo))
   [#15359](https://github.com/rust-lang/cargo/pull/15359)
   [#15371](https://github.com/rust-lang/cargo/pull/15371)
+- `build-dir`: Added validation for unmatched brackets in build-dir template 
+  [#15414](https://github.com/rust-lang/cargo/pull/15414)
+- `build-dir`: Improved error message when build-dir template var is invalid 
+  [#15418](https://github.com/rust-lang/cargo/pull/15418)
+- `build-dir`: Added `build_directory` field to cargo metadata output 
+  [#15377](https://github.com/rust-lang/cargo/pull/15377)
+- `build-dir`: Added symlink resolution for `workspace-path-hash` 
+  [#15400](https://github.com/rust-lang/cargo/pull/15400)
+- `build-dir`: Added build_directory to cargo metadata documentation 
+  [#15410](https://github.com/rust-lang/cargo/pull/15410)
+- `unit-graph`: switch to Package ID Spec.
+  [#15447](https://github.com/rust-lang/cargo/pull/15447)
 - `-Zgc`: Rename the `gc` config table to `[cache]`.
   Low-level settings is now under `[cache.global-clean]`.
   [#15367](https://github.com/rust-lang/cargo/pull/15367)
+- `-Zdoctest-xcompile`: Update doctest xcompile flags.
+  [#15455](https://github.com/rust-lang/cargo/pull/15455)
 
 ### Documentation
 
+- Mention the convention of kebab-case for Cargo targets naming.
+  [#14439](https://github.com/rust-lang/cargo/pull/14439)
+- Use better example value in `CARGO_CFG_TARGET_ABI` 
+  [#15404](https://github.com/rust-lang/cargo/pull/15404)
+
 ### Internal
+
+- Fix formatting of CliUnstable parsing
+  [#15434](https://github.com/rust-lang/cargo/pull/15434)
+- ci: restore semver-checks for cargo-util
+  [#15389](https://github.com/rust-lang/cargo/pull/15389)
+- ci: add aarch64 linux runner
+  [#15077](https://github.com/rust-lang/cargo/pull/15077)
+- rustfix: Use `snapbox` for snapshot testing
+  [#15429](https://github.com/rust-lang/cargo/pull/15429)
+- test:Prevent undeclared public network access 
+  [#15368](https://github.com/rust-lang/cargo/pull/15368)
+- Update dependencies.
+  [#15373](https://github.com/rust-lang/cargo/pull/15373)
+  [#15381](https://github.com/rust-lang/cargo/pull/15381)
+  [#15391](https://github.com/rust-lang/cargo/pull/15391)
+  [#15394](https://github.com/rust-lang/cargo/pull/15394)
+  [#15403](https://github.com/rust-lang/cargo/pull/15403)
+  [#15415](https://github.com/rust-lang/cargo/pull/15415)
+  [#15421](https://github.com/rust-lang/cargo/pull/15421)
+  [#15446](https://github.com/rust-lang/cargo/pull/15446)
+
 
 ## Cargo 1.87 (2025-05-15)
 [ce948f46...rust-1.87.0](https://github.com/rust-lang/cargo/compare/ce948f46...rust-1.87.0)
