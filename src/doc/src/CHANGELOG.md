@@ -63,6 +63,7 @@
   [#15193](https://github.com/rust-lang/cargo/pull/15193)
 - Include the package name also in the target hint message.
   [#15199](https://github.com/rust-lang/cargo/pull/15199)
+  [#15497](https://github.com/rust-lang/cargo/pull/15497)
 - cargo-add: collapse large feature lists
   [#15200](https://github.com/rust-lang/cargo/pull/15200)
 - cargo-vendor: Add context which workspace failed to resolve
