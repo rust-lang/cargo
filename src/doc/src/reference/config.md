@@ -1,4 +1,4 @@
-# Configuration
+de# Configuration
 
 This document explains how Cargo’s configuration system works, as well as
 available keys or configuration. For configuration of a package through its
