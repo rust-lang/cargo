@@ -2158,4 +2158,4 @@ More information can be found in the [config chapter](config.md#cache).
 
 ## doctest-xcompile
 
-Doctest cross-compiling is now unconditionally enabled starting in Rust 1.88. Running doctests with `cargo test` will now honor the `--target` flag.
+Doctest cross-compiling is now unconditionally enabled starting in Rust 1.89. Running doctests with `cargo test` will now honor the `--target` flag.

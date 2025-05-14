@@ -1276,7 +1276,7 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
-            "doctest-xcompile" => stabilized_warn(k, "1.88", STABILIZED_DOCTEST_XCOMPILE),
+            "doctest-xcompile" => stabilized_warn(k, "1.89", STABILIZED_DOCTEST_XCOMPILE),
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "gc" => self.gc = parse_empty(k, v)?,
