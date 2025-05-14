@@ -4037,10 +4037,18 @@ fn one_unpublishable_package() {
     p.cargo("publish -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `main` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] dep v0.1.0 ([ROOT]/foo/dep)
+[UPLOADED] dep v0.1.0 to registry `crates-io`
+[NOTE] waiting for `dep v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] dep v0.1.0 at registry `crates-io`
 
 "#]])
         .run();
@@ -4109,10 +4117,18 @@ fn virtual_ws_with_multiple_unpublishable_package() {
     p.cargo("publish -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep`, `main` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[COMPILING] publishable v0.1.0 ([ROOT]/foo/target/package/publishable-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[UPLOADED] publishable v0.1.0 to registry `crates-io`
+[NOTE] waiting for `publishable v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] publishable v0.1.0 at registry `crates-io`
 
 "#]])
         .run();
@@ -4173,10 +4189,18 @@ fn workspace_flag_with_unpublishable_packages() {
     p.cargo("publish --workspace -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `non-publishable`, `cwd` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[COMPILING] publishable v0.0.0 ([ROOT]/foo/target/package/publishable-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[UPLOADED] publishable v0.0.0 to registry `crates-io`
+[NOTE] waiting for `publishable v0.0.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] publishable v0.0.0 at registry `crates-io`
 
 "#]])
         .run();
@@ -4233,8 +4257,15 @@ fn unpublishable_package_as_versioned_dev_dep() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4244,8 +4275,15 @@ fn unpublishable_package_as_versioned_dev_dep() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4255,8 +4293,15 @@ fn unpublishable_package_as_versioned_dev_dep() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4307,10 +4352,8 @@ fn all_unpublishable_packages() {
     p.cargo("publish --workspace -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `non-publishable1`, `non-publishable2` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
 
 "#]])
         .run();

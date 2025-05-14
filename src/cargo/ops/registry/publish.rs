@@ -96,7 +96,17 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let (unpublishable, pkgs): (Vec<_>, Vec<_>) = pkgs
         .into_iter()
         .partition(|(pkg, _)| pkg.publish() == &Some(vec![]));
-    if !unpublishable.is_empty() {
+    // If `--workspace` is passed,
+    // the intent is more like "publish all publisable packages in this workspace",
+    // so skip `publish=false` packages.
+    let allow_unpublishable = multi_package_mode
+        && match &opts.to_publish {
+            Packages::Default => ws.is_virtual(),
+            Packages::All(_) => true,
+            Packages::OptOut(_) => true,
+            Packages::Packages(_) => false,
+        };
+    if !unpublishable.is_empty() && !allow_unpublishable {
         bail!(
             "{} cannot be published.\n\
             `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
