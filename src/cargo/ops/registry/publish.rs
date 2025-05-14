@@ -117,6 +117,22 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         );
     }
 
+    if pkgs.is_empty() {
+        if allow_unpublishable {
+            let n = unpublishable.len();
+            let plural = if n == 1 { "" } else { "s" };
+            ws.gctx().shell().warn(format_args!(
+                "nothing to publish, but found {n} unpublishable package{plural}"
+            ))?;
+            ws.gctx().shell().note(format_args!(
+                "to publish packages, set `package.publish` to `true` or a non-empty list"
+            ))?;
+            return Ok(());
+        } else {
+            unreachable!("must have at least one publishable package");
+        }
+    }
+
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
     let reg_or_index = match opts.reg_or_index.clone() {
         Some(r) => {

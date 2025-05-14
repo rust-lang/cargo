@@ -4353,7 +4353,8 @@ fn all_unpublishable_packages() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
+[WARNING] nothing to publish, but found 2 unpublishable packages
+[NOTE] to publish packages, set `package.publish` to `true` or a non-empty list
 
 "#]])
         .run();
