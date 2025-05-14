@@ -331,6 +331,7 @@ impl Profiles {
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
         result.trim_paths = for_unit_profile.trim_paths.clone();
+        result.force_frame_pointers = for_unit_profile.force_frame_pointers;
         result
     }
 
@@ -574,6 +575,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(flags) = &toml.rustflags {
         profile.rustflags = flags.iter().map(InternedString::from).collect();
     }
+    if let Some(force_frame_pointers) = toml.force_frame_pointers {
+        profile.force_frame_pointers = force_frame_pointers;
+    }
     if let Some(trim_paths) = &toml.trim_paths {
         profile.trim_paths = Some(trim_paths.clone());
     }
@@ -624,6 +628,7 @@ pub struct Profile {
     pub incremental: bool,
     pub panic: PanicStrategy,
     pub strip: Strip,
+    pub force_frame_pointers: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stablized
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Vec<InternedString>,
@@ -649,6 +654,7 @@ impl Default for Profile {
             incremental: false,
             panic: PanicStrategy::Unwind,
             strip: Strip::Deferred(StripInner::None),
+            force_frame_pointers: false,
             rustflags: vec![],
             trim_paths: None,
         }
@@ -678,6 +684,7 @@ compact_debug! {
                 incremental
                 panic
                 strip
+                force_frame_pointers
                 rustflags
                 trim_paths
             )]
@@ -746,7 +753,12 @@ impl Profile {
             self.debug_assertions,
             self.overflow_checks,
             self.rpath,
-            (self.incremental, self.panic, self.strip),
+            (
+                self.incremental,
+                self.panic,
+                self.strip,
+                self.force_frame_pointers,
+            ),
             &self.rustflags,
             &self.trim_paths,
         )
