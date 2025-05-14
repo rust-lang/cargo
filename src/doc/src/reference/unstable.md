@@ -84,7 +84,6 @@ Each new feature described below should explain how to use it.
     * [root-dir](#root-dir) --- Controls the root directory relative to which paths are printed
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) --- Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
-    * [doctest-xcompile](#doctest-xcompile) --- Supports running doctests with the `--target` flag.
     * [build-std](#build-std) --- Builds the standard library instead of using pre-built binaries.
     * [build-std-features](#build-std-features) --- Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
@@ -277,21 +276,6 @@ Available template variables:
 
 The `-Zroot-dir` flag sets the root directory relative to which paths are printed.
 This affects both diagnostics and paths emitted by the `file!()` macro.
-
-## doctest-xcompile
-* Tracking Issue: [#7040](https://github.com/rust-lang/cargo/issues/7040)
-* Tracking Rustc Issue: [#64245](https://github.com/rust-lang/rust/issues/64245)
-
-This flag changes `cargo test`'s behavior when handling doctests when
-a target is passed. Currently, if a target is passed that is different
-from the host cargo will simply skip testing doctests. If this flag is
-present, cargo will continue as normal, passing the tests to doctest,
-while also passing it a `--target` option, as well as passing along
-information from `.cargo/config.toml`. See the rustc issue for more information.
-
-```sh
-cargo test --target foo -Zdoctest-xcompile
-```
 
 ## Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
@@ -2171,3 +2155,7 @@ See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](..
 
 Support for automatically deleting old files was stabilized in Rust 1.88.
 More information can be found in the [config chapter](config.md#cache).
+
+## doctest-xcompile
+
+Doctest cross-compiling is now unconditionally enabled starting in Rust 1.89. Running doctests with `cargo test` will now honor the `--target` flag.
