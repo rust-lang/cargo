@@ -173,7 +173,7 @@ _cargo() {
                     _arguments -s -S $common $registry \
                         '--lib[use library template]' \
                         '--edition=[specify edition to set for the crate generated]:edition:(2015 2018 2021)' \
-                        '--vcs=[initialize a new repo with a given VCS]:vcs:(git hg pijul fossil none)' \
+                        '--vcs=[initialize a new repo with a given VCS]:vcs:(git hg pijul fossil rcs none)' \
                         '--name=[set the resulting package name]:name' \
                         '1:path:_directories'
                         ;;
