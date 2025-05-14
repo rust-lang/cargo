@@ -93,6 +93,46 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         .filter(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())))
         .collect();
 
+    let (unpublishable, pkgs): (Vec<_>, Vec<_>) = pkgs
+        .into_iter()
+        .partition(|(pkg, _)| pkg.publish() == &Some(vec![]));
+    // If `--workspace` is passed,
+    // the intent is more like "publish all publisable packages in this workspace",
+    // so skip `publish=false` packages.
+    let allow_unpublishable = multi_package_mode
+        && match &opts.to_publish {
+            Packages::Default => ws.is_virtual(),
+            Packages::All(_) => true,
+            Packages::OptOut(_) => true,
+            Packages::Packages(_) => false,
+        };
+    if !unpublishable.is_empty() && !allow_unpublishable {
+        bail!(
+            "{} cannot be published.\n\
+            `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
+            unpublishable
+                .iter()
+                .map(|(pkg, _)| format!("`{}`", pkg.name()))
+                .join(", "),
+        );
+    }
+
+    if pkgs.is_empty() {
+        if allow_unpublishable {
+            let n = unpublishable.len();
+            let plural = if n == 1 { "" } else { "s" };
+            ws.gctx().shell().warn(format_args!(
+                "nothing to publish, but found {n} unpublishable package{plural}"
+            ))?;
+            ws.gctx().shell().note(format_args!(
+                "to publish packages, set `package.publish` to `true` or a non-empty list"
+            ))?;
+            return Ok(());
+        } else {
+            unreachable!("must have at least one publishable package");
+        }
+    }
+
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
     let reg_or_index = match opts.reg_or_index.clone() {
         Some(r) => {
@@ -705,19 +745,6 @@ fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> S
 }
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
-    let unpublishable = pkgs
-        .iter()
-        .filter(|pkg| pkg.publish() == &Some(Vec::new()))
-        .map(|pkg| format!("`{}`", pkg.name()))
-        .collect::<Vec<_>>();
-    if !unpublishable.is_empty() {
-        bail!(
-            "{} cannot be published.\n\
-            `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
-            unpublishable.join(", ")
-        );
-    }
-
     let reg_name = match reg_or_index {
         Some(RegistryOrIndex::Registry(r)) => Some(r.as_str()),
         None => Some(CRATES_IO_REGISTRY),

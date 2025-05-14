@@ -3990,73 +3990,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn one_unpublishable_package() {
-    let _alt_reg = registry::RegistryBuilder::new()
-        .http_api()
-        .http_index()
-        .alternative()
-        .build();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [workspace]
-            members = ["dep", "main"]
-            "#,
-        )
-        .file(
-            "main/Cargo.toml",
-            r#"
-            [package]
-            name = "main"
-            version = "0.0.1"
-            edition = "2015"
-            authors = []
-            license = "MIT"
-            description = "main"
-            repository = "bar"
-            publish = false
-
-            [dependencies]
-            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
-        "#,
-        )
-        .file("main/src/main.rs", "fn main() {}")
-        .file(
-            "dep/Cargo.toml",
-            r#"
-            [package]
-            name = "dep"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-            license = "MIT"
-            description = "dep"
-            repository = "bar"
-            publish = ["alternative"]
-        "#,
-        )
-        .file("dep/src/lib.rs", "")
-        .build();
-
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] `main` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn multiple_unpublishable_package() {
-    let _alt_reg = registry::RegistryBuilder::new()
-        .http_api()
-        .http_index()
-        .alternative()
-        .build();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -4095,7 +4029,6 @@ fn multiple_unpublishable_package() {
             license = "MIT"
             description = "dep"
             repository = "bar"
-            publish = false
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -4103,10 +4036,325 @@ fn multiple_unpublishable_package() {
 
     p.cargo("publish -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] dep v0.1.0 ([ROOT]/foo/dep)
+[UPLOADED] dep v0.1.0 to registry `crates-io`
+[NOTE] waiting for `dep v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] dep v0.1.0 at registry `crates-io`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn virtual_ws_with_multiple_unpublishable_package() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main", "publishable"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = false
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = false
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .file(
+            "publishable/Cargo.toml",
+            r#"
+            [package]
+            name = "publishable"
+            version = "0.1.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+        "#,
+        )
+        .file("publishable/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[COMPILING] publishable v0.1.0 ([ROOT]/foo/target/package/publishable-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] publishable v0.1.0 ([ROOT]/foo/publishable)
+[UPLOADED] publishable v0.1.0 to registry `crates-io`
+[NOTE] waiting for `publishable v0.1.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] publishable v0.1.0 at registry `crates-io`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_flag_with_unpublishable_packages() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["publishable", "non-publishable"]
+
+            [package]
+            name = "cwd"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+            publish = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "publishable/Cargo.toml",
+            r#"
+            [package]
+            name = "publishable"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+            publish = true
+        "#,
+        )
+        .file("publishable/src/lib.rs", "")
+        .file(
+            "non-publishable/Cargo.toml",
+            r#"
+            [package]
+            name = "non-publishable"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+            publish = false
+        "#,
+        )
+        .file("non-publishable/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --workspace -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[COMPILING] publishable v0.0.0 ([ROOT]/foo/target/package/publishable-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] publishable v0.0.0 ([ROOT]/foo/publishable)
+[UPLOADED] publishable v0.0.0 to registry `crates-io`
+[NOTE] waiting for `publishable v0.0.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] publishable v0.0.0 at registry `crates-io`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unpublishable_package_as_versioned_dev_dep() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dev-dependencies]
+            dep = { path = "../dep", version = "0.1.0" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = false
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    // It is expected to find the versioned dev dep not being published,
+    // regardless with `--dry-run` or `--no-verify`.
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `dep`, `main` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+
+    p.cargo("publish -Zpackage-workspace --dry-run")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+
+    p.cargo("publish -Zpackage-workspace --no-verify")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: crates.io index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn all_unpublishable_packages() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["non-publishable1", "non-publishable2"]
+            "#,
+        )
+        .file(
+            "non-publishable1/Cargo.toml",
+            r#"
+            [package]
+            name = "non-publishable1"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+            publish = false
+        "#,
+        )
+        .file("non-publishable1/src/lib.rs", "")
+        .file(
+            "non-publishable2/Cargo.toml",
+            r#"
+            [package]
+            name = "non-publishable2"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+            publish = false
+        "#,
+        )
+        .file("non-publishable2/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --workspace -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[WARNING] nothing to publish, but found 2 unpublishable packages
+[NOTE] to publish packages, set `package.publish` to `true` or a non-empty list
 
 "#]])
         .run();
