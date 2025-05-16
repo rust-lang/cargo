@@ -479,7 +479,13 @@ fn prepare_archive(
     let src_files = src.list_files(pkg)?;
 
     // Check (git) repository state, getting the current commit hash.
-    let vcs_info = vcs::check_repo_state(pkg, &src_files, ws, &opts)?;
+    // TODO: where is the feature toggle?
+    let use_gix = true;
+    let vcs_info = if use_gix {
+        vcs::gix::check_repo_state(pkg, &src_files, ws, &opts)
+    } else {
+        vcs::check_repo_state(pkg, &src_files, ws, &opts)
+    }?;
 
     build_ar_list(ws, pkg, src_files, vcs_info, opts.include_lockfile)
 }

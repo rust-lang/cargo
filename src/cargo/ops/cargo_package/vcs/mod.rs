@@ -17,6 +17,8 @@ use crate::sources::PathEntry;
 
 use super::PackageOpts;
 
+pub(super) mod gix;
+
 /// Represents the VCS information when packaging.
 #[derive(Serialize)]
 pub struct VcsInfo {
@@ -29,7 +31,7 @@ pub struct VcsInfo {
 #[derive(Serialize)]
 pub struct GitVcsInfo {
     sha1: String,
-    /// Indicate whether or not the Git worktree is dirty.
+    /// Indicate whether the Git worktree is dirty.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     dirty: bool,
 }
