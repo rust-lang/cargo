@@ -17,6 +17,8 @@ use crate::GlobalContext;
 
 use super::PackageOpts;
 
+pub(super) mod gix;
+
 /// Represents the VCS information when packaging.
 #[derive(Serialize)]
 pub struct VcsInfo {
