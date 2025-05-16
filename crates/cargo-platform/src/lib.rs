@@ -97,6 +97,7 @@ impl Platform {
                              https://doc.rust-lang.org/cargo/reference/features.html"
                         ))
                     },
+                    Cfg::Version(..) => {},
                 }
                 CfgExpr::True | CfgExpr::False => {},
             }
@@ -130,6 +131,7 @@ impl Platform {
                             ));
                         }
                     }
+                    Cfg::Version(..) => {}
                 },
             }
         }

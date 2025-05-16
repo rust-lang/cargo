@@ -15,6 +15,13 @@ pub enum CfgExpr {
     False,
 }
 
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
+pub struct CfgRustVersion {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
 /// A cfg value.
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
@@ -22,6 +29,8 @@ pub enum Cfg {
     Name(Ident),
     /// A key/value cfg pair, like `target_os = "linux"`.
     KeyPair(Ident, String),
+    /// A Rust version cfg value, like `version(1.87.0)`.
+    Version(CfgRustVersion),
 }
 
 /// A identifier
@@ -44,6 +53,7 @@ enum Token<'a> {
     Comma,
     Equals,
     String(&'a str),
+    Version(CfgRustVersion),
 }
 
 /// The list of keywords.
@@ -124,6 +134,11 @@ impl fmt::Display for Cfg {
         match *self {
             Cfg::Name(ref s) => s.fmt(f),
             Cfg::KeyPair(ref k, ref v) => write!(f, "{} = \"{}\"", k, v),
+            Cfg::Version(CfgRustVersion {
+                major,
+                minor,
+                patch,
+            }) => write!(f, "version({major}.{minor}.{patch})"),
         }
     }
 }
@@ -234,6 +249,25 @@ impl<'a> Parser<'a> {
                 let e = self.expr()?;
                 self.eat(&Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
+            }
+            Some(Ok(Token::Ident(false, "version"))) => {
+                self.t.next();
+                self.eat(&Token::LeftParen)?;
+                let token = self
+                    .t
+                    .next()
+                    .ok_or_else(|| ParseError::new(self.t.orig, InvalidVersion))??;
+                let Token::Version(version) = token else {
+                    return Err(ParseError::new(
+                        self.t.orig,
+                        UnexpectedToken {
+                            expected: "a Rust version",
+                            found: token.classify(),
+                        },
+                    ));
+                };
+                self.eat(&Token::RightParen)?;
+                Ok(CfgExpr::Value(Cfg::Version(version)))
             }
             Some(Ok(..)) => self.cfg().map(|v| match v {
                 Cfg::Name(n) if n == "true" => CfgExpr::True,
@@ -398,6 +432,43 @@ impl<'a> Iterator for Tokenizer<'a> {
                     }
                     return Some(Ok(Token::Ident(raw, &self.orig[start..])));
                 }
+                // Reject a major version starting with 0
+                Some((start, '1'..='9')) => {
+                    while let Some(&(end, ch)) = self.s.peek() {
+                        if ch == ')' {
+                            let mut iter = self.orig[start..end].split('.');
+                            let major = iter.next().unwrap().parse().unwrap();
+                            if let Some(minor) = iter.next().map(|s| s.parse().unwrap()) {
+                                if let Some(patch) = iter.next().map(|s| s.parse().unwrap()) {
+                                    if iter.next().is_some() {
+                                        return Some(Err(ParseError::new(
+                                            self.orig,
+                                            InvalidVersion,
+                                        )));
+                                    }
+                                    return Some(Ok(Token::Version(CfgRustVersion {
+                                        major,
+                                        minor,
+                                        patch,
+                                    })));
+                                }
+                                return Some(Ok(Token::Version(CfgRustVersion {
+                                    major,
+                                    minor,
+                                    patch: 0,
+                                })));
+                            }
+                            return Some(Ok(Token::Version(CfgRustVersion {
+                                major,
+                                minor: 0,
+                                patch: 0,
+                            })));
+                        } else {
+                            self.s.next();
+                        }
+                    }
+                    return Some(Err(ParseError::new(self.orig, UnterminatedVersion)));
+                }
                 Some((_, ch)) => {
                     return Some(Err(ParseError::new(self.orig, UnexpectedChar(ch))));
                 }
@@ -424,6 +495,7 @@ impl<'a> Token<'a> {
             Token::Comma => "`,`",
             Token::Equals => "`=`",
             Token::String(..) => "a string",
+            Token::Version(_) => "a Rust version",
         }
     }
 }
