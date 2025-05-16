@@ -10,6 +10,7 @@ pub struct ParseError {
 #[derive(Debug)]
 pub enum ParseErrorKind {
     UnterminatedString,
+    UnterminatedVersion,
     UnexpectedChar(char),
     UnexpectedToken {
         expected: &'static str,
@@ -18,6 +19,7 @@ pub enum ParseErrorKind {
     IncompleteExpr(&'static str),
     UnterminatedExpression(String),
     InvalidTarget(String),
+    InvalidVersion,
 }
 
 impl fmt::Display for ParseError {
@@ -35,6 +37,7 @@ impl fmt::Display for ParseErrorKind {
         use ParseErrorKind::*;
         match self {
             UnterminatedString => write!(f, "unterminated string in cfg"),
+            UnterminatedVersion => write!(f, "unterminated version in cfg"),
             UnexpectedChar(ch) => write!(
                 f,
                 "unexpected character `{}` in cfg, expected parens, a comma, \
@@ -51,6 +54,7 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "unexpected content `{}` found after cfg expression", s)
             }
             InvalidTarget(s) => write!(f, "invalid target specifier: {}", s),
+            InvalidVersion => write!(f, "invalid Rust version"),
         }
     }
 }
