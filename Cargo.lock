@@ -891,6 +891,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "dbus"
 version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1070,7 +1084,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cea14ef9355e3beab063703aa9dab15afd25f0667c341310c1e5274bb1d0da18"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1291,6 +1305,7 @@ dependencies = [
  "gix-revwalk",
  "gix-sec",
  "gix-shallow",
+ "gix-status",
  "gix-submodule",
  "gix-tempfile",
  "gix-trace",
@@ -1442,8 +1457,20 @@ version = "0.52.1"
 source = "git+https://github.com/GitoxideLabs/gitoxide?branch=improvements#a5c3ce64faa21e1af37b899ee4fe57a0d61cc253"
 dependencies = [
  "bstr",
+ "gix-attributes",
+ "gix-command",
+ "gix-filter",
+ "gix-fs",
  "gix-hash",
+ "gix-index",
  "gix-object",
+ "gix-path",
+ "gix-pathspec",
+ "gix-tempfile",
+ "gix-trace",
+ "gix-traverse",
+ "gix-worktree",
+ "imara-diff",
  "thiserror 2.0.12",
 ]
 
@@ -1872,6 +1899,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "gix-status"
+version = "0.19.1"
+source = "git+https://github.com/GitoxideLabs/gitoxide?branch=improvements#376ed0cb602e4df457b0b6c87fe16af027bdff48"
+dependencies = [
+ "bstr",
+ "filetime",
+ "gix-diff",
+ "gix-dir",
+ "gix-features",
+ "gix-filter",
+ "gix-fs",
+ "gix-hash",
+ "gix-index",
+ "gix-object",
+ "gix-path",
+ "gix-pathspec",
+ "gix-worktree",
+ "portable-atomic",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "gix-submodule"
 version = "0.19.1"
 source = "git+https://github.com/GitoxideLabs/gitoxide?branch=improvements#a5c3ce64faa21e1af37b899ee4fe57a0d61cc253"
@@ -1890,6 +1939,7 @@ name = "gix-tempfile"
 version = "17.1.0"
 source = "git+https://github.com/GitoxideLabs/gitoxide?branch=improvements#a5c3ce64faa21e1af37b899ee4fe57a0d61cc253"
 dependencies = [
+ "dashmap",
  "gix-fs",
  "libc",
  "once_cell",
@@ -2298,6 +2348,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "imara-diff"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17d34b7d42178945f775e84bc4c36dde7c1c6cdfea656d3354d009056f2bb3d2"
+dependencies = [
+ "hashbrown 0.15.3",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2315,7 +2374,7 @@ checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2375,7 +2434,7 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3405,7 +3464,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3862,7 +3921,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
