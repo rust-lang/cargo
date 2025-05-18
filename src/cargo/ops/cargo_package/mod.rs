@@ -450,9 +450,7 @@ fn prepare_archive(
     let src_files = src.list_files(pkg)?;
 
     // Check (git) repository state, getting the current commit hash.
-    // TODO: where is the feature toggle?
-    let use_gix = true;
-    let vcs_info = if use_gix {
+    let vcs_info = if ws.gctx().cli_unstable().gitoxide.is_some() {
         vcs::gix::check_repo_state(pkg, &src_files, ws, &opts)
     } else {
         vcs::check_repo_state(pkg, &src_files, ws, &opts)

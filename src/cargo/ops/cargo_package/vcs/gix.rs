@@ -6,7 +6,6 @@ use crate::{CargoResult, GlobalContext};
 use anyhow::Context;
 use cargo_util::paths;
 use gix::bstr::ByteSlice;
-use gix::diff::rewrites::tracker::Change;
 use gix::dir::walk::EmissionMode;
 use gix::index::entry::Mode;
 use gix::status::tree_index::TrackRenames;
@@ -182,13 +181,11 @@ fn git(
         relative_package_root(repo, pkg.root()).as_deref(),
         &mut dirty_files,
     )?;
-    // super::collect_statuses(git_repo, &[pathspec.as_str()], &mut dirty_files)?;
 
     // Include each submodule so that the error message can provide
     // specifically *which* files in a submodule are modified.
     status_submodules(
         repo,
-        workdir,
         &mut dirty_files,
         &mut dirty_files_outside_of_package_root,
     )?;
@@ -199,7 +196,22 @@ fn git(
     let cwd = ws.gctx().cwd();
     let mut dirty_src_files: Vec<_> = src_files
         .iter()
-        .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
+        .filter(|src_file| {
+            if let Some(canon_src_file) = src_file.is_symlink_or_under_symlink().then(|| {
+                gix::path::realpath_opts(
+                    &src_file,
+                    ws.gctx().cwd(),
+                    gix::path::realpath::MAX_SYMLINKS,
+                )
+                .unwrap_or_else(|_| src_file.to_path_buf())
+            }) {
+                dirty_files
+                    .iter()
+                    .any(|path| canon_src_file.starts_with(path))
+            } else {
+                dirty_files.iter().any(|path| src_file.starts_with(path))
+            }
+        })
         .map(|p| p.as_ref())
         .chain(
             dirty_files_outside_pkg_root(ws, pkg, &dirty_files_outside_of_package_root, src_files)?
@@ -248,9 +260,10 @@ fn collect_statuses(
         .status(gix::progress::Discard)?
         .dirwalk_options(|opts| {
             opts.emit_untracked(gix::dir::walk::EmissionMode::Matching)
-                // Also pick up ignored files (but not entire directories)
+                // Also pick up ignored files or whole directories
                 // to specifically catch overzealously ignored source files.
-                // Later we will match these dirs by prefix.
+                // Later we will match these dirs by prefix, which is why collapsing
+                // them is desirable here.
                 .emit_ignored(Some(EmissionMode::CollapseDirectory))
                 .emit_tracked(false)
                 .recurse_repositories(false)
@@ -295,13 +308,6 @@ fn collect_statuses(
             continue;
         }
 
-        // We completely ignore submodules
-        if matches!(
-                status,
-                gix::status::Item::TreeIndex(change) if change.entry_mode().is_commit())
-        {
-            continue;
-        }
         dirty_files.push(path);
     }
     Ok(dirty_files_outside_of_package_root)
@@ -310,7 +316,6 @@ fn collect_statuses(
 /// Helper to collect dirty statuses while recursing into submodules.
 fn status_submodules(
     repo: &gix::Repository,
-    workdir: &Path,
     dirty_files: &mut Vec<PathBuf>,
     dirty_files_outside_of_package_root: &mut Vec<PathBuf>,
 ) -> CargoResult<()> {
@@ -321,12 +326,10 @@ fn status_submodules(
         // Ignore submodules that don't open, they are probably not initialized.
         // If its files are required, then the verification step should fail.
         if let Some(sub_repo) = submodule.open()? {
-            status_submodules(
-                &sub_repo,
-                workdir,
-                dirty_files,
-                dirty_files_outside_of_package_root,
-            )?;
+            let Some(workdir) = sub_repo.workdir() else {
+                continue;
+            };
+            status_submodules(&sub_repo, dirty_files, dirty_files_outside_of_package_root)?;
             dirty_files_outside_of_package_root.extend(collect_statuses(
                 &sub_repo,
                 workdir,
@@ -391,15 +394,10 @@ fn dirty_files_outside_pkg_root(
             )
             .unwrap_or_else(|_| src_file.to_owned());
 
-            if dirty_files_outside_of_package_root
+            dirty_files_outside_of_package_root
                 .iter()
                 .any(|p| canon_src_path.starts_with(p))
-            {
-                // Use the canonicalized path as later we want to truncate it by the CWD, which is also canonicalized.
-                Some(canon_src_path)
-            } else {
-                None
-            }
+                .then_some(canon_src_path)
         })
         .collect();
     Ok(dirty_files)
