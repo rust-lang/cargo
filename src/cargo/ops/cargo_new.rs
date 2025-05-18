@@ -434,6 +434,9 @@ fn calculate_new_project_kind(
 pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
     let path = &opts.path;
     let name = get_name(path, opts)?;
+    let name = format_project_name(name);
+    let name = name.as_str();
+
     gctx.shell()
         .status("Creating", format!("{} `{}` package", opts.kind, name))?;
 
@@ -469,6 +472,23 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
     Ok(())
 }
 
+// This issue comes from me trying to port Tsoding's nob.h to Rust (yes, very Rust of me)
+// and I named the directory nob.rs, but I got yelled at. So, in spirit of Rust and because I want to,
+// I am making an auto-fix for this <2
+/// All illegal characters will become '_' or some other variant that makes sense!
+pub fn format_project_name(name: &str) -> String {
+    let mut result = String::new();
+
+    for c in name.chars() {
+        result.push(match c {
+            '.' | ':' | '"' | '\'' => '_',
+            _ => c,
+        });
+    }
+
+    result
+}
+
 pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
     if gctx.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
@@ -477,6 +497,9 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
 
     let path = &opts.path;
     let name = get_name(path, opts)?;
+    let name = format_project_name(name);
+    let name = name.as_str();
+
     let mut src_paths_types = vec![];
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
@@ -555,7 +578,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
 
     let mkopts = MkOptions {
         version_control,
-        path,
+        path: &path,
         name,
         source_files: src_paths_types,
         edition: opts.edition.as_deref(),
