@@ -57,7 +57,7 @@
 </tspan>
     <tspan x="10px" y="352px"><tspan>  </tspan><tspan class="fg-cyan bold">-w</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--workspace</tspan><tspan>  Only update the workspace packages</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-cyan">[SPEC]...</tspan><tspan>    Package to update</tspan>
+    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-cyan">[SPEC]...</tspan><tspan>        Package to update</tspan>
 </tspan>
     <tspan x="10px" y="388px">
 </tspan>

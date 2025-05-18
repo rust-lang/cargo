@@ -101,7 +101,7 @@ supports-hyperlinks = "3.1.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "0.6.21", features = ["diff", "dir", "term-svg", "regex", "json"] }
 tar = { version = "0.4.43", default-features = false }
-tempfile = "3.16.0"
+tempfile = "3.20.0"
 thiserror = "2.0.11"
 time = { version = "0.3.37", features = ["parsing", "formatting", "serde"] }
 toml = "0.8.20"
