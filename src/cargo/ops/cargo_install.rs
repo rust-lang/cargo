@@ -343,7 +343,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
-                drop(td.into_path());
+                drop(td.keep());
             }
 
             format!(
