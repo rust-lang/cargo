@@ -2465,25 +2465,15 @@ pub fn validate_profile(
     features: &Features,
     warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
-    validate_profile_layer(root, name, cli_unstable, features)?;
+    validate_profile_layer(root, cli_unstable, features)?;
     if let Some(ref profile) = root.build_override {
         validate_profile_override(profile, "build-override")?;
-        validate_profile_layer(
-            profile,
-            &format!("{name}.build-override"),
-            cli_unstable,
-            features,
-        )?;
+        validate_profile_layer(profile, cli_unstable, features)?;
     }
     if let Some(ref packages) = root.package {
-        for (override_name, profile) in packages {
+        for profile in packages.values() {
             validate_profile_override(profile, "package")?;
-            validate_profile_layer(
-                profile,
-                &format!("{name}.package.{override_name}"),
-                cli_unstable,
-                features,
-            )?;
+            validate_profile_layer(profile, cli_unstable, features)?;
         }
     }
 
@@ -2548,25 +2538,16 @@ pub fn validate_profile(
 /// This is a shallow check, which is reused for the profile itself and any overrides.
 fn validate_profile_layer(
     profile: &manifest::TomlProfile,
-    name: &str,
     cli_unstable: &CliUnstable,
     features: &Features,
 ) -> CargoResult<()> {
-    if let Some(codegen_backend) = &profile.codegen_backend {
+    if profile.codegen_backend.is_some() {
         match (
             features.require(Feature::codegen_backend()),
             cli_unstable.codegen_backend,
         ) {
             (Err(e), false) => return Err(e),
             _ => {}
-        }
-
-        if codegen_backend.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
-            bail!(
-                "`profile.{}.codegen-backend` setting of `{}` is not a valid backend name.",
-                name,
-                codegen_backend,
-            );
         }
     }
     if profile.rustflags.is_some() {
