@@ -87,7 +87,7 @@ fn setup() -> Setup {
     let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
         .file(
             "src/main.rs",
-            r#"
+            &r#"
                 use std::process::Command;
                 use std::env;
                 fn main() {
@@ -97,21 +97,18 @@ fn setup() -> Setup {
                     if is_sysroot_crate {
                         args.push("--sysroot".to_string());
                         args.push(env::var("REAL_SYSROOT").unwrap());
-                    } else if args.iter().any(|arg| arg == "--target") {
+                    } else if let Some(pos) = args.iter().position(|arg| arg == "--target") {
                         // build-std target unit
-                        //
-                        // This `--sysroot` is here to disable the sysroot lookup,
-                        // to ensure nothing is required.
-                        // See https://github.com/rust-lang/wg-cargo-std-aware/issues/31
-                        // for more information on this.
-                        //
-                        // FIXME: this is broken on x86_64-unknown-linux-gnu
-                        // due to https://github.com/rust-lang/rust/pull/124129,
-                        // because it requires lld in the sysroot. See
-                        // https://github.com/rust-lang/rust/issues/125246 for
-                        // more information.
-                        // args.push("--sysroot".to_string());
-                        // args.push("/path/to/nowhere".to_string());
+
+                        // Set --sysroot only when the target is host
+                        if args.iter().nth(pos + 1) == Some(&"__HOST_TARGET__".to_string()) {
+                            // This `--sysroot` is here to disable the sysroot lookup,
+                            // to ensure nothing is required.
+                            // See https://github.com/rust-lang/wg-cargo-std-aware/issues/31
+                            // for more information on this.
+                            args.push("--sysroot".to_string());
+                            args.push("/path/to/nowhere".to_string());
+                        }
                     } else {
                         // host unit, do not use sysroot
                     }
@@ -119,7 +116,8 @@ fn setup() -> Setup {
                     let ret = Command::new(&args[0]).args(&args[1..]).status().unwrap();
                     std::process::exit(ret.code().unwrap_or(1));
                 }
-            "#,
+            "#
+            .replace("__HOST_TARGET__", rustc_host()),
         )
         .build();
     p.cargo("build").run();
@@ -298,20 +296,16 @@ fn shared_std_dependency_rebuild() {
 "#]])
         .run();
 
-    // TODO: Because of the way in which std is resolved, it's mandatory that this is left commented
-    // out as it will fail. This case should result in `dep_test` only being built once, however
-    // it's still being built twice. This is a bug.
-    //
-    //    p.cargo("build -v")
-    //        .build_std(&setup)
-    //        .with_stderr_does_not_contain(str![[r#"
-    //...
-    //[RUNNING] `[..] rustc --crate-name dep_test [..]`
-    //...
-    //[RUNNING] `[..] rustc --crate-name dep_test [..]`
-    //...
-    //"#]])
-    //        .run();
+    p.cargo("build -v")
+        .build_std(&setup)
+        .with_stderr_does_not_contain(str![[r#"
+    ...
+    [RUNNING] `[..] rustc --crate-name dep_test [..]`
+    ...
+    [RUNNING] `[..] rustc --crate-name dep_test [..]`
+    ...
+    "#]])
+        .run();
 }
 
 #[cargo_test(build_std_mock)]
