@@ -30,7 +30,7 @@ cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
 cargo-credential-libsecret = { version = "0.4.15", path = "credential/cargo-credential-libsecret" }
 cargo-credential-macos-keychain = { version = "0.4.15", path = "credential/cargo-credential-macos-keychain" }
 cargo-credential-wincred = { version = "0.4.15", path = "credential/cargo-credential-wincred" }
-cargo-platform = { path = "crates/cargo-platform", version = "0.3.0" }
+cargo-platform = { path = "crates/cargo-platform", version = "0.4.0" }
 cargo-test-macro = { version = "0.4.4", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.7.5", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.22", path = "crates/cargo-util" }
