@@ -1,6 +1,6 @@
 [package]
 name = "cargo-test-macro"
-version = "0.4.3"
+version = "0.4.4"
 edition.workspace = true
 rust-version = "1.87"  # MSRV:1
 license.workspace = true
