@@ -34,10 +34,10 @@ impl Platform {
     /// Returns whether the Platform matches the given target and cfg.
     ///
     /// The named target and cfg values should be obtained from `rustc`.
-    pub fn matches(&self, name: &str, cfg: &[Cfg]) -> bool {
+    pub fn matches(&self, name: &str, cfg: &[Cfg], rustc_version: &semver::Version) -> bool {
         match *self {
             Platform::Name(ref p) => p == name,
-            Platform::Cfg(ref p) => p.matches(cfg),
+            Platform::Cfg(ref p) => p.matches(cfg, rustc_version),
         }
     }
 

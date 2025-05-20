@@ -443,6 +443,7 @@ dependencies = [
 name = "cargo-platform"
 version = "0.4.0"
 dependencies = [
+ "semver",
  "serde",
  "snapbox",
 ]

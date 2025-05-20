@@ -251,33 +251,34 @@ fn cfg_expr_bad() {
 
 #[test]
 fn cfg_matches() {
-    assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)]));
-    assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)]));
-    assert!(e!(any(foo, bar)).matches(&[c!(bar)]));
-    assert!(e!(any(foo, bar)).matches(&[c!(foo)]));
-    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(not(foo)).matches(&[c!(bar)]));
-    assert!(e!(not(foo)).matches(&[]));
-    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(bar)]));
-    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(foo).matches(&[c!(r # foo)]));
-    assert!(e!(r # foo).matches(&[c!(foo)]));
-    assert!(e!(r # foo).matches(&[c!(r # foo)]));
+    let v87 = semver::Version::new(1, 87, 0);
+    assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)], &v87));
+    assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)], &v87));
+    assert!(e!(any(foo, bar)).matches(&[c!(bar)], &v87));
+    assert!(e!(any(foo, bar)).matches(&[c!(foo)], &v87));
+    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(not(foo)).matches(&[c!(bar)], &v87));
+    assert!(e!(not(foo)).matches(&[], &v87));
+    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(bar)], &v87));
+    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(foo).matches(&[c!(r # foo)], &v87));
+    assert!(e!(r # foo).matches(&[c!(foo)], &v87));
+    assert!(e!(r # foo).matches(&[c!(r # foo)], &v87));
 
-    assert!(!e!(foo).matches(&[]));
-    assert!(!e!(foo).matches(&[c!(bar)]));
-    assert!(!e!(foo).matches(&[c!(fo)]));
-    assert!(!e!(any(foo)).matches(&[]));
-    assert!(!e!(any(foo)).matches(&[c!(bar)]));
-    assert!(!e!(any(foo)).matches(&[c!(bar), c!(baz)]));
-    assert!(!e!(all(foo)).matches(&[c!(bar), c!(baz)]));
-    assert!(!e!(all(foo, bar)).matches(&[c!(bar)]));
-    assert!(!e!(all(foo, bar)).matches(&[c!(foo)]));
-    assert!(!e!(all(foo, bar)).matches(&[]));
-    assert!(!e!(not(bar)).matches(&[c!(bar)]));
-    assert!(!e!(not(bar)).matches(&[c!(baz), c!(bar)]));
-    assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)]));
+    assert!(!e!(foo).matches(&[], &v87));
+    assert!(!e!(foo).matches(&[c!(bar)], &v87));
+    assert!(!e!(foo).matches(&[c!(fo)], &v87));
+    assert!(!e!(any(foo)).matches(&[], &v87));
+    assert!(!e!(any(foo)).matches(&[c!(bar)], &v87));
+    assert!(!e!(any(foo)).matches(&[c!(bar), c!(baz)], &v87));
+    assert!(!e!(all(foo)).matches(&[c!(bar), c!(baz)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[c!(bar)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[c!(foo)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[], &v87));
+    assert!(!e!(not(bar)).matches(&[c!(bar)], &v87));
+    assert!(!e!(not(bar)).matches(&[c!(baz), c!(bar)], &v87));
+    assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)], &v87));
 }
 
 #[test]
