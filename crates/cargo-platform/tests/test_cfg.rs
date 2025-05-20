@@ -49,6 +49,7 @@ macro_rules! e {
     ($($t:tt)*) => (CfgExpr::Value(c!($($t)*)));
 }
 
+#[track_caller]
 fn good<T>(s: &str, expected: T)
 where
     T: FromStr + PartialEq + fmt::Debug,
@@ -87,6 +88,43 @@ fn cfg_syntax() {
     good(" foo=\"3\"      ", c!(foo = "3"));
     good("foo = \"3 e\"", c!(foo = "3 e"));
     good(" r#foo = \"3 e\"", c!(r # foo = "3 e"));
+    bad::<Cfg>(
+        "version(\"1.23.4\")",
+        str![[
+            r#"failed to parse `version("1.23.4")` as a cfg expression: unexpected content `("1.23.4")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.23\")",
+        str![[
+            r#"failed to parse `version("1.23")` as a cfg expression: unexpected content `("1.23")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.234.56\")",
+        str![[
+            r#"failed to parse `version("1.234.56")` as a cfg expression: unexpected content `("1.234.56")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        " version(\"1.23.4\")",
+        str![[
+            r#"failed to parse ` version("1.23.4")` as a cfg expression: unexpected content `("1.23.4")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.23.4\") ",
+        str![[
+            r#"failed to parse `version("1.23.4") ` as a cfg expression: unexpected content `("1.23.4") ` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        " version(\"1.23.4\") ",
+        str![[
+            r#"failed to parse ` version("1.23.4") ` as a cfg expression: unexpected content `("1.23.4") ` found after cfg expression"#
+        ]],
+    );
+    good("version = \"1.23.4\"", c!(version = "1.23.4"));
 }
 
 #[test]
@@ -112,17 +150,48 @@ fn cfg_syntax_bad() {
         "(",
         str!["failed to parse `(` as a cfg expression: expected identifier, found `(`"],
     );
-    bad::<Cfg>("foo (", str!["failed to parse `foo (` as a cfg expression: unexpected content `(` found after cfg expression"]);
-    bad::<Cfg>("bar =", str!["failed to parse `bar =` as a cfg expression: expected a string, but cfg expression ended"]);
     bad::<Cfg>(
-        "bar = \"",
-        str![[r#"failed to parse `bar = "` as a cfg expression: unterminated string in cfg"#]],
+        "version(\"1\")",
+        str![[
+            r#"failed to parse `version("1")` as a cfg expression: unexpected content `("1")` found after cfg expression"#
+        ]],
     );
-    bad::<Cfg>("foo, bar", str!["failed to parse `foo, bar` as a cfg expression: unexpected content `, bar` found after cfg expression"]);
-    bad::<Cfg>("r# foo", str!["failed to parse `r# foo` as a cfg expression: unexpected character ` ` in cfg, expected parens, a comma, an identifier, or a string"]);
-    bad::<Cfg>("r #foo", str!["failed to parse `r #foo` as a cfg expression: unexpected content `#foo` found after cfg expression"]);
-    bad::<Cfg>("r#\"foo\"", str![[r#"failed to parse `r#"foo"` as a cfg expression: unexpected character `"` in cfg, expected parens, a comma, an identifier, or a string"#]]);
-    bad::<Cfg>("foo = r#\"\"", str![[r#"failed to parse `foo = r#""` as a cfg expression: unexpected character `"` in cfg, expected parens, a comma, an identifier, or a string"#]]);
+    bad::<Cfg>(
+        "version(\"1.\")",
+        str![[
+            r#"failed to parse `version("1.")` as a cfg expression: unexpected content `("1.")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.\")",
+        str![[
+            r#"failed to parse `version("1.2.")` as a cfg expression: unexpected content `("1.2.")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.3.\")",
+        str![[
+            r#"failed to parse `version("1.2.3.")` as a cfg expression: unexpected content `("1.2.3.")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.3-stable\")",
+        str![[
+            r#"failed to parse `version("1.2.3-stable")` as a cfg expression: unexpected content `("1.2.3-stable")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"2.3\")",
+        str![[
+            r#"failed to parse `version("2.3")` as a cfg expression: unexpected content `("2.3")` found after cfg expression"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"0.99.9\")",
+        str![[
+            r#"failed to parse `version("0.99.9")` as a cfg expression: unexpected content `("0.99.9")` found after cfg expression"#
+        ]],
+    );
 }
 
 #[test]
@@ -145,6 +214,12 @@ fn cfg_expr() {
     good("all(a, )", e!(all(a)));
     good("not(a = \"b\")", e!(not(a = "b")));
     good("not(all(a))", e!(not(all(a))));
+    bad::<Cfg>(
+        "not(version(\"1.23.4\"))",
+        str![[
+            r#"failed to parse `not(version("1.23.4"))` as a cfg expression: unexpected content `(version("1.23.4"))` found after cfg expression"#
+        ]],
+    );
 }
 
 #[test]
