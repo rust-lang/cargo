@@ -254,7 +254,7 @@
 //! simple system for detecting rebuilds. [`LocalFingerprint::Precalculated`] is
 //! used for rustdoc units. For registry packages, this is the package
 //! version. For git packages, it is the git hash. For path packages, it is
-//! the a string of the mtime of the newest file in the package.
+//! a string of the mtime of the newest file in the package.
 //!
 //! There are some known bugs with how this works, so it should be improved at
 //! some point.
