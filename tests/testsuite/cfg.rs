@@ -836,16 +836,7 @@ fn cfg_version() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("check -v")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `version("1.87.0")` as a cfg expression: unexpected content `("1.87.0")` found after cfg expression
-
-"#]])
-        .run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -866,16 +857,7 @@ fn cfg_version_short() {
         .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
         .file("b/src/lib.rs", "")
         .build();
-    p.cargo("check -v")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `version("1.87")` as a cfg expression: unexpected content `("1.87")` found after cfg expression
-
-"#]])
-        .run();
+    p.cargo("check -v").run();
 }
 
 #[cargo_test]
@@ -903,7 +885,7 @@ fn cfg_bad_version() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `version("1")` as a cfg expression: unexpected content `("1")` found after cfg expression
+  failed to parse `version("1")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`
 
 "#]])
         .run();
@@ -934,7 +916,7 @@ fn cfg_bad_version2() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `version(1.87.0)` as a cfg expression: unexpected content `(1.87.0)` found after cfg expression
+  failed to parse `version(1.87.0)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();

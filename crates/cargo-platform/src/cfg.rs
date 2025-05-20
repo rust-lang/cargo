@@ -1,4 +1,5 @@
 use crate::error::{ParseError, ParseErrorKind::*};
+use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter;
@@ -15,6 +16,50 @@ pub enum CfgExpr {
     False,
 }
 
+// Major version restricted to `1`.
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
+pub struct CfgRustVersion {
+    pub minor: u64,
+    pub patch: Option<u64>,
+}
+
+impl CfgRustVersion {
+    pub fn parse(version: &str) -> Option<Self> {
+        let minor_patch = version.strip_prefix("1.")?;
+        let (minor, patch) = match minor_patch.split_once('.') {
+            Some((minor, patch)) => (minor.parse().ok()?, Some(patch.parse().ok()?)),
+            None => (minor_patch.parse().ok()?, None),
+        };
+        Some(Self { minor, patch })
+    }
+
+    pub fn matches(&self, rustc_version: &semver::Version) -> bool {
+        match self.minor.cmp(&rustc_version.minor) {
+            Ordering::Less => true,
+            Ordering::Equal => match self.patch {
+                Some(patch) => {
+                    if rustc_version.pre.as_str() == "nightly" {
+                        false
+                    } else {
+                        patch <= rustc_version.patch
+                    }
+                }
+                None => true,
+            },
+            Ordering::Greater => false,
+        }
+    }
+}
+
+impl fmt::Display for CfgRustVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.patch {
+            Some(patch) => write!(f, "version(\"1.{}.{patch}\")", self.minor),
+            None => write!(f, "version(\"1.{}\")", self.minor),
+        }
+    }
+}
+
 /// A cfg value.
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
@@ -22,6 +67,8 @@ pub enum Cfg {
     Name(Ident),
     /// A key/value cfg pair, like `target_os = "linux"`.
     KeyPair(Ident, String),
+    /// A Rust version cfg value, like `version("1.23.4")` or `version("1.23")`.
+    Version(CfgRustVersion),
 }
 
 /// A identifier
@@ -124,6 +171,7 @@ impl fmt::Display for Cfg {
         match *self {
             Cfg::Name(ref s) => s.fmt(f),
             Cfg::KeyPair(ref k, ref v) => write!(f, "{} = \"{}\"", k, v),
+            Cfg::Version(ref cfg_rust_version) => cfg_rust_version.fmt(f),
         }
     }
 }
@@ -148,6 +196,9 @@ impl CfgExpr {
             CfgExpr::Not(ref e) => !e.matches(cfg, rustc_version),
             CfgExpr::All(ref e) => e.iter().all(|e| e.matches(cfg, rustc_version)),
             CfgExpr::Any(ref e) => e.iter().any(|e| e.matches(cfg, rustc_version)),
+            CfgExpr::Value(Cfg::Version(ref cfg_rust_version)) => {
+                cfg_rust_version.matches(rustc_version)
+            }
             CfgExpr::Value(ref e) => cfg.contains(e),
             CfgExpr::True => true,
             CfgExpr::False => false,
@@ -275,6 +326,25 @@ impl<'a> Parser<'a> {
                         },
                         val.to_string(),
                     )
+                } else if name == "version" {
+                    self.eat(&Token::LeftParen)?;
+                    let token = self
+                        .t
+                        .next()
+                        .ok_or_else(|| ParseError::new(self.t.orig, InvalidVersion))??;
+                    let Token::String(version_str) = token else {
+                        return Err(ParseError::new(
+                            self.t.orig,
+                            UnexpectedToken {
+                                expected: "a string",
+                                found: token.classify(),
+                            },
+                        ));
+                    };
+                    self.eat(&Token::RightParen)?;
+                    let version = CfgRustVersion::parse(version_str)
+                        .ok_or_else(|| ParseError::new(self.t.orig, InvalidVersion))?;
+                    Cfg::Version(version)
                 } else {
                     Cfg::Name(Ident {
                         name: name.to_string(),

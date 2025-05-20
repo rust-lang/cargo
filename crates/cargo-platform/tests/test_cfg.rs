@@ -1,7 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-use cargo_platform::{Cfg, CfgExpr, Ident, Platform};
+use cargo_platform::{Cfg, CfgExpr, CfgRustVersion, Ident, Platform};
+use semver::{BuildMetadata, Prerelease};
 use snapbox::assert_data_eq;
 use snapbox::prelude::*;
 use snapbox::str;
@@ -36,6 +37,18 @@ macro_rules! c {
             },
             $e.to_string(),
         )
+    };
+    (version($minor:literal)) => {
+        Cfg::Version(CfgRustVersion {
+            minor: $minor,
+            patch: None,
+        })
+    };
+    (version($minor:literal, $patch:literal)) => {
+        Cfg::Version(CfgRustVersion {
+            minor: $minor,
+            patch: Some($patch),
+        })
     };
 }
 
@@ -88,42 +101,12 @@ fn cfg_syntax() {
     good(" foo=\"3\"      ", c!(foo = "3"));
     good("foo = \"3 e\"", c!(foo = "3 e"));
     good(" r#foo = \"3 e\"", c!(r # foo = "3 e"));
-    bad::<Cfg>(
-        "version(\"1.23.4\")",
-        str![[
-            r#"failed to parse `version("1.23.4")` as a cfg expression: unexpected content `("1.23.4")` found after cfg expression"#
-        ]],
-    );
-    bad::<Cfg>(
-        "version(\"1.23\")",
-        str![[
-            r#"failed to parse `version("1.23")` as a cfg expression: unexpected content `("1.23")` found after cfg expression"#
-        ]],
-    );
-    bad::<Cfg>(
-        "version(\"1.234.56\")",
-        str![[
-            r#"failed to parse `version("1.234.56")` as a cfg expression: unexpected content `("1.234.56")` found after cfg expression"#
-        ]],
-    );
-    bad::<Cfg>(
-        " version(\"1.23.4\")",
-        str![[
-            r#"failed to parse ` version("1.23.4")` as a cfg expression: unexpected content `("1.23.4")` found after cfg expression"#
-        ]],
-    );
-    bad::<Cfg>(
-        "version(\"1.23.4\") ",
-        str![[
-            r#"failed to parse `version("1.23.4") ` as a cfg expression: unexpected content `("1.23.4") ` found after cfg expression"#
-        ]],
-    );
-    bad::<Cfg>(
-        " version(\"1.23.4\") ",
-        str![[
-            r#"failed to parse ` version("1.23.4") ` as a cfg expression: unexpected content `("1.23.4") ` found after cfg expression"#
-        ]],
-    );
+    good("version(\"1.23.4\")", c!(version(23, 4)));
+    good("version(\"1.23\")", c!(version(23)));
+    good("version(\"1.234.56\")", c!(version(234, 56)));
+    good(" version(\"1.23.4\")", c!(version(23, 4)));
+    good("version(\"1.23.4\") ", c!(version(23, 4)));
+    good(" version(\"1.23.4\") ", c!(version(23, 4)));
     good("version = \"1.23.4\"", c!(version = "1.23.4"));
 }
 
@@ -153,43 +136,43 @@ fn cfg_syntax_bad() {
     bad::<Cfg>(
         "version(\"1\")",
         str![[
-            r#"failed to parse `version("1")` as a cfg expression: unexpected content `("1")` found after cfg expression"#
+            r#"failed to parse `version("1")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"1.\")",
         str![[
-            r#"failed to parse `version("1.")` as a cfg expression: unexpected content `("1.")` found after cfg expression"#
+            r#"failed to parse `version("1.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"1.2.\")",
         str![[
-            r#"failed to parse `version("1.2.")` as a cfg expression: unexpected content `("1.2.")` found after cfg expression"#
+            r#"failed to parse `version("1.2.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"1.2.3.\")",
         str![[
-            r#"failed to parse `version("1.2.3.")` as a cfg expression: unexpected content `("1.2.3.")` found after cfg expression"#
+            r#"failed to parse `version("1.2.3.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"1.2.3-stable\")",
         str![[
-            r#"failed to parse `version("1.2.3-stable")` as a cfg expression: unexpected content `("1.2.3-stable")` found after cfg expression"#
+            r#"failed to parse `version("1.2.3-stable")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"2.3\")",
         str![[
-            r#"failed to parse `version("2.3")` as a cfg expression: unexpected content `("2.3")` found after cfg expression"#
+            r#"failed to parse `version("2.3")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
     bad::<Cfg>(
         "version(\"0.99.9\")",
         str![[
-            r#"failed to parse `version("0.99.9")` as a cfg expression: unexpected content `("0.99.9")` found after cfg expression"#
+            r#"failed to parse `version("0.99.9")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
         ]],
     );
 }
@@ -214,12 +197,7 @@ fn cfg_expr() {
     good("all(a, )", e!(all(a)));
     good("not(a = \"b\")", e!(not(a = "b")));
     good("not(all(a))", e!(not(all(a))));
-    bad::<Cfg>(
-        "not(version(\"1.23.4\"))",
-        str![[
-            r#"failed to parse `not(version("1.23.4"))` as a cfg expression: unexpected content `(version("1.23.4"))` found after cfg expression"#
-        ]],
-    );
+    good("not(version(\"1.23.4\"))", e!(not(version(23, 4))));
 }
 
 #[test]
@@ -279,6 +257,28 @@ fn cfg_matches() {
     assert!(!e!(not(bar)).matches(&[c!(bar)], &v87));
     assert!(!e!(not(bar)).matches(&[c!(baz), c!(bar)], &v87));
     assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)], &v87));
+
+    assert!(e!(version(87)).matches(&[], &v87));
+    assert!(e!(version(87, 0)).matches(&[], &v87));
+    assert!(e!(version(86)).matches(&[], &v87));
+    assert!(e!(version(86, 1)).matches(&[], &v87));
+    assert!(!e!(version(87, 1)).matches(&[], &v87));
+    assert!(!e!(version(88)).matches(&[], &v87));
+    assert!(!e!(version(88, 1)).matches(&[], &v87));
+    assert!(e!(not(version(88))).matches(&[], &v87));
+    assert!(e!(not(version(88, 1))).matches(&[], &v87));
+
+    let v89_nightly = semver::Version {
+        major: 1,
+        minor: 89,
+        patch: 0,
+        pre: Prerelease::new("nightly").unwrap(),
+        build: BuildMetadata::EMPTY,
+    };
+    assert!(e!(version(89)).matches(&[], &v89_nightly));
+    assert!(!e!(version(89, 0)).matches(&[], &v89_nightly));
+    assert!(e!(version(88)).matches(&[], &v89_nightly));
+    assert!(e!(version(88, 0)).matches(&[], &v89_nightly));
 }
 
 #[test]

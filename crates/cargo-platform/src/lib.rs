@@ -18,7 +18,7 @@ mod cfg;
 mod error;
 
 use cfg::KEYWORDS;
-pub use cfg::{Cfg, CfgExpr, Ident};
+pub use cfg::{Cfg, CfgExpr, CfgRustVersion, Ident};
 pub use error::{ParseError, ParseErrorKind};
 
 /// Platform definition.
@@ -97,6 +97,7 @@ impl Platform {
                              https://doc.rust-lang.org/cargo/reference/features.html"
                         ))
                     },
+                    Cfg::Version(..) => {},
                 }
                 CfgExpr::True | CfgExpr::False => {},
             }
@@ -130,6 +131,7 @@ impl Platform {
                             ));
                         }
                     }
+                    Cfg::Version(..) => {}
                 },
             }
         }
