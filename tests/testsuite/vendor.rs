@@ -1094,11 +1094,19 @@ fn ignore_files() {
 
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/url/.cargo-checksum.json");
-    assert!(!csum.contains("foo.orig"));
-    assert!(!csum.contains(".gitignore"));
-    assert!(!csum.contains(".gitattributes"));
-    assert!(!csum.contains(".cargo-ok"));
-    assert!(!csum.contains("foo.rej"));
+    assert_e2e().eq(
+        csum,
+        str![[r#"
+{
+  "files": {
+    "Cargo.toml": "[..]",
+    "src/lib.rs": "[..]"
+  },
+  "package": "[..]"
+}
+"#]]
+        .is_json(),
+    );
 }
 
 #[cargo_test]
