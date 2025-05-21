@@ -514,6 +514,7 @@ fn main() {}
 
     #[test]
     fn rustc_multifrontmatter_2() {
+        // This should be valid, bug on rustc's side
         assert_source(
             r#"---
  ---
