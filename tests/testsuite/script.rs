@@ -25,7 +25,7 @@ fn path() -> Vec<std::path::PathBuf> {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect()
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn basic_rs() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -48,7 +48,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn basic_path() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
@@ -71,7 +71,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn path_required() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
@@ -95,7 +95,7 @@ fn path_required() {
 }
 
 #[cfg(unix)]
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn manifest_precedence_over_plugins() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -126,7 +126,7 @@ args: []
 }
 
 #[cfg(unix)]
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn warn_when_plugin_masks_manifest_on_stable() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -165,7 +165,7 @@ fn requires_nightly() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn requires_z_flag() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -182,7 +182,7 @@ fn requires_z_flag() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -212,7 +212,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -242,7 +242,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn rebuild() {
     let script = r#"#!/usr/bin/env cargo-eval
 
@@ -302,7 +302,7 @@ msg = hello
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn use_cargo_home_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
@@ -366,7 +366,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn default_programmatic_verbosity() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -384,7 +384,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn quiet() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -402,7 +402,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -430,7 +430,7 @@ line: 4
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_escaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -454,7 +454,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_unescaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -478,7 +478,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_same_flags() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -502,7 +502,7 @@ args: ["--help"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_has_weird_chars() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -526,7 +526,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_has_leading_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -550,7 +550,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_is_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("42.rs", script).build();
@@ -572,7 +572,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn script_like_dir() {
     let p = cargo_test_support::project()
         .file("foo.rs/foo", "something")
@@ -588,7 +588,7 @@ fn script_like_dir() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn non_existent_rs() {
     let p = cargo_test_support::project().build();
 
@@ -602,7 +602,7 @@ fn non_existent_rs() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn non_existent_rs_stable() {
     let p = cargo_test_support::project().build();
 
@@ -617,7 +617,7 @@ fn non_existent_rs_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn did_you_mean_file() {
     let p = cargo_test_support::project()
         .file("food.rs", ECHO_SCRIPT)
@@ -635,7 +635,7 @@ fn did_you_mean_file() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn did_you_mean_file_stable() {
     let p = cargo_test_support::project()
         .file("food.rs", ECHO_SCRIPT)
@@ -653,7 +653,7 @@ fn did_you_mean_file_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn did_you_mean_command() {
     let p = cargo_test_support::project().build();
 
@@ -669,7 +669,7 @@ fn did_you_mean_command() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn did_you_mean_command_stable() {
     let p = cargo_test_support::project().build();
 
@@ -685,7 +685,7 @@ fn did_you_mean_command_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -722,7 +722,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_path_dep() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -758,7 +758,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_no_build_rs() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -786,7 +786,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_no_autobins() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -814,7 +814,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_no_autolib() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -842,7 +842,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_workspace() {
     let p = cargo_test_support::project()
         .file(
@@ -872,7 +872,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_lib() {
     let p = cargo_test_support::project()
         .file(
@@ -904,7 +904,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_bin() {
     let p = cargo_test_support::project()
         .file(
@@ -936,7 +936,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_example() {
     let p = cargo_test_support::project()
         .file(
@@ -968,7 +968,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_test() {
     let p = cargo_test_support::project()
         .file(
@@ -1000,7 +1000,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_bench() {
     let p = cargo_test_support::project()
         .file(
@@ -1032,7 +1032,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_build() {
     let p = cargo_test_support::project()
         .file(
@@ -1062,7 +1062,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_links() {
     let p = cargo_test_support::project()
         .file(
@@ -1092,7 +1092,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_autolib() {
     let p = cargo_test_support::project()
         .file(
@@ -1122,7 +1122,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_autobins() {
     let p = cargo_test_support::project()
         .file(
@@ -1152,7 +1152,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_autoexamples() {
     let p = cargo_test_support::project()
         .file(
@@ -1182,7 +1182,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_autotests() {
     let p = cargo_test_support::project()
         .file(
@@ -1212,7 +1212,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_package_autobenches() {
     let p = cargo_test_support::project()
         .file(
@@ -1242,7 +1242,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1266,7 +1266,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn no_local_lockfile() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1295,7 +1295,7 @@ args: []
     assert!(!local_lockfile_path.exists());
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_check_requires_nightly() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1312,7 +1312,7 @@ fn cmd_check_requires_nightly() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_check_requires_z_flag() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1330,7 +1330,7 @@ fn cmd_check_requires_z_flag() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_check_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1349,7 +1349,7 @@ fn cmd_check_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_check_with_missing_script_rs() {
     let p = cargo_test_support::project().build();
 
@@ -1364,7 +1364,7 @@ fn cmd_check_with_missing_script_rs() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_check_with_missing_script() {
     let p = cargo_test_support::project().build();
 
@@ -1379,7 +1379,7 @@ fn cmd_check_with_missing_script() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_build_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1398,7 +1398,7 @@ fn cmd_build_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_test_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1426,7 +1426,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_clean_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1449,7 +1449,7 @@ fn cmd_clean_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_generate_lockfile_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1466,7 +1466,7 @@ fn cmd_generate_lockfile_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_metadata_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1553,7 +1553,7 @@ fn cmd_metadata_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_read_manifest_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1615,7 +1615,7 @@ fn cmd_read_manifest_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_run_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1638,7 +1638,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_tree_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1657,7 +1657,7 @@ script v0.0.0 ([ROOT]/foo/script.rs)
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_update_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1673,7 +1673,7 @@ fn cmd_update_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_verify_project_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1696,7 +1696,7 @@ fn cmd_verify_project_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_pkgid_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1719,7 +1719,7 @@ path+[ROOTURL]/foo/script.rs#script@0.0.0
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_pkgid_with_embedded_no_lock_file() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1736,7 +1736,7 @@ fn cmd_pkgid_with_embedded_no_lock_file() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_pkgid_with_embedded_dep() {
     Package::new("dep", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -1769,7 +1769,7 @@ registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn script_as_dep() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1807,7 +1807,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_install_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1823,7 +1823,7 @@ fn cmd_install_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1840,7 +1840,7 @@ fn cmd_package_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn cmd_publish_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1857,7 +1857,7 @@ fn cmd_publish_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn manifest_path_env() {
     let p = cargo_test_support::project()
         .file(
@@ -1887,7 +1887,7 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn ignore_surrounding_workspace() {
     let p = cargo_test_support::project()
         .file(

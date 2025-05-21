@@ -494,7 +494,7 @@ fn install_lock_file_path_must_present() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn run_embed() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let invalid_lockfile = "Cargo.lock";

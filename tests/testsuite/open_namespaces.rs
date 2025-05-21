@@ -259,7 +259,7 @@ fn explicit_bin_within_namespace() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[cfg(unix)]
 fn namespaced_script_name() {
     let p = cargo_test_support::project()
@@ -314,7 +314,7 @@ fn main() {}
         "bin"
       ],
       "name": "foo::bar",
-      "src_path": "[ROOT]/home/.cargo/target/[HASH]/foo::bar.rs",
+      "src_path": "[ROOT]/foo/foo::bar.rs",
       "test": true
     }
   ],

@@ -1,16 +1,9 @@
-use anyhow::Context as _;
-
 use cargo_util_schemas::manifest::PackageName;
 
 use crate::util::restricted_names;
 use crate::CargoResult;
-use crate::GlobalContext;
 
-pub(super) fn expand_manifest(
-    content: &str,
-    path: &std::path::Path,
-    gctx: &GlobalContext,
-) -> CargoResult<String> {
+pub(super) fn expand_manifest(content: &str) -> CargoResult<String> {
     let source = ScriptSource::parse(content)?;
     if let Some(frontmatter) = source.frontmatter() {
         match source.info() {
@@ -24,72 +17,11 @@ pub(super) fn expand_manifest(
             }
         }
 
-        // HACK: until rustc has native support for this syntax, we have to remove it from the
-        // source file
-        use std::fmt::Write as _;
-        let hash = crate::util::hex::short_hash(&path.to_string_lossy());
-        let mut rel_path = std::path::PathBuf::new();
-        rel_path.push("target");
-        rel_path.push(&hash[0..2]);
-        rel_path.push(&hash[2..]);
-        let target_dir = gctx.home().join(rel_path);
-        let hacked_path = target_dir
-            .join(
-                path.file_name()
-                    .expect("always a name for embedded manifests"),
-            )
-            .into_path_unlocked();
-        let mut hacked_source = String::new();
-        if let Some(shebang) = source.shebang() {
-            writeln!(hacked_source, "{shebang}")?;
-        }
-        writeln!(hacked_source)?; // open
-        for _ in 0..frontmatter.lines().count() {
-            writeln!(hacked_source)?;
-        }
-        writeln!(hacked_source)?; // close
-        writeln!(hacked_source, "{}", source.content())?;
-        if let Some(parent) = hacked_path.parent() {
-            cargo_util::paths::create_dir_all(parent)?;
-        }
-        cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
-
-        let manifest = inject_bin_path(&frontmatter, &hacked_path)
-            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
-        let manifest = toml::to_string_pretty(&manifest)?;
-        Ok(manifest)
+        Ok(frontmatter.to_owned())
     } else {
         let frontmatter = "";
-        let manifest = inject_bin_path(frontmatter, path)
-            .with_context(|| format!("failed to parse manifest at `{}`", path.display()))?;
-        let manifest = toml::to_string_pretty(&manifest)?;
-        Ok(manifest)
+        Ok(frontmatter.to_owned())
     }
-}
-
-/// HACK: Add a `[[bin]]` table to the `original_toml`
-fn inject_bin_path(manifest: &str, path: &std::path::Path) -> CargoResult<toml::Table> {
-    let mut manifest: toml::Table = toml::from_str(&manifest)?;
-
-    let bin_path = path.to_string_lossy().into_owned();
-    let file_stem = path
-        .file_stem()
-        .ok_or_else(|| anyhow::format_err!("no file name"))?
-        .to_string_lossy();
-    let name = sanitize_name(file_stem.as_ref());
-    let bin_name = name.clone();
-
-    let mut bin = toml::Table::new();
-    bin.insert("name".to_owned(), toml::Value::String(bin_name));
-    bin.insert("path".to_owned(), toml::Value::String(bin_path));
-    manifest
-        .entry("bin")
-        .or_insert_with(|| Vec::<toml::Value>::new().into())
-        .as_array_mut()
-        .ok_or_else(|| anyhow::format_err!("`bin` must be an array"))?
-        .push(toml::Value::Table(bin));
-
-    Ok(manifest)
 }
 
 /// Ensure the package name matches the validation from `ops::cargo_new::check_name`
@@ -584,25 +516,12 @@ fn main() {}
 
     #[track_caller]
     fn expand(source: &str) -> String {
-        let shell = crate::Shell::from_write(Box::new(Vec::new()));
-        let cwd = std::env::current_dir().unwrap();
-        let home = home::cargo_home_with_cwd(&cwd).unwrap();
-        let gctx = GlobalContext::new(shell, cwd, home);
-        expand_manifest(source, std::path::Path::new("/home/me/test.rs"), &gctx)
-            .unwrap_or_else(|err| panic!("{}", err))
+        expand_manifest(source).unwrap_or_else(|err| panic!("{}", err))
     }
 
     #[test]
     fn expand_default() {
-        assert_data_eq!(
-            expand(r#"fn main() {}"#),
-            str![[r#"
-[[bin]]
-name = "test-"
-path = "/home/me/test.rs"
-
-"#]]
-        );
+        assert_data_eq!(expand(r#"fn main() {}"#), str![""]);
     }
 
     #[test]
@@ -617,12 +536,8 @@ fn main() {}
 "#
             ),
             str![[r#"
-[[bin]]
-name = "test-"
-path = [..]
-
 [dependencies]
-time = "0.1.25"
+time="0.1.25"
 
 "#]]
         );
