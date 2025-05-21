@@ -160,7 +160,7 @@ fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> Car
         if !gctx.cli_unstable().script {
             anyhow::bail!("parsing `{}` requires `-Zscript`", path.display());
         }
-        contents = embedded::expand_manifest(&contents, path, gctx)?;
+        contents = embedded::expand_manifest(&contents)?;
     }
     Ok(contents)
 }
@@ -368,8 +368,37 @@ fn normalize_toml(
             original_package.autolib.or(auto_embedded),
             warnings,
         )?;
+        let original_toml_bin = if is_embedded {
+            let manifest_file_stem = manifest_file
+                .file_stem()
+                .expect("file name enforced previously");
+            let name = embedded::sanitize_name(manifest_file_stem.to_string_lossy().as_ref());
+            let manifest_file_name = manifest_file
+                .file_name()
+                .expect("file name enforced previously");
+            let path = PathBuf::from(manifest_file_name);
+            Cow::Owned(Some(vec![manifest::TomlBinTarget {
+                name: Some(name),
+                crate_type: None,
+                crate_type2: None,
+                path: Some(manifest::PathValue(path)),
+                filename: None,
+                test: None,
+                doctest: None,
+                bench: None,
+                doc: None,
+                doc_scrape_examples: None,
+                proc_macro: None,
+                proc_macro2: None,
+                harness: None,
+                required_features: None,
+                edition: None,
+            }]))
+        } else {
+            Cow::Borrowed(&original_toml.bin)
+        };
         normalized_toml.bin = Some(targets::normalize_bins(
-            original_toml.bin.as_ref(),
+            original_toml_bin.as_ref().as_ref(),
             package_root,
             package_name,
             edition,
@@ -1345,10 +1374,7 @@ pub fn to_real_manifest(
         let invalid_fields = [
             ("`workspace`", original_toml.workspace.is_some()),
             ("`lib`", original_toml.lib.is_some()),
-            (
-                "`bin`",
-                original_toml.bin.as_ref().map(|b| b.len()).unwrap_or(0) != 1,
-            ),
+            ("`bin`", original_toml.bin.is_some()),
             ("`example`", original_toml.example.is_some()),
             ("`test`", original_toml.test.is_some()),
             ("`bench`", original_toml.bench.is_some()),

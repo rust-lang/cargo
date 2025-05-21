@@ -2542,7 +2542,7 @@ edition = "2021"
     );
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn migrate_removes_project_for_script() {
     let p = project()
         .file(
@@ -2576,7 +2576,7 @@ fn main() {
 [MIGRATING] foo.rs from 2021 edition to 2024
 [FIXED] foo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/foo.rs)
-[MIGRATING] [ROOT]/home/.cargo/target/[HASH]/foo.rs from 2021 edition to 2024
+[MIGRATING] foo.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
