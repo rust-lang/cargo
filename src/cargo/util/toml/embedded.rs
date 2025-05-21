@@ -143,6 +143,11 @@ impl<'s> ScriptSource<'s> {
         let frontmatter_len = input.len() - rest.len();
         source.content = &input[frontmatter_len..];
 
+        let repeat = Self::parse(source.content)?;
+        if repeat.frontmatter.is_some() {
+            anyhow::bail!("only one frontmatter is supported");
+        }
+
         Ok(source)
     }
 
@@ -362,6 +367,7 @@ content: "\n//@ check-pass\n\n// check that frontmatter blocks can have tokens t
 
     #[test]
     fn rustc_frontmatter_whitespace_1() {
+        // Deferred to rustc since this requires knowledge of Rust grammar
         assert_source(
             r#"  ---
 //~^ ERROR: invalid preceding whitespace for frontmatter opening
@@ -539,8 +545,9 @@ content: "\nfn main() {}\n"
 
     #[test]
     fn rustc_multifrontmatter() {
-        assert_source(
-            r#"---
+        assert_err(
+            ScriptSource::parse(
+                r#"---
 ---
 
 ---
@@ -552,13 +559,8 @@ content: "\nfn main() {}\n"
 
 fn main() {}
 "#,
-            str![[r#"
-shebang: None
-info: None
-frontmatter: ""
-content: "\n---\n//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n---\n\n// test that we do not parse another frontmatter block after the first one.\n\nfn main() {}\n"
-
-"#]],
+            ),
+            str!["only one frontmatter is supported"],
         );
     }
 
