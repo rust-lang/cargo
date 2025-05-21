@@ -217,6 +217,453 @@ mod test_expand {
     }
 
     #[test]
+    fn rustc_dot_in_infostring_leading() {
+        assert_source(
+            r#"---.toml
+//~^ ERROR: invalid infostring for frontmatter
+---
+
+// infostrings cannot have leading dots
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: ".toml"
+frontmatter: "//~^ ERROR: invalid infostring for frontmatter\n"
+content: "\n// infostrings cannot have leading dots\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_dot_in_infostring_non_leading() {
+        assert_err(
+            ScriptSource::parse(
+                r#"---Cargo.toml
+---
+
+// infostrings can contain dots as long as a dot isn't the first character.
+//@ check-pass
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_escape() {
+        assert_source(
+            r#"----
+
+---
+
+----
+
+//@ check-pass
+
+// This test checks that longer dashes for opening and closing can be used to
+// escape sequences such as three dashes inside the frontmatter block.
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "\n---\n\n"
+content: "\n//@ check-pass\n\n// This test checks that longer dashes for opening and closing can be used to\n// escape sequences such as three dashes inside the frontmatter block.\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_extra_after_end() {
+        assert_err(
+            ScriptSource::parse(
+                r#"---
+---cargo
+//~^ ERROR: extra characters after frontmatter close are not allowed
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_after_tokens() {
+        assert_source(
+            r#"#![feature(frontmatter)]
+
+---
+//~^ ERROR: expected item, found `-`
+// FIXME(frontmatter): make this diagnostic better
+---
+
+// frontmatters must be at the start of a file. This test ensures that.
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: None
+info: None
+frontmatter: None
+content: "#![feature(frontmatter)]\n\n---\n//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n---\n\n// frontmatters must be at the start of a file. This test ensures that.\n\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_non_lexible_tokens() {
+        assert_source(
+            r#"---uwu
+🏳️‍⚧️
+---
+
+//@ check-pass
+
+// check that frontmatter blocks can have tokens that are otherwise not accepted by
+// the lexer as Rust code.
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "uwu"
+frontmatter: "🏳\u{fe0f}\u{200d}⚧\u{fe0f}\n"
+content: "\n//@ check-pass\n\n// check that frontmatter blocks can have tokens that are otherwise not accepted by\n// the lexer as Rust code.\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_whitespace_1() {
+        assert_source(
+            r#"  ---
+//~^ ERROR: invalid preceding whitespace for frontmatter opening
+  ---
+//~^ ERROR: invalid preceding whitespace for frontmatter close
+
+// check that whitespaces should not precede the frontmatter opening or close.
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: None
+content: "  ---\n//~^ ERROR: invalid preceding whitespace for frontmatter opening\n  ---\n//~^ ERROR: invalid preceding whitespace for frontmatter close\n\n// check that whitespaces should not precede the frontmatter opening or close.\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_whitespace_2() {
+        assert_err(
+            ScriptSource::parse(
+                r#"---cargo
+
+//@ compile-flags: --crate-type lib
+
+fn foo(x: i32) -> i32 {
+    ---x
+    //~^ ERROR: invalid preceding whitespace for frontmatter close
+    //~| ERROR: extra characters after frontmatter close are not allowed
+}
+//~^ ERROR: unexpected closing delimiter: `}`
+
+// this test is for the weird case that valid Rust code can have three dashes
+// within them and get treated as a frontmatter close.
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_whitespace_3() {
+        assert_err(
+            ScriptSource::parse(
+                r#"
+
+
+---cargo   
+---   
+
+// please note the whitespace characters after the first four lines.
+// This ensures that we accept whitespaces before the frontmatter, after
+// the frontmatter opening and the frontmatter close.
+
+//@ check-pass
+// ignore-tidy-end-whitespace
+// ignore-tidy-leading-newlines
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_whitespace_4() {
+        assert_err(
+            ScriptSource::parse(
+                r#"--- cargo
+---
+
+//@ check-pass
+// A frontmatter infostring can have leading whitespace.
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_infostring_fail() {
+        assert_source(
+            r#"
+---cargo,clippy
+//~^ ERROR: invalid infostring for frontmatter
+---
+
+// infostrings can only be a single identifier.
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "cargo,clippy"
+frontmatter: "//~^ ERROR: invalid infostring for frontmatter\n"
+content: "\n// infostrings can only be a single identifier.\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_mismatch_1() {
+        assert_err(
+            ScriptSource::parse(
+                r#"---cargo
+//~^ ERROR: frontmatter close does not match the opening
+----
+
+// there must be the same number of dashes for both the opening and the close
+// of the frontmatter.
+
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `-`"],
+        );
+    }
+
+    #[test]
+    fn rustc_mismatch_2() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----cargo
+//~^ ERROR: frontmatter close does not match the opening
+---cargo
+//~^ ERROR: extra characters after frontmatter close are not allowed
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_multifrontmatter_2() {
+        assert_source(
+            r#"---
+ ---
+//~^ ERROR: invalid preceding whitespace for frontmatter close
+
+ ---
+//~^ ERROR: expected item, found `-`
+// FIXME(frontmatter): make this diagnostic better
+---
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: " ---\n//~^ ERROR: invalid preceding whitespace for frontmatter close\n\n ---\n//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n"
+content: "\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_multifrontmatter() {
+        assert_source(
+            r#"---
+---
+
+---
+//~^ ERROR: expected item, found `-`
+// FIXME(frontmatter): make this diagnostic better
+---
+
+// test that we do not parse another frontmatter block after the first one.
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "---\n\n"
+content: "//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n---\n\n// test that we do not parse another frontmatter block after the first one.\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_shebang() {
+        assert_source(
+            r#"#!/usr/bin/env -S cargo -Zscript
+---
+[dependencies]
+clap = "4"
+---
+
+//@ check-pass
+
+// Shebangs on a file can precede a frontmatter.
+
+fn main () {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env -S cargo -Zscript\n"
+info: None
+frontmatter: "[dependencies]\nclap = \"4\"\n"
+content: "\n//@ check-pass\n\n// Shebangs on a file can precede a frontmatter.\n\nfn main () {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn rustc_unclosed_1() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----cargo
+//~^ ERROR: unclosed frontmatter
+
+// This test checks that the #! characters can help us recover a frontmatter
+// close. There should not be a "missing `main` function" error as the rest
+// are properly parsed.
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_unclosed_2() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----cargo
+//~^ ERROR: unclosed frontmatter
+//~| ERROR: frontmatters are experimental
+
+//@ compile-flags: --crate-type lib
+
+// Leading whitespace on the feature line prevents recovery. However
+// the dashes quoted will not be used for recovery and the entire file
+// should be treated as within the frontmatter block.
+
+fn foo() -> &str {
+    "----"
+}
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_unclosed_3() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----cargo
+//~^ ERROR: frontmatter close does not match the opening
+
+//@ compile-flags: --crate-type lib
+
+// Unfortunate recovery situation. Not really preventable with improving the
+// recovery strategy, but this type of code is rare enough already.
+
+fn foo(x: i32) -> i32 {
+    ---x
+    //~^ ERROR: invalid preceding whitespace for frontmatter close
+    //~| ERROR: extra characters after frontmatter close are not allowed
+}
+//~^ ERROR: unexpected closing delimiter: `}`
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_unclosed_4() {
+        assert_err(
+            ScriptSource::parse(
+                r#"
+----cargo
+//~^ ERROR: unclosed frontmatter
+
+//! Similarly, a module-level content should allow for recovery as well (as
+//! per unclosed-1.rs)
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
+    fn rustc_unclosed_5() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----cargo
+//~^ ERROR: unclosed frontmatter
+//~| ERROR: frontmatters are experimental
+
+// Similarly, a use statement should allow for recovery as well (as
+// per unclosed-1.rs)
+
+use std::env;
+
+fn main() {}
+"#,
+            ),
+            str!["no closing `----` found for frontmatter"],
+        );
+    }
+
+    #[test]
     fn split_default() {
         assert_source(
             r#"fn main() {}
