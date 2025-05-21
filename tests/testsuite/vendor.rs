@@ -1087,13 +1087,14 @@ fn ignore_files() {
     Package::new("url", "1.4.1")
         // These will be vendored
         .file(".cargo_vcs_info.json", "")
+        .file("Cargo.toml.orig", "")
+        .file("foo.orig", "")
+        .file("foo.rej", "")
         .file("src/lib.rs", "")
         // These will not be vendored
         .file(".cargo-ok", "")
         .file(".gitattributes", "")
         .file(".gitignore", "")
-        .file("foo.orig", "")
-        .file("foo.rej", "")
         .publish();
 
     p.cargo("vendor --respect-source-config").run();
@@ -1105,6 +1106,9 @@ fn ignore_files() {
   "files": {
     ".cargo_vcs_info.json": "[..]",
     "Cargo.toml": "[..]",
+    "Cargo.toml.orig": "[..]",
+    "foo.orig": "[..]",
+    "foo.rej": "[..]",
     "src/lib.rs": "[..]"
   },
   "package": "[..]"

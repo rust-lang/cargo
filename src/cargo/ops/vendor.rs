@@ -618,10 +618,6 @@ fn vendor_this(relative: &Path) -> bool {
         // Temporary Cargo files
         Some(".cargo-ok") => false,
 
-        // Skip patch-style orig/rej files. Published crates on crates.io
-        // have `Cargo.toml.orig` which we don't want to use here and
-        // otherwise these are rarely used as part of the build process.
-        Some(p) if p.ends_with(".orig") || p.ends_with(".rej") => false,
         _ => true,
     }
 }
