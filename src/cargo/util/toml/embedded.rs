@@ -120,9 +120,6 @@ impl<'s> ScriptSource<'s> {
         if !info.is_empty() {
             source.info = Some(info);
         }
-        let rest = rest
-            .strip_prefix('\n')
-            .expect("earlier `found` + `split_at` left us here");
 
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
@@ -130,8 +127,11 @@ impl<'s> ScriptSource<'s> {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
         let frontmatter = &rest[..frontmatter_nl + 1];
-        let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
+        let frontmatter = frontmatter
+            .strip_prefix('\n')
+            .expect("earlier `found` + `split_at` left us here");
         source.frontmatter = Some(frontmatter);
+        let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
 
         let (after_closing_fence, rest) = rest.split_once("\n").unwrap_or((rest, ""));
         let after_closing_fence = after_closing_fence.trim_matches(WHITESPACE);
@@ -251,9 +251,8 @@ content: "\n// infostrings cannot have leading dots\n\nfn main() {}\n"
 
     #[test]
     fn rustc_dot_in_infostring_non_leading() {
-        assert_err(
-            ScriptSource::parse(
-                r#"---Cargo.toml
+        assert_source(
+            r#"---Cargo.toml
 ---
 
 // infostrings can contain dots as long as a dot isn't the first character.
@@ -261,8 +260,13 @@ content: "\n// infostrings cannot have leading dots\n\nfn main() {}\n"
 
 fn main() {}
 "#,
-            ),
-            str!["no closing `---` found for frontmatter"],
+            str![[r#"
+shebang: None
+info: "Cargo.toml"
+frontmatter: ""
+content: "\n// infostrings can contain dots as long as a dot isn't the first character.\n//@ check-pass\n\nfn main() {}\n"
+
+"#]],
         );
     }
 
@@ -303,7 +307,7 @@ content: "\n//@ check-pass\n\n// This test checks that longer dashes for opening
 fn main() {}
 "#,
             ),
-            str!["no closing `---` found for frontmatter"],
+            str!["trailing characters found after frontmatter close"],
         );
     }
 
@@ -402,9 +406,8 @@ fn foo(x: i32) -> i32 {
 
     #[test]
     fn rustc_frontmatter_whitespace_3() {
-        assert_err(
-            ScriptSource::parse(
-                r#"
+        assert_source(
+            r#"
 
 
 ---cargo   
@@ -420,16 +423,20 @@ fn foo(x: i32) -> i32 {
 
 fn main() {}
 "#,
-            ),
-            str!["no closing `---` found for frontmatter"],
+            str![[r#"
+shebang: None
+info: "cargo"
+frontmatter: ""
+content: "\n// please note the whitespace characters after the first four lines.\n// This ensures that we accept whitespaces before the frontmatter, after\n// the frontmatter opening and the frontmatter close.\n\n//@ check-pass\n// ignore-tidy-end-whitespace\n// ignore-tidy-leading-newlines\n\nfn main() {}\n"
+
+"#]],
         );
     }
 
     #[test]
     fn rustc_frontmatter_whitespace_4() {
-        assert_err(
-            ScriptSource::parse(
-                r#"--- cargo
+        assert_source(
+            r#"--- cargo
 ---
 
 //@ check-pass
@@ -437,8 +444,13 @@ fn main() {}
 
 fn main() {}
 "#,
-            ),
-            str!["no closing `---` found for frontmatter"],
+            str![[r#"
+shebang: None
+info: "cargo"
+frontmatter: ""
+content: "\n//@ check-pass\n// A frontmatter infostring can have leading whitespace.\n\nfn main() {}\n"
+
+"#]],
         );
     }
 
@@ -541,8 +553,8 @@ fn main() {}
             str![[r#"
 shebang: None
 info: None
-frontmatter: "---\n\n"
-content: "//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n---\n\n// test that we do not parse another frontmatter block after the first one.\n\nfn main() {}\n"
+frontmatter: ""
+content: "\n---\n//~^ ERROR: expected item, found `-`\n// FIXME(frontmatter): make this diagnostic better\n---\n\n// test that we do not parse another frontmatter block after the first one.\n\nfn main() {}\n"
 
 "#]],
         );
