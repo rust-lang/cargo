@@ -1086,6 +1086,7 @@ fn ignore_files() {
     Package::new("url", "1.4.1")
         .file("src/lib.rs", "")
         .file("foo.orig", "")
+        .file(".cargo_vcs_info.json", "")
         .file(".gitignore", "")
         .file(".gitattributes", "")
         .file("foo.rej", "")
@@ -1094,6 +1095,7 @@ fn ignore_files() {
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/url/.cargo-checksum.json");
     assert!(!csum.contains("foo.orig"));
+    assert!(!csum.contains(".cargo_vcs_info.json"));
     assert!(!csum.contains(".gitignore"));
     assert!(!csum.contains(".gitattributes"));
     assert!(!csum.contains(".cargo-ok"));
