@@ -229,6 +229,7 @@ mod test_expand {
 
     #[test]
     fn rustc_dot_in_infostring_leading() {
+        // We don't validate infostrings besides `info == "cargo"`
         assert_source(
             r#"---.toml
 //~^ ERROR: invalid infostring for frontmatter
@@ -443,6 +444,7 @@ fn main() {}
 
     #[test]
     fn rustc_infostring_fail() {
+        // We don't validate infostrings besides `info == "cargo"`
         assert_source(
             r#"
 ---cargo,clippy
