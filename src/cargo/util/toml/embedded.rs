@@ -313,6 +313,7 @@ fn main() {}
 
     #[test]
     fn rustc_frontmatter_after_tokens() {
+        // Deferred to rustc since this requires knowledge of Rust grammar
         assert_source(
             r#"#![feature(frontmatter)]
 
