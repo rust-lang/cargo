@@ -81,8 +81,7 @@ impl<'s> ScriptSource<'s> {
         let mut rest = source.content;
 
         // Whitespace may precede a frontmatter but must end with a newline
-        const WHITESPACE: [char; 4] = [' ', '\t', '\r', '\n'];
-        let trimmed = rest.trim_start_matches(WHITESPACE);
+        let trimmed = rest.trim_start_matches(is_whitespace);
         if trimmed.len() != rest.len() {
             let trimmed_len = rest.len() - trimmed.len();
             let last_trimmed_index = trimmed_len - 1;
@@ -116,7 +115,7 @@ impl<'s> ScriptSource<'s> {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
         let (info, rest) = rest.split_at(info_end_index);
-        let info = info.trim_matches(WHITESPACE);
+        let info = info.trim_matches(is_whitespace);
         if !info.is_empty() {
             source.info = Some(info);
         }
@@ -134,7 +133,7 @@ impl<'s> ScriptSource<'s> {
         let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
 
         let (after_closing_fence, rest) = rest.split_once("\n").unwrap_or((rest, ""));
-        let after_closing_fence = after_closing_fence.trim_matches(WHITESPACE);
+        let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
             anyhow::bail!("trailing characters found after frontmatter close");
@@ -186,6 +185,40 @@ fn strip_shebang(input: &str) -> Option<usize> {
         }
     }
     None
+}
+
+/// True if `c` is considered a whitespace according to Rust language definition.
+/// See [Rust language reference](https://doc.rust-lang.org/reference/whitespace.html)
+/// for definitions of these classes.
+///
+/// See rust-lang/rust's compiler/rustc_lexer/src/lib.rs `is_whitespace`
+fn is_whitespace(c: char) -> bool {
+    // This is Pattern_White_Space.
+    //
+    // Note that this set is stable (ie, it doesn't change with different
+    // Unicode versions), so it's ok to just hard-code the values.
+
+    matches!(
+        c,
+        // Usual ASCII suspects
+        '\u{0009}'   // \t
+        | '\u{000A}' // \n
+        | '\u{000B}' // vertical tab
+        | '\u{000C}' // form feed
+        | '\u{000D}' // \r
+        | '\u{0020}' // space
+
+        // NEXT LINE from latin1
+        | '\u{0085}'
+
+        // Bidi markers
+        | '\u{200E}' // LEFT-TO-RIGHT MARK
+        | '\u{200F}' // RIGHT-TO-LEFT MARK
+
+        // Dedicated whitespace characters from Unicode
+        | '\u{2028}' // LINE SEPARATOR
+        | '\u{2029}' // PARAGRAPH SEPARATOR
+    )
 }
 
 #[cfg(test)]
