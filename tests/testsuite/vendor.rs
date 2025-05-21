@@ -1096,7 +1096,7 @@ fn ignore_files() {
     p.cargo("vendor --respect-source-config").run();
     let csum = p.read_file("vendor/url/.cargo-checksum.json");
     assert!(!csum.contains("foo.orig"));
-    assert!(!csum.contains(".cargo_vcs_info.json"));
+    assert!(csum.contains(".cargo_vcs_info.json"));
     assert!(!csum.contains(".gitignore"));
     assert!(!csum.contains(".gitattributes"));
     assert!(!csum.contains(".cargo-ok"));

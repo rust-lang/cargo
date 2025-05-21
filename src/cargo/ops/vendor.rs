@@ -647,9 +647,6 @@ fn vendor_this(relative: &Path) -> bool {
         // Temporary Cargo files
         Some(".cargo-ok") => false,
 
-        // Explicitly exclude .cargo_vcs_info.json to keep the old behavior.
-        Some(".cargo_vcs_info.json") => false,
-
         // Skip patch-style orig/rej files. Published crates on crates.io
         // have `Cargo.toml.orig` which we don't want to use here and
         // otherwise these are rarely used as part of the build process.
