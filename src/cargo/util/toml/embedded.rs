@@ -78,59 +78,70 @@ impl<'s> ScriptSource<'s> {
             source.content = content;
         }
 
-        const FENCE_CHAR: char = '-';
-
         let mut rest = source.content;
-        while !rest.is_empty() {
-            let without_spaces = rest.trim_start_matches([' ', '\t']);
-            let without_nl = without_spaces.trim_start_matches(['\r', '\n']);
-            if without_nl == rest {
-                // nothing trimmed
-                break;
-            } else if without_nl == without_spaces {
-                // frontmatter must come after a newline
+
+        // Whitespace may precede a frontmatter but must end with a newline
+        const WHITESPACE: [char; 4] = [' ', '\t', '\r', '\n'];
+        let trimmed = rest.trim_start_matches(WHITESPACE);
+        if trimmed.len() != rest.len() {
+            let trimmed_len = rest.len() - trimmed.len();
+            let last_trimmed_index = trimmed_len - 1;
+            if rest.as_bytes()[last_trimmed_index] != b'\n' {
+                // either not a frontmatter or invalid opening
                 return Ok(source);
             }
-            rest = without_nl;
         }
-        let fence_end = rest
+        rest = trimmed;
+
+        // Opens with a line that starts with 3 or more `-` followed by an optional identifier
+        const FENCE_CHAR: char = '-';
+        let fence_length = rest
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
-            .unwrap_or(source.content.len());
-        let (fence_pattern, rest) = match fence_end {
+            .unwrap_or(rest.len());
+        match fence_length {
             0 => {
                 return Ok(source);
             }
             1 | 2 => {
+                // either not a frontmatter or invalid frontmatter opening
                 anyhow::bail!(
-                    "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
+                    "found {fence_length} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
                 )
             }
-            _ => rest.split_at(fence_end),
+            _ => {}
+        }
+        let (fence_pattern, rest) = rest.split_at(fence_length);
+        let Some(info_end_index) = rest.find('\n') else {
+            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let nl_fence_pattern = format!("\n{fence_pattern}");
-        let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
-        let info = info.trim();
+        let (info, rest) = rest.split_at(info_end_index);
+        let info = info.trim_matches(WHITESPACE);
         if !info.is_empty() {
             source.info = Some(info);
         }
-        source.content = content;
+        let rest = rest
+            .strip_prefix('\n')
+            .expect("earlier `found` + `split_at` left us here");
 
-        let Some(frontmatter_nl) = source.content.find(&nl_fence_pattern) else {
+        // Ends with a line that starts with a matching number of `-` only followed by whitespace
+        let nl_fence_pattern = format!("\n{fence_pattern}");
+        let Some(frontmatter_nl) = rest.find(&nl_fence_pattern) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        source.frontmatter = Some(&source.content[..frontmatter_nl + 1]);
-        source.content = &source.content[frontmatter_nl + nl_fence_pattern.len()..];
+        let frontmatter = &rest[..frontmatter_nl + 1];
+        let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
+        source.frontmatter = Some(frontmatter);
 
-        let (line, content) = source
-            .content
-            .split_once("\n")
-            .unwrap_or((source.content, ""));
-        let line = line.trim();
-        if !line.is_empty() {
-            anyhow::bail!("unexpected trailing content on closing fence: `{line}`");
+        let (after_closing_fence, rest) = rest.split_once("\n").unwrap_or((rest, ""));
+        let after_closing_fence = after_closing_fence.trim_matches(WHITESPACE);
+        if !after_closing_fence.is_empty() {
+            // extra characters beyond the original fence pattern, even if they are extra `-`
+            anyhow::bail!("trailing characters found after frontmatter close");
         }
-        source.content = content;
+
+        let frontmatter_len = input.len() - rest.len();
+        source.content = &input[frontmatter_len..];
 
         Ok(source)
     }
@@ -466,7 +477,7 @@ content: "\n// infostrings can only be a single identifier.\n\nfn main() {}\n"
 fn main() {}
 "#,
             ),
-            str!["unexpected trailing content on closing fence: `-`"],
+            str!["trailing characters found after frontmatter close"],
         );
     }
 
@@ -905,7 +916,7 @@ content: "\nfn main() {}\n"
 fn main() {}
 "#,
             ),
-            str!["unexpected trailing content on closing fence: `--`"],
+            str!["trailing characters found after frontmatter close"],
         );
     }
 
@@ -942,7 +953,7 @@ time="0.1.25"
 fn main() {}
 "#,
             ),
-            str!["unexpected trailing content on closing fence: `-`"],
+            str!["trailing characters found after frontmatter close"],
         );
     }
 
