@@ -248,6 +248,8 @@ pub struct RegistrySource<'gctx> {
     source_id: SourceId,
     /// The path where crate files are extracted (`$CARGO_HOME/registry/src/$REG-HASH`).
     src_path: Filesystem,
+    /// Path to the cache of `.crate` files (`$CARGO_HOME/registry/cache/$REG-HASH`).
+    cache_path: Filesystem,
     /// Local reference to [`GlobalContext`] for convenience.
     gctx: &'gctx GlobalContext,
     /// Abstraction for interfacing to the different registry kinds.
@@ -532,6 +534,7 @@ impl<'gctx> RegistrySource<'gctx> {
         RegistrySource {
             name: name.into(),
             src_path: gctx.registry_source_path().join(name),
+            cache_path: gctx.registry_cache_path().join(name),
             gctx,
             source_id,
             index: index::RegistryIndex::new(source_id, ops.index_path(), gctx),
@@ -630,60 +633,8 @@ impl<'gctx> RegistrySource<'gctx> {
             Err(e) => anyhow::bail!("unable to read .cargo-ok file at {path:?}: {e}"),
         }
         dst.create_dir()?;
-        let mut tar = {
-            let size_limit = max_unpack_size(self.gctx, tarball.metadata()?.len());
-            let gz = GzDecoder::new(tarball);
-            let gz = LimitErrorReader::new(gz, size_limit);
-            let mut tar = Archive::new(gz);
-            set_mask(&mut tar);
-            tar
-        };
-        let mut bytes_written = 0;
-        let prefix = unpack_dir.file_name().unwrap();
-        let parent = unpack_dir.parent().unwrap();
-        for entry in tar.entries()? {
-            let mut entry = entry.context("failed to iterate over archive")?;
-            let entry_path = entry
-                .path()
-                .context("failed to read entry path")?
-                .into_owned();
 
-            // We're going to unpack this tarball into the global source
-            // directory, but we want to make sure that it doesn't accidentally
-            // (or maliciously) overwrite source code from other crates. Cargo
-            // itself should never generate a tarball that hits this error, and
-            // crates.io should also block uploads with these sorts of tarballs,
-            // but be extra sure by adding a check here as well.
-            if !entry_path.starts_with(prefix) {
-                anyhow::bail!(
-                    "invalid tarball downloaded, contains \
-                     a file at {:?} which isn't under {:?}",
-                    entry_path,
-                    prefix
-                )
-            }
-            // Prevent unpacking the lockfile from the crate itself.
-            if entry_path
-                .file_name()
-                .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
-            {
-                continue;
-            }
-            // Unpacking failed
-            bytes_written += entry.size();
-            let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
-            if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
-                result = result.with_context(|| {
-                    format!(
-                        "`{}` appears to contain a reserved Windows path, \
-                        it cannot be extracted on Windows",
-                        entry_path.display()
-                    )
-                });
-            }
-            result
-                .with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
-        }
+        let bytes_written = unpack(self.gctx, tarball, unpack_dir, &|_| true)?;
 
         // Now that we've finished unpacking, create and write to the lock file to indicate that
         // unpacking was successful.
@@ -706,6 +657,29 @@ impl<'gctx> RegistrySource<'gctx> {
             });
 
         Ok(unpack_dir.to_path_buf())
+    }
+
+    /// Unpacks the `.crate` tarball of the package in a given directory.
+    ///
+    /// Returns the path to the crate tarball directory,
+    /// whch is always `<unpack_dir>/<pkg>-<version>`.
+    ///
+    /// This holds an assumption that the associated tarball already exists.
+    pub fn unpack_package_in(
+        &self,
+        pkg: &PackageId,
+        unpack_dir: &Path,
+        include: &dyn Fn(&Path) -> bool,
+    ) -> CargoResult<PathBuf> {
+        let path = self.cache_path.join(pkg.tarball_name());
+        let path = self
+            .gctx
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
+        let dst = unpack_dir.join(format!("{}-{}", pkg.name(), pkg.version()));
+        let tarball =
+            File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
+        unpack(self.gctx, &tarball, &dst, include)?;
+        Ok(dst)
     }
 
     /// Turns the downloaded `.crate` tarball file into a [`Package`].
@@ -1045,4 +1019,71 @@ fn max_unpack_size(gctx: &GlobalContext, size: u64) -> u64 {
 fn set_mask<R: Read>(tar: &mut Archive<R>) {
     #[cfg(unix)]
     tar.set_mask(crate::util::get_umask());
+}
+
+/// Unpack a tarball with zip bomb and overwrite protections.
+fn unpack(
+    gctx: &GlobalContext,
+    tarball: &File,
+    unpack_dir: &Path,
+    include: &dyn Fn(&Path) -> bool,
+) -> CargoResult<u64> {
+    let mut tar = {
+        let size_limit = max_unpack_size(gctx, tarball.metadata()?.len());
+        let gz = GzDecoder::new(tarball);
+        let gz = LimitErrorReader::new(gz, size_limit);
+        let mut tar = Archive::new(gz);
+        set_mask(&mut tar);
+        tar
+    };
+    let mut bytes_written = 0;
+    let prefix = unpack_dir.file_name().unwrap();
+    let parent = unpack_dir.parent().unwrap();
+    for entry in tar.entries()? {
+        let mut entry = entry.context("failed to iterate over archive")?;
+        let entry_path = entry
+            .path()
+            .context("failed to read entry path")?
+            .into_owned();
+
+        if let Ok(path) = entry_path.strip_prefix(prefix) {
+            if !include(path) {
+                continue;
+            }
+        } else {
+            // We're going to unpack this tarball into the global source
+            // directory, but we want to make sure that it doesn't accidentally
+            // (or maliciously) overwrite source code from other crates. Cargo
+            // itself should never generate a tarball that hits this error, and
+            // crates.io should also block uploads with these sorts of tarballs,
+            // but be extra sure by adding a check here as well.
+            anyhow::bail!(
+                "invalid tarball downloaded, contains \
+                     a file at {entry_path:?} which isn't under {prefix:?}",
+            )
+        }
+
+        // Prevent unpacking the lockfile from the crate itself.
+        if entry_path
+            .file_name()
+            .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
+        {
+            continue;
+        }
+        // Unpacking failed
+        bytes_written += entry.size();
+        let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
+        if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
+            result = result.with_context(|| {
+                format!(
+                    "`{}` appears to contain a reserved Windows path, \
+                        it cannot be extracted on Windows",
+                    entry_path.display()
+                )
+            });
+        }
+        result.with_context(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
+    }
+
+    Ok(bytes_written)
 }
