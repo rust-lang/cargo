@@ -1,6 +1,5 @@
 //! Tests for fingerprinting (rebuild detection).
 
-use filetime::FileTime;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::prelude::*;
@@ -10,13 +9,16 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
-use super::death;
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,
-    sleep_ms,
+    sleep_ms, str,
 };
+use filetime::FileTime;
+
+use super::death;
 
 #[cargo_test]
 fn modifying_and_moving() {
@@ -26,34 +28,43 @@ fn modifying_and_moving() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     p.root().move_into_the_past();
     p.root().join("target").move_into_the_past();
 
     p.change_file("src/a.rs", "#[allow(unused)]fn main() {}");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([CWD]): the file `src/a.rs` has changed ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `src/a.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains("[..]file not found[..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+error[E0583]: file not found for module `a`
+...
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
         .run();
 }
 
@@ -68,12 +79,11 @@ fn modify_only_some_files() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("test").run();
     sleep_ms(1000);
@@ -87,14 +97,13 @@ fn modify_only_some_files() {
 
     // Make sure the binary is rebuilt, not the lib
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([CWD]): the file `src/b.rs` has changed ([..])
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `src/b.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(p.bin("foo").is_file());
 }
@@ -136,15 +145,14 @@ fn rebuild_sub_package_then_while_package() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[LOCKING] 3 packages
-[COMPILING] b [..]
-[COMPILING] a [..]
-[COMPILING] foo [..]
-[FINISHED] `dev` profile [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     if is_coarse_mtime() {
@@ -153,14 +161,13 @@ fn rebuild_sub_package_then_while_package() {
     p.change_file("b/src/lib.rs", "pub fn b() {}");
 
     p.cargo("build -pb -v")
-        .with_stderr(
-            "\
-[DIRTY] b v0.0.1 ([..]): the file `b/src/lib.rs` has changed ([..])
-[COMPILING] b [..]
+        .with_stderr_data(str![[r#"
+[DIRTY] b v0.0.1 ([ROOT]/foo/b): the file `b/src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [RUNNING] `rustc --crate-name b [..]
-[FINISHED] `dev` profile [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.change_file(
@@ -169,18 +176,17 @@ fn rebuild_sub_package_then_while_package() {
     );
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] b [..]
-[DIRTY] a [..]: the dependency b was rebuilt ([..])
-[COMPILING] a [..]
+        .with_stderr_data(str![[r#"
+[FRESH] b v0.0.1 ([ROOT]/foo/b)
+[DIRTY] a v0.0.1 ([ROOT]/foo/a): the dependency b was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name a [..]
-[DIRTY] foo [..]: the dependency b was rebuilt ([..])
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [..]
-",
-        )
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency b was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -204,33 +210,42 @@ fn changing_lib_features_caches_targets() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build --features foo")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     /* Targets should be cached from the first build */
 
     p.cargo("build")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 
     p.cargo("build --features foo")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -254,38 +269,38 @@ fn changing_profiles_caches_targets() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
-",
-        )
+
+"#]])
         .run();
 
     /* Targets should be cached from the first build */
 
     p.cargo("build")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("test foo")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
-",
-        )
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -380,55 +395,63 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     /* Build and rebuild a/. Ensure dep_crate only builds once */
     p.cargo("run")
         .cwd("a")
-        .with_stdout("ftest off")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[..]Compiling dep_crate v0.0.1 ([..])
-[..]Compiling a v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest off
+
+"#]])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] dep_crate v0.0.1 ([ROOT]/foo/dep_crate)
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/a[EXE]`
+
+"#]])
         .run();
     p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
         .cwd("a")
-        .with_stdout("ftest off")
-        .with_stderr(
-            "\
-[..]Compiling a v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest off
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/a[EXE]`
+
+"#]])
         .run();
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
     p.cargo("run")
         .cwd("b")
-        .with_stdout("ftest on")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[..]Compiling dep_crate v0.0.1 ([..])
-[..]Compiling b v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest on
+
+"#]])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] dep_crate v0.0.1 ([ROOT]/foo/dep_crate)
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/b[EXE]`
+
+"#]])
         .run();
     p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
         .cwd("b")
-        .with_stdout("ftest on")
-        .with_stderr(
-            "\
-[..]Compiling b v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest on
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/b[EXE]`
+
+"#]])
         .run();
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
@@ -436,14 +459,16 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     p.cargo("clean -p a").cwd("a").run();
     p.cargo("run")
         .cwd("a")
-        .with_stdout("ftest off")
-        .with_stderr(
-            "\
-[..]Compiling a v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest off
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/a[EXE]`
+
+"#]])
         .run();
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
@@ -451,14 +476,16 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     p.cargo("clean -p b").cwd("b").run();
     p.cargo("run")
         .cwd("b")
-        .with_stdout("ftest on")
-        .with_stderr(
-            "\
-[..]Compiling b v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b[EXE]`
-",
-        )
+        .with_stdout_data(str![[r#"
+ftest on
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/./target/debug/b[EXE]`
+
+"#]])
         .run();
 }
 
@@ -490,24 +517,32 @@ fn changing_bin_features_caches_targets() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.rename_run("foo", "off1").with_stdout("feature off").run();
+    p.rename_run("foo", "off1")
+        .with_stdout_data(str![[r#"
+feature off
+
+"#]])
+        .run();
 
     p.cargo("build --features foo")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.rename_run("foo", "on1").with_stdout("feature on").run();
+    p.rename_run("foo", "on1")
+        .with_stdout_data(str![[r#"
+feature on
+
+"#]])
+        .run();
 
     /* Targets should be cached from the first build */
 
@@ -515,51 +550,58 @@ fn changing_bin_features_caches_targets() {
 
     // MSVC does not include hash in binary filename, so it gets recompiled.
     if cfg!(target_env = "msvc") {
-        e.with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the list of features changed
-[COMPILING] foo[..]
-[RUNNING] `rustc [..]
-[FINISHED] `dev`[..]",
-        );
+        e.with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     } else {
-        e.with_stderr("[FRESH] foo v0.0.1 ([..])\n[FINISHED] `dev`[..]");
+        e.with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     }
     e.run();
-    p.rename_run("foo", "off2").with_stdout("feature off").run();
+    p.rename_run("foo", "off2")
+        .with_stdout_data(str![[r#"
+feature off
+
+"#]])
+        .run();
 
     let mut e = p.cargo("build --features foo -v");
     if cfg!(target_env = "msvc") {
-        e.with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the list of features changed
-[COMPILING] foo[..]
+        e.with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED] `dev`[..]",
-        );
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     } else {
-        e.with_stderr(
-            "\
-[FRESH] foo v0.0.1 ([..])
-[FINISHED] `dev`[..]",
-        );
+        e.with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     }
     e.run();
-    p.rename_run("foo", "on2").with_stdout("feature on").run();
+    p.rename_run("foo", "on2")
+        .with_stdout_data(str![[r#"
+feature on
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
 fn rebuild_tests_if_lib_changes() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() {}")
-        .file(
-            "tests/foo.rs",
-            r#"
-                extern crate foo;
-                #[test]
-                fn test() { foo::foo(); }
-            "#,
-        )
+        .file("tests/foo-test.rs", "extern crate foo;")
         .build();
 
     p.cargo("build").run();
@@ -568,10 +610,16 @@ fn rebuild_tests_if_lib_changes() {
     sleep_ms(1000);
     p.change_file("src/lib.rs", "");
 
-    p.cargo("build -v").run();
-    p.cargo("test -v")
-        .with_status(101)
-        .with_stderr_contains("[..]cannot find function `foo`[..]")
+    p.cargo("build").run();
+    p.cargo("test -v --test foo-test")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency foo was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo_test [..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo_test-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -629,16 +677,15 @@ fn no_rebuild_transitive_target_deps() {
 
     p.cargo("build").run();
     p.cargo("test --no-run")
-        .with_stderr(
-            "\
-[COMPILING] c v0.0.1 ([..])
-[COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
-[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[..][EXE])
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] c v0.0.1 ([ROOT]/foo/c)
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -682,7 +729,12 @@ fn rerun_if_changed_in_dep() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -754,27 +806,24 @@ fn same_build_dir_cached_packages() {
 
     p.cargo("build")
         .cwd("a1")
-        .with_stderr(&format!(
-            "\
-[LOCKING] 4 packages
-[COMPILING] d v0.0.1 ({dir}/d)
-[COMPILING] c v0.0.1 ({dir}/c)
-[COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-            dir = p.url().to_file_path().unwrap().to_str().unwrap()
-        ))
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] d v0.0.1 ([ROOT]/foo/d)
+[COMPILING] c v0.0.1 ([ROOT]/foo/c)
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[COMPILING] a1 v0.0.1 ([ROOT]/foo/a1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .cwd("a2")
-        .with_stderr(
-            "\
-[LOCKING] 4 packages
-[COMPILING] a2 v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] a2 v0.0.1 ([ROOT]/foo/a2)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -804,8 +853,11 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
     p.root().move_into_the_past();
 
     p.cargo("build")
-        .with_stdout("")
-        .with_stderr("[FINISHED] [..]")
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -836,14 +888,13 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
 
     p.cargo("build")
         .env("CARGO_LOG", "")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[COMPILING] a v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] [..]
-",
-        )
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -872,14 +923,16 @@ fn rebuild_if_environment_changes() {
         .build();
 
     p.cargo("run")
-        .with_stdout("old desc")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stdout_data(str![[r#"
+old desc
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 
     p.change_file(
@@ -895,16 +948,18 @@ fn rebuild_if_environment_changes() {
     );
 
     p.cargo("run -v")
-        .with_stdout("new desc")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([CWD]): the metadata changed
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stdout_data(str![[r#"
+new desc
+
+"#]])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the environment variable CARGO_PKG_DESCRIPTION changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -947,7 +1002,10 @@ fn no_rebuild_when_rename_dir() {
 
     p.cargo("build")
         .cwd(&new)
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1005,7 +1063,12 @@ fn unused_optional_dep() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1062,7 +1125,12 @@ fn path_dev_dep_registry_updates() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1157,9 +1225,17 @@ fn dont_rebuild_based_on_plugins() {
 
     p.cargo("build").run();
     p.cargo("build -p baz").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]\n").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     p.cargo("build -p bar")
-        .with_stderr("[FINISHED] [..]\n")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1187,14 +1263,13 @@ fn reuse_workspace_lib() {
 
     p.cargo("build").run();
     p.cargo("test -p baz -v --no-run")
-        .with_stderr(
-            "\
-[COMPILING] baz v0.1.1 ([..])
-[RUNNING] `rustc[..] --test [..]`
-[FINISHED] [..]
-[EXECUTABLE] `[..]/target/debug/deps/baz-[..][EXE]`
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] baz v0.1.1 ([ROOT]/foo/baz)
+[RUNNING] `rustc --crate-name baz [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/baz-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -1238,13 +1313,12 @@ fn reuse_shared_build_dep() {
     p.cargo("build --workspace").run();
     // This should not recompile!
     p.cargo("build -p foo -v")
-        .with_stderr(
-            "\
-[FRESH] shared [..]
-[FRESH] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] shared v0.0.1 ([ROOT]/foo/shared)
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1254,41 +1328,73 @@ fn changing_rustflags_is_cached() {
 
     // This isn't ever cached, we always have to recompile
     p.cargo("build")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the rustflags changed
-[COMPILING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the rustflags changed
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the rustflags changed
-[COMPILING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn changing_rustc_extra_flags_is_cached() {
+    let p = project().file("src/lib.rs", "").build();
+
+    // This isn't ever cached, we always have to recompile
+    p.cargo("rustc")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("rustc -v -- -C linker=cc")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("rustc -v")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("rustc -v -- -C linker=cc")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1315,25 +1421,31 @@ fn update_dependency_mtime_does_not_rebuild() {
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[COMPILING] bar v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
     p.cargo("build -p bar -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1397,11 +1509,11 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
     p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     if is_coarse_mtime() {
         sleep_ms(1000);
@@ -1413,22 +1525,28 @@ fn fingerprint_cleaner_does_not_rebuild() {
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // But this should be cleaned and so need a rebuild
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1461,19 +1579,18 @@ fn reuse_panic_build_dep_test() {
 
     // Check that `bar` is not built twice. It is only needed once (without `panic`).
     p.cargo("test --lib --no-run -v")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[COMPILING] bar [..]
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]
-[COMPILING] foo [..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] [..]build-script-build`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--test[..]
-[FINISHED] [..]
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-",
-        )
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]--test[..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -1522,18 +1639,20 @@ fn reuse_panic_pm() {
     // bar is built once without panic (for proc-macro) and once with (for the
     // normal dependency).
     p.cargo("build -v")
-        .with_stderr_unordered(
-            "\
-[LOCKING] 3 packages
-[COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
-[COMPILING] somepm [..]
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..] -C panic=abort [..]
+[RUNNING] `rustc --crate-name bar [..]
+[COMPILING] somepm v0.0.1 ([ROOT]/foo/somepm)
 [RUNNING] `rustc --crate-name somepm [..]
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C panic=abort[..]
-[FINISHED] [..]
-",
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C panic=abort [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -1576,32 +1695,28 @@ fn bust_patched_dep() {
         sleep_ms(1000);
     }
 
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] registry1 v0.1.0 ([..]): the file `reg1new/src/lib.rs` has changed ([..])
-[COMPILING] registry1 v0.1.0 ([..])
-[RUNNING] `rustc [..]
+    p.cargo("build -v").with_stderr_data(str![[r#"
+[DIRTY] registry1 v0.1.0 ([ROOT]/foo/reg1new): the file `reg1new/src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] registry1 v0.1.0 ([ROOT]/foo/reg1new)
+[RUNNING] `rustc --crate-name registry1 [..]
 [DIRTY] registry2 v0.1.0: the dependency registry1 was rebuilt
 [COMPILING] registry2 v0.1.0
-[RUNNING] `rustc [..]
-[DIRTY] foo v0.0.1 ([..]): the dependency registry2 was rebuilt
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
-        .run();
+[RUNNING] `rustc --crate-name registry2 [..]
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency registry2 was rebuilt
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] registry1 v0.1.0 ([..])
+        .with_stderr_data(str![[r#"
+[FRESH] registry1 v0.1.0 ([ROOT]/foo/reg1new)
 [FRESH] registry2 v0.1.0
-[FRESH] foo v0.0.1 ([..])
-[FINISHED] [..]
-",
-        )
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1693,27 +1808,22 @@ fn rebuild_on_mid_build_file_modification() {
     });
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
-[COMPILING] root v0.1.0 ([..]/root)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] proc_macro_dep v0.1.0 ([ROOT]/foo/proc_macro_dep)
+[COMPILING] root v0.1.0 ([ROOT]/foo/root)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
-[DIRTY] root v0.1.0 ([..]/root): the file `root/src/lib.rs` has changed ([..])
-[COMPILING] root v0.1.0 ([..]/root)
-[RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+    p.cargo("build -v").with_stderr_data(str![[r#"
+[FRESH] proc_macro_dep v0.1.0 ([ROOT]/foo/proc_macro_dep)
+[DIRTY] root v0.1.0 ([ROOT]/foo/root): the file `root/src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] root v0.1.0 ([ROOT]/foo/root)
+[RUNNING] `rustc --crate-name root [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 
     t.join().ok().unwrap();
 }
@@ -1795,7 +1905,7 @@ fn dirty_both_lib_and_test() {
     // 2 != 1
     p.cargo("test --lib")
         .with_status(101)
-        .with_stdout_contains("[..]doit assert failure[..]")
+        .with_stdout_data("...\n[..]doit assert failure[..]\n...")
         .run();
 
     if is_coarse_mtime() {
@@ -1839,12 +1949,12 @@ fn script_fails_stay_dirty() {
     }
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build")
-        .with_stderr_contains("[..]Crash![..]")
+        .with_stderr_data("...\n[..]Crash![..]\n...")
         .with_status(101)
         .run();
     // There was a bug where this second call would be "fresh".
     p.cargo("build")
-        .with_stderr_contains("[..]Crash![..]")
+        .with_stderr_data("...\n[..]Crash![..]\n...")
         .with_status(101)
         .run();
 }
@@ -1955,8 +2065,8 @@ fn simulated_docker_deps_stay_cached() {
         println!("already zero");
         // If it was already truncated, then everything stays fresh.
         p.cargo("build -v")
-            .with_stderr_unordered(
-                "\
+            .with_stderr_data(
+                str![[r#"
 [FRESH] pathdep [..]
 [FRESH] regdep [..]
 [FRESH] regdep_env [..]
@@ -1964,7 +2074,9 @@ fn simulated_docker_deps_stay_cached() {
 [FRESH] regdep_rerun [..]
 [FRESH] foo [..]
 [FINISHED] [..]
-",
+
+"#]]
+                .unordered(),
             )
             .run();
     } else {
@@ -1979,19 +2091,21 @@ fn simulated_docker_deps_stay_cached() {
         // in it. It differs between builds because one has nsec=0 and the other
         // likely has a nonzero nsec. Hence, the rebuild.
         p.cargo("build -v")
-            .with_stderr_unordered(
-                "\
-[FRESH] pathdep [..]
+            .with_stderr_data(
+                str![[r#"
 [FRESH] regdep [..]
+[FRESH] pathdep [..]
 [FRESH] regdep_env [..]
-[FRESH] regdep_old_style [..]
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FRESH] regdep_rerun [..]
-[DIRTY] foo [..]: the precalculated components changed
-[COMPILING] foo [..]
-[RUNNING] [..]/foo-[..]/build-script-build[..]
-[RUNNING] `rustc --crate-name foo[..]
-[FINISHED] [..]
-",
+[FRESH] regdep_old_style [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
             )
             .run();
     }
@@ -1999,41 +2113,114 @@ fn simulated_docker_deps_stay_cached() {
 
 #[cargo_test]
 fn metadata_change_invalidates() {
-    let p = project()
-        .file(
-            "Cargo.toml",
+    // (key, value, value-updated, env-var-name)
+    let scenarios = [
+        (
+            "description",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_DESCRIPTION",
+        ),
+        (
+            "homepage",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_HOMEPAGE",
+        ),
+        (
+            "repository",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_REPOSITORY",
+        ),
+        (
+            "license",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_LICENSE",
+        ),
+        (
+            "license-file",
+            r#""foo""#,
+            r#""foo_updated""#,
+            "CARGO_PKG_LICENSE_FILE",
+        ),
+        (
+            "authors",
+            r#"["foo"]"#,
+            r#"["foo_updated"]"#,
+            "CARGO_PKG_AUTHORS",
+        ),
+        (
+            "rust-version",
+            r#""1.0.0""#,
+            r#""1.0.1""#,
+            "CARGO_PKG_RUST_VERSION",
+        ),
+        ("readme", r#""foo""#, r#""foo_updated""#, "CARGO_PKG_README"),
+    ];
+    let base_cargo_toml = r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                "#;
+
+    let p = project().build();
+    for (key, value, value_updated, env_var) in scenarios {
+        p.change_file("Cargo.toml", base_cargo_toml);
+        p.change_file(
+            "src/main.rs",
+            &format!(
+                r#"
+            fn main() {{
+                let output = env!("{env_var}");
+                println!("{{output}}");
+            }}
+            "#
+            ),
+        );
+
+        // Compile the first time
+        p.cargo("build").run();
+
+        // Update the manifest, rebuild, and verify the build was invalided
+        p.change_file("Cargo.toml", &format!("{base_cargo_toml}\n{key} = {value}"));
+        p.cargo("build -v")
+            .with_stderr_data(format!(
+                r#"[DIRTY] foo v0.1.0 ([ROOT]/foo): the environment variable {env_var} changed
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+"#
+            ))
+            .run();
+
+        // Remove references to the metadata and rebuild
+        p.change_file(
+            "src/main.rs",
             r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
+            fn main() {
+                println!("foo");
+            }
             "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
+        );
+        p.cargo("build").run();
 
-    p.cargo("build").run();
+        // Update the manifest value and verify the build is NOT invalidated.
+        p.change_file(
+            "Cargo.toml",
+            &format!("{base_cargo_toml}\n{key} = {value_updated}"),
+        );
 
-    for attr in &[
-        "authors = [\"foo\"]",
-        "description = \"desc\"",
-        "homepage = \"https://example.com\"",
-        "repository =\"https://example.com\"",
-    ] {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(p.root().join("Cargo.toml"))
-            .unwrap();
-        writeln!(file, "{}", attr).unwrap();
-        p.cargo("build")
-            .with_stderr_contains("[COMPILING] foo [..]")
+        p.cargo("build -v")
+            .with_stderr_data(str![[r#"
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
             .run();
     }
-    p.cargo("build -v")
-        .with_stderr_contains("[FRESH] foo[..]")
-        .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
 #[cargo_test]
@@ -2050,7 +2237,11 @@ fn edition_change_invalidates() {
     p.cargo("build").run();
     p.change_file("Cargo.toml", &format!("{}edition = \"2018\"", MANIFEST));
     p.cargo("build")
-        .with_stderr_contains("[COMPILING] foo [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.change_file(
         "Cargo.toml",
@@ -2063,10 +2254,20 @@ fn edition_change_invalidates() {
         ),
     );
     p.cargo("build")
-        .with_stderr_contains("[COMPILING] foo [..]")
+        .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
-        .with_stderr_contains("[FRESH] foo[..]")
+        .with_stderr_data(str![[r#"
+[WARNING] `edition` is set on library `foo` which is deprecated
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
@@ -2127,7 +2328,10 @@ fn rename_with_path_deps() {
 
     p.cargo("build")
         .cwd(&new)
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2196,7 +2400,10 @@ fn move_target_directory_with_path_deps() {
 
     p.cargo("build")
         .env("CARGO_TARGET_DIR", &new_target)
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2218,59 +2425,70 @@ fn rerun_if_changes() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 
     p.cargo("build -v")
         .env("FOO", "1")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the env variable FOO changed
-[COMPILING] foo [..]
-[RUNNING] `[..]build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env("FOO", "1")
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build -v")
         .env("FOO", "1")
         .env("BAR", "1")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the env variable BAR changed
-[COMPILING] foo [..]
-[RUNNING] `[..]build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable BAR changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env("FOO", "1")
         .env("BAR", "1")
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build -v")
         .env("BAR", "2")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the env variable FOO changed
-[COMPILING] foo [..]
-[RUNNING] `[..]build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env("BAR", "2")
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2398,8 +2616,7 @@ LLVM version: 9.0
         let output = p
             .cargo("check --message-format=json")
             .env("RUSTC", compiler.bin(version))
-            .exec_with_output()
-            .unwrap();
+            .run();
         // Collect the filenames generated.
         let mut artifacts: Vec<_> = std::str::from_utf8(&output.stdout)
             .unwrap()
@@ -2559,16 +2776,15 @@ fn linking_interrupted() {
 
     // Build again, shouldn't be fresh.
     p.cargo("test --test t1 -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the config settings changed
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the config settings changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name t1 [..]
-[FINISHED] [..]
-[RUNNING] `[..]target/debug/deps/t1-[..][EXE]`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/t1-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -2585,7 +2801,6 @@ fn lld_is_fresh() {
             r#"
                 [target.x86_64-pc-windows-msvc]
                 linker = "rust-lld"
-                rustflags = ["-C", "link-arg=-fuse-ld=lld"]
             "#,
         )
         .file(
@@ -2605,7 +2820,11 @@ fn lld_is_fresh() {
 
     p.cargo("build").run();
     p.cargo("build -v")
-        .with_stderr("[FRESH] foo [..]\n[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2635,62 +2854,80 @@ fn env_in_code_causes_rebuild() {
     p.cargo("build").env_remove("FOO").run();
     p.cargo("build")
         .env_remove("FOO")
-        .with_stderr("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
         .env("FOO", "bar")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the environment variable FOO changed
-[COMPILING][..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the environment variable FOO changed
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED][..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env("FOO", "bar")
-        .with_stderr("[FINISHED][..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
         .env("FOO", "baz")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the environment variable FOO changed
-[COMPILING][..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the environment variable FOO changed
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED][..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env("FOO", "baz")
-        .with_stderr("[FINISHED][..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build -v")
         .env_remove("FOO")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the environment variable FOO changed
-[COMPILING][..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the environment variable FOO changed
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED][..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build")
         .env_remove("FOO")
-        .with_stderr("[FINISHED][..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let interesting = " #!$\nabc\r\\\t\u{8}\r\n";
     p.cargo("build").env("FOO", interesting).run();
     p.cargo("build")
         .env("FOO", interesting)
-        .with_stderr("[FINISHED][..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build").env("FOO\nBAR", interesting).run();
     p.cargo("build")
         .env("FOO\nBAR", interesting)
-        .with_stderr("[FINISHED][..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2725,7 +2962,12 @@ fn env_build_script_no_rebuild() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -2757,35 +2999,32 @@ fn cargo_env_changes() {
     other_cargo()
         .arg("check")
         .arg("-v")
-        .with_stderr(
-            "\
-[DIRTY] foo v1.0.0 ([..]): the environment variable CARGO changed
-[CHECKING] foo [..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v1.0.0 ([ROOT]/foo): the environment variable CARGO changed
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // And just to confirm that without using env! it doesn't rebuild.
     p.change_file("src/main.rs", "fn main() {}");
     p.cargo("check")
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     other_cargo()
         .arg("check")
         .arg("-v")
-        .with_stderr(
-            "\
-[FRESH] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v1.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2798,13 +3037,13 @@ fn changing_linker() {
     p.cargo("build --verbose")
         .env(&linker_env, "nonexistent-linker")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[ERROR] [..]linker[..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the config settings changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C linker=nonexistent-linker [..]`
+[ERROR] linker `nonexistent-linker` not found
+...
+"#]])
         .run();
 }
 
@@ -2842,9 +3081,14 @@ fn verify_source_before_recompile() {
     );
     // Sanity check: vendoring works correctly.
     p.cargo("check --verbose")
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 [CWD]/vendor/bar/src/lib.rs[..]",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v0.1.0
+[RUNNING] `rustc --crate-name bar [..] [ROOT]/foo/vendor/bar/src/lib.rs [..]
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // Now modify vendored crate.
     p.change_file(
@@ -2853,13 +3097,12 @@ fn verify_source_before_recompile() {
     );
     // Should ignore modified sources without any recompile.
     p.cargo("check --verbose")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [FRESH] bar v0.1.0
-[FRESH] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [..]
-",
-        )
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Add a `RUSTFLAGS` to trigger a recompile.
@@ -2869,15 +3112,14 @@ fn verify_source_before_recompile() {
     p.cargo("check --verbose")
         .env("RUSTFLAGS", "-W warnings")
         .with_status(101)
-        .with_stderr(
-            "\
-error: the listed checksum of `[CWD]/vendor/bar/src/lib.rs` has changed:
-expected: [..]
-actual:   [..]
+        .with_stderr_data(str![[r#"
+[ERROR] the listed checksum of `[ROOT]/foo/vendor/bar/src/lib.rs` has changed:
+expected: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+actual:   66e843918c1d4ea8231af814f9f958958808249d4407de01114acb730ecd9bdf
 
-directory sources are not [..]
-",
-        )
+directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
+
+"#]])
         .run();
 }
 
@@ -2892,21 +3134,21 @@ fn skip_mtime_check_in_selected_cargo_home_subdirs() {
     let cargo_home = project_root.parent().unwrap().parent().unwrap();
     p.cargo("check -v")
         .env("CARGO_HOME", &cargo_home)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
-[FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.5.0 ([ROOT]/cargo_home/registry/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.change_file("src/lib.rs", "illegal syntax");
     p.cargo("check -v")
         .env("CARGO_HOME", &cargo_home)
-        .with_stderr(
-            "\
-[FRESH] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/cargo_home/registry/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2921,21 +3163,24 @@ fn use_mtime_cache_in_cargo_home() {
     let cargo_home = project_root.parent().unwrap();
     p.cargo("check -v")
         .env("CARGO_HOME", &cargo_home)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
-[FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.5.0 ([ROOT]/cargo_home/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..] src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.change_file("src/lib.rs", "illegal syntax");
     p.cargo("check -v")
         .env("CARGO_HOME", &cargo_home)
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([CWD]): [..]
-[CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]",
-        )
-        .run_expect_error();
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/cargo_home/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[CHECKING] foo v0.5.0 ([ROOT]/cargo_home/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
+...
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+...
+"#]])
+        .run();
 }

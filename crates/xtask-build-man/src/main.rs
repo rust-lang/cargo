@@ -45,14 +45,14 @@ fn build_mdman() -> io::Result<()> {
 /// saved in the src/doc/src/commands/ directory. These are included in the
 /// Cargo book, which is converted to HTML by mdbook.
 fn build_cargo() -> io::Result<()> {
-    // Find all `src/doc/man/cargo-*.md`
+    // Find all `src/doc/man/cargo*.md`
     let src_paths = {
         let mut src_paths = Vec::new();
         for entry in fs::read_dir("src/doc/man")? {
             let entry = entry?;
             let file_name = entry.file_name();
             let file_name = file_name.to_str().unwrap();
-            if file_name.starts_with("cargo-") && file_name.ends_with(".md") {
+            if file_name.starts_with("cargo") && file_name.ends_with(".md") {
                 src_paths.push(entry.path());
             }
         }

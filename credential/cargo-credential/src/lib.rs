@@ -12,6 +12,9 @@
 //! While in the `perform` function, stdin and stdout will be re-attached to the
 //! active console. This allows credential providers to be interactive if necessary.
 //!
+//! > This crate is maintained by the Cargo team for use by the wider
+//! > ecosystem. This crate follows semver compatibility for its APIs.
+//!
 //! ## Error handling
 //! ### [`Error::UrlNotSupported`]
 //! A credential provider may only support some registry URLs. If this is the case
@@ -208,7 +211,9 @@ pub enum CacheControl {
     Unknown,
 }
 
-/// Credential process JSON protocol version. If the protocol needs to make
+/// Credential process JSON protocol version.
+///
+/// If the protocol needs to make
 /// a breaking change, a new protocol version should be defined (`PROTOCOL_VERSION_2`).
 /// This library should offer support for both protocols if possible, by signaling
 /// in the `CredentialHello` message. Cargo will then choose which protocol to use,

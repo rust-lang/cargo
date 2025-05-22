@@ -2,8 +2,10 @@
 //!
 //! Note: Some tests are located in the resolver-tests package.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn simple() {
@@ -28,6 +30,12 @@ fn simple() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[ADDING] dep v1.0.0 (available: v1.1.0)
+
+"#]])
         .run();
 
     let lock = p.read_lockfile();
@@ -70,20 +78,20 @@ fn mixed_dependencies() {
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_status(101)
-        .with_stderr(
-            r#"[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `dep`.
-    ... required by package `foo v0.0.1 ([CWD])`
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `^1.1` are: 1.1.0
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `dep v1.0.0`
-    ... which satisfies dependency `dep = "^1.0"` of package `foo v0.0.1 ([CWD])`
+    ... which satisfies dependency `dep = "^1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
 
 failed to select a version for `dep` which could resolve this conflict
-"#,
-        )
+
+"#]])
         .run();
 }
 
@@ -111,6 +119,12 @@ fn yanked() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[ADDING] dep v1.1.0 (available: v1.2.0)
+
+"#]])
         .run();
 
     let lock = p.read_lockfile();
@@ -159,6 +173,12 @@ fn indirect() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] direct v1.0.0 (available: v1.1.0)
+
+"#]])
         .run();
 
     let lock = p.read_lockfile();
@@ -217,20 +237,20 @@ fn indirect_conflict() {
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_status(101)
-        .with_stderr(
-            r#"[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `indirect`.
     ... required by package `direct v1.0.0`
-    ... which satisfies dependency `direct = "^1.0"` of package `foo v0.0.1 ([CWD])`
+    ... which satisfies dependency `direct = "^1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `^2.1` are: 2.2.0, 2.1.0
 
 all possible versions conflict with previously selected packages.
 
   previously selected package `indirect v2.0.0`
-    ... which satisfies dependency `indirect = "^2.0"` of package `foo v0.0.1 ([CWD])`
+    ... which satisfies dependency `indirect = "^2.0"` of package `foo v0.0.1 ([ROOT]/foo)`
 
 failed to select a version for `indirect` which could resolve this conflict
-"#,
-        )
+
+"#]])
         .run();
 }

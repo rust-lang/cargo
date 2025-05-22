@@ -137,7 +137,7 @@ impl<'e> TextRenderer<'e> {
                                 self.indent = (level as usize - 1) * 3 + 1;
                             }
                         }
-                        Tag::BlockQuote => {
+                        Tag::BlockQuote(_kind) => {
                             self.indent += 3;
                         }
                         Tag::CodeBlock(_kind) => {
@@ -217,12 +217,21 @@ impl<'e> TextRenderer<'e> {
                                         range.start
                                     );
                                 }
+                                LinkType::WikiLink { .. } => {
+                                    panic!("wikilink unsupported");
+                                }
                             }
                         }
                         Tag::Image { .. } => {
                             bail!("images are not currently supported")
                         }
-                        Tag::HtmlBlock { .. } | Tag::MetadataBlock { .. } => {}
+                        Tag::HtmlBlock { .. }
+                        | Tag::MetadataBlock { .. }
+                        | Tag::DefinitionList
+                        | Tag::DefinitionListTitle
+                        | Tag::DefinitionListDefinition
+                        | Tag::Superscript
+                        | Tag::Subscript => {}
                     }
                 }
                 Event::End(tag_end) => match &tag_end {
@@ -231,7 +240,7 @@ impl<'e> TextRenderer<'e> {
                         self.hard_break();
                     }
                     TagEnd::Heading(..) => {}
-                    TagEnd::BlockQuote => {
+                    TagEnd::BlockQuote(..) => {
                         self.indent -= 3;
                     }
                     TagEnd::CodeBlock => {
@@ -274,7 +283,14 @@ impl<'e> TextRenderer<'e> {
                             write!(self.word, "<{}>", dest_url)?;
                         }
                     }
-                    TagEnd::Image | TagEnd::HtmlBlock | TagEnd::MetadataBlock(..) => {}
+                    TagEnd::HtmlBlock { .. }
+                    | TagEnd::MetadataBlock { .. }
+                    | TagEnd::DefinitionList
+                    | TagEnd::DefinitionListTitle
+                    | TagEnd::Image
+                    | TagEnd::DefinitionListDefinition
+                    | TagEnd::Superscript
+                    | TagEnd::Subscript => {}
                 },
                 Event::Text(t) | Event::Code(t) => {
                     if wrap_text {
@@ -347,6 +363,8 @@ impl<'e> TextRenderer<'e> {
                 }
                 Event::TaskListMarker(_b) => unimplemented!(),
                 Event::InlineHtml(..) => unimplemented!(),
+                Event::InlineMath(..) => unimplemented!(),
+                Event::DisplayMath(..) => unimplemented!(),
             }
         }
         Ok(())

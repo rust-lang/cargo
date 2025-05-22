@@ -43,9 +43,29 @@ When used with _spec_, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
 
-While not recommended, you can specify a yanked version of a package (nightly only).
+While not recommended, you can specify a yanked version of a package.
 When possible, try other non-yanked SemVer-compatible versions or seek help
 from the maintainers of the package.
+
+A compatible `pre-release` version can also be specified even when the version
+requirement in `Cargo.toml` doesn't contain any pre-release identifier (nightly only).
+{{/option}}
+
+{{#option "`--breaking` _directory_" }}
+Update _spec_ to latest SemVer-breaking version.
+
+Version requirements will be modified to allow this update.
+
+This only applies to dependencies when
+- The package is a dependency of a workspace member
+- The dependency is not renamed
+- A SemVer-incompatible version is available
+- The "SemVer operator" is used (`^` which is the default)
+
+This option is unstable and available only on the
+[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
+and requires the `-Z unstable-options` flag to enable.
+See <https://github.com/rust-lang/cargo/issues/12425> for more information.
 {{/option}}
 
 {{#option "`-w`" "`--workspace`" }}
@@ -73,7 +93,11 @@ Displays what would be updated, but doesn't actually write the lockfile.
 
 {{> options-manifest-path }}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 
 {{/options}}
 

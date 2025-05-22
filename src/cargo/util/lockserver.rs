@@ -20,6 +20,8 @@ use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
 
+use crate::util::network::LOCALHOST;
+
 pub struct LockServer {
     listener: TcpListener,
     addr: SocketAddr,
@@ -44,8 +46,8 @@ struct ServerClient {
 
 impl LockServer {
     pub fn new() -> Result<LockServer, Error> {
-        let listener = TcpListener::bind("127.0.0.1:0")
-            .with_context(|| "failed to bind TCP listener to manage locking")?;
+        let listener = TcpListener::bind(&LOCALHOST[..])
+            .context("failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
         Ok(LockServer {
             listener,
@@ -157,15 +159,15 @@ impl Drop for LockServerStarted {
 impl LockServerClient {
     pub fn lock(addr: &SocketAddr, name: impl AsRef<[u8]>) -> Result<LockServerClient, Error> {
         let mut client =
-            TcpStream::connect(&addr).with_context(|| "failed to connect to parent lock server")?;
+            TcpStream::connect(&addr).context("failed to connect to parent lock server")?;
         client
             .write_all(name.as_ref())
             .and_then(|_| client.write_all(b"\n"))
-            .with_context(|| "failed to write to lock server")?;
+            .context("failed to write to lock server")?;
         let mut buf = [0];
         client
             .read_exact(&mut buf)
-            .with_context(|| "failed to acquire lock")?;
+            .context("failed to acquire lock")?;
         Ok(LockServerClient { _socket: client })
     }
 }

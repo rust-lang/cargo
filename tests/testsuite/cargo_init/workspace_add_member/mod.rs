@@ -15,8 +15,8 @@ fn case() {
         .current_dir(project_root.join("crates").join("foo"))
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

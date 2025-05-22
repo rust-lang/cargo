@@ -308,7 +308,7 @@ impl RecursiveLock {
                         self.is_exclusive = true;
                         return Ok(());
                     } else {
-                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                        return Err(e).context("failed to acquire package cache lock");
                     }
                 }
             }
@@ -331,7 +331,7 @@ impl RecursiveLock {
                         self.is_exclusive = true;
                         return Ok(result);
                     } else {
-                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                        return Err(e).context("failed to acquire package cache lock");
                     }
                 }
             }
@@ -513,7 +513,7 @@ impl CacheLocker {
     ///
     /// Note that `Shared` will return true if a `MutateExclusive` lock is
     /// held, since `MutateExclusive` is just an upgraded `Shared`. Likewise,
-    /// `DownlaodExclusive` will return true if a `MutateExclusive` lock is
+    /// `DownloadExclusive` will return true if a `MutateExclusive` lock is
     /// held since they overlap.
     pub fn is_locked(&self, mode: CacheLockMode) -> bool {
         let state = self.state.borrow();

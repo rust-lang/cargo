@@ -1,7 +1,8 @@
 //! Tests for whether or not warnings are displayed for build scripts.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{project, Project};
+use cargo_test_support::{project, str, Project};
 
 static WARNING1: &str = "Hello! I'm a warning. :)";
 static WARNING2: &str = "And one more!";
@@ -63,17 +64,16 @@ fn no_warning_on_success() {
     let upstream = make_upstream("");
     upstream
         .cargo("build")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[LOCKING] 2 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 ([..])
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -85,13 +85,18 @@ fn no_warning_on_bin_failure() {
         .cargo("build")
         .with_status(101)
         .with_stdout_does_not_contain("hidden stdout")
-        .with_stderr_does_not_contain("hidden stderr")
-        .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING1))
-        .with_stderr_does_not_contain(&format!("[WARNING] {}", WARNING2))
-        .with_stderr_contains("[UPDATING] `[..]` index")
-        .with_stderr_contains("[DOWNLOADED] bar v0.0.1 ([..])")
-        .with_stderr_contains("[COMPILING] bar v0.0.1")
-        .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+error[E0425]: cannot find function `hi` in this scope
+...
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
         .run();
 }
 
@@ -103,12 +108,18 @@ fn warning_on_lib_failure() {
         .cargo("build")
         .with_status(101)
         .with_stdout_does_not_contain("hidden stdout")
-        .with_stderr_does_not_contain("hidden stderr")
-        .with_stderr_does_not_contain("[COMPILING] foo v0.0.1 ([..])")
-        .with_stderr_contains("[UPDATING] `[..]` index")
-        .with_stderr_contains("[DOWNLOADED] bar v0.0.1 ([..])")
-        .with_stderr_contains("[COMPILING] bar v0.0.1")
-        .with_stderr_contains(&format!("[WARNING] bar@0.0.1: {}", WARNING1))
-        .with_stderr_contains(&format!("[WARNING] bar@0.0.1: {}", WARNING2))
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[COMPILING] bar v0.0.1
+error[E0425]: cannot find function `err` in this scope
+...
+[WARNING] bar@0.0.1: Hello! I'm a warning. :)
+[WARNING] bar@0.0.1: And one more!
+[ERROR] could not compile `bar` (lib) due to 1 previous error
+
+"#]])
         .run();
 }

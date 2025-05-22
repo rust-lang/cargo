@@ -1,7 +1,9 @@
 //! Tests for registry authentication.
 
-use cargo_test_support::compare::match_contains;
+use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder, Token};
+use cargo_test_support::str;
 use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
@@ -37,16 +39,6 @@ fn make_project() -> Project {
     p
 }
 
-static SUCCESS_OUTPUT: &'static str = "\
-[UPDATING] `alternative` index
-[LOCKING] 2 packages
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-";
-
 #[cargo_test]
 fn requires_credential_provider() {
     let _registry = RegistryBuilder::new()
@@ -58,18 +50,19 @@ fn requires_credential_provider() {
     let p = make_project();
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            r#"[UPDATING] `alternative` index
-[LOCKING] 2 packages
-error: failed to download `bar v0.0.1 (registry `alternative`)`
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
   unable to get packages from source
 
 Caused by:
   authenticated registries require a credential-provider to be configured
-  see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details"#,
-        )
+  see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details
+
+"#]])
         .run();
 }
 
@@ -82,7 +75,18 @@ fn simple() {
         .build();
 
     let p = make_project();
-    cargo(&p, "build").with_stderr(SUCCESS_OUTPUT).run();
+    cargo(&p, "build")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -95,7 +99,18 @@ fn simple_with_asymmetric() {
         .build();
 
     let p = make_project();
-    cargo(&p, "build").with_stderr(SUCCESS_OUTPUT).run();
+    cargo(&p, "build")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -114,7 +129,16 @@ fn environment_config() {
             registry.index_url().as_str(),
         )
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
-        .with_stderr(SUCCESS_OUTPUT)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -130,7 +154,16 @@ fn environment_token() {
     let p = make_project();
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
-        .with_stderr(SUCCESS_OUTPUT)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -151,7 +184,16 @@ fn environment_token_with_asymmetric() {
     let p = make_project();
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
-        .with_stderr(SUCCESS_OUTPUT)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -176,9 +218,20 @@ fn bad_environment_token_with_asymmetric_subject() {
             "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY_SUBJECT",
             "incorrect",
         )
-        .with_stderr_contains(
-            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  token rejected for `alternative`, please run `cargo login --registry alternative`
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  body:
+  Unauthorized message from server.
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -200,9 +253,20 @@ fn bad_environment_token_with_asymmetric_incorrect_subject() {
             "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY_SUBJECT",
             "incorrect",
         )
-        .with_stderr_contains(
-            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  token rejected for `alternative`, please run `cargo login --registry alternative`
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  body:
+  Unauthorized message from server.
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -227,9 +291,20 @@ fn bad_environment_token_with_incorrect_asymmetric() {
             "CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY",
             "k3.secret.9Vxr5hVlI_g_orBZN54vPz20bmB4O76wB_MVqUSuJJJqHFLwP8kdn_RY5g6J6pQG",
         )
-        .with_stderr_contains(
-            "  token rejected for `alternative`, please run `cargo login --registry alternative`",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  token rejected for `alternative`, please run `cargo login --registry alternative`
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  body:
+  Unauthorized message from server.
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -246,15 +321,15 @@ fn missing_token() {
     let p = make_project();
     cargo(&p, "build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
-        )
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+"#]])
         .run();
 }
 
@@ -269,10 +344,9 @@ fn missing_token_git() {
     let p = make_project();
     cargo(&p, "build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
@@ -280,8 +354,9 @@ Caused by:
 
 Caused by:
   no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
-        )
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+"#]])
         .run();
 }
 
@@ -298,20 +373,20 @@ fn incorrect_token() {
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", "incorrect")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 Caused by:
-  failed to get successful HTTP response from `http://[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
   body:
-  Unauthorized message from server.",
-        )
+  Unauthorized message from server.
+
+"#]])
         .run();
 }
 
@@ -328,18 +403,18 @@ fn incorrect_token_git() {
     cargo(&p, "build")
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", "incorrect")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[ERROR] failed to download from `http://[..]/dl/bar/0.0.1/download`
+[ERROR] failed to download from `http://127.0.0.1:[..]/dl/bar/0.0.1/download`
 
 Caused by:
-  failed to get successful HTTP response from `http://[..]/dl/bar/0.0.1/download` (127.0.0.1), got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/0.0.1/download` (127.0.0.1), got 401
   body:
-  Unauthorized message from server.",
-        )
+  Unauthorized message from server.
+
+"#]])
         .run();
 }
 
@@ -357,18 +432,17 @@ fn anonymous_alt_registry() {
     let p = make_project();
     cargo(&p, &format!("install --index {} bar", registry.index_url()))
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[ERROR] no token found for `[..]`
+        .with_stderr_data(str![[r#"
+[UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
+[ERROR] no token found for `sparse+http://127.0.0.1:[..]/index/`
 consider setting up an alternate registry in Cargo's configuration
 as described by https://doc.rust-lang.org/cargo/reference/registries.html
 
 [registries]
-my-registry = { index = \"[..]\" }
+my-registry = { index = "sparse+http://127.0.0.1:[..]/index/" }
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -421,20 +495,18 @@ fn duplicate_index() {
             server.index_url().as_str(),
         )
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
   unable to get packages from source
 
 Caused by:
-  multiple registries are configured with the same index url \
-  'registry+file://[..]/alternative-registry': alternative1, alternative2
-",
-        )
+  multiple registries are configured with the same index url 'registry+[ROOTURL]/alternative-registry': alternative1, alternative2
+
+"#]])
         .run();
 }
 
@@ -470,26 +542,16 @@ fn token_not_logged() {
         .replace_crates_io(crates_io.index_url())
         .env("CARGO_HTTP_DEBUG", "true")
         .env("CARGO_LOG", "trace")
-        .exec_with_output()
-        .unwrap();
+        .run();
     let log = String::from_utf8(output.stderr).unwrap();
-    let lines = "\
-[UPDATING] crates.io index
-[PACKAGING] foo v0.1.0 [..]
-[VERIFYING] foo v0.1.0 [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0
-[COMPILING] bar v1.0.0
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-[PACKAGED] 3 files[..]
-[UPLOADING] foo v0.1.0[..]
-[UPLOADED] foo v0.1.0 to registry `crates-io`
-[NOTE] waiting [..]
-";
-    for line in lines.lines() {
-        match_contains(line, &log, None).unwrap();
-    }
+    assert_e2e().eq(
+        &log,
+        str![[r#"
+...
+[PUBLISHED] foo v0.1.0 at registry `crates-io`
+
+"#]],
+    );
     let authorizations: Vec<_> = log
         .lines()
         .filter(|line| {
@@ -499,12 +561,15 @@ fn token_not_logged() {
     assert!(authorizations.iter().all(|line| line.contains("REDACTED")));
     // Total authorizations:
     // 1. Initial config.json
-    // 2. config.json again for verification
-    // 3. /index/3/b/bar
-    // 4. /dl/bar/1.0.0/download
-    // 5. /api/v1/crates/new
-    // 6. config.json for the "wait for publish"
-    // 7. /index/3/f/foo for the "wait for publish"
-    assert_eq!(authorizations.len(), 7);
+    // 2. /index/3/f/foo
+    // 3. config.json again for verification
+    // 4. /index/3/b/bar
+    // 5. config.json again for verification
+    // 6. /index/3/b/bar
+    // 7. /dl/bar/1.0.0/download
+    // 8. /api/v1/crates/new
+    // 9. config.json again for verification
+    // 10. /index/3/f/foo for the "wait for publish"
+    assert_eq!(authorizations.len(), 10);
     assert!(!log.contains("a-unique_token"));
 }

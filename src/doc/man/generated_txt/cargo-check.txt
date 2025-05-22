@@ -86,26 +86,26 @@ OPTIONS
            multiple times and supports common Unix glob patterns.
 
        --tests
-           Check all targets in test mode that have the test = true manifest
-           flag set. By default this includes the library and binaries built as
-           unittests, and integration tests. Be aware that this will also build
-           any required dependencies, so the lib target may be built twice
-           (once as a unittest, and once as a dependency for binaries,
-           integration tests, etc.). Targets may be enabled or disabled by
-           setting the test flag in the manifest settings for the target.
+           Check all targets that have the test = true manifest flag set. By
+           default this includes the library and binaries built as unittests,
+           and integration tests. Be aware that this will also build any
+           required dependencies, so the lib target may be built twice (once as
+           a unittest, and once as a dependency for binaries, integration
+           tests, etc.). Targets may be enabled or disabled by setting the test
+           flag in the manifest settings for the target.
 
        --bench name…
            Check the specified benchmark. This flag may be specified multiple
            times and supports common Unix glob patterns.
 
        --benches
-           Check all targets in benchmark mode that have the bench = true
-           manifest flag set. By default this includes the library and binaries
-           built as benchmarks, and bench targets. Be aware that this will also
-           build any required dependencies, so the lib target may be built
-           twice (once as a benchmark, and once as a dependency for binaries,
-           benchmarks, etc.). Targets may be enabled or disabled by setting the
-           bench flag in the manifest settings for the target.
+           Check all targets that have the bench = true manifest flag set. By
+           default this includes the library and binaries built as benchmarks,
+           and bench targets. Be aware that this will also build any required
+           dependencies, so the lib target may be built twice (once as a
+           benchmark, and once as a dependency for binaries, benchmarks, etc.).
+           Targets may be enabled or disabled by setting the bench flag in the
+           manifest settings for the target.
 
        --all-targets
            Check all targets. This is equivalent to specifying --lib --bins
@@ -146,7 +146,7 @@ OPTIONS
            Note that specifying this flag makes Cargo run in a different mode
            where the target artifacts are placed in a separate directory. See
            the build cache
-           <https://doc.rust-lang.org/cargo/guide/build-cache.html>
+           <https://doc.rust-lang.org/cargo/reference/build-cache.html>
            documentation for more details.
 
        -r, --release
@@ -164,11 +164,6 @@ OPTIONS
            See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
-
-       --ignore-rust-version
-           Check the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project’s
-           rust-version field.
 
        --timings=fmts
            Output information how long each compilation takes, and track
@@ -257,6 +252,9 @@ OPTIONS
            Path to the Cargo.toml file. By default, Cargo searches for the
            Cargo.toml file in the current directory or any parent directory.
 
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
+
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo
@@ -288,6 +286,21 @@ OPTIONS
 
        --frozen
            Equivalent to specifying both --locked and --offline.
+
+       --lockfile-path PATH
+           Changes the path of the lockfile from the default
+           (<workspace_root>/Cargo.lock) to PATH. PATH must end with Cargo.lock
+           (e.g. --lockfile-path /tmp/temporary-lockfile/Cargo.lock). Note that
+           providing --lockfile-path will ignore existing lockfile at the
+           default path, and instead will either use the lockfile from PATH, or
+           write a new lockfile into the provided PATH if it doesn’t exist.
+           This flag can be used to run most commands in read-only directories,
+           writing lockfile into the provided PATH.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #14421
+           <https://github.com/rust-lang/cargo/issues/14421>).
 
    Common Options
        +toolchain

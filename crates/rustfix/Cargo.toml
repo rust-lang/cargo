@@ -1,6 +1,6 @@
 [package]
 name = "rustfix"
-version = "0.8.2"
+version = "0.9.1"
 authors = [
     "Pascal Hertleif <killercup@gmail.com>",
     "Oliver Schneider <oli-obk@users.noreply.github.com>",
@@ -26,9 +26,10 @@ tracing.workspace = true
 [dev-dependencies]
 anyhow.workspace = true
 proptest.workspace = true
-similar = "2.4.0"
+similar.workspace = true
 tempfile.workspace = true
 tracing-subscriber.workspace = true
+snapbox.workspace = true
 
 [lints]
 workspace = true

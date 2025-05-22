@@ -268,7 +268,7 @@ impl<'gctx> HttpRegistry<'gctx> {
 
         self.multi
             .pipelining(false, self.multiplexing)
-            .with_context(|| "failed to enable multiplexing/pipelining in curl")?;
+            .context("failed to enable multiplexing/pipelining in curl")?;
 
         // let's not flood the server with connections
         self.multi.set_max_host_connections(2)?;
@@ -376,7 +376,7 @@ impl<'gctx> HttpRegistry<'gctx> {
         } else if self.gctx.cli_unstable().no_index_update {
             trace!("using local {} in no_index_update mode", path.display());
             true
-        } else if self.gctx.offline() {
+        } else if !self.gctx.network_allowed() {
             trace!("using local {} in offline mode", path.display());
             true
         } else if self.fresh.contains(path) {
@@ -511,7 +511,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             return Poll::Ready(Ok(LoadResponse::NotFound));
         }
 
-        if self.gctx.offline() || self.gctx.cli_unstable().no_index_update {
+        if !self.gctx.network_allowed() || self.gctx.cli_unstable().no_index_update {
             // Return NotFound in offline mode when the file doesn't exist in the cache.
             // If this results in resolution failure, the resolver will suggest
             // removing the --offline flag.
@@ -789,26 +789,29 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        trace!(target: "network",
-            "block_until_ready: {} transfers pending",
+        trace!(target: "network::HttpRegistry::block_until_ready",
+            "{} transfers pending",
             self.downloads.pending.len()
         );
         self.downloads.blocking_calls += 1;
 
         loop {
-            self.handle_completed_downloads()?;
-            self.add_sleepers()?;
-
             let remaining_in_multi = tls::set(&self.downloads, || {
                 self.multi
                     .perform()
-                    .with_context(|| "failed to perform http requests")
+                    .context("failed to perform http requests")
             })?;
             trace!(target: "network", "{} transfers remaining", remaining_in_multi);
-
+            // Handles transfers performed by `self.multi` above and adds to
+            // `self.downloads.results`. Failed transfers get added to
+            // `self.downloads.sleeping` for retry.
+            self.handle_completed_downloads()?;
             if remaining_in_multi + self.downloads.sleeping.len() as u32 == 0 {
                 return Ok(());
             }
+            // Handles failed transfers in `self.downloads.sleeping` and
+            // re-adds them to `self.multi`.
+            self.add_sleepers()?;
 
             if self.downloads.pending.is_empty() {
                 let delay = self.downloads.sleeping.time_to_next().unwrap();
@@ -823,7 +826,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                     .unwrap_or_else(|| Duration::new(1, 0));
                 self.multi
                     .wait(&mut [], timeout)
-                    .with_context(|| "failed to wait on curl `Multi`")?;
+                    .context("failed to wait on curl `Multi`")?;
             }
         }
     }

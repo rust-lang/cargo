@@ -1,0 +1,51 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+edition = "2015"
+
+[dependencies.your-face]
+version = "99999.0.0"
+features = [
+  "eyes000",
+  "eyes001",
+  "eyes002",
+  "eyes003",
+  "eyes004",
+  "eyes005",
+  "eyes006",
+  "eyes007",
+  "eyes008",
+  "eyes009",
+  "eyes010",
+  "eyes011",
+  "eyes012",
+  "eyes013",
+  "eyes014",
+  "eyes015",
+  "eyes016",
+  "eyes017",
+  "eyes018",
+  "eyes019",
+  "eyes020",
+  "eyes021",
+  "eyes022",
+  "eyes023",
+  "eyes024",
+  "eyes025",
+  "eyes026",
+  "eyes027",
+  "eyes028",
+  "eyes029",
+  "eyes030",
+  "eyes031",
+  "eyes032",
+  "eyes033",
+  "eyes034",
+  "eyes035",
+  "eyes036",
+  "eyes037",
+  "eyes038",
+  "eyes039",
+]

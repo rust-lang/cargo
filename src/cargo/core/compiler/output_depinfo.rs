@@ -61,7 +61,7 @@ fn add_deps_for_unit(
             build_runner.files().host_root(),
             &dep_info_loc,
         )? {
-            for path in paths.files {
+            for path in paths.files.into_keys() {
                 deps.insert(path);
             }
         } else {
@@ -141,11 +141,12 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for output in build_runner
-        .outputs(unit)?
-        .iter()
-        .filter(|o| !matches!(o.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))
-    {
+    for output in build_runner.outputs(unit)?.iter().filter(|o| {
+        !matches!(
+            o.flavor,
+            FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom
+        )
+    }) {
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {
@@ -154,7 +155,12 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous.files.iter().eq(deps.iter().map(Path::new)) {
+                    if previous
+                        .files
+                        .iter()
+                        .map(|(path, _checksum)| path)
+                        .eq(deps.iter().map(Path::new))
+                    {
                         continue;
                     }
                 }

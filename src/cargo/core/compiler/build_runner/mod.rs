@@ -16,7 +16,7 @@ use jobserver::Client;
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
-use super::fingerprint::Fingerprint;
+use super::fingerprint::{Checksum, Fingerprint};
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
@@ -27,7 +27,7 @@ use super::{
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
-pub use self::compilation_files::{Metadata, OutputFile};
+pub use self::compilation_files::{Metadata, OutputFile, UnitHash};
 
 /// Collection of all the stuff that is needed to perform a build.
 ///
@@ -50,6 +50,8 @@ pub struct BuildRunner<'a, 'gctx> {
     pub fingerprints: HashMap<Unit, Arc<Fingerprint>>,
     /// Cache of file mtimes to reduce filesystem hits.
     pub mtime_cache: HashMap<PathBuf, FileTime>,
+    /// Cache of file checksums to reduce filesystem reads.
+    pub checksum_cache: HashMap<PathBuf, Checksum>,
     /// A set used to track which units have been compiled.
     /// A unit may appear in the job graph multiple times as a dependency of
     /// multiple packages, but it only needs to run once.
@@ -78,13 +80,13 @@ pub struct BuildRunner<'a, 'gctx> {
     pub lto: HashMap<Unit, Lto>,
 
     /// Map of Doc/Docscrape units to metadata for their -Cmetadata flag.
-    /// See Context::find_metadata_units for more details.
+    /// See `Context::find_metadata_units` for more details.
     pub metadata_for_doc_units: HashMap<Unit, Metadata>,
 
     /// Set of metadata of Docscrape units that fail before completion, e.g.
     /// because the target has a type error. This is in an Arc<Mutex<..>>
     /// because it is continuously updated as the job progresses.
-    pub failed_scrape_units: Arc<Mutex<HashSet<Metadata>>>,
+    pub failed_scrape_units: Arc<Mutex<HashSet<UnitHash>>>,
 }
 
 impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
@@ -100,8 +102,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         let jobserver = match bcx.gctx.jobserver_from_env() {
             Some(c) => c.clone(),
             None => {
-                let client = Client::new(bcx.jobs() as usize)
-                    .with_context(|| "failed to create jobserver")?;
+                let client =
+                    Client::new(bcx.jobs() as usize).context("failed to create jobserver")?;
                 client.acquire_raw()?;
                 client
             }
@@ -113,6 +115,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             build_script_outputs: Arc::new(Mutex::new(BuildScriptOutputs::default())),
             fingerprints: HashMap::new(),
             mtime_cache: HashMap::new(),
+            checksum_cache: HashMap::new(),
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
@@ -126,12 +129,33 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         })
     }
 
+    /// Dry-run the compilation without actually running it.
+    ///
+    /// This is expected to collect information like the location of output artifacts.
+    /// Please keep in sync with non-compilation part in [`BuildRunner::compile`].
+    pub fn dry_run(mut self) -> CargoResult<Compilation<'gctx>> {
+        let _lock = self
+            .bcx
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::Shared)?;
+        self.lto = super::lto::generate(self.bcx)?;
+        self.prepare_units()?;
+        self.prepare()?;
+        self.check_collisions()?;
+
+        for unit in &self.bcx.roots {
+            self.collect_tests_and_executables(unit)?;
+        }
+
+        Ok(self.compilation)
+    }
+
     /// Starts compilation, waits for it to finish, and returns information
     /// about the result of compilation.
     ///
     /// See [`ops::cargo_compile`] for a higher-level view of the compile process.
     ///
-    /// [`ops::cargo_compile`]: ../../../ops/cargo_compile/index.html
+    /// [`ops::cargo_compile`]: crate::ops::cargo_compile
     #[tracing::instrument(skip_all)]
     pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'gctx>> {
         // A shared lock is held during the duration of the build since rustc
@@ -214,31 +238,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
-            // Collect tests and executables.
-            for output in self.outputs(unit)?.iter() {
-                if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary
-                {
-                    continue;
-                }
-
-                let bindst = output.bin_dst();
-
-                if unit.mode == CompileMode::Test {
-                    self.compilation
-                        .tests
-                        .push(self.unit_output(unit, &output.path));
-                } else if unit.target.is_executable() {
-                    self.compilation
-                        .binaries
-                        .push(self.unit_output(unit, bindst));
-                } else if unit.target.is_cdylib()
-                    && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
-                {
-                    self.compilation
-                        .cdylibs
-                        .push(self.unit_output(unit, bindst));
-                }
-            }
+            self.collect_tests_and_executables(unit)?;
 
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
@@ -246,7 +246,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lto_args(&self, unit));
                 args.extend(compiler::features_args(unit));
-                args.extend(compiler::check_cfg_args(&self, unit));
+                args.extend(compiler::check_cfg_args(unit));
 
                 let script_meta = self.find_build_script_metadata(unit);
                 if let Some(meta) = script_meta {
@@ -256,23 +256,20 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                             args.push(cfg.into());
                         }
 
-                        if !output.check_cfgs.is_empty() {
-                            args.push("-Zunstable-options".into());
-                            for check_cfg in &output.check_cfgs {
-                                args.push("--check-cfg".into());
-                                args.push(check_cfg.into());
-                            }
+                        for check_cfg in &output.check_cfgs {
+                            args.push("--check-cfg".into());
+                            args.push(check_cfg.into());
                         }
 
                         for (lt, arg) in &output.linker_args {
-                            if lt.applies_to(&unit.target) {
+                            if lt.applies_to(&unit.target, unit.mode) {
                                 args.push("-C".into());
                                 args.push(format!("link-arg={}", arg).into());
                             }
                         }
                     }
                 }
-                args.extend(self.bcx.rustdocflags_args(unit).iter().map(Into::into));
+                args.extend(unit.rustdocflags.iter().map(Into::into));
 
                 use super::MessageFormat;
                 let format = match self.bcx.build_config.message_format {
@@ -304,10 +301,42 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 .extend(output.env.iter().cloned());
 
             for dir in output.library_paths.iter() {
-                self.compilation.native_dirs.insert(dir.clone());
+                self.compilation
+                    .native_dirs
+                    .insert(dir.clone().into_path_buf());
             }
         }
         Ok(self.compilation)
+    }
+
+    fn collect_tests_and_executables(&mut self, unit: &Unit) -> CargoResult<()> {
+        for output in self.outputs(unit)?.iter() {
+            if matches!(
+                output.flavor,
+                FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom
+            ) {
+                continue;
+            }
+
+            let bindst = output.bin_dst();
+
+            if unit.mode == CompileMode::Test {
+                self.compilation
+                    .tests
+                    .push(self.unit_output(unit, &output.path));
+            } else if unit.target.is_executable() {
+                self.compilation
+                    .binaries
+                    .push(self.unit_output(unit, bindst));
+            } else if unit.target.is_cdylib()
+                && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
+            {
+                self.compilation
+                    .cdylibs
+                    .push(self.unit_output(unit, bindst));
+            }
+        }
+        Ok(())
     }
 
     /// Returns the executable for the specified unit (if any).
@@ -357,11 +386,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .unwrap()
             .host
             .prepare()
-            .with_context(|| "couldn't prepare build directories")?;
+            .context("couldn't prepare build directories")?;
         for target in self.files.as_mut().unwrap().target.values_mut() {
             target
                 .prepare()
-                .with_context(|| "couldn't prepare build directories")?;
+                .context("couldn't prepare build directories")?;
         }
 
         let files = self.files.as_ref().unwrap();
@@ -391,7 +420,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         &self.bcx.unit_graph[unit]
     }
 
-    /// Returns the RunCustomBuild Unit associated with the given Unit.
+    /// Returns the `RunCustomBuild` Unit associated with the given Unit.
     ///
     /// If the package does not have a build script, this returns None.
     pub fn find_build_script_unit(&self, unit: &Unit) -> Option<Unit> {
@@ -407,19 +436,29 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .map(|unit_dep| unit_dep.unit.clone())
     }
 
-    /// Returns the metadata hash for the RunCustomBuild Unit associated with
+    /// Returns the metadata hash for the `RunCustomBuild` Unit associated with
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<Metadata> {
+    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<UnitHash> {
         let script_unit = self.find_build_script_unit(unit)?;
         Some(self.get_run_build_script_metadata(&script_unit))
     }
 
-    /// Returns the metadata hash for a RunCustomBuild unit.
-    pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
+    /// Returns the metadata hash for a `RunCustomBuild` unit.
+    pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
-        self.files().metadata(unit)
+        self.files().metadata(unit).unit_id()
+    }
+
+    /// Returns the list of SBOM output file paths for a given [`Unit`].
+    pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        Ok(self
+            .outputs(unit)?
+            .iter()
+            .filter(|o| o.flavor == FileFlavor::Sbom)
+            .map(|o| o.path.clone())
+            .collect())
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
@@ -577,7 +616,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 if let Some(ref export_path) = output.export_path {
                     if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
                         self.bcx.gctx.shell().warn(format!(
-                            "`--out-dir` filename collision.\n\
+                            "`--artifact-dir` filename collision.\n\
                              {}\
                              The exported filenames should be unique.\n\
                              {}",

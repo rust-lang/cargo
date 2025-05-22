@@ -1,1 +1,1 @@
-// intentionally blank
+#![no_std]

@@ -30,14 +30,14 @@ use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionRe
 use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
-use tracing::{debug, info};
+use tracing::info;
 
 mod cache;
 use self::cache::CacheManager;
@@ -51,7 +51,7 @@ const INDEX_V_MAX: u32 = 2;
 ///
 /// Different kinds of registries store the index differently:
 ///
-/// * [`LocalRegistry`]` is a simple on-disk tree of files of the raw index.
+/// * [`LocalRegistry`] is a simple on-disk tree of files of the raw index.
 /// * [`RemoteRegistry`] is stored as a raw git repository.
 /// * [`HttpRegistry`] fills the on-disk index cache directly without keeping
 ///   any raw index.
@@ -135,6 +135,8 @@ pub enum IndexSummary {
     Offline(Summary),
     /// From a newer schema version and is likely incomplete or inaccurate
     Unsupported(Summary, u32),
+    /// An error was encountered despite being a supported schema version
+    Invalid(Summary),
 }
 
 impl IndexSummary {
@@ -144,7 +146,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -154,7 +157,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -164,17 +168,13 @@ impl IndexSummary {
             IndexSummary::Yanked(s) => IndexSummary::Yanked(f(s)),
             IndexSummary::Offline(s) => IndexSummary::Offline(f(s)),
             IndexSummary::Unsupported(s, v) => IndexSummary::Unsupported(f(s), v.clone()),
+            IndexSummary::Invalid(s) => IndexSummary::Invalid(f(s)),
         }
     }
 
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
-        match self {
-            IndexSummary::Candidate(sum)
-            | IndexSummary::Yanked(sum)
-            | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum.package_id(),
-        }
+        self.as_summary().package_id()
     }
 
     /// Returns `true` if the index summary is [`Yanked`].
@@ -195,44 +195,45 @@ impl IndexSummary {
 }
 
 /// A single line in the index representing a single version of a package.
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IndexPackage<'a> {
     /// Name of the package.
-    name: InternedString,
+    pub name: InternedString,
     /// The version of this dependency.
-    vers: Version,
+    pub vers: Version,
     /// All kinds of direct dependencies of the package, including dev and
     /// build dependencies.
     #[serde(borrow)]
-    deps: Vec<RegistryDependency<'a>>,
+    pub deps: Vec<RegistryDependency<'a>>,
     /// Set of features defined for the package, i.e., `[features]` table.
-    features: BTreeMap<InternedString, Vec<InternedString>>,
+    #[serde(default)]
+    pub features: BTreeMap<InternedString, Vec<InternedString>>,
     /// This field contains features with new, extended syntax. Specifically,
     /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
     ///
     /// This is separated from `features` because versions older than 1.19
     /// will fail to load due to not being able to parse the new syntax, even
     /// with a `Cargo.lock` file.
-    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    pub features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     /// Checksum for verifying the integrity of the corresponding downloaded package.
-    cksum: String,
+    pub cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
     ///
     /// This was added in 2014. Everything in the crates.io index has this set
     /// now, so this probably doesn't need to be an option anymore.
-    yanked: Option<bool>,
+    pub yanked: Option<bool>,
     /// Native library name this package links to.
     ///
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
-    links: Option<InternedString>,
+    pub links: Option<InternedString>,
     /// Required version of rust
     ///
     /// Corresponds to `package.rust-version`.
     ///
     /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
     /// can be `None` if published before then or if not set in the manifest.
-    rust_version: Option<RustVersion>,
+    pub rust_version: Option<RustVersion>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version `1`. Entries with unknown
@@ -255,41 +256,92 @@ pub struct IndexPackage<'a> {
     /// incorrectly select a new package that uses a new index schema. A
     /// workaround is to downgrade any packages that are incompatible with the
     /// `--precise` flag of `cargo update`.
+    pub v: Option<u32>,
+}
+
+impl IndexPackage<'_> {
+    fn to_summary(&self, source_id: SourceId) -> CargoResult<Summary> {
+        // ****CAUTION**** Please be extremely careful with returning errors, see
+        // `IndexSummary::parse` for details
+        let pkgid = PackageId::new(self.name.into(), self.vers.clone(), source_id);
+        let deps = self
+            .deps
+            .iter()
+            .map(|dep| dep.clone().into_dep(source_id))
+            .collect::<CargoResult<Vec<_>>>()?;
+        let mut features = self.features.clone();
+        if let Some(features2) = &self.features2 {
+            for (name, values) in features2 {
+                features.entry(*name).or_default().extend(values);
+            }
+        }
+        let mut summary = Summary::new(
+            pkgid,
+            deps,
+            &features,
+            self.links,
+            self.rust_version.clone(),
+        )?;
+        summary.set_checksum(self.cksum.clone());
+        Ok(summary)
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+struct IndexPackageMinimum {
+    name: InternedString,
+    vers: Version,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageRustVersion {
+    rust_version: Option<RustVersion>,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageV {
     v: Option<u32>,
 }
 
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
-#[derive(Deserialize)]
-struct RegistryDependency<'a> {
+#[derive(Deserialize, Serialize, Clone)]
+pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
-    name: InternedString,
+    pub name: InternedString,
     /// The SemVer requirement for this dependency.
     #[serde(borrow)]
-    req: Cow<'a, str>,
+    pub req: Cow<'a, str>,
     /// Set of features enabled for this dependency.
-    features: Vec<InternedString>,
+    #[serde(default)]
+    pub features: Vec<InternedString>,
     /// Whether or not this is an optional dependency.
-    optional: bool,
+    #[serde(default)]
+    pub optional: bool,
     /// Whether or not default features are enabled.
-    default_features: bool,
+    #[serde(default = "default_true")]
+    pub default_features: bool,
     /// The target platform for this dependency.
-    target: Option<Cow<'a, str>>,
+    pub target: Option<Cow<'a, str>>,
     /// The dependency kind. "dev", "build", and "normal".
-    kind: Option<Cow<'a, str>>,
+    pub kind: Option<Cow<'a, str>>,
     // The URL of the index of the registry where this dependency is from.
     // `None` if it is from the same index.
-    registry: Option<Cow<'a, str>>,
+    pub registry: Option<Cow<'a, str>>,
     /// The original name if the dependency is renamed.
-    package: Option<InternedString>,
+    pub package: Option<InternedString>,
     /// Whether or not this is a public dependency. Unstable. See [RFC 1977].
     ///
     /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
-    public: Option<bool>,
-    artifact: Option<Vec<Cow<'a, str>>>,
-    bindep_target: Option<Cow<'a, str>>,
+    pub public: Option<bool>,
+    pub artifact: Option<Vec<Cow<'a, str>>>,
+    pub bindep_target: Option<Cow<'a, str>>,
     #[serde(default)]
-    lib: bool,
+    pub lib: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl<'gctx> RegistryIndex<'gctx> {
@@ -362,21 +414,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
             .filter_map(move |maybe| {
                 match maybe.parse(raw_data, source_id, bindeps) {
-                    Ok(sum @ IndexSummary::Candidate(_) | sum @ IndexSummary::Yanked(_)) => {
-                        Some(sum)
-                    }
-                    Ok(IndexSummary::Unsupported(summary, v)) => {
-                        debug!(
-                            "unsupported schema version {} ({} {})",
-                            v,
-                            summary.name(),
-                            summary.version()
-                        );
-                        None
-                    }
-                    Ok(IndexSummary::Offline(_)) => {
-                        unreachable!("We do not check for off-line until later")
-                    }
+                    Ok(sum) => Some(sum),
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         None
@@ -444,7 +482,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         load: &mut dyn RegistryData,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        if self.gctx.offline() {
+        if !self.gctx.network_allowed() {
             // This should only return `Poll::Ready(Ok(()))` if there is at least 1 match.
             //
             // If there are 0 matches it should fall through and try again with online.
@@ -531,7 +569,7 @@ impl Summaries {
     ///
     /// * `root` --- this is the root argument passed to `load`
     /// * `name` --- the name of the package.
-    /// * `source_id` --- the registry's SourceId used when parsing JSON blobs
+    /// * `source_id` --- the registry's `SourceId` used when parsing JSON blobs
     ///   to create summaries.
     /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
@@ -546,19 +584,19 @@ impl Summaries {
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // This is the file we're loading from cache or the index data.
         // See module comment in `registry/mod.rs` for why this is structured the way it is.
-        let name = &name.to_lowercase();
-        let relative = make_dep_path(&name, false);
+        let lowered_name = &name.to_lowercase();
+        let relative = make_dep_path(&lowered_name, false);
 
         let mut cached_summaries = None;
         let mut index_version = None;
-        if let Some(contents) = cache_manager.get(name) {
+        if let Some(contents) = cache_manager.get(lowered_name) {
             match Summaries::parse_cache(contents) {
                 Ok((s, v)) => {
                     cached_summaries = Some(s);
                     index_version = Some(v);
                 }
                 Err(e) => {
-                    tracing::debug!("failed to parse {name:?} cache: {e}");
+                    tracing::debug!("failed to parse {lowered_name:?} cache: {e}");
                 }
             }
         }
@@ -571,7 +609,7 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                cache_manager.invalidate(name);
+                cache_manager.invalidate(lowered_name);
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -620,7 +658,7 @@ impl Summaries {
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
                     // invocations can use it.
-                    cache_manager.put(name, &cache_bytes);
+                    cache_manager.put(lowered_name, &cache_bytes);
 
                     // If we've got debug assertions enabled read back in the cached values
                     // and assert they match the expected result.
@@ -712,32 +750,45 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let IndexPackage {
-            name,
-            vers,
-            cksum,
-            deps,
-            mut features,
-            features2,
-            yanked,
-            links,
-            rust_version,
-            v,
-        } = serde_json::from_slice(line)?;
-        let v = v.unwrap_or(1);
-        tracing::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::new(name.into(), vers.clone(), source_id);
-        let deps = deps
-            .into_iter()
-            .map(|dep| dep.into_dep(source_id))
-            .collect::<CargoResult<Vec<_>>>()?;
-        if let Some(features2) = features2 {
-            for (name, values) in features2 {
-                features.entry(name).or_default().extend(values);
+        let index_summary = (|| {
+            let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
+            let summary = index.to_summary(source_id)?;
+            Ok((index, summary))
+        })();
+        let (index, summary, valid) = match index_summary {
+            Ok((index, summary)) => (index, summary, true),
+            Err(err) => {
+                let Ok(IndexPackageMinimum { name, vers }) =
+                    serde_json::from_slice::<IndexPackageMinimum>(line)
+                else {
+                    // If we can't recover, prefer the original error
+                    return Err(err);
+                };
+                tracing::info!(
+                    "recoverying from failed parse of registry package {name}@{vers}: {err}"
+                );
+                let IndexPackageRustVersion { rust_version } =
+                    serde_json::from_slice::<IndexPackageRustVersion>(line).unwrap_or_default();
+                let IndexPackageV { v } =
+                    serde_json::from_slice::<IndexPackageV>(line).unwrap_or_default();
+                let index = IndexPackage {
+                    name,
+                    vers,
+                    rust_version,
+                    v,
+                    deps: Default::default(),
+                    features: Default::default(),
+                    features2: Default::default(),
+                    cksum: Default::default(),
+                    yanked: Default::default(),
+                    links: Default::default(),
+                };
+                let summary = index.to_summary(source_id)?;
+                (index, summary, false)
             }
-        }
-        let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
-        summary.set_checksum(cksum);
+        };
+        let v = index.v.unwrap_or(1);
+        tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
 
         let v_max = if bindeps {
             INDEX_V_MAX + 1
@@ -747,7 +798,9 @@ impl IndexSummary {
 
         if v_max < v {
             Ok(IndexSummary::Unsupported(summary, v))
-        } else if yanked.unwrap_or(false) {
+        } else if !valid {
+            Ok(IndexSummary::Invalid(summary))
+        } else if index.yanked.unwrap_or(false) {
             Ok(IndexSummary::Yanked(summary))
         } else {
             Ok(IndexSummary::Candidate(summary))

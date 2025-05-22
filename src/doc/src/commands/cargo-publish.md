@@ -77,15 +77,57 @@ which defaults to <code>crates-io</code>.</dd>
 
 ### Package Selection
 
-By default, the package in the current working directory is selected. The `-p`
-flag can be used to choose a different package in a workspace.
+By default, when no package selection options are given, the packages selected
+depend on the selected manifest file (based on the current working directory if
+`--manifest-path` is not given). If the manifest is the root of a workspace then
+the workspaces default members are selected, otherwise only the package defined
+by the manifest will be selected.
+
+The default members of a workspace can be set explicitly with the
+`workspace.default-members` key in the root manifest. If this is not set, a
+virtual workspace will include all workspace members (equivalent to passing
+`--workspace`), and a non-virtual workspace will include only the root crate itself.
+
+Selecting more than one package is unstable and available only on the
+[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
+and requires the `-Z package-workspace` flag to enable.
+See <https://github.com/rust-lang/cargo/issues/10948> for more information.
+
 
 <dl>
 
-<dt class="option-term" id="option-cargo-publish--p"><a class="option-anchor" href="#option-cargo-publish--p"></a><code>-p</code> <em>spec</em></dt>
-<dt class="option-term" id="option-cargo-publish---package"><a class="option-anchor" href="#option-cargo-publish---package"></a><code>--package</code> <em>spec</em></dt>
-<dd class="option-desc">The package to publish. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC
-format.</dd>
+<dt class="option-term" id="option-cargo-publish--p"><a class="option-anchor" href="#option-cargo-publish--p"></a><code>-p</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-publish---package"><a class="option-anchor" href="#option-cargo-publish---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dd class="option-desc">Publish only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
+SPEC format. This flag may be specified multiple times and supports common Unix
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally
+expanding glob patterns before Cargo handles them, you must use single quotes or
+double quotes around each pattern.</p>
+<p>Selecting more than one package with this option is unstable and available only
+on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z package-workspace</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---workspace"><a class="option-anchor" href="#option-cargo-publish---workspace"></a><code>--workspace</code></dt>
+<dd class="option-desc">Publish all members in the workspace.</p>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z package-workspace</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---exclude"><a class="option-anchor" href="#option-cargo-publish---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
+<dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
+<code>--workspace</code> flag. This flag may be specified multiple times and supports
+common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
+accidentally expanding glob patterns before Cargo handles them, you must use
+single quotes or double quotes around each pattern.</p>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z package-workspace</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
 
 
 </dl>
@@ -102,7 +144,7 @@ list of supported targets. This flag may be specified multiple times.</p>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---target-dir"><a class="option-anchor" href="#option-cargo-publish---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
@@ -178,6 +220,18 @@ offline.</p>
 
 <dt class="option-term" id="option-cargo-publish---frozen"><a class="option-anchor" href="#option-cargo-publish---frozen"></a><code>--frozen</code></dt>
 <dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---lockfile-path"><a class="option-anchor" href="#option-cargo-publish---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
+<code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
+either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
+This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 
 </dl>

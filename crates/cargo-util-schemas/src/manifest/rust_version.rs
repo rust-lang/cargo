@@ -106,6 +106,8 @@ enum RustVersionErrorKind {
 #[cfg(test)]
 mod test {
     use super::*;
+    use snapbox::prelude::*;
+    use snapbox::str;
 
     #[test]
     fn is_compatible_with_rustc() {
@@ -169,5 +171,49 @@ mod test {
             }
         }
         assert!(passed);
+    }
+
+    #[test]
+    fn parse_errors() {
+        let cases = &[
+            // Disallow caret
+            (
+                "^1.43",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            // Valid pre-release
+            (
+                "1.43.0-beta.1",
+                str![[r#"unexpected prerelease field, expected a version like "1.32""#]],
+            ),
+            // Bad pre-release
+            (
+                "1.43-beta.1",
+                str![[r#"unexpected prerelease field, expected a version like "1.32""#]],
+            ),
+            // Weird wildcard
+            (
+                "x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            (
+                "1.x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            (
+                "1.1.x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            // Non-sense
+            ("foodaddle", str![[r#"expected a version like "1.32""#]]),
+        ];
+        for (input, expected) in cases {
+            let actual: Result<RustVersion, _> = input.parse();
+            let actual = match actual {
+                Ok(result) => format!("didn't fail: {result:?}"),
+                Err(err) => err.to_string(),
+            };
+            snapbox::assert_data_eq!(actual, expected.clone().raw());
+        }
     }
 }

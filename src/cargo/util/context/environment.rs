@@ -15,6 +15,7 @@ fn make_case_insensitive_and_normalized_env(
         .filter_map(|k| k.to_str())
         .map(|k| (k.to_uppercase(), k.to_owned()))
         .collect();
+
     let normalized_env = env
         .iter()
         // Only keep entries where both the key and value are valid UTF-8,
@@ -112,12 +113,12 @@ impl Env {
     ///
     /// This can be used similarly to [`std::env::var_os`].
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
-    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
+    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
         match self.env.get(key.as_ref()) {
-            Some(s) => Some(s.clone()),
+            Some(s) => Some(s),
             None => {
                 if cfg!(windows) {
-                    self.get_env_case_insensitive(key).cloned()
+                    self.get_env_case_insensitive(key)
                 } else {
                     None
                 }
@@ -129,14 +130,14 @@ impl Env {
     ///
     /// This can be used similarly to `std::env::var`.
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
-    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<&str> {
         let key = key.as_ref();
         let s = self
             .get_env_os(key)
             .ok_or_else(|| anyhow!("{key:?} could not be found in the environment snapshot"))?;
 
         match s.to_str() {
-            Some(s) => Ok(s.to_owned()),
+            Some(s) => Ok(s),
             None => bail!("environment variable value is not valid unicode: {s:?}"),
         }
     }
@@ -146,10 +147,10 @@ impl Env {
     /// This is relevant on Windows, where environment variables are case-insensitive.
     /// Note that this only works on keys that are valid UTF-8 and it uses Unicode uppercase,
     /// which may differ from the OS's notion of uppercase.
-    fn get_env_case_insensitive(&self, key: impl AsRef<OsStr>) -> Option<&OsString> {
+    fn get_env_case_insensitive(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
         let upper_case_key = key.as_ref().to_str()?.to_uppercase();
         let env_key: &OsStr = self.case_insensitive_env.get(&upper_case_key)?.as_ref();
-        self.env.get(env_key)
+        self.env.get(env_key).map(|v| v.as_ref())
     }
 
     /// Get the value of environment variable `key` as a `&str`.

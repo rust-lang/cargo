@@ -1,18 +1,26 @@
 //! Tests for the --config CLI option.
 
-use super::config::{
-    assert_error, assert_match, read_output, write_config_at, write_config_toml,
-    GlobalContextBuilder,
-};
-use cargo::util::context::Definition;
-use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
+
+use cargo::util::context::Definition;
+use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::str;
+
+use super::config::{
+    assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
+};
 
 #[cargo_test]
 fn basic() {
     // Simple example.
-    let gctx = GlobalContextBuilder::new().config_arg("foo='bar'").build();
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("foo='bar'")
+        .config_arg("net.git-fetch-with-cli=true")
+        .build();
     assert_eq!(gctx.get::<String>("foo").unwrap(), "bar");
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 }
 
 #[cargo_test]
@@ -39,13 +47,16 @@ fn cli_priority() {
         .env("CARGO_BUILD_JOBS", "2")
         .env("CARGO_BUILD_RUSTC", "env")
         .env("CARGO_TERM_VERBOSE", "false")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .config_arg("build.jobs=1")
         .config_arg("build.rustc='cli'")
         .config_arg("term.verbose=true")
+        .config_arg("net.git-fetch-with-cli=true")
         .build();
     assert_eq!(gctx.get::<i32>("build.jobs").unwrap(), 1);
     assert_eq!(gctx.get::<String>("build.rustc").unwrap(), "cli");
     assert_eq!(gctx.get::<bool>("term.verbose").unwrap(), true);
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 
     // Setting both term.verbose and term.quiet is invalid and is tested
     // in the run test suite.
@@ -341,10 +352,11 @@ fn unused_key() {
 
     gctx.build_config().unwrap();
     let output = read_output(gctx);
-    let expected = "\
-warning: unused config key `build.unused` in `--config cli option`
-";
-    assert_match(expected, &output);
+    let expected = str![[r#"
+[WARNING] unused config key `build.unused` in `--config cli option`
+
+"#]];
+    assert_e2e().eq(&output, expected);
 }
 
 #[cargo_test]

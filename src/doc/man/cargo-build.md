@@ -41,8 +41,6 @@ they have `required-features` that are missing.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -52,7 +50,7 @@ they have `required-features` that are missing.
 {{#options}}
 {{> options-target-dir }}
 
-{{#option "`--out-dir` _directory_" }}
+{{#option "`--artifact-dir` _directory_" }}
 Copy final artifacts to this directory.
 
 This option is unstable and available only on the
@@ -86,7 +84,11 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 {{#options}}
 {{> options-manifest-path }}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

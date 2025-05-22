@@ -23,15 +23,14 @@ fn case() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .arg("-Zmsrv-policy")
         .arg("add")
         .arg_line("rust-version-user")
         .current_dir(cwd)
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .assert()
         .failure()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

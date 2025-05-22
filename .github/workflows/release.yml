@@ -1,0 +1,33 @@
+# Publish Cargo to crates.io whenever a new tag is pushed. Tags are pushed by
+# the Rust release process (https://github.com/rust-lang/promote-release),
+# which will cause this workflow to run.
+
+name: Release
+on:
+  push:
+    tags:
+      - "0.*"
+
+# Prevent multiple releases from starting at the same time.
+concurrency:
+  group: release
+
+jobs:
+  crates-io:
+    name: Publish on crates.io
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    # Gain access to the crates.io publishing token.
+    environment:
+      name: release
+
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@v4
+
+      - name: Publish Cargo to crates.io
+        run: ./publish.py
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

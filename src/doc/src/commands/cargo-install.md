@@ -124,6 +124,11 @@ treated as a caret requirement like Cargo dependencies are.</dd>
 <dd class="option-desc">List all installed packages and their versions.</dd>
 
 
+<dt class="option-term" id="option-cargo-install--n"><a class="option-anchor" href="#option-cargo-install--n"></a><code>-n</code></dt>
+<dt class="option-term" id="option-cargo-install---dry-run"><a class="option-anchor" href="#option-cargo-install---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">(unstable) Perform all checks without installing.</dd>
+
+
 <dt class="option-term" id="option-cargo-install--f"><a class="option-anchor" href="#option-cargo-install--f"></a><code>-f</code></dt>
 <dt class="option-term" id="option-cargo-install---force"><a class="option-anchor" href="#option-cargo-install---force"></a><code>--force</code></dt>
 <dd class="option-desc">Force overwriting existing crates or binaries. This can be used if a package
@@ -214,7 +219,7 @@ list of supported targets.</p>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---target-dir"><a class="option-anchor" href="#option-cargo-install---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
@@ -236,11 +241,6 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 <dt class="option-term" id="option-cargo-install---profile"><a class="option-anchor" href="#option-cargo-install---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Install with the given profile.
 See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
-
-
-<dt class="option-term" id="option-cargo-install---ignore-rust-version"><a class="option-anchor" href="#option-cargo-install---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Install the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
@@ -266,6 +266,10 @@ information about timing information.</li>
 ### Manifest Options
 
 <dl>
+<dt class="option-term" id="option-cargo-install---ignore-rust-version"><a class="option-anchor" href="#option-cargo-install---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+
+
 <dt class="option-term" id="option-cargo-install---locked"><a class="option-anchor" href="#option-cargo-install---locked"></a><code>--locked</code></dt>
 <dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an

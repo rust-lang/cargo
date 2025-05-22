@@ -5,6 +5,6 @@ name = "cargo-list-test-fixture"
 version = "0.0.0"
 edition = "2015"
 
-[target."cfg(unix)".dependencies]
+[target.'cfg(target_os="linux")'.dependencies]
 my-package1 = "99999.0.0"
 my-package2 = "99999.0.0"

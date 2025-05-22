@@ -63,6 +63,12 @@ Specific commit to use when adding from git.
 [Filesystem path](../reference/specifying-dependencies.html#specifying-path-dependencies) to local crate to add.
 {{/option}}
 
+{{#option "`--base` _base_" }}
+The [path base](../reference/unstable.html#path-bases) to use when adding a local crate.
+
+[Unstable (nightly-only)](../reference/unstable.html#path-bases)
+{{/option}}
+
 {{> options-registry }}
 
 {{/options}}
@@ -139,15 +145,6 @@ crates, the features for a specific crate may be enabled with
 which enables all specified features.
 {{/option}}
 
-{{#option "`--ignore-rust-version`" }}
-Ignore `rust-version` specification in packages.
-
-This option is unstable and available only on the
-[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
-and requires the `-Z unstable-options` flag to enable.
-See <https://github.com/rust-lang/cargo/issues/5579> for more information.
-{{/option}}
-
 {{/options}}
 
 
@@ -166,7 +163,11 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 Add dependencies to only the specified package.
 {{/option}}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

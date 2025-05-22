@@ -27,7 +27,7 @@ The installation root is determined, in order of precedence:
 
 ## OPTIONS
 
-### Install Options
+### Uninstall Options
 
 <dl>
 

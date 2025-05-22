@@ -19,9 +19,9 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Removing</tspan><tspan> toml from dependencies for target `x86_64-unknown-linux-gnu`</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Removing</tspan><tspan> toml from dependencies for target `wasm32-unknown-unknown`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the dependency `toml` could not be found in `target.x86_64-unknown-linux-gnu.dependencies`; it is present in `dependencies`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the dependency `toml` could not be found in `target.wasm32-unknown-unknown.dependencies`; it is present in `dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

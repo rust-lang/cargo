@@ -20,13 +20,16 @@
 
 #![allow(clippy::disallowed_methods)]
 
-use cargo_test_support::*;
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs};
 use std::env;
 use std::path::Path;
 
-fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
-    e.env_remove("CARGO_HOME");
-    e.env_remove("HOME");
+fn enable_build_std(e: &mut Execs, arg: Option<&str>, isolated: bool) {
+    if !isolated {
+        e.env_remove("CARGO_HOME");
+        e.env_remove("HOME");
+    }
 
     // And finally actually enable `build-std` for now
     let arg = match arg {
@@ -39,19 +42,41 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
 
 // Helper methods used in the tests below
 trait BuildStd: Sized {
+    /// Set `-Zbuild-std` args and will download dependencies of the standard
+    /// library in users's `CARGO_HOME` (`~/.cargo/`) instead of isolated
+    /// environment `cargo-test-support` usually provides.
+    ///
+    /// The environment is not isolated is to avoid excessive network requests
+    /// and downloads. A side effect is `[BLOCKING]` will show up in stderr,
+    /// as a sign of package cahce lock contention when running other build-std
+    /// tests concurrently.
     fn build_std(&mut self) -> &mut Self;
+
+    /// Like [`BuildStd::build_std`] and is able to specify what crates to build.
     fn build_std_arg(&mut self, arg: &str) -> &mut Self;
+
+    /// Like [`BuildStd::build_std`] but use an isolated `CARGO_HOME` environment
+    /// to avoid package cache lock contention.
+    ///
+    /// Don't use this unless you really need to assert the full stderr
+    /// and avoid any `[BLOCKING]` message.
+    fn build_std_isolated(&mut self) -> &mut Self;
     fn target_host(&mut self) -> &mut Self;
 }
 
 impl BuildStd for Execs {
     fn build_std(&mut self) -> &mut Self {
-        enable_build_std(self, None);
+        enable_build_std(self, None, false);
         self
     }
 
     fn build_std_arg(&mut self, arg: &str) -> &mut Self {
-        enable_build_std(self, Some(arg));
+        enable_build_std(self, Some(arg), false);
+        self
+    }
+
+    fn build_std_isolated(&mut self) -> &mut Self {
+        enable_build_std(self, None, true);
         self
     }
 
@@ -106,19 +131,46 @@ fn basic() {
         )
         .build();
 
-    p.cargo("check").build_std().target_host().run();
+    // HACK: use an isolated the isolated CARGO_HOME environment (`build_std_isolated`)
+    // to avoid `[BLOCKING]` messages (from lock contention with other tests)
+    // from getting in this test's asserts
+    p.cargo("check").build_std_isolated().target_host().run();
     p.cargo("build")
-        .build_std()
+        .build_std_isolated()
         .target_host()
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
-        .with_stderr(
-            "[COMPILING] foo v0.0.1 [..]\n\
-             [FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.cargo("run").build_std().target_host().run();
-    p.cargo("test").build_std().target_host().run();
+    p.cargo("run")
+        .build_std_isolated()
+        .target_host()
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/debug/foo`
+
+"#]])
+        .run();
+    p.cargo("test")
+        .build_std_isolated()
+        .target_host()
+        .with_stderr_data(str![[r#"
+[COMPILING] [..]
+...
+[COMPILING] test v0.0.0 ([..])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
+[RUNNING] tests/smoke.rs (target/[HOST_TARGET]/debug/deps/smoke-[HASH])
+[DOCTEST] foo
+
+"#]])
+        .run();
 
     // Check for hack that removes dylibs.
     let deps_dir = Path::new("target")
@@ -127,6 +179,66 @@ fn basic() {
         .join("deps");
     assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
     assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
+}
+
+#[cargo_test(build_std_real)]
+fn host_proc_macro() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                macro_test = { path = "macro_test" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            extern crate macro_test;
+            use macro_test::make_answer;
+
+            make_answer!();
+
+            fn main() {
+                println!("Hello, World: {}", answer());
+            }
+            "#,
+        )
+        .file(
+            "macro_test/Cargo.toml",
+            r#"
+            [package]
+            name = "macro_test"
+            version = "0.1.0"
+            edition = "2021"
+
+            [lib]
+            proc-macro = true
+            "#,
+        )
+        .file(
+            "macro_test/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro]
+            pub fn make_answer(_item: TokenStream) -> TokenStream {
+                "fn answer() -> u32 { 42 }".parse().unwrap()
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .build_std_arg("std")
+        .build_std_arg("proc_macro")
+        .run();
 }
 
 #[cargo_test(build_std_real)]
@@ -260,15 +372,72 @@ fn remap_path_scope() {
         .build_std()
         .target_host()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[FINISHED] `release` profile [optimized + debuginfo] [..]
-[RUNNING] [..]
-[..]thread '[..]' panicked at [..]src/main.rs:3:[..]",
+        .with_stderr_data(
+            str![[r#"
+[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/release/foo`
+...
+[..]thread '[..]' panicked at [..]src/main.rs:3:[..]:
+[..]remap to /rustc/<hash>[..]
+[..]at /rustc/[..]/library/std/src/[..]
+[..]at ./src/main.rs:3:[..]
+[..]at /rustc/[..]/library/core/src/[..]
+...
+"#]]
+            .unordered(),
         )
-        .with_stderr_contains("remap to /rustc/<hash>")
-        .with_stderr_contains("[..]at /rustc/[..]/library/std/src/[..]")
-        .with_stderr_contains("[..]at src/main.rs:3[..]")
-        .with_stderr_contains("[..]at /rustc/[..]/library/core/src/[..]")
+        .run();
+}
+
+#[cargo_test(build_std_real)]
+fn test_proc_macro() {
+    // See rust-lang/cargo#14735
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("test --lib")
+        .env_remove(cargo_util::paths::dylib_path_envvar())
+        .build_std()
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH])
+
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_real)]
+fn test_panic_abort() {
+    // See rust-lang/cargo#14935
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+            "#,
+        )
+        .file("src/lib.rs", "#![no_std]")
+        .build();
+
+    p.cargo("check")
+        .build_std_arg("std,panic_abort")
+        .env("RUSTFLAGS", "-C panic=abort")
+        .arg("-Zbuild-std-features=panic_immediate_abort")
         .run();
 }

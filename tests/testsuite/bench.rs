@@ -1,7 +1,7 @@
 //! Tests for the `cargo bench` command.
 
-use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project, str};
 
 #[cargo_test(nightly, reason = "bench")]
 fn cargo_bench_simple() {
@@ -33,16 +33,29 @@ fn cargo_bench_simple() {
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("hello\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bench_hello ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench_hello ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -78,15 +91,28 @@ fn bench_bench_implicit() {
         .build();
 
     p.cargo("bench --benches")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-[RUNNING] [..] (target/release/deps/mybench-[..][EXE])
-",
-        )
-        .with_stdout_contains("test run2 ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/mybench-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test run1 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test run2 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -122,14 +148,21 @@ fn bench_bin_implicit() {
         .build();
 
     p.cargo("bench --bins")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-",
-        )
-        .with_stdout_contains("test run1 ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test run1 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -155,14 +188,21 @@ fn bench_tarname() {
         .build();
 
     p.cargo("bench --bench bin2")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/bin2-[..][EXE])
-",
-        )
-        .with_stdout_contains("test run2 ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/bin2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test run2 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -195,10 +235,15 @@ fn bench_multiple_targets() {
         )
         .build();
 
+    // This should not have anything about `run3` in it.
     p.cargo("bench --bench bin1 --bench bin2")
-        .with_stdout_contains("test run1 ... bench: [..]")
-        .with_stdout_contains("test run2 ... bench: [..]")
-        .with_stdout_does_not_contain("[..]run3[..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/bin1.rs (target/release/deps/bin1-[HASH][EXE])
+[RUNNING] benches/bin2.rs (target/release/deps/bin2-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -219,14 +264,22 @@ fn cargo_bench_verbose() {
         .build();
 
     p.cargo("bench -v hello")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/main.rs [..]`
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[..]target/release/deps/foo-[..][EXE] hello --bench`",
-        )
-        .with_stdout_contains("test bench_hello ... bench: [..]")
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] hello --bench`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench_hello ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -267,9 +320,27 @@ fn many_similar_names() {
         .build();
 
     p.cargo("bench")
-        .with_stdout_contains("test bin_bench ... bench:           0 ns/iter (+/- 0)")
-        .with_stdout_contains("test lib_bench ... bench:           0 ns/iter (+/- 0)")
-        .with_stdout_contains("test bench_bench ... bench:           0 ns/iter (+/- 0)")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test lib_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bin_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -293,7 +364,7 @@ fn cargo_bench_failing_test() {
 
             #[bench]
             fn bench_hello(_b: &mut test::Bencher) {
-                assert_eq!(hello(), "nope")
+                assert_eq!(hello(), "nope", "NOPE!")
             }
             "#,
         )
@@ -302,22 +373,23 @@ fn cargo_bench_failing_test() {
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("hello\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
 
     // Force libtest into serial execution so that the test header will be printed.
     p.cargo("bench -- --test-threads=1")
-        .with_stdout_contains("test bench_hello ...[..]")
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])[..]
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("[..]thread '[..]' panicked at[..]")
-        .with_stdout_contains("[..]assertion [..]failed[..]")
-        .with_stdout_contains("[..]left: [..]\"hello\"[..]")
-        .with_stdout_contains("[..]right: [..]\"nope\"[..]")
-        .with_stdout_contains("[..]src/main.rs:15[..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[ERROR] bench failed, to rerun pass `--bin foo`
+
+"#]])
+        .with_stdout_data("...\n[..]NOPE![..]\n...")
         .with_status(101)
         .run();
 }
@@ -375,15 +447,28 @@ fn bench_with_lib_dep() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-[RUNNING] [..] (target/release/deps/baz-[..][EXE])",
-        )
-        .with_stdout_contains("test lib_bench ... bench: [..]")
-        .with_stdout_contains("test bin_bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/baz-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test lib_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bin_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -436,15 +521,23 @@ fn bench_with_deep_lib_dep() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[COMPILING] foo v0.0.1 ([..])
-[COMPILING] bar v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/bar-[..][EXE])",
-        )
-        .with_stdout_contains("test bar_bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] bar v0.0.1 ([ROOT]/bar)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/bar-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bar_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -492,15 +585,28 @@ fn external_bench_explicit() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-[RUNNING] [..] (target/release/deps/bench-[..][EXE])",
-        )
-        .with_stdout_contains("test internal_bench ... bench: [..]")
-        .with_stdout_contains("test external_bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/bench-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test internal_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test external_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -535,15 +641,28 @@ fn external_bench_implicit() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-[RUNNING] [..] (target/release/deps/external-[..][EXE])",
-        )
-        .with_stdout_contains("test internal_bench ... bench: [..]")
-        .with_stdout_contains("test external_bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/external-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test internal_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test external_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -595,9 +714,8 @@ fn bench_autodiscover_2015() {
         .build();
 
     p.cargo("bench bench_basic")
-        .with_stderr(
-            "warning: \
-An explicit [[bench]] section is specified in Cargo.toml which currently
+        .with_stderr_data(str![[r#"
+[WARNING] An explicit [[bench]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other benchmark targets.
 This inference behavior will change in the Rust 2018 edition and the following
 files will be included as a benchmark target:
@@ -612,11 +730,11 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -649,21 +767,38 @@ fn pass_through_command_line() {
         .build();
 
     p.cargo("bench bar")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bar ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 1 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench foo")
-        .with_stderr(
-            "[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test foo ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 1 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -735,14 +870,28 @@ fn lib_bin_same_name() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains_n("test [..] ... bench: [..]", 2)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test lib_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bin_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -780,15 +929,28 @@ fn lib_with_standard_name() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/syntax-[..][EXE])
-[RUNNING] [..] (target/release/deps/bench-[..][EXE])",
-        )
-        .with_stdout_contains("test foo_bench ... bench: [..]")
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] syntax v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/syntax-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/bench-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo_bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -829,13 +991,21 @@ fn lib_with_standard_name2() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/syntax-[..][EXE])",
-        )
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] syntax v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/syntax-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -853,7 +1023,7 @@ fn bench_dylib() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
 
                 [dependencies.bar]
                 path = "bar"
@@ -895,40 +1065,68 @@ fn bench_dylib() {
 
                 [lib]
                 name = "bar"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
             "#,
         )
         .file("bar/src/lib.rs", "pub fn baz() {}")
         .build();
 
     p.cargo("bench -v")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[COMPILING] bar v0.0.1 ([CWD]/bar)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] [..] -C opt-level=3 [..]
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] [..] -C opt-level=3 [..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[..]target/release/deps/foo-[..][EXE] --bench`
-[RUNNING] `[..]target/release/deps/bench-[..][EXE] --bench`",
-        )
-        .with_stdout_contains_n("test foo ... bench: [..]", 2)
+[RUNNING] [..] -C opt-level=3 [..]
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] --bench`
+[RUNNING] `[..]target/release/deps/bench-[HASH][EXE] --bench`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.root().move_into_the_past();
     p.cargo("bench -v")
-        .with_stderr(
-            "\
-[FRESH] bar v0.0.1 ([CWD]/bar)
-[FRESH] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[..]target/release/deps/foo-[..][EXE] --bench`
-[RUNNING] `[..]target/release/deps/bench-[..][EXE] --bench`",
-        )
-        .with_stdout_contains_n("test foo ... bench: [..]", 2)
+        .with_stderr_data(str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] --bench`
+[RUNNING] `[..]target/release/deps/bench-[HASH][EXE] --bench`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -960,21 +1158,38 @@ fn bench_twice_with_build_cmd() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test foo ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench")
-        .with_stderr(
-            "[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test foo ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [..]
+[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1047,18 +1262,31 @@ fn bench_with_examples() {
         .build();
 
     p.cargo("bench -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v6.6.6 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v6.6.6 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[CWD]/target/release/deps/foo-[..][EXE] --bench`
-[RUNNING] `[CWD]/target/release/deps/testb1-[..][EXE] --bench`",
-        )
-        .with_stdout_contains("test bench_bench1 ... bench: [..]")
-        .with_stdout_contains("test bench_bench2 ... bench: [..]")
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/deps/testb1-[HASH][EXE] --bench`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench_bench1 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_bench2 ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1089,13 +1317,21 @@ fn test_a_bench() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/b-[..][EXE])",
-        )
-        .with_stdout_contains("test foo ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] [..] (target/debug/deps/b-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1119,14 +1355,13 @@ fn test_bench_no_run() {
         .build();
 
     p.cargo("bench --no-run")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[EXECUTABLE] benches src/lib.rs (target/release/deps/foo-[..][EXE])
-[EXECUTABLE] benches/bbaz.rs (target/release/deps/bbaz-[..][EXE])
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[EXECUTABLE] benches src/lib.rs (target/release/deps/foo-[HASH][EXE])
+[EXECUTABLE] benches/bbaz.rs (target/release/deps/bbaz-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -1150,12 +1385,11 @@ fn test_bench_no_run_emit_json() {
         .build();
 
     p.cargo("bench --no-run --message-format json")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1184,7 +1418,7 @@ fn test_bench_no_fail_fast() {
 
             #[bench]
             fn bench_nope(_b: &mut test::Bencher) {
-                assert_eq!("nope", hello())
+                assert_eq!("nope", hello(), "NOPE!")
             }
             "#,
         )
@@ -1194,30 +1428,34 @@ fn test_bench_no_fail_fast() {
                 #![feature(test)]
                 extern crate test;
                 #[bench]
-                fn b1_fail(_b: &mut test::Bencher) { assert_eq!(1, 2); }
+                fn b1_fail(_b: &mut test::Bencher) { assert_eq!(1, 2, "ONE=TWO"); }
             "#,
         )
         .build();
 
     p.cargo("bench --no-fail-fast -- --test-threads=1")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 [..]
-[FINISHED] `bench` profile [..]
-[RUNNING] unittests src/main.rs (target/release/deps/foo[..])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
 [ERROR] bench failed, to rerun pass `--bin foo`
-[RUNNING] benches/b1.rs (target/release/deps/b1[..])
+[RUNNING] benches/b1.rs (target/release/deps/b1-[HASH][EXE])
 [ERROR] bench failed, to rerun pass `--bench b1`
 [ERROR] 2 targets failed:
     `--bin foo`
     `--bench b1`
-",
+
+"#]])
+        .with_stdout_data(
+            r#"
+...
+[..]NOPE![..]
+...
+[..]ONE=TWO[..]
+...
+"#,
         )
-        .with_stdout_contains("running 2 tests")
-        .with_stdout_contains("test bench_hello [..]")
-        .with_stdout_contains("test bench_nope [..]")
-        .with_stdout_contains("test b1_fail [..]")
         .run();
 }
 
@@ -1306,10 +1544,25 @@ fn test_bench_multiple_packages() {
         .build();
 
     p.cargo("bench -p bar -p baz")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/bbaz-[..][EXE])")
-        .with_stdout_contains("test bench_baz ... bench: [..]")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/bbar-[..][EXE])")
-        .with_stdout_contains("test bench_bar ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[RUNNING] [..] (target/release/deps/bbaz-[HASH][EXE])
+[RUNNING] [..] (target/release/deps/bbar-[HASH][EXE])
+
+"#]])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] bar v0.1.0 ([ROOT]/bar)
+[COMPILING] baz v0.1.0 ([ROOT]/baz)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] benches/bbar.rs (target/release/deps/bbar-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] benches/bbaz.rs (target/release/deps/bbaz-[HASH][EXE])
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1360,10 +1613,41 @@ fn bench_all_workspace() {
         .build();
 
     p.cargo("bench --workspace")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/bar-[..][EXE])")
-        .with_stdout_contains("test bench_bar ... bench: [..]")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/foo-[..][EXE])")
-        .with_stdout_contains("test bench_foo ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_foo ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1405,11 +1689,20 @@ fn bench_all_exclude() {
         .build();
 
     p.cargo("bench --workspace --exclude baz")
-        .with_stdout_contains(
-            "\
+        .with_stdout_data(str![[r#"
+
 running 1 test
-test bar ... bench:           [..] ns/iter (+/- [..])",
-        )
+test bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1451,11 +1744,20 @@ fn bench_all_exclude_glob() {
         .build();
 
     p.cargo("bench --workspace --exclude '*z'")
-        .with_stdout_contains(
-            "\
+        .with_stdout_data(str![[r#"
+
 running 1 test
-test bar ... bench:           [..] ns/iter (+/- [..])",
-        )
+test bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1501,10 +1803,44 @@ fn bench_all_virtual_manifest() {
 
     // The order in which bar and baz are built is not guaranteed
     p.cargo("bench --workspace")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/baz-[..][EXE])")
-        .with_stdout_contains("test bench_baz ... bench: [..]")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/bar-[..][EXE])")
-        .with_stdout_contains("test bench_bar ... bench: [..]")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_baz ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1548,12 +1884,29 @@ fn bench_virtual_manifest_glob() {
         )
         .build();
 
-    // The order in which bar and baz are built is not guaranteed
+    // This should not have `bar` built or benched
     p.cargo("bench -p '*z'")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/baz-[..][EXE])")
-        .with_stdout_contains("test bench_baz ... bench: [..]")
-        .with_stderr_does_not_contain("[RUNNING] [..] (target/release/deps/bar-[..][EXE])")
-        .with_stdout_does_not_contain("test bench_bar ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_baz ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1589,11 +1942,15 @@ fn legacy_bench_name() {
         .build();
 
     p.cargo("bench")
-        .with_stderr_contains(
-            "\
-[WARNING] path `[..]src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
-please set bench.path in Cargo.toml",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] path `src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
+please set bench.path in Cargo.toml
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/foo-[HASH][EXE])
+[RUNNING] src/bench.rs (target/release/deps/bench-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -1636,10 +1993,44 @@ fn bench_virtual_manifest_all_implied() {
     // The order in which bar and baz are built is not guaranteed
 
     p.cargo("bench")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/baz-[..][EXE])")
-        .with_stdout_contains("test bench_baz ... bench: [..]")
-        .with_stderr_contains("[RUNNING] [..] (target/release/deps/bar-[..][EXE])")
-        .with_stdout_contains("test bench_bar ... bench: [..]")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_bar ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench_baz ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1661,31 +2052,41 @@ fn json_artifact_includes_executable_for_benchmark() {
         .build();
 
     p.cargo("bench --no-run --message-format=json")
-        .with_json(
-            r#"
-                {
-                    "executable": "[..]/foo/target/release/deps/benchmark-[..][EXE]",
-                    "features": [],
-                    "filenames": "{...}",
-                    "fresh": false,
-                    "package_id": "path+file:///[..]/foo#0.0.1",
-                    "manifest_path": "[..]",
-                    "profile": "{...}",
-                    "reason": "compiler-artifact",
-                    "target": {
-                        "crate_types": [ "bin" ],
-                        "kind": [ "bench" ],
-                        "doc": false,
-                        "doctest": false,
-                        "edition": "2015",
-                        "name": "benchmark",
-                        "src_path": "[..]/foo/benches/benchmark.rs",
-                        "test": false
-                    }
-                }
-
-                {"reason": "build-finished", "success": true}
-            "#,
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "executable": "[..]",
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": false,
+      "doctest": false,
+      "edition": "2015",
+      "kind": [
+        "bench"
+      ],
+      "name": "benchmark",
+      "src_path": "[ROOT]/foo/benches/benchmark.rs",
+      "test": false
+    }
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
@@ -1717,12 +2118,12 @@ fn cargo_bench_print_env_verbose() {
         )
         .build();
     p.cargo("bench -vv")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc[..]`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc[..]`
 [FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/release/deps/foo-[..][EXE] --bench`",
-        )
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] [ROOT]/foo/target/release/deps/foo-[HASH][EXE] --bench`
+
+"#]])
         .run();
 }

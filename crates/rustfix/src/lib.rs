@@ -18,6 +18,10 @@
 //! 3. Create a [`CodeFix`] with the source of a file to modify.
 //! 4. Call [`CodeFix::apply`] to apply a change.
 //! 5. Call [`CodeFix::finish`] to get the result and write it back to disk.
+//!
+//! > This crate is maintained by the Cargo team, primarily for use by Cargo and Rust compiler test suite
+//! > and not intended for external use (except as a transitive dependency). This
+//! > crate may make major changes to its APIs or be deprecated without warning.
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -163,8 +167,6 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         }
     }
 
-    let snippets = diagnostic.spans.iter().map(span_to_snippet).collect();
-
     let solutions: Vec<_> = diagnostic
         .children
         .iter()
@@ -200,7 +202,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     } else {
         Some(Suggestion {
             message: diagnostic.message.clone(),
-            snippets,
+            snippets: diagnostic.spans.iter().map(span_to_snippet).collect(),
             solutions,
         })
     }
@@ -213,6 +215,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
 /// 1. Feeds the source of a file to [`CodeFix::new`].
 /// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
 /// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
+#[derive(Clone)]
 pub struct CodeFix {
     data: replace::Data,
     /// Whether or not the data has been modified.
@@ -230,13 +233,27 @@ impl CodeFix {
 
     /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
-        for sol in &suggestion.solutions {
-            for r in &sol.replacements {
+        for solution in &suggestion.solutions {
+            for r in &solution.replacements {
                 self.data
-                    .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
-                self.modified = true;
+                    .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
+                    .inspect_err(|_| self.data.restore())?;
             }
         }
+        self.data.commit();
+        self.modified = true;
+        Ok(())
+    }
+
+    /// Applies an individual solution from a [`Suggestion`].
+    pub fn apply_solution(&mut self, solution: &Solution) -> Result<(), Error> {
+        for r in &solution.replacements {
+            self.data
+                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
+                .inspect_err(|_| self.data.restore())?;
+        }
+        self.data.commit();
+        self.modified = true;
         Ok(())
     }
 
@@ -251,11 +268,25 @@ impl CodeFix {
     }
 }
 
-/// Applies multiple `suggestions` to the given `code`.
+/// Applies multiple `suggestions` to the given `code`, handling certain conflicts automatically.
+///
+/// If a replacement in a suggestion exactly matches a replacement of a previously applied solution,
+/// that entire suggestion will be skipped without generating an error.
+/// This is currently done to alleviate issues like rust-lang/rust#51211,
+/// although it may be removed if that's fixed deeper in the compiler.
+///
+/// The intent of this design is that the overall application process
+/// should repeatedly apply non-conflicting suggestions then rëevaluate the result,
+/// looping until either there are no more suggestions to apply or some budget is exhausted.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        fix.apply(suggestion)?;
+        fix.apply(suggestion).or_else(|err| match err {
+            Error::AlreadyReplaced {
+                is_identical: true, ..
+            } => Ok(()),
+            _ => Err(err),
+        })?;
     }
     fix.finish()
 }

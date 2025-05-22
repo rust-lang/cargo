@@ -1,60 +1,66 @@
-/*
-# Git Testing Support
+//! # Git Testing Support
+//!
+//! ## Creating a git dependency
+//! [`new()`] is an easy way to create a new git repository containing a
+//! project that you can then use as a dependency. It will automatically add all
+//! the files you specify in the project and commit them to the repository.
+//!
+//! ### Example:
+//!
+//! ```no_run
+//! # use cargo_test_support::project;
+//! # use cargo_test_support::basic_manifest;
+//! # use cargo_test_support::git;
+//! let git_project = git::new("dep1", |project| {
+//!     project
+//!         .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+//!         .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
+//! });
+//!
+//! // Use the `url()` method to get the file url to the new repository.
+//! let p = project()
+//!     .file("Cargo.toml", &format!(r#"
+//!         [package]
+//!         name = "a"
+//!         version = "1.0.0"
+//!
+//!         [dependencies]
+//!         dep1 = {{ git = '{}' }}
+//!     "#, git_project.url()))
+//!     .file("src/lib.rs", "extern crate dep1;")
+//!     .build();
+//! ```
+//!
+//! ## Manually creating repositories
+//!
+//! [`repo()`] can be used to create a [`RepoBuilder`] which provides a way of
+//! adding files to a blank repository and committing them.
+//!
+//! If you want to then manipulate the repository (such as adding new files or
+//! tags), you can use `git2::Repository::open()` to open the repository and then
+//! use some of the helper functions in this file to interact with the repository.
 
-## Creating a git dependency
-`git::new()` is an easy way to create a new git repository containing a
-project that you can then use as a dependency. It will automatically add all
-the files you specify in the project and commit them to the repository.
-Example:
-
-```
-let git_project = git::new("dep1", |project| {
-    project
-        .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
-        .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
-});
-
-// Use the `url()` method to get the file url to the new repository.
-let p = project()
-    .file("Cargo.toml", &format!(r#"
-        [package]
-        name = "a"
-        version = "1.0.0"
-
-        [dependencies]
-        dep1 = {{ git = '{}' }}
-    "#, git_project.url()))
-    .file("src/lib.rs", "extern crate dep1;")
-    .build();
-```
-
-## Manually creating repositories
-`git::repo()` can be used to create a `RepoBuilder` which provides a way of
-adding files to a blank repository and committing them.
-
-If you want to then manipulate the repository (such as adding new files or
-tags), you can use `git2::Repository::open()` to open the repository and then
-use some of the helper functions in this file to interact with the repository.
-
-*/
-
-use crate::{path2url, project, Project, ProjectBuilder};
+use crate::{paths::CargoPathExt, project, Project, ProjectBuilder, SymlinkBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 use url::Url;
 
+/// Manually construct a [`Repository`]
+///
+/// See also [`new`], [`repo`]
 #[must_use]
 pub struct RepoBuilder {
     repo: git2::Repository,
     files: Vec<PathBuf>,
 }
 
+/// See [`new`]
 pub struct Repository(git2::Repository);
 
-/// Create a `RepoBuilder` to build a new git repository.
+/// Create a [`RepoBuilder`] to build a new git repository.
 ///
-/// Call `build()` to finalize and create the repository.
+/// Call [`RepoBuilder::build()`] to finalize and create the repository.
 pub fn repo(p: &Path) -> RepoBuilder {
     RepoBuilder::init(p)
 }
@@ -74,6 +80,13 @@ impl RepoBuilder {
         let mut me = self.nocommit_file(path, contents);
         me.files.push(PathBuf::from(path));
         me
+    }
+
+    /// Create a symlink to a directory
+    pub fn nocommit_symlink_dir<T: AsRef<Path>>(self, dst: T, src: T) -> Self {
+        let workdir = self.repo.workdir().unwrap();
+        SymlinkBuilder::new_dir(workdir.join(dst), workdir.join(src)).mk();
+        self
     }
 
     /// Add a file that will be left in the working directory, but not added
@@ -111,7 +124,7 @@ impl Repository {
     }
 
     pub fn url(&self) -> Url {
-        path2url(self.0.workdir().unwrap().to_path_buf())
+        self.0.workdir().unwrap().to_url()
     }
 
     pub fn revparse_head(&self) -> String {
@@ -123,7 +136,7 @@ impl Repository {
     }
 }
 
-/// Initialize a new repository at the given path.
+/// *(`git2`)* Initialize a new repository at the given path.
 pub fn init(path: &Path) -> git2::Repository {
     default_search_path();
     let repo = t!(git2::Repository::init(path));
@@ -151,7 +164,7 @@ fn default_repo_cfg(repo: &git2::Repository) {
     t!(cfg.set_str("user.name", "Foo Bar"));
 }
 
-/// Create a new git repository with a project.
+/// Create a new [`Project`] in a git [`Repository`]
 pub fn new<F>(name: &str, callback: F) -> Project
 where
     F: FnOnce(ProjectBuilder) -> ProjectBuilder,
@@ -159,8 +172,7 @@ where
     new_repo(name, callback).0
 }
 
-/// Create a new git repository with a project.
-/// Returns both the Project and the git Repository.
+/// Create a new [`Project`] with access to the [`Repository`]
 pub fn new_repo<F>(name: &str, callback: F) -> (Project, git2::Repository)
 where
     F: FnOnce(ProjectBuilder) -> ProjectBuilder,
@@ -175,14 +187,14 @@ where
     (git_project, repo)
 }
 
-/// Add all files in the working directory to the git index.
+/// *(`git2`)* Add all files in the working directory to the git index
 pub fn add(repo: &git2::Repository) {
     let mut index = t!(repo.index());
     t!(index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None));
     t!(index.write());
 }
 
-/// Add a git submodule to the repository.
+/// *(`git2`)* Add a git submodule to the repository
 pub fn add_submodule<'a>(
     repo: &'a git2::Repository,
     url: &str,
@@ -200,7 +212,7 @@ pub fn add_submodule<'a>(
     s
 }
 
-/// Commit changes to the git repository.
+/// *(`git2`)* Commit changes to the git repository
 pub fn commit(repo: &git2::Repository) -> git2::Oid {
     let tree_id = t!(t!(repo.index()).write_tree());
     let sig = t!(repo.signature());
@@ -219,7 +231,7 @@ pub fn commit(repo: &git2::Repository) -> git2::Oid {
     ))
 }
 
-/// Create a new tag in the git repository.
+/// *(`git2`)* Create a new tag in the git repository
 pub fn tag(repo: &git2::Repository, name: &str) {
     let head = repo.head().unwrap().target().unwrap();
     t!(repo.tag(

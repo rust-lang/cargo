@@ -10,6 +10,10 @@ handle fetching remote repositories instead of using the built-in support.
 This can be enabled with the `CARGO_NET_GIT_FETCH_WITH_CLI=true` environment
 variable.
 
+> **Note:** Cargo does not require authentication for public git dependencies
+> so if you see an authentication failure in that context, ensure that the
+> URL is correct.
+
 ## HTTPS authentication
 
 HTTPS authentication requires the [`credential.helper`] mechanism. There are

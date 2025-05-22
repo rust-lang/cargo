@@ -1,15 +1,12 @@
 [package]
 name = "cargo-test-support"
-version = "0.2.0"
+version = "0.7.5"
 edition.workspace = true
-rust-version = "1.77"  # MSRV:1
+rust-version = "1.87"  # MSRV:1
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = "Testing framework for Cargo's testsuite."
-
-[lib]
-doctest = false
 
 [dependencies]
 anstream.workspace = true
@@ -24,6 +21,7 @@ git2.workspace = true
 glob.workspace = true
 itertools.workspace = true
 pasetors.workspace = true
+regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 snapbox.workspace = true

@@ -11,4 +11,9 @@ Flag with optional value.
 Alternate syntax for optional value (with required = for disambiguation).
 {{/option}}
 
+{{#option "`--split-block`"}}
+An option where the description has a `block statement
+that is split across multiple lines`
+{{/option}}
+
 {{/options}}

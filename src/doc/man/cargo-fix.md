@@ -93,7 +93,7 @@ Fix code even if a VCS was not detected.
 {{/option}}
 
 {{#option "`--allow-dirty`" }}
-Fix code even if the working directory has changes.
+Fix code even if the working directory has changes (including staged changes).
 {{/option}}
 
 {{#option "`--allow-staged`" }}
@@ -124,8 +124,6 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{> options-profile-legacy-check }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -149,7 +147,11 @@ When no target selection options are given, `cargo fix` will fix all targets
 {{#options}}
 {{> options-manifest-path }}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

@@ -391,6 +391,11 @@ impl Profiles {
             .get(name)
             .ok_or_else(|| anyhow::format_err!("profile `{}` is not defined", name))
     }
+
+    /// Returns an iterator over all profile names known to Cargo.
+    pub fn profile_names(&self) -> impl Iterator<Item = InternedString> + '_ {
+        self.by_name.keys().copied()
+    }
 }
 
 /// An object used for handling the profile hierarchy.
@@ -1003,16 +1008,16 @@ pub struct UnitFor {
     ///     └── shared_dep build.rs
     /// ```
     ///
-    /// In this example, `foo build.rs` is HOST=true, HOST_FEATURES=false.
+    /// In this example, `foo build.rs` is `HOST=true`, `HOST_FEATURES=false`.
     /// This is so that `foo build.rs` gets the profile settings for build
-    /// scripts (HOST=true) and features of foo (HOST_FEATURES=false) because
+    /// scripts (`HOST=true`) and features of foo (`HOST_FEATURES=false`) because
     /// build scripts need to know which features their package is being built
     /// with.
     ///
     /// But in the case of `shared_dep`, when built as a build dependency,
     /// both flags are true (it only wants the build-dependency features).
     /// When `shared_dep` is built as a normal dependency, then `shared_dep
-    /// build.rs` is HOST=true, HOST_FEATURES=false for the same reasons that
+    /// build.rs` is `HOST=true`, `HOST_FEATURES=false` for the same reasons that
     /// foo's build script is set that way.
     host_features: bool,
     /// How Cargo processes the `panic` setting or profiles.
@@ -1139,7 +1144,7 @@ impl UnitFor {
 
     /// Returns a new copy updated based on the target dependency.
     ///
-    /// This is where the magic happens that the host/host_features settings
+    /// This is where the magic happens that the `host`/`host_features` settings
     /// transition in a sticky fashion. As the dependency graph is being
     /// built, once those flags are set, they stay set for the duration of
     /// that portion of tree.
@@ -1414,7 +1419,12 @@ fn validate_packages_unmatched(
             })
             .collect();
         if name_matches.is_empty() {
-            let suggestion = closest_msg(&spec.name(), resolve.iter(), |p| p.name().as_str());
+            let suggestion = closest_msg(
+                &spec.name(),
+                resolve.iter(),
+                |p| p.name().as_str(),
+                "package",
+            );
             shell.warn(format!(
                 "profile package spec `{}` in profile `{}` did not match any packages{}",
                 spec, name, suggestion

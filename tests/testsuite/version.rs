@@ -1,5 +1,6 @@
 //! Tests for displaying the cargo version.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::{cargo_process, project};
 
 #[cargo_test]
@@ -7,15 +8,15 @@ fn simple() {
     let p = project().build();
 
     p.cargo("version")
-        .with_stdout(&format!("cargo {}\n", cargo::version()))
+        .with_stdout_data(&format!("cargo {}\n", cargo::version()))
         .run();
 
     p.cargo("--version")
-        .with_stdout(&format!("cargo {}\n", cargo::version()))
+        .with_stdout_data(&format!("cargo {}\n", cargo::version()))
         .run();
 
     p.cargo("-V")
-        .with_stdout(&format!("cargo {}\n", cargo::version()))
+        .with_stdout_data(&format!("cargo {}\n", cargo::version()))
         .run();
 }
 
@@ -51,10 +52,19 @@ fn version_works_with_bad_target_dir() {
 fn verbose() {
     // This is mainly to check that it doesn't explode.
     cargo_process("-vV")
-        .with_stdout_contains(&format!("cargo {}", cargo::version()))
-        .with_stdout_contains("host: [..]")
-        .with_stdout_contains("libgit2: [..]")
-        .with_stdout_contains("libcurl: [..]")
-        .with_stdout_contains("os: [..]")
+        .with_stdout_data(format!(
+            "\
+cargo {}
+release: [..]
+commit-hash: [..]
+commit-date: [..]
+host: [HOST_TARGET]
+libgit2: [..] (sys:[..] [..])
+libcurl: [..] (sys:[..] [..])
+...
+os: [..]
+",
+            cargo::version()
+        ))
         .run();
 }

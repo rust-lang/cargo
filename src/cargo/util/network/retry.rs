@@ -104,19 +104,26 @@ impl<'a> Retry<'a> {
     pub fn r#try<T>(&mut self, f: impl FnOnce() -> CargoResult<T>) -> RetryResult<T> {
         match f() {
             Err(ref e) if maybe_spurious(e) && self.retries < self.max_retries => {
-                let err_msg = e
-                    .downcast_ref::<HttpNotSuccessful>()
+                let err = e.downcast_ref::<HttpNotSuccessful>();
+                let err_msg = err
                     .map(|http_err| http_err.display_short())
                     .unwrap_or_else(|| e.root_cause().to_string());
+                let left_retries = self.max_retries - self.retries;
                 let msg = format!(
-                    "spurious network error ({} tries remaining): {err_msg}",
-                    self.max_retries - self.retries,
+                    "spurious network error ({} {} remaining): {err_msg}",
+                    left_retries,
+                    if left_retries != 1 { "tries" } else { "try" }
                 );
                 if let Err(e) = self.gctx.shell().warn(msg) {
                     return RetryResult::Err(e);
                 }
                 self.retries += 1;
-                RetryResult::Retry(self.next_sleep_ms())
+                let sleep = err
+                    .and_then(|v| Self::parse_retry_after(v, &jiff::Timestamp::now()))
+                    // Limit the Retry-After to a maximum value to avoid waiting too long.
+                    .map(|retry_after| retry_after.min(MAX_RETRY_SLEEP_MS))
+                    .unwrap_or_else(|| self.next_sleep_ms());
+                RetryResult::Retry(sleep)
             }
             Err(e) => RetryResult::Err(e),
             Ok(r) => RetryResult::Success(r),
@@ -130,14 +137,50 @@ impl<'a> Retry<'a> {
         }
 
         if self.retries == 1 {
-            let mut rng = rand::thread_rng();
-            INITIAL_RETRY_SLEEP_BASE_MS + rng.gen_range(0..INITIAL_RETRY_JITTER_MS)
+            let mut rng = rand::rng();
+            INITIAL_RETRY_SLEEP_BASE_MS + rng.random_range(0..INITIAL_RETRY_JITTER_MS)
         } else {
             min(
                 ((self.retries - 1) * 3) * 1000 + INITIAL_RETRY_SLEEP_BASE_MS,
                 MAX_RETRY_SLEEP_MS,
             )
         }
+    }
+
+    /// Parse the HTTP `Retry-After` header.
+    /// Returns the number of milliseconds to wait before retrying according to the header.
+    fn parse_retry_after(response: &HttpNotSuccessful, now: &jiff::Timestamp) -> Option<u64> {
+        // Only applies to HTTP 429 (too many requests) and 503 (service unavailable).
+        if !matches!(response.code, 429 | 503) {
+            return None;
+        }
+
+        // Extract the Retry-After header value.
+        let retry_after = response
+            .headers
+            .iter()
+            .filter_map(|h| h.split_once(':'))
+            .map(|(k, v)| (k.trim(), v.trim()))
+            .find(|(k, _)| k.eq_ignore_ascii_case("retry-after"))?
+            .1;
+
+        // First option: Retry-After is a positive integer of seconds to wait.
+        if let Ok(delay_secs) = retry_after.parse::<u32>() {
+            return Some(delay_secs as u64 * 1000);
+        }
+
+        // Second option: Retry-After is a future HTTP date string that tells us when to retry.
+        if let Ok(retry_time) = jiff::fmt::rfc2822::parse(retry_after) {
+            let diff_ms = now
+                .until(&retry_time)
+                .unwrap()
+                .total(jiff::Unit::Millisecond)
+                .unwrap();
+            if diff_ms > 0.0 {
+                return Some(diff_ms as u64);
+            }
+        }
+        None
     }
 }
 
@@ -167,7 +210,7 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
     if let Some(not_200) = err.downcast_ref::<HttpNotSuccessful>() {
-        if 500 <= not_200.code && not_200.code < 600 {
+        if 500 <= not_200.code && not_200.code < 600 || not_200.code == 429 {
             return true;
         }
     }
@@ -314,4 +357,48 @@ fn curle_http2_stream_is_spurious() {
     let code = curl_sys::CURLE_HTTP2_STREAM;
     let err = curl::Error::new(code);
     assert!(maybe_spurious(&err.into()));
+}
+
+#[test]
+fn retry_after_parsing() {
+    use crate::core::Shell;
+    fn spurious(code: u32, header: &str) -> HttpNotSuccessful {
+        HttpNotSuccessful {
+            code,
+            url: "Uri".to_string(),
+            ip: None,
+            body: Vec::new(),
+            headers: vec![header.to_string()],
+        }
+    }
+
+    // Start of year 2025.
+    let now = jiff::Timestamp::new(1735689600, 0).unwrap();
+    let headers = spurious(429, "Retry-After: 10");
+    assert_eq!(Retry::parse_retry_after(&headers, &now), Some(10_000));
+    let headers = spurious(429, "retry-after: Wed, 01 Jan 2025 00:00:10 GMT");
+    let actual = Retry::parse_retry_after(&headers, &now).unwrap();
+    assert_eq!(10000, actual);
+
+    let headers = spurious(429, "Content-Type: text/html");
+    assert_eq!(Retry::parse_retry_after(&headers, &now), None);
+
+    let headers = spurious(429, "retry-after: Fri, 01 Jan 2000 00:00:00 GMT");
+    assert_eq!(Retry::parse_retry_after(&headers, &now), None);
+
+    let headers = spurious(429, "retry-after: -1");
+    assert_eq!(Retry::parse_retry_after(&headers, &now), None);
+
+    let headers = spurious(400, "retry-after: 1");
+    assert_eq!(Retry::parse_retry_after(&headers, &now), None);
+
+    let gctx = GlobalContext::default().unwrap();
+    *gctx.shell() = Shell::from_write(Box::new(Vec::new()));
+    let mut retry = Retry::new(&gctx).unwrap();
+    match retry
+        .r#try(|| -> CargoResult<()> { Err(anyhow::Error::from(spurious(429, "Retry-After: 7"))) })
+    {
+        RetryResult::Retry(sleep) => assert_eq!(sleep, 7_000),
+        _ => panic!("unexpected non-retry"),
+    }
 }

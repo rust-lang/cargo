@@ -3,7 +3,7 @@
 //!
 //! These tests use a replacement of rustc ("rustc-fix-shim") which emits JSON
 //! messages based on what the test is exercising. It uses an environment
-//! variable RUSTC_FIX_SHIM_SEQUENCE which determines how it should behave
+//! variable `RUSTC_FIX_SHIM_SEQUENCE` which determines how it should behave
 //! based on how many times `rustc` has run. It keeps track of how many times
 //! rustc has run in a local file.
 //!
@@ -14,9 +14,11 @@
 //! The [`expect_fix_runs_rustc_n_times`] function handles setting everything
 //! up, and verifying the results.
 
-use cargo_test_support::{basic_manifest, paths, project, tools, Execs};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_manifest, paths, project, str, tools, Execs};
 
 /// The action that the `rustc` shim should take in the current sequence of
 /// events.
@@ -58,7 +60,7 @@ enum Step {
 fn expect_fix_runs_rustc_n_times(
     sequence: &[Step],
     extra_execs: impl FnOnce(&mut Execs),
-    expected_stderr: &str,
+    expected_stderr: impl IntoData,
     expected_lib_rs: &str,
 ) {
     let rustc = rustc_for_cargo_fix();
@@ -71,7 +73,7 @@ fn expect_fix_runs_rustc_n_times(
     execs
         .env("RUSTC", &rustc)
         .env("RUSTC_FIX_SHIM_SEQUENCE", sequence_str)
-        .with_stderr(expected_stderr);
+        .with_stderr_data(expected_stderr);
     extra_execs(&mut execs);
     execs.run();
     let lib_rs = p.read_file("src/lib.rs");
@@ -268,10 +270,11 @@ fn fix_no_suggestions() {
     expect_fix_runs_rustc_n_times(
         &[Step::SuccessNoOutput],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -282,11 +285,12 @@ fn fix_one_suggestion() {
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::SuccessNoOutput],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] [..]
-",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 1",
     );
 }
@@ -297,11 +301,12 @@ fn fix_one_overlapping() {
     expect_fix_runs_rustc_n_times(
         &[Step::TwoFixOverlapping, Step::SuccessNoOutput],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] [..]
-",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 2",
     );
 }
@@ -319,9 +324,9 @@ fn fix_overlapping_max() {
             Step::TwoFixOverlapping,
         ],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
-warning: error applying suggestions to `src/lib.rs`
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] error applying suggestions to `src/lib.rs`
 
 The full error message was:
 
@@ -339,9 +344,10 @@ fixing code with the `--broken-code` flag
 [FIXED] src/lib.rs (4 fixes)
 rustc fix shim comment 5
 rustc fix shim comment 6
-warning: `foo` (lib) generated 2 warnings (run `cargo fix --lib -p foo` to apply 2 suggestions)
-[FINISHED] [..]
-",
+[WARNING] `foo` (lib) generated 2 warnings (run `cargo fix --lib -p foo` to apply 2 suggestions)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 5",
     );
 }
@@ -353,9 +359,9 @@ fn fix_verification_failed() {
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::Error],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
-warning: failed to automatically apply fixes suggested by rustc to crate `foo`
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
 
 after fixes were automatically applied the compiler reported errors within these files:
 
@@ -375,9 +381,10 @@ rustc fix shim error count=2
 Original diagnostics will follow.
 
 rustc fix shim comment 1
-warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] [..]
-",
+[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -392,9 +399,9 @@ fn fix_verification_failed_clippy() {
         |execs| {
             execs.env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver());
         },
-        "\
-[CHECKING] foo [..]
-warning: failed to automatically apply fixes suggested by rustc to crate `foo`
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
 
 after fixes were automatically applied the compiler reported errors within these files:
 
@@ -414,9 +421,10 @@ rustc fix shim error count=2
 Original diagnostics will follow.
 
 rustc fix shim comment 1
-warning: `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] [..]
-",
+[WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -427,12 +435,13 @@ fn warnings() {
     expect_fix_runs_rustc_n_times(
         &[Step::Warning],
         |_execs| {},
-        "\
-[CHECKING] foo [..]
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 rustc fix shim warning count=1
-warning: `foo` (lib) generated 1 warning
-[FINISHED] [..]
-",
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -445,11 +454,12 @@ fn starts_with_error() {
         |execs| {
             execs.with_status(101);
         },
-        "\
-[CHECKING] foo [..]
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 rustc fix shim error count=1
-error: could not compile `foo` (lib) due to 1 previous error
-",
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -462,11 +472,12 @@ fn broken_code_no_suggestions() {
         |execs| {
             execs.arg("--broken-code").with_status(101);
         },
-        "\
-[CHECKING] foo [..]
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 rustc fix shim error count=1
-error: could not compile `foo` (lib) due to 1 previous error
-",
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]],
         "// fix-count 0",
     );
 }
@@ -479,9 +490,9 @@ fn broken_code_one_suggestion() {
         |execs| {
             execs.arg("--broken-code").with_status(101);
         },
-        "\
-[CHECKING] foo [..]
-warning: failed to automatically apply fixes suggested by rustc to crate `foo`
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
 
 after fixes were automatically applied the compiler reported errors within these files:
 
@@ -502,9 +513,10 @@ Original diagnostics will follow.
 
 rustc fix shim comment 1
 rustc fix shim error count=2
-warning: `foo` (lib) generated 1 warning
-error: could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
-",
+[WARNING] `foo` (lib) generated 1 warning
+[ERROR] could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
+
+"#]],
         "// fix-count 1",
     );
 }

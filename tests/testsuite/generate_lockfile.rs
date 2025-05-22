@@ -1,8 +1,10 @@
 //! Tests for the `cargo generate-lockfile` command.
 
-use cargo_test_support::registry::{Package, RegistryBuilder};
-use cargo_test_support::{basic_manifest, paths, project, ProjectBuilder};
 use std::fs;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{Package, RegistryBuilder};
+use cargo_test_support::{basic_manifest, paths, project, str, ProjectBuilder};
 
 #[cargo_test]
 fn adding_and_removing_packages() {
@@ -59,15 +61,35 @@ fn adding_and_removing_packages() {
 #[cargo_test]
 fn no_index_update_sparse() {
     let _registry = RegistryBuilder::new().http_index().build();
-    no_index_update();
+    no_index_update(
+        str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+
+"#]],
+        str![[r#"
+[LOCKING] 1 package to latest compatible version
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn no_index_update_git() {
-    no_index_update();
+    no_index_update(
+        str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+
+"#]],
+        str![[r#"
+[LOCKING] 1 package to latest compatible version
+
+"#]],
+    );
 }
 
-fn no_index_update() {
+fn no_index_update(expected: impl IntoData, expected_unstable_option: impl IntoData) {
     Package::new("serde", "1.0.0").publish();
 
     let p = project()
@@ -87,22 +109,13 @@ fn no_index_update() {
         .build();
 
     p.cargo("generate-lockfile")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[LOCKING] 2 packages
-",
-        )
+        .with_stderr_data(expected)
         .run();
 
     p.cargo("generate-lockfile -Zno-index-update")
         .masquerade_as_nightly_cargo(&["no-index-update"])
-        .with_stdout("")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(expected_unstable_option)
         .run();
 }
 
@@ -170,13 +183,13 @@ fn cargo_update_generate_lockfile() {
 
     let lockfile = p.root().join("Cargo.lock");
     assert!(!lockfile.is_file());
-    p.cargo("update").with_stderr("").run();
+    p.cargo("update").with_stderr_data("").run();
     assert!(lockfile.is_file());
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     assert!(!lockfile.is_file());
-    p.cargo("update").with_stderr("").run();
+    p.cargo("update").with_stderr_data("").run();
     assert!(lockfile.is_file());
 }
 
@@ -213,6 +226,7 @@ fn duplicate_entries_in_lockfile() {
             name = "b"
             authors = []
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             common = {path="common"}
@@ -230,11 +244,10 @@ fn duplicate_entries_in_lockfile() {
     // should fail due to a duplicate package `common` in the lock file
     b.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "[..]package collision in the lockfile: packages common [..] and \
-             common [..] are different, but only one can be written to \
-             lockfile unambiguously",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] package collision in the lockfile: packages common v0.0.1 ([ROOT]/a/common) and common v0.0.1 ([ROOT]/b/common) are different, but only one can be written to lockfile unambiguously
+
+"#]])
         .run();
 }
 
@@ -257,19 +270,17 @@ fn generate_lockfile_holds_lock_and_offline() {
         .build();
 
     p.cargo("generate-lockfile")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[LOCKING] 2 packages
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+
+"#]])
         .run();
 
     p.cargo("generate-lockfile --offline")
-        .with_stderr_contains(
-            "\
-[LOCKING] 2 packages
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+
+"#]])
         .run();
 }

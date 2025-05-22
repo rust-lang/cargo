@@ -3,6 +3,12 @@
 /// - [index from of Cargo's index on filesystem][1], and
 /// - [index from Crates.io][2].
 ///
+/// <div class="warning">
+///
+/// Note: For index files, `dep_name` must have had `to_lowercase` called on it.
+///
+/// </div>
+///
 /// [1]: https://docs.rs/cargo/latest/cargo/sources/registry/index.html#the-format-of-the-index
 /// [2]: https://github.com/rust-lang/crates.io-index
 pub fn make_dep_path(dep_name: &str, prefix_only: bool) -> String {

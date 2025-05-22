@@ -1,6 +1,5 @@
 //! Tests for the jobserver protocol.
 
-use cargo_util::is_ci;
 use std::env;
 use std::net::TcpListener;
 use std::process::Command;
@@ -9,9 +8,10 @@ use std::thread;
 use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_exe;
 use cargo_test_support::install::assert_has_installed_exe;
-use cargo_test_support::install::cargo_home;
-use cargo_test_support::project;
-use cargo_test_support::rustc_host;
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::{project, rustc_host, str};
+use cargo_util::is_ci;
 
 const EXE_CONTENT: &str = r#"
 use std::env;
@@ -57,6 +57,8 @@ fn validate(_: &str) {
 fn make_exe() -> &'static str {
     if cfg!(windows) {
         "mingw32-make"
+    } else if cfg!(target_os = "aix") {
+        "gmake"
     } else {
         "make"
     }
@@ -105,7 +107,7 @@ all:
         .build();
 
     p.cargo("install --path .").run();
-    assert_has_installed_exe(cargo_home(), name);
+    assert_has_installed_exe(paths::cargo_home(), name);
 
     p.process(make).env("CARGO", cargo_exe()).arg("-j2").run();
 }
@@ -138,9 +140,9 @@ fn runner_inherits_jobserver() {
 
     // Add .cargo/bin to PATH
     let mut path: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
-    path.push(cargo_home().join("bin"));
+    path.push(paths::cargo_home().join("bin"));
     let path = &env::join_paths(path).unwrap();
-    assert_has_installed_exe(cargo_home(), runner);
+    assert_has_installed_exe(paths::cargo_home(), runner);
 
     let host = rustc_host();
     let config_value = &format!("target.{host}.runner = \"{runner}\"");
@@ -154,6 +156,7 @@ fn runner_inherits_jobserver() {
                     [package]
                     name = "{name}"
                     version = "0.0.1"
+                    edition = "2015"
                 "#
             ),
         )
@@ -198,7 +201,12 @@ test-runner:
         .env("CARGO", cargo_exe())
         .arg("run-runner")
         .arg("-j2")
-        .with_stderr_contains("[..]this is a runner[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
+this is a runner
+
+"#]])
         .run();
     p.process(make)
         .env("CARGO", cargo_exe())
@@ -210,33 +218,58 @@ test-runner:
         .env("CARGO", cargo_exe())
         .arg("test-runner")
         .arg("-j2")
-        .with_stderr_contains("[..]this is a runner[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+this is a runner
+
+"#]])
         .run();
 
     // but not from `-j` flag
     p.cargo("run -j2")
         .with_status(101)
-        .with_stderr_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/cargo-jobserver-check[EXE]`
+...
+[..]no jobserver from env[..]
+...
+
+"#]])
         .run();
     p.cargo("run -j2")
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
         .with_status(101)
-        .with_stderr_contains("[..]this is a runner[..]")
-        .with_stderr_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
+this is a runner
+...
+[..]no jobserver from env[..]
+...
+
+"#]])
         .run();
     p.cargo("test -j2")
         .with_status(101)
-        .with_stdout_contains("[..]no jobserver from env[..]")
+        .with_stdout_data("...\n[..]no jobserver from env[..]\n...")
         .run();
     p.cargo("test -j2")
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
         .with_status(101)
-        .with_stderr_contains("[..]this is a runner[..]")
-        .with_stdout_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+this is a runner
+...
+
+"#]])
+        .with_stdout_data("...\n[..]no jobserver from env[..]\n...")
         .run();
 }
 
@@ -369,13 +402,11 @@ all:
     p.process(make)
         .env("CARGO", cargo_exe())
         .arg("-j2")
-        .with_stderr(
-            "\
-warning: a `-j` argument was passed to Cargo but Cargo is also configured \
-with an external jobserver in its environment, ignoring the `-j` parameter
-[COMPILING] [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] a `-j` argument was passed to Cargo but Cargo is also configured with an external jobserver in its environment, ignoring the `-j` parameter
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }

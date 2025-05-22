@@ -1,0 +1,39 @@
+<svg width="911px" height="146px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
+    .fg-green { fill: #00AA00 }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> my-package v0.2.3+my-package </tspan><tspan class="fg-yellow bold">(available: v0.4.1+my-package)</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-green bold"> Downloading</tspan><tspan> crates ...</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-green bold">  Downloaded</tspan><tspan> my-package v0.2.3+my-package (registry `dummy-registry`)</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> to see how you depend on my-package, run `</tspan><tspan class="fg-cyan bold">cargo tree --invert --package my-package@0.2.3+my-package</tspan><tspan>`</tspan>
+</tspan>
+    <tspan x="10px" y="136px">
+</tspan>
+  </text>
+
+</svg>

@@ -3,7 +3,7 @@
 //! Note that cross-testing is very limited. You need to install the
 //! "alternate" target to the host (32-bit for 64-bit hosts or vice-versa).
 //!
-//! Set CFG_DISABLE_CROSS_TESTS=1 environment variable to disable these tests
+//! Set `CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests
 //! if you are unable to use the alternate target. Unfortunately 32-bit
 //! support on macOS is going away, so macOS users are out of luck.
 //!
@@ -25,6 +25,12 @@ pub fn disabled() -> bool {
     match env::var("CFG_DISABLE_CROSS_TESTS") {
         Ok(ref s) if *s == "1" => return true,
         _ => {}
+    }
+
+    // It requires setting `target.linker` for cross-compilation to work on aarch64,
+    // so not going to bother now.
+    if cfg!(all(target_arch = "aarch64", target_os = "linux")) {
+        return true;
     }
 
     // Cross tests are only tested to work on macos, linux, and MSVC windows.
@@ -209,18 +215,23 @@ pub fn native_arch() -> &'static str {
 ///
 /// Only use this function on tests that check `cross_compile::disabled`.
 pub fn alternate() -> &'static str {
+    try_alternate().expect("This test should be gated on cross_compile::disabled.")
+}
+
+/// A possible alternate target-triple to build with.
+pub(crate) fn try_alternate() -> Option<&'static str> {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "x86_64-apple-darwin"
+        Some("x86_64-apple-darwin")
     } else if cfg!(target_os = "macos") {
-        "x86_64-apple-ios"
+        Some("x86_64-apple-ios")
     } else if cfg!(target_os = "linux") {
-        "i686-unknown-linux-gnu"
+        Some("i686-unknown-linux-gnu")
     } else if cfg!(all(target_os = "windows", target_env = "msvc")) {
-        "i686-pc-windows-msvc"
+        Some("i686-pc-windows-msvc")
     } else if cfg!(all(target_os = "windows", target_env = "gnu")) {
-        "i686-pc-windows-gnu"
+        Some("i686-pc-windows-gnu")
     } else {
-        panic!("This test should be gated on cross_compile::disabled.");
+        None
     }
 }
 
@@ -261,4 +272,34 @@ pub fn can_run_on_host() -> bool {
         assert!(CAN_RUN_ON_HOST.load(Ordering::SeqCst));
         return true;
     }
+}
+
+/// Check if the given target has been installed.
+///
+/// Generally [`disabled`] should be used to check if cross-compilation is allowed.
+/// And [`alternate`] to get the cross target.
+///
+/// You should only use this as a last resort to skip tests,
+/// because it doesn't report skipped tests as ignored.
+pub fn requires_target_installed(target: &str) -> bool {
+    let has_target = std::process::Command::new("rustup")
+        .args(["target", "list", "--installed"])
+        .output()
+        .ok()
+        .map(|output| {
+            String::from_utf8(output.stdout)
+                .map(|stdout| stdout.contains(target))
+                .unwrap_or_default()
+        })
+        .unwrap_or_default();
+    if !has_target {
+        let msg =
+            format!("to run this test, run `rustup target add {target} --toolchain <toolchain>`",);
+        if cargo_util::is_ci() {
+            panic!("{msg}");
+        } else {
+            eprintln!("{msg}");
+        }
+    }
+    has_target
 }

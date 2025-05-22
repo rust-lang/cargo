@@ -146,6 +146,8 @@ pub trait Source {
     fn describe(&self) -> String;
 
     /// Returns whether a source is being replaced by another here.
+    ///
+    /// Builtin replacement of `crates.io` doesn't count as replacement here.
     fn is_replaced(&self) -> bool {
         false
     }
@@ -181,10 +183,17 @@ pub enum QueryKind {
     /// Each source gets to define what `close` means for it.
     ///
     /// Path/Git sources may return all dependencies that are at that URI,
+    /// whereas an `Registry` source may return dependencies that are yanked or invalid.
+    RejectedVersions,
+    /// A query for packages close to the given dependency requirement.
+    ///
+    /// Each source gets to define what `close` means for it.
+    ///
+    /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Registry` source may return dependencies that have the same
     /// canonicalization.
-    Alternatives,
-    /// Match a denpendency in all ways and will normalize the package name.
+    AlternativeNames,
+    /// Match a dependency in all ways and will normalize the package name.
     /// Each source defines what normalizing means.
     Normalized,
 }

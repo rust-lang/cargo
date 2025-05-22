@@ -49,7 +49,7 @@ Here we can see that we have a `build.rs` build script and our binary in
 [package]
 name = "hello-from-generated-code"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 ```
 
 Let’s see what’s inside the build script:
@@ -148,7 +148,7 @@ Pretty similar to before! Next, the manifest:
 [package]
 name = "hello-world-from-c"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 ```
 
 For now we’re not going to use any build dependencies, so let’s take a look at
@@ -252,7 +252,7 @@ void hello() {
 // Note the lack of the `#[link]` attribute. We’re delegating the responsibility
 // of selecting what to link over to the build script rather than hard-coding
 // it in the source file.
-extern { fn hello(); }
+unsafe extern { fn hello(); }
 
 fn main() {
     unsafe { hello(); }
@@ -298,7 +298,7 @@ with `pkg-config` installed. Let's start by setting up the manifest:
 [package]
 name = "libz-sys"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 links = "z"
 
 [build-dependencies]
@@ -327,7 +327,7 @@ Let's round out the example with a basic FFI binding:
 
 use std::os::raw::{c_uint, c_ulong};
 
-extern "C" {
+unsafe extern "C" {
     pub fn crc32(crc: c_ulong, buf: *const u8, len: c_uint) -> c_ulong;
 }
 
@@ -385,7 +385,7 @@ Here's an example:
 [package]
 name = "zuser"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 libz-sys = "1.0.25"
@@ -440,7 +440,7 @@ script looks something [like
 this](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61a733a66e7877fc/openssl-sys/build/main.rs#L216):
 
 ```rust,ignore
-println!("cargo::version_number={:x}", openssl_version);
+println!("cargo::metadata=version_number={openssl_version:x}");
 ```
 
 This instruction causes the `DEP_OPENSSL_VERSION_NUMBER` environment variable
@@ -455,6 +455,9 @@ values](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61
 
 ```rust,ignore
 // (portion of build.rs)
+
+println!("cargo::rustc-check-cfg=cfg(ossl101,ossl102)");
+println!("cargo::rustc-check-cfg=cfg(ossl110,ossl110g,ossl111)");
 
 if let Ok(version) = env::var("DEP_OPENSSL_VERSION_NUMBER") {
     let version = u64::from_str_radix(&version, 16).unwrap();

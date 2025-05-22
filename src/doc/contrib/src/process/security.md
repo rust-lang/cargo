@@ -131,6 +131,6 @@ Post release:
 [GHSA-r5w3-xm58-jv6j]: https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j
 [handling reports]: https://github.com/rust-lang/wg-security-response/blob/main/docs/handling-reports.md
 [first-guide]: https://www.first.org/cvss/user-guide
-[`CHANGELOG.md`]: https://github.com/rust-lang/cargo/blob/master/CHANGELOG.md
+[`CHANGELOG.md`]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/CHANGELOG.md
 [`Cargo.toml`]: https://github.com/rust-lang/cargo/blob/master/Cargo.toml
 [`RELEASES.md`]: https://github.com/rust-lang/rust/blob/master/RELEASES.md

@@ -1,11 +1,22 @@
 //! Utilities for networking.
 
+use std::net::Ipv4Addr;
+use std::net::Ipv6Addr;
+use std::net::SocketAddr;
+use std::net::SocketAddrV4;
+use std::net::SocketAddrV6;
 use std::task::Poll;
 
 pub mod http;
 pub mod proxy;
 pub mod retry;
 pub mod sleep;
+
+/// LOCALHOST constants for both IPv4 and IPv6.
+pub const LOCALHOST: [SocketAddr; 2] = [
+    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)),
+    SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 0, 0, 0)),
+];
 
 pub trait PollExt<T> {
     fn expect(self, msg: &str) -> T;

@@ -1,12 +1,14 @@
 //! Tests for Cargo's behavior under Rustup.
 
-use cargo_test_support::paths::{home, root, CargoPathExt};
-use cargo_test_support::{cargo_process, process, project};
 use std::env;
 use std::env::consts::EXE_EXTENSION;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use cargo_test_support::paths::{home, root};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{cargo_process, process, project, str};
 
 /// Helper to generate an executable.
 fn make_exe(dest: &Path, name: &str, contents: &str, env: &[(&str, PathBuf)]) -> PathBuf {
@@ -162,13 +164,12 @@ fn typical_rustup() {
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Do a similar test, but with a toolchain link that does not have cargo
@@ -180,13 +181,12 @@ real rustc running
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -250,13 +250,12 @@ fn custom_calls_other_cargo() {
         // rustup proxies.
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 custom command running
-[CHECKING] foo [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 custom toolchain rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }

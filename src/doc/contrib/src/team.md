@@ -48,7 +48,7 @@ Members are required to always:
 
 Members are given privileges, such as:
 
-- Merge permissions (bors rights)
+- Merge permissions (GitHub permissions)
 - Issue and project management (GitHub permissions)
 - Voting and decision making (RFCs, major changes)
 - Access to private communications related to team management and security discussions
@@ -58,12 +58,28 @@ Members are given privileges, such as:
 
 ### Meetings
 
-The team meets on a weekly basis on a video chat.
-If you are interested in participating, feel free to contact us on [Zulip].
+The primary focus of team meetings is for unblocking designs, including discussing
+- [RFCs][t-cargo-rfcs]
+- [FCPs][cargo-status-tracker]
+- [Items marked **I-nominated-to-discuss**][i-nominated]
+- [Items marked **S-needs-team-input**][s-team-input]
+- Topics proposed on [Zulip][zulip-meeting], subject to availability
 
+Generally, topics for the agenda should be posted a day in advance to give people the opportunity to review them before the meeting.
+
+The team meets on a weekly basis ([ics][meeting-ics]) on a video chat.
+Members of the community are welcome to attend.
 Minutes for all meetings are recorded on [HackMD][meeting-minutes].
 
+For discussing contributions, [Office Hours](../process/index.md#mentorship) would be more appropriate venue.
+
+[t-cargo-rfcs]: https://github.com/rust-lang/rfcs/pulls?q=is%3Apr+is%3Aopen+label%3AT-cargo
+[cargo-status-tracker]: https://github.com/orgs/rust-lang/projects/47
+[i-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated-to-discuss
+[s-team-input]: https://github.com/rust-lang/cargo/labels/S-needs-team-input
+[meeting-ics]: https://rust-lang.github.io/calendar/cargo/team-meeting.ics
 [meeting-minutes]: https://hackmd.io/@rust-cargo-team?tags=%5B%22meetings%22%5D
+[zulip-meeting]: https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/Cargo.20meeting
 
 ### Becoming a member
 
@@ -135,6 +151,7 @@ The degree of process is correlated with the degree of change being proposed:
     These decisions are usually processed via private channels by the entirety of the team.
   - A change that is a "one-way door".
     That is, something that is difficult to reverse without breaking backwards compatibility.
+  - New or transferred "Intentional Artifact" crates to the team, see also [Rust crate ownership policy](https://forge.rust-lang.org/policies/crate-ownership.html)
 
 - Larger features should usually go through the [RFC process].
   This usually involves first soliciting feedback from the Cargo team and the rest of the community, often via the [Rust Internals] discussion board, [Cargo's issue tracker], and the [Zulip] channel.
@@ -164,6 +181,16 @@ The degree of process is correlated with the degree of change being proposed:
 [Backwards compatibility]: design.md#backwards-compatibility
 [Stable backports]: process/release.md#stable-backports
 [SemVer chapter]: https://doc.rust-lang.org/cargo/reference/semver.html
+
+## Intentional Artifacts
+
+Per the [Rust crate ownership policy](https://forge.rust-lang.org/policies/crate-ownership.html), the Cargo team's "Intentional Artifacts" include:
+
+- [build-rs](https://crates.io/crates/build-rs)
+- [cargo-credential](https://crates.io/crates/cargo-credential)
+- [cargo-platform](https://crates.io/crates/cargo-platform)
+- [cargo-util-schemas](https://crates.io/crates/cargo-util-schemas)
+- [crates-io](https://crates.io/crates/crates-io)
 
 ## Contacting the team
 

@@ -5,7 +5,7 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::Project;
 
-#[cargo_test(requires_hg)]
+#[cargo_test(requires = "hg")]
 fn case() {
     let project = Project::from_template(current_dir!().join("in"));
     let project_root = &project.root();
@@ -15,8 +15,8 @@ fn case() {
         .current_dir(project_root)
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), project_root);
     assert!(!project_root.join(".git").is_dir());

@@ -31,21 +31,25 @@ pub struct BuildConfig {
     pub build_plan: bool,
     /// Output the unit graph to stdout instead of actually compiling.
     pub unit_graph: bool,
+    /// `true` to avoid really compiling.
+    pub dry_run: bool,
     /// An optional override of the rustc process for primary units
     pub primary_unit_rustc: Option<ProcessBuilder>,
     /// A thread used by `cargo fix` to receive messages on a socket regarding
     /// the success/failure of applying fixes.
     pub rustfix_diagnostic_server: Rc<RefCell<Option<RustfixDiagnosticServer>>>,
-    /// The directory to copy final artifacts to. Note that even if `out_dir` is
-    /// set, a copy of artifacts still could be found a `target/(debug\release)`
-    /// as usual.
-    // Note that, although the cmd-line flag name is `out-dir`, in code we use
-    // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
+    /// The directory to copy final artifacts to. Note that even if
+    /// `artifact-dir` is set, a copy of artifacts still can be found at
+    /// `target/(debug\release)` as usual.
+    /// Named `export_dir` to avoid confusion with
+    /// `CompilationFiles::artifact_dir`.
     pub export_dir: Option<PathBuf>,
     /// `true` to output a future incompatibility report at the end of the build
     pub future_incompat_report: bool,
     /// Which kinds of build timings to output (empty if none).
     pub timing_outputs: Vec<TimingOutput>,
+    /// Output SBOM precursor files.
+    pub sbom: bool,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -97,10 +101,16 @@ impl BuildConfig {
             },
         };
 
-        if gctx.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
+        // If sbom flag is set, it requires the unstable feature
+        let sbom = match (cfg.sbom, gctx.cli_unstable().sbom) {
+            (Some(sbom), true) => sbom,
+            (Some(_), false) => {
+                gctx.shell()
+                    .warn("ignoring 'sbom' config, pass `-Zsbom` to enable it")?;
+                false
+            }
+            (None, _) => false,
+        };
 
         Ok(BuildConfig {
             requested_kinds,
@@ -112,11 +122,13 @@ impl BuildConfig {
             force_rebuild: false,
             build_plan: false,
             unit_graph: false,
+            dry_run: false,
             primary_unit_rustc: None,
             rustfix_diagnostic_server: Rc::new(RefCell::new(None)),
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),
+            sbom,
         })
     }
 
@@ -156,6 +168,7 @@ pub enum MessageFormat {
 }
 
 /// The general "mode" for what to do.
+///
 /// This is used for two purposes. The commands themselves pass this in to
 /// `compile_ws` to tell it the general execution strategy. This influences
 /// the default targets selected. The other use is in the `Unit` struct

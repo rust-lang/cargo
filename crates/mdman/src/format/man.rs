@@ -140,7 +140,7 @@ impl<'e> ManRenderer<'e> {
                                 suppress_paragraph = true;
                             }
                         }
-                        Tag::BlockQuote => {
+                        Tag::BlockQuote(..) => {
                             self.flush();
                             // .RS = move left margin over 3
                             // .ll = shrink line length
@@ -167,7 +167,7 @@ impl<'e> ManRenderer<'e> {
                                     *n += 1;
                                 }
                                 // Unordered list.
-                                None => self.output.push_str("\\h'-04'\\(bu\\h'+02'"),
+                                None => self.output.push_str("\\h'-04'\\(bu\\h'+03'"),
                             }
                             suppress_paragraph = true;
                         }
@@ -251,19 +251,28 @@ impl<'e> ManRenderer<'e> {
                                         range.start
                                     );
                                 }
+                                LinkType::WikiLink { .. } => {
+                                    panic!("wikilink unsupported");
+                                }
                             }
                         }
                         Tag::Image { .. } => {
                             bail!("images are not currently supported")
                         }
-                        Tag::HtmlBlock { .. } | Tag::MetadataBlock { .. } => {}
+                        Tag::HtmlBlock { .. }
+                        | Tag::MetadataBlock { .. }
+                        | Tag::DefinitionList
+                        | Tag::DefinitionListTitle
+                        | Tag::DefinitionListDefinition
+                        | Tag::Superscript
+                        | Tag::Subscript => {}
                     }
                 }
                 Event::End(tag_end) => {
                     match &tag_end {
                         TagEnd::Paragraph => self.flush(),
                         TagEnd::Heading(..) => {}
-                        TagEnd::BlockQuote => {
+                        TagEnd::BlockQuote(..) => {
                             self.flush();
                             // restore left margin, restore line length
                             self.output.push_str(".br\n.RE\n.ll\n");
@@ -317,7 +326,14 @@ impl<'e> ManRenderer<'e> {
                                 write!(self.output, "<{}>", escape(&dest_url)?)?;
                             }
                         }
-                        TagEnd::Image | TagEnd::HtmlBlock | TagEnd::MetadataBlock(..) => {}
+                        TagEnd::Image
+                        | TagEnd::HtmlBlock
+                        | TagEnd::MetadataBlock(..)
+                        | TagEnd::DefinitionListDefinition
+                        | TagEnd::DefinitionListTitle
+                        | TagEnd::DefinitionList
+                        | TagEnd::Superscript
+                        | TagEnd::Subscript => {}
                     }
                 }
                 Event::Text(t) => {
@@ -356,6 +372,8 @@ impl<'e> ManRenderer<'e> {
                 }
                 Event::TaskListMarker(_b) => unimplemented!(),
                 Event::InlineHtml(..) => unimplemented!(),
+                Event::InlineMath(..) => unimplemented!(),
+                Event::DisplayMath(..) => unimplemented!(),
             }
         }
         Ok(())

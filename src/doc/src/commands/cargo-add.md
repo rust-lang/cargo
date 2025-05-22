@@ -59,6 +59,11 @@ dependency will be listed in the command's output.
 <dd class="option-desc"><a href="../reference/specifying-dependencies.html#specifying-path-dependencies">Filesystem path</a> to local crate to add.</dd>
 
 
+<dt class="option-term" id="option-cargo-add---base"><a class="option-anchor" href="#option-cargo-add---base"></a><code>--base</code> <em>base</em></dt>
+<dd class="option-desc">The <a href="../reference/unstable.html#path-bases">path base</a> to use when adding a local crate.</p>
+<p><a href="../reference/unstable.html#path-bases">Unstable (nightly-only)</a></dd>
+
+
 <dt class="option-term" id="option-cargo-add---registry"><a class="option-anchor" href="#option-cargo-add---registry"></a><code>--registry</code> <em>registry</em></dt>
 <dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
@@ -136,14 +141,6 @@ crates, the features for a specific crate may be enabled with
 which enables all specified features.</dd>
 
 
-<dt class="option-term" id="option-cargo-add---ignore-rust-version"><a class="option-anchor" href="#option-cargo-add---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</p>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z unstable-options</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/rust-lang/cargo/issues/5579</a> for more information.</dd>
-
-
 </dl>
 
 
@@ -191,6 +188,10 @@ terminal.</li>
 <dd class="option-desc">Add dependencies to only the specified package.</dd>
 
 
+<dt class="option-term" id="option-cargo-add---ignore-rust-version"><a class="option-anchor" href="#option-cargo-add---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+
+
 <dt class="option-term" id="option-cargo-add---locked"><a class="option-anchor" href="#option-cargo-add---locked"></a><code>--locked</code></dt>
 <dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
@@ -218,6 +219,18 @@ offline.</p>
 
 <dt class="option-term" id="option-cargo-add---frozen"><a class="option-anchor" href="#option-cargo-add---frozen"></a><code>--frozen</code></dt>
 <dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---lockfile-path"><a class="option-anchor" href="#option-cargo-add---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
+<code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
+either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
+This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 </dl>
 

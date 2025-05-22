@@ -124,7 +124,7 @@ OPTIONS
            Note that specifying this flag makes Cargo run in a different mode
            where the target artifacts are placed in a separate directory. See
            the build cache
-           <https://doc.rust-lang.org/cargo/guide/build-cache.html>
+           <https://doc.rust-lang.org/cargo/reference/build-cache.html>
            documentation for more details.
 
        -r, --release
@@ -135,11 +135,6 @@ OPTIONS
            Document with the given profile. See the reference
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
-
-       --ignore-rust-version
-           Document the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project’s
-           rust-version field.
 
        --timings=fmts
            Output information how long each compilation takes, and track
@@ -228,6 +223,9 @@ OPTIONS
            Path to the Cargo.toml file. By default, Cargo searches for the
            Cargo.toml file in the current directory or any parent directory.
 
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
+
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo
@@ -259,6 +257,21 @@ OPTIONS
 
        --frozen
            Equivalent to specifying both --locked and --offline.
+
+       --lockfile-path PATH
+           Changes the path of the lockfile from the default
+           (<workspace_root>/Cargo.lock) to PATH. PATH must end with Cargo.lock
+           (e.g. --lockfile-path /tmp/temporary-lockfile/Cargo.lock). Note that
+           providing --lockfile-path will ignore existing lockfile at the
+           default path, and instead will either use the lockfile from PATH, or
+           write a new lockfile into the provided PATH if it doesn’t exist.
+           This flag can be used to run most commands in read-only directories,
+           writing lockfile into the provided PATH.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #14421
+           <https://github.com/rust-lang/cargo/issues/14421>).
 
    Common Options
        +toolchain

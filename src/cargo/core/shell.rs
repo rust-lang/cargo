@@ -2,6 +2,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::IsTerminal;
 
+use annotate_snippets::{Message, Renderer};
 use anstream::AutoStream;
 use anstyle::Style;
 
@@ -55,6 +56,7 @@ impl Shell {
                 stderr_tty: std::io::stderr().is_terminal(),
                 stdout_unicode: supports_unicode(&std::io::stdout()),
                 stderr_unicode: supports_unicode(&std::io::stderr()),
+                stderr_term_integration: supports_term_integration(&std::io::stderr()),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -118,6 +120,18 @@ impl Shell {
         match self.output {
             ShellOut::Stream { stderr_tty, .. } => stderr_tty,
             _ => false,
+        }
+    }
+
+    pub fn is_err_term_integration_available(&self) -> bool {
+        if let ShellOut::Stream {
+            stderr_term_integration,
+            ..
+        } = self.output
+        {
+            stderr_term_integration
+        } else {
+            false
         }
     }
 
@@ -391,6 +405,19 @@ impl Shell {
         drop(writeln!(self.out(), "{}", encoded));
         Ok(())
     }
+
+    /// Prints the passed in [Message] to stderr
+    pub fn print_message(&mut self, message: Message<'_>) -> std::io::Result<()> {
+        let term_width = self
+            .err_width()
+            .diagnostic_terminal_width()
+            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
+        writeln!(
+            self.err(),
+            "{}",
+            Renderer::styled().term_width(term_width).render(message)
+        )
+    }
 }
 
 impl Default for Shell {
@@ -412,6 +439,7 @@ enum ShellOut {
         hyperlinks: bool,
         stdout_unicode: bool,
         stderr_unicode: bool,
+        stderr_term_integration: bool,
     },
 }
 
@@ -561,6 +589,16 @@ fn supports_hyperlinks() -> bool {
     supports_hyperlinks::supports_hyperlinks()
 }
 
+/// Determines whether the terminal supports ANSI OSC 9;4.
+#[allow(clippy::disallowed_methods)] // Read environment variables to detect terminal
+fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
+    let windows_terminal = std::env::var("WT_SESSION").is_ok();
+    let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());
+    let wezterm = std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into());
+
+    (windows_terminal || conemu || wezterm) && stream.is_terminal()
+}
+
 pub struct Hyperlink<D: fmt::Display> {
     url: Option<D>,
 }
@@ -648,7 +686,7 @@ mod imp {
                 ptr::null_mut(),
                 OPEN_EXISTING,
                 0,
-                0,
+                std::ptr::null_mut(),
             );
             if h == INVALID_HANDLE_VALUE {
                 return TtyWidth::NoTty;

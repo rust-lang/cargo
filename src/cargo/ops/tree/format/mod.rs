@@ -3,7 +3,7 @@ use std::fmt;
 use anyhow::{bail, Error};
 
 use self::parse::{Parser, RawChunk};
-use super::{Graph, Node};
+use super::{Graph, Node, NodeId};
 
 mod parse;
 
@@ -41,7 +41,7 @@ impl Pattern {
         Ok(Pattern(chunks))
     }
 
-    pub fn display<'a>(&'a self, graph: &'a Graph<'a>, node_index: usize) -> Display<'a> {
+    pub fn display<'a>(&'a self, graph: &'a Graph<'a>, node_index: NodeId) -> Display<'a> {
         Display {
             pattern: self,
             graph,
@@ -53,7 +53,7 @@ impl Pattern {
 pub struct Display<'a> {
     pattern: &'a Pattern,
     graph: &'a Graph<'a>,
-    node_index: usize,
+    node_index: NodeId,
 }
 
 impl<'a> fmt::Display for Display<'a> {

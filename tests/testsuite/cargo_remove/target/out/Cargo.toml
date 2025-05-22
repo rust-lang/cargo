@@ -10,7 +10,7 @@ path = "src/main.rs"
 [target.x86_64-unknown-freebsd.build-dependencies]
 semver = "0.1.0"
 
-[target.x86_64-unknown-linux-gnu.build-dependencies]
+[target.wasm32-unknown-unknown.build-dependencies]
 semver = "0.1.0"
 
 [dependencies]
@@ -24,7 +24,7 @@ clippy = "0.4"
 regex = "0.1.1"
 serde = "1.0.90"
 
-[target.x86_64-unknown-linux-gnu.dev-dependencies]
+[target.wasm32-unknown-unknown.dev-dependencies]
 ncurses = "20.0"
 
 [features]

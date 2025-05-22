@@ -1,11 +1,11 @@
-target
-Cargo.lock
+/target
+/Cargo.lock
 /config.stamp
 /Makefile
 /config.mk
-src/doc/build
-src/etc/*.pyc
-src/registry/target
+/src/doc/build
+/src/etc/*.pyc
+/src/registry/target
 rustc
 __pycache__
 .idea/

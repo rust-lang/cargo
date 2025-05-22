@@ -187,7 +187,7 @@ The [`default` features](#the-default-feature) can be disabled using
 
 ```toml
 [dependencies]
-flate2 = { version = "1.0.3", default-features = false, features = ["zlib"] }
+flate2 = { version = "1.0.3", default-features = false, features = ["zlib-rs"] }
 ```
 
 > **Note**: This may not ensure the default features are disabled. If another
@@ -365,11 +365,11 @@ that unification can be unwanted. The exact situations are described in the
 [resolver chapter][resolver-v2], but in short, it avoids unifying in these
 situations:
 
-* Features enabled on [platform-specific dependencies] for targets not
+* Features enabled on [platform-specific dependencies] for [target architectures][target] not
   currently being built are ignored.
 * [Build-dependencies] and proc-macros do not share features with normal
   dependencies.
-* [Dev-dependencies] do not activate features unless building a target that
+* [Dev-dependencies] do not activate features unless building a [Cargo target][target] that
   needs them (like tests or examples).
 
 Avoiding the unification is necessary for some situations. For example, if a
@@ -392,6 +392,8 @@ features](#inspecting-resolved-features) for more on fetching information on
 the resolved features. For build dependencies, this is not necessary if you
 are cross-compiling with the `--target` flag because build dependencies are
 always built separately from normal dependencies in that scenario.
+
+[target]: ../appendix/glossary.md#target
 
 ### Resolver version 2 command-line flags
 

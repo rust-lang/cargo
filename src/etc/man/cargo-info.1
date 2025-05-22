@@ -1,0 +1,201 @@
+'\" t
+.TH "CARGO\-INFO" "1"
+.nh
+.ad l
+.ss \n[.ss] 0
+.SH "NAME"
+cargo\-info \[em] Display information about a package.
+.SH "SYNOPSIS"
+\fBcargo info\fR [\fIoptions\fR] \fIspec\fR
+.SH "DESCRIPTION"
+This command displays information about a package. It fetches data from the package\[cq]s Cargo.toml file
+and presents it in a human\-readable format.
+.SH "OPTIONS"
+.SS "Info Options"
+.sp
+\fIspec\fR
+.RS 4
+Fetch information about the specified package. The \fIspec\fR can be a package ID, see \fBcargo\-pkgid\fR(1) for the SPEC
+format.
+If the specified package is part of the current workspace, information from the local Cargo.toml file will be displayed.
+If the \fBCargo.lock\fR file does not exist, it will be created. If no version is specified, the appropriate version will be
+selected based on the Minimum Supported Rust Version (MSRV).
+.RE
+.sp
+\fB\-\-index\fR \fIindex\fR
+.RS 4
+The URL of the registry index to use.
+.RE
+.sp
+\fB\-\-registry\fR \fIregistry\fR
+.RS 4
+Name of the registry to use. Registry names are defined in \fICargo config
+files\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&. If not specified, the default registry is used,
+which is defined by the \fBregistry.default\fR config key which defaults to
+\fBcrates\-io\fR\&.
+.RE
+.SS "Display Options"
+.sp
+\fB\-v\fR, 
+\fB\-\-verbose\fR
+.RS 4
+Use verbose output. May be specified twice for \[lq]very verbose\[rq] output which
+includes extra output such as dependency warnings and build script output.
+May also be specified with the \fBterm.verbose\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.sp
+\fB\-q\fR, 
+\fB\-\-quiet\fR
+.RS 4
+Do not print cargo log messages.
+May also be specified with the \fBterm.quiet\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.sp
+\fB\-\-color\fR \fIwhen\fR
+.RS 4
+Control when colored output is used. Valid values:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
+terminal.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
+.RE
+.sp
+May also be specified with the \fBterm.color\fR
+\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.SS "Manifest Options"
+.sp
+\fB\-\-locked\fR
+.RS 4
+Asserts that the exact same dependencies and versions are used as when the
+existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
+error when either of the following scenarios arises:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'The lock file is missing.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
+.RE
+.sp
+It may be used in environments where deterministic builds are desired,
+such as in CI pipelines.
+.RE
+.sp
+\fB\-\-offline\fR
+.RS 4
+Prevents Cargo from accessing the network for any reason. Without this
+flag, Cargo will stop with an error if it needs to access the network and
+the network is not available. With this flag, Cargo will attempt to
+proceed without the network if possible.
+.sp
+Beware that this may result in different dependency resolution than online
+mode. Cargo will restrict itself to crates that are downloaded locally, even
+if there might be a newer version as indicated in the local copy of the index.
+See the \fBcargo\-fetch\fR(1) command to download dependencies before going
+offline.
+.sp
+May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.sp
+\fB\-\-frozen\fR
+.RS 4
+Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
+.RE
+.SS "Common Options"
+.sp
+\fB+\fR\fItoolchain\fR
+.RS 4
+If Cargo has been installed with rustup, and the first argument to \fBcargo\fR
+begins with \fB+\fR, it will be interpreted as a rustup toolchain name (such
+as \fB+stable\fR or \fB+nightly\fR).
+See the \fIrustup documentation\fR <https://rust\-lang.github.io/rustup/overrides.html>
+for more information about how toolchain overrides work.
+.RE
+.sp
+\fB\-\-config\fR \fIKEY=VALUE\fR or \fIPATH\fR
+.RS 4
+Overrides a Cargo configuration value. The argument should be in TOML syntax of \fBKEY=VALUE\fR,
+or provided as a path to an extra configuration file. This flag may be specified multiple times.
+See the \fIcommand\-line overrides section\fR <https://doc.rust\-lang.org/cargo/reference/config.html#command\-line\-overrides> for more information.
+.RE
+.sp
+\fB\-C\fR \fIPATH\fR
+.RS 4
+Changes the current working directory before executing any specified operations. This affects
+things like where cargo looks by default for the project manifest (\fBCargo.toml\fR), as well as
+the directories searched for discovering \fB\&.cargo/config.toml\fR, for example. This option must
+appear before the command name, for example \fBcargo \-C path/to/my\-project build\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#10098\fR <https://github.com/rust\-lang/cargo/issues/10098>).
+.RE
+.sp
+\fB\-h\fR, 
+\fB\-\-help\fR
+.RS 4
+Prints help information.
+.RE
+.sp
+\fB\-Z\fR \fIflag\fR
+.RS 4
+Unstable (nightly\-only) flags to Cargo. Run \fBcargo \-Z help\fR for details.
+.RE
+.SH "ENVIRONMENT"
+See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html> for
+details on environment variables that Cargo reads.
+.SH "EXIT STATUS"
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
+.RE
+.SH "EXAMPLES"
+.sp
+.RS 4
+\h'-04' 1.\h'+01'Inspect the \fBserde\fR package from crates.io:
+.sp
+.RS 4
+.nf
+ cargo info serde
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Inspect the \fBserde\fR package with version \fB1.0.0\fR:
+.sp
+.RS 4
+.nf
+ cargo info serde@1.0.0
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'Inspect the \fBserde\fR package form the local registry:
+.sp
+.RS 4
+.nf
+ cargo info serde \-\-registry my\-registry
+.fi
+.RE
+.RE
+.SH "SEE ALSO"
+\fBcargo\fR(1), \fBcargo\-search\fR(1)

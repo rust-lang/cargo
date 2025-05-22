@@ -14,25 +14,35 @@ DESCRIPTION
        following steps:
 
        1. Load and check the current workspace, performing some basic checks.
+
           o  Path dependencies are not allowed unless they have a version key.
              Cargo will ignore the path key for dependencies in published
              packages. dev-dependencies do not have this restriction.
 
        2. Create the compressed .crate file.
+
           o  The original Cargo.toml file is rewritten and normalized.
 
           o  [patch], [replace], and [workspace] sections are removed from the
              manifest.
 
-          o  Cargo.lock is automatically included if the package contains an
-             executable binary or example target. cargo-install(1) will use the
-             packaged lock file if the --locked flag is used.
+          o  Cargo.lock is always included. When missing, a new lock file will
+             be generated unless the --exclude-lockfile flag is used.
+             cargo-install(1) will use the packaged lock file if the --locked
+             flag is used.
 
           o  A .cargo_vcs_info.json file is included that contains information
-             about the current VCS checkout hash if available (not included
-             with --allow-dirty).
+             about the current VCS checkout hash if available, as well as a
+             flag if the worktree is dirty.
+
+          o  Symlinks are flattened to their target files.
+
+          o  Files and directories are included or excluded based on rules
+             mentioned in the [include] and [exclude] fields
+             <https://doc.rust-lang.org/cargo/reference/manifest.html#the-exclude-and-include-fields>.
 
        3. Extract the .crate file and build it to verify it can build.
+
           o  This will rebuild your package from scratch to ensure that it can
              be built from a pristine state. The --no-verify flag can be used
              to skip this step.
@@ -51,13 +61,25 @@ DESCRIPTION
 
            {
             "git": {
-              "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+              "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302",
+              "dirty": true
             },
             "path_in_vcs": ""
            }
 
+       dirty indicates that the Git worktree was dirty when the package was
+       built.
+
        path_in_vcs will be set to a repo-relative path for packages in
        subdirectories of the version control repository.
+
+       The compatibility of this file is maintained under the same policy as
+       the JSON output of cargo-metadata(1).
+
+       Note that this file provides a best-effort snapshot of the VCS
+       information. However, the provenance of the package is not verified.
+       There is no guarantee that the source code in the tarball matches the
+       VCS information.
 
 OPTIONS
    Package Options
@@ -74,6 +96,62 @@ OPTIONS
        --allow-dirty
            Allow working directories with uncommitted VCS changes to be
            packaged.
+
+       --exclude-lockfile
+           Don’t include the lock file when packaging.
+
+           This flag is not for general use. Some tools may expect a lock file
+           to be present (e.g. cargo install --locked). Consider other options
+           before using this.
+
+       --index index
+           The URL of the registry index to use.
+
+       --registry registry
+           Name of the registry to package for; see cargo publish --help for
+           more details about configuration of registry names. The packages
+           will not be published to this registry, but if we are packaging
+           multiple inter-dependent crates, lock-files will be generated under
+           the assumption that dependencies will be published to this registry.
+
+       --message-format fmt
+           Specifies the output message format. Currently, it only works with
+           --list and affects the file listing format. This is unstable and
+           requires -Zunstable-options. Valid output formats:
+
+           o  human (default): Display in a file-per-line format.
+
+           o  json: Emit machine-readable JSON information about each package.
+              One package per JSON line (Newline delimited JSON).
+                  {
+                    /* The Package ID Spec of the package. */
+                    "id": "path+file:///home/foo#0.0.0",
+                    /* Files of this package */
+                    "files" {
+                      /* Relative path in the archive file. */
+                      "Cargo.toml.orig": {
+                        /* Where the file is from.
+                           - "generate" for file being generated during packaging
+                           - "copy" for file being copied from another location.
+                        */
+                        "kind": "copy",
+                        /* For the "copy" kind,
+                           it is an absolute path to the actual file content.
+                           For the "generate" kind,
+                           it is the original file the generated one is based on.
+                        */
+                        "path": "/home/foo/Cargo.toml"
+                      },
+                      "Cargo.toml": {
+                        "kind": "generate",
+                        "path": "/home/foo/Cargo.toml"
+                      },
+                      "src/main.rs": {
+                        "kind": "copy",
+                        "path": "/home/foo/src/main.rs"
+                      }
+                    }
+                  }
 
    Package Selection
        By default, when no package selection options are given, the packages
@@ -122,7 +200,7 @@ OPTIONS
            Note that specifying this flag makes Cargo run in a different mode
            where the target artifacts are placed in a separate directory. See
            the build cache
-           <https://doc.rust-lang.org/cargo/guide/build-cache.html>
+           <https://doc.rust-lang.org/cargo/reference/build-cache.html>
            documentation for more details.
 
        --target-dir directory
@@ -189,6 +267,21 @@ OPTIONS
 
        --frozen
            Equivalent to specifying both --locked and --offline.
+
+       --lockfile-path PATH
+           Changes the path of the lockfile from the default
+           (<workspace_root>/Cargo.lock) to PATH. PATH must end with Cargo.lock
+           (e.g. --lockfile-path /tmp/temporary-lockfile/Cargo.lock). Note that
+           providing --lockfile-path will ignore existing lockfile at the
+           default path, and instead will either use the lockfile from PATH, or
+           write a new lockfile into the provided PATH if it doesn’t exist.
+           This flag can be used to run most commands in read-only directories,
+           writing lockfile into the provided PATH.
+
+           This option is only available on the nightly channel
+           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
+           requires the -Z unstable-options flag to enable (see #14421
+           <https://github.com/rust-lang/cargo/issues/14421>).
 
    Miscellaneous Options
        -j N, --jobs N

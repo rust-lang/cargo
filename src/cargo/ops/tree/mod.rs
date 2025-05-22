@@ -6,7 +6,7 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::{self, Packages};
-use crate::util::{CargoResult, GlobalContext};
+use crate::util::CargoResult;
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
 use graph::Graph;
@@ -16,7 +16,7 @@ use std::str::FromStr;
 mod format;
 mod graph;
 
-pub use {graph::EdgeKind, graph::Node};
+pub use {graph::EdgeKind, graph::Node, graph::NodeId};
 
 pub struct TreeOptions {
     pub cli_features: CliFeatures,
@@ -43,8 +43,10 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
-    /// Maximum display depth of the dependency tree.
-    pub max_display_depth: u32,
+    /// Display depth of the dependency tree.
+    /// If non-negative integer, display dependencies with that amount of max depth.
+    /// If `workspace`, display dependencies from current workspace only.
+    pub display_depth: DisplayDepth,
     /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
 }
@@ -82,6 +84,34 @@ impl FromStr for Prefix {
             "indent" => Ok(Prefix::Indent),
             "depth" => Ok(Prefix::Depth),
             _ => Err("invalid prefix"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum DisplayDepth {
+    MaxDisplayDepth(u32),
+    Public,
+    Workspace,
+}
+
+impl FromStr for DisplayDepth {
+    type Err = clap::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "workspace" => Ok(Self::Workspace),
+            "public" => Ok(Self::Public),
+            s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
+                clap::Error::raw(
+                    clap::error::ErrorKind::ValueValidation,
+                    format!(
+                        "supported values for --depth are non-negative integers and `workspace`, \
+                                but `{}` is unknown",
+                        s
+                    ),
+                )
+            }),
         }
     }
 }
@@ -131,6 +161,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     } else {
         ForceAllTargets::No
     };
+    let dry_run = false;
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -139,6 +170,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &specs,
         has_dev,
         force_all,
+        dry_run,
     )?;
 
     let package_map: HashMap<PackageId, &Package> = ws_resolve
@@ -201,23 +233,23 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         try to use option `--target all` first, and then narrow your search scope accordingly.",
         )?;
     } else {
-        print(ws.gctx(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+        print(ws, opts, root_indexes, &pkgs_to_prune, &graph)?;
     }
     Ok(())
 }
 
 /// Prints a tree for each given root.
 fn print(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     opts: &TreeOptions,
-    roots: Vec<usize>,
+    roots: Vec<NodeId>,
     pkgs_to_prune: &[PackageIdSpec],
     graph: &Graph<'_>,
 ) -> CargoResult<()> {
     let format = Pattern::new(&opts.format)
         .with_context(|| format!("tree format `{}` not valid", opts.format))?;
 
-    let symbols = if gctx.shell().out_unicode() {
+    let symbols = if ws.gctx().shell().out_unicode() {
         &UTF8_SYMBOLS
     } else {
         &ASCII_SYMBOLS
@@ -229,7 +261,7 @@ fn print(
 
     for (i, root_index) in roots.into_iter().enumerate() {
         if i != 0 {
-            drop_println!(gctx);
+            drop_println!(ws.gctx());
         }
 
         // A stack of bools used to determine where | symbols should appear
@@ -240,7 +272,7 @@ fn print(
         let mut print_stack = vec![];
 
         print_node(
-            gctx,
+            ws,
             graph,
             root_index,
             &format,
@@ -248,11 +280,11 @@ fn print(
             pkgs_to_prune,
             opts.prefix,
             opts.no_dedupe,
-            opts.max_display_depth,
+            opts.display_depth,
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
-        );
+        )?;
     }
 
     Ok(())
@@ -260,28 +292,28 @@ fn print(
 
 /// Prints a package and all of its dependencies.
 fn print_node<'a>(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
-    node_index: usize,
+    node_index: NodeId,
     format: &Pattern,
     symbols: &Symbols,
     pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
-    max_display_depth: u32,
-    visited_deps: &mut HashSet<usize>,
-    levels_continue: &mut Vec<bool>,
-    print_stack: &mut Vec<usize>,
-) {
+    display_depth: DisplayDepth,
+    visited_deps: &mut HashSet<NodeId>,
+    levels_continue: &mut Vec<(anstyle::Style, bool)>,
+    print_stack: &mut Vec<NodeId>,
+) -> CargoResult<()> {
     let new = no_dedupe || visited_deps.insert(node_index);
 
     match prefix {
-        Prefix::Depth => drop_print!(gctx, "{}", levels_continue.len()),
+        Prefix::Depth => drop_print!(ws.gctx(), "{}", levels_continue.len()),
         Prefix::Indent => {
-            if let Some((last_continues, rest)) = levels_continue.split_last() {
-                for continues in rest {
+            if let Some(((last_style, last_continues), rest)) = levels_continue.split_last() {
+                for (style, continues) in rest {
                     let c = if *continues { symbols.down } else { " " };
-                    drop_print!(gctx, "{}   ", c);
+                    drop_print!(ws.gctx(), "{style}{c}{style:#}   ");
                 }
 
                 let c = if *last_continues {
@@ -289,7 +321,12 @@ fn print_node<'a>(
                 } else {
                     symbols.ell
                 };
-                drop_print!(gctx, "{0}{1}{1} ", c, symbols.right);
+                drop_print!(
+                    ws.gctx(),
+                    "{last_style}{0}{1}{1}{last_style:#} ",
+                    c,
+                    symbols.right
+                );
             }
         }
         Prefix::None => {}
@@ -303,12 +340,12 @@ fn print_node<'a>(
     let star = if (new && !in_cycle) || !has_deps {
         ""
     } else {
-        " (*)"
+        color_print::cstr!(" <yellow,dim>(*)</>")
     };
-    drop_println!(gctx, "{}{}", format.display(graph, node_index), star);
+    drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
-        return;
+        return Ok(());
     }
     print_stack.push(node_index);
 
@@ -319,7 +356,7 @@ fn print_node<'a>(
         EdgeKind::Feature,
     ] {
         print_dependencies(
-            gctx,
+            ws,
             graph,
             node_index,
             format,
@@ -327,89 +364,133 @@ fn print_node<'a>(
             pkgs_to_prune,
             prefix,
             no_dedupe,
-            max_display_depth,
+            display_depth,
             visited_deps,
             levels_continue,
             print_stack,
             kind,
-        );
+        )?;
     }
     print_stack.pop();
+
+    Ok(())
 }
 
 /// Prints all the dependencies of a package for the given dependency kind.
 fn print_dependencies<'a>(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
-    node_index: usize,
+    node_index: NodeId,
     format: &Pattern,
     symbols: &Symbols,
     pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
-    max_display_depth: u32,
-    visited_deps: &mut HashSet<usize>,
-    levels_continue: &mut Vec<bool>,
-    print_stack: &mut Vec<usize>,
+    display_depth: DisplayDepth,
+    visited_deps: &mut HashSet<NodeId>,
+    levels_continue: &mut Vec<(anstyle::Style, bool)>,
+    print_stack: &mut Vec<NodeId>,
     kind: &EdgeKind,
-) {
-    let deps = graph.connected_nodes(node_index, kind);
+) -> CargoResult<()> {
+    let deps = graph.edges_of_kind(node_index, kind);
     if deps.is_empty() {
-        return;
+        return Ok(());
     }
 
     let name = match kind {
         EdgeKind::Dep(DepKind::Normal) => None,
-        EdgeKind::Dep(DepKind::Build) => Some("[build-dependencies]"),
-        EdgeKind::Dep(DepKind::Development) => Some("[dev-dependencies]"),
+        EdgeKind::Dep(DepKind::Build) => {
+            Some(color_print::cstr!("<blue,bold>[build-dependencies]</>"))
+        }
+        EdgeKind::Dep(DepKind::Development) => {
+            Some(color_print::cstr!("<cyan,bold>[dev-dependencies]</>"))
+        }
         EdgeKind::Feature => None,
     };
 
     if let Prefix::Indent = prefix {
         if let Some(name) = name {
-            for continues in &**levels_continue {
+            for (style, continues) in &**levels_continue {
                 let c = if *continues { symbols.down } else { " " };
-                drop_print!(gctx, "{}   ", c);
+                drop_print!(ws.gctx(), "{style}{c}{style:#}   ");
             }
 
-            drop_println!(gctx, "{}", name);
+            drop_println!(ws.gctx(), "{name}");
         }
     }
 
+    let (max_display_depth, filter_non_workspace_member, filter_private) = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => (max, false, false),
+        DisplayDepth::Workspace => (u32::MAX, true, false),
+        DisplayDepth::Public => {
+            if !ws.gctx().cli_unstable().unstable_options {
+                anyhow::bail!("`--depth public` requires `-Zunstable-options`")
+            }
+            (u32::MAX, false, true)
+        }
+    };
+
     // Current level exceeds maximum display depth. Skip.
     if levels_continue.len() + 1 > max_display_depth as usize {
-        return;
+        return Ok(());
     }
 
     let mut it = deps
         .iter()
         .filter(|dep| {
             // Filter out packages to prune.
-            match graph.node(**dep) {
+            match graph.node(dep.node()) {
                 Node::Package { package_id, .. } => {
+                    if filter_non_workspace_member && !ws.is_member_id(*package_id) {
+                        return false;
+                    }
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
                     !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
-                _ => true,
+                Node::Feature { .. } => {
+                    if filter_private && !dep.public() {
+                        return false;
+                    }
+                    true
+                }
             }
         })
         .peekable();
 
     while let Some(dependency) = it.next() {
-        levels_continue.push(it.peek().is_some());
+        let style = edge_line_color(dependency.kind());
+        levels_continue.push((style, it.peek().is_some()));
         print_node(
-            gctx,
+            ws,
             graph,
-            *dependency,
+            dependency.node(),
             format,
             symbols,
             pkgs_to_prune,
             prefix,
             no_dedupe,
-            max_display_depth,
+            display_depth,
             visited_deps,
             levels_continue,
             print_stack,
-        );
+        )?;
         levels_continue.pop();
+    }
+
+    Ok(())
+}
+
+fn edge_line_color(kind: EdgeKind) -> anstyle::Style {
+    match kind {
+        EdgeKind::Dep(DepKind::Normal) => anstyle::Style::new() | anstyle::Effects::DIMMED,
+        EdgeKind::Dep(DepKind::Build) => {
+            anstyle::AnsiColor::Blue.on_default() | anstyle::Effects::BOLD
+        }
+        EdgeKind::Dep(DepKind::Development) => {
+            anstyle::AnsiColor::Cyan.on_default() | anstyle::Effects::BOLD
+        }
+        EdgeKind::Feature => anstyle::AnsiColor::Magenta.on_default() | anstyle::Effects::DIMMED,
     }
 }

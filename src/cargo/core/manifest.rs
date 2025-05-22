@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -64,7 +65,7 @@ pub struct Manifest {
     contents: Rc<String>,
     document: Rc<toml_edit::ImDocument<String>>,
     original_toml: Rc<TomlManifest>,
-    resolved_toml: Rc<TomlManifest>,
+    normalized_toml: Rc<TomlManifest>,
     summary: Summary,
 
     // this form of manifest:
@@ -110,7 +111,7 @@ pub struct VirtualManifest {
     contents: Rc<String>,
     document: Rc<toml_edit::ImDocument<String>>,
     original_toml: Rc<TomlManifest>,
-    resolved_toml: Rc<TomlManifest>,
+    normalized_toml: Rc<TomlManifest>,
 
     // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
@@ -144,6 +145,70 @@ pub struct ManifestMetadata {
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
     pub rust_version: Option<RustVersion>,
+}
+
+impl ManifestMetadata {
+    /// Whether the given env var should be tracked by Cargo's dep-info.
+    pub fn should_track(env_key: &str) -> bool {
+        let keys = MetadataEnvs::keys();
+        keys.iter().any(|k| *k == env_key)
+    }
+
+    pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
+        MetadataEnvs::var(self, env_key)
+    }
+
+    pub fn env_vars(&self) -> impl Iterator<Item = (&'static str, Cow<'_, str>)> {
+        MetadataEnvs::keys()
+            .iter()
+            .map(|k| (*k, MetadataEnvs::var(self, k).unwrap()))
+    }
+}
+
+macro_rules! get_metadata_env {
+    ($meta:ident, $field:ident) => {
+        $meta.$field.as_deref().unwrap_or_default().into()
+    };
+    ($meta:ident, $field:ident, $to_var:expr) => {
+        $to_var($meta).into()
+    };
+}
+
+struct MetadataEnvs;
+
+macro_rules! metadata_envs {
+    (
+        $(
+            ($field:ident, $key:literal$(, $to_var:expr)?),
+        )*
+    ) => {
+        impl MetadataEnvs {
+            fn keys() -> &'static [&'static str] {
+                &[$($key),*]
+            }
+
+            fn var<'a>(meta: &'a ManifestMetadata, key: &str) -> Option<Cow<'a, str>> {
+                match key {
+                    $($key => Some(get_metadata_env!(meta, $field$(, $to_var)?)),)*
+                    _ => None,
+                }
+            }
+        }
+    }
+}
+
+// Metadata environmental variables that are emitted to rustc. Usable by `env!()`
+// If these change we need to trigger a rebuild.
+// NOTE: The env var name will be prefixed with `CARGO_PKG_`
+metadata_envs! {
+    (description, "CARGO_PKG_DESCRIPTION"),
+    (homepage, "CARGO_PKG_HOMEPAGE"),
+    (repository, "CARGO_PKG_REPOSITORY"),
+    (license, "CARGO_PKG_LICENSE"),
+    (license_file, "CARGO_PKG_LICENSE_FILE"),
+    (authors, "CARGO_PKG_AUTHORS", |m: &ManifestMetadata| m.authors.join(":")),
+    (rust_version, "CARGO_PKG_RUST_VERSION", |m: &ManifestMetadata| m.rust_version.as_ref().map(ToString::to_string).unwrap_or_default()),
+    (readme, "CARGO_PKG_README"),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -211,6 +276,17 @@ impl TargetKind {
                 kinds.iter().any(|k| k.requires_upstream_objects())
             }
             _ => true,
+        }
+    }
+
+    /// Returns whether production of this artifact could benefit from splitting metadata
+    /// into a .rmeta file.
+    pub fn benefits_from_no_embed_metadata(&self) -> bool {
+        match self {
+            TargetKind::Lib(kinds) | TargetKind::ExampleLib(kinds) => {
+                kinds.iter().any(|k| k.benefits_from_no_embed_metadata())
+            }
+            _ => false,
         }
     }
 
@@ -422,7 +498,7 @@ impl Manifest {
         contents: Rc<String>,
         document: Rc<toml_edit::ImDocument<String>>,
         original_toml: Rc<TomlManifest>,
-        resolved_toml: Rc<TomlManifest>,
+        normalized_toml: Rc<TomlManifest>,
         summary: Summary,
 
         default_kind: Option<CompileKind>,
@@ -451,7 +527,7 @@ impl Manifest {
             contents,
             document,
             original_toml,
-            resolved_toml,
+            normalized_toml,
             summary,
 
             default_kind,
@@ -483,8 +559,9 @@ impl Manifest {
     pub fn contents(&self) -> &str {
         self.contents.as_str()
     }
-    pub fn to_resolved_contents(&self) -> CargoResult<String> {
-        let toml = toml::to_string_pretty(self.resolved_toml())?;
+    /// See [`Manifest::normalized_toml`] for what "normalized" means
+    pub fn to_normalized_contents(&self) -> CargoResult<String> {
+        let toml = toml::to_string_pretty(self.normalized_toml())?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
     /// Collection of spans for the original TOML
@@ -496,8 +573,13 @@ impl Manifest {
         &self.original_toml
     }
     /// The [`TomlManifest`] with all fields expanded
-    pub fn resolved_toml(&self) -> &TomlManifest {
-        &self.resolved_toml
+    ///
+    /// This is the intersection of what fields need resolving for cargo-publish that also are
+    /// useful for the operation of cargo, including
+    /// - workspace inheritance
+    /// - target discovery
+    pub fn normalized_toml(&self) -> &TomlManifest {
+        &self.normalized_toml
     }
     pub fn summary(&self) -> &Summary {
         &self.summary
@@ -547,7 +629,7 @@ impl Manifest {
         &self.warnings
     }
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.resolved_toml.profile.as_ref()
+        self.normalized_toml.profile.as_ref()
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
@@ -658,7 +740,7 @@ impl VirtualManifest {
         contents: Rc<String>,
         document: Rc<toml_edit::ImDocument<String>>,
         original_toml: Rc<TomlManifest>,
-        resolved_toml: Rc<TomlManifest>,
+        normalized_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
@@ -669,7 +751,7 @@ impl VirtualManifest {
             contents,
             document,
             original_toml,
-            resolved_toml,
+            normalized_toml,
             replace,
             patch,
             workspace,
@@ -692,8 +774,8 @@ impl VirtualManifest {
         &self.original_toml
     }
     /// The [`TomlManifest`] with all fields expanded
-    pub fn resolved_toml(&self) -> &TomlManifest {
-        &self.resolved_toml
+    pub fn normalized_toml(&self) -> &TomlManifest {
+        &self.normalized_toml
     }
 
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
@@ -709,7 +791,7 @@ impl VirtualManifest {
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.resolved_toml.profile.as_ref()
+        self.normalized_toml.profile.as_ref()
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {
@@ -899,7 +981,7 @@ impl Target {
     pub fn documented(&self) -> bool {
         self.inner.doc
     }
-    // A plugin, proc-macro, or build-script.
+    // A proc-macro or build-script.
     pub fn for_host(&self) -> bool {
         self.inner.for_host
     }

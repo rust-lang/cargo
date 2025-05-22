@@ -1,4 +1,5 @@
-use super::{GlobalContext, UnmergedStringList, Value};
+use super::{GlobalContext, StringList, Value};
+use regex::Regex;
 use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
@@ -32,6 +33,48 @@ impl ConfigRelativePath {
         self.0.definition.root(gctx).join(&self.0.val)
     }
 
+    /// Same as [`Self::resolve_path`] but will make string replacements
+    /// before resolving the path.
+    ///
+    /// `replacements` should be an [`IntoIterator`] of tuples with the "from" and "to" for the
+    /// string replacement
+    pub fn resolve_templated_path(
+        &self,
+        gctx: &GlobalContext,
+        replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> Result<PathBuf, ResolveTemplateError> {
+        let mut value = self.0.val.clone();
+
+        for (from, to) in replacements {
+            value = value.replace(from.as_ref(), to.as_ref());
+        }
+
+        // Check for expected variables
+        let re = Regex::new(r"\{(.*)\}").unwrap();
+        if let Some(caps) = re.captures(&value) {
+            return Err(ResolveTemplateError::UnexpectedVariable {
+                variable: caps[1].to_string(),
+                raw_template: self.0.val.clone(),
+            });
+        };
+
+        if value.contains("{") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Opening,
+                raw_template: self.0.val.clone(),
+            });
+        }
+
+        if value.contains("}") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Closing,
+                raw_template: self.0.val.clone(),
+            });
+        }
+
+        Ok(self.0.definition.root(gctx).join(&value))
+    }
+
     /// Resolves this configuration-relative path to either an absolute path or
     /// something appropriate to execute from `PATH`.
     ///
@@ -53,6 +96,10 @@ impl ConfigRelativePath {
 ///
 /// Typically you should use `ConfigRelativePath::resolve_program` on the path
 /// to get the actual program.
+///
+/// **Note**: Any usage of this type in config needs to be listed in
+/// the `util::context::is_nonmergable_list` check to prevent list merging
+/// from multiple config files.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
     pub path: ConfigRelativePath,
@@ -64,7 +111,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
     where
         D: serde::Deserializer<'de>,
     {
-        let vsl = Value::<UnmergedStringList>::deserialize(deserializer)?;
+        let vsl = Value::<StringList>::deserialize(deserializer)?;
         let mut strings = vsl.val.0;
         if strings.is_empty() {
             return Err(D::Error::invalid_length(0, &"at least one element"));
@@ -82,7 +129,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
 }
 
 impl PathAndArgs {
-    /// Construct a PathAndArgs from a string. The string will be split on ascii whitespace,
+    /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
     /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
     /// items as arguments.
     pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {
@@ -98,4 +145,22 @@ impl PathAndArgs {
             args,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ResolveTemplateError {
+    UnexpectedVariable {
+        variable: String,
+        raw_template: String,
+    },
+    UnexpectedBracket {
+        bracket_type: BracketType,
+        raw_template: String,
+    },
+}
+
+#[derive(Debug)]
+pub enum BracketType {
+    Opening,
+    Closing,
 }

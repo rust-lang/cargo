@@ -1,7 +1,6 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::toml_mut::is_sorted;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, GlobalContext};
 use anyhow::{anyhow, Context as _};
@@ -131,6 +130,7 @@ impl NewOptions {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct CargoNewConfig {
     #[deprecated = "cargo-new no longer supports adding the authors field"]
     #[allow(dead_code)]
@@ -572,7 +572,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     Ok(kind)
 }
 
-/// IgnoreList
+/// `IgnoreList`
 struct IgnoreList {
     /// git like formatted entries
     ignore: Vec<String>,
@@ -613,7 +613,7 @@ impl IgnoreList {
         ignore_items.join("\n") + "\n"
     }
 
-    /// format_existing is used to format the IgnoreList when the ignore file
+    /// `format_existing` is used to format the `IgnoreList` when the ignore file
     /// already exists. It reads the contents of the given `BufRead` and
     /// checks if the contents of the ignore list are already existing in the
     /// file.
@@ -801,7 +801,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    let manifest_path = path.join("Cargo.toml");
+    let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
     if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
         let root_manifest = paths::read(&root_manifest_path)?;
         // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
@@ -875,7 +875,7 @@ fn main() {
 "
         } else {
             b"\
-pub fn add(left: usize, right: usize) -> usize {
+pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
@@ -905,7 +905,7 @@ mod tests {
         }
     }
 
-    if let Err(e) = Workspace::new(&path.join("Cargo.toml"), gctx) {
+    if let Err(e) = Workspace::new(&manifest_path, gctx) {
         crate::display_warning_with_error(
             "compiling this new package may not work due to invalid \
              workspace configuration",
@@ -970,38 +970,40 @@ fn update_manifest_with_new_member(
     workspace_document: &mut toml_edit::DocumentMut,
     display_path: &str,
 ) -> CargoResult<bool> {
+    let Some(workspace) = workspace_document.get_mut("workspace") else {
+        return Ok(false);
+    };
+
     // If the members element already exist, check if one of the patterns
     // in the array already includes the new package's relative path.
     // - Add the relative path if the members don't match the new package's path.
     // - Create a new members array if there are no members element in the workspace yet.
-    if let Some(workspace) = workspace_document.get_mut("workspace") {
-        if let Some(members) = workspace
-            .get_mut("members")
-            .and_then(|members| members.as_array_mut())
-        {
-            for member in members.iter() {
-                let pat = member
-                    .as_str()
-                    .with_context(|| format!("invalid non-string member `{}`", member))?;
-                let pattern = glob::Pattern::new(pat)
-                    .with_context(|| format!("cannot build glob pattern from `{}`", pat))?;
+    if let Some(members) = workspace
+        .get_mut("members")
+        .and_then(|members| members.as_array_mut())
+    {
+        for member in members.iter() {
+            let pat = member
+                .as_str()
+                .with_context(|| format!("invalid non-string member `{}`", member))?;
+            let pattern = glob::Pattern::new(pat)
+                .with_context(|| format!("cannot build glob pattern from `{}`", pat))?;
 
-                if pattern.matches(&display_path) {
-                    return Ok(false);
-                }
+            if pattern.matches(&display_path) {
+                return Ok(false);
             }
-
-            let was_sorted = is_sorted(members.iter().map(Value::as_str));
-            members.push(display_path);
-            if was_sorted {
-                members.sort_by(|lhs, rhs| lhs.as_str().cmp(&rhs.as_str()));
-            }
-        } else {
-            let mut array = Array::new();
-            array.push(display_path);
-
-            workspace["members"] = toml_edit::value(array);
         }
+
+        let was_sorted = members.iter().map(Value::as_str).is_sorted();
+        members.push(display_path);
+        if was_sorted {
+            members.sort_by(|lhs, rhs| lhs.as_str().cmp(&rhs.as_str()));
+        }
+    } else {
+        let mut array = Array::new();
+        array.push(display_path);
+
+        workspace["members"] = toml_edit::value(array);
     }
 
     write_atomic(

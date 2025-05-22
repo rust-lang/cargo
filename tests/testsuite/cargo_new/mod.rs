@@ -8,6 +8,7 @@ mod add_members_to_workspace_with_members_glob;
 mod add_members_to_workspace_without_members;
 mod empty_name;
 mod help;
+mod ignore_current_dir_workspace;
 mod inherit_workspace_lints;
 mod inherit_workspace_package_table;
 mod inherit_workspace_package_table_with_edition;

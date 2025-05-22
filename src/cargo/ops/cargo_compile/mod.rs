@@ -35,14 +35,13 @@
 //! [`drain_the_queue`]: crate::core::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
-use cargo_platform::Cfg;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
+use crate::core::compiler::{apply_env_config, standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
@@ -53,7 +52,7 @@ use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
-use crate::util::context::GlobalContext;
+use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, StableHasher};
 
@@ -98,7 +97,7 @@ pub struct CompileOptions {
     pub rustdoc_document_private_items: bool,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
-    pub honor_rust_version: bool,
+    pub honor_rust_version: Option<bool>,
 }
 
 impl CompileOptions {
@@ -116,7 +115,7 @@ impl CompileOptions {
             target_rustc_args: None,
             target_rustc_crate_types: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: true,
+            honor_rust_version: None,
         })
     }
 }
@@ -139,7 +138,11 @@ pub fn compile_with_exec<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
-    compile_ws(ws, options, exec)
+    let compilation = compile_ws(ws, options, exec)?;
+    if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.warning_count > 0 {
+        anyhow::bail!("warnings are denied by `build.warnings` configuration")
+    }
+    Ok(compilation)
 }
 
 /// Like [`compile_with_exec`] but without warnings from manifest parsing.
@@ -157,7 +160,11 @@ pub fn compile_ws<'a>(
     }
     crate::core::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;
-    build_runner.compile(exec)
+    if options.build_config.dry_run {
+        build_runner.dry_run()
+    } else {
+        build_runner.compile(exec)
+    }
 }
 
 /// Executes `rustc --print <VALUE>`.
@@ -181,6 +188,7 @@ pub fn print<'a>(
         }
         let target_info = TargetInfo::new(gctx, &build_config.requested_kinds, &rustc, *kind)?;
         let mut process = rustc.process();
+        apply_env_config(gctx, &mut process)?;
         process.args(&target_info.rustflags);
         if let Some(args) = target_rustc_args {
             process.args(args);
@@ -264,6 +272,7 @@ pub fn create_bcx<'a, 'gctx>(
             HasDevUnits::No
         }
     };
+    let dry_run = false;
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -272,6 +281,7 @@ pub fn create_bcx<'a, 'gctx>(
         &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
+        dry_run,
     )?;
     let WorkspaceResolve {
         mut pkg_set,
@@ -281,8 +291,13 @@ pub fn create_bcx<'a, 'gctx>(
     } = resolve;
 
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &mut target_data, &build_config, crates)?;
+        let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
+            ws,
+            &mut target_data,
+            &build_config,
+            crates,
+            &build_config.requested_kinds,
+        )?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -359,6 +374,8 @@ pub fn create_bcx<'a, 'gctx>(
     let generator = UnitGenerator {
         ws,
         packages: &to_builds,
+        spec,
+        target_data: &target_data,
         filter,
         requested_kinds: &build_config.requested_kinds,
         explicit_host_kind,
@@ -388,16 +405,18 @@ pub fn create_bcx<'a, 'gctx>(
         Vec::new()
     };
 
-    let std_roots = if let Some(crates) = standard_lib::std_crates(gctx, Some(&units)) {
+    let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
+            &units,
             std_resolve,
             std_features,
             &explicit_host_kinds,
             &pkg_set,
             interner,
             &profiles,
+            &target_data,
         )?
     } else {
         Default::default()
@@ -437,7 +456,6 @@ pub fn create_bcx<'a, 'gctx>(
         &units,
         &scrape_units,
         host_kind_requested.then_some(explicit_host_kind),
-        &target_data,
     );
 
     let mut extra_compiler_args = HashMap::new();
@@ -474,7 +492,7 @@ pub fn create_bcx<'a, 'gctx>(
             .extend(args);
     }
 
-    if honor_rust_version {
+    if honor_rust_version.unwrap_or(true) {
         let rustc_version = target_data.rustc.version.clone().into();
 
         let mut incompatible = Vec::new();
@@ -577,7 +595,6 @@ fn rebuild_unit_graph_shared(
     roots: &[Unit],
     scrape_units: &[Unit],
     to_host: Option<CompileKind>,
-    target_data: &RustcTargetData<'_>,
 ) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
     let mut result = UnitGraph::new();
     // Map of the old unit to the new unit, used to avoid recursing into units
@@ -594,7 +611,6 @@ fn rebuild_unit_graph_shared(
                 root,
                 false,
                 to_host,
-                target_data,
             )
         })
         .collect();
@@ -621,7 +637,6 @@ fn traverse_and_share(
     unit: &Unit,
     unit_is_for_host: bool,
     to_host: Option<CompileKind>,
-    target_data: &RustcTargetData<'_>,
 ) -> Unit {
     if let Some(new_unit) = memo.get(unit) {
         // Already computed, no need to recompute.
@@ -639,7 +654,6 @@ fn traverse_and_share(
                 &dep.unit,
                 dep.unit_for.is_for_host(),
                 to_host,
-                target_data,
             );
             new_dep_unit.hash(&mut dep_hash);
             UnitDep {
@@ -650,7 +664,7 @@ fn traverse_and_share(
         .collect();
     // Here, we have recursively traversed this unit's dependencies, and hashed them: we can
     // finalize the dep hash.
-    let new_dep_hash = dep_hash.finish();
+    let new_dep_hash = Hasher::finish(&dep_hash);
 
     // This is the key part of the sharing process: if the unit is a runtime dependency, whose
     // target is the same as the host, we canonicalize the compile kind to `CompileKind::Host`.
@@ -663,13 +677,8 @@ fn traverse_and_share(
         _ => unit.kind,
     };
 
-    let cfg = target_data.cfg(unit.kind);
-    let is_target_windows_msvc = cfg.contains(&Cfg::Name("windows".to_string()))
-        && cfg.contains(&Cfg::KeyPair("target_env".to_string(), "msvc".to_string()));
     let mut profile = unit.profile.clone();
-    // For MSVC, rustc currently treats -Cstrip=debuginfo same as -Cstrip=symbols, which causes
-    // this optimization to also remove symbols and thus break backtraces.
-    if profile.strip.is_deferred() && !is_target_windows_msvc {
+    if profile.strip.is_deferred() {
         // If strip was not manually set, and all dependencies of this unit together
         // with this unit have debuginfo turned off, we enable debuginfo stripping.
         // This will remove pre-existing debug symbols coming from the standard library.
@@ -703,6 +712,9 @@ fn traverse_and_share(
             to_host.unwrap(),
             unit.mode,
             unit.features.clone(),
+            unit.rustflags.clone(),
+            unit.rustdocflags.clone(),
+            unit.links_overrides.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,
@@ -728,6 +740,9 @@ fn traverse_and_share(
         canonical_kind,
         unit.mode,
         unit.features.clone(),
+        unit.rustflags.clone(),
+        unit.rustdocflags.clone(),
+        unit.links_overrides.clone(),
         unit.is_std,
         new_dep_hash,
         unit.artifact,
@@ -740,7 +755,7 @@ fn traverse_and_share(
     new_unit
 }
 
-/// Removes duplicate CompileMode::Doc units that would cause problems with
+/// Removes duplicate `CompileMode::Doc` units that would cause problems with
 /// filename collisions.
 ///
 /// Rustdoc only separates units by crate name in the file directory
@@ -889,6 +904,9 @@ fn override_rustc_crate_types(
             unit.kind,
             unit.mode,
             unit.features.clone(),
+            unit.rustflags.clone(),
+            unit.rustdocflags.clone(),
+            unit.links_overrides.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,

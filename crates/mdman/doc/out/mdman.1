@@ -22,13 +22,13 @@ The handlebars template has several special tags to assist with generating the
 man page:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Every block of command\-line options must be wrapped between \fB{{#options}}\fR
+\h'-04'\(bu\h'+03'Every block of command\-line options must be wrapped between \fB{{#options}}\fR
 and \fB{{/options}}\fR tags. This tells the processor where the options start
 and end.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Each option must be expressed with a \fB{{#option}}\fR block. The parameters to
+\h'-04'\(bu\h'+03'Each option must be expressed with a \fB{{#option}}\fR block. The parameters to
 the block are a sequence of strings indicating the option. For example,
 \fB{{#option "`\-p` _spec_..." "`\-\-package` _spec_..."}}\fR is an option that
 has two different forms. The text within the string is processed as markdown.
@@ -41,7 +41,7 @@ Use the \fB{{/option}}\fR tag to end the option block.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'References to other man pages should use the \fB{{man name section}}\fR
+\h'-04'\(bu\h'+03'References to other man pages should use the \fB{{man name section}}\fR
 expression. For example, \fB{{man "mdman" 1}}\fR will generate a reference to
 the \fBmdman(1)\fR man page. For non\-troff output, the \fB\-\-man\fR option will tell
 \fBmdman\fR how to create links to the man page. If there is no matching \fB\-\-man\fR
@@ -49,21 +49,21 @@ option, then it links to a file named \fIname\fR\fB\&.md\fR in the same director
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Variables can be set with \fB{{*set name="value"}}\fR\&. These variables can
+\h'-04'\(bu\h'+03'Variables can be set with \fB{{*set name="value"}}\fR\&. These variables can
 then be referenced with \fB{{name}}\fR expressions.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Partial templates should be placed in a directory named \fBincludes\fR
+\h'-04'\(bu\h'+03'Partial templates should be placed in a directory named \fBincludes\fR
 next to the source file. Templates can be included with an expression like
 \fB{{> template\-name}}\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Other helpers include:
+\h'-04'\(bu\h'+03'Other helpers include:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB{{lower value}}\fR Converts the given value to lowercase.
+\h'-04'\(bu\h'+03'\fB{{lower value}}\fR Converts the given value to lowercase.
 .RE
 .RE
 .SH "OPTIONS"
@@ -73,17 +73,17 @@ next to the source file. Templates can be included with an expression like
 Specifies the output type. The following output types are supported:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBman\fR \[em] A troff\-style man page. Outputs with a numbered extension (like
+\h'-04'\(bu\h'+03'\fBman\fR \[em] A troff\-style man page. Outputs with a numbered extension (like
 \fB\&.1\fR) matching the man page section.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBmd\fR \[em] A markdown file, after all handlebars processing has been finished.
+\h'-04'\(bu\h'+03'\fBmd\fR \[em] A markdown file, after all handlebars processing has been finished.
 Outputs with the \fB\&.md\fR extension.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBtxt\fR \[em] A text file, rendered for situations where a man page viewer isn\[cq]t
+\h'-04'\(bu\h'+03'\fBtxt\fR \[em] A text file, rendered for situations where a man page viewer isn\[cq]t
 available. Outputs with the \fB\&.txt\fR extension.
 .RE
 .RE

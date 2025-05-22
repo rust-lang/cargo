@@ -2,7 +2,8 @@
 
 use std::fs::File;
 
-use cargo_test_support::{cross_compile, project, publish, registry};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{cross_compile, project, publish, registry, str};
 
 #[cargo_test]
 fn simple_cross_package() {
@@ -41,15 +42,14 @@ fn simple_cross_package() {
 
     p.cargo("package --target")
         .arg(&target)
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.0 ([CWD])
-[VERIFYING] foo v0.0.0 ([CWD])
-[COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 4 files, [..] ([..] compressed)
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.0 ([ROOT]/foo)
+[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Check that the tarball contains the files
@@ -58,7 +58,7 @@ fn simple_cross_package() {
         f,
         "foo-0.0.0.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
-        &[],
+        (),
     );
 }
 
@@ -105,20 +105,19 @@ fn publish_with_target() {
         .replace_crates_io(registry.index_url())
         .arg("--target")
         .arg(&target)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[PACKAGING] foo v0.0.0 ([CWD])
-[VERIFYING] foo v0.0.0 ([CWD])
-[COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] [..]
-[UPLOADING] foo v0.0.0 ([CWD])
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.0 ([ROOT]/foo)
+[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.0 ([ROOT]/foo)
 [UPLOADED] foo v0.0.0 to registry `crates-io`
-[NOTE] waiting [..]
-You may press ctrl-c [..]
+[NOTE] waiting for `foo v0.0.0` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.0 at registry `crates-io`
-",
-        )
+
+"#]])
         .run();
 }

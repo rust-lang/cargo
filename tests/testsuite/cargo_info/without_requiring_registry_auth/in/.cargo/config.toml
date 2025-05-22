@@ -1,0 +1,2 @@
+[registry]
+global-credential-providers = ["false"]

@@ -3,9 +3,10 @@ use cargo_test_support::compare::assert_ui;
 use cargo_test_support::current_dir;
 use cargo_test_support::file;
 use cargo_test_support::git;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
-use cargo_test_support::CargoCommand;
+use cargo_test_support::CargoCommandExt;
 
 #[cargo_test]
 fn case() {
@@ -73,8 +74,8 @@ fn case() {
         .current_dir(&in_project.root())
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &in_project.root());
 }

@@ -1,14 +1,18 @@
 //! Tests for weak-dep-features.
 
-use super::features2::switch_to_resolver_2;
-use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
-use cargo_test_support::{project, publish};
 use std::fmt::Write;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
+use cargo_test_support::str;
+use cargo_test_support::{project, publish};
+
+use super::features2::switch_to_resolver_2;
 
 // Helper to create lib.rs files that check features.
 fn require(enabled_features: &[&str], disabled_features: &[&str]) -> String {
     let mut s = String::new();
+    writeln!(s, "#![allow(unexpected_cfgs)]").unwrap();
     for feature in enabled_features {
         writeln!(s, "#[cfg(not(feature=\"{feature}\"))] compile_error!(\"expected feature {feature} to be enabled\");",
             feature=feature).unwrap();
@@ -48,26 +52,24 @@ fn simple() {
     // It's a bit unfortunate that this has to download `bar`, but avoiding
     // that is extremely difficult.
     p.cargo("check --features f1")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 2 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 [..]
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check --features f1,bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -104,21 +106,20 @@ fn deferred() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 4 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 [..]
-[DOWNLOADED] bar_activator v1.0.0 [..]
-[DOWNLOADED] bar v1.0.0 [..]
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
 [CHECKING] dep v1.0.0
 [CHECKING] bar_activator v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -148,13 +149,14 @@ fn not_optional_dep() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr("\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `feat` includes `dep?/feat` with a `?`, but `dep` is not an optional dependency
   A non-optional dependency of the same name is defined; consider removing the `?` or changing the dependency to be optional
-")
+
+"#]])
         .run();
 }
 
@@ -184,27 +186,25 @@ fn optional_cli_syntax() {
 
     // Does not build bar.
     p.cargo("check --features bar?/feat")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 2 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 [..]
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Builds bar.
     p.cargo("check --features bar?/feat,bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     eprintln!("check V2 resolver");
@@ -212,23 +212,21 @@ fn optional_cli_syntax() {
     p.build_dir().rm_rf();
     // Does not build bar.
     p.cargo("check --features bar?/feat")
-        .with_stderr(
-            "\
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Builds bar.
     p.cargo("check --features bar?/feat,bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -259,14 +257,12 @@ fn required_features() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 2 packages
-[ERROR] invalid feature `bar?/feat` in required-features of target `foo`: \
-optional dependency with `?` is not allowed in required-features
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[ERROR] invalid feature `bar?/feat` in required-features of target `foo`: optional dependency with `?` is not allowed in required-features
+
+"#]])
         .run();
 }
 
@@ -355,22 +351,21 @@ fn weak_with_host_decouple() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 4 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
+[DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
 [COMPILING] common v1.0.0
 [COMPILING] bar_activator v1.0.0
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -402,49 +397,52 @@ fn weak_namespaced() {
         .build();
 
     p.cargo("check --features f1")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 2 packages
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 [..]
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("tree -f")
         .arg("{p} feats:{f}")
-        .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) feats:
+
+"#]])
         .run();
 
     p.cargo("tree --features f1 -f")
         .arg("{p} feats:{f}")
-        .with_stdout("foo v0.1.0 ([ROOT]/foo) feats:f1")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) feats:f1
+
+"#]])
         .run();
 
     p.cargo("tree --features f1,f2 -f")
         .arg("{p} feats:{f}")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo) feats:f1,f2
 └── bar v1.0.0 feats:feat
-",
-        )
+
+"#]])
         .run();
 
     // "bar" remains not-a-feature
     p.change_file("src/lib.rs", &require(&["f1", "f2"], &["bar"]));
 
     p.cargo("check --features f1,f2")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -474,64 +472,66 @@ fn tree() {
         .build();
 
     p.cargo("tree --features f1")
-        .with_stdout("foo v0.1.0 ([ROOT]/foo)")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree --features f1,bar")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --features f1,bar -e features")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar feature \"default\"
+└── bar feature "default"
     └── bar v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --features f1,bar -e features -i bar")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bar v1.0.0
-├── bar feature \"default\"
+├── bar feature "default"
 │   └── foo v0.1.0 ([ROOT]/foo)
-│       ├── foo feature \"bar\" (command-line)
-│       ├── foo feature \"default\" (command-line)
-│       └── foo feature \"f1\" (command-line)
-└── bar feature \"feat\"
-    └── foo feature \"f1\" (command-line)
-",
-        )
+│       ├── foo feature "bar" (command-line)
+│       ├── foo feature "default" (command-line)
+│       └── foo feature "f1" (command-line)
+└── bar feature "feat"
+    └── foo feature "f1" (command-line)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features bar?/feat")
-        .with_stdout("foo v0.1.0 ([ROOT]/foo)")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     // This is a little strange in that it produces no output.
     // Maybe `cargo tree` should print a note about why?
     p.cargo("tree -e features -i bar --features bar?/feat")
-        .with_stdout("")
+        .with_stdout_data("")
         .run();
 
     p.cargo("tree -e features -i bar --features bar?/feat,bar")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bar v1.0.0
-├── bar feature \"default\"
+├── bar feature "default"
 │   └── foo v0.1.0 ([ROOT]/foo)
-│       ├── foo feature \"bar\" (command-line)
-│       └── foo feature \"default\" (command-line)
-└── bar feature \"feat\" (command-line)
-",
-        )
+│       ├── foo feature "bar" (command-line)
+│       └── foo feature "default" (command-line)
+└── bar feature "feat" (command-line)
+
+"#]])
         .run();
 }
 
@@ -566,22 +566,21 @@ fn publish() {
 
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[PACKAGING] foo v0.1.0 [..]
-[VERIFYING] foo v0.1.0 [..]
-[UPDATING] [..]
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-[PACKAGED] [..]
-[UPLOADING] foo v0.1.0 [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for `foo v0.1.0` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
-",
-        )
+
+"#]])
         .run();
 
     publish::validate_upload_with_contents(
@@ -621,29 +620,49 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           }
         "#,
         "foo-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
-        &[(
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
+        [(
             "Cargo.toml",
-            &format!(
-                r#"{}
+            str![[r##"
+# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
 [package]
 edition = "2015"
 name = "foo"
 version = "0.1.0"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
+
+[features]
+feat1 = []
+feat2 = ["bar?/feat"]
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 
 [dependencies.bar]
 version = "1.0"
 optional = true
 
-[features]
-feat1 = []
-feat2 = ["bar?/feat"]
-"#,
-                cargo::core::manifest::MANIFEST_PREAMBLE
-            ),
+"##]],
         )],
     );
 }

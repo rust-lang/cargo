@@ -10,6 +10,7 @@ pub fn cli() -> Command {
         .arg_silent_suggestion()
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()
+        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help pkgid</>` for more detailed information.\n"
         ))
@@ -17,13 +18,6 @@ pub fn cli() -> Command {
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(gctx)?;
-    if ws.root_maybe().is_embedded() {
-        return Err(anyhow::format_err!(
-            "{} is unsupported by `cargo pkgid`",
-            ws.root_manifest().display()
-        )
-        .into());
-    }
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?
     }

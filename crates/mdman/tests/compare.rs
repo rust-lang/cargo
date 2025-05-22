@@ -22,7 +22,7 @@ fn run(name: &str) {
             name,
             format.extension(section)
         ));
-        snapbox::assert_eq(snapbox::Data::read_from(&expected_path, None), result);
+        snapbox::assert_data_eq!(result, snapbox::Data::read_from(&expected_path, None).raw());
     }
 }
 

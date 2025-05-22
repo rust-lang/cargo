@@ -15,7 +15,7 @@ The key points of workspaces are:
   sections in `Cargo.toml` are only recognized in the *root* manifest, and
   ignored in member crates' manifests.
 
-In the `Cargo.toml`, the `[workspace]` table supports the following sections:
+The root `Cargo.toml` of a workspace supports the following sections:
 
 * [`[workspace]`](#the-workspace-section) --- Defines a workspace.
   * [`resolver`](resolver.md#resolver-versions) --- Sets the dependency resolver to use.
@@ -54,7 +54,6 @@ where the workspace's `Cargo.toml` is located.
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
 ### Virtual workspace
@@ -68,7 +67,7 @@ you want to keep all the packages organized in separate directories.
 # [PROJECT_DIR]/Cargo.toml
 [workspace]
 members = ["hello_world"]
-resolver = "2"
+resolver = "3"
 ```
 
 ```toml
@@ -76,14 +75,17 @@ resolver = "2"
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-edition = "2021"     # the edition, will have no effect on a resolver used in the workspace
-authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
+edition = "2024"     # the edition, will have no effect on a resolver used in the workspace
 ```
 
-Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
-should be specified manually. It is usually deduced from the [`package.edition`][package-edition]
-field which is absent in virtual manifests and the edition field of a member
-won't affect the resolver used by the workspace.
+By having a workspace without a root package,
+
+- [`resolver`](resolver.md#resolver-versions) must be
+  set explicitly in virtual workspaces as they have no
+  [`package.edition`][package-edition] to infer it from
+  [resolver version](resolver.md#resolver-versions).
+- Commands run in the workspace root will run against all workspace
+  members by default, see [`default-members`](#the-default-members-field).
 
 ## The `members` and `exclude` fields 
 
@@ -120,14 +122,12 @@ is not inside a subdirectory of the workspace root.
 In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
 packages to operate on. If neither of those flags are specified, Cargo will
-use the package in the current working directory. If the current directory is
-a [virtual workspace](#virtual-workspace), it will apply to all members (as if
-`--workspace` were specified on the command-line).  See also
-[`default-members`](#the-default-members-field).
+use the package in the current working directory. However, if the current directory is
+a workspace root, the [`default-members`](#the-default-members-field) will be used.
 
 ## The `default-members` field
 
-The optional `default-members` key can be specified to set the members to
+The `default-members` field specifies paths of [members](#the-members-and-exclude-fields) to
 operate on when in the workspace root and the package selection flags are not
 used:
 
@@ -137,7 +137,12 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
 
-When specified, `default-members` must expand to a subset of `members`.
+> Note: when a [root package](#root-package) is present,
+> you can only operate on it using `--package` and `--workspace` flags.
+
+When unspecified, the [root package](#root-package) will be used.
+In the case of a [virtual workspace](#virtual-workspace), all members will be used
+(as if `--workspace` were specified on the command-line).
 
 ## The `package` table
 
@@ -184,6 +189,8 @@ description.workspace = true
 documentation.workspace = true
 ```
 
+> **MSRV:** Requires 1.64+
+
 ## The `dependencies` table
 
 The `workspace.dependencies` table is where you define dependencies to be
@@ -223,6 +230,8 @@ cc.workspace = true
 rand.workspace = true
 ```
 
+> **MSRV:** Requires 1.64+
+
 ## The `lints` table
 
 The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
@@ -249,6 +258,8 @@ version = "0.1.0"
 [lints]
 workspace = true
 ```
+
+> **MSRV:** Respected as of 1.74
 
 ## The `metadata` table
 
@@ -277,7 +288,7 @@ if that makes sense for the tool in question.
 [`Cargo.lock`]: ../guide/cargo-toml-vs-cargo-lock.md
 [package-metadata]: manifest.md#the-metadata-table
 [package-edition]: manifest.md#the-edition-field
-[output directory]: ../guide/build-cache.md
+[output directory]: build-cache.md
 [patch]: overriding-dependencies.md#the-patch-section
 [replace]: overriding-dependencies.md#the-replace-section
 [profiles]: profiles.md

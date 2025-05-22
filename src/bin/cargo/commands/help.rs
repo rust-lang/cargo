@@ -15,7 +15,19 @@ const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"
 pub fn cli() -> Command {
     subcommand("help")
         .about("Displays help for a cargo subcommand")
-        .arg(Arg::new("COMMAND").action(ArgAction::Set))
+        .arg(Arg::new("COMMAND").action(ArgAction::Set).add(
+            clap_complete::ArgValueCandidates::new(|| {
+                super::builtin()
+                    .iter()
+                    .map(|cmd| {
+                        let name = cmd.get_name();
+                        clap_complete::CompletionCandidate::new(name)
+                            .help(cmd.get_about().cloned())
+                            .hide(cmd.is_hide_set())
+                    })
+                    .collect()
+            }),
+        ))
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {

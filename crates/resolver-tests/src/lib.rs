@@ -1,12 +1,15 @@
+//! > This crate is maintained by the Cargo team, primarily for use by Cargo
+//! > and not intended for external use (except as a transitive dependency). This
+//! > crate may make major changes to its APIs or be deprecated without warning.
+
 #![allow(clippy::print_stderr)]
 
-use std::cell::RefCell;
+pub mod helpers;
+pub mod sat;
+
 use std::cmp::{max, min};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::fmt::Write;
-use std::rc::Rc;
-use std::sync::OnceLock;
 use std::task::Poll;
 use std::time::Instant;
 
@@ -14,44 +17,64 @@ use cargo::core::dependency::DepKind;
 use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::Resolve;
 use cargo::core::ResolveVersion;
+use cargo::core::SourceId;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
-use cargo::util::{CargoResult, GlobalContext, IntoUrl};
-use cargo_util_schemas::manifest::RustVersion;
+use cargo::util::interning::InternedString;
+use cargo::util::{CargoResult, GlobalContext};
+
+use crate::helpers::{dep_req, dep_req_kind, pkg_dep, pkg_id, ToPkgId};
+use crate::sat::SatResolver;
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
 use proptest::string::string_regex;
-use varisat::ExtendFormula;
 
 pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
-    resolve_with_global_context(deps, registry, &GlobalContext::default().unwrap())
+    Ok(
+        resolve_with_global_context(deps, registry, &GlobalContext::default().unwrap())?
+            .into_iter()
+            .map(|(pkg, _)| pkg)
+            .collect(),
+    )
 }
 
 pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    sat_resolve: Option<SatResolve>,
-) -> CargoResult<Vec<PackageId>> {
-    let resolve =
-        resolve_with_global_context_raw(deps.clone(), registry, &GlobalContext::default().unwrap());
+    sat_resolver: &mut SatResolver,
+) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
+    resolve_and_validated_raw(deps, registry, pkg_id("root"), sat_resolver)
+}
+
+// Verify that the resolution of cargo resolver can pass the verification of SAT
+pub fn resolve_and_validated_raw(
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    root_pkg_id: PackageId,
+    sat_resolver: &mut SatResolver,
+) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
+    let resolve = resolve_with_global_context_raw(
+        deps.clone(),
+        registry,
+        root_pkg_id,
+        &GlobalContext::default().unwrap(),
+    );
 
     match resolve {
         Err(e) => {
-            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
-            if sat_resolve.sat_resolve(&deps) {
+            if sat_resolver.sat_resolve(&deps) {
                 panic!(
-                    "the resolve err but the sat_resolve thinks this will work:\n{}",
-                    sat_resolve.use_packages().unwrap()
+                    "`resolve()` returned an error but the sat resolver thinks this will work:\n{}",
+                    sat_resolver.used_packages().unwrap()
                 );
             }
             Err(e)
         }
         Ok(resolve) => {
-            let mut stack = vec![pkg_id("root")];
+            let mut stack = vec![root_pkg_id];
             let mut used = HashSet::new();
             let mut links = HashSet::new();
             while let Some(p) = stack.pop() {
@@ -69,14 +92,13 @@ pub fn resolve_and_validated(
                     }));
                 }
             }
-            let out = resolve.sort();
+            let out = collect_features(&resolve);
             assert_eq!(out.len(), used.len());
 
-            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
-            if !sat_resolve.sat_is_valid_solution(&out) {
+            if !sat_resolver.sat_is_valid_solution(&out) {
                 panic!(
-                    "the sat_resolve err but the resolve thinks this will work:\n{:?}",
-                    resolve
+                    "`resolve()` thinks this will work, but the solution is \
+                     invalid according to the sat resolver:\n{resolve:?}",
                 );
             }
             Ok(out)
@@ -84,18 +106,27 @@ pub fn resolve_and_validated(
     }
 }
 
+fn collect_features(resolve: &Resolve) -> Vec<(PackageId, Vec<InternedString>)> {
+    resolve
+        .sort()
+        .iter()
+        .map(|&pkg| (pkg, resolve.features(pkg).to_vec()))
+        .collect()
+}
+
 pub fn resolve_with_global_context(
     deps: Vec<Dependency>,
     registry: &[Summary],
     gctx: &GlobalContext,
-) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_global_context_raw(deps, registry, gctx)?;
-    Ok(resolve.sort())
+) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
+    let resolve = resolve_with_global_context_raw(deps, registry, pkg_id("root"), gctx)?;
+    Ok(collect_features(&resolve))
 }
 
 pub fn resolve_with_global_context_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
+    root_pkg_id: PackageId,
     gctx: &GlobalContext,
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
@@ -112,7 +143,8 @@ pub fn resolve_with_global_context_raw(
             for summary in self.list.iter() {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(summary),
-                    QueryKind::Alternatives => true,
+                    QueryKind::RejectedVersions => dep.matches(summary),
+                    QueryKind::AlternativeNames => true,
                     QueryKind::Normalized => true,
                 };
                 if matched {
@@ -141,7 +173,7 @@ pub fn resolve_with_global_context_raw(
                 // we found a case that causes a panic and did not use all of the input.
                 // lets print the part of the input that was used for minimization.
                 eprintln!(
-                    "Part used befor drop: {:?}",
+                    "Part used before drop: {:?}",
                     PrettyPrintRegistry(
                         self.list
                             .iter()
@@ -157,22 +189,20 @@ pub fn resolve_with_global_context_raw(
         list: registry,
         used: HashSet::new(),
     };
-    let summary = Summary::new(
-        pkg_id("root"),
-        deps,
-        &BTreeMap::new(),
-        None::<&String>,
-        None::<RustVersion>,
-    )
-    .unwrap();
+
+    let root_summary =
+        Summary::new(root_pkg_id, deps, &BTreeMap::new(), None::<&String>, None).unwrap();
+
     let opts = ResolveOpts::everything();
+
     let start = Instant::now();
     let mut version_prefs = VersionPreferences::default();
     if gctx.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
+
     let resolve = resolver::resolve(
-        &[(summary, opts)],
+        &[(root_summary, opts)],
         &[],
         &mut registry,
         &version_prefs,
@@ -180,382 +210,10 @@ pub fn resolve_with_global_context_raw(
         Some(gctx),
     );
 
-    // The largest test in our suite takes less then 30 sec.
-    // So lets fail the test if we have ben running for two long.
+    // The largest test in our suite takes less then 30 secs.
+    // So let's fail the test if we have been running for more than 60 secs.
     assert!(start.elapsed().as_secs() < 60);
     resolve
-}
-
-const fn num_bits<T>() -> usize {
-    std::mem::size_of::<T>() * 8
-}
-
-fn log_bits(x: usize) -> usize {
-    if x == 0 {
-        return 0;
-    }
-    assert!(x > 0);
-    (num_bits::<usize>() as u32 - x.leading_zeros()) as usize
-}
-
-fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
-    if vars.len() <= 1 {
-        return;
-    } else if vars.len() == 2 {
-        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
-        return;
-    } else if vars.len() == 3 {
-        solver.add_clause(&[vars[0].negative(), vars[1].negative()]);
-        solver.add_clause(&[vars[0].negative(), vars[2].negative()]);
-        solver.add_clause(&[vars[1].negative(), vars[2].negative()]);
-        return;
-    }
-    // use the "Binary Encoding" from
-    // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
-    let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
-    for (i, p) in vars.iter().enumerate() {
-        for b in 0..bits.len() {
-            solver.add_clause(&[p.negative(), bits[b].lit(((1 << b) & i) > 0)]);
-        }
-    }
-}
-
-fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
-    cnf: &mut impl varisat::ExtendFormula,
-    data: impl Iterator<Item = (K, varisat::Var)>,
-) -> HashMap<K, Vec<varisat::Var>> {
-    // no two packages with the same links set
-    let mut by_keys: HashMap<K, Vec<varisat::Var>> = HashMap::new();
-    for (p, v) in data {
-        by_keys.entry(p).or_default().push(v)
-    }
-    for key in by_keys.values() {
-        sat_at_most_one(cnf, key);
-    }
-    by_keys
-}
-
-/// Resolution can be reduced to the SAT problem. So this is an alternative implementation
-/// of the resolver that uses a SAT library for the hard work. This is intended to be easy to read,
-/// as compared to the real resolver.
-///
-/// For the subset of functionality that are currently made by `registry_strategy` this will,
-/// find a valid resolution if one exists. The big thing that the real resolver does,
-/// that this one does not do is work with features and optional dependencies.
-///
-/// The SAT library dose not optimize for the newer version,
-/// so the selected packages may not match the real resolver.
-#[derive(Clone)]
-pub struct SatResolve(Rc<RefCell<SatResolveInner>>);
-
-struct SatResolveInner {
-    solver: varisat::Solver<'static>,
-    var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
-    by_name: HashMap<&'static str, Vec<PackageId>>,
-}
-
-impl SatResolve {
-    pub fn new(registry: &[Summary]) -> Self {
-        let mut cnf = varisat::CnfFormula::new();
-        let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
-            .iter()
-            .map(|s| (s.package_id(), cnf.new_var()))
-            .collect();
-
-        // no two packages with the same links set
-        sat_at_most_one_by_key(
-            &mut cnf,
-            registry
-                .iter()
-                .map(|s| (s.links(), var_for_is_packages_used[&s.package_id()]))
-                .filter(|(l, _)| l.is_some()),
-        );
-
-        // no two semver compatible versions of the same package
-        sat_at_most_one_by_key(
-            &mut cnf,
-            var_for_is_packages_used
-                .iter()
-                .map(|(p, &v)| (p.as_activations_key(), v)),
-        );
-
-        let mut by_name: HashMap<&'static str, Vec<PackageId>> = HashMap::new();
-
-        for p in registry.iter() {
-            by_name
-                .entry(p.name().as_str())
-                .or_default()
-                .push(p.package_id())
-        }
-
-        let empty_vec = vec![];
-
-        // active packages need each of there `deps` to be satisfied
-        for p in registry.iter() {
-            for dep in p.dependencies() {
-                let mut matches: Vec<varisat::Lit> = by_name
-                    .get(dep.package_name().as_str())
-                    .unwrap_or(&empty_vec)
-                    .iter()
-                    .filter(|&p| dep.matches_id(*p))
-                    .map(|p| var_for_is_packages_used[&p].positive())
-                    .collect();
-                // ^ the `dep` is satisfied or `p` is not active
-                matches.push(var_for_is_packages_used[&p.package_id()].negative());
-                cnf.add_clause(&matches);
-            }
-        }
-
-        let mut solver = varisat::Solver::new();
-        solver.add_formula(&cnf);
-
-        // We dont need to `solve` now. We know that "use nothing" will satisfy all the clauses so far.
-        // But things run faster if we let it spend some time figuring out how the constraints interact before we add assumptions.
-        solver
-            .solve()
-            .expect("docs say it can't error in default config");
-        SatResolve(Rc::new(RefCell::new(SatResolveInner {
-            solver,
-            var_for_is_packages_used,
-            by_name,
-        })))
-    }
-    pub fn sat_resolve(&self, deps: &[Dependency]) -> bool {
-        let mut s = self.0.borrow_mut();
-        let mut assumption = vec![];
-        let mut this_call = None;
-
-        // the starting `deps` need to be satisfied
-        for dep in deps.iter() {
-            let empty_vec = vec![];
-            let matches: Vec<varisat::Lit> = s
-                .by_name
-                .get(dep.package_name().as_str())
-                .unwrap_or(&empty_vec)
-                .iter()
-                .filter(|&p| dep.matches_id(*p))
-                .map(|p| s.var_for_is_packages_used[p].positive())
-                .collect();
-            if matches.is_empty() {
-                return false;
-            } else if matches.len() == 1 {
-                assumption.extend_from_slice(&matches)
-            } else {
-                if this_call.is_none() {
-                    let new_var = s.solver.new_var();
-                    this_call = Some(new_var);
-                    assumption.push(new_var.positive());
-                }
-                let mut matches = matches;
-                matches.push(this_call.unwrap().negative());
-                s.solver.add_clause(&matches);
-            }
-        }
-
-        s.solver.assume(&assumption);
-
-        s.solver
-            .solve()
-            .expect("docs say it can't error in default config")
-    }
-    pub fn sat_is_valid_solution(&self, pids: &[PackageId]) -> bool {
-        let mut s = self.0.borrow_mut();
-        for p in pids {
-            if p.name().as_str() != "root" && !s.var_for_is_packages_used.contains_key(p) {
-                return false;
-            }
-        }
-        let assumption: Vec<_> = s
-            .var_for_is_packages_used
-            .iter()
-            .map(|(p, v)| v.lit(pids.contains(p)))
-            .collect();
-
-        s.solver.assume(&assumption);
-
-        s.solver
-            .solve()
-            .expect("docs say it can't error in default config")
-    }
-    fn use_packages(&self) -> Option<String> {
-        self.0.borrow().solver.model().map(|lits| {
-            let lits: HashSet<_> = lits
-                .iter()
-                .filter(|l| l.is_positive())
-                .map(|l| l.var())
-                .collect();
-            let mut out = String::new();
-            out.push_str("used:\n");
-            for (p, v) in self.0.borrow().var_for_is_packages_used.iter() {
-                if lits.contains(v) {
-                    writeln!(&mut out, "    {}", p).unwrap();
-                }
-            }
-            out
-        })
-    }
-}
-
-pub trait ToDep {
-    fn to_dep(self) -> Dependency;
-}
-
-impl ToDep for &'static str {
-    fn to_dep(self) -> Dependency {
-        Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
-    }
-}
-
-impl ToDep for Dependency {
-    fn to_dep(self) -> Dependency {
-        self
-    }
-}
-
-pub trait ToPkgId {
-    fn to_pkgid(&self) -> PackageId;
-}
-
-impl ToPkgId for PackageId {
-    fn to_pkgid(&self) -> PackageId {
-        *self
-    }
-}
-
-impl<'a> ToPkgId for &'a str {
-    fn to_pkgid(&self) -> PackageId {
-        PackageId::try_new(*self, "1.0.0", registry_loc()).unwrap()
-    }
-}
-
-impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
-    fn to_pkgid(&self) -> PackageId {
-        let (name, vers) = self;
-        PackageId::try_new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
-    }
-}
-
-#[macro_export]
-macro_rules! pkg {
-    ($pkgid:expr => [$($deps:expr),+ $(,)* ]) => ({
-        let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
-        $crate::pkg_dep($pkgid, d)
-    });
-
-    ($pkgid:expr) => ({
-        $crate::pkg($pkgid)
-    })
-}
-
-fn registry_loc() -> SourceId {
-    static EXAMPLE_DOT_COM: OnceLock<SourceId> = OnceLock::new();
-    let example_dot = EXAMPLE_DOT_COM.get_or_init(|| {
-        SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap()
-    });
-    *example_dot
-}
-
-pub fn pkg<T: ToPkgId>(name: T) -> Summary {
-    pkg_dep(name, Vec::new())
-}
-
-pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
-    let pkgid = name.to_pkgid();
-    let link = if pkgid.name().ends_with("-sys") {
-        Some(pkgid.name().as_str())
-    } else {
-        None
-    };
-    Summary::new(
-        name.to_pkgid(),
-        dep,
-        &BTreeMap::new(),
-        link,
-        None::<RustVersion>,
-    )
-    .unwrap()
-}
-
-pub fn pkg_id(name: &str) -> PackageId {
-    PackageId::try_new(name, "1.0.0", registry_loc()).unwrap()
-}
-
-fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
-    let remote = loc.into_url();
-    let master = GitReference::Branch("master".to_string());
-    let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
-
-    PackageId::try_new(name, "1.0.0", source_id).unwrap()
-}
-
-pub fn pkg_loc(name: &str, loc: &str) -> Summary {
-    let link = if name.ends_with("-sys") {
-        Some(name)
-    } else {
-        None
-    };
-    Summary::new(
-        pkg_id_loc(name, loc),
-        Vec::new(),
-        &BTreeMap::new(),
-        link,
-        None::<RustVersion>,
-    )
-    .unwrap()
-}
-
-pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
-    let mut deps = sum.dependencies().to_vec();
-    deps.remove(ind);
-    // note: more things will need to be copied over in the future, but it works for now.
-    Summary::new(
-        sum.package_id(),
-        deps,
-        &BTreeMap::new(),
-        sum.links().map(|a| a.as_str()),
-        None::<RustVersion>,
-    )
-    .unwrap()
-}
-
-pub fn dep(name: &str) -> Dependency {
-    dep_req(name, "*")
-}
-
-pub fn dep_req(name: &str, req: &str) -> Dependency {
-    Dependency::parse(name, Some(req), registry_loc()).unwrap()
-}
-
-pub fn dep_req_kind(name: &str, req: &str, kind: DepKind) -> Dependency {
-    let mut dep = dep_req(name, req);
-    dep.set_kind(kind);
-    dep
-}
-
-pub fn dep_loc(name: &str, location: &str) -> Dependency {
-    let url = location.into_url().unwrap();
-    let master = GitReference::Branch("master".to_string());
-    let source_id = SourceId::for_git(&url, master).unwrap();
-    Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
-}
-
-pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
-    dep(name).set_kind(kind).clone()
-}
-
-pub fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
-    pkgs
-}
-
-pub fn names<P: ToPkgId>(names: &[P]) -> Vec<PackageId> {
-    names.iter().map(|name| name.to_pkgid()).collect()
-}
-
-pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
-    names
-        .iter()
-        .map(|&(name, loc)| pkg_id_loc(name, loc))
-        .collect()
 }
 
 /// By default `Summary` and `Dependency` have a very verbose `Debug` representation.
@@ -608,43 +266,9 @@ impl fmt::Debug for PrettyPrintRegistry {
     }
 }
 
-#[test]
-fn meta_test_deep_pretty_print_registry() {
-    assert_eq!(
-        &format!(
-            "{:?}",
-            PrettyPrintRegistry(vec![
-                pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
-                pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
-                pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
-                pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
-                                  dep_req("other", "1")]),
-                pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
-                pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
-                pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
-                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
-                pkg!(("dep_req", "1.0.0")),
-                pkg!(("dep_req", "2.0.0")),
-            ])
-        ),
-        "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
-         pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
-         pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
-         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"=1.0.2\"),dep_req(\"other\", \"^1\"),]),\
-         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"=1.0.1\"),]),\
-         pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
-         pkg!((\"baz\", \"1.0.1\")),\
-         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", DepKind::Build, false),]),\
-         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", DepKind::Development, false),]),\
-         pkg!((\"dep_req\", \"1.0.0\")),\
-         pkg!((\"dep_req\", \"2.0.0\")),]"
-    )
-}
-
 /// This generates a random registry index.
-/// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
-/// This strategy has a high probability of having valid dependencies
+/// Unlike `vec((Name, Ver, vec((Name, VerRq), ..), ..)`,
+/// this strategy has a high probability of having valid dependencies.
 pub fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
@@ -681,7 +305,7 @@ pub fn registry_strategy(
             vers
         });
 
-    // each version of each crate can depend on each crate smaller then it.
+    // each version of each crate can depend on each crate smaller than it.
     // In theory shrinkage should be 2, but in practice we get better trees with a larger value.
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
@@ -774,102 +398,125 @@ pub fn registry_strategy(
         )
 }
 
-/// This test is to test the generator to ensure
-/// that it makes registries with large dependency trees
-#[test]
-fn meta_test_deep_trees_from_strategy() {
-    use proptest::strategy::ValueTree;
-    use proptest::test_runner::TestRunner;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::helpers::registry;
 
-    let mut dis = [0; 21];
-
-    let strategy = registry_strategy(50, 20, 60);
-    let mut test_runner = TestRunner::deterministic();
-    for _ in 0..128 {
-        let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::new_with_rng(
-                Default::default(),
-                test_runner.new_rng(),
-            ))
-            .unwrap()
-            .current();
-        let reg = registry(input.clone());
-        for this in input.iter().rev().take(10) {
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
-            dis[res
-                .as_ref()
-                .map(|x| min(x.len(), dis.len()) - 1)
-                .unwrap_or(0)] += 1;
-            if dis.iter().all(|&x| x > 0) {
-                return;
-            }
-        }
+    #[test]
+    fn meta_test_deep_pretty_print_registry() {
+        assert_eq!(
+        &format!(
+            "{:?}",
+            PrettyPrintRegistry(vec![
+                pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
+                pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
+                pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
+                                          dep_req("other", "1")]),
+                pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
+                pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
+                pkg!(("baz", "1.0.1")),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
+                pkg!(("dep_req", "1.0.0")),
+                pkg!(("dep_req", "2.0.0")),
+            ])
+        ),
+        "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
+         pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
+         pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
+         pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"=1.0.2\"),dep_req(\"other\", \"^1\"),]),\
+         pkg!((\"bar\", \"2.0.0\") => [dep_req(\"baz\", \"=1.0.1\"),]),\
+         pkg!((\"baz\", \"1.0.2\") => [dep_req(\"other\", \"^2\"),]),\
+         pkg!((\"baz\", \"1.0.1\")),\
+         pkg!((\"cat\", \"1.0.2\") => [dep_req_kind(\"other\", \"^2\", DepKind::Build, false),]),\
+         pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", DepKind::Development, false),]),\
+         pkg!((\"dep_req\", \"1.0.0\")),\
+         pkg!((\"dep_req\", \"2.0.0\")),]"
+    )
     }
 
-    panic!(
-        "In 1280 tries we did not see a wide enough distribution of dependency trees! dis: {:?}",
-        dis
-    );
-}
+    /// This test is to test the generator to ensure
+    /// that it makes registries with large dependency trees
+    #[test]
+    fn meta_test_deep_trees_from_strategy() {
+        use proptest::strategy::ValueTree;
+        use proptest::test_runner::TestRunner;
 
-/// This test is to test the generator to ensure
-/// that it makes registries that include multiple versions of the same library
-#[test]
-fn meta_test_multiple_versions_strategy() {
-    use proptest::strategy::ValueTree;
-    use proptest::test_runner::TestRunner;
+        let mut dis = [0; 21];
 
-    let mut dis = [0; 10];
-
-    let strategy = registry_strategy(50, 20, 60);
-    let mut test_runner = TestRunner::deterministic();
-    for _ in 0..128 {
-        let PrettyPrintRegistry(input) = strategy
-            .new_tree(&mut TestRunner::new_with_rng(
-                Default::default(),
-                test_runner.new_rng(),
-            ))
-            .unwrap()
-            .current();
-        let reg = registry(input.clone());
-        for this in input.iter().rev().take(10) {
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
-            if let Ok(mut res) = res {
-                let res_len = res.len();
-                res.sort_by_key(|s| s.name());
-                res.dedup_by_key(|s| s.name());
-                dis[min(res_len - res.len(), dis.len() - 1)] += 1;
-            }
-            if dis.iter().all(|&x| x > 0) {
-                return;
+        let strategy = registry_strategy(50, 20, 60);
+        let mut test_runner = TestRunner::deterministic();
+        for _ in 0..128 {
+            let PrettyPrintRegistry(input) = strategy
+                .new_tree(&mut TestRunner::new_with_rng(
+                    Default::default(),
+                    test_runner.new_rng(),
+                ))
+                .unwrap()
+                .current();
+            let reg = registry(input.clone());
+            for this in input.iter().rev().take(10) {
+                let res = resolve(
+                    vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                    &reg,
+                );
+                dis[res
+                    .as_ref()
+                    .map(|x| min(x.len(), dis.len()) - 1)
+                    .unwrap_or(0)] += 1;
+                if dis.iter().all(|&x| x > 0) {
+                    return;
+                }
             }
         }
-    }
-    panic!(
-        "In 1280 tries we did not see a wide enough distribution of multiple versions of the same library! dis: {:?}",
-        dis
-    );
-}
 
-/// Assert `xs` contains `elems`
-#[track_caller]
-pub fn assert_contains<A: PartialEq + std::fmt::Debug>(xs: &[A], elems: &[A]) {
-    for elem in elems {
-        assert!(
-            xs.contains(elem),
-            "missing element\nset: {xs:?}\nmissing: {elem:?}"
+        panic!(
+            "In 1280 tries we did not see a wide enough distribution \
+             of dependency trees! dis: {dis:?}"
         );
     }
-}
 
-#[track_caller]
-pub fn assert_same<A: PartialEq + std::fmt::Debug>(a: &[A], b: &[A]) {
-    assert_eq!(a.len(), b.len(), "not equal\n{a:?}\n{b:?}");
-    assert_contains(b, a);
+    /// This test is to test the generator to ensure
+    /// that it makes registries that include multiple versions of the same library
+    #[test]
+    fn meta_test_multiple_versions_strategy() {
+        use proptest::strategy::ValueTree;
+        use proptest::test_runner::TestRunner;
+
+        let mut dis = [0; 10];
+
+        let strategy = registry_strategy(50, 20, 60);
+        let mut test_runner = TestRunner::deterministic();
+        for _ in 0..128 {
+            let PrettyPrintRegistry(input) = strategy
+                .new_tree(&mut TestRunner::new_with_rng(
+                    Default::default(),
+                    test_runner.new_rng(),
+                ))
+                .unwrap()
+                .current();
+            let reg = registry(input.clone());
+            for this in input.iter().rev().take(10) {
+                let res = resolve(
+                    vec![dep_req(&this.name(), &format!("={}", this.version()))],
+                    &reg,
+                );
+                if let Ok(mut res) = res {
+                    let res_len = res.len();
+                    res.sort_by_key(|s| s.name());
+                    res.dedup_by_key(|s| s.name());
+                    dis[min(res_len - res.len(), dis.len() - 1)] += 1;
+                }
+                if dis.iter().all(|&x| x > 0) {
+                    return;
+                }
+            }
+        }
+        panic!(
+            "In 1280 tries we did not see a wide enough distribution \
+             of multiple versions of the same library! dis: {dis:?}"
+        );
+    }
 }

@@ -1,6 +1,7 @@
 //! Tests for multiple `--target` flags to subcommands
 
-use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host, str};
 
 #[cargo_test]
 fn simple_build() {
@@ -69,8 +70,15 @@ fn simple_test() {
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t1))
-        .with_stderr_contains(&format!("[RUNNING] [..]{}[..]", t2))
+        .with_stderr_data(
+            str![[r#"
+[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE])
+...
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -82,7 +90,10 @@ fn simple_run() {
         .build();
 
     p.cargo("run --target a --target b")
-        .with_stderr("[ERROR] only one `--target` argument is supported")
+        .with_stderr_data(str![[r#"
+[ERROR] only one `--target` argument is supported
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -128,12 +139,12 @@ fn simple_doc_open() {
         .arg(&t1)
         .arg("--target")
         .arg(&t2)
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v1.0.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[ERROR] only one `--target` argument is supported",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v1.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] only one `--target` argument is supported
+
+"#]])
         .with_status(101)
         .run();
 }

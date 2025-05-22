@@ -1,5 +1,7 @@
 //! Tests for the `cargo rustdoc` command.
 
+use cargo_test_support::prelude::*;
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cross_compile, project};
 
 #[cargo_test]
@@ -7,17 +9,13 @@ fn rustdoc_simple() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v")
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
-        [..] \
-        -L dependency=[CWD]/target/debug/deps [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..] -L dependency=[ROOT]/foo/target/debug/deps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -27,13 +25,12 @@ fn rustdoc_simple_html() {
 
     p.cargo("rustdoc --output-format html --open -v")
         .with_status(101)
-        .with_stderr(
-            "\
-error: the `--output-format` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-[..]
+        .with_stderr_data(str![[r#"
+[ERROR] the `--output-format` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
 See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -43,14 +40,13 @@ fn rustdoc_simple_json() {
 
     p.cargo("rustdoc -Z unstable-options --output-format json -v")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc [..]--crate-name foo [..]-o [CWD]/target/doc [..]--output-format=json[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo.json
-",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/doc [..] --output-format=json[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo.json
+
+"#]])
         .run();
     assert!(p.root().join("target/doc/foo.json").is_file());
 }
@@ -62,14 +58,13 @@ fn rustdoc_invalid_output_format() {
     p.cargo("rustdoc -Z unstable-options --output-format pdf -v")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_status(1)
-        .with_stderr(
-            "\
-error: invalid value 'pdf' for '--output-format <FMT>'
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'pdf' for '--output-format <FMT>'
   [possible values: html, json]
 
 For more information, try '--help'.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -79,11 +74,12 @@ fn rustdoc_json_stable() {
 
     p.cargo("rustdoc -Z unstable-options --output-format json -v")
         .with_status(101)
-        .with_stderr(
-            "\
-error: the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-[..]
-",
+        .with_stderr_data(
+            str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
+
+"#]]
 	    )
         .run();
 }
@@ -95,12 +91,11 @@ fn rustdoc_json_without_unstable_options() {
     p.cargo("rustdoc --output-format json -v")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: the `--output-format` flag is unstable, pass `-Z unstable-options` to enable it
-[..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the `--output-format` flag is unstable, pass `-Z unstable-options` to enable it
+See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
+
+"#]])
         .run();
 }
 
@@ -109,19 +104,13 @@ fn rustdoc_args() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
-        [..] \
-        --cfg=foo \
-        -C metadata=[..] \
-        -L dependency=[CWD]/target/debug/deps [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -132,7 +121,11 @@ fn rustdoc_binary_args_passed() {
     p.cargo("rustdoc -v")
         .arg("--")
         .arg("--markdown-no-toc")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --markdown-no-toc[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --markdown-no-toc[..]`
+...
+"#]])
         .run();
 }
 
@@ -161,23 +154,16 @@ fn rustdoc_foo_with_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[CHECKING] bar v0.0.1 ([..])
-[RUNNING] `rustc [..]bar/src/lib.rs [..]`
-[DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
-        [..] \
-        --cfg=foo \
-        -C metadata=[..] \
-        -L dependency=[CWD]/target/debug/deps \
-        --extern [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.0.1 ([ROOT]/bar)
+[RUNNING] `rustc [..] [ROOT]/bar/src/lib.rs [..]`
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps --extern [..]--cfg=foo[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -206,20 +192,14 @@ fn rustdoc_only_bar_dependency() {
         .build();
 
     foo.cargo("rustdoc -v -p bar -- --cfg=foo")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[DOCUMENTING] bar v0.0.1 ([..])
-[RUNNING] `rustdoc [..]--crate-name bar [..]bar/src/lib.rs [..]\
-        -o [CWD]/target/doc \
-        [..] \
-        --cfg=foo \
-        -C metadata=[..] \
-        -L dependency=[CWD]/target/debug/deps [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/bar/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[DOCUMENTING] bar v0.0.1 ([ROOT]/bar)
+[RUNNING] `rustdoc [..] --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/bar/index.html
+
+"#]])
         .run();
 }
 
@@ -231,19 +211,13 @@ fn rustdoc_same_name_documents_lib() {
         .build();
 
     p.cargo("rustdoc -v -- --cfg=foo")
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-        -o [CWD]/target/doc \
-        [..] \
-        --cfg=foo \
-        -C metadata=[..] \
-        -L dependency=[CWD]/target/debug/deps [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -267,7 +241,11 @@ fn features() {
         .build();
 
     p.cargo("rustdoc --verbose --features quux")
-        .with_stderr_contains("[..]feature=[..]quux[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]feature=[..]quux[..]`
+...
+"#]])
         .run();
 }
 
@@ -292,11 +270,11 @@ fn proc_macro_crate_type() {
         .build();
 
     p.cargo("rustdoc --verbose")
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
 [RUNNING] `rustdoc --edition=2015 --crate-type proc-macro [..]`
-",
-        )
+...
+"#]])
         .run();
 }
 
@@ -310,19 +288,13 @@ fn rustdoc_target() {
 
     p.cargo("rustdoc --verbose --target")
         .arg(cross_compile::alternate())
-        .with_stderr(format!(
-            "\
-[DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]\
-    --target {target} \
-    -o [CWD]/target/{target}/doc \
-    [..] \
-    -L dependency=[CWD]/target/{target}/debug/deps \
-    -L dependency=[CWD]/target/debug/deps[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/[..]/doc/foo/index.html",
-            target = cross_compile::alternate()
-        ))
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]--target [ALT_TARGET] -o [ROOT]/foo/target/[ALT_TARGET]/doc [..] -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/deps -L dependency=[ROOT]/foo/target/debug/deps[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/[..]/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -342,6 +314,9 @@ fn fail_with_glob() {
 
     p.cargo("rustdoc -p '*z'")
         .with_status(101)
-        .with_stderr("[ERROR] Glob patterns on package selection are not supported.")
+        .with_stderr_data(str![[r#"
+[ERROR] Glob patterns on package selection are not supported.
+
+"#]])
         .run();
 }

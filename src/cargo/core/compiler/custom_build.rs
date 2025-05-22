@@ -31,12 +31,13 @@
 //! [`CompileMode::RunCustomBuild`]: super::CompileMode
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, BuildRunner, Job, Unit, Work};
+use super::{fingerprint, get_dynamic_search_path, BuildRunner, Job, Unit, Work};
 use crate::core::compiler::artifact;
-use crate::core::compiler::build_runner::Metadata;
+use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
+use crate::util::command_prelude::CompileMode;
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};
@@ -50,6 +51,11 @@ use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
 
+/// A build script instruction that tells Cargo to display an error after the
+/// build script has finished running. Read [the doc] for more.
+///
+/// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-error
+const CARGO_ERROR_SYNTAX: &str = "cargo::error=";
 /// Deprecated: A build script instruction that tells Cargo to display a warning after the
 /// build script has finished running. Read [the doc] for more.
 ///
@@ -60,11 +66,85 @@ const OLD_CARGO_WARNING_SYNTAX: &str = "cargo:warning=";
 ///
 /// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
 const NEW_CARGO_WARNING_SYNTAX: &str = "cargo::warning=";
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Severity {
+    Error,
+    Warning,
+}
+
+pub type LogMessage = (Severity, String);
+
+/// Represents a path added to the library search path.
+///
+/// We need to keep track of requests to add search paths within the cargo build directory
+/// separately from paths outside of Cargo. The reason is that we want to give precedence to linking
+/// against libraries within the Cargo build directory even if a similar library exists in the
+/// system (e.g. crate A adds `/usr/lib` to the search path and then a later build of crate B adds
+/// `target/debug/...` to satisfy its request to link against the library B that it built, but B is
+/// also found in `/usr/lib`).
+///
+/// There's some nuance here because we want to preserve relative order of paths of the same type.
+/// For example, if the build process would in declaration order emit the following linker line:
+/// ```bash
+/// -L/usr/lib -Ltarget/debug/build/crate1/libs -L/lib -Ltarget/debug/build/crate2/libs)
+/// ```
+///
+/// we want the linker to actually receive:
+/// ```bash
+/// -Ltarget/debug/build/crate1/libs -Ltarget/debug/build/crate2/libs) -L/usr/lib -L/lib
+/// ```
+///
+/// so that the library search paths within the crate artifacts directory come first but retain
+/// relative ordering while the system library paths come after while still retaining relative
+/// ordering among them; ordering is the order they are emitted within the build process,
+/// not lexicographic order.
+///
+/// WARNING: Even though this type implements PartialOrd + Ord, this is a lexicographic ordering.
+/// The linker line will require an explicit sorting algorithm. PartialOrd + Ord is derived because
+/// BuildOutput requires it but that ordering is different from the one for the linker search path,
+/// at least today. It may be worth reconsidering & perhaps it's ok if BuildOutput doesn't have
+/// a lexicographic ordering for the library_paths? I'm not sure the consequence of that.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LibraryPath {
+    /// The path is pointing within the output folder of the crate and takes priority over
+    /// external paths when passed to the linker.
+    CargoArtifact(PathBuf),
+    /// The path is pointing outside of the crate's build location. The linker will always
+    /// receive such paths after `CargoArtifact`.
+    External(PathBuf),
+}
+
+impl LibraryPath {
+    fn new(p: PathBuf, script_out_dir: &Path) -> Self {
+        let search_path = get_dynamic_search_path(&p);
+        if search_path.starts_with(script_out_dir) {
+            Self::CargoArtifact(p)
+        } else {
+            Self::External(p)
+        }
+    }
+
+    pub fn into_path_buf(self) -> PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
+impl AsRef<PathBuf> for LibraryPath {
+    fn as_ref(&self) -> &PathBuf {
+        match self {
+            LibraryPath::CargoArtifact(p) | LibraryPath::External(p) => p,
+        }
+    }
+}
+
 /// Contains the parsed output of a custom build script.
-#[derive(Clone, Debug, Hash, Default)]
+#[derive(Clone, Debug, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag.
-    pub library_paths: Vec<PathBuf>,
+    pub library_paths: Vec<LibraryPath>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
@@ -82,11 +162,13 @@ pub struct BuildOutput {
     pub rerun_if_changed: Vec<PathBuf>,
     /// Environment variables which, when changed, will cause a rebuild.
     pub rerun_if_env_changed: Vec<String>,
-    /// Warnings generated by this build.
+    /// Errors and warnings generated by this build.
     ///
-    /// These are only displayed if this is a "local" package, `-vv` is used,
-    /// or there is a build error for any target in this package.
-    pub warnings: Vec<String>,
+    /// These are only displayed if this is a "local" package, `-vv` is used, or
+    /// there is a build error for any target in this package. Note that any log
+    /// message of severity `Error` will by itself cause a build error, and will
+    /// cause all log messages to be displayed.
+    pub log_messages: Vec<LogMessage>,
 }
 
 /// Map of packages to build script output.
@@ -95,13 +177,13 @@ pub struct BuildOutput {
 /// inserted during `build_map`. The rest of the entries are added
 /// immediately after each build script runs.
 ///
-/// The `Metadata` is the unique metadata hash for the RunCustomBuild Unit of
+/// The [`UnitHash`] is the unique metadata hash for the `RunCustomBuild` Unit of
 /// the package. It needs a unique key, since the build script can be run
 /// multiple times with different profiles or features. We can't embed a
 /// `Unit` because this structure needs to be shareable between threads.
 #[derive(Default)]
 pub struct BuildScriptOutputs {
-    outputs: HashMap<Metadata, BuildOutput>,
+    outputs: HashMap<UnitHash, BuildOutput>,
 }
 
 /// Linking information for a `Unit`.
@@ -125,18 +207,18 @@ pub struct BuildScripts {
     /// usage here doesn't blow up too much.
     ///
     /// For more information, see #2354.
-    pub to_link: Vec<(PackageId, Metadata)>,
+    pub to_link: Vec<(PackageId, UnitHash)>,
     /// This is only used while constructing `to_link` to avoid duplicates.
-    seen_to_link: HashSet<(PackageId, Metadata)>,
+    seen_to_link: HashSet<(PackageId, UnitHash)>,
     /// Host-only dependencies that have build scripts. Each element is an
     /// index into `BuildScriptOutputs`.
     ///
     /// This is the set of transitive dependencies that are host-only
     /// (proc-macro, plugin, build-dependency) that contain a build script.
     /// Any `BuildOutput::library_paths` path relative to `target` will be
-    /// added to LD_LIBRARY_PATH so that the compiler can find any dynamic
+    /// added to `LD_LIBRARY_PATH` so that the compiler can find any dynamic
     /// libraries a build script may have generated.
-    pub plugins: BTreeSet<(PackageId, Metadata)>,
+    pub plugins: BTreeSet<(PackageId, UnitHash)>,
 }
 
 /// Dependency information as declared by a build script that might trigger
@@ -160,7 +242,7 @@ pub struct BuildDeps {
 /// See the [build script documentation][1] for more.
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-link-argflag
-#[derive(Clone, Hash, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LinkArgTarget {
     /// Represents `cargo::rustc-link-arg=FLAG`.
     All,
@@ -180,10 +262,11 @@ pub enum LinkArgTarget {
 
 impl LinkArgTarget {
     /// Checks if this link type applies to a given [`Target`].
-    pub fn applies_to(&self, target: &Target) -> bool {
+    pub fn applies_to(&self, target: &Target, mode: CompileMode) -> bool {
+        let is_test = mode.is_any_test();
         match self {
             LinkArgTarget::All => true,
-            LinkArgTarget::Cdylib => target.is_cdylib(),
+            LinkArgTarget::Cdylib => !is_test && target.is_cdylib(),
             LinkArgTarget::Bin => target.is_bin(),
             LinkArgTarget::SingleBin(name) => target.is_bin() && target.name() == name,
             LinkArgTarget::Test => target.is_test(),
@@ -221,7 +304,7 @@ fn emit_build_output(
     let library_paths = output
         .library_paths
         .iter()
-        .map(|l| l.display().to_string())
+        .map(|l| l.as_ref().display().to_string())
         .collect::<Vec<_>>();
 
     let msg = machine_message::BuildScript {
@@ -279,6 +362,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let debug = unit.profile.debuginfo.is_turned_on();
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
+        .env("CARGO_MANIFEST_PATH", unit.pkg.manifest_path())
         .env("NUM_JOBS", &bcx.jobs().to_string())
         .env("TARGET", bcx.target_data.short_name(&unit.kind))
         .env("DEBUG", debug.to_string())
@@ -319,14 +403,18 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     }
 
     let mut cfg_map = HashMap::new();
+    cfg_map.insert(
+        "feature",
+        unit.features.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+    );
     for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
-                cfg_map.insert(n.clone(), Vec::new());
+                cfg_map.insert(n.as_str(), Vec::new());
             }
             Cfg::KeyPair(ref k, ref v) => {
-                let values = cfg_map.entry(k.clone()).or_default();
-                values.push(v.clone());
+                let values = cfg_map.entry(k.as_str()).or_default();
+                values.push(v.as_str());
             }
         }
     }
@@ -336,7 +424,9 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             // That is because Cargo queries rustc without any profile settings.
             continue;
         }
-        let k = format!("CARGO_CFG_{}", super::envify(&k));
+        // FIXME: We should handle raw-idents somehow instead of predenting they
+        // don't exist here
+        let k = format!("CARGO_CFG_{}", super::envify(k));
         cmd.env(&k, v.join(","));
     }
 
@@ -352,10 +442,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             cmd.env("RUSTC_WORKSPACE_WRAPPER", wrapper);
         }
     }
-    cmd.env(
-        "CARGO_ENCODED_RUSTFLAGS",
-        bcx.rustflags_args(unit).join("\x1f"),
-    );
+    cmd.env("CARGO_ENCODED_RUSTFLAGS", unit.rustflags.join("\x1f"));
     cmd.env_remove("RUSTFLAGS");
 
     if build_runner.bcx.ws.gctx().extra_verbose() {
@@ -408,7 +495,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     paths::create_dir_all(&script_out_dir)?;
 
     let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
-    let extra_check_cfg = build_runner.bcx.gctx.cli_unstable().check_cfg;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     let msrv = unit.pkg.rust_version().cloned();
     // Need a separate copy for the fresh closure.
@@ -435,7 +521,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
         paths::create_dir_all(&script_out_dir)
-            .with_context(|| "failed to create script output directory for build command")?;
+            .context("failed to create script output directory for build command")?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our
@@ -477,15 +563,18 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         state.running(&cmd);
         let timestamp = paths::set_invocation_time(&script_run_dir)?;
         let prefix = format!("[{} {}] ", id.name(), id.version());
-        let mut warnings_in_case_of_panic = Vec::new();
+        let mut log_messages_in_case_of_panic = Vec::new();
         let output = cmd
             .exec_with_streaming(
                 &mut |stdout| {
+                    if let Some(error) = stdout.strip_prefix(CARGO_ERROR_SYNTAX) {
+                        log_messages_in_case_of_panic.push((Severity::Error, error.to_owned()));
+                    }
                     if let Some(warning) = stdout
                         .strip_prefix(OLD_CARGO_WARNING_SYNTAX)
                         .or(stdout.strip_prefix(NEW_CARGO_WARNING_SYNTAX))
                     {
-                        warnings_in_case_of_panic.push(warning.to_owned());
+                        log_messages_in_case_of_panic.push((Severity::Warning, warning.to_owned()));
                     }
                     if extra_verbose {
                         state.stdout(format!("{}{}", prefix, stdout))?;
@@ -525,14 +614,28 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 build_error_context
             });
 
+        // If the build failed
         if let Err(error) = output {
-            insert_warnings_in_build_outputs(
+            insert_log_messages_in_build_outputs(
                 build_script_outputs,
                 id,
                 metadata_hash,
-                warnings_in_case_of_panic,
+                log_messages_in_case_of_panic,
             );
             return Err(error);
+        }
+        // ... or it logged any errors
+        else if log_messages_in_case_of_panic
+            .iter()
+            .any(|(severity, _)| *severity == Severity::Error)
+        {
+            insert_log_messages_in_build_outputs(
+                build_script_outputs,
+                id,
+                metadata_hash,
+                log_messages_in_case_of_panic,
+            );
+            anyhow::bail!("build script logged errors");
         }
 
         let output = output.unwrap();
@@ -556,7 +659,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             &pkg_descr,
             &script_out_dir,
             &script_out_dir,
-            extra_check_cfg,
             nightly_features_allowed,
             &targets,
             &msrv,
@@ -585,7 +687,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
-                extra_check_cfg,
                 nightly_features_allowed,
                 &targets_fresh,
                 &msrv_fresh,
@@ -616,22 +717,23 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     Ok(job)
 }
 
-/// When a build script run fails, store only warnings and nuke other outputs,
-/// as they are likely broken.
-fn insert_warnings_in_build_outputs(
+/// When a build script run fails, store only log messages, and nuke other
+/// outputs, as they are likely broken.
+fn insert_log_messages_in_build_outputs(
     build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
     id: PackageId,
-    metadata_hash: Metadata,
-    warnings: Vec<String>,
+    metadata_hash: UnitHash,
+    log_messages: Vec<LogMessage>,
 ) {
-    let build_output_with_only_warnings = BuildOutput {
-        warnings,
+    let build_output_with_only_log_messages = BuildOutput {
+        log_messages,
         ..BuildOutput::default()
     };
-    build_script_outputs
-        .lock()
-        .unwrap()
-        .insert(id, metadata_hash, build_output_with_only_warnings);
+    build_script_outputs.lock().unwrap().insert(
+        id,
+        metadata_hash,
+        build_output_with_only_log_messages,
+    );
 }
 
 impl BuildOutput {
@@ -642,7 +744,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
         msrv: &Option<RustVersion>,
@@ -654,7 +755,6 @@ impl BuildOutput {
             pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
-            extra_check_cfg,
             nightly_features_allowed,
             targets,
             msrv,
@@ -665,9 +765,6 @@ impl BuildOutput {
     ///
     /// * `pkg_descr` --- for error messages
     /// * `library_name` --- for determining if `RUSTC_BOOTSTRAP` should be allowed
-    /// * `extra_check_cfg` --- for unstable feature [`-Zcheck-cfg`]
-    ///
-    /// [`-Zcheck-cfg`]: https://doc.rust-lang.org/cargo/reference/unstable.html#check-cfg
     pub fn parse(
         input: &[u8],
         // Takes String instead of InternedString so passing `unit.pkg.name()` will give a compile error.
@@ -675,7 +772,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
         msrv: &Option<RustVersion>,
@@ -689,7 +785,7 @@ impl BuildOutput {
         let mut metadata = Vec::new();
         let mut rerun_if_changed = Vec::new();
         let mut rerun_if_env_changed = Vec::new();
-        let mut warnings = Vec::new();
+        let mut log_messages = Vec::new();
         let whence = format!("build script of `{}`", pkg_descr);
         // Old syntax:
         //    cargo:rustc-flags=VALUE
@@ -720,17 +816,35 @@ impl BuildOutput {
         const DOCS_LINK_SUGGESTION: &str = "See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
                 for more information about build script outputs.";
 
+        fn has_reserved_prefix(flag: &str) -> bool {
+            RESERVED_PREFIXES
+                .iter()
+                .any(|reserved_prefix| flag.starts_with(reserved_prefix))
+        }
+
         fn check_minimum_supported_rust_version_for_new_syntax(
             pkg_descr: &str,
             msrv: &Option<RustVersion>,
+            flag: &str,
         ) -> CargoResult<()> {
-            let new_syntax_added_in = &RustVersion::from_str("1.77.0")?;
-
             if let Some(msrv) = msrv {
-                if msrv < new_syntax_added_in {
+                let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
+                if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
+                    let old_syntax_suggestion = if has_reserved_prefix(flag) {
+                        format!(
+                            "Switch to the old `cargo:{flag}` syntax (note the single colon).\n"
+                        )
+                    } else if flag.starts_with("metadata=") {
+                        let old_format_flag = flag.strip_prefix("metadata=").unwrap();
+                        format!("Switch to the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n")
+                    } else {
+                        String::new()
+                    };
+
                     bail!(
                         "the `cargo::` syntax for build script output instructions was added in \
                         Rust 1.77.0, but the minimum supported Rust version of `{pkg_descr}` is {msrv}.\n\
+                        {old_syntax_suggestion}\
                         {DOCS_LINK_SUGGESTION}"
                     );
                 }
@@ -792,16 +906,13 @@ impl BuildOutput {
             };
             let mut old_syntax = false;
             let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
-                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv)?;
+                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv, data)?;
                 // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
                 parse_directive(whence.as_str(), line, data, old_syntax)?
             } else if let Some(data) = line.strip_prefix("cargo:") {
                 old_syntax = true;
                 // For instance, `cargo:rustc-flags=foo`.
-                if RESERVED_PREFIXES
-                    .iter()
-                    .any(|prefix| data.starts_with(prefix))
-                {
+                if has_reserved_prefix(data) {
                     parse_directive(whence.as_str(), line, data, old_syntax)?
                 } else {
                     // For instance, `cargo:foo=bar`.
@@ -840,21 +951,30 @@ impl BuildOutput {
                 "rustc-flags" => {
                     let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
                     library_links.extend(links.into_iter());
-                    library_paths.extend(paths.into_iter());
+                    library_paths.extend(
+                        paths
+                            .into_iter()
+                            .map(|p| LibraryPath::new(p, script_out_dir)),
+                    );
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
-                "rustc-link-search" => library_paths.push(PathBuf::from(value)),
+                "rustc-link-search" => {
+                    library_paths.push(LibraryPath::new(PathBuf::from(value), script_out_dir))
+                }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     if !targets.iter().any(|target| target.is_cdylib()) {
-                        warnings.push(format!(
-                            "{}{} was specified in the build script of {}, \
+                        log_messages.push((
+                            Severity::Warning,
+                            format!(
+                                "{}{} was specified in the build script of {}, \
                              but that package does not contain a cdylib target\n\
                              \n\
                              Allowing this was an unintended change in the 1.50 \
                              release, and may become an error in the future. \
                              For more information, see \
                              <https://github.com/rust-lang/cargo/issues/9562>.",
-                            syntax_prefix, key, pkg_descr
+                                syntax_prefix, key, pkg_descr
+                            ),
                         ));
                     }
                     linker_args.push((LinkArgTarget::Cdylib, value))
@@ -907,14 +1027,7 @@ impl BuildOutput {
                     linker_args.push((LinkArgTarget::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
-                "rustc-check-cfg" => {
-                    if extra_check_cfg {
-                        check_cfgs.push(value.to_string());
-                    } else {
-                        // silently ignoring the instruction to try to
-                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
-                    }
-                }
+                "rustc-check-cfg" => check_cfgs.push(value.to_string()),
                 "rustc-env" => {
                     let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
                     // Build scripts aren't allowed to set RUSTC_BOOTSTRAP.
@@ -947,10 +1060,10 @@ impl BuildOutput {
                         if nightly_features_allowed
                             || rustc_bootstrap_allows(library_name.as_deref())
                         {
-                            warnings.push(format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                            log_messages.push((Severity::Warning, format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
-                            ));
+                            )));
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
@@ -966,7 +1079,8 @@ impl BuildOutput {
                         env.push((key, val));
                     }
                 }
-                "warning" => warnings.push(value.to_string()),
+                "error" => log_messages.push((Severity::Error, value.to_string())),
+                "warning" => log_messages.push((Severity::Warning, value.to_string())),
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
                 "metadata" => {
@@ -991,7 +1105,7 @@ impl BuildOutput {
             metadata,
             rerun_if_changed,
             rerun_if_env_changed,
-            warnings,
+            log_messages,
         })
     }
 
@@ -1083,7 +1197,7 @@ fn prepare_metabuild(
     let path = unit
         .pkg
         .manifest()
-        .metabuild_path(build_runner.bcx.ws.target_dir());
+        .metabuild_path(build_runner.bcx.ws.build_dir());
     paths::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())
@@ -1154,11 +1268,7 @@ pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
         // If there is a build script override, pre-fill the build output.
         if unit.mode.is_run_custom_build() {
             if let Some(links) = unit.pkg.manifest().links() {
-                if let Some(output) = build_runner
-                    .bcx
-                    .target_data
-                    .script_override(links, unit.kind)
-                {
+                if let Some(output) = unit.links_overrides.get(links) {
                     let metadata = build_runner.get_run_build_script_metadata(unit);
                     build_runner.build_script_outputs.lock().unwrap().insert(
                         unit.pkg.package_id(),
@@ -1214,7 +1324,7 @@ pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g., we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, metadata: Metadata) {
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, metadata: UnitHash) {
         if scripts.seen_to_link.insert((pkg, metadata)) {
             scripts.to_link.push((pkg, metadata));
         }
@@ -1255,7 +1365,6 @@ fn prev_build_output(
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
-            build_runner.bcx.gctx.cli_unstable().check_cfg,
             build_runner.bcx.gctx.nightly_features_allowed,
             unit.pkg.targets(),
             &unit.pkg.rust_version().cloned(),
@@ -1267,7 +1376,7 @@ fn prev_build_output(
 
 impl BuildScriptOutputs {
     /// Inserts a new entry into the map.
-    fn insert(&mut self, pkg_id: PackageId, metadata: Metadata, parsed_output: BuildOutput) {
+    fn insert(&mut self, pkg_id: PackageId, metadata: UnitHash, parsed_output: BuildOutput) {
         match self.outputs.entry(metadata) {
             Entry::Vacant(entry) => {
                 entry.insert(parsed_output);
@@ -1284,17 +1393,17 @@ impl BuildScriptOutputs {
     }
 
     /// Returns `true` if the given key already exists.
-    fn contains_key(&self, metadata: Metadata) -> bool {
+    fn contains_key(&self, metadata: UnitHash) -> bool {
         self.outputs.contains_key(&metadata)
     }
 
     /// Gets the build output for the given key.
-    pub fn get(&self, meta: Metadata) -> Option<&BuildOutput> {
+    pub fn get(&self, meta: UnitHash) -> Option<&BuildOutput> {
         self.outputs.get(&meta)
     }
 
     /// Returns an iterator over all entries.
-    pub fn iter(&self) -> impl Iterator<Item = (&Metadata, &BuildOutput)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&UnitHash, &BuildOutput)> {
         self.outputs.iter()
     }
 }

@@ -19,6 +19,7 @@ pub fn cli() -> Command {
         .arg_target_triple("Target triple to clean output for")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_lockfile_path()
         .arg_dry_run("Display what would be deleted without deleting anything")
         .args_conflicts_with_subcommands(true)
         .subcommand(
@@ -146,7 +147,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx,
         spec: values(args, "package"),
         targets: args.targets()?,
-        requested_profile: args.get_profile_name(gctx, "dev", ProfileChecking::Custom)?,
+        requested_profile: args.get_profile_name("dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),

@@ -1,0 +1,16 @@
+[package]
+name = "build-rs"
+version = "0.3.1"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "API for writing Cargo `build.rs` files"
+
+[features]
+## Experimental API. This feature flag is **NOT** semver stable.
+unstable = []
+
+[dependencies]
+unicode-ident.workspace = true

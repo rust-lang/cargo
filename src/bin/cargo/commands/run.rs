@@ -24,7 +24,6 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package("Package with the target to run")
@@ -39,6 +38,8 @@ pub fn cli() -> Command {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_lockfile_path()
+        .arg_ignore_rust_version()
         .arg_unit_graph()
         .arg_timings()
         .after_help(color_print::cstr!(
@@ -89,9 +90,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 /// See also `util/toml/mod.rs`s `is_embedded`
 pub fn is_manifest_command(arg: &str) -> bool {
     let path = Path::new(arg);
-    1 < path.components().count()
-        || path.extension() == Some(OsStr::new("rs"))
-        || path.file_name() == Some(OsStr::new("Cargo.toml"))
+    1 < path.components().count() || path.extension() == Some(OsStr::new("rs"))
 }
 
 pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsString]) -> CliResult {
@@ -104,7 +103,7 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
         (false, true) => {
             let possible_commands = crate::list_commands(gctx);
             let is_dir = if manifest_path.is_dir() {
-                format!("\n\t`{cmd}` is a directory")
+                format!(": `{cmd}` is a directory")
             } else {
                 "".to_owned()
             };
@@ -122,12 +121,12 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
                         args.into_iter().map(|os| os.to_string_lossy()).join(" ")
                     )
                 };
-                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+                format!("\nhelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`")
             } else {
                 "".to_owned()
             };
             let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!("\n\tDid you mean the file `{suggested_script}`")
+                format!("\nhelp: there is a script with a similar name: `{suggested_script}`")
             } else {
                 "".to_owned()
             };
@@ -154,12 +153,12 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
                         args.into_iter().map(|os| os.to_string_lossy()).join(" ")
                     )
                 };
-                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+                format!("\nhelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`")
             } else {
                 "".to_owned()
             };
             let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!("\n\tDid you mean the file `{suggested_script}` with `-Zscript`")
+                format!("\nhelp: there is a script with a similar name: `{suggested_script}` (requires `-Zscript`)")
             } else {
                 "".to_owned()
             };
@@ -172,12 +171,8 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
 
     let manifest_path = root_manifest(Some(manifest_path), gctx)?;
 
-    // Treat `cargo foo.rs` like `cargo install --path foo` and re-evaluate the config based on the
-    // location where the script resides, rather than the environment from where it's being run.
-    let parent_path = manifest_path
-        .parent()
-        .expect("a file should always have a parent");
-    gctx.reload_rooted_at(parent_path)?;
+    // Reload to cargo home.
+    gctx.reload_rooted_at(gctx.home().clone().into_path_unlocked())?;
 
     let mut ws = Workspace::new(&manifest_path, gctx)?;
     if gctx.cli_unstable().avoid_dev_deps {

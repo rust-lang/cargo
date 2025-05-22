@@ -14,6 +14,7 @@ pub fn builtin() -> Vec<Command> {
         generate_lockfile::cli(),
         git_checkout::cli(),
         help::cli(),
+        info::cli(),
         init::cli(),
         install::cli(),
         locate_project::cli(),
@@ -59,6 +60,7 @@ pub fn builtin_exec(cmd: &str) -> Option<Exec> {
         "generate-lockfile" => generate_lockfile::exec,
         "git-checkout" => git_checkout::exec,
         "help" => help::exec,
+        "info" => info::exec,
         "init" => init::exec,
         "install" => install::exec,
         "locate-project" => locate_project::exec,
@@ -102,6 +104,7 @@ pub mod fix;
 pub mod generate_lockfile;
 pub mod git_checkout;
 pub mod help;
+pub mod info;
 pub mod init;
 pub mod install;
 pub mod locate_project;

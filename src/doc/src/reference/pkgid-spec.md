@@ -27,8 +27,8 @@ query = ( "branch" | "tag" | "rev" ) "=" ref
 pkgname := name [ ("@" | ":" ) semver ]
 semver := digits [ "." digits [ "." digits [ "-" prerelease ] [ "+" build ]]]
 
-kind = "registry" | "git" | "file"
-proto := "http" | "git" | ...
+kind = "registry" | "git" | "path"
+proto := "http" | "git" | "file" | ...
 ```
 
 Here, brackets indicate that the contents are optional.

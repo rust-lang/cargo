@@ -1,0 +1,5 @@
+[workspace]
+members = ["primary"]
+
+[workspace.dependencies]
+fuzzy_dependency = "1.0.0"

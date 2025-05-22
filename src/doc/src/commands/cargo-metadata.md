@@ -13,9 +13,9 @@ cargo-metadata --- Machine-readable metadata about the current package
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
 
-The format of the output is subject to change in futures versions of Cargo. It
+The output format is subject to change in future versions of Cargo. It
 is recommended to include the `--format-version` flag to future-proof your code
-to ensure the output is in the format you are expecting. For more on the
+and ensure the output is in the format you are expecting. For more on the
 expectations, see ["Compatibility"](#compatibility).
 
 See the [cargo_metadata crate](https://crates.io/crates/cargo_metadata)
@@ -27,7 +27,7 @@ for a Rust API for reading the metadata.
 
 Within the same output format version, the compatibility is maintained, except
 some scenarios. The following is a non-exhaustive list of changes that are not
-considersed as incompatible:
+considered as incompatible:
 
 * **Adding new fields** — New fields will be added when needed. Reserving this
   helps Cargo evolve without bumping the format version too often.
@@ -123,7 +123,12 @@ The JSON output has the following format:
                        If not specified or null, the dependency is from the default
                        registry (crates.io).
                     */
-                    "registry": null
+                    "registry": null,
+                    /* (unstable) Boolean flag of whether or not this is a pulbic
+                       dependency. This field is only present when
+                       `-Zpublic-dependency` is enabled.
+                    */
+                    "public": false
                 }
             ],
             /* Array of Cargo targets. */
@@ -151,7 +156,9 @@ The JSON output has the following format:
                     "crate_types": [
                         "bin"
                     ],
-                    /* The name of the target. */
+                    /* The name of the target.
+                       For lib targets, dashes will be replaced with underscores.
+                    */
                     "name": "my-package",
                     /* Absolute path to the root source file of the target. */
                     "src_path": "/path/to/my-package/src/main.rs",
@@ -305,14 +312,16 @@ The JSON output has the following format:
                 ]
             }
         ],
-        /* The root package of the workspace.
-           This is null if this is a virtual workspace. Otherwise it is
-           the Package ID of the root package.
+        /* The package in the current working directory (if --manifest-path is not given).
+           This is null if there is a virtual workspace. Otherwise it is
+           the Package ID of the package.
         */
         "root": "file:///path/to/my-package#0.1.0",
     },
-    /* The absolute path to the build directory where Cargo places its output. */
+    /* The absolute path to the target directory where Cargo places its output. */
     "target_directory": "/path/to/my-package/target",
+    /* The absolute path to the build directory where Cargo places intermediate build artifacts. (unstable) */
+    "build_directory": "/path/to/my-package/build-dir",
     /* The version of the schema for this metadata structure.
        This will be changed if incompatible changes are ever made.
     */
@@ -455,6 +464,18 @@ offline.</p>
 
 <dt class="option-term" id="option-cargo-metadata---frozen"><a class="option-anchor" href="#option-cargo-metadata---frozen"></a><code>--frozen</code></dt>
 <dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+
+
+<dt class="option-term" id="option-cargo-metadata---lockfile-path"><a class="option-anchor" href="#option-cargo-metadata---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
+<code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
+either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
+This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 </dl>
 

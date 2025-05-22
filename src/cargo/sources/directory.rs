@@ -70,6 +70,7 @@ pub struct DirectorySource<'gctx> {
 /// The file name is simply `.cargo-checksum.json`. The checksum algorithm as
 /// of now is SHA256.
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct Checksum {
     /// Checksum of the package. Normally it is computed from the `.crate` file.
     package: Option<String>,
@@ -107,8 +108,8 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         }
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| match kind {
-            QueryKind::Exact => dep.matches(pkg.summary()),
-            QueryKind::Alternatives => true,
+            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
+            QueryKind::AlternativeNames => true,
             QueryKind::Normalized => dep.matches(pkg.summary()),
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {
@@ -174,7 +175,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
             }
 
             let mut src = PathSource::new(&path, self.source_id, self.gctx);
-            src.update()?;
+            src.load()?;
             let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");

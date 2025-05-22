@@ -56,10 +56,11 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
-        let name = &compilation
-            .root_crate_names
-            .get(0)
-            .ok_or_else(|| anyhow::anyhow!("no crates with documentation"))?;
+        let name = &compilation.root_crate_names.get(0).ok_or_else(|| {
+            anyhow::anyhow!(
+                "cannot open specified crate's documentation: no documentation generated"
+            )
+        })?;
         let kind = options.compile_opts.build_config.single_requested_kind()?;
 
         let path = path_by_output_format(&compilation, &kind, &name, &options.output_format);

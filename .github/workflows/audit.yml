@@ -22,7 +22,7 @@ jobs:
           - bans licenses sources
     steps:
     - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v1
+    - uses: EmbarkStudios/cargo-deny-action@v2
       # Prevent sudden announcement of a new advisory from failing ci:
       continue-on-error: ${{ matrix.checks == 'advisories' }}
       with:

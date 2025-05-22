@@ -4,8 +4,8 @@ use std::fmt::Write;
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::IsArtifact;
-use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, Unit};
+use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
@@ -17,6 +17,7 @@ use crate::util::{closest_msg, CargoResult};
 
 use super::compile_filter::{CompileFilter, FilterRule, LibRule};
 use super::packages::build_glob;
+use super::Packages;
 
 /// A proposed target.
 ///
@@ -47,6 +48,8 @@ struct Proposal<'a> {
 pub(super) struct UnitGenerator<'a, 'gctx> {
     pub ws: &'a Workspace<'gctx>,
     pub packages: &'a [&'a Package],
+    pub spec: &'a Packages,
+    pub target_data: &'a RustcTargetData<'gctx>,
     pub filter: &'a CompileFilter,
     pub requested_kinds: &'a [CompileKind],
     pub explicit_host_kind: CompileKind,
@@ -162,13 +165,17 @@ impl<'a> UnitGenerator<'a, '_> {
                     unit_for,
                     kind,
                 );
+                let kind = kind.for_target(target);
                 self.interner.intern(
                     pkg,
                     target,
                     profile,
-                    kind.for_target(target),
+                    kind,
                     target_mode,
                     features.clone(),
+                    self.target_data.info(kind).rustflags.clone(),
+                    self.target_data.info(kind).rustdocflags.clone(),
+                    self.target_data.target_config(kind).links_overrides.clone(),
                     /*is_std*/ false,
                     /*dep_hash*/ 0,
                     IsArtifact::No,
@@ -242,53 +249,111 @@ impl<'a> UnitGenerator<'a, '_> {
         mode: CompileMode,
     ) -> CargoResult<Vec<Proposal<'a>>> {
         let is_glob = is_glob_pattern(target_name);
-        let proposals = if is_glob {
-            let pattern = build_glob(target_name)?;
-            let filter = |t: &Target| is_expected_kind(t) && pattern.matches(t.name());
-            self.filter_targets(filter, true, mode)
-        } else {
-            let filter = |t: &Target| t.name() == target_name && is_expected_kind(t);
-            self.filter_targets(filter, true, mode)
-        };
-
-        if proposals.is_empty() {
-            let targets = self
-                .packages
-                .iter()
-                .flat_map(|pkg| {
-                    pkg.targets()
-                        .iter()
-                        .filter(|target| is_expected_kind(target))
-                })
-                .collect::<Vec<_>>();
-            let suggestion = closest_msg(target_name, targets.iter(), |t| t.name());
-            if !suggestion.is_empty() {
-                anyhow::bail!(
-                    "no {} target {} `{}`{}",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                    suggestion
-                );
+        let pattern = build_glob(target_name)?;
+        let filter = |t: &Target| {
+            if is_glob {
+                is_expected_kind(t) && pattern.matches(t.name())
             } else {
-                let mut msg = String::new();
-                writeln!(
-                    msg,
-                    "no {} target {} `{}`.",
-                    target_desc,
-                    if is_glob { "matches pattern" } else { "named" },
-                    target_name,
-                )?;
-                if !targets.is_empty() {
-                    writeln!(msg, "Available {} targets:", target_desc)?;
-                    for target in targets {
-                        writeln!(msg, "    {}", target.name())?;
+                is_expected_kind(t) && t.name() == target_name
+            }
+        };
+        let proposals = self.filter_targets(filter, true, mode);
+        if proposals.is_empty() {
+            let mut targets = std::collections::BTreeMap::new();
+            for (pkg, target) in self.packages.iter().flat_map(|pkg| {
+                pkg.targets()
+                    .iter()
+                    .filter(|target| is_expected_kind(target))
+                    .map(move |t| (pkg, t))
+            }) {
+                targets
+                    .entry(target.name())
+                    .or_insert_with(Vec::new)
+                    .push((pkg, target));
+            }
+
+            let suggestion = closest_msg(target_name, targets.keys(), |t| t, "target");
+            let targets_elsewhere = self.get_targets_from_other_packages(filter)?;
+            let append_targets_elsewhere = |msg: &mut String| {
+                let mut available_msg = Vec::new();
+                for (package, targets) in &targets_elsewhere {
+                    if !targets.is_empty() {
+                        available_msg.push(format!(
+                            "help: available {target_desc} in `{package}` package:"
+                        ));
+                        for target in targets {
+                            available_msg.push(format!("    {target}"));
+                        }
                     }
                 }
-                anyhow::bail!(msg);
+                if !available_msg.is_empty() {
+                    write!(msg, "\n{}", available_msg.join("\n"))?;
+                }
+                CargoResult::Ok(())
+            };
+
+            let unmatched_packages = match self.spec {
+                Packages::Default | Packages::OptOut(_) | Packages::All(_) => {
+                    " in default-run packages".to_owned()
+                }
+                Packages::Packages(packages) => match packages.len() {
+                    0 => String::new(),
+                    1 => format!(" in `{}` package", packages[0]),
+                    _ => format!(" in `{}`, ... packages", packages[0]),
+                },
+            };
+
+            let named = if is_glob { "matches pattern" } else { "named" };
+
+            let mut msg = String::new();
+            write!(
+                msg,
+                "no {target_desc} target {named} `{target_name}`{unmatched_packages}{suggestion}",
+            )?;
+            if !targets_elsewhere.is_empty() {
+                append_targets_elsewhere(&mut msg)?;
+            } else if suggestion.is_empty() && !targets.is_empty() {
+                write!(msg, "\nhelp: available {} targets:", target_desc)?;
+                for (target_name, pkgs) in targets {
+                    if pkgs.len() == 1 {
+                        write!(msg, "\n    {target_name}")?;
+                    } else {
+                        for (pkg, _) in pkgs {
+                            let pkg_name = pkg.name();
+                            write!(msg, "\n    {target_name} in package {pkg_name}")?;
+                        }
+                    }
+                }
             }
+            anyhow::bail!(msg);
         }
         Ok(proposals)
+    }
+
+    fn get_targets_from_other_packages(
+        &self,
+        filter_fn: impl Fn(&Target) -> bool,
+    ) -> CargoResult<Vec<(&str, Vec<&str>)>> {
+        let packages = Packages::All(Vec::new()).get_packages(self.ws)?;
+        let targets = packages
+            .into_iter()
+            .filter_map(|pkg| {
+                let mut targets: Vec<_> = pkg
+                    .manifest()
+                    .targets()
+                    .iter()
+                    .filter_map(|target| filter_fn(target).then(|| target.name()))
+                    .collect();
+                if targets.is_empty() {
+                    None
+                } else {
+                    targets.sort();
+                    Some((pkg.name().as_str(), targets))
+                }
+            })
+            .collect();
+
+        Ok(targets)
     }
 
     /// Returns a list of proposed targets based on command-line target selection flags.

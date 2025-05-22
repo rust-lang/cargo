@@ -121,10 +121,10 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
 
     /// Gets the host architecture triple.
     ///
-    /// For example, x86_64-unknown-linux-gnu, would be
-    /// - machine: x86_64,
-    /// - hardware-platform: unknown,
-    /// - operating system: linux-gnu.
+    /// For example, `x86_64-unknown-linux-gnu`, would be
+    /// - machine: `x86_64`,
+    /// - hardware-platform: `unknown`,
+    /// - operating system: `linux-gnu`.
     pub fn host_triple(&self) -> InternedString {
         self.target_data.rustc.host
     }
@@ -132,32 +132,6 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     /// Gets the number of jobs specified for this build.
     pub fn jobs(&self) -> u32 {
         self.build_config.jobs
-    }
-
-    /// Extra compiler flags to pass to `rustc` for a given unit.
-    ///
-    /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
-    ///
-    /// As of now, these flags come from environment variables and configurations.
-    /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
-    ///
-    /// [`TargetInfo.rustflags`]: TargetInfo::rustflags
-    pub fn rustflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustflags
-    }
-
-    /// Extra compiler flags to pass to `rustdoc` for a given unit.
-    ///
-    /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
-    ///
-    /// As of now, these flags come from environment variables and configurations.
-    /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
-    ///
-    /// [`TargetInfo.rustdocflags`]: TargetInfo::rustdocflags
-    pub fn rustdocflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustdocflags
     }
 
     /// Extra compiler args for either `rustc` or `rustdoc`.

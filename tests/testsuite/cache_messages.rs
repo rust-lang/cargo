@@ -1,8 +1,11 @@
 //! Tests for caching compiler diagnostics.
 
-use super::messages::raw_rustc_output;
+use cargo_test_support::prelude::*;
+use cargo_test_support::str;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};
+
+use super::messages::raw_rustc_output;
 
 fn as_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).expect("valid utf-8")
@@ -26,17 +29,11 @@ fn simple() {
     let rustc_output = raw_rustc_output(&p, "src/lib.rs", &[]);
 
     // -q so the output is the same as rustc (no "Compiling" or "Finished").
-    let cargo_output1 = p
-        .cargo("check -q --color=never")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check -q --color=never").run();
     assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     assert!(cargo_output1.stdout.is_empty());
     // Check that the cached version is exactly the same.
-    let cargo_output2 = p
-        .cargo("check -q")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q").run();
     assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
 }
@@ -58,14 +55,10 @@ fn simple_short() {
 
     let cargo_output1 = p
         .cargo("check -q --color=never --message-format=short")
-        .exec_with_output()
-        .expect("cargo to run");
+        .run();
     assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     // assert!(cargo_output1.stdout.is_empty());
-    let cargo_output2 = p
-        .cargo("check -q --message-format=short")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q --message-format=short").run();
     println!("{}", String::from_utf8_lossy(&cargo_output2.stdout));
     assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
@@ -99,24 +92,15 @@ fn color() {
     assert!(!rustc_nocolor.contains("\x1b["));
 
     // First pass, non-cached, with color, should be the same.
-    let cargo_output1 = p
-        .cargo("check -q --color=always")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check -q --color=always").run();
     compare(&rustc_color, as_str(&cargo_output1.stderr));
 
     // Replay cached, with color.
-    let cargo_output2 = p
-        .cargo("check -q --color=always")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q --color=always").run();
     compare(&rustc_color, as_str(&cargo_output2.stderr));
 
     // Replay cached, no color.
-    let cargo_output_nocolor = p
-        .cargo("check -q --color=never")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output_nocolor = p.cargo("check -q --color=never").run();
     compare(&rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
 }
 
@@ -127,27 +111,17 @@ fn cached_as_json() {
 
     // Grab the non-cached output, feature disabled.
     // NOTE: When stabilizing, this will need to be redone.
-    let cargo_output = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
-    assert!(cargo_output.status.success());
+    let cargo_output = p.cargo("check --message-format=json").run();
     let orig_cargo_out = as_str(&cargo_output.stdout);
     assert!(orig_cargo_out.contains("compiler-message"));
     p.cargo("clean").run();
 
     // Check JSON output, not fresh.
-    let cargo_output1 = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check --message-format=json").run();
     assert_eq!(as_str(&cargo_output1.stdout), orig_cargo_out);
 
     // Check JSON output, fresh.
-    let cargo_output2 = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check --message-format=json").run();
     // The only difference should be this field.
     let fix_fresh = as_str(&cargo_output2.stdout).replace("\"fresh\":true", "\"fresh\":false");
     assert_eq!(fix_fresh, orig_cargo_out);
@@ -158,7 +132,16 @@ fn clears_cache_after_fix() {
     // Make sure the cache is invalidated when there is no output.
     let p = project().file("src/lib.rs", "fn asdf() {}").build();
     // Fill the cache.
-    p.cargo("check").with_stderr_contains("[..]asdf[..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] function `asdf` is never used
+...
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     let cpath = p
         .glob("target/debug/.fingerprint/foo-*/output-*")
         .next()
@@ -173,13 +156,12 @@ fn clears_cache_after_fix() {
     p.change_file("src/lib.rs", "");
 
     p.cargo("check")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert_eq!(
         p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
@@ -188,12 +170,11 @@ fn clears_cache_after_fix() {
 
     // And again, check the cache is correct.
     p.cargo("check")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[FINISHED] [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -210,11 +191,7 @@ fn rustdoc() {
         )
         .build();
 
-    let rustdoc_output = p
-        .cargo("doc -q --color=always")
-        .exec_with_output()
-        .expect("rustdoc to run");
-    assert!(rustdoc_output.status.success());
+    let rustdoc_output = p.cargo("doc -q --color=always").run();
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
     assert!(rustdoc_stderr.contains("missing"));
     assert!(rustdoc_stderr.contains("\x1b["));
@@ -224,10 +201,7 @@ fn rustdoc() {
     );
 
     // Check the cached output.
-    let rustdoc_output = p
-        .cargo("doc -q --color=always")
-        .exec_with_output()
-        .expect("rustdoc to run");
+    let rustdoc_output = p.cargo("doc -q --color=always").run();
     assert_eq!(as_str(&rustdoc_output.stderr), rustdoc_stderr);
 }
 
@@ -265,13 +239,39 @@ fn very_verbose() {
         .build();
 
     p.cargo("check -vv")
-        .with_stderr_contains("[..]not_used[..]")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[RUNNING] [..]
+[WARNING] function `not_used` is never used
+...
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 
     p.cargo("check -vv")
-        .with_stderr_contains("[..]not_used[..]")
+        .with_stderr_data(str![[r#"
+[FRESH] bar v1.0.0
+[WARNING] function `not_used` is never used
+...
+[WARNING] `bar` (lib) generated 1 warning
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -344,25 +344,23 @@ fn replay_non_json() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check")
         .env("RUSTC", rustc.bin("rustc_alt"))
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 line 1
 line 2
-[FINISHED] `dev` profile [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check")
         .env("RUSTC", rustc.bin("rustc_alt"))
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 line 1
 line 2
-[FINISHED] `dev` profile [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -405,11 +403,11 @@ fn caching_large_output() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check")
         .env("RUSTC", rustc.bin("rustc_alt"))
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
-[CHECKING] foo [..]
-{}warning: `foo` (lib) generated 250 warnings
-[FINISHED] `dev` profile [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+{}[WARNING] `foo` (lib) generated 250 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 ",
             expected
         ))
@@ -417,10 +415,10 @@ fn caching_large_output() {
 
     p.cargo("check")
         .env("RUSTC", rustc.bin("rustc_alt"))
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
-{}warning: `foo` (lib) generated 250 warnings
-[FINISHED] `dev` profile [..]
+{}[WARNING] `foo` (lib) generated 250 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 ",
             expected
         ))
@@ -439,41 +437,57 @@ fn rustc_workspace_wrapper() {
 
     p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains(
-            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] [..]/rustc-echo-wrapper[EXE] rustc --crate-name foo [..]
+WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]
+[WARNING] function `unused_func` is never used
+...
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Check without a wrapper should rebuild
     p.cargo("check -v")
-        .with_stderr_contains(
-            "\
-[CHECKING] foo [..]
-[RUNNING] `rustc[..]
-[WARNING] [..]unused_func[..]
-",
-        )
-        .with_stdout_does_not_contain(
-            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc[..]`
+[WARNING] function `unused_func` is never used
+...
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 
     // Again, reading from the cache.
     p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("[FRESH] foo [..]")
-        .with_stdout_does_not_contain(
-            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+WRAPPER CALLED: rustc [..]
+...
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 
     // And `check` should also be fresh, reading from cache.
     p.cargo("check -v")
-        .with_stderr_contains("[FRESH] foo [..]")
-        .with_stderr_contains("[WARNING] [..]unused_func[..]")
-        .with_stdout_does_not_contain(
-            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[WARNING] function `unused_func` is never used
+...
+[WARNING] `foo` (lib) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 }
 
@@ -489,7 +503,14 @@ fn wacky_hashless_fingerprint() {
         .with_stderr_does_not_contain("[..]unused[..]")
         .run();
     p.cargo("check --bin a")
-        .with_stderr_contains("[..]unused[..]")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `unused`
+...
+[WARNING] `foo` (bin "a") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // This should not pick up the cache from `a`.
     p.cargo("check --bin b")

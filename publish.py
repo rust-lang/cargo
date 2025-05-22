@@ -15,6 +15,9 @@ import urllib.request
 from urllib.error import HTTPError
 
 
+# Whenever you add a new crate to this list that does NOT start with "cargo-"
+# you must reach out to the infra team to add the crate to the list of crates
+# allowed to be published from the "cargo CI" crates.io token.
 TO_PUBLISH = [
     'credential/cargo-credential',
     'credential/cargo-credential-libsecret',

@@ -38,7 +38,7 @@ in `Cargo.toml`:
 [package]
 name = "my-project"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 other-crate = { version = "1.0", registry = "my-registry" }

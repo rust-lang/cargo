@@ -2,15 +2,16 @@
 //!
 //! [`--unit-graph`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unit-graph
 
+use cargo_util_schemas::core::PackageIdSpec;
+
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::{PackageId, Target};
+use crate::core::Target;
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use crate::GlobalContext;
 use std::collections::HashMap;
-use std::io::Write;
 
 /// The dependency graph of Units.
 pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;
@@ -48,7 +49,7 @@ struct SerializedUnitGraph<'a> {
 
 #[derive(serde::Serialize)]
 struct SerializedUnit<'a> {
-    pkg_id: PackageId,
+    pkg_id: PackageIdSpec,
     target: &'a Target,
     profile: &'a Profile,
     platform: CompileKind,
@@ -110,7 +111,7 @@ pub fn emit_serialized_unit_graph(
                 })
                 .collect();
             SerializedUnit {
-                pkg_id: unit.pkg.package_id(),
+                pkg_id: unit.pkg.package_id().to_spec(),
                 target: &unit.target,
                 profile: &unit.profile,
                 platform: unit.kind,
@@ -121,15 +122,10 @@ pub fn emit_serialized_unit_graph(
             }
         })
         .collect();
-    let s = SerializedUnitGraph {
+
+    gctx.shell().print_json(&SerializedUnitGraph {
         version: VERSION,
         units: ser_units,
         roots,
-    };
-
-    let stdout = std::io::stdout();
-    let mut lock = stdout.lock();
-    serde_json::to_writer(&mut lock, &s)?;
-    drop(writeln!(lock));
-    Ok(())
+    })
 }

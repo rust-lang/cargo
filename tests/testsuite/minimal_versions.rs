@@ -2,8 +2,10 @@
 //!
 //! Note: Some tests are located in the resolver-tests package.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 // Ensure that the "-Z minimal-versions" CLI option works and the minimal
 // version of a dependency ends up in the lock file.
@@ -30,6 +32,12 @@ fn minimal_version_cli() {
 
     p.cargo("generate-lockfile -Zminimal-versions")
         .masquerade_as_nightly_cargo(&["minimal-versions"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to earliest compatible version
+[ADDING] dep v1.0.0 (available: v1.1.0)
+
+"#]])
         .run();
 
     let lock = p.read_lockfile();

@@ -1,8 +1,9 @@
 use cargo_test_support::compare::assert_ui;
 use cargo_test_support::current_dir;
 use cargo_test_support::file;
+use cargo_test_support::prelude::*;
 use cargo_test_support::str;
-use cargo_test_support::CargoCommand;
+use cargo_test_support::CargoCommandExt;
 use cargo_test_support::Project;
 
 #[cargo_test]
@@ -22,8 +23,8 @@ fn case() {
         .args(["--package", "serde", "serde_derive"])
         .assert()
         .code(0)
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

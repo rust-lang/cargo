@@ -14,9 +14,9 @@ configuring the settings for a target.
 
 The library target defines a "library" that can be used and linked by other
 libraries and executables. The filename defaults to `src/lib.rs`, and the name
-of the library defaults to the name of the package. A package can have only
-one library. The settings for the library can be [customized] in the `[lib]`
-table in `Cargo.toml`.
+of the library defaults to the name of the package, with any dashes replaced
+with underscores. A package can have only one library. The settings for the
+library can be [customized] in the `[lib]` table in `Cargo.toml`.
 
 ```toml
 # Example of customizing the library in Cargo.toml.
@@ -28,10 +28,10 @@ bench = false
 ## Binaries
 
 Binary targets are executable programs that can be run after being compiled.
-The default binary filename is `src/main.rs`, which defaults to the name of
-the package. Additional binaries are stored in the [`src/bin/`
-directory][package layout]. The settings for each binary can be [customized]
-in the `[[bin]]` tables in `Cargo.toml`.
+A binary's source can be `src/main.rs` and/or stored in the [`src/bin/`
+directory][package layout]. For `src/main.rs`, the default binary name is the
+package name. The settings for each binary can be [customized] in the`[[bin]]`
+tables in `Cargo.toml`.
 
 Binaries can use the public API of the package's library. They are also linked
 with the [`[dependencies]`][dependencies] defined in `Cargo.toml`.
@@ -184,10 +184,8 @@ test = true            # Is tested by default.
 doctest = true         # Documentation examples are tested by default.
 bench = true           # Is benchmarked by default.
 doc = true             # Is documented by default.
-plugin = false         # Used as a compiler plugin (deprecated).
 proc-macro = false     # Set to `true` for a proc-macro library.
 harness = true         # Use libtest harness.
-edition = "2015"       # The edition of the target.
 crate-type = ["lib"]   # The crate types to generate.
 required-features = [] # Features required to build this target (N/A for lib).
 ```
@@ -198,9 +196,10 @@ The `name` field specifies the name of the target, which corresponds to the
 filename of the artifact that will be generated. For a library, this is the
 crate name that dependencies will use to reference it.
 
-For the `[lib]` and the default binary (`src/main.rs`), this defaults to the
-name of the package, with any dashes replaced with underscores. For other
-[auto discovered](#target-auto-discovery) targets, it defaults to the
+For the library target, this defaults to the name of the package , with any
+dashes replaced with underscores. For the default binary (`src/main.rs`),
+it also defaults to the name of the package, with no replacement for dashes.
+For [auto discovered](#target-auto-discovery) targets, it defaults to the
 directory or file name.
 
 This is required for all targets except `[lib]`.
@@ -246,7 +245,7 @@ libraries and binaries.
 
 ### The `plugin` field
 
-This field is used for `rustc` plugins, which are being deprecated.
+This option is deprecated and unused.
 
 ### The `proc-macro` field
 
@@ -267,14 +266,6 @@ to run tests and benchmarks.
 
 Tests have the [`cfg(test)` conditional expression][cfg-test] enabled whether
 or not the harness is enabled.
-
-### The `edition` field
-
-The `edition` field defines the [Rust edition] the target will use. If not
-specified, it defaults to the [`edition` field][package-edition] for the
-`[package]`. This field should usually not be set, and is only intended for
-advanced scenarios such as incrementally transitioning a large package to a
-new edition.
 
 ### The `crate-type` field
 
@@ -313,6 +304,13 @@ name = "my-pg-tool"
 required-features = ["postgres", "tools"]
 ```
 
+### The `edition` field
+
+The `edition` field defines the [Rust edition] the target will use. If not
+specified, it defaults to the [`edition` field][package-edition] for the
+`[package]`.
+
+> **Note:** This field is deprecated and will be removed in a future Edition
 
 ## Target auto-discovery
 
@@ -323,13 +321,14 @@ configuration tables, such as `[lib]`, `[[bin]]`, `[[test]]`, `[[bench]]`, or
 standard directory layout.
 
 The automatic target discovery can be disabled so that only manually
-configured targets will be built. Setting the keys `autobins`, `autoexamples`,
+configured targets will be built. Setting the keys `autolib`, `autobins`, `autoexamples`,
 `autotests`, or `autobenches` to `false` in the `[package]` section will
 disable auto-discovery of the corresponding target type.
 
 ```toml
 [package]
 # ...
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -363,8 +362,11 @@ autobins = false
 > is `false` if at least one target is manually defined in `Cargo.toml`.
 > Beginning with the 2018 edition, the default is always `true`.
 
+> **MSRV:** Respected as of 1.27 for `autobins`, `autoexamples`, `autotests`, and `autobenches`
 
-[Build cache]: ../guide/build-cache.md
+> **MSRV:** Respected as of 1.83 for `autolib`
+
+[Build cache]: build-cache.md
 [Rust Edition]: ../../edition-guide/index.html
 [`--test` flag]: ../../rustc/command-line-arguments.html#option-test
 [`cargo bench`]: ../commands/cargo-bench.md

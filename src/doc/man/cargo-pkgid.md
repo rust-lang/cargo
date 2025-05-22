@@ -63,6 +63,8 @@ Get the package ID for the given package instead of the current package.
 
 {{> options-locked }}
 
+{{> options-lockfile-path }}
+
 {{/options}}
 
 {{> section-options-common }}

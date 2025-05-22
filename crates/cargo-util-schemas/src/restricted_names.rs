@@ -238,6 +238,10 @@ pub(crate) fn validate_feature_name(name: &str) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn validate_path_base_name(name: &str) -> Result<()> {
+    validate_name(name, "path base name")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

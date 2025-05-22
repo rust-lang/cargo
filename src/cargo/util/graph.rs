@@ -22,7 +22,21 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
             .entry(node)
             .or_insert_with(im_rc::OrdMap::new)
             .entry(child)
-            .or_insert_with(Default::default)
+            .or_default()
+    }
+
+    /// Returns the graph obtained by reversing all edges.
+    pub fn reversed(&self) -> Graph<N, E> {
+        let mut ret = Graph::new();
+
+        for n in self.iter() {
+            ret.add(n.clone());
+            for (m, e) in self.edges(n) {
+                *ret.link(m.clone(), n.clone()) = e.clone();
+            }
+        }
+
+        ret
     }
 
     pub fn contains<Q: ?Sized>(&self, k: &Q) -> bool
@@ -67,6 +81,10 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
 
     pub fn iter(&self) -> impl Iterator<Item = &N> {
         self.nodes.keys()
+    }
+
+    pub fn len(&self) -> usize {
+        self.nodes.len()
     }
 
     /// Checks if there is a path from `from` to `to`.
@@ -200,6 +218,19 @@ fn path_to_self() {
     let mut new: Graph<i32, ()> = Graph::new();
     new.link(0, 0);
     assert_eq!(new.path_to_bottom(&0), vec![(&0, Some(&()))]);
+}
+
+#[test]
+fn reverse() {
+    let mut new: Graph<i32, ()> = Graph::new();
+    new.link(0, 1);
+    new.link(0, 2);
+
+    let mut expected: Graph<i32, ()> = Graph::new();
+    expected.add(0);
+    expected.link(1, 0);
+    expected.link(2, 0);
+    assert_eq!(new.reversed(), expected);
 }
 
 impl<N: Eq + Ord + Clone, E: Default + Clone> Default for Graph<N, E> {

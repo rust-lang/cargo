@@ -2,5 +2,14 @@
 #
 # The goal is to help people find the right file to edit
 src/doc/man/generated_txt
-src/doc/src/commands
+src/doc/src/commands/*
 src/etc/man
+!src/doc/src/commands/build-commands.md
+!src/doc/src/commands/cargo-clippy.md
+!src/doc/src/commands/cargo-fmt.md
+!src/doc/src/commands/cargo-miri.md
+!src/doc/src/commands/general-commands.md
+!src/doc/src/commands/index.md
+!src/doc/src/commands/manifest-commands.md
+!src/doc/src/commands/package-commands.md
+!src/doc/src/commands/publishg-commands.md

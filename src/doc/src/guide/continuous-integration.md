@@ -29,7 +29,7 @@ jobs:
           - beta
           - nightly
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
@@ -105,6 +105,25 @@ channel, but any breakage in nightly will not fail your overall build. Please
 see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
 information.
 
+
+### CircleCI
+
+To test your package on CircleCI, here is a sample `.circleci/config.yml` file:
+
+```yaml
+version: 2.1
+jobs:
+  build:
+    docker:
+      # check https://circleci.com/developer/images/image/cimg/rust#image-tags for latest
+      - image: cimg/rust:1.77.2
+    steps:
+      - checkout
+      - run: cargo test
+```
+
+To run more complex pipelines, including flaky test detection, caching, and artifact management, please see [CircleCI Configuration Reference](https://circleci.com/docs/configuration-reference/).
+
 ## Verifying Latest Dependencies
 
 When [specifying dependencies](../reference/specifying-dependencies.md) in
@@ -146,13 +165,18 @@ jobs:
     name: Latest Dependencies
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: allow
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
       - run: cargo update --verbose
       - run: cargo build --verbose
       - run: cargo test --verbose
 ```
+Notes:
+- [`CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`](../reference/config.md#resolverincompatible-rust-versions) is set to ensure the [resolver](../reference/resolver.md) doesn't limit selected dependencies because of your project's [Rust version](../reference/rust-version.md).
+
 For projects with higher risks of per-platform or per-Rust version failures,
 more combinations may want to be tested.
 

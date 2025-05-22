@@ -1,8 +1,8 @@
 //! A graph-like structure used to represent the rustc commands to build the package and the
 //! interdependencies between them.
 //!
-//! The BuildPlan structure is used to store the dependency graph of a dry run so that it can be
-//! shared with an external build system. Each Invocation in the BuildPlan comprises a single
+//! The `BuildPlan` structure is used to store the dependency graph of a dry run so that it can be
+//! shared with an external build system. Each Invocation in the `BuildPlan` comprises a single
 //! subprocess and defines the build environment, the outputs produced by the subprocess, and the
 //! dependencies on other Invocations.
 

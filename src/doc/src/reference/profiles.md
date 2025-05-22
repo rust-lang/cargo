@@ -78,6 +78,8 @@ For more information on what each option does see `rustc`'s docs on [debuginfo].
 You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
 depending on your needs as well.
 
+> **MSRV:** 1.71 is required for `none`, `limited`, `full`, `line-directives-only`, and `line-tables-only`
+
 [`-C debuginfo` flag]: ../../rustc/codegen-options/index.html#debuginfo
 [debuginfo]: ../../rustc/codegen-options/index.html#debuginfo
 [profiling]: https://reviews.llvm.org/D46061
@@ -369,7 +371,7 @@ The output for each profile will be placed in a directory of the same name
 as the profile in the [`target` directory]. As in the example above, the
 output would go into the `target/release-lto` directory.
 
-[`target` directory]: ../guide/build-cache.md
+[`target` directory]: build-cache.md
 
 ## Profile selection
 

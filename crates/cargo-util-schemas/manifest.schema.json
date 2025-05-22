@@ -1,0 +1,1424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TomlManifest",
+  "description": "This type is used to deserialize `Cargo.toml` files.",
+  "type": "object",
+  "properties": {
+    "cargo-features": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "package": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlPackage"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "project": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlPackage"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "badges": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "features": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "lib": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlTarget"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bin": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/TomlTarget"
+      }
+    },
+    "example": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/TomlTarget"
+      }
+    },
+    "test": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/TomlTarget"
+      }
+    },
+    "bench": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/TomlTarget"
+      }
+    },
+    "dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/InheritableDependency"
+      }
+    },
+    "dev-dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/InheritableDependency"
+      }
+    },
+    "dev_dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/InheritableDependency"
+      }
+    },
+    "build-dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/InheritableDependency"
+      }
+    },
+    "build_dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/InheritableDependency"
+      }
+    },
+    "target": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlPlatform"
+      }
+    },
+    "lints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InheritableLints"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "workspace": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlWorkspace"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "profile": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlProfiles"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "patch": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/TomlDependency_for_string"
+        }
+      }
+    },
+    "replace": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlDependency_for_string"
+      }
+    }
+  },
+  "$defs": {
+    "TomlPackage": {
+      "description": "Represents the `package`/`project` sections of a `Cargo.toml`.\n\n Note that the order of the fields matters, since this is the order they\n are serialized to a TOML file. For example, you cannot have values after\n the field `metadata`, since it is a table and values cannot appear after\n tables.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "edition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rust-version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_SemVer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_Array_of_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "build": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metabuild": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrVec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default-target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "forced-target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exclude": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_Array_of_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "include": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_Array_of_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publish": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_VecStringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workspace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "im-a-teapot": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "autolib": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "autobins": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "autoexamples": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "autotests": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "autobenches": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default-run": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "homepage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "documentation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "readme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "keywords": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_Array_of_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "categories": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_Array_of_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license-file": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritableField_for_string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolver": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "InheritableField_for_string": {
+      "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "type": "string"
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "TomlInheritedField": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "$ref": "#/$defs/WorkspaceValue"
+        }
+      },
+      "required": [
+        "workspace"
+      ]
+    },
+    "WorkspaceValue": {
+      "type": "null"
+    },
+    "InheritableField_for_SemVer": {
+      "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "$ref": "#/$defs/SemVer"
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "InheritableField_for_Array_of_string": {
+      "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "StringOrBool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "StringOrVec": {
+      "description": "This can be parsed from either a TOML string or array,\n but is always stored as a vector.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "InheritableField_for_VecStringOrBool": {
+      "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "$ref": "#/$defs/VecStringOrBool"
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "VecStringOrBool": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "InheritableField_for_StringOrBool": {
+      "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "$ref": "#/$defs/StringOrBool"
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "TomlValue": true,
+    "TomlTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crate-type": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "crate_type": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "filename": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "test": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "doctest": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bench": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "doc": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "doc-scrape-examples": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "proc-macro": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "proc_macro": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "harness": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "required-features": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "edition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "InheritableDependency": {
+      "anyOf": [
+        {
+          "description": "The type that is used when not inheriting from a workspace.",
+          "$ref": "#/$defs/TomlDependency_for_string"
+        },
+        {
+          "description": "The type when inheriting from a workspace.",
+          "$ref": "#/$defs/TomlInheritedDependency"
+        }
+      ]
+    },
+    "TomlDependency_for_string": {
+      "anyOf": [
+        {
+          "description": "In the simple format, only a version is specified, eg.\n `package = \"<version>\"`",
+          "type": "string"
+        },
+        {
+          "description": "The simple format is equivalent to a detailed dependency\n specifying only a version, eg.\n `package = { version = \"<version>\" }`",
+          "$ref": "#/$defs/TomlDetailedDependency_for_string"
+        }
+      ]
+    },
+    "TomlDetailedDependency_for_string": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry-index": {
+          "description": "The URL of the `registry` field.\n This is an internal implementation detail. When Cargo creates a\n package, it replaces `registry` with `registry-index` so that the\n manifest contains the correct URL. All users won't have the same\n registry names configured, so Cargo can't rely on just the name for\n crates published by other users.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "git": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rev": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "features": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default-features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default_features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "package": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "artifact": {
+          "description": "One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrVec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lib": {
+          "description": "If set, the artifact should also be a dependency",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "A platform name, like `x86_64-apple-darwin`",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "TomlInheritedDependency": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "boolean"
+        },
+        "features": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "default-features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default_features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "optional": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "public": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "workspace"
+      ]
+    },
+    "TomlPlatform": {
+      "description": "Corresponds to a `target` entry, but `TomlTarget` is already used.",
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/InheritableDependency"
+          }
+        },
+        "build-dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/InheritableDependency"
+          }
+        },
+        "build_dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/InheritableDependency"
+          }
+        },
+        "dev-dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/InheritableDependency"
+          }
+        },
+        "dev_dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/InheritableDependency"
+          }
+        }
+      }
+    },
+    "InheritableLints": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/TomlLint"
+        }
+      }
+    },
+    "TomlLint": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlLintLevel"
+        },
+        {
+          "$ref": "#/$defs/TomlLintConfig"
+        }
+      ]
+    },
+    "TomlLintLevel": {
+      "type": "string",
+      "enum": [
+        "forbid",
+        "deny",
+        "warn",
+        "allow"
+      ]
+    },
+    "TomlLintConfig": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/TomlLintLevel"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int8",
+          "default": 0
+        }
+      },
+      "required": [
+        "level"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlValue"
+      }
+    },
+    "TomlWorkspace": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "default-members": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolver": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InheritablePackage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/TomlDependency_for_string"
+          }
+        },
+        "lints": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/$defs/TomlLint"
+            }
+          }
+        }
+      }
+    },
+    "InheritablePackage": {
+      "description": "A group of fields that are inheritable by members of the workspace",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SemVer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authors": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "homepage": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "documentation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "readme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "keywords": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "license": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "license-file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publish": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VecStringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "edition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "badges": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "exclude": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "rust-version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "TomlProfiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlProfile"
+      }
+    },
+    "TomlProfile": {
+      "type": "object",
+      "properties": {
+        "opt-level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlOptLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lto": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "codegen-backend": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "codegen-units": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "default": null
+        },
+        "debug": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlDebugInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "split-debuginfo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "debug-assertions": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "rpath": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "panic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "overflow-checks": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "incremental": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "dir-name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "inherits": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "strip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rustflags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null
+        },
+        "package": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/TomlProfile"
+          },
+          "default": null
+        },
+        "build-override": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "trim-paths": {
+          "description": "Unstable feature `-Ztrim-paths`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlTrimPaths"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      }
+    },
+    "TomlOptLevel": {
+      "type": "string"
+    },
+    "TomlDebugInfo": {
+      "type": "string",
+      "enum": [
+        "None",
+        "LineDirectivesOnly",
+        "LineTablesOnly",
+        "Limited",
+        "Full"
+      ]
+    },
+    "TomlTrimPaths": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TomlTrimPathsValue"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "TomlTrimPathsValue": {
+      "type": "string",
+      "enum": [
+        "diagnostics",
+        "macro",
+        "object"
+      ]
+    }
+  }
+}

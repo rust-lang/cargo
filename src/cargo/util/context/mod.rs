@@ -63,7 +63,7 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Once;
+use std::sync::{Arc, Once};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
@@ -77,14 +77,14 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::try_canonicalize;
-use crate::util::{internal, CanonicalUrl};
+use crate::util::{closest_msg, internal, CanonicalUrl};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_credential::Secret;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
+use itertools::Itertools;
 use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
@@ -113,10 +113,10 @@ use environment::Env;
 
 use super::auth::RegistryConfig;
 
-// Helper macro for creating typed access methods.
+/// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
-        /// Low-level private method for getting a config value as an OptValue.
+        /// Low-level private method for getting a config value as an [`OptValue`].
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.get_cv(key)?;
             let env = self.get_config_env::<$ty>(key)?;
@@ -227,7 +227,7 @@ pub struct GlobalContext {
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
-    env_config: LazyCell<EnvConfig>,
+    env_config: LazyCell<Arc<HashMap<String, OsString>>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -244,7 +244,7 @@ pub struct GlobalContext {
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
-    /// WorkspaceRootConfigs that have been found
+    /// `WorkspaceRootConfigs` that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
     /// The global cache tracker is a database used to track disk cache usage.
     global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
@@ -335,8 +335,8 @@ impl GlobalContext {
     /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn default() -> CargoResult<GlobalContext> {
         let shell = Shell::new();
-        let cwd = env::current_dir()
-            .with_context(|| "couldn't get the current directory of the process")?;
+        let cwd =
+            env::current_dir().context("couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
@@ -421,11 +421,8 @@ impl GlobalContext {
 
     /// Gets the path to the `rustc` executable.
     pub fn load_global_rustc(&self, ws: Option<&Workspace<'_>>) -> CargoResult<Rustc> {
-        let cache_location = ws.map(|ws| {
-            ws.target_dir()
-                .join(".rustc_info.json")
-                .into_path_unlocked()
-        });
+        let cache_location =
+            ws.map(|ws| ws.build_dir().join(".rustc_info.json").into_path_unlocked());
         let wrapper = self.maybe_get_tool("rustc_wrapper", &self.build_config()?.rustc_wrapper);
         let rustc_workspace_wrapper = self.maybe_get_tool(
             "rustc_workspace_wrapper",
@@ -460,11 +457,10 @@ impl GlobalContext {
                     // commands that use Cargo as a library to inherit (via `cargo <subcommand>`)
                     // or set (by setting `$CARGO`) a correct path to `cargo` when the current exe
                     // is not actually cargo (e.g., `cargo-*` binaries, Valgrind, `ld.so`, etc.).
-                    let exe = try_canonicalize(
-                        self.get_env_os(crate::CARGO_ENV)
-                            .map(PathBuf::from)
-                            .ok_or_else(|| anyhow!("$CARGO not set"))?,
-                    )?;
+                    let exe = self
+                        .get_env_os(crate::CARGO_ENV)
+                        .map(PathBuf::from)
+                        .ok_or_else(|| anyhow!("$CARGO not set"))?;
                     Ok(exe)
                 };
 
@@ -473,7 +469,7 @@ impl GlobalContext {
                     // The method varies per operating system and might fail; in particular,
                     // it depends on `/proc` being mounted on Linux, and some environments
                     // (like containers or chroots) may not have that available.
-                    let exe = try_canonicalize(env::current_exe()?)?;
+                    let exe = env::current_exe()?;
                     Ok(exe)
                 }
 
@@ -484,8 +480,6 @@ impl GlobalContext {
                     // Otherwise, it has multiple components and is either:
                     // - a relative path (e.g., `./cargo`, `target/debug/cargo`), or
                     // - an absolute path (e.g., `/usr/local/bin/cargo`).
-                    // In either case, `Path::canonicalize` will return the full absolute path
-                    // to the target if it exists.
                     let argv0 = env::args_os()
                         .map(PathBuf::from)
                         .next()
@@ -493,10 +487,26 @@ impl GlobalContext {
                     paths::resolve_executable(&argv0)
                 }
 
+                // Determines whether `path` is a cargo binary.
+                // See: https://github.com/rust-lang/cargo/issues/15099#issuecomment-2666737150
+                fn is_cargo(path: &Path) -> bool {
+                    path.file_stem() == Some(OsStr::new("cargo"))
+                }
+
+                let from_current_exe = from_current_exe();
+                if from_current_exe.as_deref().is_ok_and(is_cargo) {
+                    return from_current_exe;
+                }
+
+                let from_argv = from_argv();
+                if from_argv.as_deref().is_ok_and(is_cargo) {
+                    return from_argv;
+                }
+
                 let exe = from_env()
-                    .or_else(|_| from_current_exe())
-                    .or_else(|_| from_argv())
-                    .with_context(|| "couldn't get the path to cargo executable")?;
+                    .or(from_current_exe)
+                    .or(from_argv)
+                    .context("couldn't get the path to cargo executable")?;
                 Ok(exe)
             })
             .map(AsRef::as_ref)
@@ -569,8 +579,8 @@ impl GlobalContext {
     ///
     /// There is not a need to also call [`Self::reload_rooted_at`].
     pub fn reload_cwd(&mut self) -> CargoResult<()> {
-        let cwd = env::current_dir()
-            .with_context(|| "couldn't get the current directory of the process")?;
+        let cwd =
+            env::current_dir().context("couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
@@ -603,7 +613,7 @@ impl GlobalContext {
     ///
     /// Returns `None` if the user has not chosen an explicit directory.
     ///
-    /// Callers should prefer `Workspace::target_dir` instead.
+    /// Callers should prefer [`Workspace::target_dir`] instead.
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
@@ -631,6 +641,90 @@ impl GlobalContext {
             Ok(Some(Filesystem::new(path)))
         } else {
             Ok(None)
+        }
+    }
+
+    /// The directory to use for intermediate build artifacts.
+    ///
+    /// Falls back to the target directory if not specified.
+    ///
+    /// Callers should prefer [`Workspace::build_dir`] instead.
+    pub fn build_dir(&self, workspace_manifest_path: &PathBuf) -> CargoResult<Option<Filesystem>> {
+        if !self.cli_unstable().build_dir {
+            return self.target_dir();
+        }
+        if let Some(val) = &self.build_config()?.build_dir {
+            let replacements = vec![
+                (
+                    "{workspace-root}",
+                    workspace_manifest_path
+                        .parent()
+                        .unwrap()
+                        .to_str()
+                        .context("workspace root was not valid utf-8")?
+                        .to_string(),
+                ),
+                (
+                    "{cargo-cache-home}",
+                    self.home()
+                        .as_path_unlocked()
+                        .to_str()
+                        .context("cargo home was not valid utf-8")?
+                        .to_string(),
+                ),
+                ("{workspace-path-hash}", {
+                    let real_path = std::fs::canonicalize(workspace_manifest_path)?;
+                    let hash = crate::util::hex::short_hash(&real_path);
+                    format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
+                }),
+            ];
+
+            let template_variables = replacements
+                .iter()
+                .map(|(key, _)| key[1..key.len() - 1].to_string())
+                .collect_vec();
+
+            let path = val
+                .resolve_templated_path(self, replacements)
+                .map_err(|e| match e {
+                    path::ResolveTemplateError::UnexpectedVariable {
+                        variable,
+                        raw_template,
+                    } => {
+                        let mut suggestion = closest_msg(&variable, template_variables.iter(), |key| key, "template variable");
+                        if suggestion == "" {
+                            let variables = template_variables.iter().map(|v| format!("`{{{v}}}`")).join(", ");
+                            suggestion = format!("\n\nhelp: available template variables are {variables}");
+                        }
+                        anyhow!(
+                            "unexpected variable `{variable}` in build.build-dir path `{raw_template}`{suggestion}"
+                        )
+                    },
+                    path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                        let (btype, literal) = match bracket_type {
+                            path::BracketType::Opening => ("opening", "{"),
+                            path::BracketType::Closing => ("closing", "}"),
+                        };
+
+                        anyhow!(
+                            "unexpected {btype} bracket `{literal}` in build.build-dir path `{raw_template}`"
+                        )
+                    }
+                })?;
+
+            // Check if the target directory is set to an empty string in the config.toml file.
+            if val.raw_value().is_empty() {
+                bail!(
+                    "the build directory is set to an empty string in {}",
+                    val.value().definition
+                )
+            }
+
+            Ok(Some(Filesystem::new(path)))
+        } else {
+            // For now, fallback to the previous implementation.
+            // This will change in the future.
+            return self.target_dir();
         }
     }
 
@@ -736,7 +830,7 @@ impl GlobalContext {
                     Ok(Some(CV::List(cv_list, cv_def)))
                 }
                 Some(cv) => {
-                    // This can't assume StringList or UnmergedStringList.
+                    // This can't assume StringList.
                     // Return an error, which is the behavior of merging
                     // multiple config.toml files with the same scenario.
                     bail!(
@@ -815,7 +909,7 @@ impl GlobalContext {
     /// [`GlobalContext`].
     ///
     /// This can be used similarly to [`std::env::var`].
-    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<&str> {
         self.env.get_env(key)
     }
 
@@ -823,7 +917,7 @@ impl GlobalContext {
     /// [`GlobalContext`].
     ///
     /// This can be used similarly to [`std::env::var_os`].
-    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
+    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
         self.env.get_env_os(key)
     }
 
@@ -909,21 +1003,9 @@ impl GlobalContext {
         }
     }
 
-    /// Helper for StringList type to get something that is a string or list.
-    fn get_list_or_string(
-        &self,
-        key: &ConfigKey,
-        merge: bool,
-    ) -> CargoResult<Vec<(String, Definition)>> {
+    /// Helper for `StringList` type to get something that is a string or list.
+    fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
         let mut res = Vec::new();
-
-        if !merge {
-            self.get_env_list(key, &mut res)?;
-
-            if !res.is_empty() {
-                return Ok(res);
-            }
-        }
 
         match self.get_cv(key)? {
             Some(CV::List(val, _def)) => res.extend(val),
@@ -943,6 +1025,7 @@ impl GlobalContext {
     }
 
     /// Internal method for getting an environment variable as a list.
+    /// If the key is a non-mergable list and a value is found in the environment, existing values are cleared.
     fn get_env_list(
         &self,
         key: &ConfigKey,
@@ -952,6 +1035,10 @@ impl GlobalContext {
             self.check_environment_key_case_mismatch(key);
             return Ok(());
         };
+
+        if is_nonmergable_list(&key) {
+            output.clear();
+        }
 
         let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
@@ -1020,6 +1107,36 @@ impl GlobalContext {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
+        for warning in self
+            .unstable_flags
+            .parse(unstable_flags, self.nightly_features_allowed)?
+        {
+            self.shell().warn(warning)?;
+        }
+        if !unstable_flags.is_empty() {
+            // store a copy of the cli flags separately for `load_unstable_flags_from_config`
+            // (we might also need it again for `reload_rooted_at`)
+            self.unstable_flags_cli = Some(unstable_flags.to_vec());
+        }
+        if !cli_config.is_empty() {
+            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
+            self.merge_cli_args()?;
+        }
+
+        // Load the unstable flags from config file here first, as the config
+        // file itself may enable inclusion of other configs. In that case, we
+        // want to re-load configs with includes enabled:
+        self.load_unstable_flags_from_config()?;
+        if self.unstable_flags.config_include {
+            // If the config was already loaded (like when fetching the
+            // `[alias]` table), it was loaded with includes disabled because
+            // the `unstable_flags` hadn't been set up, yet. Any values
+            // fetched before this step will not process includes, but that
+            // should be fine (`[alias]` is one of the only things loaded
+            // before configure). This can be removed when stabilized.
+            self.reload_rooted_at(self.cwd.clone())?;
+        }
+
         // Ignore errors in the configuration files. We don't want basic
         // commands like `cargo version` to error out due to config file
         // problems.
@@ -1066,33 +1183,6 @@ impl GlobalContext {
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
         self.target_dir = cli_target_dir;
 
-        for warning in self
-            .unstable_flags
-            .parse(unstable_flags, self.nightly_features_allowed)?
-        {
-            self.shell().warn(warning)?;
-        }
-        if !unstable_flags.is_empty() {
-            // store a copy of the cli flags separately for `load_unstable_flags_from_config`
-            // (we might also need it again for `reload_rooted_at`)
-            self.unstable_flags_cli = Some(unstable_flags.to_vec());
-        }
-        if !cli_config.is_empty() {
-            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
-            self.merge_cli_args()?;
-        }
-        if self.unstable_flags.config_include {
-            // If the config was already loaded (like when fetching the
-            // `[alias]` table), it was loaded with includes disabled because
-            // the `unstable_flags` hadn't been set up, yet. Any values
-            // fetched before this step will not process includes, but that
-            // should be fine (`[alias]` is one of the only things loaded
-            // before configure). This can be removed when stabilized.
-            self.reload_rooted_at(self.cwd.clone())?;
-        }
-
-        self.load_unstable_flags_from_config()?;
-
         Ok(())
     }
 
@@ -1124,23 +1214,35 @@ impl GlobalContext {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen() && !self.offline()
+        !self.offline_flag().is_some()
     }
 
-    pub fn offline(&self) -> bool {
-        self.offline
+    pub fn offline_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.offline {
+            Some("--offline")
+        } else {
+            None
+        }
     }
 
-    pub fn frozen(&self) -> bool {
-        self.frozen
-    }
-
-    pub fn locked(&self) -> bool {
-        self.locked
+    pub fn set_locked(&mut self, locked: bool) {
+        self.locked = locked;
     }
 
     pub fn lock_update_allowed(&self) -> bool {
-        !self.frozen && !self.locked
+        !self.locked_flag().is_some()
+    }
+
+    pub fn locked_flag(&self) -> Option<&'static str> {
+        if self.frozen {
+            Some("--frozen")
+        } else if self.locked {
+            Some("--locked")
+        } else {
+            None
+        }
     }
 
     /// Loads configuration from the filesystem.
@@ -1163,7 +1265,7 @@ impl GlobalContext {
             result.push(cv);
             Ok(())
         })
-        .with_context(|| "could not load Cargo configuration")?;
+        .context("could not load Cargo configuration")?;
         Ok(result)
     }
 
@@ -1203,7 +1305,7 @@ impl GlobalContext {
             })?;
             Ok(())
         })
-        .with_context(|| "could not load Cargo configuration")?;
+        .context("could not load Cargo configuration")?;
 
         match cfg {
             CV::Table(map, _) => Ok(map),
@@ -1492,7 +1594,7 @@ impl GlobalContext {
             };
             let tmp_table = self
                 .load_includes(tmp_table, &mut HashSet::new(), WhyLoad::Cli)
-                .with_context(|| "failed to load --config include".to_string())?;
+                .context("failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
@@ -1537,36 +1639,32 @@ impl GlobalContext {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        if possible.exists() {
+        if let Ok(possible_handle) = same_file::Handle::from_path(&possible) {
             if warn {
-                // We don't want to print a warning if the version
-                // without the extension is just a symlink to the version
-                // WITH an extension, which people may want to do to
-                // support multiple Cargo versions at once and not
-                // get a warning.
-                let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
-                    target_path == possible_with_extension
-                } else {
-                    false
-                };
-
-                if !skip_warning {
-                    if possible_with_extension.exists() {
+                if let Ok(possible_with_extension_handle) =
+                    same_file::Handle::from_path(&possible_with_extension)
+                {
+                    // We don't want to print a warning if the version
+                    // without the extension is just a symlink to the version
+                    // WITH an extension, which people may want to do to
+                    // support multiple Cargo versions at once and not
+                    // get a warning.
+                    if possible_handle != possible_with_extension_handle {
                         self.shell().warn(format!(
                             "both `{}` and `{}` exist. Using `{}`",
                             possible.display(),
                             possible_with_extension.display(),
                             possible.display()
                         ))?;
-                    } else {
-                        self.shell().warn(format!(
-                            "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
-                            possible.display(),
-                        ))?;
-                        self.shell().note(
-                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
-                        )?;
                     }
+                } else {
+                    self.shell().warn(format!(
+                        "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                        possible.display(),
+                    ))?;
+                    self.shell().note(
+                        format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
+                    )?;
                 }
             }
 
@@ -1582,20 +1680,21 @@ impl GlobalContext {
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
-        let mut stash: HashSet<PathBuf> = HashSet::new();
+        let mut seen_dir = HashSet::new();
 
         for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
-            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
+            let config_root = current.join(".cargo");
+            if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
-                stash.insert(path);
             }
+            seen_dir.insert(config_root);
         }
 
         // Once we're done, also be sure to walk the home directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
-        if let Some(path) = self.get_file_path(home, "config", true)? {
-            if !stash.contains(&path) {
+        if !seen_dir.contains(home) {
+            if let Some(path) = self.get_file_path(home, "config", true)? {
                 walk(&path)?;
             }
         }
@@ -1829,34 +1928,47 @@ impl GlobalContext {
         &self.progress_config
     }
 
-    pub fn env_config(&self) -> CargoResult<&EnvConfig> {
-        let env_config = self
-            .env_config
-            .try_borrow_with(|| self.get::<EnvConfig>("env"))?;
-
-        // Reasons for disallowing these values:
-        //
-        // - CARGO_HOME: The initial call to cargo does not honor this value
-        //   from the [env] table. Recursive calls to cargo would use the new
-        //   value, possibly behaving differently from the outer cargo.
-        //
-        // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
-        //   this will have no effect because the rustup proxy sets
-        //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
-        //   [env] table. If the outer cargo is executed directly
-        //   circumventing the rustup proxy, then this would affect calls to
-        //   rustc (assuming that is a proxy), which could potentially cause
-        //   problems with cargo and rustc being from different toolchains. We
-        //   consider this to be not a use case we would like to support,
-        //   since it will likely cause problems or lead to confusion.
-        for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
-            if env_config.contains_key(*disallowed) {
-                bail!(
-                    "setting the `{disallowed}` environment variable is not supported \
-                    in the `[env]` configuration table"
-                );
-            }
-        }
+    /// Get the env vars from the config `[env]` table which
+    /// are `force = true` or don't exist in the env snapshot [`GlobalContext::get_env`].
+    pub fn env_config(&self) -> CargoResult<&Arc<HashMap<String, OsString>>> {
+        let env_config = self.env_config.try_borrow_with(|| {
+            CargoResult::Ok(Arc::new({
+                let env_config = self.get::<EnvConfig>("env")?;
+                // Reasons for disallowing these values:
+                //
+                // - CARGO_HOME: The initial call to cargo does not honor this value
+                //   from the [env] table. Recursive calls to cargo would use the new
+                //   value, possibly behaving differently from the outer cargo.
+                //
+                // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
+                //   this will have no effect because the rustup proxy sets
+                //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
+                //   [env] table. If the outer cargo is executed directly
+                //   circumventing the rustup proxy, then this would affect calls to
+                //   rustc (assuming that is a proxy), which could potentially cause
+                //   problems with cargo and rustc being from different toolchains. We
+                //   consider this to be not a use case we would like to support,
+                //   since it will likely cause problems or lead to confusion.
+                for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
+                    if env_config.contains_key(*disallowed) {
+                        bail!(
+                            "setting the `{disallowed}` environment variable is not supported \
+                            in the `[env]` configuration table"
+                        );
+                    }
+                }
+                env_config
+                    .into_iter()
+                    .filter_map(|(k, v)| {
+                        if v.is_force() || self.get_env_os(&k).is_none() {
+                            Some((k, v.resolve(self).to_os_string()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }))
+        })?;
 
         Ok(env_config)
     }
@@ -1871,7 +1983,7 @@ impl GlobalContext {
         Ok(())
     }
 
-    /// Returns a list of [target.'cfg()'] tables.
+    /// Returns a list of [target.'`cfg()`'] tables.
     ///
     /// The list is sorted by the table name.
     pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
@@ -2005,6 +2117,15 @@ impl GlobalContext {
         })?;
         Ok(deferred.borrow_mut())
     }
+
+    /// Get the global [`WarningHandling`] configuration.
+    pub fn warning_handling(&self) -> CargoResult<WarningHandling> {
+        if self.unstable_flags.warnings {
+            Ok(self.build_config()?.warnings.unwrap_or_default())
+        } else {
+            Ok(WarningHandling::default())
+        }
+    }
 }
 
 /// Internal error for serde errors.
@@ -2034,6 +2155,10 @@ impl ConfigError {
         }
     }
 
+    fn is_missing_field(&self) -> bool {
+        self.error.downcast_ref::<MissingFieldError>().is_some()
+    }
+
     fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
             error: anyhow!("missing config key `{}`", key),
@@ -2041,11 +2166,11 @@ impl ConfigError {
         }
     }
 
-    fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
+    fn with_key_context(self, key: &ConfigKey, definition: Option<Definition>) -> ConfigError {
         ConfigError {
             error: anyhow::Error::from(self)
                 .context(format!("could not load config key `{}`", key)),
-            definition: Some(definition),
+            definition: definition,
         }
     }
 }
@@ -2066,10 +2191,28 @@ impl fmt::Display for ConfigError {
     }
 }
 
+#[derive(Debug)]
+struct MissingFieldError(String);
+
+impl fmt::Display for MissingFieldError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "missing field `{}`", self.0)
+    }
+}
+
+impl std::error::Error for MissingFieldError {}
+
 impl serde::de::Error for ConfigError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         ConfigError {
             error: anyhow::Error::msg(msg.to_string()),
+            definition: None,
+        }
+    }
+
+    fn missing_field(field: &'static str) -> Self {
+        ConfigError {
+            error: anyhow::Error::new(MissingFieldError(field.to_string())),
             definition: None,
         }
     }
@@ -2115,6 +2258,16 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
+    fn get_definition(&self) -> &Definition {
+        match self {
+            CV::Boolean(_, def)
+            | CV::Integer(_, def)
+            | CV::String(_, def)
+            | CV::List(_, def)
+            | CV::Table(_, def) => def,
+        }
+    }
+
     fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
             toml::Value::String(val) => Ok(CV::String(val, def)),
@@ -2169,13 +2322,31 @@ impl ConfigValue {
     ///
     /// Container and non-container types cannot be mixed.
     fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
+        self.merge_helper(from, force, &mut ConfigKey::new())
+    }
+
+    fn merge_helper(
+        &mut self,
+        from: ConfigValue,
+        force: bool,
+        parts: &mut ConfigKey,
+    ) -> CargoResult<()> {
+        let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                if force {
-                    old.append(new);
+                if is_nonmergable_list(&parts) {
+                    // Use whichever list is higher priority.
+                    if force || is_higher_priority {
+                        mem::swap(new, old);
+                    }
                 } else {
-                    new.append(old);
-                    mem::swap(new, old);
+                    // Merge the lists together.
+                    if force {
+                        old.append(new);
+                    } else {
+                        new.append(old);
+                        mem::swap(new, old);
+                    }
                 }
                 old.sort_by(|a, b| a.1.cmp(&b.1));
             }
@@ -2185,7 +2356,8 @@ impl ConfigValue {
                         Occupied(mut entry) => {
                             let new_def = value.definition().clone();
                             let entry = entry.get_mut();
-                            entry.merge(value, force).with_context(|| {
+                            parts.push(&key);
+                            entry.merge_helper(value, force, parts).with_context(|| {
                                 format!(
                                     "failed to merge key `{}` between \
                                      {} and {}",
@@ -2215,7 +2387,7 @@ impl ConfigValue {
                 ));
             }
             (old, mut new) => {
-                if force || new.definition().is_higher_priority(old.definition()) {
+                if force || is_higher_priority {
                     mem::swap(old, &mut new);
                 }
             }
@@ -2288,6 +2460,17 @@ impl ConfigValue {
             self.definition()
         )
     }
+}
+
+/// List of which configuration lists cannot be merged.
+/// Instead of merging, these the higher priority list replaces the lower priority list.
+fn is_nonmergable_list(key: &ConfigKey) -> bool {
+    key.matches("registry.credential-provider")
+        || key.matches("registries.*.credential-provider")
+        || key.matches("target.*.runner")
+        || key.matches("host.runner")
+        || key.matches("credential-alias.*")
+        || key.matches("doc.browser")
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
@@ -2514,6 +2697,7 @@ impl<'de> Deserialize<'de> for SslVersionConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
 pub struct SslVersionConfigRange {
     pub min: Option<String>,
     pub max: Option<String>,
@@ -2571,6 +2755,7 @@ pub struct CargoBuildConfig {
     pub pipelining: Option<bool>,
     pub dep_info_basedir: Option<ConfigRelativePath>,
     pub target_dir: Option<ConfigRelativePath>,
+    pub build_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
     pub jobs: Option<JobsConfig>,
@@ -2580,7 +2765,25 @@ pub struct CargoBuildConfig {
     pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
     pub rustc: Option<ConfigRelativePath>,
     pub rustdoc: Option<ConfigRelativePath>,
+    // deprecated alias for artifact-dir
     pub out_dir: Option<ConfigRelativePath>,
+    pub artifact_dir: Option<ConfigRelativePath>,
+    pub warnings: Option<WarningHandling>,
+    /// Unstable feature `-Zsbom`.
+    pub sbom: Option<bool>,
+}
+
+/// Whether warnings should warn, be allowed, or cause an error.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum WarningHandling {
+    #[default]
+    /// Output warnings.
+    Warn,
+    /// Allow warnings (do not output them).
+    Allow,
+    /// Error if  warnings are emitted.
+    Deny,
 }
 
 /// Configuration for `build.target`.
@@ -2643,7 +2846,29 @@ impl BuildTargetConfig {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoResolverConfig {
+    pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
+    pub feature_unification: Option<FeatureUnification>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum IncompatibleRustVersions {
+    Allow,
+    Fallback,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FeatureUnification {
+    Selected,
+    Workspace,
+}
+
 #[derive(Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct TermConfig {
     pub verbose: Option<bool>,
     pub quiet: Option<bool>,
@@ -2656,13 +2881,17 @@ pub struct TermConfig {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
+    #[serde(default)]
     pub when: ProgressWhen,
     pub width: Option<usize>,
+    /// Communicate progress status with a terminal
+    pub term_integration: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum ProgressWhen {
     #[default]
     Auto,
@@ -2691,10 +2920,12 @@ where
                 "auto" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Auto,
                     width: None,
+                    term_integration: None,
                 })),
                 "never" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Never,
                     width: None,
+                    term_integration: None,
                 })),
                 "always" => Err(E::custom("\"always\" progress requires a `width` key")),
                 _ => Err(E::unknown_variant(s, &["auto", "never"])),
@@ -2716,6 +2947,7 @@ where
             if let ProgressConfig {
                 when: ProgressWhen::Always,
                 width: None,
+                ..
             } = pc
             {
                 return Err(serde::de::Error::custom(
@@ -2825,14 +3057,6 @@ impl StringList {
         &self.0
     }
 }
-
-/// StringList automatically merges config values with environment values,
-/// this instead follows the precedence rules, so that eg. a string list found
-/// in the environment will be used instead of one in a config file.
-///
-/// This is currently only used by `PathAndArgs`
-#[derive(Debug, Deserialize)]
-pub struct UnmergedStringList(Vec<String>);
 
 #[macro_export]
 macro_rules! __shell_print {

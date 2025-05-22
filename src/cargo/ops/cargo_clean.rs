@@ -5,11 +5,14 @@ use crate::ops;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{human_readable_bytes, GlobalContext, Progress, ProgressStyle};
+use crate::util::HumanBytes;
+use crate::util::{GlobalContext, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 pub struct CleanOptions<'gctx> {
     pub gctx: &'gctx GlobalContext,
@@ -39,6 +42,7 @@ pub struct CleanContext<'gctx> {
 /// Cleans various caches.
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
+    let mut build_dir = ws.build_dir();
     let gctx = opts.gctx;
     let mut clean_ctx = CleanContext::new(gctx);
     clean_ctx.dry_run = opts.dry_run;
@@ -65,6 +69,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
             // that profile.
             let dir_name = profiles.get_dir_name();
             target_dir = target_dir.join(dir_name);
+            build_dir = build_dir.join(dir_name);
         }
 
         // If we have a spec, then we need to delete some packages, otherwise, just
@@ -73,9 +78,24 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            clean_ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+            let paths: &[PathBuf] = if gctx.cli_unstable().build_dir && build_dir != target_dir {
+                &[
+                    target_dir.into_path_unlocked(),
+                    build_dir.into_path_unlocked(),
+                ]
+            } else {
+                &[target_dir.into_path_unlocked()]
+            };
+            clean_ctx.remove_paths(paths)?;
         } else {
-            clean_specs(&mut clean_ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
+            clean_specs(
+                &mut clean_ctx,
+                &ws,
+                &profiles,
+                &opts.targets,
+                &opts.spec,
+                opts.dry_run,
+            )?;
         }
     }
 
@@ -89,11 +109,12 @@ fn clean_specs(
     profiles: &Profiles,
     targets: &[String],
     spec: &[String],
+    dry_run: bool,
 ) -> CargoResult<()> {
     // Clean specific packages.
     let requested_kinds = CompileKind::from_requested_targets(clean_ctx.gctx, targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
-    let (pkg_set, resolve) = ops::resolve_ws(ws)?;
+    let (pkg_set, resolve) = ops::resolve_ws(ws, dry_run)?;
     let prof_dir_name = profiles.get_dir_name();
     let host_layout = Layout::new(ws, None, &prof_dir_name)?;
     // Convert requested kinds to a Vec of layouts.
@@ -156,6 +177,7 @@ fn clean_specs(
                 &spec.name(),
                 resolve.iter(),
                 |id| id.name().as_str(),
+                "package",
             ));
             anyhow::bail!(
                 "package ID specification `{}` did not match any packages{}",
@@ -169,6 +191,9 @@ fn clean_specs(
 
     clean_ctx.progress = Box::new(CleaningPackagesBar::new(clean_ctx.gctx, packages.len()));
 
+    // Try to reduce the amount of times we iterate over the same target directory by storing away
+    // the directories we've iterated over (and cleaned for a given package).
+    let mut cleaned_packages: HashMap<_, HashSet<_>> = HashMap::default();
     for pkg in packages {
         let pkg_dir = format!("{}-*", pkg.name());
         clean_ctx.progress.on_cleaning_package(&pkg.name())?;
@@ -192,7 +217,9 @@ fn clean_specs(
                 }
                 continue;
             }
-            let crate_name = target.crate_name();
+            let crate_name: Rc<str> = target.crate_name().into();
+            let path_dot: &str = &format!("{crate_name}.");
+            let path_dash: &str = &format!("{crate_name}-");
             for &mode in &[
                 CompileMode::Build,
                 CompileMode::Test,
@@ -203,37 +230,24 @@ fn clean_specs(
 
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
-                        .rustc_outputs(mode, target.kind(), triple)?;
+                        .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
                     let (dir, uplift_dir) = match target.kind() {
                         TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
-                            (layout.examples(), Some(layout.examples()))
+                            (layout.build_examples(), Some(layout.examples()))
                         }
                         // Tests/benchmarks are never uplifted.
                         TargetKind::Test | TargetKind::Bench => (layout.deps(), None),
                         _ => (layout.deps(), Some(layout.dest())),
                     };
+                    let mut dir_glob_str = escape_glob_path(dir)?;
+                    let dir_glob = Path::new(&dir_glob_str);
                     for file_type in file_types {
                         // Some files include a hash in the filename, some don't.
                         let hashed_name = file_type.output_filename(target, Some("*"));
                         let unhashed_name = file_type.output_filename(target, None);
-                        let dir_glob = escape_glob_path(dir)?;
-                        let dir_glob = Path::new(&dir_glob);
 
                         clean_ctx.rm_rf_glob(&dir_glob.join(&hashed_name))?;
                         clean_ctx.rm_rf(&dir.join(&unhashed_name))?;
-                        // Remove dep-info file generated by rustc. It is not tracked in
-                        // file_types. It does not have a prefix.
-                        let hashed_dep_info = dir_glob.join(format!("{}-*.d", crate_name));
-                        clean_ctx.rm_rf_glob(&hashed_dep_info)?;
-                        let unhashed_dep_info = dir.join(format!("{}.d", crate_name));
-                        clean_ctx.rm_rf(&unhashed_dep_info)?;
-                        // Remove split-debuginfo files generated by rustc.
-                        let split_debuginfo_obj = dir_glob.join(format!("{}.*.o", crate_name));
-                        clean_ctx.rm_rf_glob(&split_debuginfo_obj)?;
-                        let split_debuginfo_dwo = dir_glob.join(format!("{}.*.dwo", crate_name));
-                        clean_ctx.rm_rf_glob(&split_debuginfo_dwo)?;
-                        let split_debuginfo_dwp = dir_glob.join(format!("{}.*.dwp", crate_name));
-                        clean_ctx.rm_rf_glob(&split_debuginfo_dwp)?;
 
                         // Remove the uplifted copy.
                         if let Some(uplift_dir) = uplift_dir {
@@ -244,6 +258,31 @@ fn clean_specs(
                             clean_ctx.rm_rf(&dep_info)?;
                         }
                     }
+                    let unhashed_dep_info = dir.join(format!("{}.d", crate_name));
+                    clean_ctx.rm_rf(&unhashed_dep_info)?;
+
+                    if !dir_glob_str.ends_with(std::path::MAIN_SEPARATOR) {
+                        dir_glob_str.push(std::path::MAIN_SEPARATOR);
+                    }
+                    dir_glob_str.push('*');
+                    let dir_glob_str: Rc<str> = dir_glob_str.into();
+                    if cleaned_packages
+                        .entry(dir_glob_str.clone())
+                        .or_default()
+                        .insert(crate_name.clone())
+                    {
+                        let paths = [
+                            // Remove dep-info file generated by rustc. It is not tracked in
+                            // file_types. It does not have a prefix.
+                            (path_dash, ".d"),
+                            // Remove split-debuginfo files generated by rustc.
+                            (path_dot, ".o"),
+                            (path_dot, ".dwo"),
+                            (path_dot, ".dwp"),
+                        ];
+                        clean_ctx.rm_rf_prefix_list(&dir_glob_str, &paths)?;
+                    }
+
                     // TODO: what to do about build_script_build?
                     let dir = escape_glob_path(layout.incremental())?;
                     let incremental = Path::new(&dir).join(format!("{}-*", crate_name));
@@ -322,6 +361,30 @@ impl<'gctx> CleanContext<'gctx> {
         Ok(())
     }
 
+    /// Removes files matching a glob and any of the provided filename patterns (prefix/suffix pairs).
+    ///
+    /// This function iterates over files matching a glob (`pattern`) and removes those whose
+    /// filenames start and end with specific prefix/suffix pairs. It should be more efficient for
+    /// operations involving multiple prefix/suffix pairs, as it iterates over the directory
+    /// only once, unlike making multiple calls to [`Self::rm_rf_glob`].
+    fn rm_rf_prefix_list(
+        &mut self,
+        pattern: &str,
+        path_matchers: &[(&str, &str)],
+    ) -> CargoResult<()> {
+        for path in glob::glob(pattern)? {
+            let path = path?;
+            let filename = path.file_name().and_then(|name| name.to_str()).unwrap();
+            if path_matchers
+                .iter()
+                .any(|(prefix, suffix)| filename.starts_with(prefix) && filename.ends_with(suffix))
+            {
+                self.rm_rf(&path)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn rm_rf(&mut self, path: &Path) -> CargoResult<()> {
         let meta = match fs::symlink_metadata(path) {
             Ok(meta) => meta,
@@ -395,13 +458,8 @@ impl<'gctx> CleanContext<'gctx> {
         let byte_count = if self.total_bytes_removed == 0 {
             String::new()
         } else {
-            // Don't show a fractional number of bytes.
-            if self.total_bytes_removed < 1024 {
-                format!(", {}B total", self.total_bytes_removed)
-            } else {
-                let (bytes, unit) = human_readable_bytes(self.total_bytes_removed);
-                format!(", {bytes:.1}{unit} total")
-            }
+            let bytes = HumanBytes(self.total_bytes_removed);
+            format!(", {bytes:.1} total")
         };
         // I think displaying the number of directories removed isn't
         // particularly interesting to the user. However, if there are 0

@@ -543,7 +543,7 @@ impl GlobalCacheTracker {
     /// Deletes files from the global cache based on the given options.
     pub fn clean(&mut self, clean_ctx: &mut CleanContext<'_>, gc_opts: &GcOpts) -> CargoResult<()> {
         self.clean_inner(clean_ctx, gc_opts)
-            .with_context(|| "failed to clean entries from the global cache")
+            .context("failed to clean entries from the global cache")
     }
 
     #[tracing::instrument(skip_all)]
@@ -575,7 +575,7 @@ impl GlobalCacheTracker {
                 gc_opts.is_download_cache_size_set(),
                 &mut delete_paths,
             )
-            .with_context(|| "failed to sync tracking database")?
+            .context("failed to sync tracking database")?
         }
         if let Some(max_age) = gc_opts.max_index_age {
             let max_age = now - max_age.as_secs();
@@ -657,8 +657,19 @@ impl GlobalCacheTracker {
         Ok(())
     }
 
-    /// Returns a list of directory entries in the given path.
-    fn names_from(path: &Path) -> CargoResult<Vec<String>> {
+    /// Returns a list of directory entries in the given path that are
+    /// themselves directories.
+    fn list_dir_names(path: &Path) -> CargoResult<Vec<String>> {
+        Self::read_dir_with_filter(path, &|entry| {
+            entry.file_type().map_or(false, |ty| ty.is_dir())
+        })
+    }
+
+    /// Returns a list of names in a directory, filtered by the given callback.
+    fn read_dir_with_filter(
+        path: &Path,
+        filter: &dyn Fn(&std::fs::DirEntry) -> bool,
+    ) -> CargoResult<Vec<String>> {
         let entries = match path.read_dir() {
             Ok(e) => e,
             Err(e) => {
@@ -672,7 +683,9 @@ impl GlobalCacheTracker {
             }
         };
         let names = entries
-            .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| filter(entry))
+            .filter_map(|entry| entry.file_name().into_string().ok())
             .collect();
         Ok(names)
     }
@@ -803,7 +816,7 @@ impl GlobalCacheTracker {
         base_path: &Path,
     ) -> CargoResult<()> {
         trace!(target: "gc", "checking for untracked parent to add to {parent_table_name}");
-        let names = Self::names_from(base_path)?;
+        let names = Self::list_dir_names(base_path)?;
 
         let mut stmt = conn.prepare_cached(&format!(
             "INSERT INTO {parent_table_name} (name, timestamp)
@@ -896,7 +909,7 @@ impl GlobalCacheTracker {
              VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT DO NOTHING",
         )?;
-        let index_names = Self::names_from(&base_path)?;
+        let index_names = Self::list_dir_names(&base_path)?;
         for index_name in index_names {
             let Some(id) = Self::id_from_name(conn, REGISTRY_INDEX_TABLE, &index_name)? else {
                 // The id is missing from the database. This should be resolved
@@ -904,13 +917,18 @@ impl GlobalCacheTracker {
                 continue;
             };
             let index_path = base_path.join(index_name);
-            for crate_name in Self::names_from(&index_path)? {
-                if crate_name.ends_with(".crate") {
-                    // Missing files should have already been taken care of by
-                    // update_db_for_removed.
-                    let size = paths::metadata(index_path.join(&crate_name))?.len();
-                    insert_stmt.execute(params![id, crate_name, size, now])?;
-                }
+            let crates = Self::read_dir_with_filter(&index_path, &|entry| {
+                entry.file_type().map_or(false, |ty| ty.is_file())
+                    && entry
+                        .file_name()
+                        .to_str()
+                        .map_or(false, |name| name.ends_with(".crate"))
+            })?;
+            for crate_name in crates {
+                // Missing files should have already been taken care of by
+                // update_db_for_removed.
+                let size = paths::metadata(index_path.join(&crate_name))?.len();
+                insert_stmt.execute(params![id, crate_name, size, now])?;
             }
         }
         Ok(())
@@ -931,7 +949,7 @@ impl GlobalCacheTracker {
     ) -> CargoResult<()> {
         trace!(target: "gc", "populating untracked files for {table_name}");
         // Gather names (and make sure they are in the database).
-        let id_names = Self::names_from(&base_path)?;
+        let id_names = Self::list_dir_names(&base_path)?;
 
         // This SELECT is used to determine if the directory is already
         // tracked. We don't want to do the expensive size computation unless
@@ -954,7 +972,7 @@ impl GlobalCacheTracker {
                 continue;
             };
             let index_path = base_path.join(id_name);
-            let names = Self::names_from(&index_path)?;
+            let names = Self::list_dir_names(&index_path)?;
             let max = names.len();
             for (i, name) in names.iter().enumerate() {
                 if select_stmt.exists(params![id, name])? {
@@ -1020,7 +1038,7 @@ impl GlobalCacheTracker {
         Ok(())
     }
 
-    /// Adds paths to delete from either registry_crate or registry_src whose
+    /// Adds paths to delete from either `registry_crate` or `registry_src` whose
     /// last use is older than the given timestamp.
     fn get_registry_items_to_clean_age(
         conn: &Connection,
@@ -1799,7 +1817,8 @@ pub fn is_silent_error(e: &anyhow::Error) -> bool {
 }
 
 /// Returns the disk usage for a git checkout directory.
-pub fn du_git_checkout(path: &Path) -> CargoResult<u64> {
+#[tracing::instrument]
+fn du_git_checkout(path: &Path) -> CargoResult<u64> {
     // !.git is used because clones typically use hardlinks for the git
     // contents. TODO: Verify behavior on Windows.
     // TODO: Or even better, switch to worktrees, and remove this.

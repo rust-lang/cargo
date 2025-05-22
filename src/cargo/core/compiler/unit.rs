@@ -9,11 +9,13 @@ use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
+
+use super::BuildOutput;
 
 /// All information needed to define a unit.
 ///
@@ -59,6 +61,34 @@ pub struct UnitInner {
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
     pub features: Vec<InternedString>,
+    /// Extra compiler flags to pass to `rustc` for a given unit.
+    ///
+    /// Although it depends on the caller, in the current Cargo implementation,
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
+    ///
+    /// As of now, these flags come from environment variables and configurations.
+    /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
+    ///
+    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustflags`]: crate::core::compiler::build_context::TargetInfo::rustflags
+    pub rustflags: Rc<[String]>,
+    /// Extra compiler flags to pass to `rustdoc` for a given unit.
+    ///
+    /// Although it depends on the caller, in the current Cargo implementation,
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
+    ///
+    /// As of now, these flags come from environment variables and configurations.
+    /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
+    ///
+    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustdocflags`]: crate::core::compiler::build_context::TargetInfo::rustdocflags
+    pub rustdocflags: Rc<[String]>,
+    /// Build script override for the given library name.
+    ///
+    /// Any package with a `links` value for the given library name will skip
+    /// running its build script and instead use the given output from the
+    /// config file.
+    pub links_overrides: Rc<BTreeMap<String, BuildOutput>>,
     // if `true`, the dependency is an artifact dependency, requiring special handling when
     // calculating output directories, linkage and environment variables provided to builds.
     pub artifact: IsArtifact,
@@ -93,6 +123,13 @@ impl UnitInner {
     /// finish in their entirety before this one is started.
     pub fn requires_upstream_objects(&self) -> bool {
         self.mode.is_any_test() || self.target.kind().requires_upstream_objects()
+    }
+
+    /// Returns whether compilation of this unit could benefit from splitting metadata
+    /// into a .rmeta file.
+    pub fn benefits_from_no_embed_metadata(&self) -> bool {
+        matches!(self.mode, CompileMode::Build)
+            && self.target.kind().benefits_from_no_embed_metadata()
     }
 
     /// Returns whether or not this is a "local" package.
@@ -151,6 +188,9 @@ impl fmt::Debug for Unit {
             .field("kind", &self.kind)
             .field("mode", &self.mode)
             .field("features", &self.features)
+            .field("rustflags", &self.rustflags)
+            .field("rustdocflags", &self.rustdocflags)
+            .field("links_overrides", &self.links_overrides)
             .field("artifact", &self.artifact.is_true())
             .field(
                 "artifact_target_for_features",
@@ -198,6 +238,9 @@ impl UnitInterner {
         kind: CompileKind,
         mode: CompileMode,
         features: Vec<InternedString>,
+        rustflags: Rc<[String]>,
+        rustdocflags: Rc<[String]>,
+        links_overrides: Rc<BTreeMap<String, BuildOutput>>,
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
@@ -231,6 +274,9 @@ impl UnitInterner {
             kind,
             mode,
             features,
+            rustflags,
+            rustdocflags,
+            links_overrides,
             is_std,
             dep_hash,
             artifact,

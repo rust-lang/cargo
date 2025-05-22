@@ -9,15 +9,14 @@ cargo\-package \[em] Assemble the local package into a distributable tarball
 \fBcargo package\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
 This command will create a distributable, compressed \fB\&.crate\fR file with the
-source code of the package in the current directory. The resulting file will
-be stored in the \fBtarget/package\fR directory. This performs the following
-steps:
+source code of the package in the current directory. The resulting file will be
+stored in the \fBtarget/package\fR directory. This performs the following steps:
 .sp
 .RS 4
 \h'-04' 1.\h'+01'Load and check the current workspace, performing some basic checks.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Path dependencies are not allowed unless they have a version key. Cargo
+\h'-04'\(bu\h'+03'Path dependencies are not allowed unless they have a version key. Cargo
 will ignore the path key for dependencies in published packages.
 \fBdev\-dependencies\fR do not have this restriction.
 .RE
@@ -27,24 +26,33 @@ will ignore the path key for dependencies in published packages.
 \h'-04' 2.\h'+01'Create the compressed \fB\&.crate\fR file.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The original \fBCargo.toml\fR file is rewritten and normalized.
+\h'-04'\(bu\h'+03'The original \fBCargo.toml\fR file is rewritten and normalized.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
+\h'-04'\(bu\h'+03'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
 manifest.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBCargo.lock\fR is automatically included if the package contains an
-executable binary or example target. \fBcargo\-install\fR(1) will use the
-packaged lock file if the \fB\-\-locked\fR flag is used.
+\h'-04'\(bu\h'+03'\fBCargo.lock\fR is always included. When missing, a new lock file will be
+generated unless the \fB\-\-exclude\-lockfile\fR flag is used. \fBcargo\-install\fR(1)
+will use the packaged lock file if the \fB\-\-locked\fR flag is used.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
-about the current VCS checkout hash if available (not included with
-\fB\-\-allow\-dirty\fR).
+\h'-04'\(bu\h'+03'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
+about the current VCS checkout hash if available, as well as a flag if the
+worktree is dirty.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Symlinks are flattened to their target files.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Files and directories are included or excluded based on rules mentioned in
+\fIthe \f(BI[include]\fI and \f(BI[exclude]\fI fields\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-exclude\-and\-include\-fields>\&.
 .RE
 .RE
 .sp
@@ -52,7 +60,7 @@ about the current VCS checkout hash if available (not included with
 \h'-04' 3.\h'+01'Extract the \fB\&.crate\fR file and build it to verify it can build.
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'This will rebuild your package from scratch to ensure that it can be
+\h'-04'\(bu\h'+03'This will rebuild your package from scratch to ensure that it can be
 built from a pristine state. The \fB\-\-no\-verify\fR flag can be used to skip
 this step.
 .RE
@@ -74,15 +82,26 @@ Will generate a \fB\&.cargo_vcs_info.json\fR in the following format
 .nf
 {
  "git": {
-   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302",
+   "dirty": true
  },
  "path_in_vcs": ""
 }
 .fi
 .RE
 .sp
+\fBdirty\fR indicates that the Git worktree was dirty when the package
+was built.
+.sp
 \fBpath_in_vcs\fR will be set to a repo\-relative path for packages
 in subdirectories of the version control repository.
+.sp
+The compatibility of this file is maintained under the same policy
+as the JSON output of \fBcargo\-metadata\fR(1).
+.sp
+Note that this file provides a best\-effort snapshot of the VCS information.
+However, the provenance of the package is not verified.
+There is no guarantee that the source code in the tarball matches the VCS information.
 .SH "OPTIONS"
 .SS "Package Options"
 .sp
@@ -106,6 +125,80 @@ or the license).
 \fB\-\-allow\-dirty\fR
 .RS 4
 Allow working directories with uncommitted VCS changes to be packaged.
+.RE
+.sp
+\fB\-\-exclude\-lockfile\fR
+.RS 4
+Don\[cq]t include the lock file when packaging.
+.sp
+This flag is not for general use.
+Some tools may expect a lock file to be present (e.g. \fBcargo install \-\-locked\fR).
+Consider other options before using this.
+.RE
+.sp
+\fB\-\-index\fR \fIindex\fR
+.RS 4
+The URL of the registry index to use.
+.RE
+.sp
+\fB\-\-registry\fR \fIregistry\fR
+.RS 4
+Name of the registry to package for; see \fBcargo publish \-\-help\fR for more details
+about configuration of registry names. The packages will not be published
+to this registry, but if we are packaging multiple inter\-dependent crates,
+lock\-files will be generated under the assumption that dependencies will be
+published to this registry.
+.RE
+.sp
+\fB\-\-message\-format\fR \fIfmt\fR
+.RS 4
+Specifies the output message format.
+Currently, it only works with \fB\-\-list\fR and affects the file listing format.
+This is unstable and requires \fB\-Zunstable\-options\fR\&.
+Valid output formats:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBhuman\fR (default): Display in a file\-per\-line format.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fBjson\fR: Emit machine\-readable JSON information about each package.
+One package per JSON line (Newline delimited JSON).
+.sp
+.RS 4
+.nf
+{
+  /* The Package ID Spec of the package. */
+  "id": "path+file:///home/foo#0.0.0",
+  /* Files of this package */
+  "files" {
+    /* Relative path in the archive file. */
+    "Cargo.toml.orig": {
+      /* Where the file is from.
+         \- "generate" for file being generated during packaging
+         \- "copy" for file being copied from another location.
+      */
+      "kind": "copy",
+      /* For the "copy" kind,
+         it is an absolute path to the actual file content.
+         For the "generate" kind,
+         it is the original file the generated one is based on.
+      */
+      "path": "/home/foo/Cargo.toml"
+    },
+    "Cargo.toml": {
+      "kind": "generate",
+      "path": "/home/foo/Cargo.toml"
+    },
+    "src/main.rs": {
+      "kind": "copy",
+      "path": "/home/foo/src/main.rs"
+    }
+  }
+}
+.fi
+.RE
+.RE
 .RE
 .SS "Package Selection"
 By default, when no package selection options are given, the packages selected
@@ -155,7 +248,7 @@ This may also be specified with the \fBbuild.target\fR
 .sp
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-\fIbuild cache\fR <https://doc.rust\-lang.org/cargo/guide/build\-cache.html> documentation for more details.
+\fIbuild cache\fR <https://doc.rust\-lang.org/cargo/reference/build\-cache.html> documentation for more details.
 .RE
 .sp
 \fB\-\-target\-dir\fR \fIdirectory\fR
@@ -205,11 +298,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -235,6 +328,20 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 \fB\-\-frozen\fR
 .RS 4
 Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
+.RE
+.sp
+\fB\-\-lockfile\-path\fR \fIPATH\fR
+.RS 4
+Changes the path of the lockfile from the default (\fB<workspace_root>/Cargo.lock\fR) to \fIPATH\fR\&. \fIPATH\fR must end with
+\fBCargo.lock\fR (e.g. \fB\-\-lockfile\-path /tmp/temporary\-lockfile/Cargo.lock\fR). Note that providing
+\fB\-\-lockfile\-path\fR will ignore existing lockfile at the default path, and instead will
+either use the lockfile from \fIPATH\fR, or write a new lockfile into the provided \fIPATH\fR if it doesn\[cq]t exist.
+This flag can be used to run most commands in read\-only directories, writing lockfile into the provided \fIPATH\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#14421\fR <https://github.com/rust\-lang/cargo/issues/14421>).
 .RE
 .SS "Miscellaneous Options"
 .sp
@@ -284,16 +391,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -346,11 +453,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp

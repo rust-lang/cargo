@@ -72,7 +72,8 @@ the directory for each compilation, this can cause different calls to `rustc`
 to use different versions. There are a few workarounds:
 
 * Don't use rustup overrides.
-* Use `rustup run target/debug/cargo` to execute `cargo`.
+* Use `rustup run <toolchain> target/debug/cargo` to specify the toolchain(rustc) to use.
+  For example, `rustup run nightly target/debug/cargo`.
 * Set the `RUSTC` environment variable to a specific `rustc` executable (not
   the rustup wrapper).
 * Create a [custom toolchain]. This is a bit of a hack, but you can create a
@@ -124,6 +125,21 @@ typically finish in under 30 minutes.
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
 
+> **tip:** Prefer atomic commits where each commit is a single, complete, and coherent unit of work.
+> For example, if your feature work leads to renaming a module, make the rename its own commit.
+> However, adding an internal function that is unused is not complete or coherent.
+>
+> As part of your atomic commits, prefer adding tests as their own commit *before* any functionality changes.
+> The tests should pass in each commit, demonstrating the behavior before your
+> change and how each commit affects behavior.
+> This makes it easier for reviewers and community members to understand the
+> precise details of the side effects of your change and gives you confidence
+> that your tests are verifying the right behavior.
+>
+> Examples:
+> - [#13910: fix: remove symlink dir on Windows](https://github.com/rust-lang/cargo/pull/13910)
+> - [#14006: fix(add): Avoid escaping double-quotes by using string literals](https://github.com/rust-lang/cargo/pull/14006)
+
 ### Status labeling
 
 PRs will get marked with [labels] like [`S-waiting-on-review`] or [`S-waiting-on-author`] to indicate their status.
@@ -141,19 +157,18 @@ More information about these commands can be found at the [shortcuts documentati
 
 ## The merging process
 
-After a reviewer has approved your PR, they will issue a command to the [bors]
-bot (also known as "Homu", the software that powers [`@bors`]). Bors will
-create a temporary branch with your PR, and run all tests. Only if all tests
-pass will it merge the PR to master. If it fails, the bot will leave a comment
-on the PR. This system ensures that the master branch is always in a good
-state, and that merges are processed one at a time. The [Homu queue
-dashboard][homu-cargo] shows the current merge queue. Cargo's queue is rarely
-busy, but a busy project like the [rust repo][homu-rust] is constantly full.
+After a reviewer has approved your PR,
+they will add the PR to [GitHub merge queue].
+The merge queue will create a temporary branch with your PR,
+and run all required jobs.
+If it fails, it will be removed from the queue.
+The merge queue ensures that the master branch is always in a good state,
+and that merges are processed one at a time.
+The [merge queue dashboard] shows the current queued pull requests.
 
 Assuming everything works, congratulations! It may take at least a week for
 the changes to arrive on the nightly channel. See the [release chapter] for
 more information on how Cargo releases are made.
-
 
 [development-models]: https://help.github.com/articles/about-collaborative-development-models/
 [create pull requests]: https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
@@ -164,10 +179,8 @@ more information on how Cargo releases are made.
 [how-to-clone]: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository
 [Testing chapter]: ../tests/index.md
 [GitHub's keywords]: https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
-[bors]: https://buildbot2.rust-lang.org/homu/
-[`@bors`]: https://github.com/bors
-[homu-cargo]: https://buildbot2.rust-lang.org/homu/queue/cargo
-[homu-rust]: https://buildbot2.rust-lang.org/homu/queue/rust
+[GitHub merge queue]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue
+[merge queue dashboard]: https://github.com/rust-lang/cargo/queue/master
 [release chapter]: release.md
 [internals forum]: https://internals.rust-lang.org/c/tools-and-infrastructure/cargo
 [file an issue]: https://github.com/rust-lang/cargo/issues

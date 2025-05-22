@@ -40,9 +40,27 @@ Cannot be used with <code>--precise</code>.</dd>
 <dd class="option-desc">When used with <em>spec</em>, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).</p>
-<p>While not recommended, you can specify a yanked version of a package (nightly only).
+<p>While not recommended, you can specify a yanked version of a package.
 When possible, try other non-yanked SemVer-compatible versions or seek help
-from the maintainers of the package.</dd>
+from the maintainers of the package.</p>
+<p>A compatible <code>pre-release</code> version can also be specified even when the version
+requirement in <code>Cargo.toml</code> doesn’t contain any pre-release identifier (nightly only).</dd>
+
+
+<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"></a><code>--breaking</code> <em>directory</em></dt>
+<dd class="option-desc">Update <em>spec</em> to latest SemVer-breaking version.</p>
+<p>Version requirements will be modified to allow this update.</p>
+<p>This only applies to dependencies when</p>
+<ul>
+<li>The package is a dependency of a workspace member</li>
+<li>The dependency is not renamed</li>
+<li>A SemVer-incompatible version is available</li>
+<li>The “SemVer operator” is used (<code>^</code> which is the default)</li>
+</ul>
+<p>This option is unstable and available only on the
+<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
+and requires the <code>-Z unstable-options</code> flag to enable.
+See <a href="https://github.com/rust-lang/cargo/issues/12425">https://github.com/rust-lang/cargo/issues/12425</a> for more information.</dd>
 
 
 <dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>
@@ -99,6 +117,10 @@ terminal.</li>
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
 
 
+<dt class="option-term" id="option-cargo-update---ignore-rust-version"><a class="option-anchor" href="#option-cargo-update---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+
+
 <dt class="option-term" id="option-cargo-update---locked"><a class="option-anchor" href="#option-cargo-update---locked"></a><code>--locked</code></dt>
 <dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
@@ -126,6 +148,18 @@ offline.</p>
 
 <dt class="option-term" id="option-cargo-update---frozen"><a class="option-anchor" href="#option-cargo-update---frozen"></a><code>--frozen</code></dt>
 <dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+
+
+<dt class="option-term" id="option-cargo-update---lockfile-path"><a class="option-anchor" href="#option-cargo-update---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
+<code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
+either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
+This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 
 </dl>

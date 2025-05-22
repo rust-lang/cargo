@@ -1,4 +1,9 @@
 //! Cargo registry 1password credential process.
+//!
+//! > This crate is maintained by the Cargo team as a part of an experiment around
+//! > 1password integration. We encourage people to try to use this crate in their projects and
+//! > provide feedback through [issues](https://github.com/rust-lang/cargo/issues/), but do not
+//! > guarantee long term maintenance.
 
 #![allow(clippy::disallowed_methods)]
 #![allow(clippy::print_stderr)]

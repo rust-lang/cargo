@@ -11,8 +11,8 @@
   customManagers: [
     {
       customType: 'regex',
-      fileMatch: [
-        'Cargo.toml$',
+      managerFilePatterns: [
+        '/Cargo.toml$/',
       ],
       matchStrings: [
         '\\bMSRV:1\\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
@@ -24,8 +24,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'Cargo.toml$',
+      managerFilePatterns: [
+        '/Cargo.toml$/',
       ],
       matchStrings: [
         '\\bMSRV:3\\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
@@ -35,6 +35,18 @@
       packageNameTemplate: 'rust-lang/rust',
       datasourceTemplate: 'github-releases',
     },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^.github.workflows.main.yml$/',
+      ],
+      matchStrings: [
+        'cargo-semver-checks.releases.download.v(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+      ],
+      depNameTemplate: 'cargo-semver-checks',
+      packageNameTemplate: 'obi1kenobi/cargo-semver-checks',
+      datasourceTemplate: 'github-releases',
+    },
   ],
   packageRules: [
     {
@@ -42,7 +54,7 @@
       matchManagers: [
         'custom.regex',
       ],
-      matchPackageNames: [
+      matchDepNames: [
         'MSRV:1',
       ],
       extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
@@ -56,7 +68,7 @@
       matchManagers: [
         'custom.regex',
       ],
-      matchPackageNames: [
+      matchDepNames: [
         'MSRV:3',
       ],
       extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
@@ -66,6 +78,20 @@
       minimumReleaseAge: '85 days',  // 2 releases back * 6 weeks per release * 7 days per week + 1
       internalChecksFilter: 'strict',
       groupName: 'msrv',
+    },
+    {
+      commitMessageTopic: 'cargo-semver-checks',
+      matchManagers: [
+        'custom.regex',
+      ],
+      matchDepNames: [
+        'cargo-semver-checks',
+      ],
+      extractVersion: '^v(?<version>\\d+\\.\\d+\\.\\d+)',
+      schedule: [
+        '* * * * *',
+      ],
+      internalChecksFilter: 'strict',
     },
     // Goals:
     // - Rollup safe upgrades to reduce CI runner load

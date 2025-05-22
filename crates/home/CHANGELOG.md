@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.11 - 2024-12-16
+
+Note: 0.5.10 was not published.
+
+- Updated package metadata.
+  [#13184](https://github.com/rust-lang/cargo/pull/13184)
+- Updated minimum Rust version to 1.81.
+  [#13266](https://github.com/rust-lang/cargo/pull/13266)
+  [#13324](https://github.com/rust-lang/cargo/pull/13324)
+  [#14871](https://github.com/rust-lang/cargo/pull/14871)
+- Updated windows-sys to 0.59.
+  [#14335](https://github.com/rust-lang/cargo/pull/14335)
+- Clarified support level of this crate (not intended for external use).
+  [#14600](https://github.com/rust-lang/cargo/pull/14600)
+- Docs cleanup.
+  [#14823]()
+- Add notice that this crate should not be used, and to use the standard library's `home_dir` instead.
+  [#14939](https://github.com/rust-lang/cargo/pull/14939)
+
 ## 0.5.9 - 2023-12-15
 
 - Replace SHGetFolderPathW with SHGetKnownFolderPath

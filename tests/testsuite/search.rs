@@ -1,10 +1,13 @@
 //! Tests for the `cargo search` command.
 
+use std::collections::HashSet;
+
 use cargo::util::cache_lock::CacheLockMode;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{RegistryBuilder, Response};
-use std::collections::HashSet;
+use cargo_test_support::str;
 
 const SEARCH_API_RESPONSE: &[u8] = br#"
 {
@@ -111,8 +114,12 @@ fn not_update() {
 
     cargo_process("search postgres")
         .replace_crates_io(registry.index_url())
-        .with_stdout_contains(SEARCH_RESULTS)
-        .with_stderr("") // without "Updating ... index"
+        .with_stdout_data(SEARCH_RESULTS)
+        // without "Updating ... index"
+        .with_stderr_data(str![[r#"
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -122,8 +129,12 @@ fn replace_default() {
 
     cargo_process("search postgres")
         .replace_crates_io(registry.index_url())
-        .with_stdout_contains(SEARCH_RESULTS)
-        .with_stderr_contains("[..]Updating [..] index")
+        .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -133,7 +144,12 @@ fn simple() {
 
     cargo_process("search postgres --index")
         .arg(registry.index_url().as_str())
-        .with_stdout_contains(SEARCH_RESULTS)
+        .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -143,7 +159,12 @@ fn multiple_query_params() {
 
     cargo_process("search postgres sql --index")
         .arg(registry.index_url().as_str())
-        .with_stdout_contains(SEARCH_RESULTS)
+        .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -153,7 +174,7 @@ fn ignore_quiet() {
 
     cargo_process("search -q postgres")
         .replace_crates_io(registry.index_url())
-        .with_stdout_contains(SEARCH_RESULTS)
+        .with_stdout_data(SEARCH_RESULTS)
         .run();
 }
 
@@ -168,7 +189,13 @@ fn colored_results() {
 
     cargo_process("search --color=always postgres")
         .replace_crates_io(registry.index_url())
-        .with_stdout_contains("[..]\x1b[[..]")
+        .with_stdout_data(
+            "\
+...
+[..]\x1b[[..]
+...
+",
+        )
         .run();
 }
 
@@ -179,7 +206,12 @@ fn auth_required_failure() {
     cargo_process("search postgres")
         .replace_crates_io(server.index_url())
         .with_status(101)
-        .with_stderr_contains("[ERROR] no token found, please run `cargo login`")
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN
+
+"#]])
         .run();
 }
 
@@ -189,6 +221,6 @@ fn auth_required() {
 
     cargo_process("search postgres")
         .replace_crates_io(server.index_url())
-        .with_stdout_contains(SEARCH_RESULTS)
+        .with_stdout_data(SEARCH_RESULTS)
         .run();
 }

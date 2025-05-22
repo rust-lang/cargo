@@ -10,6 +10,9 @@ https://doc.rust-lang.org/nightly/cargo/reference/credential-provider-protocol.h
 Example implementations may be found at
 https://github.com/rust-lang/cargo/tree/master/credential
 
+> This crate is maintained by the Cargo team for use by the wider
+> ecosystem. This crate follows semver compatibility for its APIs.
+
 ## Usage
 
 Create a Cargo project with this as a dependency:

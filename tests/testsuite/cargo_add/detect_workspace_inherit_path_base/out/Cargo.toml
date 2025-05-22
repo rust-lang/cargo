@@ -1,0 +1,7 @@
+cargo-features = ["path-bases"]
+
+[workspace]
+members = ["primary", "deps/dependency"]
+
+[workspace.dependencies]
+foo = { version = "0.0.0", base = "my_base", path = "./dependency"}

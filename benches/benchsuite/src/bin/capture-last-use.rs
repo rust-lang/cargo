@@ -1,7 +1,7 @@
 //! Utility for capturing a global cache last-use database based on the files
 //! on a real-world system.
 //!
-//! This will look in the CARGO_HOME of the current system and record last-use
+//! This will look in the `CARGO_HOME` of the current system and record last-use
 //! data for all files in the cache. This is intended to provide a real-world
 //! example for a benchmark that should be close to what a real set of data
 //! should look like.
@@ -16,7 +16,7 @@ use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCache
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
-use rand::prelude::SliceRandom;
+use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -131,7 +131,7 @@ fn main() {
     let biggest = counts.last().unwrap().1;
 
     src_entries.retain(|src| src.encoded_registry_name == biggest);
-    let mut rng = &mut rand::thread_rng();
+    let mut rng = &mut rand::rng();
     let sample: Vec<_> = src_entries.choose_multiple(&mut rng, 500).collect();
     let mut f = File::create(homedir.join("random-sample")).unwrap();
     for src in sample {

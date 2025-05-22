@@ -1,6 +1,7 @@
 //! Tests for --message-format flag.
 
-use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project, str};
 
 #[cargo_test]
 fn cannot_specify_two() {
@@ -11,12 +12,14 @@ fn cannot_specify_two() {
 
     let formats = ["human", "json", "short"];
 
-    let two_kinds = "error: cannot specify two kinds of `message-format` arguments\n";
     for a in formats.iter() {
         for b in formats.iter() {
             p.cargo(&format!("build --message-format {},{}", a, b))
                 .with_status(101)
-                .with_stderr(two_kinds)
+                .with_stderr_data(str![[r#"
+[ERROR] cannot specify two kinds of `message-format` arguments
+
+"#]])
                 .run();
         }
     }
@@ -64,9 +67,21 @@ fn cargo_renders() {
 
     p.cargo("check --message-format json-render-diagnostics")
         .with_status(101)
-        .with_stdout(
-            "{\"reason\":\"compiler-artifact\",[..]\n\
-             {\"reason\":\"build-finished\",\"success\":false}",
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": false
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .with_stderr_contains(
             "\
@@ -87,13 +102,12 @@ fn cargo_renders_short() {
 
     p.cargo("check --message-format json-render-diagnostics,json-diagnostic-short")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[CHECKING] foo [..]
-error[..]`main`[..]
-",
-        )
-        .with_stderr_does_not_contain("note:")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+error[E0601]: `main` function not found in crate `foo`
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
         .run();
 }
 
@@ -127,7 +141,24 @@ fn cargo_renders_doctests() {
 
     p.cargo("test --doc --message-format short")
         .with_status(101)
-        .with_stdout_contains("src/lib.rs:2:1: error[E0425]:[..]")
-        .with_stdout_contains("[..]src/lib.rs - bar (line 1)[..]")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test src/lib.rs - bar (line 1) ... FAILED
+
+failures:
+
+---- src/lib.rs - bar (line 1) stdout ----
+src/lib.rs:2:1: error[E0425]: cannot find function `bar`[..]
+[ERROR] aborting due to 1 previous error
+Couldn't compile the test.
+
+failures:
+    src/lib.rs - bar (line 1)
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }

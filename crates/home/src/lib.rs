@@ -16,6 +16,10 @@
 //!
 //! See also this [discussion].
 //!
+//! > This crate is maintained by the Cargo team, primarily for use by Cargo and Rustup
+//! > and not intended for external use. This
+//! > crate may make major changes to its APIs or be deprecated without warning.
+//!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
 #![allow(clippy::disallowed_methods)]
@@ -65,7 +69,7 @@ pub fn home_dir() -> Option<PathBuf> {
 #[cfg(windows)]
 use windows::home_dir_inner;
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(unix)]
 fn home_dir_inner() -> Option<PathBuf> {
     #[allow(deprecated)]
     std::env::home_dir()

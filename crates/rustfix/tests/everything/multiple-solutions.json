@@ -1,4 +1,5 @@
 {
+  "$message_type": "diagnostic",
   "message": "unused imports: `HashMap`, `VecDeque`",
   "code": {
     "code": "unused_imports",
@@ -7,7 +8,7 @@
   "level": "warning",
   "spans": [
     {
-      "file_name": "src/main.rs",
+      "file_name": "./tests/everything/multiple-solutions.nightly.rs",
       "byte_start": 23,
       "byte_end": 30,
       "line_start": 1,
@@ -28,7 +29,7 @@
       "expansion": null
     },
     {
-      "file_name": "src/main.rs",
+      "file_name": "./tests/everything/multiple-solutions.nightly.rs",
       "byte_start": 41,
       "byte_end": 49,
       "line_start": 1,
@@ -51,7 +52,7 @@
   ],
   "children": [
     {
-      "message": "#[warn(unused_imports)] on by default",
+      "message": "`#[warn(unused_imports)]` on by default",
       "code": null,
       "level": "note",
       "spans": [],
@@ -64,7 +65,28 @@
       "level": "help",
       "spans": [
         {
-          "file_name": "src/main.rs",
+          "file_name": "./tests/everything/multiple-solutions.nightly.rs",
+          "byte_start": 22,
+          "byte_end": 23,
+          "line_start": 1,
+          "line_end": 1,
+          "column_start": 23,
+          "column_end": 24,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+              "highlight_start": 23,
+              "highlight_end": 24
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MachineApplicable",
+          "expansion": null
+        },
+        {
+          "file_name": "./tests/everything/multiple-solutions.nightly.rs",
           "byte_start": 23,
           "byte_end": 32,
           "line_start": 1,
@@ -85,7 +107,7 @@
           "expansion": null
         },
         {
-          "file_name": "src/main.rs",
+          "file_name": "./tests/everything/multiple-solutions.nightly.rs",
           "byte_start": 39,
           "byte_end": 49,
           "line_start": 1,
@@ -104,11 +126,41 @@
           "suggested_replacement": "",
           "suggestion_applicability": "MachineApplicable",
           "expansion": null
+        },
+        {
+          "file_name": "./tests/everything/multiple-solutions.nightly.rs",
+          "byte_start": 49,
+          "byte_end": 50,
+          "line_start": 1,
+          "line_end": 1,
+          "column_start": 50,
+          "column_end": 51,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+              "highlight_start": 50,
+              "highlight_end": 51
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MachineApplicable",
+          "expansion": null
         }
       ],
       "children": [],
       "rendered": null
     }
   ],
-  "rendered": "warning: unused imports: `HashMap`, `VecDeque`\n --> src/main.rs:1:24\n  |\n1 | use std::collections::{HashMap, HashSet, VecDeque};\n  |                        ^^^^^^^           ^^^^^^^^\n  |\n  = note: #[warn(unused_imports)] on by default\nhelp: remove the unused imports\n  |\n1 | use std::collections::{HashSet};\n  |                       --     --\n\n"
+  "rendered": "warning: unused imports: `HashMap`, `VecDeque`\n --> ./tests/everything/multiple-solutions.nightly.rs:1:24\n  |\n1 | use std::collections::{HashMap, HashSet, VecDeque};\n  |                        ^^^^^^^           ^^^^^^^^\n  |\n  = note: `#[warn(unused_imports)]` on by default\n\n"
+}
+{
+  "$message_type": "diagnostic",
+  "message": "1 warning emitted",
+  "code": null,
+  "level": "warning",
+  "spans": [],
+  "children": [],
+  "rendered": "warning: 1 warning emitted\n\n"
 }

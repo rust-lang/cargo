@@ -3,15 +3,16 @@
 use std::path::PathBuf;
 
 use mdman::{Format, ManMap};
+use snapbox::prelude::*;
 
-fn run(name: &str, expected_error: &str) {
+fn run(name: &str, expected_error: impl IntoData) {
     let input = PathBuf::from(format!("tests/invalid/{}", name));
     match mdman::convert(&input, Format::Man, None, ManMap::new()) {
         Ok(_) => {
             panic!("expected {} to fail", name);
         }
         Err(e) => {
-            snapbox::assert_eq(expected_error, e.to_string());
+            snapbox::assert_data_eq!(e.to_string(), expected_error.raw());
         }
     }
 }

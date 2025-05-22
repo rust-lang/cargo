@@ -1,0 +1,39 @@
+<svg width="740px" height="146px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-green { fill: #00AA00 }
+    .fg-red { fill: #AA0000 }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-green bold">my-package</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">version:</tspan><tspan> 0.2.3+my-package </tspan><tspan class="fg-yellow bold">(latest 0.4.1+my-package)</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">license:</tspan><tspan> </tspan><tspan class="fg-red bold">unknown</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-green bold">rust-version:</tspan><tspan> </tspan><tspan class="fg-yellow bold">unknown</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-green bold">documentation:</tspan><tspan> https://docs.rs/my-package/0.2.3+my-package</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan class="fg-green bold">crates.io:</tspan><tspan> https://crates.io/crates/my-package/0.2.3+my-package</tspan>
+</tspan>
+    <tspan x="10px" y="136px">
+</tspan>
+  </text>
+
+</svg>

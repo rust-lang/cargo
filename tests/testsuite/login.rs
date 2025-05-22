@@ -1,11 +1,14 @@
 //! Tests for the `cargo login` command.
 
-use cargo_test_support::cargo_process;
-use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{self, RegistryBuilder};
-use cargo_test_support::t;
 use std::fs;
 use std::path::PathBuf;
+
+use cargo_test_support::cargo_process;
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{self, RegistryBuilder};
+use cargo_test_support::str;
+use cargo_test_support::t;
 
 const TOKEN: &str = "test-token";
 const TOKEN2: &str = "test-token2";
@@ -78,7 +81,10 @@ fn registry_credentials() {
 
     let reg = "alternative";
 
-    cargo_process("login --registry").arg(reg).arg(TOKEN).run();
+    cargo_process("login --registry")
+        .arg(reg)
+        .with_stdin(TOKEN)
+        .run();
 
     // Ensure that we have not updated the default token
     check_token(Some(ORIGINAL_TOKEN), None);
@@ -89,7 +95,7 @@ fn registry_credentials() {
     let reg2 = "alternative2";
     cargo_process("login --registry")
         .arg(reg2)
-        .arg(TOKEN2)
+        .with_stdin(TOKEN2)
         .run();
 
     // Ensure not overwriting 1st alternate registry token with
@@ -110,29 +116,44 @@ fn empty_login_token() {
     cargo_process("login")
         .replace_crates_io(registry.index_url())
         .with_stdin("\t\n")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+please paste the token found on [ROOTURL]/api/me below
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
   please provide a non-empty token
-",
-        )
+
+"#]])
+        .with_status(101)
+        .run();
+
+    cargo_process("login")
+        .replace_crates_io(registry.index_url())
+        .with_stdin("")
+        .with_stderr_data(str![[r#"
+please paste the token found on [ROOTURL]/api/me below
+[ERROR] credential provider `cargo:token` failed action `login`
+
+Caused by:
+  please provide a non-empty token
+
+"#]])
         .with_status(101)
         .run();
 
     cargo_process("login")
         .replace_crates_io(registry.index_url())
         .arg("")
-        .with_stderr(
-            "\
+        .with_stdin("")
+        .with_stderr_data(str![[r#"
+[WARNING] `cargo login <token>` is deprecated in favor of reading `<token>` from stdin
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
   please provide a non-empty token
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -149,7 +170,7 @@ fn invalid_login_token() {
         cargo_process("login")
             .replace_crates_io(registry.index_url())
             .with_stdin(stdin)
-            .with_stderr(stderr)
+            .with_stderr_data(stderr)
             .with_status(status)
             .run();
     };
@@ -161,11 +182,20 @@ fn invalid_login_token() {
 
 Caused by:
   token contains invalid characters.
-  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.",
+  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+",
             101,
         )
     };
-    let valid = |stdin: &str| check(stdin, "[LOGIN] token for `crates-io` saved", 0);
+    let valid = |stdin: &str| {
+        check(
+            stdin,
+            "\
+[LOGIN] token for `crates-io` saved
+",
+            0,
+        )
+    };
 
     // Update config.json so that the rest of the tests don't need to care
     // whether or not `Updating` is printed.
@@ -200,9 +230,16 @@ fn bad_asymmetric_token_args() {
     cargo_process("login -Zasymmetric-token -- --key-subject")
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains(
-            "  error: a value is required for '--key-subject <SUBJECT>' but none was supplied",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] credential provider `cargo:paseto --key-subject` failed action `login`
+
+Caused by:
+  [ERROR] a value is required for '--key-subject <SUBJECT>' but none was supplied
+
+  For more information, try '--help'.
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -231,10 +268,12 @@ fn login_with_asymmetric_token_and_subject_on_stdin() {
     cargo_process("login -v -Z asymmetric-token -- --key-subject=foo")
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .replace_crates_io(registry.index_url())
-        .with_stderr_contains(
-            "\
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[CREDENTIAL] cargo:paseto --key-subject=foo login crates-io
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
+
+"#]])
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
@@ -288,12 +327,12 @@ fn login_with_asymmetric_token_on_stdin() {
     let credentials = credentials_toml();
     cargo_process("login -v -Z asymmetric-token --registry alternative")
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
 [CREDENTIAL] cargo:paseto login alternative
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ",
-        )
+k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
+
+"#]])
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
@@ -310,7 +349,11 @@ fn login_with_generate_asymmetric_token() {
     let credentials = credentials_toml();
     cargo_process("login -Z asymmetric-token --registry alternative")
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr("[UPDATING] `alternative` index\nk3.public.[..]")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+k3.public.[..]
+
+"#]])
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert!(credentials.contains("secret-key = \"k3.secret."));
@@ -332,13 +375,12 @@ fn default_registry_configured() {
     .unwrap();
 
     cargo_process("login")
-        .arg("a-new-token")
-        .with_stderr(
-            "\
+        .with_stdin("a-new-token")
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOGIN] token for `alternative` saved
-",
-        )
+
+"#]])
         .run();
 
     check_token(None, None);

@@ -152,7 +152,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
     }
 
     fn is_replaced(&self) -> bool {
-        true
+        !self.is_builtin_replacement()
     }
 
     fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {

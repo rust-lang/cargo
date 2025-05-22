@@ -1,4 +1,3 @@
-<!-- homu-ignore:start -->
 <!--
 Thanks for submitting a pull request 🎉! Here are some tips for you:
 
@@ -35,4 +34,3 @@ https://doc.crates.io/contrib/tests
 Other information you want to mention in this PR, such as prior arts,
 future extensions, an unresolved problem, or a TODO list.
 -->
-<!-- homu-ignore:end -->

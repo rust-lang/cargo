@@ -20,7 +20,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
-If our package had tests, we would see more output with the correct number of
+If your package had tests, you would see more output with the correct number of
 tests.
 
 You can also run a specific test by passing a filter:

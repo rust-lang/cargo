@@ -11,6 +11,7 @@ use std::fmt::Write;
 
 use super::commands;
 use super::list_commands;
+use super::user_defined_aliases;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
@@ -356,7 +357,13 @@ For more information, see issue #12207 <https://github.com/rust-lang/cargo/issue
                 let global_args = GlobalArgs::new(sub_args);
                 let new_args = cli(gctx).no_binary_name(true).try_get_matches_from(alias)?;
 
-                let new_cmd = new_args.subcommand_name().expect("subcommand is required");
+                let Some(new_cmd) = new_args.subcommand_name() else {
+                    return Err(anyhow!(
+                        "subcommand is required, add a subcommand to the command alias `alias.{cmd}`"
+                    )
+                        .into());
+                };
+
                 already_expanded.push(cmd.to_string());
                 if already_expanded.contains(&new_cmd.to_string()) {
                     // Crash if the aliases are corecursive / unresolvable
@@ -627,9 +634,11 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
         )
         .arg(flag("quiet", "Do not print cargo log messages").short('q').global(true))
         .arg(
-            opt("color", "Coloring: auto, always, never")
+            opt("color", "Coloring")
                 .value_name("WHEN")
-                .global(true),
+                .global(true)
+                .value_parser(["auto", "always", "never"])
+                .ignore_case(true),
         )
         .arg(
             Arg::new("directory")
@@ -662,7 +671,7 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
             .action(ArgAction::SetTrue)
             .global(true)
             .hide(true))
-        .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
+        .arg(multi_opt("config", "KEY=VALUE|PATH", "Override a configuration value").global(true))
         // Better suggestion for the unsupported lowercase unstable feature flag.
         .arg( Arg::new("unsupported-lowercase-unstable-feature-flag")
             .help("")
@@ -676,8 +685,70 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
             .short('Z')
             .value_name("FLAG")
             .action(ArgAction::Append)
-            .global(true))
+            .global(true)
+        .add(clap_complete::ArgValueCandidates::new(|| {
+            let flags = CliUnstable::help();
+            flags.into_iter().map(|flag| {
+                clap_complete::CompletionCandidate::new(flag.0.replace("_", "-")).help(flag.1.map(|help| {
+                    help.into()
+                }))
+            }).collect()
+        })))
+        .add(clap_complete::engine::SubcommandCandidates::new(move || {
+            let mut candidates = get_toolchains_from_rustup()
+                .into_iter()
+                .map(|t| clap_complete::CompletionCandidate::new(t))
+                .collect::<Vec<_>>();
+            candidates.extend(get_alias_candidates());
+            candidates
+        }))
         .subcommands(commands::builtin())
+}
+
+fn get_toolchains_from_rustup() -> Vec<String> {
+    let output = std::process::Command::new("rustup")
+        .arg("toolchain")
+        .arg("list")
+        .arg("-q")
+        .output()
+        .unwrap();
+
+    if !output.status.success() {
+        return vec![];
+    }
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+
+    stdout.lines().map(|line| format!("+{}", line)).collect()
+}
+
+fn get_alias_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    if let Ok(gctx) = new_gctx_for_completions() {
+        let alias_map = user_defined_aliases(&gctx);
+        return alias_map
+            .iter()
+            .map(|(alias, cmd_info)| {
+                let help_text = match cmd_info {
+                    CommandInfo::Alias { target } => {
+                        let cmd_str = target
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        format!("alias for {}", cmd_str)
+                    }
+                    CommandInfo::BuiltIn { .. } => {
+                        unreachable!("BuiltIn command shouldn't appear in alias map")
+                    }
+                    CommandInfo::External { .. } => {
+                        unreachable!("External command shouldn't appear in alias map")
+                    }
+                };
+                clap_complete::CompletionCandidate::new(alias.clone()).help(Some(help_text.into()))
+            })
+            .collect();
+    }
+    Vec::new()
 }
 
 #[test]

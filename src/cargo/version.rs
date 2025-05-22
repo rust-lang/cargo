@@ -15,12 +15,24 @@ pub struct VersionInfo {
     pub version: String,
     /// The release channel we were built for (stable/beta/nightly/dev).
     ///
-    /// `None` if not built via rustbuild.
+    /// `None` if not built via bootstrap.
     pub release_channel: Option<String>,
     /// Information about the Git repository we may have been built from.
     ///
     /// `None` if not built from a git repo.
     pub commit_info: Option<CommitInfo>,
+
+    /// A descriptive string to be appended to version output.
+    ///
+    /// This is usually set by the bootstrap in rust-lang/rust
+    /// via the `CFG_VER_DESCRIPTION` environment variable.
+    /// Useful for showing vendor build information.
+    /// For example,
+    ///
+    /// ```text
+    /// cargo 1.85.0 (d73d2caf9 2024-12-31) (MyCustomBuild 1.85.0-3)
+    /// ```
+    pub description: Option<String>,
 }
 
 impl fmt::Display for VersionInfo {
@@ -29,6 +41,10 @@ impl fmt::Display for VersionInfo {
 
         if let Some(ref ci) = self.commit_info {
             write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
+        };
+
+        if let Some(description) = self.description.as_ref().filter(|d| !d.is_empty()) {
+            write!(f, " ({description})")?;
         };
         Ok(())
     }
@@ -42,9 +58,9 @@ pub fn version() -> VersionInfo {
         };
     }
 
-    // This is the version set in rustbuild, which we use to match rustc.
+    // This is the version set in bootstrap, which we use to match rustc.
     let version = option_env_str!("CFG_RELEASE").unwrap_or_else(|| {
-        // If cargo is not being built by rustbuild, then we just use the
+        // If cargo is not being built by bootstrap, then we just use the
         // version from cargo's own `Cargo.toml`.
         //
         // There are two versions at play here:
@@ -71,10 +87,12 @@ pub fn version() -> VersionInfo {
         commit_hash,
         commit_date: option_env_str!("CARGO_COMMIT_DATE").unwrap(),
     });
+    let description = option_env_str!("CFG_VER_DESCRIPTION");
 
     VersionInfo {
         version,
         release_channel,
         commit_info,
+        description,
     }
 }

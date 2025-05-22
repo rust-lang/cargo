@@ -4,10 +4,11 @@ use cargo::core::resolver::ResolveError;
 use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{context::GlobalContext, errors::ManifestError};
-
-use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry;
+use cargo_test_support::str;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.
@@ -46,18 +47,17 @@ fn toml_deserialize_manifest_error() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid string
-expected `\"`, `'`
+expected `"`, `'`
  --> bar/Cargo.toml:8:25
   |
-8 |                 foobar == \"0.55\"
+8 |                 foobar == "0.55"
   |                         ^
   |
 [ERROR] failed to load manifest for dependency `bar`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -151,8 +151,8 @@ fn member_manifest_version_error() {
     registry::init();
     let gctx = GlobalContext::new(
         Shell::from_write(Box::new(Vec::new())),
-        cargo_home(),
-        cargo_home(),
+        paths::cargo_home(),
+        paths::cargo_home(),
     );
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
     let compile_options = CompileOptions::new(&gctx, CompileMode::Build).unwrap();

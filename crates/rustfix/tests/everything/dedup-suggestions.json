@@ -1,0 +1,323 @@
+{
+  "$message_type": "diagnostic",
+  "message": "unused borrow that must be used",
+  "code": {
+    "code": "unused_must_use",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+      "byte_start": 96,
+      "byte_end": 98,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 9,
+      "column_end": 11,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "        &1;",
+          "highlight_start": 9,
+          "highlight_end": 11
+        }
+      ],
+      "label": "the borrow produces a value",
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": {
+        "span": {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 126,
+          "byte_end": 132,
+          "line_start": 9,
+          "line_end": 9,
+          "column_start": 5,
+          "column_end": 11,
+          "is_primary": false,
+          "text": [
+            {
+              "text": "    foo!();",
+              "highlight_start": 5,
+              "highlight_end": 11
+            }
+          ],
+          "label": null,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "expansion": null
+        },
+        "macro_decl_name": "foo!",
+        "def_site_span": {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 57,
+          "byte_end": 73,
+          "line_start": 2,
+          "line_end": 2,
+          "column_start": 1,
+          "column_end": 17,
+          "is_primary": false,
+          "text": [
+            {
+              "text": "macro_rules! foo {",
+              "highlight_start": 1,
+              "highlight_end": 17
+            }
+          ],
+          "label": null,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "expansion": null
+        }
+      }
+    }
+  ],
+  "children": [
+    {
+      "message": "`#[warn(unused_must_use)]` on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "use `let _ = ...` to ignore the resulting value",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 96,
+          "byte_end": 96,
+          "line_start": 4,
+          "line_end": 4,
+          "column_start": 9,
+          "column_end": 9,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "        &1;",
+              "highlight_start": 9,
+              "highlight_end": 9
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "let _ = ",
+          "suggestion_applicability": "MaybeIncorrect",
+          "expansion": {
+            "span": {
+              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+              "byte_start": 126,
+              "byte_end": 132,
+              "line_start": 9,
+              "line_end": 9,
+              "column_start": 5,
+              "column_end": 11,
+              "is_primary": false,
+              "text": [
+                {
+                  "text": "    foo!();",
+                  "highlight_start": 5,
+                  "highlight_end": 11
+                }
+              ],
+              "label": null,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "expansion": null
+            },
+            "macro_decl_name": "foo!",
+            "def_site_span": {
+              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+              "byte_start": 57,
+              "byte_end": 73,
+              "line_start": 2,
+              "line_end": 2,
+              "column_start": 1,
+              "column_end": 17,
+              "is_primary": false,
+              "text": [
+                {
+                  "text": "macro_rules! foo {",
+                  "highlight_start": 1,
+                  "highlight_end": 17
+                }
+              ],
+              "label": null,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "expansion": null
+            }
+          }
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: unused borrow that must be used\n --> ./tests/everything/dedup-insert-only-replacements.rs:4:9\n  |\n4 |         &1;\n  |         ^^ the borrow produces a value\n...\n9 |     foo!();\n  |     ------ in this macro invocation\n  |\n  = note: `#[warn(unused_must_use)]` on by default\n  = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: use `let _ = ...` to ignore the resulting value\n  |\n4 |         let _ = &1;\n  |         +++++++\n\n"
+}
+{
+  "$message_type": "diagnostic",
+  "message": "unused borrow that must be used",
+  "code": {
+    "code": "unused_must_use",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+      "byte_start": 96,
+      "byte_end": 98,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 9,
+      "column_end": 11,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "        &1;",
+          "highlight_start": 9,
+          "highlight_end": 11
+        }
+      ],
+      "label": "the borrow produces a value",
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": {
+        "span": {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 138,
+          "byte_end": 144,
+          "line_start": 10,
+          "line_end": 10,
+          "column_start": 5,
+          "column_end": 11,
+          "is_primary": false,
+          "text": [
+            {
+              "text": "    foo!();",
+              "highlight_start": 5,
+              "highlight_end": 11
+            }
+          ],
+          "label": null,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "expansion": null
+        },
+        "macro_decl_name": "foo!",
+        "def_site_span": {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 57,
+          "byte_end": 73,
+          "line_start": 2,
+          "line_end": 2,
+          "column_start": 1,
+          "column_end": 17,
+          "is_primary": false,
+          "text": [
+            {
+              "text": "macro_rules! foo {",
+              "highlight_start": 1,
+              "highlight_end": 17
+            }
+          ],
+          "label": null,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "expansion": null
+        }
+      }
+    }
+  ],
+  "children": [
+    {
+      "message": "use `let _ = ...` to ignore the resulting value",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+          "byte_start": 96,
+          "byte_end": 96,
+          "line_start": 4,
+          "line_end": 4,
+          "column_start": 9,
+          "column_end": 9,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "        &1;",
+              "highlight_start": 9,
+              "highlight_end": 9
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "let _ = ",
+          "suggestion_applicability": "MaybeIncorrect",
+          "expansion": {
+            "span": {
+              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+              "byte_start": 138,
+              "byte_end": 144,
+              "line_start": 10,
+              "line_end": 10,
+              "column_start": 5,
+              "column_end": 11,
+              "is_primary": false,
+              "text": [
+                {
+                  "text": "    foo!();",
+                  "highlight_start": 5,
+                  "highlight_end": 11
+                }
+              ],
+              "label": null,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "expansion": null
+            },
+            "macro_decl_name": "foo!",
+            "def_site_span": {
+              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
+              "byte_start": 57,
+              "byte_end": 73,
+              "line_start": 2,
+              "line_end": 2,
+              "column_start": 1,
+              "column_end": 17,
+              "is_primary": false,
+              "text": [
+                {
+                  "text": "macro_rules! foo {",
+                  "highlight_start": 1,
+                  "highlight_end": 17
+                }
+              ],
+              "label": null,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "expansion": null
+            }
+          }
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: unused borrow that must be used\n  --> ./tests/everything/dedup-insert-only-replacements.rs:4:9\n   |\n4  |         &1;\n   |         ^^ the borrow produces a value\n...\n10 |     foo!();\n   |     ------ in this macro invocation\n   |\n   = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: use `let _ = ...` to ignore the resulting value\n   |\n4  |         let _ = &1;\n   |         +++++++\n\n"
+}
+{
+  "$message_type": "diagnostic",
+  "message": "2 warnings emitted",
+  "code": null,
+  "level": "warning",
+  "spans": [],
+  "children": [],
+  "rendered": "warning: 2 warnings emitted\n\n"
+}

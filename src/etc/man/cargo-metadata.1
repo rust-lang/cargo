@@ -11,9 +11,9 @@ cargo\-metadata \[em] Machine\-readable metadata about the current package
 Output JSON to stdout containing information about the workspace members and
 resolved dependencies of the current package.
 .sp
-The format of the output is subject to change in futures versions of Cargo. It
+The output format is subject to change in future versions of Cargo. It
 is recommended to include the \fB\-\-format\-version\fR flag to future\-proof your code
-to ensure the output is in the format you are expecting. For more on the
+and ensure the output is in the format you are expecting. For more on the
 expectations, see \[lq]Compatibility\[rq]\&.
 .sp
 See the \fIcargo_metadata crate\fR <https://crates.io/crates/cargo_metadata>
@@ -22,20 +22,20 @@ for a Rust API for reading the metadata.
 .SS "Compatibility"
 Within the same output format version, the compatibility is maintained, except
 some scenarios. The following is a non\-exhaustive list of changes that are not
-considersed as incompatible:
+considered as incompatible:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBAdding new fields\fR \[em] New fields will be added when needed. Reserving this
+\h'-04'\(bu\h'+03'\fBAdding new fields\fR \[em] New fields will be added when needed. Reserving this
 helps Cargo evolve without bumping the format version too often.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBAdding new values for enum\-like fields\fR \[em] Same as adding new fields. It
+\h'-04'\(bu\h'+03'\fBAdding new values for enum\-like fields\fR \[em] Same as adding new fields. It
 keeps metadata evolving without stagnation.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBChanging opaque representations\fR \[em] The inner representations of some
+\h'-04'\(bu\h'+03'\fBChanging opaque representations\fR \[em] The inner representations of some
 fields are implementation details. For example, fields related to
 \[lq]Source ID\[rq] are treated as opaque identifiers to differentiate packages or
 sources. Consumers shouldn\[cq]t rely on those representations unless specified.
@@ -125,7 +125,12 @@ The JSON output has the following format:
                        If not specified or null, the dependency is from the default
                        registry (crates.io).
                     */
-                    "registry": null
+                    "registry": null,
+                    /* (unstable) Boolean flag of whether or not this is a pulbic
+                       dependency. This field is only present when
+                       `\-Zpublic\-dependency` is enabled.
+                    */
+                    "public": false
                 }
             ],
             /* Array of Cargo targets. */
@@ -153,7 +158,9 @@ The JSON output has the following format:
                     "crate_types": [
                         "bin"
                     ],
-                    /* The name of the target. */
+                    /* The name of the target.
+                       For lib targets, dashes will be replaced with underscores.
+                    */
                     "name": "my\-package",
                     /* Absolute path to the root source file of the target. */
                     "src_path": "/path/to/my\-package/src/main.rs",
@@ -307,14 +314,16 @@ The JSON output has the following format:
                 ]
             }
         ],
-        /* The root package of the workspace.
-           This is null if this is a virtual workspace. Otherwise it is
-           the Package ID of the root package.
+        /* The package in the current working directory (if \-\-manifest\-path is not given).
+           This is null if there is a virtual workspace. Otherwise it is
+           the Package ID of the package.
         */
         "root": "file:///path/to/my\-package#0.1.0",
     },
-    /* The absolute path to the build directory where Cargo places its output. */
+    /* The absolute path to the target directory where Cargo places its output. */
     "target_directory": "/path/to/my\-package/target",
+    /* The absolute path to the build directory where Cargo places intermediate build artifacts. (unstable) */
+    "build_directory": "/path/to/my\-package/build\-dir",
     /* The version of the schema for this metadata structure.
        This will be changed if incompatible changes are ever made.
     */
@@ -337,7 +346,7 @@ The JSON output has the following format:
 Notes:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'For \fB"id"\fR field syntax, see \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html> in the reference.
+\h'-04'\(bu\h'+03'For \fB"id"\fR field syntax, see \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html> in the reference.
 .RE
 .SH "OPTIONS"
 .SS "Output Options"
@@ -413,16 +422,16 @@ May also be specified with the \fBterm.quiet\fR
 Control when colored output is used. Valid values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBauto\fR (default): Automatically detect if color support is available on the
+\h'-04'\(bu\h'+03'\fBauto\fR (default): Automatically detect if color support is available on the
 terminal.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBalways\fR: Always display colors.
+\h'-04'\(bu\h'+03'\fBalways\fR: Always display colors.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fBnever\fR: Never display colors.
+\h'-04'\(bu\h'+03'\fBnever\fR: Never display colors.
 .RE
 .sp
 May also be specified with the \fBterm.color\fR
@@ -443,11 +452,11 @@ existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'The lock file is missing.
+\h'-04'\(bu\h'+03'The lock file is missing.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+\h'-04'\(bu\h'+03'Cargo attempted to change the lock file due to a different dependency resolution.
 .RE
 .sp
 It may be used in environments where deterministic builds are desired,
@@ -473,6 +482,20 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 \fB\-\-frozen\fR
 .RS 4
 Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
+.RE
+.sp
+\fB\-\-lockfile\-path\fR \fIPATH\fR
+.RS 4
+Changes the path of the lockfile from the default (\fB<workspace_root>/Cargo.lock\fR) to \fIPATH\fR\&. \fIPATH\fR must end with
+\fBCargo.lock\fR (e.g. \fB\-\-lockfile\-path /tmp/temporary\-lockfile/Cargo.lock\fR). Note that providing
+\fB\-\-lockfile\-path\fR will ignore existing lockfile at the default path, and instead will
+either use the lockfile from \fIPATH\fR, or write a new lockfile into the provided \fIPATH\fR if it doesn\[cq]t exist.
+This flag can be used to run most commands in read\-only directories, writing lockfile into the provided \fIPATH\fR\&.
+.sp
+This option is only available on the \fInightly
+channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
+requires the \fB\-Z unstable\-options\fR flag to enable (see
+\fI#14421\fR <https://github.com/rust\-lang/cargo/issues/14421>).
 .RE
 .SS "Common Options"
 .sp
@@ -521,11 +544,11 @@ details on environment variables that Cargo reads.
 .SH "EXIT STATUS"
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB0\fR: Cargo succeeded.
+\h'-04'\(bu\h'+03'\fB0\fR: Cargo succeeded.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+02'\fB101\fR: Cargo failed to complete.
+\h'-04'\(bu\h'+03'\fB101\fR: Cargo failed to complete.
 .RE
 .SH "EXAMPLES"
 .sp

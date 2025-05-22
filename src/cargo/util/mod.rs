@@ -59,6 +59,7 @@ mod progress;
 mod queue;
 pub mod restricted_names;
 pub mod rustc;
+mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
 pub mod style;
@@ -85,12 +86,26 @@ pub fn elapsed(duration: Duration) -> String {
 }
 
 /// Formats a number of bytes into a human readable SI-prefixed size.
-/// Returns a tuple of `(quantity, units)`.
-pub fn human_readable_bytes(bytes: u64) -> (f32, &'static str) {
-    static UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
-    let bytes = bytes as f32;
-    let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
-    (bytes / 1024_f32.powi(i as i32), UNITS[i])
+pub struct HumanBytes(pub u64);
+
+impl std::fmt::Display for HumanBytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+        let bytes = self.0 as f32;
+        let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
+        let unit = UNITS[i];
+        let size = bytes / 1024_f32.powi(i as i32);
+
+        // Don't show a fractional number of bytes.
+        if i == 0 {
+            return write!(f, "{size}{unit}");
+        }
+
+        let Some(precision) = f.precision() else {
+            return write!(f, "{size}{unit}");
+        };
+        write!(f, "{size:.precision$}{unit}",)
+    }
 }
 
 pub fn indented_lines(text: &str) -> String {
@@ -126,12 +141,8 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
 #[cfg(windows)]
 #[inline]
 pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
-    use std::ffi::OsString;
     use std::io::Error;
-    use std::os::windows::ffi::{OsStrExt, OsStringExt};
-    use std::{io::ErrorKind, ptr};
-    use windows_sys::Win32::Foundation::{GetLastError, SetLastError};
-    use windows_sys::Win32::Storage::FileSystem::GetFullPathNameW;
+    use std::io::ErrorKind;
 
     // On Windows `canonicalize` may fail, so we fall back to getting an absolute path.
     std::fs::canonicalize(&path).or_else(|_| {
@@ -139,54 +150,7 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
         if !path.as_ref().try_exists()? {
             return Err(Error::new(ErrorKind::NotFound, "the path was not found"));
         }
-
-        // This code is based on the unstable `std::path::absolute` and could be replaced with it
-        // if it's stabilized.
-
-        let path = path.as_ref().as_os_str();
-        let mut path_u16 = Vec::with_capacity(path.len() + 1);
-        path_u16.extend(path.encode_wide());
-        if path_u16.iter().find(|c| **c == 0).is_some() {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "strings passed to WinAPI cannot contain NULs",
-            ));
-        }
-        path_u16.push(0);
-
-        loop {
-            unsafe {
-                SetLastError(0);
-                let len =
-                    GetFullPathNameW(path_u16.as_ptr(), 0, &mut [] as *mut u16, ptr::null_mut());
-                if len == 0 {
-                    let error = GetLastError();
-                    if error != 0 {
-                        return Err(Error::from_raw_os_error(error as i32));
-                    }
-                }
-                let mut result = vec![0u16; len as usize];
-
-                let write_len = GetFullPathNameW(
-                    path_u16.as_ptr(),
-                    result.len().try_into().unwrap(),
-                    result.as_mut_ptr().cast::<u16>(),
-                    ptr::null_mut(),
-                );
-                if write_len == 0 {
-                    let error = GetLastError();
-                    if error != 0 {
-                        return Err(Error::from_raw_os_error(error as i32));
-                    }
-                }
-
-                if write_len <= len {
-                    return Ok(PathBuf::from(OsString::from_wide(
-                        &result[0..(write_len as usize)],
-                    )));
-                }
-            }
-        }
+        std::path::absolute(&path)
     })
 }
 
@@ -212,32 +176,30 @@ pub fn get_umask() -> u32 {
 mod test {
     use super::*;
 
+    #[track_caller]
+    fn t(bytes: u64, expected: &str) {
+        assert_eq!(&HumanBytes(bytes).to_string(), expected);
+    }
+
     #[test]
     fn test_human_readable_bytes() {
-        assert_eq!(human_readable_bytes(0), (0., "B"));
-        assert_eq!(human_readable_bytes(8), (8., "B"));
-        assert_eq!(human_readable_bytes(1000), (1000., "B"));
-        assert_eq!(human_readable_bytes(1024), (1., "KiB"));
-        assert_eq!(human_readable_bytes(1024 * 420 + 512), (420.5, "KiB"));
-        assert_eq!(human_readable_bytes(1024 * 1024), (1., "MiB"));
+        t(0, "0B");
+        t(8, "8B");
+        t(1000, "1000B");
+        t(1024, "1KiB");
+        t(1024 * 420 + 512, "420.5KiB");
+        t(1024 * 1024, "1MiB");
+        t(1024 * 1024 + 1024 * 256, "1.25MiB");
+        t(1024 * 1024 * 1024, "1GiB");
+        t((1024. * 1024. * 1024. * 1.2345) as u64, "1.2345GiB");
+        t(1024 * 1024 * 1024 * 1024, "1TiB");
+        t(1024 * 1024 * 1024 * 1024 * 1024, "1PiB");
+        t(1024 * 1024 * 1024 * 1024 * 1024 * 1024, "1EiB");
+        t(u64::MAX, "16EiB");
+
         assert_eq!(
-            human_readable_bytes(1024 * 1024 + 1024 * 256),
-            (1.25, "MiB")
+            &format!("{:.3}", HumanBytes((1024. * 1.23456) as u64)),
+            "1.234KiB"
         );
-        assert_eq!(human_readable_bytes(1024 * 1024 * 1024), (1., "GiB"));
-        assert_eq!(
-            human_readable_bytes((1024. * 1024. * 1024. * 3.1415) as u64),
-            (3.1415, "GiB")
-        );
-        assert_eq!(human_readable_bytes(1024 * 1024 * 1024 * 1024), (1., "TiB"));
-        assert_eq!(
-            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024),
-            (1., "PiB")
-        );
-        assert_eq!(
-            human_readable_bytes(1024 * 1024 * 1024 * 1024 * 1024 * 1024),
-            (1., "EiB")
-        );
-        assert_eq!(human_readable_bytes(u64::MAX), (16., "EiB"));
     }
 }

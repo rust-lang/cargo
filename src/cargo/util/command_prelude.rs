@@ -1,12 +1,16 @@
-use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
-use crate::core::resolver::CliFeatures;
-use crate::core::{Edition, Workspace};
+use crate::core::compiler::{
+    BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
+};
+use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
+use crate::core::{profiles::Profiles, shell, Edition, Package, Target, TargetKind, Workspace};
+use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
-use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
 use crate::util::restricted_names;
+use crate::util::toml::is_embedded;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
@@ -18,6 +22,9 @@ use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
+use home::cargo_home_with_cwd;
+use semver::Version;
+use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -56,7 +63,7 @@ pub trait CommandExt: Sized {
         )
     }
 
-    /// Variant of arg_package_spec that does not include the `--all` flag
+    /// Variant of `arg_package_spec` that does not include the `--all` flag
     /// (but does include `--workspace`). Used to avoid confusion with
     /// historical uses of `--all`.
     fn arg_package_spec_no_all(
@@ -131,7 +138,12 @@ pub trait CommandExt: Sized {
     ) -> Self {
         let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
         let value_parser = UnknownArgumentValueParser::suggest(msg);
-        self._arg(flag(default_mode, "").value_parser(value_parser).hide(true))
+        self._arg(
+            flag(default_mode, "")
+                .conflicts_with("profile")
+                .value_parser(value_parser)
+                .hide(true),
+        )
     }
 
     fn arg_targets_all(
@@ -149,10 +161,16 @@ pub trait CommandExt: Sized {
     ) -> Self {
         self.arg_targets_lib_bin_example(lib, bin, bins, example, examples)
             ._arg(flag("tests", tests).help_heading(heading::TARGET_SELECTION))
-            ._arg(optional_multi_opt("test", "NAME", test).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("test", "NAME", test)
+                    .help_heading(heading::TARGET_SELECTION)
+                    .add(clap_complete::ArgValueCandidates::new(get_test_candidates)),
+            )
             ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
             ._arg(
-                optional_multi_opt("bench", "NAME", bench).help_heading(heading::TARGET_SELECTION),
+                optional_multi_opt("bench", "NAME", bench)
+                    .help_heading(heading::TARGET_SELECTION)
+                    .add(clap_complete::ArgValueCandidates::new(get_bench_candidates)),
             )
             ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
@@ -167,11 +185,18 @@ pub trait CommandExt: Sized {
     ) -> Self {
         self._arg(flag("lib", lib).help_heading(heading::TARGET_SELECTION))
             ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
-            ._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
+            ._arg(
+                optional_multi_opt("bin", "NAME", bin)
+                    .help_heading(heading::TARGET_SELECTION)
+                    .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+            )
             ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
             ._arg(
                 optional_multi_opt("example", "NAME", example)
-                    .help_heading(heading::TARGET_SELECTION),
+                    .help_heading(heading::TARGET_SELECTION)
+                    .add(clap_complete::ArgValueCandidates::new(
+                        get_example_candidates,
+                    )),
             )
     }
 
@@ -182,21 +207,35 @@ pub trait CommandExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
-            ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
-            ._arg(
-                optional_multi_opt("example", "NAME", example)
-                    .help_heading(heading::TARGET_SELECTION),
-            )
-            ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
+        self._arg(
+            optional_multi_opt("bin", "NAME", bin)
+                .help_heading(heading::TARGET_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+        )
+        ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
+        ._arg(
+            optional_multi_opt("example", "NAME", example)
+                .help_heading(heading::TARGET_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(
+                    get_example_candidates,
+                )),
+        )
+        ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(optional_multi_opt("bin", "NAME", bin).help_heading(heading::TARGET_SELECTION))
-            ._arg(
-                optional_multi_opt("example", "NAME", example)
-                    .help_heading(heading::TARGET_SELECTION),
-            )
+        self._arg(
+            optional_multi_opt("bin", "NAME", bin)
+                .help_heading(heading::TARGET_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+        )
+        ._arg(
+            optional_multi_opt("example", "NAME", example)
+                .help_heading(heading::TARGET_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(
+                    get_example_candidates,
+                )),
+        )
     }
 
     fn arg_features(self) -> Self {
@@ -226,6 +265,7 @@ pub trait CommandExt: Sized {
         self._arg(
             flag("release", release)
                 .short('r')
+                .conflicts_with("profile")
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
@@ -234,7 +274,11 @@ pub trait CommandExt: Sized {
         self._arg(
             opt("profile", profile)
                 .value_name("PROFILE-NAME")
-                .help_heading(heading::COMPILATION_OPTIONS),
+                .help_heading(heading::COMPILATION_OPTIONS)
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let candidates = get_profile_candidates();
+                    candidates
+                })),
         )
     }
 
@@ -254,7 +298,8 @@ pub trait CommandExt: Sized {
         };
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
-                .help_heading(heading::COMPILATION_OPTIONS),
+                .help_heading(heading::COMPILATION_OPTIONS)
+                .add(clap_complete::ArgValueCandidates::new(get_target_triples)),
         )
         ._arg(unsupported_short_arg)
     }
@@ -285,12 +330,54 @@ pub trait CommandExt: Sized {
         self._arg(
             opt("manifest-path", "Path to Cargo.toml")
                 .value_name("PATH")
-                .help_heading(heading::MANIFEST_OPTIONS),
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any().filter(|path: &Path| {
+                        if path.file_name() == Some(OsStr::new("Cargo.toml")) {
+                            return true;
+                        }
+                        if is_embedded(path) {
+                            return true;
+                        }
+                        false
+                    }),
+                )),
+        )
+    }
+
+    fn arg_lockfile_path(self) -> Self {
+        self._arg(
+            opt("lockfile-path", "Path to Cargo.lock (unstable)")
+                .value_name("PATH")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .add(clap_complete::engine::ArgValueCompleter::new(
+                    clap_complete::engine::PathCompleter::any().filter(|path: &Path| {
+                        let file_name = match path.file_name() {
+                            Some(name) => name,
+                            None => return false,
+                        };
+
+                        // allow `Cargo.lock` file
+                        file_name == OsStr::new("Cargo.lock")
+                    }),
+                )),
         )
     }
 
     fn arg_message_format(self) -> Self {
-        self._arg(multi_opt("message-format", "FMT", "Error format"))
+        self._arg(
+            multi_opt("message-format", "FMT", "Error format")
+                .value_parser([
+                    "human",
+                    "short",
+                    "json",
+                    "json-diagnostic-short",
+                    "json-diagnostic-rendered-ansi",
+                    "json-render-diagnostics",
+                ])
+                .value_delimiter(',')
+                .ignore_case(true),
+        )
     }
 
     fn arg_build_plan(self) -> Self {
@@ -318,7 +405,10 @@ pub trait CommandExt: Sized {
             .value_name("VCS")
             .value_parser(["git", "hg", "pijul", "fossil", "none"]),
         )
-        ._arg(flag("bin", "Use a binary (application) template [default]"))
+        ._arg(
+            flag("bin", "Use a binary (application) template [default]")
+                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+        )
         ._arg(flag("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
@@ -335,7 +425,12 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_registry(self, help: &'static str) -> Self {
-        self._arg(opt("registry", help).value_name("REGISTRY"))
+        self._arg(opt("registry", help).value_name("REGISTRY").add(
+            clap_complete::ArgValueCandidates::new(|| {
+                let candidates = get_registry_candidates();
+                candidates.unwrap_or_default()
+            }),
+        ))
     }
 
     fn arg_index(self, help: &'static str) -> Self {
@@ -352,10 +447,11 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_ignore_rust_version(self) -> Self {
-        self._arg(flag(
-            "ignore-rust-version",
-            "Ignore `rust-version` specification in packages",
-        ))
+        self.arg_ignore_rust_version_with_help("Ignore `rust-version` specification in packages")
+    }
+
+    fn arg_ignore_rust_version_with_help(self, help: &'static str) -> Self {
+        self._arg(flag("ignore-rust-version", help).help_heading(heading::MANIFEST_OPTIONS))
     }
 
     fn arg_future_incompat_report(self) -> Self {
@@ -392,25 +488,35 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_out_dir(self) -> Self {
+    fn arg_artifact_dir(self) -> Self {
         let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--out-dir");
-            Arg::new("unsupported-short-out-dir-flag")
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--artifact-dir");
+            Arg::new("unsupported-short-artifact-dir-flag")
                 .help("")
                 .short('O')
                 .value_parser(value_parser)
                 .action(ArgAction::SetTrue)
                 .hide(true)
         };
+
         self._arg(
             opt(
-                "out-dir",
+                "artifact-dir",
                 "Copy final artifacts to this directory (unstable)",
             )
             .value_name("PATH")
             .help_heading(heading::COMPILATION_OPTIONS),
         )
         ._arg(unsupported_short_arg)
+        ._arg(
+            opt(
+                "out-dir",
+                "Copy final artifacts to this directory (deprecated; use --artifact-dir instead)",
+            )
+            .value_name("PATH")
+            .conflicts_with("artifact-dir")
+            .hide(true),
+        )
     }
 }
 
@@ -500,13 +606,20 @@ pub trait ArgMatchesExt {
         root_manifest(self._value_of("manifest-path").map(Path::new), gctx)
     }
 
+    fn lockfile_path(&self, gctx: &GlobalContext) -> CargoResult<Option<PathBuf>> {
+        lockfile_path(self._value_of("lockfile-path").map(Path::new), gctx)
+    }
+
     #[tracing::instrument(skip_all)]
     fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(gctx)?;
+        let lockfile_path = self.lockfile_path(gctx)?;
         let mut ws = Workspace::new(&root, gctx)?;
+        ws.set_resolve_honors_rust_version(self.honor_rust_version());
         if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
+        ws.set_requested_lockfile_path(lockfile_path);
         Ok(ws)
     }
 
@@ -534,6 +647,10 @@ pub trait ArgMatchesExt {
         self.maybe_flag("keep-going")
     }
 
+    fn honor_rust_version(&self) -> Option<bool> {
+        self.flag("ignore-rust-version").then_some(false)
+    }
+
     fn targets(&self) -> CargoResult<Vec<String>> {
         if self.is_present_with_zero_values("target") {
             let cmd = if is_rustup() {
@@ -552,7 +669,6 @@ Run `{cmd}` to see possible targets."
 
     fn get_profile_name(
         &self,
-        gctx: &GlobalContext,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
@@ -565,29 +681,10 @@ Run `{cmd}` to see possible targets."
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self.maybe_flag("release") {
-                    gctx.shell().warn(
-                        "the `--release` flag should not be specified with the `--profile` flag\n\
-                         The `--release` flag will be ignored.\n\
-                         This was historically accepted, but will become an error \
-                         in a future release."
-                    )?;
-                }
                 return Ok(InternedString::new(name));
             }
             _ => {}
         }
-
-        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
-            anyhow::format_err!(
-                "conflicting usage of --profile={} and --{flag}\n\
-                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
-                 Remove one flag or the other to continue.",
-                specified,
-                flag = flag,
-                equiv = equiv
-            )
-        };
 
         let name = match (
             self.maybe_flag("release"),
@@ -595,10 +692,8 @@ Run `{cmd}` to see possible targets."
             specified_profile,
         ) {
             (false, false, None) => default,
-            (true, _, None | Some("release")) => "release",
-            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
-            (_, true, None | Some("dev")) => "dev",
-            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            (true, _, None) => "release",
+            (_, true, None) => "dev",
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
@@ -704,7 +799,7 @@ Run `{cmd}` to see possible targets."
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.requested_profile = self.get_profile_name(gctx, "dev", profile_checking)?;
+        build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
@@ -763,7 +858,7 @@ Run `{cmd}` to see possible targets."
             target_rustc_args: None,
             target_rustc_crate_types: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: !self.flag("ignore-rust-version"),
+            honor_rust_version: self.honor_rust_version(),
         };
 
         if let Some(ws) = workspace {
@@ -984,6 +1079,358 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
     } else {
         find_root_manifest_for_wd(gctx.cwd())
     }
+}
+
+pub fn lockfile_path(
+    lockfile_path: Option<&Path>,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<PathBuf>> {
+    let Some(lockfile_path) = lockfile_path else {
+        return Ok(None);
+    };
+
+    gctx.cli_unstable()
+        .fail_if_stable_opt("--lockfile-path", 14421)?;
+
+    let path = gctx.cwd().join(lockfile_path);
+
+    if !path.ends_with(LOCKFILE_NAME) {
+        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})")
+    }
+    if path.is_dir() {
+        bail!(
+            "lockfile path `{}` is a directory but expected a file",
+            lockfile_path.display()
+        )
+    }
+
+    return Ok(Some(path));
+}
+
+pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+
+    if let Ok(Some(registries)) =
+        gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
+    {
+        Ok(registries
+            .keys()
+            .map(|name| clap_complete::CompletionCandidate::new(name.to_owned()))
+            .collect())
+    } else {
+        Ok(vec![])
+    }
+}
+
+fn get_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    match get_workspace_profile_candidates() {
+        Ok(candidates) if !candidates.is_empty() => candidates,
+        // fallback to default profile candidates
+        _ => default_profile_candidates(),
+    }
+}
+
+fn get_workspace_profile_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+    let profiles = Profiles::new(&ws, InternedString::new("dev"))?;
+
+    let mut candidates = Vec::new();
+    for name in profiles.profile_names() {
+        let Ok(profile_instance) = Profiles::new(&ws, name) else {
+            continue;
+        };
+        let base_profile = profile_instance.base_profile();
+
+        let mut description = String::from(if base_profile.opt_level.as_str() == "0" {
+            "unoptimized"
+        } else {
+            "optimized"
+        });
+
+        if base_profile.debuginfo.is_turned_on() {
+            description.push_str(" + debuginfo");
+        }
+
+        candidates
+            .push(clap_complete::CompletionCandidate::new(&name).help(Some(description.into())));
+    }
+
+    Ok(candidates)
+}
+
+fn default_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    vec![
+        clap_complete::CompletionCandidate::new("dev").help(Some("unoptimized + debuginfo".into())),
+        clap_complete::CompletionCandidate::new("release").help(Some("optimized".into())),
+        clap_complete::CompletionCandidate::new("test")
+            .help(Some("unoptimized + debuginfo".into())),
+        clap_complete::CompletionCandidate::new("bench").help(Some("optimized".into())),
+    ]
+}
+
+fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|target| match target.kind() {
+            TargetKind::ExampleBin => Some(clap_complete::CompletionCandidate::new(target.name())),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|target| match target.kind() {
+            TargetKind::Bench => Some(clap_complete::CompletionCandidate::new(target.name())),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|target| match target.kind() {
+            TargetKind::Test => Some(clap_complete::CompletionCandidate::new(target.name())),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|target| match target.kind() {
+            TargetKind::Bin => Some(clap_complete::CompletionCandidate::new(target.name())),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
+    let cwd = std::env::current_dir()?;
+    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+
+    let packages = ws.members().collect::<Vec<_>>();
+
+    let targets = packages
+        .into_iter()
+        .flat_map(|pkg| pkg.targets().into_iter().cloned())
+        .collect::<Vec<_>>();
+
+    Ok(targets)
+}
+
+fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
+    let mut candidates = Vec::new();
+
+    if let Ok(targets) = get_target_triples_from_rustup() {
+        candidates = targets;
+    }
+
+    if candidates.is_empty() {
+        if let Ok(targets) = get_target_triples_from_rustc() {
+            candidates = targets;
+        }
+    }
+
+    candidates
+}
+
+fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let output = std::process::Command::new("rustup")
+        .arg("target")
+        .arg("list")
+        .output()?;
+
+    if !output.status.success() {
+        return Ok(vec![]);
+    }
+
+    let stdout = String::from_utf8(output.stdout)?;
+
+    Ok(stdout
+        .lines()
+        .map(|line| {
+            let target = line.split_once(' ');
+            match target {
+                None => clap_complete::CompletionCandidate::new(line.to_owned()).hide(true),
+                Some((target, _installed)) => clap_complete::CompletionCandidate::new(target),
+            }
+        })
+        .collect())
+}
+
+fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let cwd = std::env::current_dir()?;
+    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+
+    let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
+
+    let (stdout, _stderr) =
+        rustc.cached_output(rustc.process().arg("--print").arg("target-list"), 0)?;
+
+    Ok(stdout
+        .lines()
+        .map(|line| clap_complete::CompletionCandidate::new(line.to_owned()))
+        .collect())
+}
+
+pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    let mut candidates = vec![];
+
+    let package_map = HashMap::<&str, Vec<Package>>::new();
+    let package_map =
+        get_packages()
+            .unwrap_or_default()
+            .into_iter()
+            .fold(package_map, |mut map, package| {
+                map.entry(package.name().as_str())
+                    .or_insert_with(Vec::new)
+                    .push(package);
+                map
+            });
+
+    let unique_name_candidates = package_map
+        .iter()
+        .filter(|(_name, packages)| packages.len() == 1)
+        .map(|(name, packages)| {
+            clap_complete::CompletionCandidate::new(name.to_string()).help(
+                packages[0]
+                    .manifest()
+                    .metadata()
+                    .description
+                    .to_owned()
+                    .map(From::from),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let duplicate_name_pairs = package_map
+        .iter()
+        .filter(|(_name, packages)| packages.len() > 1)
+        .collect::<Vec<_>>();
+
+    let mut duplicate_name_candidates = vec![];
+    for (name, packages) in duplicate_name_pairs {
+        let mut version_count: HashMap<&Version, usize> = HashMap::new();
+
+        for package in packages {
+            *version_count.entry(package.version()).or_insert(0) += 1;
+        }
+
+        for package in packages {
+            if let Some(&count) = version_count.get(package.version()) {
+                if count == 1 {
+                    duplicate_name_candidates.push(
+                        clap_complete::CompletionCandidate::new(format!(
+                            "{}@{}",
+                            name,
+                            package.version()
+                        ))
+                        .help(
+                            package
+                                .manifest()
+                                .metadata()
+                                .description
+                                .to_owned()
+                                .map(From::from),
+                        ),
+                    );
+                } else {
+                    duplicate_name_candidates.push(
+                        clap_complete::CompletionCandidate::new(format!(
+                            "{}",
+                            package.package_id().to_spec()
+                        ))
+                        .help(
+                            package
+                                .manifest()
+                                .metadata()
+                                .description
+                                .to_owned()
+                                .map(From::from),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    candidates.extend(unique_name_candidates);
+    candidates.extend(duplicate_name_candidates);
+
+    candidates
+}
+
+fn get_packages() -> CargoResult<Vec<Package>> {
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+
+    let requested_kinds = CompileKind::from_requested_targets(ws.gctx(), &[])?;
+    let mut target_data = RustcTargetData::new(&ws, &requested_kinds)?;
+    // `cli_features.all_features` must be true in case that `specs` is empty.
+    let cli_features = CliFeatures::new_all(true);
+    let has_dev_units = HasDevUnits::Yes;
+    let force_all_targets = ForceAllTargets::No;
+    let dry_run = true;
+
+    let ws_resolve = ops::resolve_ws_with_opts(
+        &ws,
+        &mut target_data,
+        &requested_kinds,
+        &cli_features,
+        &[],
+        has_dev_units,
+        force_all_targets,
+        dry_run,
+    )?;
+
+    let packages = ws_resolve
+        .pkg_set
+        .packages()
+        .map(Clone::clone)
+        .collect::<Vec<_>>();
+
+    Ok(packages)
+}
+
+pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
+    let cwd = std::env::current_dir()?;
+    let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+
+    let verbose = 0;
+    let quiet = true;
+    let color = None;
+    let frozen = false;
+    let locked = true;
+    let offline = false;
+    let target_dir = None;
+    let unstable_flags = &[];
+    let cli_config = &[];
+
+    gctx.configure(
+        verbose,
+        quiet,
+        color,
+        frozen,
+        locked,
+        offline,
+        &target_dir,
+        unstable_flags,
+        cli_config,
+    )?;
+
+    Ok(gctx)
 }
 
 #[track_caller]

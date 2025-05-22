@@ -98,7 +98,7 @@ pub struct CrateListingV1 {
 }
 
 impl InstallTracker {
-    /// Create an InstallTracker from information on disk.
+    /// Create an `InstallTracker` from information on disk.
     pub fn load(gctx: &GlobalContext, root: &Filesystem) -> CargoResult<InstallTracker> {
         let v1_lock =
             root.open_rw_exclusive_create(Path::new(".crates.toml"), gctx, "crate metadata")?;
@@ -111,7 +111,7 @@ impl InstallTracker {
             if contents.is_empty() {
                 Ok(CrateListingV1::default())
             } else {
-                Ok(toml::from_str(&contents).with_context(|| "invalid TOML found for metadata")?)
+                Ok(toml::from_str(&contents).context("invalid TOML found for metadata")?)
             }
         })()
         .with_context(|| {
@@ -127,8 +127,7 @@ impl InstallTracker {
             let mut v2 = if contents.is_empty() {
                 CrateListingV2::default()
             } else {
-                serde_json::from_str(&contents)
-                    .with_context(|| "invalid JSON found for metadata")?
+                serde_json::from_str(&contents).context("invalid JSON found for metadata")?
             };
             v2.sync_v1(&v1);
             Ok(v2)
@@ -154,7 +153,7 @@ impl InstallTracker {
     /// Returns a tuple `(freshness, map)`. `freshness` indicates if the
     /// package should be built (`Dirty`) or if it is already up-to-date
     /// (`Fresh`) and should be skipped. The map maps binary names to the
-    /// PackageId that installed it (which is None if not known).
+    /// `PackageId` that installed it (which is `None` if not known).
     ///
     /// If there are no duplicates, then it will be considered `Dirty` (i.e.,
     /// it is OK to build/install).
@@ -251,7 +250,7 @@ impl InstallTracker {
     /// Check if any executables are already installed.
     ///
     /// Returns a map of duplicates, the key is the executable name and the
-    /// value is the PackageId that is already installed. The PackageId is
+    /// value is the `PackageId` that is already installed. The `PackageId` is
     /// None if it is an untracked executable.
     fn find_duplicates(
         &self,
@@ -763,7 +762,7 @@ where
     }
 }
 
-/// Helper to convert features to a BTreeSet.
+/// Helper to convert features to a `BTreeSet`.
 fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
     features.iter().map(|s| s.to_string()).collect()
 }

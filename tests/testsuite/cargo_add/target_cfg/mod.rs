@@ -28,12 +28,12 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("my-package1 my-package2 --target cfg(unix)")
+        .arg_line("my-package1 my-package2 --target 'cfg(target_os=\"linux\")'")
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

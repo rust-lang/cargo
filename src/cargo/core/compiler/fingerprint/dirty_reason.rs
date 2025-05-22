@@ -26,13 +26,15 @@ pub enum DirtyReason {
         old: Vec<String>,
         new: Vec<String>,
     },
-    MetadataChanged,
     ConfigSettingsChanged,
     CompileKindChanged,
     LocalLengthsChanged,
     PrecalculatedComponentsChanged {
         old: String,
         new: String,
+    },
+    ChecksumUseChanged {
+        old: bool,
     },
     DepInfoOutputChanged {
         old: PathBuf,
@@ -100,12 +102,9 @@ impl fmt::Display for FileTimeDiff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s_diff = self.new_time.seconds() - self.old_time.seconds();
         if s_diff >= 1 {
-            fmt::Display::fmt(
-                &humantime::Duration::from(std::time::Duration::from_secs(s_diff as u64)),
-                f,
-            )
+            write!(f, "{:#}", jiff::SignedDuration::from_secs(s_diff))
         } else {
-            // format nanoseconds as it is, humantime would display ms, us and ns
+            // format nanoseconds as it is, jiff would display ms, us and ns
             let ns_diff = self.new_time.nanoseconds() - self.old_time.nanoseconds();
             write!(f, "{ns_diff}ns")
         }
@@ -165,7 +164,6 @@ impl DirtyReason {
                 s.dirty_because(unit, "the profile configuration changed")
             }
             DirtyReason::RustflagsChanged { .. } => s.dirty_because(unit, "the rustflags changed"),
-            DirtyReason::MetadataChanged => s.dirty_because(unit, "the metadata changed"),
             DirtyReason::ConfigSettingsChanged => {
                 s.dirty_because(unit, "the config settings changed")
             }
@@ -182,6 +180,16 @@ impl DirtyReason {
             }
             DirtyReason::PrecalculatedComponentsChanged { .. } => {
                 s.dirty_because(unit, "the precalculated components changed")
+            }
+            DirtyReason::ChecksumUseChanged { old } => {
+                if *old {
+                    s.dirty_because(
+                        unit,
+                        "the prior compilation used checksum freshness and this one does not",
+                    )
+                } else {
+                    s.dirty_because(unit, "checksum freshness requested, prior compilation did not use checksum freshness")
+                }
             }
             DirtyReason::DepInfoOutputChanged { .. } => {
                 s.dirty_because(unit, "the dependency info output changed")
@@ -222,6 +230,20 @@ impl DirtyReason {
                             format_args!("the file `{}` is missing", file.display()),
                         )
                     }
+                    StaleItem::UnableToReadFile(file) => {
+                        let file = file.strip_prefix(root).unwrap_or(&file);
+                        s.dirty_because(
+                            unit,
+                            format_args!("the file `{}` could not be read", file.display()),
+                        )
+                    }
+                    StaleItem::FailedToReadMetadata(file) => {
+                        let file = file.strip_prefix(root).unwrap_or(&file);
+                        s.dirty_because(
+                            unit,
+                            format_args!("couldn't read metadata for file `{}`", file.display()),
+                        )
+                    }
                     StaleItem::ChangedFile {
                         stale,
                         stale_mtime,
@@ -233,6 +255,41 @@ impl DirtyReason {
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` has changed ({after})", file.display()),
+                        )
+                    }
+                    StaleItem::ChangedChecksum {
+                        source,
+                        stored_checksum,
+                        new_checksum,
+                    } => {
+                        let file = source.strip_prefix(root).unwrap_or(&source);
+                        s.dirty_because(
+                            unit,
+                            format_args!(
+                                "the file `{}` has changed (checksum didn't match, {stored_checksum} != {new_checksum})",
+                                file.display(),
+                            ),
+                        )
+                    }
+                    StaleItem::FileSizeChanged {
+                        path,
+                        old_size,
+                        new_size,
+                    } => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        s.dirty_because(
+                            unit,
+                            format_args!(
+                                "file size changed ({old_size} != {new_size}) for `{}`",
+                                file.display()
+                            ),
+                        )
+                    }
+                    StaleItem::MissingChecksum(path) => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        s.dirty_because(
+                            unit,
+                            format_args!("the checksum for file `{}` is missing", file.display()),
                         )
                     }
                     StaleItem::ChangedEnv { var, .. } => s.dirty_because(

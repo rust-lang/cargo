@@ -1,45 +1,100 @@
-//! A small module giving you a simple container that allows easy and cheap
-//! replacement of parts of its content, with the ability to prevent changing
-//! the same parts multiple times.
+//! A small module giving you a simple container that allows
+//! easy and cheap replacement of parts of its content,
+//! with the ability to commit or rollback pending changes.
+//!
+//! Create a new [`Data`] struct with some initial set of code,
+//! then record changes with [`Data::replace_range`],
+//! which will validate that the changes do not conflict with one another.
+//! At any time, you can "checkpoint" the current changes with [`Data::commit`]
+//! or roll them back (perhaps due to a conflict) with [`Data::restore`].
+//! When you're done, use [`Data::to_vec`]
+//! to merge the original data with the changes.
+//!
+//! # Notes
+//!
+//! The [`Data::to_vec`] method includes uncommitted changes, if present.
+//! The reason for including uncommitted changes is that typically, once you're calling those,
+//! you're done with edits and will be dropping the [`Data`] struct in a moment.
+//! In this case, requiring an extra call to `commit` would be unnecessary work.
+//! Of course, there's no harm in calling `commit`---it's just not strictly necessary.
+//!
+//! Put another way, the main point of `commit` is to checkpoint a set of known-good changes
+//! before applying additional sets of as-of-yet unvalidated changes.
+//! If no future changes are expected, you aren't _required_ to pay the cost of `commit`.
+//! If you want to discard uncommitted changes, simply call [`Data::restore`] first.
 
+use std::ops::Range;
 use std::rc::Rc;
 
 use crate::error::Error;
 
-/// Indicates the change state of a [`Span`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum State {
-    /// The initial state. No change applied.
-    Initial,
-    /// Has been replaced.
-    Replaced(Rc<[u8]>),
-    /// Has been inserted.
-    Inserted(Rc<[u8]>),
+/// Data that should replace a particular range of the original.
+#[derive(Clone)]
+struct Span {
+    /// Span of the parent data to be replaced, inclusive of the start, exclusive of the end.
+    range: Range<usize>,
+    /// New data to insert at the `start` position of the `original` data.
+    data: Rc<[u8]>,
+    /// Whether this data is committed or provisional.
+    committed: bool,
 }
 
-impl State {
-    fn is_inserted(&self) -> bool {
-        matches!(*self, State::Inserted(..))
+impl std::fmt::Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let state = if self.is_insert() {
+            "inserted"
+        } else {
+            "replaced"
+        };
+
+        let committed = if self.committed {
+            "committed"
+        } else {
+            "uncommitted"
+        };
+
+        write!(
+            f,
+            "({}, {}: {state}, {committed})",
+            self.range.start, self.range.end
+        )
     }
 }
 
-/// Span with a change [`State`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Span {
-    /// Start of this span in parent data
-    start: usize,
-    /// up to end excluding
-    end: usize,
-    /// Whether the span is inserted, replaced or still fresh.
-    data: State,
+impl Span {
+    fn new(range: Range<usize>, data: &[u8]) -> Self {
+        Self {
+            range,
+            data: data.into(),
+            committed: false,
+        }
+    }
+
+    /// Returns `true` if and only if this is a "pure" insertion,
+    /// i.e. does not remove any existing data.
+    ///
+    /// The insertion point is the `start` position of the range.
+    fn is_insert(&self) -> bool {
+        self.range.start == self.range.end
+    }
 }
 
-/// A container that allows easily replacing chunks of its data
+impl PartialEq for Span {
+    /// Returns `true` if and only if this `Span` and `other` have the same range and data,
+    /// regardless of `committed` status.
+    fn eq(&self, other: &Self) -> bool {
+        self.range == other.range && self.data == other.data
+    }
+}
+
+/// A container that allows easily replacing chunks of its data.
 #[derive(Debug, Clone, Default)]
 pub struct Data {
     /// Original data.
     original: Vec<u8>,
     /// [`Span`]s covering the full range of the original data.
+    /// Important: it's expected that the underlying implementation maintains this in order,
+    /// sorted ascending by start position.
     parts: Vec<Span>,
 }
 
@@ -48,36 +103,51 @@ impl Data {
     pub fn new(data: &[u8]) -> Self {
         Data {
             original: data.into(),
-            parts: vec![Span {
-                data: State::Initial,
-                start: 0,
-                end: data.len(),
-            }],
+            parts: vec![],
         }
     }
 
-    /// Render this data as a vector of bytes
+    /// Commit the current changes.
+    pub fn commit(&mut self) {
+        self.parts.iter_mut().for_each(|span| span.committed = true);
+    }
+
+    /// Discard uncommitted changes.
+    pub fn restore(&mut self) {
+        self.parts.retain(|parts| parts.committed);
+    }
+
+    /// Merge the original data with changes, **including** uncommitted changes.
+    ///
+    /// See the module-level documentation for more information on why uncommitted changes are included.
     pub fn to_vec(&self) -> Vec<u8> {
-        if self.original.is_empty() {
-            return Vec::new();
-        }
+        let mut prev_end = 0;
+        let mut s = self.parts.iter().fold(Vec::new(), |mut acc, span| {
+            // Hedge against potential implementation errors.
+            debug_assert!(
+                prev_end <= span.range.start,
+                "expected parts in sorted order"
+            );
 
-        self.parts.iter().fold(Vec::new(), |mut acc, d| {
-            match d.data {
-                State::Initial => acc.extend_from_slice(&self.original[d.start..d.end]),
-                State::Replaced(ref d) | State::Inserted(ref d) => acc.extend_from_slice(d),
-            };
+            acc.extend_from_slice(&self.original[prev_end..span.range.start]);
+            acc.extend_from_slice(&span.data);
+            prev_end = span.range.end;
             acc
-        })
+        });
+
+        // Append remaining data, if any.
+        s.extend_from_slice(&self.original[prev_end..]);
+        s
     }
 
-    /// Replace a chunk of data with the given slice, erroring when this part
-    /// was already changed previously.
-    pub fn replace_range(
-        &mut self,
-        range: std::ops::Range<usize>,
-        data: &[u8],
-    ) -> Result<(), Error> {
+    /// Record a provisional change.
+    ///
+    /// If committed, the original data in the given `range` will be replaced by the given data.
+    /// If there already exist changes for data in the given range (committed or not),
+    /// this method will return an error.
+    /// It will also return an error if the beginning of the range comes before its end,
+    /// or if the range is outside that of the original data.
+    pub fn replace_range(&mut self, range: Range<usize>, data: &[u8]) -> Result<(), Error> {
         if range.start > range.end {
             return Err(Error::InvalidRange(range));
         }
@@ -86,116 +156,38 @@ impl Data {
             return Err(Error::DataLengthExceeded(range, self.original.len()));
         }
 
-        let insert_only = range.start == range.end;
+        // Keep sorted by start position, or by end position if the start position is the same,
+        // which has the effect of keeping a pure insertion ahead of a replacement.
+        // That limits the kinds of conflicts that can happen, simplifying the checks below.
+        let ins_point = self.parts.partition_point(|span| {
+            span.range.start < range.start
+                || (span.range.start == range.start && span.range.end < range.end)
+        });
 
-        // Since we error out when replacing an already replaced chunk of data,
-        // we can take some shortcuts here. For example, there can be no
-        // overlapping replacements -- we _always_ split a chunk of 'initial'
-        // data into three[^empty] parts, and there can't ever be two 'initial'
-        // parts touching.
-        //
-        // [^empty]: Leading and trailing ones might be empty if we replace
-        // the whole chunk. As an optimization and without loss of generality we
-        // don't add empty parts.
-        let new_parts = {
-            let Some(index_of_part_to_split) = self.parts.iter().position(|p| {
-                !p.data.is_inserted() && p.start <= range.start && p.end >= range.end
-            }) else {
-                if tracing::enabled!(tracing::Level::DEBUG) {
-                    let slices = self
-                        .parts
-                        .iter()
-                        .map(|p| {
-                            (
-                                p.start,
-                                p.end,
-                                match p.data {
-                                    State::Initial => "initial",
-                                    State::Replaced(..) => "replaced",
-                                    State::Inserted(..) => "inserted",
-                                },
-                            )
-                        })
-                        .collect::<Vec<_>>();
-                    tracing::debug!(
-                        "no single slice covering {}..{}, current slices: {:?}",
-                        range.start,
-                        range.end,
-                        slices,
-                    );
-                }
+        let incoming = Span::new(range, data.as_ref());
 
-                return Err(Error::MaybeAlreadyReplaced(range));
-            };
-
-            let part_to_split = &self.parts[index_of_part_to_split];
-
-            // If this replacement matches exactly the part that we would
-            // otherwise split then we ignore this for now. This means that you
-            // can replace the exact same range with the exact same content
-            // multiple times and we'll process and allow it.
-            //
-            // This is currently done to alleviate issues like
-            // rust-lang/rust#51211 although this clause likely wants to be
-            // removed if that's fixed deeper in the compiler.
-            if part_to_split.start == range.start && part_to_split.end == range.end {
-                if let State::Replaced(ref replacement) = part_to_split.data {
-                    if &**replacement == data {
-                        return Ok(());
-                    }
-                }
-            }
-
-            if part_to_split.data != State::Initial {
-                return Err(Error::AlreadyReplaced);
-            }
-
-            let mut new_parts = Vec::with_capacity(self.parts.len() + 2);
-
-            // Previous parts
-            if let Some(ps) = self.parts.get(..index_of_part_to_split) {
-                new_parts.extend_from_slice(ps);
-            }
-
-            // Keep initial data on left side of part
-            if range.start > part_to_split.start {
-                new_parts.push(Span {
-                    start: part_to_split.start,
-                    end: range.start,
-                    data: State::Initial,
+        // Reject if the change starts before the previous one ends.
+        if let Some(before) = ins_point.checked_sub(1).and_then(|i| self.parts.get(i)) {
+            if incoming.range.start < before.range.end {
+                return Err(Error::AlreadyReplaced {
+                    is_identical: incoming == *before,
+                    range: incoming.range,
                 });
             }
+        }
 
-            // New part
-            new_parts.push(Span {
-                start: range.start,
-                end: range.end,
-                data: if insert_only {
-                    State::Inserted(data.into())
-                } else {
-                    State::Replaced(data.into())
-                },
-            });
-
-            // Keep initial data on right side of part
-            if range.end < part_to_split.end {
-                new_parts.push(Span {
-                    start: range.end,
-                    end: part_to_split.end,
-                    data: State::Initial,
+        // Reject if the change ends after the next one starts,
+        // or if this is an insert and there's already an insert there.
+        if let Some(after) = self.parts.get(ins_point) {
+            if incoming.range.end > after.range.start || incoming.range == after.range {
+                return Err(Error::AlreadyReplaced {
+                    is_identical: incoming == *after,
+                    range: incoming.range,
                 });
             }
+        }
 
-            // Following parts
-            if let Some(ps) = self.parts.get(index_of_part_to_split + 1..) {
-                new_parts.extend_from_slice(ps);
-            }
-
-            new_parts
-        };
-
-        self.parts = new_parts;
-
+        self.parts.insert(ins_point, incoming);
         Ok(())
     }
 }
@@ -263,6 +255,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::reversed_empty_ranges)]
     fn replace_invalid_range() {
         let mut d = Data::new(b"foo!");
 
@@ -277,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_overlapping_stuff_errs() {
+    fn replace_same_range_diff_data() {
         let mut d = Data::new(b"foo bar baz");
 
         d.replace_range(4..7, b"lol").unwrap();
@@ -285,7 +278,26 @@ mod tests {
 
         assert!(matches!(
             d.replace_range(4..7, b"lol2").unwrap_err(),
-            Error::AlreadyReplaced,
+            Error::AlreadyReplaced {
+                is_identical: false,
+                ..
+            },
+        ));
+    }
+
+    #[test]
+    fn replace_same_range_same_data() {
+        let mut d = Data::new(b"foo bar baz");
+
+        d.replace_range(4..7, b"lol").unwrap();
+        assert_eq!("foo lol baz", str(&d.to_vec()));
+
+        assert!(matches!(
+            d.replace_range(4..7, b"lol").unwrap_err(),
+            Error::AlreadyReplaced {
+                is_identical: true,
+                ..
+            },
         ));
     }
 
@@ -299,11 +311,48 @@ mod tests {
     }
 
     #[test]
-    fn replace_same_twice() {
+    fn insert_same_twice() {
         let mut d = Data::new(b"foo");
-        d.replace_range(0..1, b"b").unwrap();
-        d.replace_range(0..1, b"b").unwrap();
-        assert_eq!("boo", str(&d.to_vec()));
+        d.replace_range(1..1, b"b").unwrap();
+        assert_eq!("fboo", str(&d.to_vec()));
+        assert!(matches!(
+            d.replace_range(1..1, b"b").unwrap_err(),
+            Error::AlreadyReplaced {
+                is_identical: true,
+                ..
+            },
+        ));
+        assert_eq!("fboo", str(&d.to_vec()));
+    }
+
+    #[test]
+    fn commit_restore() {
+        let mut d = Data::new(b", ");
+        assert_eq!(", ", str(&d.to_vec()));
+
+        d.replace_range(2..2, b"world").unwrap();
+        d.replace_range(0..0, b"hello").unwrap();
+        assert_eq!("hello, world", str(&d.to_vec()));
+
+        d.restore();
+        assert_eq!(", ", str(&d.to_vec()));
+
+        d.commit();
+        assert_eq!(", ", str(&d.to_vec()));
+
+        d.replace_range(2..2, b"world").unwrap();
+        assert_eq!(", world", str(&d.to_vec()));
+        d.commit();
+        assert_eq!(", world", str(&d.to_vec()));
+        d.restore();
+        assert_eq!(", world", str(&d.to_vec()));
+
+        d.replace_range(0..0, b"hello").unwrap();
+        assert_eq!("hello, world", str(&d.to_vec()));
+        d.commit();
+        assert_eq!("hello, world", str(&d.to_vec()));
+        d.restore();
+        assert_eq!("hello, world", str(&d.to_vec()));
     }
 
     proptest! {

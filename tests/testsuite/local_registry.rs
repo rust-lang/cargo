@@ -1,9 +1,11 @@
 //! Tests for local-registry sources.
 
-use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{registry_path, Package};
-use cargo_test_support::{basic_manifest, project, t};
 use std::fs;
+
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{registry_path, Package};
+use cargo_test_support::{basic_manifest, project, str, t};
 
 fn setup() {
     let root = paths::root();
@@ -50,17 +52,21 @@ fn simple() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[UNPACKING] bar v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     p.cargo("test").run();
 }
 
@@ -93,13 +99,12 @@ fn not_found() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] no matching package named `baz` found
-location searched: registry `crates-io`
-required by package `foo v0.0.1 ([..]/foo)`
-",
-        )
+location searched: `[ROOT]/registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.1 ([ROOT]/foo)`
+
+"#]])
         .run();
 }
 
@@ -135,11 +140,10 @@ fn depend_on_yanked() {
         .publish();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -173,15 +177,14 @@ fn multiple_versions() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[UNPACKING] bar v0.1.0 ([..])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] bar v0.1.0 (registry `[ROOT]/registry`)
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     Package::new("bar", "0.2.0")
@@ -190,7 +193,11 @@ fn multiple_versions() {
         .publish();
 
     p.cargo("update")
-        .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v0.1.0 -> v0.2.0
+
+"#]])
         .run();
 }
 
@@ -235,16 +242,18 @@ fn multiple_names() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[LOCKING] 3 packages
-[UNPACKING] [..]
-[UNPACKING] [..]
-[CHECKING] [..]
-[CHECKING] [..]
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
+[UNPACKING] baz v0.1.0 (registry `[ROOT]/registry`)
+[CHECKING] bar v0.0.1
+[CHECKING] baz v0.1.0
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -291,17 +300,16 @@ fn interdependent() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[LOCKING] 3 packages
-[UNPACKING] [..]
-[UNPACKING] [..]
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
+[UNPACKING] baz v0.1.0 (registry `[ROOT]/registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] baz v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -362,17 +370,16 @@ fn path_dep_rewritten() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[LOCKING] 3 packages
-[UNPACKING] [..]
-[UNPACKING] [..]
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
+[UNPACKING] baz v0.1.0 (registry `[ROOT]/registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] baz v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -409,9 +416,8 @@ fn invalid_dir_bad() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 [..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -424,8 +430,8 @@ Caused by:
 
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -472,8 +478,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] checksum for `bar v0.0.1` changed between lock files
 
 this could be indicative of a few possible errors:
@@ -484,8 +489,8 @@ this could be indicative of a few possible errors:
 
 unable to verify that `bar v0.0.1` is the same as when the lockfile was generated
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -530,16 +535,20 @@ fn crates_io_registry_url_is_optional() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[LOCKING] 2 packages
-[UNPACKING] bar v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     p.cargo("test").run();
 }

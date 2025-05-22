@@ -1,297 +1,20 @@
-use std::io::IsTerminal;
-
 use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
 use cargo::util::GlobalContext;
-use cargo_util::is_ci;
 
 use resolver_tests::{
-    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_id,
-    pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_global_context, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
+    helpers::{
+        assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg,
+        pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry, ToDep, ToPkgId,
+    },
+    pkg, resolve, resolve_with_global_context,
 };
-
-use proptest::prelude::*;
-
-// NOTE: proptest is a form of fuzz testing. It generates random input and makes sure that
-// certain universal truths are upheld. Therefore, it can pass when there is a problem,
-// but if it fails then there really is something wrong. When testing something as
-// complicated as the resolver, the problems can be very subtle and hard to generate.
-// We have had a history of these tests only failing on PRs long after a bug is introduced.
-// If you have one of these test fail please report it on #6258,
-// and if you did not change the resolver then feel free to retry without concern.
-proptest! {
-    #![proptest_config(ProptestConfig {
-        max_shrink_iters:
-            if is_ci() || !std::io::stderr().is_terminal() {
-                // This attempts to make sure that CI will fail fast,
-                0
-            } else {
-                // but that local builds will give a small clear test case.
-                u32::MAX
-            },
-        result_cache: prop::test_runner::basic_result_cache,
-        .. ProptestConfig::default()
-    })]
-
-    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
-    #[test]
-    fn prop_passes_validation(
-        PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
-    )  {
-        let reg = registry(input.clone());
-        let sat_resolve = SatResolve::new(&reg);
-        // there is only a small chance that any one
-        // crate will be interesting.
-        // So we try some of the most complicated.
-        for this in input.iter().rev().take(20) {
-            let _ = resolve_and_validated(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-                Some(sat_resolve.clone()),
-            );
-        }
-    }
-
-    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
-    #[test]
-    fn prop_minimum_version_errors_the_same(
-            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
-    ) {
-        let mut gctx = GlobalContext::default().unwrap();
-        gctx.nightly_features_allowed = true;
-        gctx
-            .configure(
-                1,
-                false,
-                None,
-                false,
-                false,
-                false,
-                &None,
-                &["minimal-versions".to_string()],
-                &[],
-            )
-            .unwrap();
-
-        let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
-        // So we try some of the most complicated.
-        for this in input.iter().rev().take(10) {
-            // minimal-versions change what order the candidates
-            // are tried but not the existence of a solution
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
-
-            let mres = resolve_with_global_context(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-                &gctx,
-            );
-
-            prop_assert_eq!(
-                res.is_ok(),
-                mres.is_ok(),
-                "minimal-versions and regular resolver disagree about whether `{} = \"={}\"` can resolve",
-                this.name(),
-                this.version()
-            )
-        }
-    }
-
-    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
-    #[test]
-    fn prop_direct_minimum_version_error_implications(
-            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
-    ) {
-        let mut gctx = GlobalContext::default().unwrap();
-        gctx.nightly_features_allowed = true;
-        gctx
-            .configure(
-                1,
-                false,
-                None,
-                false,
-                false,
-                false,
-                &None,
-                &["direct-minimal-versions".to_string()],
-                &[],
-            )
-            .unwrap();
-
-        let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
-        // So we try some of the most complicated.
-        for this in input.iter().rev().take(10) {
-            // direct-minimal-versions reduces the number of available solutions, so we verify that
-            // we do not come up with solutions maximal versions does not
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
-
-            let mres = resolve_with_global_context(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-                &gctx,
-            );
-
-            if res.is_err() {
-                prop_assert!(
-                    mres.is_err(),
-                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
-                    this.name(),
-                    this.version()
-                )
-            }
-            if mres.is_ok() {
-                prop_assert!(
-                    res.is_ok(),
-                    "direct-minimal-versions should not have more solutions than the regular, maximal resolver but found one when resolving `{} = \"={}\"`",
-                    this.name(),
-                    this.version()
-                )
-            }
-        }
-    }
-
-    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
-    #[test]
-    fn prop_removing_a_dep_cant_break(
-            PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-            indexes_to_remove in prop::collection::vec((any::<prop::sample::Index>(), any::<prop::sample::Index>()), ..10)
-    ) {
-        let reg = registry(input.clone());
-        let mut removed_input = input.clone();
-        for (summary_idx, dep_idx) in indexes_to_remove {
-            if !removed_input.is_empty() {
-                let summary_idx = summary_idx.index(removed_input.len());
-                let deps = removed_input[summary_idx].dependencies();
-                if !deps.is_empty() {
-                    let new = remove_dep(&removed_input[summary_idx], dep_idx.index(deps.len()));
-                    removed_input[summary_idx] = new;
-                }
-            }
-        }
-        let removed_reg = registry(removed_input);
-        // there is only a small chance that any one
-        // crate will be interesting.
-        // So we try some of the most complicated.
-        for this in input.iter().rev().take(10) {
-            if resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            ).is_ok() {
-                prop_assert!(
-                    resolve(
-                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                        &removed_reg,
-                    ).is_ok(),
-                    "full index worked for `{} = \"={}\"` but removing some deps broke it!",
-                    this.name(),
-                    this.version(),
-                )
-            }
-        }
-    }
-
-    /// NOTE: if you think this test has failed spuriously see the note at the top of this macro.
-    #[test]
-    fn prop_limited_independence_of_irrelevant_alternatives(
-        PrettyPrintRegistry(input) in registry_strategy(50, 20, 60),
-        indexes_to_unpublish in prop::collection::vec(any::<prop::sample::Index>(), ..10)
-    )  {
-        let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
-        // So we try some of the most complicated.
-        for this in input.iter().rev().take(10) {
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
-
-            match res {
-                Ok(r) => {
-                    // If resolution was successful, then unpublishing a version of a crate
-                    // that was not selected should not change that.
-                    let not_selected: Vec<_> = input
-                        .iter()
-                        .cloned()
-                        .filter(|x| !r.contains(&x.package_id()))
-                        .collect();
-                    if !not_selected.is_empty() {
-                        let indexes_to_unpublish: Vec<_> = indexes_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
-
-                        let new_reg = registry(
-                            input
-                                .iter()
-                                .cloned()
-                                .filter(|x| !indexes_to_unpublish.contains(&x))
-                                .collect(),
-                        );
-
-                        let res = resolve(
-                            vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                            &new_reg,
-                        );
-
-                        // Note: that we can not assert that the two `res` are identical
-                        // as the resolver does depend on irrelevant alternatives.
-                        // It uses how constrained a dependency requirement is
-                        // to determine what order to evaluate requirements.
-
-                        prop_assert!(
-                            res.is_ok(),
-                            "unpublishing {:?} stopped `{} = \"={}\"` from working",
-                            indexes_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
-                            this.name(),
-                            this.version()
-                        )
-                    }
-                }
-
-                Err(_) => {
-                    // If resolution was unsuccessful, then it should stay unsuccessful
-                    // even if any version of a crate is unpublished.
-                    let indexes_to_unpublish: Vec<_> = indexes_to_unpublish.iter().map(|x| x.get(&input)).collect();
-
-                    let new_reg = registry(
-                        input
-                            .iter()
-                            .cloned()
-                            .filter(|x| !indexes_to_unpublish.contains(&x))
-                            .collect(),
-                    );
-
-                    let res = resolve(
-                        vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                        &new_reg,
-                    );
-
-                    prop_assert!(
-                        res.is_err(),
-                        "full index did not work for `{} = \"={}\"` but unpublishing {:?} fixed it!",
-                        this.name(),
-                        this.version(),
-                        indexes_to_unpublish.iter().map(|x| x.package_id()).collect::<Vec<_>>(),
-                    )
-                }
-            }
-        }
-    }
-}
 
 #[test]
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
-    "".to_dep();
+    dep("");
 }
 
 #[test]
@@ -460,7 +183,10 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         &reg,
         &gctx,
     )
-    .unwrap();
+    .unwrap()
+    .into_iter()
+    .map(|(pkg, _)| pkg)
+    .collect::<Vec<_>>();
 
     assert_contains(
         &res,
@@ -659,8 +385,8 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
         let vsn = format!("1.0.{}", i);
         reglist.push(
             pkg!(("bar", vsn.clone()) => [dep_req("backtrack_trap1", "1.0.2"),
-                                                   dep_req("backtrack_trap2", "1.0.2"),
-                                                   dep_req("constrained", "1.0.1")]),
+                                          dep_req("backtrack_trap2", "1.0.2"),
+                                          dep_req("constrained", "1.0.1")]),
         );
         reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
         reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
@@ -1212,115 +938,47 @@ fn large_conflict_cache() {
 }
 
 #[test]
-fn off_by_one_bug() {
-    let input = vec![
-        pkg!(("A-sys", "0.0.1")),
-        pkg!(("A-sys", "0.0.4")),
-        pkg!(("A-sys", "0.0.6")),
-        pkg!(("A-sys", "0.0.7")),
-        pkg!(("NA", "0.0.0") => [dep_req("A-sys", "<= 0.0.5"),]),
-        pkg!(("NA", "0.0.1") => [dep_req("A-sys", ">= 0.0.6, <= 0.0.8"),]),
-        pkg!(("a", "0.0.1")),
-        pkg!(("a", "0.0.2")),
-        pkg!(("aa", "0.0.0") => [dep_req("A-sys", ">= 0.0.4, <= 0.0.6"),dep_req("NA", "<= 0.0.0"),]),
-        pkg!(("f", "0.0.3") => [dep("NA"),dep_req("a", "<= 0.0.2"),dep("aa"),]),
-    ];
+fn resolving_slow_case_missing_feature() {
+    let mut reg = Vec::new();
 
-    let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("f")], &reg, None);
-}
+    const LAST_CRATE_VERSION_COUNT: usize = 50;
 
-#[test]
-fn conflict_store_bug() {
-    let input = vec![
-        pkg!(("A", "0.0.3")),
-        pkg!(("A", "0.0.5")),
-        pkg!(("A", "0.0.9") => [dep("bad"),]),
-        pkg!(("A", "0.0.10") => [dep("bad"),]),
-        pkg!(("L-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("L-sys", "0.0.5")),
-        pkg!(("R", "0.0.4") => [
-            dep_req("L-sys", "= 0.0.5"),
-        ]),
-        pkg!(("R", "0.0.6")),
-        pkg!(("a-sys", "0.0.5")),
-        pkg!(("a-sys", "0.0.11")),
-        pkg!(("c", "0.0.12") => [
-            dep_req("R", ">= 0.0.3, <= 0.0.4"),
-        ]),
-        pkg!(("c", "0.0.13") => [
-            dep_req("a-sys", ">= 0.0.8, <= 0.0.11"),
-        ]),
-        pkg!(("c0", "0.0.6") => [
-            dep_req("L-sys", "<= 0.0.2"),
-        ]),
-        pkg!(("c0", "0.0.10") => [
-            dep_req("A", ">= 0.0.9, <= 0.0.10"),
-            dep_req("a-sys", "= 0.0.5"),
-        ]),
-        pkg!("j" => [
-            dep_req("A", ">= 0.0.3, <= 0.0.5"),
-            dep_req("R", ">=0.0.4, <= 0.0.6"),
-            dep_req("c", ">= 0.0.9"),
-            dep_req("c0", ">= 0.0.6"),
-        ]),
-    ];
+    // increase in resolve time is at least cubic over `INTERMEDIATE_CRATES_VERSION_COUNT`.
+    // it should be `>= LAST_CRATE_VERSION_COUNT` to reproduce slowdown.
+    const INTERMEDIATE_CRATES_VERSION_COUNT: usize = LAST_CRATE_VERSION_COUNT + 5;
 
-    let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("j")], &reg, None);
-}
+    // should be `>= 2` to reproduce slowdown
+    const TRANSITIVE_CRATES_COUNT: usize = 3;
 
-#[test]
-fn conflict_store_more_then_one_match() {
-    let input = vec![
-        pkg!(("A", "0.0.0")),
-        pkg!(("A", "0.0.1")),
-        pkg!(("A-sys", "0.0.0")),
-        pkg!(("A-sys", "0.0.1")),
-        pkg!(("A-sys", "0.0.2")),
-        pkg!(("A-sys", "0.0.3")),
-        pkg!(("A-sys", "0.0.12")),
-        pkg!(("A-sys", "0.0.16")),
-        pkg!(("B-sys", "0.0.0")),
-        pkg!(("B-sys", "0.0.1")),
-        pkg!(("B-sys", "0.0.2") => [dep_req("A-sys", "= 0.0.12"),]),
-        pkg!(("BA-sys", "0.0.0") => [dep_req("A-sys","= 0.0.16"),]),
-        pkg!(("BA-sys", "0.0.1") => [dep("bad"),]),
-        pkg!(("BA-sys", "0.0.2") => [dep("bad"),]),
-        pkg!("nA" => [
-            dep("A"),
-            dep_req("A-sys", "<= 0.0.3"),
-            dep("B-sys"),
-            dep("BA-sys"),
-        ]),
-    ];
-    let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("nA")], &reg, None);
-}
+    reg.push(pkg_dep_with(("last", "1.0.0"), vec![], &[("f", &[])]));
+    for v in 1..LAST_CRATE_VERSION_COUNT {
+        reg.push(pkg(("last", format!("1.0.{v}"))));
+    }
 
-#[test]
-fn bad_lockfile_from_8249() {
-    let input = vec![
-        pkg!(("a-sys", "0.2.0")),
-        pkg!(("a-sys", "0.1.0")),
-        pkg!(("b", "0.1.0") => [
-            dep_req("a-sys", "0.1"), // should be optional: true, but not deeded for now
-        ]),
-        pkg!(("c", "1.0.0") => [
-            dep_req("b", "=0.1.0"),
-        ]),
-        pkg!("foo" => [
-            dep_req("a-sys", "=0.2.0"),
-            {
-                let mut b = dep_req("b", "=0.1.0");
-                b.set_features(vec!["a-sys"]);
-                b
-            },
-            dep_req("c", "=1.0.0"),
-        ]),
-    ];
-    let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("foo")], &reg, None);
+    reg.push(pkg_dep(
+        ("dep", "1.0.0"),
+        vec![
+            dep("last"), // <-- needed to reproduce slowdown
+            dep_req("intermediate-1", "1.0.0"),
+        ],
+    ));
+
+    for n in 0..INTERMEDIATE_CRATES_VERSION_COUNT {
+        let version = format!("1.0.{n}");
+        for c in 1..TRANSITIVE_CRATES_COUNT {
+            reg.push(pkg_dep(
+                (format!("intermediate-{c}"), &version),
+                vec![dep_req(&format!("intermediate-{}", c + 1), &version)],
+            ));
+        }
+        reg.push(pkg_dep(
+            (format!("intermediate-{TRANSITIVE_CRATES_COUNT}"), &version),
+            vec![dep_req("last", "1.0.0").with(&["f"])],
+        ));
+    }
+
+    let deps = vec![dep("dep")];
+    let _ = resolve(deps, &reg);
 }
 
 #[test]

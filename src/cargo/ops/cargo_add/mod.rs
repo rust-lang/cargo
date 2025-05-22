@@ -12,6 +12,7 @@ use std::str::FromStr;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
+use cargo_util_schemas::manifest::PathBaseName;
 use cargo_util_schemas::manifest::RustVersion;
 use indexmap::IndexSet;
 use itertools::Itertools;
@@ -20,6 +21,7 @@ use toml_edit::Item as TomlItem;
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
 use crate::core::FeatureValue;
+use crate::core::Features;
 use crate::core::Package;
 use crate::core::Registry;
 use crate::core::Shell;
@@ -27,19 +29,22 @@ use crate::core::Summary;
 use crate::core::Workspace;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::edit_distance;
 use crate::util::style;
+use crate::util::toml::lookup_path_base;
 use crate::util::toml_mut::dependency::Dependency;
 use crate::util::toml_mut::dependency::GitSource;
 use crate::util::toml_mut::dependency::MaybeWorkspace;
 use crate::util::toml_mut::dependency::PathSource;
 use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
-use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate_spec::CrateSpec;
+
+const MAX_FEATURE_PRINTS: usize = 30;
 
 /// Information on what dependencies should be added
 #[derive(Clone, Debug)]
@@ -55,7 +60,7 @@ pub struct AddOptions<'a> {
     /// Act as if dependencies will be added
     pub dry_run: bool,
     /// Whether the minimum supported Rust version should be considered during resolution
-    pub honor_rust_version: bool,
+    pub honor_rust_version: Option<bool>,
 }
 
 /// Add dependencies to a manifest
@@ -78,7 +83,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         );
     }
 
-    let mut registry = PackageRegistry::new(options.gctx)?;
+    let mut registry = workspace.package_registry()?;
 
     let deps = {
         let _lock = options
@@ -108,10 +113,14 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         .map(TomlItem::as_table)
         .map_or(true, |table_option| {
             table_option.map_or(true, |table| {
-                is_sorted(table.get_values().iter_mut().map(|(key, _)| {
-                    // get_values key paths always have at least one key.
-                    key.remove(0)
-                }))
+                table
+                    .get_values()
+                    .iter_mut()
+                    .map(|(key, _)| {
+                        // get_values key paths always have at least one key.
+                        key.remove(0)
+                    })
+                    .is_sorted()
             })
         });
     for dep in deps {
@@ -151,45 +160,74 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             activated.retain(|f| !unknown_features.contains(f));
 
             let mut message = format!(
-                "unrecognized feature{} for crate {}: {}\n",
+                "unrecognized feature{} for crate {}: {}",
                 if unknown_features.len() == 1 { "" } else { "s" },
                 dep.name,
                 unknown_features.iter().format(", "),
             );
             if activated.is_empty() && deactivated.is_empty() {
-                write!(message, "no features available for crate {}", dep.name)?;
+                write!(message, "\n\nno features available for crate {}", dep.name)?;
             } else {
-                if !deactivated.is_empty() {
-                    writeln!(
-                        message,
-                        "disabled features:\n    {}",
-                        deactivated
-                            .iter()
-                            .map(|s| s.to_string())
-                            .coalesce(|x, y| if x.len() + y.len() < 78 {
-                                Ok(format!("{x}, {y}"))
-                            } else {
-                                Err((x, y))
-                            })
-                            .into_iter()
-                            .format("\n    ")
-                    )?
+                let mut suggested = false;
+                for unknown_feature in &unknown_features {
+                    let suggestion = edit_distance::closest_msg(
+                        unknown_feature,
+                        deactivated.iter().chain(activated.iter()),
+                        |dep| *dep,
+                        "feature",
+                    );
+                    if !suggestion.is_empty() {
+                        write!(message, "{suggestion}")?;
+                        suggested = true;
+                    }
                 }
-                if !activated.is_empty() {
-                    writeln!(
-                        message,
-                        "enabled features:\n    {}",
-                        activated
-                            .iter()
-                            .map(|s| s.to_string())
-                            .coalesce(|x, y| if x.len() + y.len() < 78 {
-                                Ok(format!("{x}, {y}"))
-                            } else {
-                                Err((x, y))
-                            })
-                            .into_iter()
-                            .format("\n    ")
-                    )?
+                if !deactivated.is_empty() && !suggested {
+                    if deactivated.len() <= MAX_FEATURE_PRINTS {
+                        write!(
+                            message,
+                            "\n\ndisabled features:\n    {}",
+                            deactivated
+                                .iter()
+                                .map(|s| s.to_string())
+                                .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                    Ok(format!("{x}, {y}"))
+                                } else {
+                                    Err((x, y))
+                                })
+                                .into_iter()
+                                .format("\n    ")
+                        )?;
+                    } else {
+                        write!(
+                            message,
+                            "\n\n{} disabled features available",
+                            deactivated.len()
+                        )?;
+                    }
+                }
+                if !activated.is_empty() && !suggested {
+                    if deactivated.len() + activated.len() <= MAX_FEATURE_PRINTS {
+                        writeln!(
+                            message,
+                            "\n\nenabled features:\n    {}",
+                            activated
+                                .iter()
+                                .map(|s| s.to_string())
+                                .coalesce(|x, y| if x.len() + y.len() < 78 {
+                                    Ok(format!("{x}, {y}"))
+                                } else {
+                                    Err((x, y))
+                                })
+                                .into_iter()
+                                .format("\n    ")
+                        )?;
+                    } else {
+                        writeln!(
+                            message,
+                            "\n\n{} enabled features available",
+                            activated.len()
+                        )?;
+                    }
                 }
             }
             anyhow::bail!(message.trim().to_owned());
@@ -197,7 +235,13 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 
         print_dep_table_msg(&mut options.gctx.shell(), &dep)?;
 
-        manifest.insert_into_table(&dep_table, &dep)?;
+        manifest.insert_into_table(
+            &dep_table,
+            &dep,
+            workspace.gctx(),
+            workspace.root(),
+            options.spec.manifest().unstable_features(),
+        )?;
         if dep.optional == Some(true) {
             let is_namespaced_features_supported =
                 check_rust_version_for_optional_dependency(options.spec.rust_version())?;
@@ -229,11 +273,11 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         }
     }
 
-    if options.gctx.locked() {
+    if let Some(locked_flag) = options.gctx.locked_flag() {
         let new_raw_manifest = manifest.to_string();
         if original_raw_manifest != new_raw_manifest {
             anyhow::bail!(
-                "the manifest file {} needs to be updated but --locked was passed to prevent this",
+                "the manifest file {} needs to be updated but {locked_flag} was passed to prevent this",
                 manifest.path.display()
             );
         }
@@ -253,7 +297,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 pub struct DepOp {
     /// Describes the crate
     pub crate_spec: Option<String>,
-    /// Dependency key, overriding the package name in crate_spec
+    /// Dependency key, overriding the package name in `crate_spec`
     pub rename: Option<String>,
 
     /// Feature flags to activate
@@ -270,8 +314,11 @@ pub struct DepOp {
     /// Registry for looking up dependency version
     pub registry: Option<String>,
 
-    /// Git repo for dependency
+    /// File system path for dependency
     pub path: Option<String>,
+    /// Specify a named base for a path dependency
+    pub base: Option<String>,
+
     /// Git repo for dependency
     pub git: Option<String>,
     /// Specify an alternative git branch
@@ -288,7 +335,7 @@ fn resolve_dependency(
     ws: &Workspace<'_>,
     spec: &Package,
     section: &DepTable,
-    honor_rust_version: bool,
+    honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
@@ -332,7 +379,19 @@ fn resolve_dependency(
         selected
     } else if let Some(raw_path) = &arg.path {
         let path = paths::normalize_path(&std::env::current_dir()?.join(raw_path));
-        let src = PathSource::new(&path);
+        let mut src = PathSource::new(path);
+        src.base = arg.base.clone();
+
+        if let Some(base) = &arg.base {
+            // Validate that the base is valid.
+            let workspace_root = || Ok(ws.root_manifest().parent().unwrap());
+            lookup_path_base(
+                &PathBaseName::new(base.clone())?,
+                &gctx,
+                &workspace_root,
+                spec.manifest().unstable_features(),
+            )?;
+        }
 
         let selected = if let Some(crate_spec) = &crate_spec {
             if let Some(v) = crate_spec.version_req() {
@@ -349,12 +408,13 @@ fn resolve_dependency(
             }
             selected
         } else {
-            let source = crate::sources::PathSource::new(&path, src.source_id()?, gctx);
-            let package = source
-                .read_packages()?
-                .pop()
-                .expect("read_packages errors when no packages");
-            Dependency::from(package.summary())
+            let mut source = crate::sources::PathSource::new(&src.path, src.source_id()?, gctx);
+            let package = source.root_package()?;
+            let mut selected = Dependency::from(package.summary());
+            if let Some(Source::Path(selected_src)) = &mut selected.source {
+                selected_src.base = src.base;
+            }
+            selected
         };
         selected
     } else if let Some(crate_spec) = &crate_spec {
@@ -364,7 +424,16 @@ fn resolve_dependency(
     };
     selected_dep = populate_dependency(selected_dep, arg);
 
-    let old_dep = get_existing_dependency(manifest, selected_dep.toml_key(), section)?;
+    let lookup = |dep_key: &_| {
+        get_existing_dependency(
+            ws,
+            spec.manifest().unstable_features(),
+            manifest,
+            dep_key,
+            section,
+        )
+    };
+    let old_dep = fuzzy_lookup(&mut selected_dep, lookup, gctx)?;
     let mut dependency = if let Some(mut old_dep) = old_dep.clone() {
         if old_dep.name != selected_dep.name {
             // Assuming most existing keys are not relevant when the package changes
@@ -386,7 +455,10 @@ fn resolve_dependency(
     if dependency.source().is_none() {
         // Checking for a workspace dependency happens first since a member could be specified
         // in the workspace dependencies table as a dependency
-        if let Some(_dep) = find_workspace_dep(dependency.toml_key(), ws.root_manifest()).ok() {
+        let lookup = |toml_key: &_| {
+            Ok(find_workspace_dep(toml_key, ws, ws.root_manifest(), ws.unstable_features()).ok())
+        };
+        if let Some(_dep) = fuzzy_lookup(&mut dependency, lookup, gctx)? {
             dependency = dependency.set_source(WorkspaceSource::new());
         } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
             // Only special-case workspaces when the user doesn't provide any extra
@@ -400,14 +472,8 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(src);
         } else {
-            let latest = get_latest_dependency(
-                spec,
-                &dependency,
-                false,
-                honor_rust_version,
-                gctx,
-                registry,
-            )?;
+            let latest =
+                get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
 
             if dependency.name != latest.name {
                 gctx.shell().warn(format!(
@@ -438,7 +504,12 @@ fn resolve_dependency(
     let query = dependency.query(gctx)?;
     let query = match query {
         MaybeWorkspace::Workspace(_workspace) => {
-            let dep = find_workspace_dep(dependency.toml_key(), ws.root_manifest())?;
+            let dep = find_workspace_dep(
+                dependency.toml_key(),
+                ws,
+                ws.root_manifest(),
+                ws.unstable_features(),
+            )?;
             if let Some(features) = dep.features.clone() {
                 dependency = dependency.set_inherited_features(features);
             }
@@ -456,6 +527,42 @@ fn resolve_dependency(
     let dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
+}
+
+fn fuzzy_lookup(
+    dependency: &mut Dependency,
+    lookup: impl Fn(&str) -> CargoResult<Option<Dependency>>,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<Dependency>> {
+    if let Some(rename) = dependency.rename() {
+        // Manually implement `toml_key` to restrict fuzzy lookups to only package names to mirror `PackageRegistry::query()`
+        return lookup(rename);
+    }
+
+    for name_permutation in [
+        dependency.name.clone(),
+        dependency.name.replace('-', "_"),
+        dependency.name.replace('_', "-"),
+    ] {
+        let Some(dep) = lookup(&name_permutation)? else {
+            continue;
+        };
+
+        if dependency.name != name_permutation {
+            // Mirror the fuzzy matching policy of `PackageRegistry::query()`
+            if !matches!(dep.source, Some(Source::Registry(_))) {
+                continue;
+            }
+            gctx.shell().warn(format!(
+                "translating `{}` to `{}`",
+                dependency.name, &name_permutation,
+            ))?;
+            dependency.name = name_permutation;
+        }
+        return Ok(Some(dep));
+    }
+
+    Ok(None)
 }
 
 /// When { workspace = true } you cannot define other keys that configure
@@ -493,7 +600,7 @@ fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
 }
 
 /// When the `--optional` option is added using `cargo add`, we need to
-/// check the current rust-version. As the `dep:` syntax is only avaliable
+/// check the current rust-version. As the `dep:` syntax is only available
 /// starting with Rust 1.60.0
 ///
 /// `true` means that the rust-version is None or the rust-version is higher
@@ -517,6 +624,8 @@ fn check_rust_version_for_optional_dependency(
 /// If it doesn't exist but exists in another table, let's use that as most likely users
 /// want to use the same version across all tables unless they are renaming.
 fn get_existing_dependency(
+    ws: &Workspace<'_>,
+    unstable_features: &Features,
     manifest: &LocalManifest,
     dep_key: &str,
     section: &DepTable,
@@ -531,7 +640,7 @@ fn get_existing_dependency(
     }
 
     let mut possible: Vec<_> = manifest
-        .get_dependency_versions(dep_key)
+        .get_dependency_versions(dep_key, ws, unstable_features)
         .map(|(path, dep)| {
             let key = if path == *section {
                 (Key::Existing, true)
@@ -577,8 +686,7 @@ fn get_existing_dependency(
 fn get_latest_dependency(
     spec: &Package,
     dependency: &Dependency,
-    _flag_allow_prerelease: bool,
-    honor_rust_version: bool,
+    honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
@@ -615,7 +723,7 @@ fn get_latest_dependency(
                 )
             })?;
 
-            if gctx.cli_unstable().msrv_policy && honor_rust_version {
+            if honor_rust_version.unwrap_or(true) {
                 let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()
@@ -747,6 +855,11 @@ fn select_package(
                     if let Some(reg_name) = dependency.registry.as_deref() {
                         dep = dep.set_registry(reg_name);
                     }
+                    if let Some(Source::Path(PathSource { base, .. })) = dependency.source() {
+                        if let Some(Source::Path(dep_src)) = &mut dep.source {
+                            dep_src.base = base.clone();
+                        }
+                    }
                     Ok(dep)
                 }
                 _ => {
@@ -839,7 +952,7 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
 /// Track presentation-layer information with the editable representation of a `[dependencies]`
 /// entry (Dependency)
 pub struct DependencyUI {
-    /// Editable representation of a `[depednencies]` entry
+    /// Editable representation of a `[dependencies]` entry
     dep: Dependency,
     /// The version of the crate that we pulled `available_features` from
     available_version: Option<semver::Version>,
@@ -900,7 +1013,7 @@ impl DependencyUI {
                     .map(|s| s.as_str()),
             );
         }
-        activated.remove("default");
+        activated.swap_remove("default");
         activated.sort();
         let mut deactivated = self
             .available_features
@@ -1033,7 +1146,6 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
         writeln!(stderr, "{prefix}Features{suffix}:")?;
 
-        const MAX_FEATURE_PRINTS: usize = 30;
         let total_activated = activated.len();
         let total_deactivated = deactivated.len();
 
@@ -1078,7 +1190,12 @@ fn format_features_version_suffix(dep: &DependencyUI) -> String {
     }
 }
 
-fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Dependency> {
+fn find_workspace_dep(
+    toml_key: &str,
+    ws: &Workspace<'_>,
+    root_manifest: &Path,
+    unstable_features: &Features,
+) -> CargoResult<Dependency> {
     let manifest = LocalManifest::try_new(root_manifest)?;
     let manifest = manifest
         .data
@@ -1095,11 +1212,17 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
         .context("could not find `dependencies` table in `workspace`")?
         .as_table_like()
         .context("could not make `dependencies` into a table")?;
-    let dep_item = dependencies.get(toml_key).context(format!(
-        "could not find {} in `workspace.dependencies`",
-        toml_key
-    ))?;
-    Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
+    let dep_item = dependencies
+        .get(toml_key)
+        .with_context(|| format!("could not find {toml_key} in `workspace.dependencies`"))?;
+    Dependency::from_toml(
+        ws.gctx(),
+        ws.root(),
+        root_manifest.parent().unwrap(),
+        unstable_features,
+        toml_key,
+        dep_item,
+    )
 }
 
 /// Convert a `semver::VersionReq` into a rendered `semver::Version` if all fields are fully

@@ -153,7 +153,7 @@ list of supported targets. This flag may be specified multiple times.</p>
 <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 <dt class="option-term" id="option-cargo-doc--r"><a class="option-anchor" href="#option-cargo-doc--r"></a><code>-r</code></dt>
@@ -165,11 +165,6 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 <dt class="option-term" id="option-cargo-doc---profile"><a class="option-anchor" href="#option-cargo-doc---profile"></a><code>--profile</code> <em>name</em></dt>
 <dd class="option-desc">Document with the given profile.
 See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
-
-
-<dt class="option-term" id="option-cargo-doc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-doc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Document the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
 
 
 <dt class="option-term" id="option-cargo-doc---timings=fmts"><a class="option-anchor" href="#option-cargo-doc---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
@@ -265,6 +260,10 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
 
 
+<dt class="option-term" id="option-cargo-doc---ignore-rust-version"><a class="option-anchor" href="#option-cargo-doc---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+
+
 <dt class="option-term" id="option-cargo-doc---locked"><a class="option-anchor" href="#option-cargo-doc---locked"></a><code>--locked</code></dt>
 <dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
@@ -292,6 +291,18 @@ offline.</p>
 
 <dt class="option-term" id="option-cargo-doc---frozen"><a class="option-anchor" href="#option-cargo-doc---frozen"></a><code>--frozen</code></dt>
 <dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+
+
+<dt class="option-term" id="option-cargo-doc---lockfile-path"><a class="option-anchor" href="#option-cargo-doc---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
+<code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
+either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
+This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
+<p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
+channel</a> and
+requires the <code>-Z unstable-options</code> flag to enable (see
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 </dl>
 

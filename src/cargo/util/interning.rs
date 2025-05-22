@@ -1,6 +1,7 @@
 use serde::{Serialize, Serializer};
 use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -13,7 +14,19 @@ use std::str;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 
-static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+pub static INTERNED_DEFAULT: InternedString = InternedString { inner: "default" };
+
+fn interned_storage() -> std::sync::MutexGuard<'static, HashSet<&'static str>> {
+    static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+    STRING_CACHE
+        .get_or_init(|| {
+            let mut out: HashSet<&'static str> = Default::default();
+            out.insert(INTERNED_DEFAULT.as_str());
+            Mutex::new(out)
+        })
+        .lock()
+        .unwrap()
+}
 
 #[derive(Clone, Copy)]
 pub struct InternedString {
@@ -34,7 +47,7 @@ impl<'a> From<&'a String> for InternedString {
 
 impl From<String> for InternedString {
     fn from(item: String) -> Self {
-        InternedString::new(&item)
+        InternedString::from_cow(item.into())
     }
 }
 
@@ -59,10 +72,14 @@ impl<'a> PartialEq<&'a str> for InternedString {
 impl Eq for InternedString {}
 
 impl InternedString {
-    pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CACHE.get_or_init(Default::default).lock().unwrap();
-        let s = cache.get(str).cloned().unwrap_or_else(|| {
-            let s = str.to_string().leak();
+    pub fn new(s: &str) -> InternedString {
+        InternedString::from_cow(s.into())
+    }
+
+    fn from_cow<'a>(cs: Cow<'a, str>) -> InternedString {
+        let mut cache = interned_storage();
+        let s = cache.get(cs.as_ref()).copied().unwrap_or_else(|| {
+            let s = cs.into_owned().leak();
             cache.insert(s);
             s
         });

@@ -1,4 +1,4 @@
-pub use self::dependency::Dependency;
+pub use self::dependency::{Dependency, SerializedDependency};
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};

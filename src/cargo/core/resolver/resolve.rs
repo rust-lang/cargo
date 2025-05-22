@@ -84,13 +84,14 @@ pub enum ResolveVersion {
     /// branch specifiers.
     ///
     /// * Introduced in 2020 in version 1.47.
-    /// * New lockfiles use V3 by default starting in 1.53.
+    /// * New lockfiles use V3 by default from in 1.53 to 1.82.
     V3,
-    /// SourceId URL serialization is aware of URL encoding. For example,
+    /// `SourceId` URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
     /// back and forth correctly.
     ///
     /// * Introduced in 2024 in version 1.78.
+    /// * New lockfiles use V4 by default starting in 1.83.
     V4,
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
@@ -107,7 +108,7 @@ impl ResolveVersion {
     /// Update this and the description of enum variants of [`ResolveVersion`]
     /// when we're changing the default lockfile version.
     fn default() -> ResolveVersion {
-        ResolveVersion::V3
+        ResolveVersion::V4
     }
 
     /// The maximum version of lockfile made into the stable channel.
@@ -125,28 +126,23 @@ impl ResolveVersion {
             return ResolveVersion::default();
         };
 
-        let rust_1_41 = PartialVersion {
-            major: 1,
-            minor: Some(41),
-            patch: None,
-            pre: None,
-            build: None,
-        }
-        .try_into()
-        .expect("PartialVersion 1.41");
-        let rust_1_53 = PartialVersion {
-            major: 1,
-            minor: Some(53),
-            patch: None,
-            pre: None,
-            build: None,
-        }
-        .try_into()
-        .expect("PartialVersion 1.53");
+        let rust = |major, minor| -> RustVersion {
+            PartialVersion {
+                major,
+                minor: Some(minor),
+                patch: None,
+                pre: None,
+                build: None,
+            }
+            .try_into()
+            .unwrap()
+        };
 
-        if rust_version >= &rust_1_53 {
+        if rust_version >= &rust(1, 83) {
+            ResolveVersion::V4
+        } else if rust_version >= &rust(1, 53) {
             ResolveVersion::V3
-        } else if rust_version >= &rust_1_41 {
+        } else if rust_version >= &rust(1, 41) {
             ResolveVersion::V2
         } else {
             ResolveVersion::V1
@@ -205,7 +201,7 @@ impl Resolve {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches(&mut self, patches: &[Summary]) {
+    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item = &'a Summary>) {
         for summary in patches {
             if !self.graph.contains(&summary.package_id()) {
                 self.unused_patches.push(summary.package_id())
@@ -324,6 +320,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter().cloned()
     }
 
+    pub fn len(&self) -> usize {
+        self.graph.len()
+    }
+
     pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
@@ -334,6 +334,19 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         pkg: PackageId,
     ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
+    }
+
+    // Only edges that are transitive, filtering out edges between a crate and its dev-dependency
+    // since that doesn't count for cycles.
+    pub fn transitive_deps_not_replaced(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, &Dependency)> {
+        self.graph.edges(&pkg).filter_map(|(id, deps)| {
+            deps.iter()
+                .find(|d| d.is_transitive())
+                .map(|transitive_dep| (*id, transitive_dep))
+        })
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {

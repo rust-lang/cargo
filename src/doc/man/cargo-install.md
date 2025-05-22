@@ -121,6 +121,10 @@ Filesystem path to local crate to install from.
 List all installed packages and their versions.
 {{/option}}
 
+{{#option "`-n`" "`--dry-run`" }}
+(unstable) Perform all checks without installing.
+{{/option}}
+
 {{#option "`-f`" "`--force`" }}
 Force overwriting existing crates or binaries. This can be used if a package
 has installed a binary with the same name as another package. This is also
@@ -180,8 +184,6 @@ See also the `--profile` option for choosing a specific profile by name.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -189,6 +191,8 @@ See also the `--profile` option for choosing a specific profile by name.
 ### Manifest Options
 
 {{#options}}
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
 {{/options}}
 

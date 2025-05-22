@@ -26,6 +26,22 @@ label = "O-windows"
 
 [shortcut]
 
+# Enable issue transfers within the org
+# Documentation at: https://forge.rust-lang.org/triagebot/transfer.html
+[transfer]
+
+# Prevents mentions in commits to avoid users being spammed
+[no-mentions]
+
+# Enable `@rustbot note` functionality
+# Documentation at: https://forge.rust-lang.org/triagebot/note.html
+[note]
+
+[merge-conflicts]
+remove = []
+add = ["S-waiting-on-author"]
+unless = ["S-blocked", "S-waiting-on-review"]
+
 [autolabel."S-waiting-on-review"]
 new_pr = true
 
@@ -53,7 +69,11 @@ trigger_files = [
 ]
 
 [autolabel."A-build-scripts"]
-trigger_files = ["src/cargo/core/compiler/custom_build.rs"]
+trigger_files = [
+  "crates/build-rs-test-lib/",
+  "crates/build-rs/",
+  "src/cargo/core/compiler/custom_build.rs",
+]
 
 [autolabel."A-cache-messages"]
 trigger_files = ["src/cargo/util/rustc.rs"]
@@ -130,7 +150,7 @@ trigger_files = ["src/cargo/util/flock.rs", "src/cargo/util/important_paths.rs"]
 trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
-trigger_files = ["src/cargo/sources/git/"]
+trigger_files = ["src/cargo/sources/git/", "src/cargo/ops/cargo_package/vcs.rs"]
 
 [autolabel."A-home"]
 trigger_files = ["crates/home/"]
@@ -265,10 +285,13 @@ trigger_files = [
 ]
 
 [autolabel."Command-generate-lockfile"]
-trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs", "src/cargo/ops/cargo_generate_lockfile.rs"]
+trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs"]
 
 [autolabel."Command-git-checkout"]
 trigger_files = ["src/bin/cargo/commands/git_checkout.rs"]
+
+[autolabel."Command-info"]
+trigger_files = ["src/bin/cargo/commands/info.rs", "src/cargo/ops/registry/info/"]
 
 [autolabel."Command-init"]
 trigger_files = ["src/bin/cargo/commands/init.rs"]
@@ -295,7 +318,7 @@ trigger_files = ["src/bin/cargo/commands/new.rs", "src/cargo/ops/cargo_new.rs"]
 trigger_files = ["src/bin/cargo/commands/owner.rs", "src/cargo/ops/registry/owner.rs"]
 
 [autolabel."Command-package"]
-trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package.rs"]
+trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package/"]
 
 [autolabel."Command-pkgid"]
 trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/cargo/ops/cargo_pkgid.rs"]
@@ -334,7 +357,7 @@ trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/"]
 trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/cargo/ops/cargo_uninstall.rs"]
 
 [autolabel."Command-update"]
-trigger_files = ["src/bin/cargo/commands/update.rs"]
+trigger_files = ["src/bin/cargo/commands/update.rs", "src/cargo/ops/cargo_update.rs"]
 
 [autolabel."Command-vendor"]
 trigger_files = ["src/bin/cargo/commands/vendor.rs", "src/cargo/ops/vendor.rs"]

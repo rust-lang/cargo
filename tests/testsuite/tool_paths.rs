@@ -1,6 +1,7 @@
 //! Tests for configuration values that point to programs.
 
-use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env, str};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -22,13 +23,12 @@ fn pathless_tools() {
         .build();
 
     foo.cargo("build --verbose")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -48,13 +48,12 @@ fn custom_linker_cfg() {
         .build();
 
     foo.cargo("build --verbose")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -81,13 +80,12 @@ fn custom_linker_cfg_precedence() {
         .build();
 
     foo.cargo("build --verbose")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -109,13 +107,12 @@ fn custom_linker_cfg_collision() {
 
     foo.cargo("build --verbose")
         .with_status(101)
-        .with_stderr(&format!(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] several matching instances of `target.'cfg(..)'.linker` in configurations
-first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config.toml
-second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config.toml
-",
-        ))
+first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
+second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
+
+"#]])
         .run();
 }
 
@@ -147,13 +144,12 @@ fn absolute_tools() {
         .build();
 
     foo.cargo("build --verbose")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C linker=[..]bogus/nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C linker=[..]/bogus/nonexistent-linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -187,18 +183,14 @@ fn relative_tools() {
         )
         .build();
 
-    let prefix = p.root().into_os_string().into_string().unwrap();
-
     p.cargo("build --verbose")
         .cwd("bar")
-        .with_stderr(&format!(
-            "\
-[COMPILING] bar v0.5.0 ([CWD])
-[RUNNING] `rustc [..] -C linker={prefix}/./tools/nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-            prefix = prefix,
-        ))
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]-C linker=[ROOT]/foo/./tools/nonexistent-linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -224,38 +216,35 @@ fn custom_runner() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-",
-        )
+...
+"#]])
         .run();
 
     p.cargo("test --test test --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/test-[HASH][EXE] --param`
+...
+"#]])
         .run();
 
     p.cargo("bench --bench bench --verbose -- --param")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
-",
-        )
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/release/deps/bench-[HASH][EXE] --param --bench`
+...
+"#]])
         .run();
 }
 
@@ -275,13 +264,12 @@ fn custom_runner_cfg() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-",
-        )
+...
+"#]])
         .run();
 }
 
@@ -309,13 +297,12 @@ fn custom_runner_cfg_precedence() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
-",
-        )
+...
+"#]])
         .run();
 }
 
@@ -337,13 +324,12 @@ fn custom_runner_cfg_collision() {
 
     p.cargo("run -- --param")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in configurations
-first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config.toml
-second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config.toml
-",
-        )
+first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
+second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
+
+"#]])
         .run();
 }
 
@@ -359,17 +345,16 @@ fn custom_runner_env() {
         // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
         // On Windows, changing to a custom executable resolver has changed the
         // error messages.
-        .with_stderr(&format!(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `dev` profile [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 
 Caused by:
-  [..]
-"
-        ))
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -395,7 +380,11 @@ fn custom_runner_env_overrides_config() {
     p.cargo("run")
         .env(&key, "should-run --foo")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `should-run --foo target/debug/foo[EXE]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `should-run --foo target/debug/foo[EXE]`
+...
+"#]])
         .run();
 }
 
@@ -410,7 +399,12 @@ fn custom_runner_env_true() {
 
     p.cargo("run")
         .env(&key, "true")
-        .with_stderr_contains("[RUNNING] `true target/debug/foo[EXE]`")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `true target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -423,7 +417,11 @@ fn custom_linker_env() {
     p.cargo("build -v")
         .env(&key, "nonexistent-linker")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+...
+"#]])
         .run();
 }
 
@@ -440,11 +438,13 @@ fn target_in_environment_contains_lower_case() {
     p.cargo("build -v --target")
         .arg(target)
         .env(&env_key, "nonexistent-linker")
-        .with_stderr_contains(format!(
-            "warning: environment variables are expected to use uppercase \
-             letters and underscores, the variable `{}` will be ignored and \
-             have no effect",
-            env_key
+        .with_stderr_data(format!("\
+[WARNING] environment variables are expected to use uppercase letters and underscores, the variable `{env_key}` will be ignored and have no effect
+[WARNING] environment variables are expected to use uppercase letters and underscores, the variable `{env_key}` will be ignored and have no effect
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+"
         ))
         .run();
 }
@@ -474,15 +474,14 @@ fn cfg_ignored_fields() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] unused key `somelib` in [target] config table `cfg(not(bar))`
-[WARNING] unused key `ar` in [target] config table `cfg(not(target_os = \"none\"))`
-[WARNING] unused key `foo` in [target] config table `cfg(not(target_os = \"none\"))`
-[WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = \"none\"))`
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] [..]
-",
-        )
+[WARNING] unused key `ar` in [target] config table `cfg(not(target_os = "none"))`
+[WARNING] unused key `foo` in [target] config table `cfg(not(target_os = "none"))`
+[WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = "none"))`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }

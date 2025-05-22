@@ -1,22 +1,27 @@
 //! Tests for config settings.
 
-use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::context::{
-    self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
-};
-use cargo::CargoResult;
-use cargo_test_support::compare;
-use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
-use cargo_util_schemas::manifest::TomlTrimPaths;
-use cargo_util_schemas::manifest::TomlTrimPathsValue;
-use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
-use serde::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::os;
 use std::path::{Path, PathBuf};
+
+use cargo::core::features::{GitFeatures, GitoxideFeatures};
+use cargo::core::{PackageIdSpec, Shell};
+use cargo::util::auth::RegistryConfig;
+use cargo::util::context::{
+    self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
+};
+use cargo::CargoResult;
+use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::prelude::*;
+use cargo_test_support::str;
+use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
+use cargo_util_schemas::manifest::TomlTrimPaths;
+use cargo_util_schemas::manifest::TomlTrimPathsValue;
+use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
+use serde::Deserialize;
 
 /// Helper for constructing a `GlobalContext` object.
 pub struct GlobalContextBuilder {
@@ -184,14 +189,31 @@ fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
     os::windows::fs::symlink_file(target, link)
 }
 
-fn symlink_config_to_config_toml() {
+fn make_config_symlink_to_config_toml_absolute() {
     let toml_path = paths::root().join(".cargo/config.toml");
     let symlink_path = paths::root().join(".cargo/config");
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
+fn make_config_symlink_to_config_toml_relative() {
+    let symlink_path = paths::root().join(".cargo/config");
+    t!(symlink_file(Path::new("config.toml"), &symlink_path));
+}
+
+fn rename_config_toml_to_config_replacing_with_symlink() {
+    let root = paths::root();
+    t!(fs::rename(
+        root.join(".cargo/config.toml"),
+        root.join(".cargo/config")
+    ));
+    t!(symlink_file(
+        Path::new("config"),
+        &root.join(".cargo/config.toml")
+    ));
+}
+
 #[track_caller]
-pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
+pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: impl IntoData) {
     let causes = error
         .borrow()
         .chain()
@@ -205,14 +227,7 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
         })
         .collect::<Vec<_>>()
         .join("\n\n");
-    assert_match(msgs, &causes);
-}
-
-#[track_caller]
-pub fn assert_match(expected: &str, actual: &str) {
-    if let Err(e) = compare::match_exact(expected, actual, "output", "", None) {
-        panic_error("", e);
-    }
+    assert_e2e().eq(&causes, msgs);
 }
 
 #[cargo_test]
@@ -277,10 +292,32 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(gctx);
-    let expected = "\
+    let expected = str![[r#"
 [WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
-[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
-    assert_match(expected, &output);
+[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+
+"#]];
+    assert_e2e().eq(&output, expected);
+}
+
+#[cargo_test]
+fn home_config_works_without_extension() {
+    write_config_at(
+        paths::cargo_home().join("config"),
+        "\
+[foo]
+f1 = 1
+",
+    );
+    let p = project_in_home("foo").file("src/lib.rs", "").build();
+
+    p.cargo("-vV")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/home/.cargo/config` is deprecated in favor of `config.toml`
+[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -298,7 +335,7 @@ f1 = 1
 ",
     );
 
-    symlink_config_to_config_toml();
+    make_config_symlink_to_config_toml_absolute();
 
     let gctx = new_gctx();
 
@@ -306,7 +343,59 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(gctx);
-    assert_match("", &output);
+    assert_e2e().eq(&output, str![[""]]);
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn_relative() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !symlink_supported() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    make_config_symlink_to_config_toml_relative();
+
+    let gctx = new_gctx();
+
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    let output = read_output(gctx);
+    assert_e2e().eq(&output, str![[""]]);
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn_backward() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !symlink_supported() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    rename_config_toml_to_config_replacing_with_symlink();
+
+    let gctx = new_gctx();
+
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for this situation.
+    let output = read_output(gctx);
+    assert_e2e().eq(&output, str![[""]]);
 }
 
 #[cargo_test]
@@ -333,10 +422,11 @@ f1 = 2
 
     // But it also should have warned.
     let output = read_output(gctx);
-    let expected = "\
-[WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    assert_match(expected, &output);
+    let expected = str![[r#"
+[WARNING] both `[ROOT]/.cargo/config` and `[ROOT]/.cargo/config.toml` exist. Using `[ROOT]/.cargo/config`
+
+"#]];
+    assert_e2e().eq(&output, expected);
 }
 
 #[cargo_test]
@@ -367,10 +457,11 @@ unused = 456
 
     // Verify the warnings.
     let output = read_output(gctx);
-    let expected = "\
-warning: unused config key `S.unused` in `[..]/.cargo/config.toml`
-";
-    assert_match(expected, &output);
+    let expected = str![[r#"
+[WARNING] unused config key `S.unused` in `[ROOT]/.cargo/config.toml`
+
+"#]];
+    assert_e2e().eq(&output, expected);
 }
 
 #[cargo_test]
@@ -762,7 +853,8 @@ Caused by:
   |
 1 | asdf
   |     ^
-expected `.`, `=`",
+expected `.`, `=`
+",
     );
 }
 
@@ -1392,7 +1484,6 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     // If, in the future, we can handle this more correctly, feel free to delete
     // this case.
     #[derive(Deserialize, Default)]
-    #[serde(default)]
     struct PrefixContainer {
         inn: bool,
         inner: Inner,
@@ -1404,7 +1495,7 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         .get::<PrefixContainer>("prefixcontainer")
         .err()
         .unwrap();
-    assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
+    assert!(format!("{}", err).contains("missing field `inn`"));
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .env("CARGO_PREFIXCONTAINER_INN", "true")
@@ -1412,6 +1503,22 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     let f: PrefixContainer = gctx.get("prefixcontainer").unwrap();
     assert_eq!(f.inner.value, 12);
     assert_eq!(f.inn, true);
+
+    // Use default attribute of serde, then we can skip setting the inn field
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct PrefixContainerFieldDefault {
+        inn: bool,
+        inner: Inner,
+    }
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let f = gctx
+        .get::<PrefixContainerFieldDefault>("prefixcontainer")
+        .unwrap();
+    assert_eq!(f.inner.value, 12);
+    assert_eq!(f.inn, false);
 
     // Containing struct where the inner value's field is a prefix of another
     //
@@ -1529,9 +1636,12 @@ fn cargo_target_empty_env() {
 
     project.cargo("check")
         .env("CARGO_TARGET_DIR", "")
-        .with_stderr("error: the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable")
+        .with_stderr_data(str![[r#"
+[ERROR] the target directory is set to an empty string in the `CARGO_TARGET_DIR` environment variable
+
+"#]])
         .with_status(101)
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -1568,7 +1678,7 @@ fn all_profile_options() {
     let profile_toml = toml::to_string(&profile).unwrap();
     let roundtrip: cargo_toml::TomlProfile = toml::from_str(&profile_toml).unwrap();
     let roundtrip_toml = toml::to_string(&roundtrip).unwrap();
-    compare::assert_match_exact(&profile_toml, &roundtrip_toml);
+    assert_e2e().eq(&roundtrip_toml, &profile_toml);
 }
 
 #[cargo_test]
@@ -1800,4 +1910,366 @@ fn trim_paths_parsing() {
         .build();
     let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
     assert_eq!(trim_paths, expected, "failed to parse {val}");
+}
+
+#[cargo_test]
+fn missing_fields() {
+    #[derive(Deserialize, Default, Debug)]
+    struct Foo {
+        bar: Bar,
+    }
+
+    #[derive(Deserialize, Default, Debug)]
+    struct Bar {
+        bax: bool,
+        baz: bool,
+    }
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_FOO_BAR_BAZ", "true")
+        .build();
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
+    let gctx: GlobalContext = GlobalContextBuilder::new()
+        .env("CARGO_FOO_BAR_BAZ", "true")
+        .env("CARGO_FOO_BAR_BAX", "true")
+        .build();
+    let foo = gctx.get::<Foo>("foo").unwrap();
+    assert_eq!(foo.bar.bax, true);
+    assert_eq!(foo.bar.baz, true);
+
+    let gctx: GlobalContext = GlobalContextBuilder::new()
+        .config_arg("foo.bar.baz=true")
+        .build();
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+error in --config cli option: could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
+}
+
+#[cargo_test]
+fn git_features() {
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT", "shallow-index")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: true,
+            ..GitFeatures::default()
+        }),
+    ));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT", "shallow-index,abc")
+        .build();
+    assert_error(
+        gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
+            .unwrap_err(),
+        "\
+error in environment variable `CARGO_UNSTABLE_GIT`: could not load config key `unstable.git`
+
+Caused by:
+[..]unstable 'git' only takes [..] as valid inputs",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT", "shallow-deps")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: false,
+            shallow_deps: true,
+        }),
+    ));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT", "true")
+        .build();
+    assert!(do_check(gctx, Some(GitFeatures::all())));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT_SHALLOW_INDEX", "true")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: true,
+            ..Default::default()
+        }),
+    ));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GIT_SHALLOW_INDEX", "true")
+        .env("CARGO_UNSTABLE_GIT_SHALLOW_DEPS", "true")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: true,
+            shallow_deps: true,
+            ..Default::default()
+        }),
+    ));
+
+    write_config_toml(
+        "\
+[unstable]
+git = 'shallow-index'
+",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: true,
+            shallow_deps: false,
+        }),
+    ));
+
+    write_config_toml(
+        "\
+    [unstable.git]
+    shallow_deps = false
+    shallow_index = true
+    ",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(
+        gctx,
+        Some(GitFeatures {
+            shallow_index: true,
+            shallow_deps: false,
+            ..Default::default()
+        }),
+    ));
+
+    write_config_toml(
+        "\
+    [unstable.git]
+    ",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(gctx, Some(Default::default())));
+
+    fn do_check(gctx: GlobalContext, expect: Option<GitFeatures>) -> bool {
+        let unstable_flags = gctx
+            .get::<Option<cargo::core::CliUnstable>>("unstable")
+            .unwrap()
+            .unwrap();
+        unstable_flags.git == expect
+    }
+}
+
+#[cargo_test]
+fn gitoxide_features() {
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GITOXIDE", "fetch")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitoxideFeatures {
+            fetch: true,
+            ..GitoxideFeatures::default()
+        }),
+    ));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GITOXIDE", "fetch,abc")
+        .build();
+
+    assert_error(
+    gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
+        .unwrap_err(),
+    "\
+error in environment variable `CARGO_UNSTABLE_GITOXIDE`: could not load config key `unstable.gitoxide`
+
+Caused by:
+[..]unstable 'gitoxide' only takes [..] as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`",
+);
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GITOXIDE", "true")
+        .build();
+    assert!(do_check(gctx, Some(GitoxideFeatures::all())));
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_GITOXIDE_FETCH", "true")
+        .build();
+    assert!(do_check(
+        gctx,
+        Some(GitoxideFeatures {
+            fetch: true,
+            ..Default::default()
+        }),
+    ));
+
+    write_config_toml(
+        "\
+[unstable]
+gitoxide = \"fetch\"
+",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(
+        gctx,
+        Some(GitoxideFeatures {
+            fetch: true,
+            ..GitoxideFeatures::default()
+        }),
+    ));
+
+    write_config_toml(
+        "\
+    [unstable.gitoxide]
+    fetch = true
+    checkout = false
+    internal_use_git2 = false
+    ",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(
+        gctx,
+        Some(GitoxideFeatures {
+            fetch: true,
+            checkout: false,
+            internal_use_git2: false,
+        }),
+    ));
+
+    write_config_toml(
+        "\
+    [unstable.gitoxide]
+    ",
+    );
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(do_check(gctx, Some(Default::default())));
+
+    fn do_check(gctx: GlobalContext, expect: Option<GitoxideFeatures>) -> bool {
+        let unstable_flags = gctx
+            .get::<Option<cargo::core::CliUnstable>>("unstable")
+            .unwrap()
+            .unwrap();
+        unstable_flags.gitoxide == expect
+    }
+}
+
+#[cargo_test]
+fn nonmergable_lists() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        "\
+[registries.example]
+credential-provider = ['a', 'b']
+",
+    );
+
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(
+        &foo_path,
+        "\
+[registries.example]
+credential-provider = ['c', 'd']
+",
+    );
+
+    let gctx = GlobalContextBuilder::new().cwd("foo").build();
+    let provider = gctx
+        .get::<Option<RegistryConfig>>(&format!("registries.example"))
+        .unwrap()
+        .unwrap()
+        .credential_provider
+        .unwrap();
+    assert_eq!(provider.path.raw_value(), "c");
+    assert_eq!(provider.args, ["d"]);
+}
+
+#[cargo_test]
+fn build_std() {
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_UNSTABLE_BUILD_STD", "core,std,panic_abort")
+        .build();
+    let value = gctx
+        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .unwrap()
+        .unwrap()
+        .build_std
+        .unwrap();
+    assert_eq!(
+        value,
+        vec![
+            "core".to_string(),
+            "std".to_string(),
+            "panic_abort".to_string(),
+        ],
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("unstable.build-std=['core', 'std,panic_abort']")
+        .build();
+    let value = gctx
+        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .unwrap()
+        .unwrap()
+        .build_std
+        .unwrap();
+    assert_eq!(
+        value,
+        vec![
+            "core".to_string(),
+            "std".to_string(),
+            "panic_abort".to_string(),
+        ]
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .env(
+            "CARGO_UNSTABLE_BUILD_STD_FEATURES",
+            "backtrace,panic-unwind,windows_raw_dylib",
+        )
+        .build();
+    let value = gctx
+        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .unwrap()
+        .unwrap()
+        .build_std_features
+        .unwrap();
+    assert_eq!(
+        value,
+        vec![
+            "backtrace".to_string(),
+            "panic-unwind".to_string(),
+            "windows_raw_dylib".to_string(),
+        ]
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("unstable.build-std-features=['backtrace', 'panic-unwind,windows_raw_dylib']")
+        .build();
+    let value = gctx
+        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .unwrap()
+        .unwrap()
+        .build_std_features
+        .unwrap();
+    assert_eq!(
+        value,
+        vec![
+            "backtrace".to_string(),
+            "panic-unwind".to_string(),
+            "windows_raw_dylib".to_string(),
+        ]
+    );
 }

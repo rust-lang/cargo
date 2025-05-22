@@ -1,0 +1,9 @@
+cargo-features = ["path-bases"]
+
+[package]
+name = "bar"
+version = "0.0.0"
+edition = "2015"
+
+[dependencies]
+foo.workspace = true

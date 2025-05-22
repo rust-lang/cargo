@@ -1,4 +1,5 @@
 use crate::command_prelude::*;
+use cargo::core::Workspace;
 
 use cargo::ops;
 
@@ -20,13 +21,12 @@ pub fn cli() -> Command {
         ))
         .arg(flag(
             "allow-dirty",
-            "Fix code even if the working directory is dirty",
+            "Fix code even if the working directory is dirty or has staged changes",
         ))
         .arg(flag(
             "allow-staged",
             "Fix code even if the working directory has staged changes",
         ))
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package_spec(
@@ -41,9 +41,9 @@ pub fn cli() -> Command {
             "Fix only the specified example",
             "Fix all examples",
             "Fix only the specified test target",
-            "Fix all test targets",
+            "Fix all targets that have `test = true` set",
             "Fix only the specified bench target",
-            "Fix all bench targets",
+            "Fix all targets that have `bench = true` set",
             "Fix all targets (default)",
         )
         .arg_features()
@@ -54,13 +54,14 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_timings()
         .arg_manifest_path()
+        .arg_lockfile_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help fix</>` for more detailed information.\n"
         ))
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(gctx)?;
     // This is a legacy behavior that causes `cargo fix` to pass `--test`.
     let test = matches!(
         args.get_one::<String>("profile").map(String::as_str),
@@ -70,23 +71,39 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
+    let root_manifest = args.root_manifest(gctx)?;
+
+    // Can't use workspace() to avoid using -Zavoid-dev-deps (if passed)
+    let mut ws = Workspace::new(&root_manifest, gctx)?;
+    ws.set_resolve_honors_rust_version(args.honor_rust_version());
+    let lockfile_path = args.lockfile_path(gctx)?;
+    ws.set_requested_lockfile_path(lockfile_path.clone());
+
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
-    if !opts.filter.is_specific() {
-        // cargo fix with no target selection implies `--all-targets`.
+    let edition = args.flag("edition") || args.flag("edition-idioms");
+    if !opts.filter.is_specific() && edition {
+        // When `cargo fix` is run without specifying targets but with `--edition` or `--edition-idioms`,
+        // it should default to fixing all targets.
+        // See: https://github.com/rust-lang/cargo/issues/13527
         opts.filter = ops::CompileFilter::new_all_targets();
     }
 
+    let allow_dirty = args.flag("allow-dirty");
+
     ops::fix(
+        gctx,
         &ws,
+        &root_manifest,
         &mut ops::FixOptions {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),
             compile_opts: opts,
-            allow_dirty: args.flag("allow-dirty"),
+            allow_dirty,
+            allow_staged: allow_dirty || args.flag("allow-staged"),
             allow_no_vcs: args.flag("allow-no-vcs"),
-            allow_staged: args.flag("allow-staged"),
             broken_code: args.flag("broken-code"),
+            requested_lockfile_path: lockfile_path,
         },
     )?;
     Ok(())

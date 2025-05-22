@@ -49,7 +49,7 @@ _cargo()
 	local opt_targets="--lib --bin --bins --example --examples --test --tests --bench --benches --all-targets"
 
 	local opt___nocmd="$opt_common -V --version --list --explain"
-	local opt__add="$opt_common -p --package --features --default-features --no-default-features $opt_mani --optional --no-optional --rename --dry-run --path --git --branch --tag --rev --registry --dev --build --target"
+	local opt__add="$opt_common -p --package --features --default-features --no-default-features $opt_mani --optional --no-optional --rename --dry-run --path --git --branch --tag --rev --registry --dev --build --target --ignore-rust-version"
 	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --no-run --no-fail-fast --target-dir --ignore-rust-version"
 	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --release --profile --target-dir --ignore-rust-version"
 	local opt__b="$opt__build"
@@ -63,6 +63,7 @@ _cargo()
 	local opt__fix="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_parallel $opt_targets $opt_lock --release --target --message-format --broken-code --edition --edition-idioms --allow-no-vcs --allow-dirty --allow-staged --profile --target-dir --ignore-rust-version"
 	local opt__generate_lockfile="$opt_common $opt_mani $opt_lock"
 	local opt__help="$opt_help"
+	local opt__info="$opt_common $opt_lock --registry --index"
 	local opt__init="$opt_common $opt_lock --bin --lib --name --vcs --edition --registry"
 	local opt__install="$opt_common $opt_feat $opt_parallel $opt_lock $opt_force --bin --bins --branch --debug --example --examples --git --list --path --rev --root --tag --version --registry --target --profile --no-track --ignore-rust-version"
 	local opt__locate_project="$opt_common $opt_mani $opt_lock --message-format --workspace"
@@ -70,10 +71,9 @@ _cargo()
 	local opt__metadata="$opt_common $opt_feat $opt_mani $opt_lock --format-version=1 --no-deps --filter-platform"
 	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name --edition --registry"
 	local opt__owner="$opt_common $opt_lock -a --add -r --remove -l --list --index --token --registry"
-	local opt__package="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty -l --list --no-verify --no-metadata --target --target-dir"
+	local opt__package="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty -l --list --no-verify --no-metadata --index --registry --target --target-dir"
 	local opt__pkgid="$opt_common $opt_mani $opt_lock $opt_pkg"
 	local opt__publish="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty --dry-run --token --no-verify --index --registry --target --target-dir"
-	local opt__read_manifest="$opt_help $opt_quiet $opt_verbose $opt_mani $opt_color $opt_lock --no-deps"
 	local opt__remove="$opt_common $opt_pkg $opt_lock $opt_mani --dry-run --dev --build --target"
 	local opt__rm="$opt__remove"
 	local opt__report="$opt_help $opt_verbose $opt_color future-incompat future-incompatibilities"
@@ -89,7 +89,6 @@ _cargo()
 	local opt__uninstall="$opt_common $opt_lock $opt_pkg --bin --root"
 	local opt__update="$opt_common $opt_mani $opt_lock $opt_pkg --aggressive --recursive --precise --dry-run"
 	local opt__vendor="$opt_common $opt_mani $opt_lock $opt_sync --no-delete --respect-source-config --versioned-dirs"
-	local opt__verify_project="$opt_common $opt_mani $opt_lock"
 	local opt__version="$opt_common $opt_lock"
 	local opt__yank="$opt_common $opt_lock --version --undo --index --token --registry"
 	local opt__libtest="--help --include-ignored --ignored --test --bench --list --logfile --nocapture --test-threads --skip -q --quiet --exact --color --format"
@@ -154,9 +153,16 @@ _cargo()
 				else
 					local opt_var=opt__${cmd//-/_}
 				fi
-				if [[ -z "${!opt_var}" ]]; then
-					# Fallback to filename completion.
-					_filedir
+				if [[ -z "${!opt_var-}" ]]; then
+					# Forward to subcommands completion if bash-completion >= 2.12 is available
+					if [[ $BASH_COMPLETION_VERSINFO && (${BASH_COMPLETION_VERSINFO[0]} -gt 2 || (${BASH_COMPLETION_VERSINFO[0]} -eq 2 && ${BASH_COMPLETION_VERSINFO[1]} -ge 12)) ]]; then
+						COMP_WORDS[cmd_i]="cargo-$cmd"
+						_comp_command_offset "$cmd_i"
+						COMP_WORDS[cmd_i]="$cmd"
+					else
+						# Fallback to filename completion.
+						_filedir
+					fi
 				else
 					COMPREPLY=( $( compgen -W "${!opt_var}" -- "$cur" ) )
 				fi

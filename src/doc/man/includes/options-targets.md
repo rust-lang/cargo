@@ -25,7 +25,7 @@ multiple times and supports common Unix glob patterns.
 {{/option}}
 
 {{#option "`--tests`" }}
-{{actionverb}} all targets in test mode that have the `test = true` manifest
+{{actionverb}} all targets that have the `test = true` manifest
 flag set. By default this includes the library and binaries built as
 unittests, and integration tests. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a
@@ -40,7 +40,7 @@ times and supports common Unix glob patterns.
 {{/option}}
 
 {{#option "`--benches`" }}
-{{actionverb}} all targets in benchmark mode that have the `bench = true`
+{{actionverb}} all targets that have the `bench = true`
 manifest flag set. By default this includes the library and binaries built
 as benchmarks, and bench targets. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a

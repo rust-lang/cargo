@@ -1,9 +1,10 @@
 use super::{ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList, CV};
-use crate::core::compiler::{BuildOutput, LinkArgTarget};
+use crate::core::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 /// Config definition of a `[target.'cfg(…)']` table.
 ///
@@ -36,7 +37,7 @@ pub struct TargetConfig {
     /// Any package with a `links` value for the given library name will skip
     /// running its build script and instead use the given output from the
     /// config file.
-    pub links_overrides: BTreeMap<String, BuildOutput>,
+    pub links_overrides: Rc<BTreeMap<String, BuildOutput>>,
 }
 
 /// Loads all of the `target.'cfg()'` tables.
@@ -52,6 +53,13 @@ pub(super) fn load_target_cfgs(
     let target: BTreeMap<String, TargetCfgConfig> = gctx.get("target")?;
     tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
+        if let Ok(platform) = key.parse::<cargo_platform::Platform>() {
+            let mut warnings = Vec::new();
+            platform.check_cfg_keywords(&mut warnings, &Path::new(".cargo/config.toml"));
+            for w in warnings {
+                gctx.shell().warn(w)?;
+            }
+        }
         if key.starts_with("cfg(") {
             // Unfortunately this is not able to display the location of the
             // unused key. Using config::Value<toml::Value> doesn't work. One
@@ -120,7 +128,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match gctx.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val, gctx)?,
+        Some(links) => parse_links_overrides(&target_key, links.val)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {
@@ -128,14 +136,13 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
         rustflags,
         rustdocflags,
         linker,
-        links_overrides,
+        links_overrides: Rc::new(links_overrides),
     })
 }
 
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
-    gctx: &GlobalContext,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
 
@@ -160,7 +167,9 @@ fn parse_links_overrides(
                     let flags = value.string(key)?;
                     let whence = format!("target config `{}.{}` (in {})", target_key, key, flags.1);
                     let (paths, links) = BuildOutput::parse_rustc_flags(flags.0, &whence)?;
-                    output.library_paths.extend(paths);
+                    output
+                        .library_paths
+                        .extend(paths.into_iter().map(LibraryPath::External));
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
@@ -171,9 +180,11 @@ fn parse_links_overrides(
                 }
                 "rustc-link-search" => {
                     let list = value.list(key)?;
-                    output
-                        .library_paths
-                        .extend(list.iter().map(|v| PathBuf::from(&v.0)));
+                    output.library_paths.extend(
+                        list.iter()
+                            .map(|v| PathBuf::from(&v.0))
+                            .map(LibraryPath::External),
+                    );
                 }
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     let args = extra_link_args(LinkArgTarget::Cdylib, key, value)?;
@@ -204,13 +215,8 @@ fn parse_links_overrides(
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-check-cfg" => {
-                    if gctx.cli_unstable().check_cfg {
-                        let list = value.list(key)?;
-                        output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
-                    } else {
-                        // silently ignoring the instruction to try to
-                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
-                    }
+                    let list = value.list(key)?;
+                    output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-env" => {
                     for (name, val) in value.table(key)?.0 {

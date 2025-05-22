@@ -78,8 +78,6 @@ and supports common Unix glob patterns.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -103,7 +101,11 @@ and supports common Unix glob patterns.
 {{#options}}
 {{> options-manifest-path }}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

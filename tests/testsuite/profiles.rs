@@ -1,8 +1,10 @@
 //! Tests for profiles.
 
-use cargo_test_support::registry::Package;
-use cargo_test_support::{project, rustc_host};
 use std::env;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::Package;
+use cargo_test_support::{project, rustc_host, str};
 
 #[cargo_test]
 fn profile_overrides() {
@@ -25,22 +27,12 @@ fn profile_overrides() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]\
-        -C opt-level=1[..]\
-        -C debug-assertions=on \
-        -C metadata=[..] \
-        -C rpath \
-        --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
-[FINISHED] `dev` profile [optimized] target(s) in [..]
-",
-        )
-        .run();
+    p.cargo("build -v").with_stderr_data(str![[r#"
+[COMPILING] test v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=1[..] -C debug-assertions=on[..] -C metadata=[..] -C rpath --out-dir [ROOT]/foo/target/debug/deps [..] -L dependency=[ROOT]/foo/target/debug/deps`
+[FINISHED] `dev` profile [optimized] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -62,20 +54,12 @@ fn opt_level_override_0() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]\
-        -C debuginfo=2 [..]\
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
-[FINISHED] [..] target(s) in [..]
-",
-        )
-        .run();
+    p.cargo("build -v").with_stderr_data(str![[r#"
+[COMPILING] test v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -96,20 +80,12 @@ fn debug_override_1() {
         )
         .file("src/lib.rs", "")
         .build();
-    p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] test v0.0.0 ([CWD])
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
-        --emit=[..]link[..]\
-        -C debuginfo=1 [..]\
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
-[FINISHED] [..] target(s) in [..]
-",
-        )
-        .run();
+    p.cargo("build -v").with_stderr_data(str![[r#"
+[COMPILING] test v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
@@ -134,18 +110,18 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         .file("src/lib.rs", "")
         .build();
     p.cargo("build -v")
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
-[COMPILING] test v0.0.0 ([CWD])
+[COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level={level}[..]\
         -C debuginfo=2 [..]\
-        -C debug-assertions=on \
+        -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/debug/deps`
-[FINISHED] [..] target(s) in [..]
+        -L dependency=[ROOT]/foo/target/debug/deps`
+[FINISHED] `dev` profile [..]+ debuginfo] target(s) in [ELAPSED]s
 ",
             level = rustc_level
         ))
@@ -203,16 +179,16 @@ fn top_level_overrides_deps() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib", "rlib"]
+                crate-type = ["dylib", "rlib"]
             "#,
         )
         .file("foo/src/lib.rs", "")
         .build();
     p.cargo("build -v --release")
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
-[LOCKING] 2 packages
-[COMPILING] foo v0.0.0 ([CWD]/foo)
+[LOCKING] 1 package to latest compatible version
+[COMPILING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
         --emit=[..]link \
@@ -220,20 +196,20 @@ fn top_level_overrides_deps() {
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
         -C metadata=[..] \
-        --out-dir [CWD]/target/release/deps \
-        -L dependency=[CWD]/target/release/deps`
-[COMPILING] test v0.0.0 ([CWD])
+        --out-dir [ROOT]/foo/target/release/deps \
+        -L dependency=[ROOT]/foo/target/release/deps`
+[COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[CWD]/target/release/deps \
-        --extern foo=[CWD]/target/release/deps/\
+        -L dependency=[ROOT]/foo/target/release/deps \
+        --extern foo=[ROOT]/foo/target/release/deps/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=[CWD]/target/release/deps/libfoo.rlib`
-[FINISHED] `release` profile [optimized + debuginfo] target(s) in [..]
+        --extern foo=[ROOT]/foo/target/release/deps/libfoo.rlib`
+[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
@@ -280,16 +256,15 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
 
     p.cargo("build -v")
         .cwd("bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   [..]
-workspace: [..]
-[LOCKING] 2 packages
-[COMPILING] bar v0.1.0 ([..])
+package:   [ROOT]/foo/bar/Cargo.toml
+workspace: [ROOT]/foo/Cargo.toml
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized] target(s) in [..]",
-        )
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -324,12 +299,12 @@ fn profile_in_virtual_manifest_works() {
 
     p.cargo("build -v")
         .cwd("bar")
-        .with_stderr(
-            "\
-[COMPILING] bar v0.1.0 ([..])
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [optimized] target(s) in [..]",
-        )
+[FINISHED] `dev` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -353,15 +328,13 @@ fn profile_lto_string_bool_dev() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  `lto` setting of string `\"true\"` for `dev` profile is not a valid setting, \
-must be a boolean (`true`/`false`) or a string (`\"thin\"`/`\"fat\"`/`\"off\"`) or omitted.
-",
-        )
+  `lto` setting of string `"true"` for `dev` profile is not a valid setting, must be a boolean (`true`/`false`) or a string (`"thin"`/`"fat"`/`"off"`) or omitted.
+
+"#]])
         .run();
 }
 
@@ -387,12 +360,13 @@ fn profile_panic_test_bench() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `panic` setting is ignored for `bench` profile
 [WARNING] `panic` setting is ignored for `test` profile
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -415,7 +389,10 @@ fn profile_doc_deprecated() {
         .build();
 
     p.cargo("build")
-        .with_stderr_contains("[WARNING] profile `doc` is deprecated and has no effect")
+        .with_stderr_data(str![[r#"
+[WARNING] profile `doc` is deprecated and has no effect
+...
+"#]])
         .run();
 }
 
@@ -443,19 +420,21 @@ fn panic_unwind_does_not_build_twice() {
         .build();
 
     p.cargo("test -v --tests --no-run")
-        .with_stderr_unordered(
-            "\
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --test [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test [..]
-[RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]
-[FINISHED] [..]
-[EXECUTABLE] `[..]/target/debug/deps/t1-[..][EXE]`
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-",
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/t1-[HASH][EXE]`
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -480,13 +459,12 @@ fn debug_0_report() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
         .with_stderr_does_not_contain("-C debuginfo")
         .run();
 }
@@ -511,13 +489,12 @@ fn thin_lto_works() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr(
-            "\
-[COMPILING] top [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] top v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C lto=thin [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -540,13 +517,12 @@ fn strip_works() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C strip=symbols [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -570,13 +546,12 @@ fn strip_passes_unknown_option_to_rustc() {
 
     p.cargo("build --release -v")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C strip=unknown [..]`
-error: incorrect value `unknown` for [..] `strip` [..] was expected
-",
-        )
+[ERROR] incorrect value `unknown` for [..] `strip` [..] was expected
+...
+"#]])
         .run();
 }
 
@@ -599,13 +574,12 @@ fn strip_accepts_true_to_strip_symbols() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C strip=symbols [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -632,9 +606,7 @@ fn strip_accepts_false_to_disable_strip() {
         .run();
 }
 
-// Temporarily disabled on Windows due to https://github.com/rust-lang/rust/issues/122857
 #[cargo_test]
-#[cfg(not(windows))]
 fn strip_debuginfo_in_release() {
     let p = project()
         .file(
@@ -650,40 +622,25 @@ fn strip_debuginfo_in_release() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] -C strip=debuginfo[..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("build --release -v --target")
         .arg(rustc_host())
-        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] -C strip=debuginfo[..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
-// Using -Cstrip=debuginfo in release mode by default is temporarily disabled on Windows due to
-// https://github.com/rust-lang/rust/issues/122857
 #[cargo_test]
-#[cfg(all(target_os = "windows", target_env = "msvc"))]
-fn do_not_strip_debuginfo_in_release_on_windows() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2015"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build --release -v")
-        .with_stderr_does_not_contain("[..]strip=debuginfo[..]")
-        .run();
-}
-
-// Temporarily disabled on Windows due to https://github.com/rust-lang/rust/issues/122857
-#[cargo_test]
-#[cfg(not(windows))]
 fn strip_debuginfo_without_debug() {
     let p = project()
         .file(
@@ -702,7 +659,12 @@ fn strip_debuginfo_without_debug() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C strip=debuginfo[..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -764,13 +726,12 @@ fn rustflags_works() {
 
     p.cargo("build -v")
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -794,13 +755,12 @@ fn rustflags_works_with_env() {
     p.cargo("build -v")
         .env("CARGO_PROFILE_DEV_RUSTFLAGS", "-C link-dead-code=yes")
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -825,21 +785,17 @@ fn rustflags_requires_cargo_feature() {
     p.cargo("build -v")
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `profile-rustflags` is required
 
-  The package requires the Cargo feature called `profile-rustflags`, but that feature is \
-  not stabilized in this version of Cargo (1.[..]).
-  Consider adding `cargo-features = [\"profile-rustflags\"]` to the top of Cargo.toml \
-  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option \
-  for more information about the status of this feature.
-",
-        )
+  The package requires the Cargo feature called `profile-rustflags`, but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = ["profile-rustflags"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option for more information about the status of this feature.
+
+"#]])
         .run();
 
     Package::new("bar", "1.0.0").publish();
@@ -861,21 +817,17 @@ Caused by:
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `profile-rustflags` is required
 
-  The package requires the Cargo feature called `profile-rustflags`, but that feature is \
-  not stabilized in this version of Cargo (1.[..]).
-  Consider adding `cargo-features = [\"profile-rustflags\"]` to the top of Cargo.toml \
-  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option \
-  for more information about the status of this feature.
-",
-        )
+  The package requires the Cargo feature called `profile-rustflags`, but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = ["profile-rustflags"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-rustflags-option for more information about the status of this feature.
+
+"#]])
         .run();
 }
 
@@ -911,7 +863,13 @@ fn debug_options_valid() {
         ("full", "2"),
     ] {
         build(option)
-            .with_stderr_contains(&format!("[RUNNING] `rustc [..]-C debuginfo={cli} [..]"))
+            .with_stderr_data(&format!(
+                "\
+...
+[RUNNING] `rustc [..]-C debuginfo={cli} [..]`
+...
+"
+            ))
             .run();
     }
     build("none")

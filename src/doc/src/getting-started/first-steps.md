@@ -33,7 +33,7 @@ This is all we need to get started. First, let’s check out `Cargo.toml`:
 [package]
 name = "hello_world"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 ```

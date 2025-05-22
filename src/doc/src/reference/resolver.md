@@ -5,99 +5,127 @@ use based on the version requirements specified in each package. This process
 is called "dependency resolution" and is performed by the "resolver". The
 result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
-
-The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. It turns out, however, that in many cases there is no
-single "best" dependency resolution, and so the resolver must use heuristics to
-choose a preferred solution. The sections below provide some details on how
-requirements are handled, and how to work with the resolver.
-
-See the chapter [Specifying Dependencies] for more details about how
-dependency requirements are specified.
-
 The [`cargo tree`] command can be used to visualize the result of the
 resolver.
 
-[Specifying Dependencies]: specifying-dependencies.md
+[dependency specifications]: specifying-dependencies.md
+[dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
 
-## SemVer compatibility
+## Constraints and Heuristics
 
-Cargo uses [SemVer] for specifying version numbers. This establishes a common
-convention for what is compatible between different versions of a package. See
-the [SemVer Compatibility] chapter for guidance on what is considered a
-"compatible" change. This notion of "compatibility" is important because Cargo
-assumes it should be safe to update a dependency within a compatibility range
-without breaking the build.
+In many cases there is no single "best" dependency resolution.
+The resolver operates under various constraints and heuristics to find a generally applicable resolution.
+To understand how these interact, it is helpful to have a coarse understanding of how dependency resolution works.
 
-Versions are considered compatible if their left-most non-zero
-major/minor/patch component is the same. For example, `1.0.3` and `1.1.0` are
-considered compatible, and thus it should be safe to update from the older
-release to the newer one. However, an update from `1.1.0` to `2.0.0` would not
-be allowed to be made automatically. This convention also applies to versions
-with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
-`0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
-compatible.
+This pseudo-code approximates what Cargo's resolver does:
+```rust
+pub fn resolve(workspace: &[Package], policy: Policy) -> Option<ResolveGraph> {
+    let dep_queue = Queue::new(workspace);
+    let resolved = ResolveGraph::new();
+    resolve_next(pkq_queue, resolved, policy)
+}
 
-As a quick refresher, the
-[*version requirement* syntax][Specifying Dependencies] Cargo uses for
-dependencies is:
+fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Option<ResolveGraph> {
+    let Some(dep_spec) = policy.pick_next_dep(dep_queue) else {
+        // Done
+        return Some(resolved);
+    };
 
-Requirement | Example | Equivalence | Description
-------------|---------|-------------|-------------
-Caret | `1.2.3` or `^1.2.3` | <code>>=1.2.3,&nbsp;<2.0.0</code> | Any SemVer-compatible version of at least the given value.
-Tilde | `~1.2` | <code>>=1.2.0,&nbsp;<1.3.0</code> | Minimum version, with restricted compatibility range.
-Wildcard | `1.*` | <code>>=1.0.0,&nbsp;<2.0.0</code> | Any version in the `*` position.
-Equals | `=1.2.3` | <code>=1.2.3</code> | Exactly the specified version only.
-Comparison | `>1.1` | <code>>=1.2.0</code> | Naive numeric comparison of specified digits.
-Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>=1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
+    if let Some(resolved) = policy.try_unify_version(dep_spec, resolved.clone()) {
+        return Some(resolved);
+    }
 
-When multiple packages specify a dependency for a common package, the resolver
-attempts to ensure that they use the same version of that common package, as
-long as they are within a SemVer compatibility range. It also attempts to use
-the greatest version currently available within that compatibility range. For
-example, if there are two packages in the resolve graph with the following
-requirements:
+    let dep_versions = dep_spec.lookup_versions()?;
+    let mut dep_versions = policy.filter_versions(dep_spec, dep_versions);
+    while let Some(dep_version) = policy.pick_next_version(&mut dep_versions) {
+        if policy.needs_version_unification(dep_version, &resolved) {
+            continue;
+        }
 
-```toml
-# Package A
-[dependencies]
-bitflags = "1.0"
+        let mut dep_queue = dep_queue.clone();
+        dep_queue.enqueue(dep_version.dependencies);
+        let mut resolved = resolved.clone();
+        resolved.register(dep_version);
+        if let Some(resolved) = resolve_next(dep_queue, resolved) {
+            return Some(resolved);
+        }
+    }
 
-# Package B
-[dependencies]
-bitflags = "1.1"
+    // No valid solution found, backtrack and `pick_next_version`
+    None
+}
 ```
 
+Key steps:
+- Walking dependencies (`pick_next_dep`):
+  The order dependencies are walked can affect
+  how related version requirements for the same dependency get resolved, see unifying versions,
+  and how much the resolver backtracks, affecting resolver performance,
+- Unifying versions (`try_unify_version`, `needs_version_unification`):
+  Cargo reuses versions where possible to reduce build times and allow types from common dependencies to be passed between APIs.
+  If multiple versions would have been unified if it wasn't for conflicts in their [dependency specifications], Cargo will backtrack, erroring if no solution is found, rather than selecting multiple versions.
+  A [dependency specification] or Cargo may decide that a version is undesirable,
+  preferring to backtrack or error rather than use it.
+- Preferring versions (`pick_next_version`):
+  Cargo may decide that it should prefer a specific version,
+  falling back to the next version when backtracking.
+
+### Version numbers
+
+Generally, Cargo prefers the highest version currently available.
+
+For example, if you had a package in the resolve graph with:
+```toml
+[dependencies]
+bitflags = "*"
+```
 If at the time the `Cargo.lock` file is generated, the greatest version of
-`bitflags` is `1.2.1`, then both packages will use `1.2.1` because it is the
+`bitflags` is `1.2.1`, then the package will use `1.2.1`.
+
+For an example of a possible exception, see [Rust version](#rust-version).
+
+### Version requirements
+
+Package specify what versions they support, rejecting all others, through
+[version requirements].
+
+For example, if you had a package in the resolve graph with:
+```toml
+[dependencies]
+bitflags = "1.0"  # meaning `>=1.0.0,<2.0.0`
+```
+If at the time the `Cargo.lock` file is generated, the greatest version of
+`bitflags` is `1.2.1`, then the package will use `1.2.1` because it is the
 greatest within the compatibility range. If `2.0.0` is published, it will
 still use `1.2.1` because `2.0.0` is considered incompatible.
 
-If multiple packages have a common dependency with semver-incompatible
-versions, then Cargo will allow this, but will build two separate copies of
-the dependency. For example:
+[version requirements]: specifying-dependencies.md#version-requirement-syntax
 
+### SemVer compatibility
+
+Cargo assumes packages follow [SemVer] and will unify dependency versions if they are
+[SemVer] compatible according to the [Caret version requirements].
+If two compatible versions cannot be unified because of conflicting version requirements,
+Cargo will error.
+
+See the [SemVer Compatibility] chapter for guidance on what is considered a
+"compatible" change.
+
+Examples:
+
+The following two packages will have their dependencies on `bitflags` unified because any version picked will be compatible with each other.
 ```toml
 # Package A
 [dependencies]
-rand = "0.7"
+bitflags = "1.0"  # meaning `>=1.0.0,<2.0.0`
 
 # Package B
 [dependencies]
-rand = "0.6"
+bitflags = "1.1"  # meaning `>=1.1.0,<2.0.0`
 ```
 
-The above will result in Package A using the greatest `0.7` release (`0.7.3`
-at the time of this writing) and Package B will use the greatest `0.6` release
-(`0.6.5` for example). This can lead to potential problems, see the
-[Version-incompatibility hazards] section for more details.
-
-Multiple versions within the same compatibility range are not allowed and will
-result in a resolver error if it is constrained to two different versions
-within a compatibility range. For example, if there are two packages in the
-resolve graph with the following requirements:
-
+The following packages will error because the version requirements conflict, selecting two distinct compatible versions.
 ```toml
 # Package A
 [dependencies]
@@ -108,14 +136,39 @@ log = "=0.4.11"
 log = "=0.4.8"
 ```
 
-The above will fail because it is not allowed to have two separate copies of
-the `0.4` release of the `log` package.
+The following two packages will not have their dependencies on `rand` unified because only incompatible versions are available for each.
+Instead, two different versions (e.g. 0.6.5 and 0.7.3) will be resolved and built.
+This can lead to potential problems, see the [Version-incompatibility hazards] section for more details.
+```toml
+# Package A
+[dependencies]
+rand = "0.7"  # meaning `>=0.7.0,<0.8.0`
+
+# Package B
+[dependencies]
+rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
+```
+
+Generally, the following two packages will not have their dependencies unified because incompatible versions are available that satisfy the version requirements:
+Instead, two different versions (e.g. 0.6.5 and 0.7.3) will be resolved and built.
+The application of other constraints or heuristics may cause these to be unified,
+picking one version (e.g. 0.6.5).
+```toml
+# Package A
+[dependencies]
+rand = ">=0.6,<0.8.0"
+
+# Package B
+[dependencies]
+rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
+```
 
 [SemVer]: https://semver.org/
 [SemVer Compatibility]: semver.md
+[Caret version requirements]: specifying-dependencies.md#default-requirements
 [Version-incompatibility hazards]: #version-incompatibility-hazards
 
-### Version-incompatibility hazards
+#### Version-incompatibility hazards
 
 When multiple versions of a crate appear in the resolve graph, this can cause
 problems when types from those crates are exposed by the crates using them.
@@ -136,7 +189,7 @@ These incompatibilities usually manifest as a compile-time error, but
 sometimes they will only appear as a runtime misbehavior. For example, let's
 say there is a common library named `foo` that ends up appearing with both
 version `1.0.0` and `2.0.0` in the resolve graph. If [`downcast_ref`] is used
-on a object created by a library using version `1.0.0`, and the code calling
+on an object created by a library using version `1.0.0`, and the code calling
 `downcast_ref` is downcasting to a type from version `2.0.0`, the downcast
 will fail at runtime.
 
@@ -150,53 +203,87 @@ ecosystem if you publish a SemVer-incompatible version of a popular library.
 [semver trick]: https://github.com/dtolnay/semver-trick
 [`downcast_ref`]: ../../std/any/trait.Any.html#method.downcast_ref
 
-### Pre-releases
+### Rust version
 
-SemVer has the concept of "pre-releases" with a dash in the version, such as
-`1.0.0-alpha`, or `1.0.0-beta`. Cargo will avoid automatically using
-pre-releases unless explicitly asked. For example, if `1.0.0-alpha` of package
-`foo` is published, then a requirement of `foo = "1.0"` will *not* match, and
-will return an error. The pre-release must be specified, such as `foo =
-"1.0.0-alpha"`. Similarly [`cargo install`] will avoid pre-releases unless
-explicitly asked to install one.
+To support developing software with a minimum supported [Rust version],
+the resolver can take into account a dependency version's compatibility with your Rust version.
+This is controlled by the config field [`resolver.incompatible-rust-versions`].
 
-Cargo allows "newer" pre-releases to be used automatically. For example, if
-`1.0.0-beta` is published, then a requirement `foo = "1.0.0-alpha"` will allow
-updating to the `beta` version. Note that this only works on the same release
-version, `foo = "1.0.0-alpha"` will not allow updating to `foo = "1.0.1-alpha"`
-or `foo = "1.0.1-beta"`.
+With the `fallback` setting, the resolver will prefer packages with a Rust version that is
+less than or equal to your own Rust version.
+For example, you are using Rust 1.85 to develop the following package:
+```toml
+[package]
+name = "my-cli"
+rust-version = "1.62"
 
-Cargo will also upgrade automatically to semver-compatible released versions
-from prereleases. The requirement `foo = "1.0.0-alpha"` will allow updating to
-`foo = "1.0.0"` as well as `foo = "1.2.0"`.
+[dependencies]
+clap = "4.0"  # resolves to 4.0.32
+```
+The resolver would pick version 4.0.32 because it has a Rust version of 1.60.0.
+- 4.0.0 is not picked because it is a [lower version number](#version-numbers) despite it also having a Rust version of 1.60.0.
+- 4.5.20 is not picked because it is incompatible with `my-cli`'s Rust version of 1.62 despite having a much [higher version](#version-numbers) and it has a Rust version of 1.74.0 which is compatible with your 1.85 toolchain.
 
-Beware that pre-release versions can be unstable, and as such care should be
-taken when using them. Some projects may choose to publish breaking changes
-between pre-release versions. It is recommended to not use pre-release
-dependencies in a library if your library is not also a pre-release. Care
-should also be taken when updating your `Cargo.lock`, and be prepared if a
-pre-release update causes issues.
+If a version requirement does not include a Rust version compatible dependency version,
+the resolver won't error but will instead pick a version, even if its potentially suboptimal.
+For example, you change the dependency on `clap`:
+```toml
+[package]
+name = "my-cli"
+rust-version = "1.62"
 
-The pre-release tag may be separated with periods to distinguish separate
-components. Numeric components will use numeric comparison. For example,
-`1.0.0-alpha.4` will use numeric comparison for the `4` component. That means
-that if `1.0.0-alpha.11` is published, that will be chosen as the greatest
-release. Non-numeric components are compared lexicographically.
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+```
+No version of `clap` matches that [version requirement](#version-requirements)
+that is compatible with Rust version 1.62.
+The resolver will then pick an incompatible version, like 4.5.20 despite it having a Rust version of 1.74.
 
-[`cargo install`]: ../commands/cargo-install.md
+When the resolver selects a dependency version of a package,
+it does not know all the workspace members that will eventually have a transitive dependency on that version
+and so it cannot take into account only the Rust versions relevant for that dependency.
+The resolver has heuristics to find a "good enough" solution when workspace members have different Rust versions.
+This applies even for packages in a workspace without a Rust version.
 
-### Version metadata
+When a workspace has members with different Rust versions,
+the resolver may pick a lower dependency version than necessary.
+For example, you have the following workspace members:
+```toml
+[package]
+name = "a"
+rust-version = "1.62"
 
-SemVer has the concept of "version metadata" with a plus in the version, such
-as `1.0.0+21AF26D3`. This metadata is usually ignored, and should not be used
-in a version requirement. You should never publish multiple versions that
-differ only in the metadata tag.
+[package]
+name = "b"
 
-## Other constraints
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+```
+Though package `b` does not have a Rust version and could use a higher version like 4.5.20,
+4.0.32 will be selected because of package `a`'s Rust version of 1.62.
 
-Version requirements aren't the only constraint that the resolver considers
-when selecting and unifying dependencies. The following sections cover some of
-the other constraints that can affect resolution.
+Or the resolver may pick too high of a version.
+For example, you have the following workspace members:
+```toml
+[package]
+name = "a"
+rust-version = "1.62"
+
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+
+[package]
+name = "b"
+
+[dependencies]
+clap = "4.5"  # resolves to 4.5.20
+```
+Though each package has a version requirement for `clap` that would meet its own Rust version,
+because of [version unification](#version-numbers),
+the resolver will need to pick one version that works in both cases and that would be a version like 4.5.20.
+
+[Rust version]: rust-version.md
+[`resolver.incompatible-rust-versions`]: config.md#resolverincompatible-rust-versions
 
 ### Features
 
@@ -407,7 +494,7 @@ it so that it remains strictly acyclic.
 
 ## Resolver versions
 
-A different feature resolver algorithm can be used by specifying the resolver
+Different resolver behavior can be specified through the resolver
 version in `Cargo.toml` like this:
 
 ```toml
@@ -416,14 +503,11 @@ name = "my-package"
 version = "1.0.0"
 resolver = "2"
 ```
-
-The version `"1"` resolver is the original resolver that shipped with Cargo up to version 1.50.
-The default is `"2"` if the root package specifies [`edition = "2021"`](manifest.md#the-edition-field) or a newer edition.
-Otherwise the default is `"1"`.
-
-The version `"2"` resolver introduces changes in [feature
+- `"1"` (default)
+- `"2"` ([`edition = "2021"`](manifest.md#the-edition-field) default): Introduces changes in [feature
 unification](#features). See the [features chapter][features-2] for more
 details.
+- `"3"` ([`edition = "2024"`](manifest.md#the-edition-field) default, requires Rust 1.84+): Change the default for [`resolver.incompatible-rust-versions`] from `allow` to `fallback`
 
 The resolver is a global option that affects the entire workspace. The
 `resolver` version in dependencies is ignored, only the value in the top-level
@@ -435,6 +519,8 @@ specified in the `[workspace]` table, for example:
 members = ["member1", "member2"]
 resolver = "2"
 ```
+
+> **MSRV:** Requires 1.51+
 
 [virtual workspace]: workspaces.md#virtual-workspace
 [features-2]: features.md#feature-resolver-version-2
@@ -501,7 +587,7 @@ solutions.
 
 ### Why was a dependency included?
 
-Say you see dependency `rand` in the `cargo check` output but don't think its needed and want to understand why its being pulled in.
+Say you see dependency `rand` in the `cargo check` output but don't think it's needed and want to understand why it's being pulled in.
 
 You can run
 ```console
@@ -610,3 +696,20 @@ circumstances:
   change of your own library, for example if it exposes types from the
   dependency.
 
+[`cargo install`]: ../commands/cargo-install.md
+
+<script>
+(function() {
+    var fragments = {
+        "#version-metadata": "specifying-dependencies.html#version-metadata",
+        "#pre-releases": "specifying-dependencies.html#pre-releases",
+        "#other-constraints": "#constraints-and-heuristics",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        var url = window.location.toString();
+        var base = url.substring(0, url.lastIndexOf('/'));
+        window.location.replace(base + "/" + target);
+    }
+})();
+</script>

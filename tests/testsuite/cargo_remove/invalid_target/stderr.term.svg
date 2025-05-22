@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Removing</tspan><tspan> dbus from dependencies for target `powerpc-unknown-linux-gnu`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the dependency `dbus` could not be found in `target.powerpc-unknown-linux-gnu.dependencies`; it is present in `target.x86_64-unknown-linux-gnu.dependencies`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the dependency `dbus` could not be found in `target.powerpc-unknown-linux-gnu.dependencies`; it is present in `target.wasm32-unknown-unknown.dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

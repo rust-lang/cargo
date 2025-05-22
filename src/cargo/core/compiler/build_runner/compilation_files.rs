@@ -25,24 +25,41 @@ use crate::util::{self, CargoResult, StableHasher};
 /// use the same rustc version.
 const METADATA_VERSION: u8 = 2;
 
-/// The `Metadata` is a hash used to make unique file names for each unit in a
-/// build. It is also used for symbol mangling.
-///
-/// For example:
-/// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
-/// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
-///
-/// In general this must include all things that need to be distinguished in different parts of
-/// the same build. This is absolutely required or we override things before
-/// we get chance to use them.
-///
-/// It is also used for symbol mangling, because if you have two versions of
-/// the same crate linked together, their symbols need to be differentiated.
+/// Uniquely identify a [`Unit`] under specific circumstances, see [`Metadata`] for more.
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UnitHash(u64);
+
+impl fmt::Display for UnitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:016x}", self.0)
+    }
+}
+
+impl fmt::Debug for UnitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnitHash({:016x})", self.0)
+    }
+}
+
+/// [`Metadata`] tracks several [`UnitHash`]s, including
+/// [`Metadata::unit_id`], [`Metadata::c_metadata`], and [`Metadata::c_extra_filename`].
 ///
 /// We use a hash because it is an easy way to guarantee
 /// that all the inputs can be converted to a valid path.
 ///
-/// This also acts as the main layer of caching provided by Cargo.
+/// [`Metadata::unit_id`] is used to uniquely identify a unit in the build graph.
+/// This serves as a similar role as [`Metadata::c_extra_filename`] in that it uniquely identifies output
+/// on the filesystem except that its always present.
+///
+/// [`Metadata::c_extra_filename`] is needed for cases like:
+/// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
+/// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
+///
+/// This also acts as the main layer of caching provided by Cargo
+/// so this must include all things that need to be distinguished in different parts of
+/// the same build. This is absolutely required or we override things before
+/// we get chance to use them.
+///
 /// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
 /// does not invalidate the artifacts for the other. We do this by including [`CompileMode`] in the
 /// hash, thus the artifacts go in different folders and do not override each other.
@@ -57,41 +74,42 @@ const METADATA_VERSION: u8 = 2;
 /// more space than needed. This makes not including something in `Metadata`
 /// a form of cache invalidation.
 ///
-/// You should also avoid anything that would interfere with reproducible
+/// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
+/// rebuild is needed.
+///
+/// [`Metadata::c_metadata`] is used for symbol mangling, because if you have two versions of
+/// the same crate linked together, their symbols need to be differentiated.
+///
+/// You should avoid anything that would interfere with reproducible
 /// builds. For example, *any* absolute path should be avoided. This is one
-/// reason that `RUSTFLAGS` is not in `Metadata`, because it often has
+/// reason that `RUSTFLAGS` is not in [`Metadata::c_metadata`], because it often has
 /// absolute paths (like `--remap-path-prefix` which is fundamentally used for
 /// reproducible builds and has absolute paths in it). Also, in some cases the
 /// mangled symbols need to be stable between different builds with different
 /// settings. For example, profile-guided optimizations need to swap
 /// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
-///
-/// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
-/// rebuild is needed.
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Metadata(u64);
-
-impl fmt::Display for Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:016x}", self.0)
-    }
+#[derive(Copy, Clone, Debug)]
+pub struct Metadata {
+    unit_id: UnitHash,
+    c_metadata: UnitHash,
+    c_extra_filename: Option<UnitHash>,
 }
 
-impl fmt::Debug for Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Metadata({:016x})", self.0)
+impl Metadata {
+    /// A hash to identify a given [`Unit`] in the build graph
+    pub fn unit_id(&self) -> UnitHash {
+        self.unit_id
     }
-}
 
-/// Information about the metadata hashes used for a `Unit`.
-struct MetaInfo {
-    /// The symbol hash to use.
-    meta_hash: Metadata,
-    /// Whether or not the `-C extra-filename` flag is used to generate unique
-    /// output filenames for this `Unit`.
-    ///
-    /// If this is `true`, the `meta_hash` is used for the filename.
-    use_extra_filename: bool,
+    /// A hash to add to symbol naming through `-C metadata`
+    pub fn c_metadata(&self) -> UnitHash {
+        self.c_metadata
+    }
+
+    /// A hash to add to file names through `-C extra-filename`
+    pub fn c_extra_filename(&self) -> Option<UnitHash> {
+        self.c_extra_filename
+    }
 }
 
 /// Collection of information about the files emitted by the compiler, and the
@@ -108,7 +126,7 @@ pub struct CompilationFiles<'a, 'gctx> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'gctx>,
     /// Metadata hash to use for each unit.
-    metas: HashMap<Unit, MetaInfo>,
+    metas: HashMap<Unit, Metadata>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -121,7 +139,7 @@ pub struct OutputFile {
     /// If it should be linked into `target`, and what it should be called
     /// (e.g., without metadata).
     pub hardlink: Option<PathBuf>,
-    /// If `--out-dir` is specified, the absolute path to the exported file.
+    /// If `--artifact-dir` is specified, the absolute path to the exported file.
     pub export_path: Option<PathBuf>,
     /// Type of the file (library / debug symbol / else).
     pub flavor: FileFlavor,
@@ -175,20 +193,14 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     ///
     /// See [`Metadata`] and [`fingerprint`] module for more.
     ///
-    /// [`fingerprint`]: ../../fingerprint/index.html#fingerprints-and-metadata
+    /// [`fingerprint`]: super::super::fingerprint#fingerprints-and-metadata
     pub fn metadata(&self, unit: &Unit) -> Metadata {
-        self.metas[unit].meta_hash
-    }
-
-    /// Returns whether or not `-C extra-filename` is used to extend the
-    /// output filenames to make them unique.
-    pub fn use_extra_filename(&self, unit: &Unit) -> bool {
-        self.metas[unit].use_extra_filename
+        self.metas[unit]
     }
 
     /// Gets the short hash based only on the `PackageId`.
-    /// Used for the metadata when `metadata` returns `None`.
-    pub fn target_short_hash(&self, unit: &Unit) -> String {
+    /// Used for the metadata when `c_extra_filename` returns `None`.
+    fn target_short_hash(&self, unit: &Unit) -> String {
         let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
         util::short_hash(&(METADATA_VERSION, hashable))
     }
@@ -205,7 +217,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
-            self.layout(unit.kind).examples().to_path_buf()
+            self.layout(unit.kind).build_examples().to_path_buf()
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
         } else {
@@ -213,7 +225,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         }
     }
 
-    /// Additional export directory from `--out-dir`.
+    /// Additional export directory from `--artifact-dir`.
     pub fn export_dir(&self) -> Option<PathBuf> {
         self.export_dir.clone()
     }
@@ -224,9 +236,9 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        let meta = &self.metas[unit];
-        if meta.use_extra_filename {
-            format!("{}-{}", name, meta.meta_hash)
+        let meta = self.metas[unit];
+        if let Some(c_extra_filename) = meta.c_extra_filename() {
+            format!("{}-{}", name, c_extra_filename)
         } else {
             format!("{}-{}", name, self.target_short_hash(unit))
         }
@@ -328,7 +340,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.layout(unit.kind).build().join(dir)
     }
 
-    /// Returns the "OUT_DIR" directory for running a build script.
+    /// Returns the "`OUT_DIR`" directory for running a build script.
     /// `/path/to/target/{debug,release}/build/PKG-HASH/out`
     pub fn build_script_out_dir(&self, unit: &Unit) -> PathBuf {
         self.build_script_run_dir(unit).join("out")
@@ -351,6 +363,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 CompileMode::Build,
                 &TargetKind::Bin,
                 bcx.target_data.short_name(&kind),
+                bcx.gctx,
             )
             .expect("target must support `bin`");
 
@@ -375,7 +388,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .map(Arc::clone)
     }
 
-    /// Returns the path where the output for the given unit and FileType
+    /// Returns the path where the output for the given unit and `FileType`
     /// should be uplifted to.
     ///
     /// Returns `None` if the unit shouldn't be uplifted (for example, a
@@ -467,7 +480,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 // The file name needs to be stable across Cargo sessions.
                 // This originally used unit.buildkey(), but that isn't stable,
                 // so we use metadata instead (prefixed with name for debugging).
-                let file_name = format!("{}-{}.examples", unit.pkg.name(), self.metadata(unit));
+                let file_name = format!(
+                    "{}-{}.examples",
+                    unit.pkg.name(),
+                    self.metadata(unit).unit_id()
+                );
                 let path = self.deps_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
@@ -479,11 +496,35 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             CompileMode::Test
             | CompileMode::Build
             | CompileMode::Bench
-            | CompileMode::Check { .. } => self.calc_outputs_rustc(unit, bcx)?,
+            | CompileMode::Check { .. } => {
+                let mut outputs = self.calc_outputs_rustc(unit, bcx)?;
+                if bcx.build_config.sbom && bcx.gctx.cli_unstable().sbom {
+                    let sbom_files: Vec<_> = outputs
+                        .iter()
+                        .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
+                        .map(|output| OutputFile {
+                            path: Self::append_sbom_suffix(&output.path),
+                            hardlink: output.hardlink.as_ref().map(Self::append_sbom_suffix),
+                            export_path: output.export_path.as_ref().map(Self::append_sbom_suffix),
+                            flavor: FileFlavor::Sbom,
+                        })
+                        .collect();
+                    outputs.extend(sbom_files.into_iter());
+                }
+                outputs
+            }
         };
         debug!("Target filenames: {:?}", ret);
 
         Ok(Arc::new(ret))
+    }
+
+    /// Append the SBOM suffix to the file name.
+    fn append_sbom_suffix(link: &PathBuf) -> PathBuf {
+        const SBOM_FILE_EXTENSION: &str = ".cargo-sbom.json";
+        let mut link_buf = link.clone().into_os_string();
+        link_buf.push(SBOM_FILE_EXTENSION);
+        PathBuf::from(link_buf)
     }
 
     /// Computes the actual, full pathnames for all the files generated by rustc.
@@ -500,7 +541,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let info = bcx.target_data.info(unit.kind);
         let triple = bcx.target_data.short_name(&unit.kind);
         let (file_types, unsupported) =
-            info.rustc_outputs(unit.mode, unit.target.kind(), triple)?;
+            info.rustc_outputs(unit.mode, unit.target.kind(), triple, bcx.gctx)?;
         if file_types.is_empty() {
             if !unsupported.is_empty() {
                 let unsupported_strs: Vec<_> = unsupported.iter().map(|ct| ct.as_str()).collect();
@@ -523,8 +564,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         // Convert FileType to OutputFile.
         let mut outputs = Vec::new();
         for file_type in file_types {
-            let meta = &self.metas[unit];
-            let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
+            let meta = self.metas[unit];
+            let meta_opt = meta.c_extra_filename().map(|h| h.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
 
             // If, the `different_binary_name` feature is enabled, the name of the hardlink will
@@ -558,8 +599,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 fn metadata_of<'a>(
     unit: &Unit,
     build_runner: &BuildRunner<'_, '_>,
-    metas: &'a mut HashMap<Unit, MetaInfo>,
-) -> &'a MetaInfo {
+    metas: &'a mut HashMap<Unit, Metadata>,
+) -> &'a Metadata {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, build_runner, metas);
         metas.insert(unit.clone(), meta);
@@ -574,59 +615,66 @@ fn metadata_of<'a>(
 fn compute_metadata(
     unit: &Unit,
     build_runner: &BuildRunner<'_, '_>,
-    metas: &mut HashMap<Unit, MetaInfo>,
-) -> MetaInfo {
+    metas: &mut HashMap<Unit, Metadata>,
+) -> Metadata {
     let bcx = &build_runner.bcx;
-    let mut hasher = StableHasher::new();
+    let deps_metadata = build_runner
+        .unit_deps(unit)
+        .iter()
+        .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
+        .collect::<Vec<_>>();
+    let use_extra_filename = use_extra_filename(bcx, unit);
 
-    METADATA_VERSION.hash(&mut hasher);
+    let mut shared_hasher = StableHasher::new();
+
+    METADATA_VERSION.hash(&mut shared_hasher);
+
+    let ws_root = if unit.is_std {
+        // SourceId for stdlib crates is an absolute path inside the sysroot.
+        // Pass the sysroot as workspace root so that we hash a relative path.
+        // This avoids the metadata hash changing depending on where the user installed rustc.
+        &bcx.target_data.get_info(unit.kind).unwrap().sysroot
+    } else {
+        bcx.ws.root()
+    };
 
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere without worrying about conflicts.
     unit.pkg
         .package_id()
-        .stable_hash(bcx.ws.root())
-        .hash(&mut hasher);
+        .stable_hash(ws_root)
+        .hash(&mut shared_hasher);
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
-    unit.features.hash(&mut hasher);
-
-    // Mix in the target-metadata of all the dependencies of this target.
-    let mut deps_metadata = build_runner
-        .unit_deps(unit)
-        .iter()
-        .map(|dep| metadata_of(&dep.unit, build_runner, metas).meta_hash)
-        .collect::<Vec<_>>();
-    deps_metadata.sort();
-    deps_metadata.hash(&mut hasher);
+    unit.features.hash(&mut shared_hasher);
 
     // Throw in the profile we're compiling with. This helps caching
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
     // settings like debuginfo and whatnot.
-    unit.profile.hash(&mut hasher);
-    unit.mode.hash(&mut hasher);
-    build_runner.lto[unit].hash(&mut hasher);
+    unit.profile.hash(&mut shared_hasher);
+    unit.mode.hash(&mut shared_hasher);
+    build_runner.lto[unit].hash(&mut shared_hasher);
 
     // Artifacts compiled for the host should have a different
     // metadata piece than those compiled for the target, so make sure
     // we throw in the unit's `kind` as well.  Use `fingerprint_hash`
     // so that the StableHash doesn't change based on the pathnames
     // of the custom target JSON spec files.
-    unit.kind.fingerprint_hash().hash(&mut hasher);
+    unit.kind.fingerprint_hash().hash(&mut shared_hasher);
 
     // Finally throw in the target name/kind. This ensures that concurrent
     // compiles of targets in the same crate don't collide.
-    unit.target.name().hash(&mut hasher);
-    unit.target.kind().hash(&mut hasher);
+    unit.target.name().hash(&mut shared_hasher);
+    unit.target.kind().hash(&mut shared_hasher);
 
-    hash_rustc_version(bcx, &mut hasher);
+    hash_rustc_version(bcx, &mut shared_hasher, unit);
 
     if build_runner.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
         if let Some(path) = &build_runner.bcx.rustc().workspace_wrapper {
-            path.hash(&mut hasher);
+            path.hash(&mut shared_hasher);
         }
     }
 
@@ -637,7 +685,7 @@ fn compute_metadata(
         .gctx
         .get_env("__CARGO_DEFAULT_LIB_METADATA")
     {
-        channel.hash(&mut hasher);
+        channel.hash(&mut shared_hasher);
     }
 
     // std units need to be kept separate from user dependencies. std crates
@@ -647,21 +695,104 @@ fn compute_metadata(
     // don't need unstable support. A future experiment might be to set
     // `is_std` to false for build dependencies so that they can be shared
     // with user dependencies.
-    unit.is_std.hash(&mut hasher);
+    unit.is_std.hash(&mut shared_hasher);
 
-    MetaInfo {
-        meta_hash: Metadata(hasher.finish()),
-        use_extra_filename: should_use_metadata(bcx, unit),
+    // While we don't hash RUSTFLAGS because it may contain absolute paths that
+    // hurts reproducibility, we track whether a unit's RUSTFLAGS is from host
+    // config, so that we can generate a different metadata hash for runtime
+    // and compile-time units.
+    //
+    // HACK: This is a temporary hack for fixing rust-lang/cargo#14253
+    // Need to find a long-term solution to replace this fragile workaround.
+    // See https://github.com/rust-lang/cargo/pull/14432#discussion_r1725065350
+    if unit.kind.is_host() && !bcx.gctx.target_applies_to_host().unwrap_or_default() {
+        let host_info = bcx.target_data.info(CompileKind::Host);
+        let target_configs_are_different = unit.rustflags != host_info.rustflags
+            || unit.rustdocflags != host_info.rustdocflags
+            || bcx
+                .target_data
+                .target_config(CompileKind::Host)
+                .links_overrides
+                != unit.links_overrides;
+        target_configs_are_different.hash(&mut shared_hasher);
+    }
+
+    let mut c_metadata_hasher = shared_hasher.clone();
+    // Mix in the target-metadata of all the dependencies of this target.
+    let mut dep_c_metadata_hashes = deps_metadata
+        .iter()
+        .map(|m| m.c_metadata)
+        .collect::<Vec<_>>();
+    dep_c_metadata_hashes.sort();
+    dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
+
+    let mut c_extra_filename_hasher = shared_hasher.clone();
+    // Mix in the target-metadata of all the dependencies of this target.
+    let mut dep_c_extra_filename_hashes = deps_metadata
+        .iter()
+        .map(|m| m.c_extra_filename)
+        .collect::<Vec<_>>();
+    dep_c_extra_filename_hashes.sort();
+    dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
+    // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
+    //
+    // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
+    let default = Vec::new();
+    let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
+    if !has_remap_path_prefix(&extra_args) {
+        extra_args.hash(&mut c_extra_filename_hasher);
+    }
+    if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+        if !has_remap_path_prefix(&unit.rustdocflags) {
+            unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+        }
+    } else {
+        if !has_remap_path_prefix(&unit.rustflags) {
+            unit.rustflags.hash(&mut c_extra_filename_hasher);
+        }
+    }
+
+    let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
+    let c_extra_filename = UnitHash(Hasher::finish(&c_extra_filename_hasher));
+    let unit_id = c_extra_filename;
+
+    let c_extra_filename = use_extra_filename.then_some(c_extra_filename);
+
+    Metadata {
+        unit_id,
+        c_metadata,
+        c_extra_filename,
     }
 }
 
+/// HACK: Detect the *potential* presence of `--remap-path-prefix`
+///
+/// As CLI parsing is contextual and dependent on the CLI definition to understand the context, we
+/// can't say for sure whether `--remap-path-prefix` is present, so we guess if anything looks like
+/// it.
+/// If we could, we'd strip it out for hashing.
+/// Instead, we use this to avoid hashing rustflags if it might be present to avoid the risk of taking
+/// a flag that is trying to make things reproducible and making things less reproducible by the
+/// `-Cextra-filename` showing up in the rlib, even with `split-debuginfo`.
+fn has_remap_path_prefix(args: &[String]) -> bool {
+    args.iter()
+        .any(|s| s.starts_with("--remap-path-prefix=") || s == "--remap-path-prefix")
+}
+
 /// Hash the version of rustc being used during the build process.
-fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
+fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, unit: &Unit) {
     let vers = &bcx.rustc().version;
     if vers.pre.is_empty() || bcx.gctx.cli_unstable().separate_nightlies {
         // For stable, keep the artifacts separate. This helps if someone is
-        // testing multiple versions, to avoid recompiles.
-        bcx.rustc().verbose_version.hash(hasher);
+        // testing multiple versions, to avoid recompiles. Note though that for
+        // cross-compiled builds the `host:` line of `verbose_version` is
+        // omitted since rustc should produce the same output for each target
+        // regardless of the host.
+        for line in bcx.rustc().verbose_version.lines() {
+            if unit.kind.is_host() || !line.starts_with("host: ") {
+                line.hash(hasher);
+            }
+        }
         return;
     }
     // On "nightly"/"beta"/"dev"/etc, keep each "channel" separate. Don't hash
@@ -674,7 +805,9 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     // Keep "host" since some people switch hosts to implicitly change
     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
     // to consider hashing `unit.kind.short_name()` instead.
-    bcx.rustc().host.hash(hasher);
+    if unit.kind.is_host() {
+        bcx.rustc().host.hash(hasher);
+    }
     // None of the other lines are important. Currently they are:
     // binary: rustc  <-- or "rustdoc"
     // commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
@@ -688,8 +821,8 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     // between different backends without recompiling.
 }
 
-/// Returns whether or not this unit should use a metadata hash.
-fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+/// Returns whether or not this unit should use a hash in the filename to make it unique.
+fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;

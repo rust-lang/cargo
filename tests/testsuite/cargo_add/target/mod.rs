@@ -28,12 +28,12 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("my-package1 my-package2 --target i686-unknown-linux-gnu")
+        .arg_line("my-package1 my-package2 --target wasm32-unknown-unknown")
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }
