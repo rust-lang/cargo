@@ -245,9 +245,6 @@ enabled:
   `package-name/feature-name` syntax can be used to specify features for
   specific workspace members.
 
-* `--all-features`: Activates all features of all packages selected on the
-  command-line.
-
 * `--no-default-features`: Does not activate the [`default`
   feature](#the-default-feature) of the selected packages.
 
