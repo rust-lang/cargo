@@ -1734,8 +1734,8 @@ pub fn to_real_manifest(
 
     if summary.features().contains_key("default-features") {
         warnings.push(
-            "`default-features = [\"..\"]` was found in [features]. \
-                 Did you mean to use `default = [\"..\"]`?"
+            "`[features]` defines a feature named `default-features`. \
+                 Note that only a feature named `default` will be enabled by default."
                 .to_string(),
         )
     }
