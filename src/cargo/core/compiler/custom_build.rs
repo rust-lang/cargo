@@ -416,6 +416,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 let values = cfg_map.entry(k.as_str()).or_default();
                 values.push(v.as_str());
             }
+            Cfg::Version(..) => {}
         }
     }
     for (k, v) in cfg_map {
