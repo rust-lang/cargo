@@ -51,6 +51,7 @@ use rustfix::CodeFix;
 use semver::Version;
 use tracing::{debug, trace, warn};
 
+pub use self::fix_edition::fix_edition;
 use crate::core::compiler::CompileKind;
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
@@ -65,6 +66,8 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::GlobalContext;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
+
+mod fix_edition;
 
 /// **Internal only.**
 /// Indicates Cargo is in fix-proxy-mode if presents.
