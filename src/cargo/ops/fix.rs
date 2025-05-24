@@ -103,7 +103,6 @@ pub struct FixOptions {
 pub fn fix(
     gctx: &GlobalContext,
     original_ws: &Workspace<'_>,
-    root_manifest: &Path,
     opts: &mut FixOptions,
 ) -> CargoResult<()> {
     check_version_control(gctx, opts)?;
@@ -120,10 +119,7 @@ pub fn fix(
 
         check_resolver_change(&original_ws, &mut target_data, opts)?;
     }
-    let mut ws = Workspace::new(&root_manifest, gctx)?;
-    ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
-    ws.set_resolve_feature_unification(original_ws.resolve_feature_unification());
-    ws.set_requested_lockfile_path(opts.requested_lockfile_path.clone());
+    let ws = original_ws.reload(gctx)?;
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
