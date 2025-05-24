@@ -194,3 +194,76 @@ fn unset_edition_works_on_old_msrv() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn future_edition_is_gated() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "future"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `unstable-editions` is required
+
+  The package requires the Cargo feature called `unstable-editions`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unstable-editions for more information about the status of this feature.
+
+"#]])
+        .run();
+
+    // Repeat on nightly.
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["unstable-editions"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `unstable-editions` is required
+
+  The package requires the Cargo feature called `unstable-editions`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider adding `cargo-features = ["unstable-editions"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unstable-editions for more information about the status of this feature.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "future edition is always unstable")]
+fn future_edition_works() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["unstable-editions"]
+
+                [package]
+                name = "foo"
+                edition = "future"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["unstable-editions"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

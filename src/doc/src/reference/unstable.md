@@ -107,6 +107,7 @@ Each new feature described below should explain how to use it.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
+    * [`unstable-editions`](#unstable-editions) --- Allows use of editions that are not yet stable.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1897,6 +1898,22 @@ be stored in `.rmeta` files.
 ```console
 cargo +nightly -Zno-embed-metadata build
 ```
+
+## `unstable-editions`
+
+The `unstable-editions` value in the `cargo-features` list allows a `Cargo.toml` manifest to specify an edition that is not yet stable.
+
+```toml
+cargo-features = ["unstable-editions"]
+
+[package]
+name = "my-package"
+edition = "future"
+```
+
+When new editions are introduced, the `unstable-editions` feature is required until the edition is stabilized.
+
+The special "future" edition is a home for new features that are under development, and is permanently unstable. The "future" edition also has no new behavior by itself. Each change in the future edition requires an opt-in such as a `#![feature(...)]` attribute.
 
 # Stabilized and removed features
 
