@@ -94,7 +94,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     ops::fix(
         gctx,
         &ws,
-        &root_manifest,
         &mut ops::FixOptions {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),
