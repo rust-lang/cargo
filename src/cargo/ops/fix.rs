@@ -90,7 +90,7 @@ const IDIOMS_ENV_INTERNAL: &str = "__CARGO_FIX_IDIOMS";
 const SYSROOT_INTERNAL: &str = "__CARGO_FIX_RUST_SRC";
 
 pub struct FixOptions {
-    pub edition: bool,
+    pub edition: Option<EditionFixMode>,
     pub idioms: bool,
     pub compile_opts: CompileOptions,
     pub allow_dirty: bool,
@@ -98,6 +98,46 @@ pub struct FixOptions {
     pub allow_staged: bool,
     pub broken_code: bool,
     pub requested_lockfile_path: Option<PathBuf>,
+}
+
+/// The behavior of `--edition` migration.
+#[derive(Clone, Copy)]
+pub enum EditionFixMode {
+    /// Migrates the package from the current edition to the next.
+    ///
+    /// This is the normal (stable) behavior of `--edition`.
+    NextRelative,
+    /// Migrates to a specific edition.
+    ///
+    /// This is used by `-Zfix-edition` to force a specific edition like
+    /// `future`, which does not have a relative value.
+    OverrideSpecific(Edition),
+}
+
+impl EditionFixMode {
+    /// Returns the edition to use for the given current edition.
+    pub fn next_edition(&self, current_edition: Edition) -> Edition {
+        match self {
+            EditionFixMode::NextRelative => current_edition.saturating_next(),
+            EditionFixMode::OverrideSpecific(edition) => *edition,
+        }
+    }
+
+    /// Serializes to a string.
+    fn to_string(&self) -> String {
+        match self {
+            EditionFixMode::NextRelative => "1".to_string(),
+            EditionFixMode::OverrideSpecific(edition) => edition.to_string(),
+        }
+    }
+
+    /// Deserializes from the given string.
+    fn from_str(s: &str) -> EditionFixMode {
+        match s {
+            "1" => EditionFixMode::NextRelative,
+            edition => EditionFixMode::OverrideSpecific(edition.parse().unwrap()),
+        }
+    }
 }
 
 pub fn fix(
@@ -109,13 +149,13 @@ pub fn fix(
 
     let mut target_data =
         RustcTargetData::new(original_ws, &opts.compile_opts.build_config.requested_kinds)?;
-    if opts.edition {
+    if let Some(edition_mode) = opts.edition {
         let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
         let members: Vec<&Package> = original_ws
             .members()
             .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
             .collect();
-        migrate_manifests(original_ws, &members)?;
+        migrate_manifests(original_ws, &members, edition_mode)?;
 
         check_resolver_change(&original_ws, &mut target_data, opts)?;
     }
@@ -133,8 +173,8 @@ pub fn fix(
         wrapper.env(BROKEN_CODE_ENV_INTERNAL, "1");
     }
 
-    if opts.edition {
-        wrapper.env(EDITION_ENV_INTERNAL, "1");
+    if let Some(mode) = &opts.edition {
+        wrapper.env(EDITION_ENV_INTERNAL, mode.to_string());
     }
     if opts.idioms {
         wrapper.env(IDIOMS_ENV_INTERNAL, "1");
@@ -248,7 +288,11 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
     );
 }
 
-fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
+fn migrate_manifests(
+    ws: &Workspace<'_>,
+    pkgs: &[&Package],
+    edition_mode: EditionFixMode,
+) -> CargoResult<()> {
     // HACK: Duplicate workspace migration logic between virtual manifests and real manifests to
     // reduce multiple Migrating messages being reported for the same file to the user
     if matches!(ws.root_maybe(), MaybePackage::Virtual(_)) {
@@ -259,7 +303,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             .map(|p| p.manifest().edition())
             .max()
             .unwrap_or_default();
-        let prepare_for_edition = highest_edition.saturating_next();
+        let prepare_for_edition = edition_mode.next_edition(highest_edition);
         if highest_edition == prepare_for_edition
             || (!prepare_for_edition.is_stable() && !ws.gctx().nightly_features_allowed)
         {
@@ -304,7 +348,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
 
     for pkg in pkgs {
         let existing_edition = pkg.manifest().edition();
-        let prepare_for_edition = existing_edition.saturating_next();
+        let prepare_for_edition = edition_mode.next_edition(existing_edition);
         if existing_edition == prepare_for_edition
             || (!prepare_for_edition.is_stable() && !ws.gctx().nightly_features_allowed)
         {
@@ -1191,10 +1235,10 @@ impl FixArgs {
         // ALLOWED: For the internal mechanism of `cargo fix` only.
         // Shouldn't be set directly by anyone.
         #[allow(clippy::disallowed_methods)]
-        let prepare_for_edition = env::var(EDITION_ENV_INTERNAL).ok().map(|_| {
-            enabled_edition
-                .unwrap_or(Edition::Edition2015)
-                .saturating_next()
+        let prepare_for_edition = env::var(EDITION_ENV_INTERNAL).ok().map(|v| {
+            let enabled_edition = enabled_edition.unwrap_or(Edition::Edition2015);
+            let mode = EditionFixMode::from_str(&v);
+            mode.next_edition(enabled_edition)
         });
 
         // ALLOWED: For the internal mechanism of `cargo fix` only.
