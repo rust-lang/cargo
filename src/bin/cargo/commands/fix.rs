@@ -91,21 +91,24 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let allow_dirty = args.flag("allow-dirty");
 
-    ops::fix(
-        gctx,
-        &ws,
-        &mut ops::FixOptions {
-            edition: args
-                .flag("edition")
-                .then_some(ops::EditionFixMode::NextRelative),
-            idioms: args.flag("edition-idioms"),
-            compile_opts: opts,
-            allow_dirty,
-            allow_staged: allow_dirty || args.flag("allow-staged"),
-            allow_no_vcs: args.flag("allow-no-vcs"),
-            broken_code: args.flag("broken-code"),
-            requested_lockfile_path: lockfile_path,
-        },
-    )?;
+    let mut opts = ops::FixOptions {
+        edition: args
+            .flag("edition")
+            .then_some(ops::EditionFixMode::NextRelative),
+        idioms: args.flag("edition-idioms"),
+        compile_opts: opts,
+        allow_dirty,
+        allow_staged: allow_dirty || args.flag("allow-staged"),
+        allow_no_vcs: args.flag("allow-no-vcs"),
+        broken_code: args.flag("broken-code"),
+        requested_lockfile_path: lockfile_path,
+    };
+
+    if let Some(fe) = &gctx.cli_unstable().fix_edition {
+        ops::fix_edition(gctx, &ws, &mut opts, fe)?;
+    } else {
+        ops::fix(gctx, &ws, &mut opts)?;
+    }
+
     Ok(())
 }

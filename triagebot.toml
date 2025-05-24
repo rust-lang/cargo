@@ -279,7 +279,7 @@ trigger_files = ["src/bin/cargo/commands/fetch.rs", "src/cargo/ops/cargo_fetch.r
 trigger_files = [
     "crates/rustfix/",
     "src/bin/cargo/commands/fix.rs",
-    "src/cargo/ops/fix.rs",
+    "src/cargo/ops/fix/",
     "src/cargo/util/diagnostic_server.rs",
     "src/cargo/util/lockserver.rs",
 ]
