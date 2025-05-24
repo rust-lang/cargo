@@ -362,6 +362,45 @@ impl FromStr for Edition {
     }
 }
 
+/// The value for `-Zfix-edition`.
+#[derive(Debug, Deserialize)]
+pub enum FixEdition {
+    /// `-Zfix-edition=start=$INITIAL`
+    ///
+    /// This mode for `cargo fix` will just run `cargo check` if the current
+    /// edition is equal to this edition. If it is a different edition, then
+    /// it just exits with success. This is used for crater integration which
+    /// needs to set a baseline for the "before" toolchain.
+    Start(Edition),
+    /// `-Zfix-edition=end=$INITIAL,$NEXT`
+    ///
+    /// This mode for `cargo fix` will migrate to the `next` edition if the
+    /// current edition is `initial`. After migration, it will update
+    /// `Cargo.toml` and verify that that it works on the new edition. If the
+    /// current edition is not `initial`, then it immediately exits with
+    /// success since we just want to ignore those packages.
+    End { initial: Edition, next: Edition },
+}
+
+impl FromStr for FixEdition {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        if let Some(start) = s.strip_prefix("start=") {
+            Ok(FixEdition::Start(start.parse()?))
+        } else if let Some(end) = s.strip_prefix("end=") {
+            let (initial, next) = end
+                .split_once(',')
+                .ok_or_else(|| anyhow::format_err!("expected `initial,next`"))?;
+            Ok(FixEdition::End {
+                initial: initial.parse()?,
+                next: next.parse()?,
+            })
+        } else {
+            bail!("invalid `-Zfix-edition, expected start= or end=, got `{s}`");
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum Status {
     Stable,
@@ -791,6 +830,7 @@ unstable_cli_options!(
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
     features: Option<Vec<String>>,
+    fix_edition: Option<FixEdition> = ("Permanently unstable edition migration helper"),
     gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
     #[serde(deserialize_with = "deserialize_git_features")]
     git: Option<GitFeatures> = ("Enable support for shallow git fetch operations"),
@@ -1298,6 +1338,12 @@ impl CliUnstable {
             "doctest-xcompile" => stabilized_warn(k, "1.89", STABILIZED_DOCTEST_XCOMPILE),
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
+            "fix-edition" => {
+                let fe = v
+                    .ok_or_else(|| anyhow::anyhow!("-Zfix-edition expected a value"))?
+                    .parse()?;
+                self.fix_edition = Some(fe);
+            }
             "gc" => self.gc = parse_empty(k, v)?,
             "git" => {
                 self.git =
