@@ -301,6 +301,18 @@ impl<'gctx> Workspace<'gctx> {
         Ok(ws)
     }
 
+    /// Reloads the workspace.
+    ///
+    /// This is useful if the workspace has been updated, such as with `cargo
+    /// fix` modifying the `Cargo.toml` file.
+    pub fn reload(&self, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
+        let mut ws = Workspace::new(self.root_manifest(), gctx)?;
+        ws.set_resolve_honors_rust_version(Some(self.resolve_honors_rust_version));
+        ws.set_resolve_feature_unification(self.resolve_feature_unification);
+        ws.set_requested_lockfile_path(self.requested_lockfile_path.clone());
+        Ok(ws)
+    }
+
     fn set_resolve_behavior(&mut self) -> CargoResult<()> {
         // - If resolver is specified in the workspace definition, use that.
         // - If the root package specifies the resolver, use that.

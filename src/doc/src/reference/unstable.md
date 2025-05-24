@@ -107,6 +107,7 @@ Each new feature described below should explain how to use it.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
+    * [`unstable-edition`](#unstable-edition) --- Allows use of editions that are not yet stable.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -125,6 +126,7 @@ Each new feature described below should explain how to use it.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
+    * [`fix-edition`](#fix-edition) --- A permanently unstable edition migration helper.
 
 ## allow-features
 
@@ -1896,6 +1898,35 @@ be stored in `.rmeta` files.
 
 ```console
 cargo +nightly -Zno-embed-metadata build
+```
+
+## `unstable-edition`
+
+The `unstable-edition` value in the `cargo-features` list allows a `Cargo.toml` manifest to specify an edition that is not yet stable.
+
+```toml
+cargo-features = ["unstable-edition"]
+
+[package]
+name = "my-package"
+edition = "future"
+```
+
+When new editions are introduced, the `unstable-edition` feature is required until the edition is stabilized.
+
+The special "future" edition is a home for new features that are under development, and is permanently unstable. The "future" edition also has no new behavior by itself. Each change in the future edition requires an opt-in such as a `#![feature(...)]` attribute.
+
+## `fix-edition`
+
+`-Zfix-edition` is a permanently unstable flag to assist with testing edition migrations, particularly with the use of crater. It only works with the `cargo fix` subcommand. It takes two different forms:
+
+- `-Zfix-edition=start=$INITIAL` --- This form checks if the current edition is equal to the given number. If not, it exits with success (because we want to ignore older editions). If it is, then it runs the equivalent of `cargo check`. This is intended to be used with crater's "start" toolchain to set a baseline for the "before" toolchain.
+- `-Zfix-edition=end=$INITIAL,$NEXT` --- This form checks if the current edition is equal to the given `$INITIAL` value. If not, it exits with success. If it is, then it performs an edition migration to the edition specified in `$NEXT`. Afterwards, it will modify `Cargo.toml` to add the appropriate `cargo-features = ["unstable-edition"]`, update the `edition` field, and run the equivalent of `cargo check` to verify that the migration works on the new edition.
+
+For example:
+
+```console
+cargo +nightly fix -Zfix-edition=end=2024,future
 ```
 
 # Stabilized and removed features
