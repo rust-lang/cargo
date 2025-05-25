@@ -21,8 +21,8 @@ pub struct BuildConfig {
     pub keep_going: bool,
     /// Build profile
     pub requested_profile: InternedString,
-    /// The mode we are compiling in.
-    pub mode: CompileMode,
+    /// The intent we are compiling in.
+    pub intent: UserIntent,
     /// `true` to print stdout in JSON format (for machine reading).
     pub message_format: MessageFormat,
     /// Force Cargo to do a full rebuild and treat each target as changed.
@@ -72,7 +72,7 @@ impl BuildConfig {
         jobs: Option<JobsConfig>,
         keep_going: bool,
         requested_targets: &[String],
-        mode: CompileMode,
+        intent: UserIntent,
     ) -> CargoResult<BuildConfig> {
         let cfg = gctx.build_config()?;
         let requested_kinds = CompileKind::from_requested_targets(gctx, requested_targets)?;
@@ -117,7 +117,7 @@ impl BuildConfig {
             jobs,
             keep_going,
             requested_profile: InternedString::new("dev"),
-            mode,
+            intent,
             message_format: MessageFormat::Human,
             force_rebuild: false,
             build_plan: false,
@@ -136,10 +136,6 @@ impl BuildConfig {
     /// actually uses JSON is decided in `add_error_format`.
     pub fn emit_json(&self) -> bool {
         matches!(self.message_format, MessageFormat::Json { .. })
-    }
-
-    pub fn test(&self) -> bool {
-        self.mode == CompileMode::Test || self.mode == CompileMode::Bench
     }
 
     pub fn single_requested_kind(&self) -> CargoResult<CompileKind> {
@@ -167,20 +163,16 @@ pub enum MessageFormat {
     Short,
 }
 
-/// The general "mode" for what to do.
-///
-/// This is used for two purposes. The commands themselves pass this in to
-/// `compile_ws` to tell it the general execution strategy. This influences
-/// the default targets selected. The other use is in the `Unit` struct
-/// to indicate what is being done with a specific target.
+/// The specific action to be performed on each `Unit` of work.
 #[derive(Clone, Copy, PartialEq, Debug, Eq, Hash, PartialOrd, Ord)]
 pub enum CompileMode {
-    /// A target being built for a test.
+    /// Test with `rustc`.
     Test,
-    /// Building a target with `rustc` (lib or bin).
+    /// Compile with `rustc`.
     Build,
-    /// Building a target with `rustc` to emit `rmeta` metadata only. If
-    /// `test` is true, then it is also compiled with `--test` to check it like
+    /// Type-check with `rustc` by emitting `rmeta` metadata only.
+    ///
+    /// If `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
     Check { test: bool },
     /// Used to indicate benchmarks should be built. This is not used in
@@ -188,16 +180,16 @@ pub enum CompileMode {
     /// `--test` should be passed to rustc) and by using `Test` instead it
     /// allows some de-duping of Units to occur.
     Bench,
-    /// A target that will be documented with `rustdoc`.
-
+    /// Document with `rustdoc`.
+    ///
     /// If `deps` is true, then it will also document all dependencies.
     /// if `json` is true, the documentation output is in json format.
     Doc { deps: bool, json: bool },
-    /// A target that will be tested with `rustdoc`.
+    /// Test with `rustdoc`.
     Doctest,
-    /// An example or library that will be scraped for function calls by `rustdoc`.
+    /// Scrape for function calls by `rustdoc`.
     Docscrape,
-    /// A marker for Units that represent the execution of a `build.rs` script.
+    /// Execute the binary built from the `build.rs` script.
     RunCustomBuild,
 }
 
@@ -274,6 +266,64 @@ impl CompileMode {
         matches!(
             self,
             CompileMode::Test | CompileMode::Bench | CompileMode::Build
+        )
+    }
+}
+
+/// Represents the high-level operation requested by the user.
+///
+/// It determines which "Cargo targets" are selected by default and influences
+/// how they will be processed. This is derived from the Cargo command the user
+/// invoked (like `cargo build` or `cargo test`).
+///
+/// Unlike [`CompileMode`], which describes the specific compilation steps for
+/// individual units, [`UserIntent`] represents the overall goal of the build
+/// process as specified by the user.
+///
+/// For example, when a user runs `cargo test`, the intent is [`UserIntent::Test`],
+/// but this might result in multiple [`CompileMode`]s for different units.
+#[derive(Clone, Copy, Debug)]
+pub enum UserIntent {
+    /// Build benchmark binaries, e.g., `cargo bench`
+    Bench,
+    /// Build binaries and libraray, e.g., `cargo run`, `cargo install`, `cargo build`.
+    Build,
+    /// Perform type-check, e.g., `cargo check`.
+    Check { test: bool },
+    /// Document packages.
+    ///
+    /// If `deps` is true, then it will also document all dependencies.
+    /// if `json` is true, the documentation output is in json format.
+    Doc { deps: bool, json: bool },
+    /// Build doctest binaries, e.g., `cargo test --doc`
+    Doctest,
+    /// Build test binaries, e.g., `cargo test`
+    Test,
+}
+
+impl UserIntent {
+    /// Returns `true` if this is generating documentation.
+    pub fn is_doc(self) -> bool {
+        matches!(self, UserIntent::Doc { .. })
+    }
+
+    /// Returns `true` if this is any type of test (test, benchmark, doc test, or
+    /// check test).
+    pub fn is_any_test(self) -> bool {
+        matches!(
+            self,
+            UserIntent::Test
+                | UserIntent::Bench
+                | UserIntent::Check { test: true }
+                | UserIntent::Doctest
+        )
+    }
+
+    /// Returns `true` if this is something that passes `--test` to rustc.
+    pub fn is_rustc_test(self) -> bool {
+        matches!(
+            self,
+            UserIntent::Test | UserIntent::Bench | UserIntent::Check { test: true }
         )
     }
 }

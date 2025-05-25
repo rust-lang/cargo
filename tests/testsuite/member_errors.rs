@@ -1,7 +1,9 @@
 //! Tests for workspace member errors.
 
+use cargo::core::compiler::UserIntent;
 use cargo::core::resolver::ResolveError;
-use cargo::core::{compiler::CompileMode, Shell, Workspace};
+use cargo::core::Shell;
+use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions};
 use cargo::util::{context::GlobalContext, errors::ManifestError};
 use cargo_test_support::paths;
@@ -155,7 +157,7 @@ fn member_manifest_version_error() {
         paths::cargo_home(),
     );
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
-    let compile_options = CompileOptions::new(&gctx, CompileMode::Build).unwrap();
+    let compile_options = CompileOptions::new(&gctx, UserIntent::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();
 
     let error = ops::compile(&ws, &compile_options).map(|_| ()).unwrap_err();

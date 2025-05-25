@@ -1,7 +1,6 @@
 //! Filters and their rules to select which Cargo targets will be built.
 
-use crate::core::compiler::CompileMode;
-
+use crate::core::compiler::UserIntent;
 use crate::core::{Target, TargetKind};
 use crate::util::restricted_names::is_glob_pattern;
 
@@ -216,23 +215,21 @@ impl CompileFilter {
     }
 
     /// Indicates if Cargo needs to build any dev dependency.
-    pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
-        match mode {
-            CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
-            CompileMode::Check { test: true } => true,
-            CompileMode::Build
-            | CompileMode::Doc { .. }
-            | CompileMode::Docscrape
-            | CompileMode::Check { test: false } => match *self {
-                CompileFilter::Default { .. } => false,
-                CompileFilter::Only {
-                    ref examples,
-                    ref tests,
-                    ref benches,
-                    ..
-                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-            },
-            CompileMode::RunCustomBuild => panic!("Invalid mode"),
+    pub fn need_dev_deps(&self, intent: UserIntent) -> bool {
+        match intent {
+            UserIntent::Test | UserIntent::Doctest | UserIntent::Bench => true,
+            UserIntent::Check { test: true } => true,
+            UserIntent::Build | UserIntent::Doc { .. } | UserIntent::Check { test: false } => {
+                match *self {
+                    CompileFilter::Default { .. } => false,
+                    CompileFilter::Only {
+                        ref examples,
+                        ref tests,
+                        ref benches,
+                        ..
+                    } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+                }
+            }
         }
     }
 

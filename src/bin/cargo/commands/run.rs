@@ -51,7 +51,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(gctx)?;
 
     let mut compile_opts =
-        args.compile_options(gctx, CompileMode::Build, Some(&ws), ProfileChecking::Custom)?;
+        args.compile_options(gctx, UserIntent::Build, Some(&ws), ProfileChecking::Custom)?;
 
     // Disallow `spec` to be an glob pattern
     if let Packages::Packages(opt_in) = &compile_opts.spec {
@@ -180,7 +180,7 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
     }
 
     let mut compile_opts =
-        cargo::ops::CompileOptions::new(gctx, cargo::core::compiler::CompileMode::Build)?;
+        cargo::ops::CompileOptions::new(gctx, cargo::core::compiler::UserIntent::Build)?;
     compile_opts.spec = cargo::ops::Packages::Default;
 
     cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(gctx, err))

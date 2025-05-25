@@ -64,7 +64,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let mut compile_opts = args.compile_options_for_single_package(
         gctx,
-        CompileMode::Doc {
+        UserIntent::Doc {
             deps: false,
             json: matches!(output_format, OutputFormat::Json),
         },

@@ -28,7 +28,7 @@
 //! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
 //! [`TargetKind::CustomBuild`]: crate::core::manifest::TargetKind::CustomBuild
 //! [`UnitGraph`]: super::unit_graph::UnitGraph
-//! [`CompileMode::RunCustomBuild`]: super::CompileMode
+//! [`CompileMode::RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
 use super::{fingerprint, get_dynamic_search_path, BuildRunner, Job, Unit, Work};
@@ -36,8 +36,8 @@ use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
+use crate::core::compiler::CompileMode;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
-use crate::util::command_prelude::CompileMode;
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};

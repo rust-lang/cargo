@@ -49,7 +49,7 @@ pub fn cli() -> Command {
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(gctx)?;
     let mut compile_opts =
-        args.compile_options(gctx, CompileMode::Build, Some(&ws), ProfileChecking::Custom)?;
+        args.compile_options(gctx, UserIntent::Build, Some(&ws), ProfileChecking::Custom)?;
 
     if let Some(artifact_dir) = args.value_of_path("artifact-dir", gctx) {
         // If the user specifies `--artifact-dir`, use that

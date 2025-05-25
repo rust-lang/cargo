@@ -5,12 +5,11 @@ use std::fs;
 use std::io::Read;
 use std::process::Stdio;
 
-use cargo::{
-    core::compiler::CompileMode,
-    core::{Shell, Workspace},
-    ops::CompileOptions,
-    GlobalContext,
-};
+use cargo::core::compiler::UserIntent;
+use cargo::core::Shell;
+use cargo::core::Workspace;
+use cargo::ops::CompileOptions;
+use cargo::GlobalContext;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::root;
 use cargo_test_support::prelude::*;
@@ -665,7 +664,7 @@ fn cargo_compile_api_exposes_artifact_paths() {
     let shell = Shell::from_write(Box::new(Vec::new()));
     let gctx = GlobalContext::new(shell, env::current_dir().unwrap(), paths::home());
     let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
-    let compile_options = CompileOptions::new(ws.gctx(), CompileMode::Build).unwrap();
+    let compile_options = CompileOptions::new(ws.gctx(), UserIntent::Build).unwrap();
 
     let result = cargo::ops::compile(&ws, &compile_options).unwrap();
 
