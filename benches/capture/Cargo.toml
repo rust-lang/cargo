@@ -10,7 +10,7 @@ publish = false
 cargo_metadata.workspace = true
 flate2.workspace = true
 tar.workspace = true
-toml.workspace = true
+toml = { workspace = true, features = ["display", "parse"] }
 
 [lints]
 workspace = true
