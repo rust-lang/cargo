@@ -92,7 +92,7 @@ High level release notes are available as part of [Rust's release notes][rel].
 Detailed release notes are available in the [changelog].
 
 [rel]: https://github.com/rust-lang/rust/blob/master/RELEASES.md
-[changelog]: https://doc.rust-lang.org/nightly/cargo/CHANGELOG.md
+[changelog]: https://doc.rust-lang.org/nightly/cargo/CHANGELOG.html
 
 ## Reporting issues
 
