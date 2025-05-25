@@ -1238,10 +1238,7 @@ impl FixArgs {
         }
 
         if let Some(edition) = self.prepare_for_edition {
-            if edition.supports_compat_lint() {
-                cmd.arg("--force-warn")
-                    .arg(format!("rust-{}-compatibility", edition));
-            }
+            edition.force_warn_arg(cmd);
         }
     }
 
