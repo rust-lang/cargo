@@ -2963,3 +2963,103 @@ dep_df_false = { workspace = true, default-features = false }
 "#]],
     );
 }
+
+#[cargo_test]
+fn fix_edition_skips_old_editions() {
+    // Checks that -Zfix-edition will skip things that are not 2024.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"[workspace]
+            members = ["e2021", "e2024"]
+            resolver = "3"
+            "#,
+        )
+        .file(
+            "e2021/Cargo.toml",
+            r#"
+            [package]
+            name = "e2021"
+            edition = "2021"
+            "#,
+        )
+        .file("e2021/src/lib.rs", "")
+        .file(
+            "e2024/Cargo.toml",
+            r#"
+                [package]
+                name = "e2024"
+                edition = "2024"
+            "#,
+        )
+        .file("e2024/src/lib.rs", "")
+        .build();
+
+    // Doing the whole workspace should skip since there is a 2021 in the mix.
+    p.cargo("fix -Zfix-edition=start=2024 -v")
+        .masquerade_as_nightly_cargo(&["fix-edition"])
+        .with_stderr_data(str![[r#"
+[SKIPPING] not all packages are at edition 2024
+
+"#]])
+        .run();
+
+    // Same with `end`.
+    p.cargo("fix -Zfix-edition=end=2024,future -v")
+        .masquerade_as_nightly_cargo(&["fix-edition"])
+        .with_stderr_data(str![[r#"
+[SKIPPING] not all packages are at edition 2024
+
+"#]])
+        .run();
+
+    // Doing an individual package at the correct edition should check it.
+    p.cargo("fix -Zfix-edition=start=2024 -p e2024")
+        .masquerade_as_nightly_cargo(&["fix-edition"])
+        .with_stderr_data(str![[r#"
+[CHECKING] e2024 v0.0.0 ([ROOT]/foo/e2024)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "future edition is always unstable")]
+fn fix_edition_future() {
+    // Checks that the -Zfix-edition can work for the future.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            edition = "2024""#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix -Zfix-edition=end=2024,future")
+        .masquerade_as_nightly_cargo(&["fix-edition"])
+        .with_stderr_data(str![[r#"
+[MIGRATING] Cargo.toml from 2024 edition to future
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[MIGRATING] src/lib.rs from 2024 edition to future
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+     Updated edition to future
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    assert_e2e().eq(
+        p.read_file("Cargo.toml"),
+        str![[r#"
+cargo-features = ["unstable-editions"]
+
+            [package]
+            name = "foo"
+edition = "future"
+
+"#]],
+    );
+}
