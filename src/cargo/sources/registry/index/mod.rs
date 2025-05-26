@@ -264,35 +264,23 @@ impl IndexPackage<'_> {
     fn to_summary(&self, source_id: SourceId) -> CargoResult<Summary> {
         // ****CAUTION**** Please be extremely careful with returning errors, see
         // `IndexSummary::parse` for details
-        let pkgid = PackageId::new(
-            InternedString::new(&self.name),
-            self.vers.clone(),
-            source_id,
-        );
+        let pkgid = PackageId::new(self.name.as_ref().into(), self.vers.clone(), source_id);
         let deps = self
             .deps
             .iter()
             .map(|dep| dep.clone().into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let mut features = self.features.clone();
-        if let Some(features2) = &self.features2 {
+        if let Some(features2) = self.features2.clone() {
             for (name, values) in features2 {
-                features
-                    .entry(name.clone())
-                    .or_default()
-                    .extend(values.iter().cloned());
+                features.entry(name).or_default().extend(values);
             }
         }
         let features = features
             .into_iter()
-            .map(|(name, values)| {
-                (
-                    InternedString::new(&name),
-                    values.iter().map(|v| InternedString::new(&v)).collect(),
-                )
-            })
+            .map(|(name, values)| (name.into(), values.into_iter().map(|v| v.into()).collect()))
             .collect::<BTreeMap<_, _>>();
-        let links = self.links.as_ref().map(|l| InternedString::new(&l));
+        let links: Option<InternedString> = self.links.as_ref().map(|l| l.as_ref().into());
         let mut summary = Summary::new(pkgid, deps, &features, links, self.rust_version.clone())?;
         summary.set_checksum(self.cksum.clone());
         Ok(summary)
@@ -849,7 +837,7 @@ impl<'a> RegistryDependency<'a> {
         let interned_name = InternedString::new(package.as_ref().unwrap_or(&name));
         let mut dep = Dependency::parse(interned_name, Some(&req), id)?;
         if package.is_some() {
-            dep.set_explicit_name_in_toml(InternedString::new(&name));
+            dep.set_explicit_name_in_toml(name);
         }
         let kind = match kind.as_deref().unwrap_or("") {
             "dev" => DepKind::Development,
@@ -883,7 +871,6 @@ impl<'a> RegistryDependency<'a> {
             dep.set_artifact(artifact);
         }
 
-        let features = features.iter().map(|f| InternedString::new(&f));
         dep.set_optional(optional)
             .set_default_features(default_features)
             .set_features(features)
