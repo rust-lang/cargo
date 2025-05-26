@@ -175,11 +175,6 @@ pub enum CompileMode {
     /// If `test` is true, then it is also compiled with `--test` to check it like
     /// a test.
     Check { test: bool },
-    /// Used to indicate benchmarks should be built. This is not used in
-    /// `Unit`, because it is essentially the same as `Test` (indicating
-    /// `--test` should be passed to rustc) and by using `Test` instead it
-    /// allows some de-duping of Units to occur.
-    Bench,
     /// Document with `rustdoc`.
     ///
     /// If `deps` is true, then it will also document all dependencies.
@@ -203,7 +198,6 @@ impl ser::Serialize for CompileMode {
             Test => "test".serialize(s),
             Build => "build".serialize(s),
             Check { .. } => "check".serialize(s),
-            Bench => "bench".serialize(s),
             Doc { .. } => "doc".serialize(s),
             Doctest => "doctest".serialize(s),
             Docscrape => "docscrape".serialize(s),
@@ -238,19 +232,13 @@ impl CompileMode {
     pub fn is_any_test(self) -> bool {
         matches!(
             self,
-            CompileMode::Test
-                | CompileMode::Bench
-                | CompileMode::Check { test: true }
-                | CompileMode::Doctest
+            CompileMode::Test | CompileMode::Check { test: true } | CompileMode::Doctest
         )
     }
 
     /// Returns `true` if this is something that passes `--test` to rustc.
     pub fn is_rustc_test(self) -> bool {
-        matches!(
-            self,
-            CompileMode::Test | CompileMode::Bench | CompileMode::Check { test: true }
-        )
+        matches!(self, CompileMode::Test | CompileMode::Check { test: true })
     }
 
     /// Returns `true` if this is the *execution* of a `build.rs` script.
@@ -263,10 +251,7 @@ impl CompileMode {
     /// Note that this also returns `true` for building libraries, so you also
     /// have to check the target.
     pub fn generates_executable(self) -> bool {
-        matches!(
-            self,
-            CompileMode::Test | CompileMode::Bench | CompileMode::Build
-        )
+        matches!(self, CompileMode::Test | CompileMode::Build)
     }
 }
 

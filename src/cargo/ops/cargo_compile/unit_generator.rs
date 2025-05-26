@@ -86,18 +86,9 @@ impl<'a> UnitGenerator<'a, '_> {
             }
             CompileMode::Build => match *target.kind() {
                 TargetKind::Test => CompileMode::Test,
-                TargetKind::Bench => CompileMode::Bench,
+                TargetKind::Bench => CompileMode::Test,
                 _ => CompileMode::Build,
             },
-            // `CompileMode::Bench` is only used to inform `filter_default_targets`
-            // which command is being used (`cargo bench`). Afterwards, tests
-            // and benches are treated identically. Switching the mode allows
-            // de-duplication of units that are essentially identical. For
-            // example, `cargo build --all-targets --release` creates the units
-            // (lib profile:bench, mode:test) and (lib profile:bench, mode:bench)
-            // and since these are the same, we want them to be de-duplicated in
-            // `unit_dependencies`.
-            CompileMode::Bench => CompileMode::Test,
             _ => initial_target_mode,
         };
 
@@ -476,11 +467,6 @@ impl<'a> UnitGenerator<'a, '_> {
                     FilterRule::All => Target::benched,
                     FilterRule::Just(_) => Target::is_bench,
                 };
-                let bench_mode = match self.intent {
-                    UserIntent::Build => CompileMode::Bench,
-                    UserIntent::Check { .. } => CompileMode::Check { test: true },
-                    _ => default_mode,
-                };
 
                 proposals.extend(self.list_rule_targets(
                     bins,
@@ -499,7 +485,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     benches,
                     "bench",
                     bench_filter,
-                    bench_mode,
+                    test_mode,
                 )?);
             }
         }
@@ -792,8 +778,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
 /// Converts [`UserIntent`] to [`CompileMode`] for root units.
 fn to_compile_mode(intent: UserIntent) -> CompileMode {
     match intent {
-        UserIntent::Test => CompileMode::Test,
-        UserIntent::Bench => CompileMode::Bench,
+        UserIntent::Test | UserIntent::Bench => CompileMode::Test,
         UserIntent::Build => CompileMode::Build,
         UserIntent::Check { test } => CompileMode::Check { test },
         UserIntent::Doc { deps, json } => CompileMode::Doc { deps, json },
