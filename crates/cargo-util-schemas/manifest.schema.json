@@ -986,6 +986,8 @@
         "priority": {
           "type": "integer",
           "format": "int8",
+          "minimum": -128,
+          "maximum": 127,
           "default": 0
         }
       },
