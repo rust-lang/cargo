@@ -810,8 +810,10 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_allow_features(build_runner, &mut rustdoc);
 
     if build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo {
+        // toolchain-shared-resources is required for keeping the shared styling resources
         // invocation-specific is required for keeping the original rustdoc emission
-        let mut arg = OsString::from("--emit=invocation-specific,dep-info=");
+        let mut arg =
+            OsString::from("--emit=toolchain-shared-resources,invocation-specific,dep-info=");
         arg.push(rustdoc_dep_info_loc(build_runner, unit));
         rustdoc.arg(arg);
 
