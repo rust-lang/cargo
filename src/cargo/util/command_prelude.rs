@@ -29,7 +29,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
 
-pub use crate::core::compiler::CompileMode;
+pub use crate::core::compiler::UserIntent;
 pub use crate::{CliError, CliResult, GlobalContext};
 pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
@@ -723,7 +723,7 @@ Run `{cmd}` to see possible targets."
     fn compile_options(
         &self,
         gctx: &GlobalContext,
-        mode: CompileMode,
+        mode: UserIntent,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
@@ -887,7 +887,7 @@ Run `{cmd}` to see possible targets."
     fn compile_options_for_single_package(
         &self,
         gctx: &GlobalContext,
-        mode: CompileMode,
+        mode: UserIntent,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {

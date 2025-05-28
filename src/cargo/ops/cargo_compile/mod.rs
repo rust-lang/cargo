@@ -41,9 +41,10 @@ use std::sync::Arc;
 
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::core::compiler::UserIntent;
 use crate::core::compiler::{apply_env_config, standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
-use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
+use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
@@ -101,11 +102,11 @@ pub struct CompileOptions {
 }
 
 impl CompileOptions {
-    pub fn new(gctx: &GlobalContext, mode: CompileMode) -> CargoResult<CompileOptions> {
+    pub fn new(gctx: &GlobalContext, intent: UserIntent) -> CargoResult<CompileOptions> {
         let jobs = None;
         let keep_going = false;
         Ok(CompileOptions {
-            build_config: BuildConfig::new(gctx, jobs, keep_going, &[], mode)?,
+            build_config: BuildConfig::new(gctx, jobs, keep_going, &[], intent)?,
             cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {
@@ -226,19 +227,15 @@ pub fn create_bcx<'a, 'gctx>(
     let gctx = ws.gctx();
 
     // Perform some pre-flight validation.
-    match build_config.mode {
-        CompileMode::Test
-        | CompileMode::Build
-        | CompileMode::Check { .. }
-        | CompileMode::Bench
-        | CompileMode::RunCustomBuild => {
+    match build_config.intent {
+        UserIntent::Test | UserIntent::Build | UserIntent::Check { .. } | UserIntent::Bench => {
             if ws.gctx().get_env("RUST_FLAGS").is_ok() {
                 gctx.shell().warn(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
                 )?;
             }
         }
-        CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
+        UserIntent::Doc { .. } | UserIntent::Doctest => {
             if ws.gctx().get_env("RUSTDOC_FLAGS").is_ok() {
                 gctx.shell().warn(
                     "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
@@ -264,8 +261,8 @@ pub fn create_bcx<'a, 'gctx>(
                     .any(|target| target.is_example() && target.doc_scrape_examples().is_enabled())
             });
 
-        if filter.need_dev_deps(build_config.mode)
-            || (build_config.mode.is_doc() && any_pkg_has_scrape_enabled)
+        if filter.need_dev_deps(build_config.intent)
+            || (build_config.intent.is_doc() && any_pkg_has_scrape_enabled)
         {
             HasDevUnits::Yes
         } else {
@@ -321,7 +318,7 @@ pub fn create_bcx<'a, 'gctx>(
     for pkg in to_builds.iter() {
         pkg.manifest().print_teapot(gctx);
 
-        if build_config.mode.is_any_test()
+        if build_config.intent.is_any_test()
             && !ws.is_member(pkg)
             && pkg.dependencies().iter().any(|dep| !dep.is_transitive())
         {
@@ -379,7 +376,7 @@ pub fn create_bcx<'a, 'gctx>(
         filter,
         requested_kinds: &build_config.requested_kinds,
         explicit_host_kind,
-        mode: build_config.mode,
+        intent: build_config.intent,
         resolve: &resolve,
         workspace_resolve: &workspace_resolve,
         resolved_features: &resolved_features,
@@ -394,13 +391,9 @@ pub fn create_bcx<'a, 'gctx>(
         override_rustc_crate_types(&mut units, args, interner)?;
     }
 
-    let should_scrape = build_config.mode.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
+    let should_scrape = build_config.intent.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
-        UnitGenerator {
-            mode: CompileMode::Docscrape,
-            ..generator
-        }
-        .generate_scrape_units(&units)?
+        generator.generate_scrape_units(&units)?
     } else {
         Vec::new()
     };
@@ -431,7 +424,7 @@ pub fn create_bcx<'a, 'gctx>(
         &units,
         &scrape_units,
         &std_roots,
-        build_config.mode,
+        build_config.intent,
         &target_data,
         &profiles,
         interner,
@@ -439,7 +432,7 @@ pub fn create_bcx<'a, 'gctx>(
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
-    if matches!(build_config.mode, CompileMode::Doc { deps: true, .. }) {
+    if matches!(build_config.intent, UserIntent::Doc { deps: true, .. }) {
         remove_duplicate_doc(build_config, &units, &mut unit_graph);
     }
 

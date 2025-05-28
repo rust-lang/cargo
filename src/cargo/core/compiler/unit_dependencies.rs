@@ -21,6 +21,7 @@ use tracing::trace;
 
 use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
+use crate::core::compiler::UserIntent;
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
@@ -51,8 +52,9 @@ struct State<'a, 'gctx> {
     std_features: Option<&'a ResolvedFeatures>,
     /// `true` while generating the dependencies for the standard library.
     is_std: bool,
-    /// The mode we are compiling in. Used for preventing from building lib thrice.
-    global_mode: CompileMode,
+    /// The high-level operation requested by the user.
+    /// Used for preventing from building lib thrice.
+    intent: UserIntent,
     target_data: &'a RustcTargetData<'gctx>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
@@ -91,7 +93,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     roots: &[Unit],
     scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
-    global_mode: CompileMode,
+    intent: UserIntent,
     target_data: &'a RustcTargetData<'gctx>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
@@ -116,7 +118,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         std_resolve,
         std_features,
         is_std: false,
-        global_mode,
+        intent,
         target_data,
         profiles,
         interner,
@@ -203,13 +205,13 @@ fn attach_std_deps(
 fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.
-        // We check the global test mode to see if we are running in `cargo
-        // test` in which case we ensure all dependencies have `panic`
-        // cleared, and avoid building the lib thrice (once with `panic`, once
-        // without, once for `--test`). In particular, the lib included for
-        // Doc tests and examples are `Build` mode here.
+        // We check the user intent to see if we are running in `cargo test` in
+        // which case we ensure all dependencies have `panic` cleared, and
+        // avoid building the lib thrice (once with `panic`, once without, once
+        // for `--test`). In particular, the lib included for Doc tests and
+        // examples are `Build` mode here.
         let root_compile_kind = unit.kind;
-        let unit_for = if unit.mode.is_any_test() || state.global_mode.is_rustc_test() {
+        let unit_for = if unit.mode.is_any_test() || state.intent.is_rustc_test() {
             if unit.target.proc_macro() {
                 // Special-case for proc-macros, which are forced to for-host
                 // since they need to link with the proc_macro crate.

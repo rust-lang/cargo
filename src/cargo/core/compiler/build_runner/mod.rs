@@ -183,7 +183,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // any versioning (See https://github.com/rust-lang/cargo/issues/8461).
         // Therefore, we can end up with weird bugs and behaviours if we mix different
         // versions of these files.
-        if self.bcx.build_config.mode.is_doc() {
+        if self.bcx.build_config.intent.is_doc() {
             RustDocFingerprint::check_rustdoc_fingerprint(&self)?
         }
 

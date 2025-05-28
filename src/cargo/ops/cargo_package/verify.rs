@@ -15,9 +15,9 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use crate::core::compiler::BuildConfig;
-use crate::core::compiler::CompileMode;
 use crate::core::compiler::DefaultExecutor;
 use crate::core::compiler::Executor;
+use crate::core::compiler::UserIntent;
 use crate::core::Feature;
 use crate::core::Package;
 use crate::core::SourceId;
@@ -103,7 +103,7 @@ pub fn run_verify(
                 opts.jobs.clone(),
                 opts.keep_going,
                 &opts.targets,
-                CompileMode::Build,
+                UserIntent::Build,
             )?,
             cli_features: opts.cli_features.clone(),
             spec: ops::Packages::Packages(Vec::new()),

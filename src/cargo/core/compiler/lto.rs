@@ -97,7 +97,7 @@ fn calculate(
     let crate_types = match unit.mode {
         // Note: Doctest ignores LTO, but for now we'll compute it as-if it is
         // a Bin, in case it is ever supported in the future.
-        CompileMode::Test | CompileMode::Bench | CompileMode::Doctest => vec![CrateType::Bin],
+        CompileMode::Test | CompileMode::Doctest => vec![CrateType::Bin],
         // Notes on other modes:
         // - Check: Treat as the underlying type, it doesn't really matter.
         // - Doc: LTO is N/A for the Doc unit itself since rustdoc does not

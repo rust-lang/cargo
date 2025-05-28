@@ -67,7 +67,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         args.get_one::<String>("profile").map(String::as_str),
         Some("test")
     );
-    let mode = CompileMode::Check { test };
+    let intent = UserIntent::Check { test };
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
@@ -79,7 +79,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let lockfile_path = args.lockfile_path(gctx)?;
     ws.set_requested_lockfile_path(lockfile_path.clone());
 
-    let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
+    let mut opts =
+        args.compile_options(gctx, intent, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     let edition = args.flag("edition") || args.flag("edition-idioms");
     if !opts.filter.is_specific() && edition {
