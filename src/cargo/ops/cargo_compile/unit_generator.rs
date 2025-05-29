@@ -11,8 +11,8 @@ use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::Workspace;
 use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
-use crate::core::{TargetKind, Workspace};
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{closest_msg, CargoResult};
 
@@ -84,11 +84,6 @@ impl<'a> UnitGenerator<'a, '_> {
                     CompileMode::Test
                 }
             }
-            CompileMode::Build => match *target.kind() {
-                TargetKind::Test => CompileMode::Test,
-                TargetKind::Bench => CompileMode::Test,
-                _ => CompileMode::Build,
-            },
             _ => initial_target_mode,
         };
 
