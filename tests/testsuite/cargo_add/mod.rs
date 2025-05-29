@@ -145,6 +145,7 @@ mod script_bare;
 mod script_frontmatter;
 mod script_shebang;
 mod sorted_table_with_dotted_item;
+mod symlink;
 mod target;
 mod target_cfg;
 mod unknown_inherited_feature;
