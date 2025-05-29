@@ -869,7 +869,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     build_deps_args(&mut rustdoc, build_runner, unit)?;
     rustdoc::add_root_urls(build_runner, unit, &mut rustdoc)?;
 
-    rustdoc::add_output_format(build_runner, unit, &mut rustdoc)?;
+    rustdoc::add_output_format(build_runner, &mut rustdoc)?;
 
     if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         rustdoc.args(args);

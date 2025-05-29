@@ -776,7 +776,7 @@ fn to_compile_mode(intent: UserIntent) -> CompileMode {
         UserIntent::Test | UserIntent::Bench => CompileMode::Test,
         UserIntent::Build => CompileMode::Build,
         UserIntent::Check { test } => CompileMode::Check { test },
-        UserIntent::Doc { deps, json } => CompileMode::Doc { deps, json },
+        UserIntent::Doc { .. } => CompileMode::Doc,
         UserIntent::Doctest => CompileMode::Doctest,
     }
 }
