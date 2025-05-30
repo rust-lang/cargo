@@ -592,24 +592,6 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
             if memchr::memmem::find(line, b" OSO ").is_some() {
                 continue;
             }
-
-            // on macOS `SO` symbols are embedded in final binaries and should be trimmed.
-            // See rust-lang/rust#117652.
-            if memchr::memmem::find(line, b" SO ").is_some() {
-                continue;
-            }
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            // There is a bug in rustc `-Zremap-path-scope`.
-            // See rust-lang/rust/pull/118518
-            if memchr::memmem::find(line, b"DW_AT_comp_dir").is_some() {
-                continue;
-            }
-            if memchr::memmem::find(line, b"DW_AT_GNU_dwo_name").is_some() {
-                continue;
-            }
         }
 
         panic!(
