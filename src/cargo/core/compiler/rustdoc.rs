@@ -12,8 +12,6 @@ use std::fmt;
 use std::hash;
 use url::Url;
 
-use super::CompileMode;
-
 const DOCS_RS_URL: &'static str = "https://docs.rs/";
 
 /// Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].
@@ -250,7 +248,6 @@ pub fn add_root_urls(
 /// [1]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html?highlight=output-format#-w--output-format-output-format
 pub fn add_output_format(
     build_runner: &BuildRunner<'_, '_>,
-    unit: &Unit,
     rustdoc: &mut ProcessBuilder,
 ) -> CargoResult<()> {
     let gctx = build_runner.bcx.gctx;
@@ -259,7 +256,7 @@ pub fn add_output_format(
         return Ok(());
     }
 
-    if let CompileMode::Doc { json: true, .. } = unit.mode {
+    if build_runner.bcx.build_config.intent.wants_doc_json_output() {
         rustdoc.arg("-Zunstable-options");
         rustdoc.arg("--output-format=json");
     }

@@ -1831,6 +1831,9 @@ fn test_run_implicit_example_target() {
                 [[example]]
                 name = "myexm2"
                 test = true
+
+                [profile.test]
+                panic = "abort" # this should be ignored by default Cargo targets set.
             "#,
         )
         .file(
@@ -1852,11 +1855,13 @@ fn test_run_implicit_example_target() {
         )
         .build();
 
-    // Compiles myexm1 as normal, but does not run it.
+    // Compiles myexm1 as normal binary (without --test), but does not run it.
     prj.cargo("test -v")
         .with_stderr_contains("[RUNNING] `rustc [..]myexm1.rs [..]--crate-type bin[..]")
         .with_stderr_contains("[RUNNING] `rustc [..]myexm2.rs [..]--test[..]")
         .with_stderr_does_not_contain("[RUNNING] [..]myexm1-[..]")
+        // profile.test panic settings shouldn't be applied even to myexm1
+        .with_stderr_line_without(&["[RUNNING] `rustc --crate-name myexm1"], &["panic=abort"])
         .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
         .run();
 

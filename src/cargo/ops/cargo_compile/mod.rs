@@ -432,7 +432,7 @@ pub fn create_bcx<'a, 'gctx>(
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
-    if matches!(build_config.intent, UserIntent::Doc { deps: true, .. }) {
+    if build_config.intent.wants_deps_docs() {
         remove_duplicate_doc(build_config, &units, &mut unit_graph);
     }
 

@@ -628,21 +628,19 @@ fn compute_deps_doc(
             IS_NO_ARTIFACT_DEP,
         )?;
         ret.push(lib_unit_dep);
-        if dep_lib.documented() {
-            if let CompileMode::Doc { deps: true, .. } = unit.mode {
-                // Document this lib as well.
-                let doc_unit_dep = new_unit_dep(
-                    state,
-                    unit,
-                    dep_pkg,
-                    dep_lib,
-                    dep_unit_for,
-                    unit.kind.for_target(dep_lib),
-                    unit.mode,
-                    IS_NO_ARTIFACT_DEP,
-                )?;
-                ret.push(doc_unit_dep);
-            }
+        if dep_lib.documented() && state.intent.wants_deps_docs() {
+            // Document this lib as well.
+            let doc_unit_dep = new_unit_dep(
+                state,
+                unit,
+                dep_pkg,
+                dep_lib,
+                dep_unit_for,
+                unit.kind.for_target(dep_lib),
+                unit.mode,
+                IS_NO_ARTIFACT_DEP,
+            )?;
+            ret.push(doc_unit_dep);
         }
     }
 

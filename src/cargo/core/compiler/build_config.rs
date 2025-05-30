@@ -176,10 +176,7 @@ pub enum CompileMode {
     /// a test.
     Check { test: bool },
     /// Document with `rustdoc`.
-    ///
-    /// If `deps` is true, then it will also document all dependencies.
-    /// if `json` is true, the documentation output is in json format.
-    Doc { deps: bool, json: bool },
+    Doc,
     /// Test with `rustdoc`.
     Doctest,
     /// Scrape for function calls by `rustdoc`.
@@ -271,7 +268,7 @@ impl CompileMode {
 pub enum UserIntent {
     /// Build benchmark binaries, e.g., `cargo bench`
     Bench,
-    /// Build binaries and libraray, e.g., `cargo run`, `cargo install`, `cargo build`.
+    /// Build binaries and libraries, e.g., `cargo run`, `cargo install`, `cargo build`.
     Build,
     /// Perform type-check, e.g., `cargo check`.
     Check { test: bool },
@@ -290,6 +287,16 @@ impl UserIntent {
     /// Returns `true` if this is generating documentation.
     pub fn is_doc(self) -> bool {
         matches!(self, UserIntent::Doc { .. })
+    }
+
+    /// User wants rustdoc output in JSON format.
+    pub fn wants_doc_json_output(self) -> bool {
+        matches!(self, UserIntent::Doc { json: true, .. })
+    }
+
+    /// User wants to document also for dependencies.
+    pub fn wants_deps_docs(self) -> bool {
+        matches!(self, UserIntent::Doc { deps: true, .. })
     }
 
     /// Returns `true` if this is any type of test (test, benchmark, doc test, or
