@@ -1,0 +1,156 @@
+# Use `git config blame.ignorerevsfile .git-blame-ignore-revs` to make `git blame` ignore the following commits.
+
+# refactor: rustfmt for tracing
+e84cc17db6ac48620e2723f51bce0703f5590060
+# Rustfmt with latest nightly.
+43c253e69a20321cdfd73d632fa5ec641b1aace3
+#  reformat with rustfmt
+df62c36b214449003997d8ee630c7d5c1c08a90c
+# rustfmt
+c973a6d0af55785f3072623b4d29127051a84b90
+# Apply rustfmt
+ebd0d58c1c11f98e804c80b3378d00f9e1000a95
+# rustfmt
+4787dd3acfb32c6d608342bca115094e1ed866e7
+# Fix for rustfmt
+ad44f0e898721f35173b59f32dae344b964dff22
+# rustfmt
+b9554f37abe4f802dd615a550773105a8b2eb386
+# Normalize raw string indentation.
+6f8c7d5a87526d10e3bbfa4098a1002076386068
+# rustfmt
+dcae5fcf2dc6e040d1cadac14276fd306c058b74
+# Rustfmt
+0dfdba6f7a7702a7f45d523b028c896084411de8
+# Run rustfmt
+e06a911de616b3f402f1e142b5202445d333f4eb
+# rustfmt
+d02f476804ae73d79059e3243ecb4c814f53bea1
+# Update for nightly rustfmt.
+4b6c26dd16786b416190bd0a36e7646d33b9846a
+# Run rustfmt
+d0430dd2b11e6ac004e8f39a712ee6425b81e12d
+# Run rustfmt
+c56cb4287fa98a42dafea36d0b88bb4441f63c1f
+# Run rustfmt
+c3f8cd3cd2999949c49c8f0e76108ffe7a37bec0
+# Run code through rustfmt
+648b39e98101f9b6417fc6ebc88fa7f397a5f509
+# Run rustfmt
+ba81441f297c6d9799473a62af021236b8bc9ed8
+# Wrap some really long lines.
+d6d15141f8ef21f1cebeaa4d42606f29e7d00239
+# rustfmt for nightly changes.
+384c311692e6ff537b51bcf57f804b917a702c9c
+# Rustfmt lint
+9dc70a3dabb291052a4d117b8348c9b461d1b570
+# Run rustfmt
+3a6cd74434cc1fdd57266740d4827ed162580005
+# rustfmt, even if I disagree
+189fef1173118ee3be47fa59e22fd2d21bb05bbd
+# Fix zalgo formatting.
+56f8848a51e5db5214ec27bb41c7d99ebac21af8
+# Rustfmt adjustments
+a50be59a70af64b83c07f40bc2faef80a73bc908
+# Run rustfmt
+ebd10526f3526b695872a8ecb381f65aaf74c019
+# Rustfmt fixes
+ac2a4382ee5d927d917df026d2236ff5cd668717
+# Rustfmt fixes
+fc4ee774483dc6b40f1edbd259879dc4cbcf20a5
+# Fixed formatting with rustfmt
+a82de176952f7c244adbd392d444baaafdfc819c
+# Fix some formatting for some strings.
+a4e9611453cb4ba3f9bcc34f2851546f57152229
+# fix(fingerprint): rustfmt
+009876a88af659c10b022ec4c4956f77b983d531
+# Make rustfmt happy
+2415a2980f455238e9422cc07abcfa4cbec9be6b
+# run rustfmt
+dac967ce27d4eeb496dcd98ba91641fbe29df957
+# $cargo fmt --all
+db09895f3c123c36e05175e2c0273bf487068b37
+# Reformat everything with rustfmt from stable 1.26
+d85336084d8855bfbfd431b85beaa5c094dc5e72
+# rustfmt
+a4947c2b47fd38857c7332d333fda7bcc405de0c
+# rustfmt
+404970f2261e2d6c9ba4eac410065fa6226271d9
+# Prettify rustfmted single-line strings
+b0c181d91ccfe1d27d4c7133049a6bfe5bacf29b
+# cargo fmt
+1e6828485eea0f550ed7be46ef96107b46aeb162
+# rustfmt for bin/cargo.rs
+ef4c09f986c0b1f701c765d894da911c2de44724
+# rustfmt cargo_doc.rs
+87124d5ade897b3fb38ce5cd0a2f19a9038dd8a7
+# run rustfmt on core/source.rs
+76fb87e2bab025acaff2d6dd919dde0e328267da
+# cargo fmt
+7a67e88baf0f73196973cadf887bf9a31c13e95f
+# cargo fmt
+7a6ff7f068acde98230d712637e934c58fc84805
+# cargo fmt
+7c8ee49bffdeeb138db5e22f14abbf88cf99c547
+# cargo fmt
+72d6c5411a215ce5ab0ff22b1e1e1525883b7c33
+# rust fmt
+ddd5c83b8cf63458bf67ae504bb289ed4e987d38
+# cargo fmt
+1179e7ef6b88a6940168cbc2e806d48ed20d92ef
+# cargo fmt
+0c07056bfeffee213e21cdf1e48875f59f834282
+# cargo fmt
+c7a79be6f8a8da1d6dee54fe3f5c137d293692b0
+# cargo fmt
+1839ded4aa5607d3564f02b36e517289ad6ed8e8
+# cargo fmt
+f2b5271a09a13f89a50861ebd71da333836bded3
+# Run `cargo fmt --all`
+3aa99422ca7808f1bc5621fda3a8f32f27273d9b
+# cargo fmt
+4538ade2d55d7353cfac8a0ce320e3c4a29bc450
+# style: cargo fmt
+3d042688a851d985013ee8ff64a9caef47b7b495
+# run cargo fmt to pass the CI build
+a4e3b81a55b8c142ab1b84f4f209414a72727e86
+# Run 'cargo fmt'
+60afaa77335ab464a5b6c913883ad145ae97d750
+# Run 'cargo fmt'
+511050baefa2ec21c2be8c3eaee2aade1da2c06b
+# cargo fmt
+577968e44828457dfa62fc10ccd29f42a359b746
+# cargo fmt
+d0f7c0ee31c81cd405dc2c163e4ca7638895610c
+# appease cargo fmt
+c4922052fc7470264f3df491213f74142ac67ebf
+# named-profiles: formatting fixes from 'cargo fmt'
+29b7e90ba37f311baaf448894bbf04721bed5791
+# cargo fmt
+f39302f432f62e29910c876f766eb8a324cee843
+# cargo fmt
+6b07c8da63c0896cc31fa6cb8b47a71fe29c88e2
+# run cargo fmt --all
+b48ae60e67096f7cda80a17dfa2a9ff7a916bbf7
+# $cargo fmt --all
+63a9c7aa6d54ff0580288f1a01795a29b3ea1c75
+# Run `cargo fmt`
+f16efff1509be313f4bed825e7ab974673dd03fc
+# cargo fmt tests/testsuite/rustflags.rs
+3ca98adbbac5752cdef337f5ac803e7843ab601a
+# Format with `cargo fmt`
+fecb72464328846dacd0ff8252d105b7818733ab
+# cargo fmt
+9b2295d11fd2816aa3032403a88d7c055cd2cf58
+# Run `cargo fmt`
+5d201944d7aba8380082dcb9e0c340d92e92850f
+# Correct formatting with cargo fmt
+90954d700ccb71b3df6ecf8ff83891dd3570f887
+# Correct formatting with cargo fmt
+5c241e102756e340991365d7b376997a9ae95f62
+# Fix formatting issues with cargo fmt
+5c7979cdf879a6cc9011432098f7ef68ed7f5e37
+# cargo fmt
+a6ad2de0484f1910d42793f3ec73b111403099b7
+# cargo fmt
+b0fbc89c33780ca3e1f2bfeacc67922ee7abe1dc
