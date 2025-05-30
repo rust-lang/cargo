@@ -15,6 +15,7 @@ mod linux {
     use std::ffi::{CStr, CString};
     use std::os::raw::{c_char, c_int};
     use std::ptr::{null, null_mut};
+    use std::sync::OnceLock;
 
     #[allow(non_camel_case_types)]
     type gchar = c_char;
@@ -85,6 +86,21 @@ mod linux {
 
     pub struct LibSecretCredential;
 
+    fn get_libsecret() -> Result<&'static Library, Error> {
+        static LIBSECRET: OnceLock<Library> = OnceLock::new();
+        // unfortunately `get_or_try_init` is not yet stable
+        match LIBSECRET.get() {
+            Some(lib) => Ok(lib),
+            None => {
+                let _ = LIBSECRET.set(unsafe { Library::new("libsecret-1.so.0") }.context(
+                    "failed to load libsecret: try installing the `libsecret` \
+                    or `libsecret-1-0` package with the system package manager",
+                )?);
+                Ok(LIBSECRET.get().unwrap())
+            }
+        }
+    }
+
     fn label(index_url: &str) -> CString {
         CString::new(format!("cargo-registry:{}", index_url)).unwrap()
     }
@@ -114,15 +130,11 @@ mod linux {
         ) -> Result<CredentialResponse, Error> {
             // Dynamically load libsecret to avoid users needing to install
             // additional -dev packages when building this provider.
-            let lib;
+            let lib = get_libsecret()?;
             let secret_password_lookup_sync: Symbol<'_, SecretPasswordLookupSync>;
             let secret_password_store_sync: Symbol<'_, SecretPasswordStoreSync>;
             let secret_password_clear_sync: Symbol<'_, SecretPasswordClearSync>;
             unsafe {
-                lib = Library::new("libsecret-1.so.0").context(
-                    "failed to load libsecret: try installing the `libsecret` \
-                    or `libsecret-1-0` package with the system package manager",
-                )?;
                 secret_password_lookup_sync = lib
                     .get(b"secret_password_lookup_sync\0")
                     .map_err(Box::new)?;
