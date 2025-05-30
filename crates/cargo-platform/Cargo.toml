@@ -1,6 +1,6 @@
 [package]
 name = "cargo-platform"
-version = "0.3.0"
+version = "0.4.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,11 @@ documentation = "https://docs.rs/cargo-platform"
 description = "Cargo's representation of a target platform."
 
 [dependencies]
+semver.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+snapbox.workspace = true
 
 [lints]
 workspace = true
