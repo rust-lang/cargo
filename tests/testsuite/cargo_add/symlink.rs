@@ -47,6 +47,8 @@ fn symlink_case() {
 
     project.cargo("add test-dep").run();
 
-    // Current behavior: symlink is NOT preserved (gets replaced)
-    assert!(!project.root().join("Cargo.toml").is_symlink());
+    assert!(project.root().join("Cargo.toml").is_symlink());
+
+    let target_content = fs::read_to_string(target_dir.join("Cargo.toml")).unwrap();
+    assert!(target_content.contains("test-dep"));
 }

@@ -190,8 +190,19 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
 /// Writes a file to disk atomically.
 ///
 /// This uses `tempfile::persist` to accomplish atomic writes.
+/// If the path is a symlink, it will follow the symlink and write to the actual target.
 pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
+
+    // Check if the path is a symlink and follow it if it is
+    let resolved_path;
+    let path = if path.is_symlink() {
+        resolved_path = fs::read_link(path)
+            .with_context(|| format!("failed to read symlink at `{}`", path.display()))?;
+        &resolved_path
+    } else {
+        path
+    };
 
     // On unix platforms, get the permissions of the original file. Copy only the user/group/other
     // read/write/execute permission bits. The tempfile lib defaults to an initial mode of 0o600,
@@ -981,6 +992,33 @@ mod tests {
              "
             );
         }
+    }
+
+    #[test]
+    fn write_atomic_symlink() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let target_path = tmpdir.path().join("target.txt");
+        let symlink_path = tmpdir.path().join("symlink.txt");
+
+        // Create initial file
+        write(&target_path, "initial").unwrap();
+
+        // Create symlink
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&target_path, &symlink_path).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&target_path, &symlink_path).unwrap();
+
+        // Write through symlink
+        write_atomic(&symlink_path, "updated").unwrap();
+
+        // Verify both paths show the updated content
+        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
+        assert_eq!(std::fs::read_to_string(&symlink_path).unwrap(), "updated");
+
+        // Verify symlink still exists and points to the same target
+        assert!(symlink_path.is_symlink());
+        assert_eq!(std::fs::read_link(&symlink_path).unwrap(), target_path);
     }
 
     #[test]
