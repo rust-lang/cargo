@@ -297,7 +297,7 @@ fn registry_dependency_with_build_script_codegen() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         // Macros should be sanitized
         .with_stdout_data(str![[r#"
-[ROOT]/foo/target/debug/build/bar-[HASH]/out/bindings.rs
+/cargo/build-dir/debug/build/bar-[HASH]/out/bindings.rs
 
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
@@ -308,7 +308,7 @@ fn registry_dependency_with_build_script_codegen() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name build_script_build [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name bar [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name bar [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -690,15 +690,6 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
             // `OSO` symbols can't be trimmed at this moment.
             // See <https://github.com/rust-lang/rust/issues/116948#issuecomment-1793617018>
             if memchr::memmem::find(line, b" OSO ").is_some() {
-                continue;
-            }
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            // To fix this, we should also remap build.build-dir.
-            // See <https://github.com/rust-lang/cargo/pull/15610/commits/a55c7f88fb8d592d993740176da95fc5d1a362e0#r2119070640>
-            if memchr::memmem::find(line, b"DW_AT_GNU_dwo_name").is_some() {
                 continue;
             }
         }
