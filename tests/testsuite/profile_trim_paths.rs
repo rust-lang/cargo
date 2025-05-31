@@ -227,7 +227,7 @@ fn registry_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-[..]/bar-0.0.1/src/lib.rs
+-[..]/bar-0.0.1/src/lib.rs
 
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
@@ -279,7 +279,7 @@ fn git_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-[..]/[..]/src/lib.rs
+bar-[..]/[..]/src/lib.rs
 
 "#]]) // Omit the hash of Source URL and commit
         .with_stderr_data(str![[r#"
