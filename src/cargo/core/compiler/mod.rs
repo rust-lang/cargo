@@ -1393,6 +1393,9 @@ fn trim_paths_args_rustdoc(
     // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
     // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap(build_runner, unit));
+    if let Some(remap) = build_script_codegen_remap(build_runner, unit) {
+        cmd.arg(remap);
+    }
     cmd.arg(sysroot_remap(build_runner, unit));
 
     Ok(())
@@ -1420,6 +1423,9 @@ fn trim_paths_args(
     // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
     // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap(build_runner, unit));
+    if let Some(remap) = build_script_codegen_remap(build_runner, unit) {
+        cmd.arg(remap);
+    }
     cmd.arg(sysroot_remap(build_runner, unit));
 
     Ok(())
@@ -1491,6 +1497,27 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
         remap.push(unit.pkg.version().to_string());
     }
     remap
+}
+
+/// Remap the paths in build script generated code.
+///
+/// For example, `[BUILD_DIR]/debug/build/bar-[HASH]/out/bindings.rs`
+/// will be remapped to `debug/build/bar-[HASH]/out/bindings.rs`.
+///
+/// A concrete scenario would be like:
+/// A build script may call `file!` macros,
+/// and the associated crate uses [`include!`] to include the expanded
+/// [`file!`] macro in-place via the `OUT_DIR` environment.
+fn build_script_codegen_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Option<OsString> {
+    if unit.target.is_custom_build() || build_runner.find_build_script_unit(unit).is_none() {
+        // Make sure we are the associated crate, not the build script itself.
+        return None;
+    }
+    let build_dir = build_runner.bcx.ws.build_dir();
+    let mut remap = OsString::from("--remap-path-prefix=");
+    remap.push(build_dir.as_path_unlocked());
+    remap.push("=");
+    Some(remap)
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
