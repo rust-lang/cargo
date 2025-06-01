@@ -763,6 +763,68 @@ Hello, Ferris!
     );
 }
 
+#[cfg(target_env = "msvc")]
+#[cargo_test(requires = "cdb", nightly, reason = "-Zremap-path-scope is unstable")]
+fn cdb_works_after_trimmed() {
+    use cargo_test_support::compare::assert_e2e;
+
+    let run_debugger = |path| {
+        std::process::Command::new("cdb")
+            .args(["-c", "bp `main.rs:4`;g;g;q"])
+            .arg(path)
+            .output()
+            .expect("debugger works")
+    };
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let msg = "Hello, Ferris!";
+                    println!("{msg}");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let bin_path = p.bin("foo");
+    assert!(bin_path.is_file());
+    let stdout = String::from_utf8(run_debugger(bin_path).stdout).unwrap();
+    assert_e2e().eq(
+        &stdout,
+        str![[r#"
+...
+Breakpoint 0 hit
+Hello, Ferris!
+...
+
+"#]],
+    );
+}
+
 #[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
 fn rustdoc_without_diagnostics_scope() {
     Package::new("bar", "0.0.1")
