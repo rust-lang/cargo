@@ -302,7 +302,37 @@ fn check_command(command_path: &Path, args: &[&str]) -> bool {
 }
 
 fn has_command(command: &str) -> bool {
-    check_command(Path::new(command), &["--version"])
+    use std::env::consts::EXE_EXTENSION;
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
+    let Some(paths) = std::env::var_os("PATH") else {
+        return false;
+    };
+    std::env::split_paths(&paths)
+        .flat_map(|path| {
+            let candidate = path.join(&command);
+            let with_exe = if EXE_EXTENSION.is_empty() {
+                None
+            } else {
+                Some(candidate.with_extension(EXE_EXTENSION))
+            };
+            std::iter::once(candidate).chain(with_exe)
+        })
+        .find(|p| is_executable(p))
+        .is_some()
+}
+
+#[cfg(unix)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::prelude::*;
+    std::fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(windows)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().is_file()
 }
 
 fn has_rustup_stable() -> bool {
