@@ -2028,7 +2028,7 @@ fn find_workspace_root_with_loader(
         let roots = gctx.ws_roots.borrow();
         // Iterate through the manifests parent directories until we find a workspace
         // root. Note we skip the first item since that is just the path itself
-        for current in manifest_path.ancestors().skip(1) {
+        for current in paths::ancestors(manifest_path, gctx.search_stop_path()).skip(1) {
             if let Some(ws_config) = roots.get(current) {
                 if !ws_config.is_excluded(manifest_path) {
                     // Add `Cargo.toml` since ws_root is the root and not the file
@@ -2061,7 +2061,7 @@ fn find_root_iter<'a>(
     manifest_path: &'a Path,
     gctx: &'a GlobalContext,
 ) -> impl Iterator<Item = PathBuf> + 'a {
-    LookBehind::new(paths::ancestors(manifest_path, None).skip(2))
+    LookBehind::new(paths::ancestors(manifest_path, gctx.search_stop_path()).skip(2))
         .take_while(|path| !path.curr.ends_with("target/package"))
         // Don't walk across `CARGO_HOME` when we're looking for the
         // workspace root. Sometimes a package will be organized with

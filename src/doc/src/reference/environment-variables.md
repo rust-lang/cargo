@@ -20,6 +20,10 @@ system:
   location of this directory. Once a crate is cached it is not removed by the
   clean command.
   For more details refer to the [guide](../guide/cargo-home.md).
+* `CARGO_ROOT` --- Instead of letting Cargo search every ancestor directory, up
+  to the root of the filesystem, looking for `.cargo` config directories or
+  workspace manifests, this limits how far Cargo can search. It doesn't stop
+  Cargo from reading `$CARGO_HOME/config.toml`, even if it's outside the root.
 * `CARGO_TARGET_DIR` --- Location of where to place all generated artifacts,
   relative to the current working directory. See [`build.target-dir`] to set
   via config.

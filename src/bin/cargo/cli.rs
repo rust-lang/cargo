@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context as _};
 use cargo::core::{features, CliUnstable};
 use cargo::util::context::TermConfig;
 use cargo::{drop_print, drop_println, CargoResult};
+use cargo_util::paths;
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -17,6 +18,34 @@ use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
 use cargo::util::style;
 
+fn closest_valid_root<'a>(
+    cwd: &std::path::Path,
+    config_root: Option<&'a std::path::Path>,
+    env_root: Option<&'a std::path::Path>,
+    cli_root: Option<&'a std::path::Path>,
+) -> anyhow::Result<Option<&'a std::path::Path>> {
+    for (name, root) in [
+        (".cargo/root", config_root),
+        ("CARGO_ROOT", env_root),
+        ("--root", cli_root),
+    ] {
+        if let Some(root) = root {
+            if !cwd.starts_with(root) {
+                return Err(anyhow::format_err!(
+                    "the {} `{}` is not a parent of the current working directory `{}`",
+                    name,
+                    root.display(),
+                    cwd.display()
+                ));
+            }
+        }
+    }
+    Ok([config_root, env_root, cli_root]
+        .into_iter()
+        .flatten()
+        .max_by_key(|root| root.components().count()))
+}
+
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
@@ -25,6 +54,7 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
 
     let args = cli(gctx).try_get_matches()?;
 
+    let mut need_reload = false;
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
         // This is a temporary hack.
@@ -46,6 +76,45 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
+        need_reload = true;
+    }
+
+    // A root directory can be specified via CARGO_ROOT, --root or the existence of a `.cargo/root` file.
+    // If more than one is specified, the effective root is the one closest to the current working directory.
+
+    let cwd = std::env::current_dir().context("could not get current working directory")?;
+    // Windows UNC paths are OK here
+    let cwd = cwd
+        .canonicalize()
+        .context("could not canonicalize current working directory")?;
+    let config_root = paths::ancestors(&cwd, gctx.search_stop_path())
+        .find(|current| current.join(".cargo").join("root").exists());
+    let env_root = gctx
+        .get_env_os("CARGO_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|p| {
+            p.canonicalize()
+                .context("could not canonicalize CARGO_ROOT")
+        })
+        .transpose()?;
+    let env_root = env_root.as_deref();
+
+    let cli_root = args
+        .get_one::<std::path::PathBuf>("root")
+        .map(|p| {
+            p.canonicalize()
+                .context("could not canonicalize requested root directory")
+        })
+        .transpose()?;
+    let cli_root = cli_root.as_deref();
+
+    if let Some(root) = closest_valid_root(&cwd, config_root, env_root, cli_root)? {
+        tracing::debug!("root directory: {}", root.display());
+        gctx.set_search_stop_path(root);
+        need_reload = true;
+    }
+
+    if need_reload {
         gctx.reload_cwd()?;
     }
 
@@ -639,6 +708,14 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .global(true)
                 .value_parser(["auto", "always", "never"])
                 .ignore_case(true),
+        )
+        .arg(
+            Arg::new("root")
+                .help("Define a root that limits searching for workspaces and .cargo/ directories")
+                .long("root")
+                .value_name("ROOT")
+                .value_hint(clap::ValueHint::DirPath)
+                .value_parser(clap::builder::ValueParser::path_buf()),
         )
         .arg(
             Arg::new("directory")

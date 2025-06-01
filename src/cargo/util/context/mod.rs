@@ -567,6 +567,11 @@ impl GlobalContext {
         }
     }
 
+    /// Gets the path where ancestor config file and workspace searching will stop.
+    pub fn search_stop_path(&self) -> Option<&Path> {
+        self.search_stop_path.as_deref()
+    }
+
     /// Sets the path where ancestor config file searching will stop. The
     /// given path is included, but its ancestors are not.
     pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
