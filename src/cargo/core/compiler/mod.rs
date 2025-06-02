@@ -1393,6 +1393,7 @@ fn trim_paths_args_rustdoc(
     // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
     // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap(build_runner, unit));
+    cmd.arg(build_dir_remap(build_runner));
     cmd.arg(sysroot_remap(build_runner, unit));
 
     Ok(())
@@ -1420,6 +1421,7 @@ fn trim_paths_args(
     // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
     // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap(build_runner, unit));
+    cmd.arg(build_dir_remap(build_runner));
     cmd.arg(sysroot_remap(build_runner, unit));
 
     Ok(())
@@ -1490,6 +1492,26 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
         remap.push("-");
         remap.push(unit.pkg.version().to_string());
     }
+    remap
+}
+
+/// Remap all paths pointing to `build.build-dir`,
+/// i.e., `[BUILD_DIR]/debug/deps/foo-[HASH].dwo` would be remapped to
+/// `/cargo/build-dir/debug/deps/foo-[HASH].dwo`
+/// (note the `/cargo/build-dir` prefix).
+///
+/// This covers scenarios like:
+///
+/// * Build script generated code. For example, a build script may call `file!`
+///   macros, and the associated crate uses [`include!`] to include the expanded
+///   [`file!`] macro in-place via the `OUT_DIR` environment.
+/// * On Linux, `DW_AT_GNU_dwo_name` that contains paths to split debuginfo
+///   files (dwp and dwo).
+fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> OsString {
+    let build_dir = build_runner.bcx.ws.build_dir();
+    let mut remap = OsString::from("--remap-path-prefix=");
+    remap.push(build_dir.as_path_unlocked());
+    remap.push("=/cargo/build-dir");
     remap
 }
 

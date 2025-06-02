@@ -227,7 +227,7 @@ fn registry_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-[..]/bar-0.0.1/src/lib.rs
+-[..]/bar-0.0.1/src/lib.rs
 
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
@@ -239,6 +239,78 @@ fn registry_dependency() {
 [RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+fn registry_dependency_with_build_script_codegen() {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                let out_dir = std::env::var("OUT_DIR").unwrap();
+                let dest = std::path::PathBuf::from(out_dir);
+                std::fs::write(
+                    dest.join("bindings.rs"),
+                    "pub fn my_file() -> &'static str { file!() }",
+                )
+                .unwrap();
+            }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+        "#,
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"fn main() { println!("{}", bar::my_file()); }"#,
+        )
+        .build();
+
+    p.cargo("run --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        // Macros should be sanitized
+        .with_stdout_data(str![[r#"
+/cargo/build-dir/debug/build/bar-[HASH]/out/bindings.rs
+
+"#]]) // Omit the hash of Source URL
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[COMPILING] bar v0.0.1
+[RUNNING] `rustc --crate-name build_script_build [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name bar [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -279,7 +351,7 @@ fn git_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-[..]/[..]/src/lib.rs
+bar-[..]/[..]/src/lib.rs
 
 "#]]) // Omit the hash of Source URL and commit
         .with_stderr_data(str![[r#"
@@ -618,24 +690,6 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
             // `OSO` symbols can't be trimmed at this moment.
             // See <https://github.com/rust-lang/rust/issues/116948#issuecomment-1793617018>
             if memchr::memmem::find(line, b" OSO ").is_some() {
-                continue;
-            }
-
-            // on macOS `SO` symbols are embedded in final binaries and should be trimmed.
-            // See rust-lang/rust#117652.
-            if memchr::memmem::find(line, b" SO ").is_some() {
-                continue;
-            }
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            // There is a bug in rustc `-Zremap-path-scope`.
-            // See rust-lang/rust/pull/118518
-            if memchr::memmem::find(line, b"DW_AT_comp_dir").is_some() {
-                continue;
-            }
-            if memchr::memmem::find(line, b"DW_AT_GNU_dwo_name").is_some() {
                 continue;
             }
         }
