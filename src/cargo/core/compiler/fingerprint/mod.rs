@@ -1167,15 +1167,12 @@ impl Fingerprint {
         // minimum mtime as it's the one we'll be comparing to inputs and
         // dependencies.
         for output in self.outputs.iter() {
-            let mtime = match paths::mtime(output) {
-                Ok(mtime) => mtime,
-
+            let Ok(mtime) = paths::mtime(output) else {
                 // This path failed to report its `mtime`. It probably doesn't
                 // exists, so leave ourselves as stale and bail out.
-                Err(e) => {
-                    debug!("failed to get mtime of {:?}: {}", output, e);
-                    return Ok(());
-                }
+                let item = StaleItem::FailedToReadMetadata(output.clone());
+                self.fs_status = FsStatus::StaleItem(item);
+                return Ok(());
             };
             assert!(mtimes.insert(output.clone(), mtime).is_none());
         }
