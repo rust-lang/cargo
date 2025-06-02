@@ -503,12 +503,32 @@ mod object_works {
     }
 }
 
-#[cfg(unix)]
-fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
-    use std::os::unix::ffi::OsStrExt;
+#[cfg(target_env = "msvc")]
+mod object_works {
+    use super::*;
 
+    fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
+        std::process::Command::new("strings")
+            .arg(path)
+            .output()
+            .expect("strings works")
+            .stdout
+    }
+
+    // windows-msvc supports split-debuginfo=packed only
+    #[cargo_test(
+        requires = "strings",
+        nightly,
+        reason = "-Zremap-path-scope is unstable"
+    )]
+    fn with_split_debuginfo_packed() {
+        object_works_helper("packed", inspect_debuginfo);
+    }
+}
+
+fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
     let registry_src = paths::home().join(".cargo/registry/src");
-    let registry_src_bytes = registry_src.as_os_str().as_bytes();
+    let registry_src_bytes = registry_src.as_os_str().as_encoded_bytes();
     let rust_src = "/lib/rustc/src/rust".as_bytes();
 
     Package::new("bar", "0.0.1")
@@ -538,19 +558,27 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
         .build();
 
     let pkg_root = p.root();
-    let pkg_root = pkg_root.as_os_str().as_bytes();
+    let pkg_root = pkg_root.as_os_str().as_encoded_bytes();
 
     p.cargo("build").run();
 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
-    // TODO: re-enable this check when rustc bootstrap disables remapping
-    // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
-    // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
-    assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
-    assert!(memchr::memmem::find(&stdout, pkg_root).is_some());
-
+    // On windows-msvc every debuginfo is in pdb file, so can't find anything here.
+    if cfg!(target_env = "msvc") {
+        // TODO: re-enable this check when rustc bootstrap disables remapping
+        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
+        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
+        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
+        assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
+    } else {
+        // TODO: re-enable this check when rustc bootstrap disables remapping
+        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
+        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
+        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
+        assert!(memchr::memmem::find(&stdout, pkg_root).is_some());
+    }
     p.cargo("clean").run();
 
     p.cargo("build --verbose -Ztrim-paths")
