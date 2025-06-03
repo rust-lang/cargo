@@ -61,9 +61,9 @@
 </tspan>
     <tspan x="10px" y="388px"><tspan>  </tspan><tspan class="fg-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Package(s) to publish</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--workspace</tspan><tspan>         Publish all packages in the workspace (unstable)</tspan>
+    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--workspace</tspan><tspan>         Publish all packages in the workspace</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--exclude</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan>    Don't publish specified packages (unstable)</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--exclude</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan>    Don't publish specified packages</tspan>
 </tspan>
     <tspan x="10px" y="442px">
 </tspan>

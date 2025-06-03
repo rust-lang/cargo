@@ -85,12 +85,6 @@ OPTIONS
        passing --workspace), and a non-virtual workspace will include only the
        root crate itself.
 
-       Selecting more than one package is unstable and available only on the
-       nightly channel
-       <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
-       requires the -Z package-workspace flag to enable. See
-       <https://github.com/rust-lang/cargo/issues/10948> for more information.
-
        -p spec…, --package spec…
            Publish only the specified packages. See cargo-pkgid(1) for the SPEC
            format. This flag may be specified multiple times and supports
@@ -99,21 +93,11 @@ OPTIONS
            them, you must use single quotes or double quotes around each
            pattern.
 
-           Selecting more than one package with this option is unstable and
-           available only on the nightly channel
-           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
-           requires the -Z package-workspace flag to enable. See
-           <https://github.com/rust-lang/cargo/issues/10948> for more
-           information.
-
        --workspace
            Publish all members in the workspace.
 
-           This option is unstable and available only on the nightly channel
-           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
-           requires the -Z package-workspace flag to enable. See
-           <https://github.com/rust-lang/cargo/issues/10948> for more
-           information.
+       --all
+           Deprecated alias for --workspace.
 
        --exclude SPEC…
            Exclude the specified packages. Must be used in conjunction with the
@@ -122,12 +106,6 @@ OPTIONS
            avoid your shell accidentally expanding glob patterns before Cargo
            handles them, you must use single quotes or double quotes around
            each pattern.
-
-           This option is unstable and available only on the nightly channel
-           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
-           requires the -Z package-workspace flag to enable. See
-           <https://github.com/rust-lang/cargo/issues/10948> for more
-           information.
 
    Compilation Options
        --target triple
