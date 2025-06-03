@@ -100,11 +100,6 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 \fB\-\-workspace\fR), and a non\-virtual workspace will include only the root crate itself.
 .sp
-Selecting more than one package is unstable and available only on the
-\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
-and requires the \fB\-Z package\-workspace\fR flag to enable.
-See <https://github.com/rust\-lang/cargo/issues/10948> for more information.
-.sp
 \fB\-p\fR \fIspec\fR\[u2026], 
 \fB\-\-package\fR \fIspec\fR\[u2026]
 .RS 4
@@ -113,22 +108,16 @@ SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally
 expanding glob patterns before Cargo handles them, you must use single quotes or
 double quotes around each pattern.
-.sp
-Selecting more than one package with this option is unstable and available only
-on the
-\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
-and requires the \fB\-Z package\-workspace\fR flag to enable.
-See <https://github.com/rust\-lang/cargo/issues/10948> for more information.
 .RE
 .sp
 \fB\-\-workspace\fR
 .RS 4
 Publish all members in the workspace.
+.RE
 .sp
-This option is unstable and available only on the
-\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
-and requires the \fB\-Z package\-workspace\fR flag to enable.
-See <https://github.com/rust\-lang/cargo/issues/10948> for more information.
+\fB\-\-all\fR
+.RS 4
+Deprecated alias for \fB\-\-workspace\fR\&.
 .RE
 .sp
 \fB\-\-exclude\fR \fISPEC\fR\[u2026]
@@ -138,11 +127,6 @@ Exclude the specified packages. Must be used in conjunction with the
 common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell
 accidentally expanding glob patterns before Cargo handles them, you must use
 single quotes or double quotes around each pattern.
-.sp
-This option is unstable and available only on the
-\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
-and requires the \fB\-Z package\-workspace\fR flag to enable.
-See <https://github.com/rust\-lang/cargo/issues/10948> for more information.
 .RE
 .SS "Compilation Options"
 .sp
