@@ -845,7 +845,6 @@ unstable_cli_options!(
     next_lockfile_bump: bool,
     no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
-    package_workspace: bool = ("Handle intra-workspace dependencies when packaging"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     profile_hint_mostly_unused: bool = ("Enable the `hint-mostly-unused` setting in profiles to mark a crate as mostly unused."),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
@@ -941,6 +940,9 @@ const STABILIZED_CHECK_CFG: &str =
     "Compile-time checking of conditional (a.k.a. `-Zcheck-cfg`) is now always enabled.";
 
 const STABILIZED_DOCTEST_XCOMPILE: &str = "Doctest cross-compiling is now always enabled.";
+
+const STABILIZED_PACKAGE_WORKSPACE: &str =
+    "Workspace packaging and publishing (a.k.a. `-Zpackage-workspace`) is now always enabled.";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1323,6 +1325,7 @@ impl CliUnstable {
             "lints" => stabilized_warn(k, "1.74", STABILIZED_LINTS),
             "registry-auth" => stabilized_warn(k, "1.74", STABILIZED_REGISTRY_AUTH),
             "check-cfg" => stabilized_warn(k, "1.80", STABILIZED_CHECK_CFG),
+            "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1366,7 +1369,6 @@ impl CliUnstable {
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
             "no-embed-metadata" => self.no_embed_metadata = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
-            "package-workspace" => self.package_workspace = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "public-dependency" => self.public_dependency = parse_empty(k, v)?,
             "profile-hint-mostly-unused" => self.profile_hint_mostly_unused = parse_empty(k, v)?,

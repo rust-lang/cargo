@@ -88,12 +88,6 @@ The default members of a workspace can be set explicitly with the
 virtual workspace will include all workspace members (equivalent to passing
 `--workspace`), and a non-virtual workspace will include only the root crate itself.
 
-Selecting more than one package is unstable and available only on the
-[nightly channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html)
-and requires the `-Z package-workspace` flag to enable.
-See <https://github.com/rust-lang/cargo/issues/10948> for more information.
-
-
 <dl>
 
 <dt class="option-term" id="option-cargo-publish--p"><a class="option-anchor" href="#option-cargo-publish--p"></a><code>-p</code> <em>spec</em>…</dt>
@@ -102,20 +96,15 @@ See <https://github.com/rust-lang/cargo/issues/10948> for more information.
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally
 expanding glob patterns before Cargo handles them, you must use single quotes or
-double quotes around each pattern.</p>
-<p>Selecting more than one package with this option is unstable and available only
-on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z package-workspace</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
+double quotes around each pattern.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---workspace"><a class="option-anchor" href="#option-cargo-publish---workspace"></a><code>--workspace</code></dt>
-<dd class="option-desc">Publish all members in the workspace.</p>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z package-workspace</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
+<dd class="option-desc">Publish all members in the workspace.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---all"><a class="option-anchor" href="#option-cargo-publish---all"></a><code>--all</code></dt>
+<dd class="option-desc">Deprecated alias for <code>--workspace</code>.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---exclude"><a class="option-anchor" href="#option-cargo-publish---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
@@ -123,11 +112,7 @@ See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
 accidentally expanding glob patterns before Cargo handles them, you must use
-single quotes or double quotes around each pattern.</p>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z package-workspace</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/10948">https://github.com/rust-lang/cargo/issues/10948</a> for more information.</dd>
+single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
