@@ -75,6 +75,7 @@ _cargo() {
                         {-F+,--features=}'[specify features to activate]:feature' \
                         "--default-features[enable the default features]" \
                         "--no-default-features[don't enable the default features]" \
+                        "--offline[run without accessing the network]" \
                         "--optional[mark the dependency as optional]" \
                         "--no-optional[mark the dependency as required]" \
                         "--dev[add as a dev dependency]" \

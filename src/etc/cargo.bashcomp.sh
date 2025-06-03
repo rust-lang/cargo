@@ -49,7 +49,7 @@ _cargo()
 	local opt_targets="--lib --bin --bins --example --examples --test --tests --bench --benches --all-targets"
 
 	local opt___nocmd="$opt_common -V --version --list --explain"
-	local opt__add="$opt_common -p --package --features --default-features --no-default-features $opt_mani --optional --no-optional --rename --dry-run --path --git --branch --tag --rev --registry --dev --build --target --ignore-rust-version"
+	local opt__add="$opt_common -p --package --features --default-features --no-default-features $opt_mani --offline --optional --no-optional --rename --dry-run --path --git --branch --tag --rev --registry --dev --build --target --ignore-rust-version"
 	local opt__bench="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_jobs $opt_targets --message-format --target --no-run --no-fail-fast --target-dir --ignore-rust-version"
 	local opt__build="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_lock $opt_parallel $opt_targets --message-format --target --release --profile --target-dir --ignore-rust-version"
 	local opt__b="$opt__build"
