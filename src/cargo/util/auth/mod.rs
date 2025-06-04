@@ -545,7 +545,7 @@ fn credential_action(
             #[cfg(target_os = "macos")]
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
             #[cfg(target_os = "linux")]
-            "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential {}),
+            "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential::new()?),
             name if BUILT_IN_PROVIDERS.contains(&name) => {
                 Box::new(cargo_credential::UnsupportedCredential {})
             }

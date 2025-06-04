@@ -83,7 +83,9 @@ mod linux {
         ...
     ) -> *mut gchar;
 
-    pub struct LibSecretCredential;
+    pub struct LibSecretCredential {
+        libsecret: Library,
+    }
 
     fn label(index_url: &str) -> CString {
         CString::new(format!("cargo-registry:{}", index_url)).unwrap()
@@ -105,6 +107,18 @@ mod linux {
         }
     }
 
+    impl LibSecretCredential {
+        pub fn new() -> Result<LibSecretCredential, Error> {
+            // Dynamically load libsecret to avoid users needing to install
+            // additional -dev packages when building this provider.
+            let libsecret = unsafe { Library::new("libsecret-1.so.0") }.context(
+                "failed to load libsecret: try installing the `libsecret` \
+                or `libsecret-1-0` package with the system package manager",
+            )?;
+            Ok(Self { libsecret })
+        }
+    }
+
     impl Credential for LibSecretCredential {
         fn perform(
             &self,
@@ -112,24 +126,22 @@ mod linux {
             action: &Action<'_>,
             _args: &[&str],
         ) -> Result<CredentialResponse, Error> {
-            // Dynamically load libsecret to avoid users needing to install
-            // additional -dev packages when building this provider.
-            let lib;
             let secret_password_lookup_sync: Symbol<'_, SecretPasswordLookupSync>;
             let secret_password_store_sync: Symbol<'_, SecretPasswordStoreSync>;
             let secret_password_clear_sync: Symbol<'_, SecretPasswordClearSync>;
             unsafe {
-                lib = Library::new("libsecret-1.so.0").context(
-                    "failed to load libsecret: try installing the `libsecret` \
-                    or `libsecret-1-0` package with the system package manager",
-                )?;
-                secret_password_lookup_sync = lib
+                secret_password_lookup_sync = self
+                    .libsecret
                     .get(b"secret_password_lookup_sync\0")
                     .map_err(Box::new)?;
-                secret_password_store_sync =
-                    lib.get(b"secret_password_store_sync\0").map_err(Box::new)?;
-                secret_password_clear_sync =
-                    lib.get(b"secret_password_clear_sync\0").map_err(Box::new)?;
+                secret_password_store_sync = self
+                    .libsecret
+                    .get(b"secret_password_store_sync\0")
+                    .map_err(Box::new)?;
+                secret_password_clear_sync = self
+                    .libsecret
+                    .get(b"secret_password_clear_sync\0")
+                    .map_err(Box::new)?;
             }
 
             let index_url_c = CString::new(registry.index_url).unwrap();
