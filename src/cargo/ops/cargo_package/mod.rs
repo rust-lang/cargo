@@ -240,15 +240,18 @@ fn do_package<'a>(
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
 
     let mut local_reg = if ws.gctx().cli_unstable().package_workspace {
-        // The publish registry doesn't matter unless there are local dependencies,
+        // The publish registry doesn't matter unless there are local dependencies that will be
+        // resolved,
         // so only try to get one if we need it. If they explicitly passed a
         // registry on the CLI, we check it no matter what.
-        let sid = if deps.has_no_dependencies() && opts.reg_or_index.is_none() {
-            None
-        } else {
+        let sid = if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
+            || opts.reg_or_index.is_some()
+        {
             let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
             debug!("packaging for registry {}", sid);
             Some(sid)
+        } else {
+            None
         };
         let reg_dir = ws.build_dir().join("package").join("tmp-registry");
         sid.map(|sid| TmpRegistry::new(ws.gctx(), reg_dir, sid))
@@ -377,10 +380,10 @@ impl<T: Clone> LocalDependencies<T> {
             .collect()
     }
 
-    pub fn has_no_dependencies(&self) -> bool {
+    pub fn has_dependencies(&self) -> bool {
         self.graph
             .iter()
-            .all(|node| self.graph.edges(node).next().is_none())
+            .any(|node| self.graph.edges(node).next().is_some())
     }
 }
 
