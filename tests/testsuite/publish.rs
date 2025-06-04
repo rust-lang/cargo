@@ -3492,18 +3492,6 @@ fn package_selection() {
         .file("b/src/lib.rs", "#[test] fn b() {}")
         .build();
 
-    p.cargo("publish --no-verify --dry-run --package a --package b")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
-
-"#]])
-        .with_stdout_data(str![[r#""#]])
-        .run();
-
     p.cargo("publish --no-verify --dry-run --workspace")
         .replace_crates_io(registry.index_url())
         .with_status(101)
@@ -3511,6 +3499,18 @@ See https://github.com/rust-lang/cargo/issues/10948 for more information about t
 [ERROR] the `--workspace` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
 See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--workspace` flag.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
 
 "#]])
         .with_stdout_data(str![[r#""#]])
