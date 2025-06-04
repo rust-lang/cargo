@@ -7585,10 +7585,9 @@ fn unpublished_cyclic_dev_dependencies_nightly() {
 
     p.cargo("package --no-verify --exclude-lockfile -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] crates-io is replaced with remote registry dummy-registry;
-include `--registry dummy-registry` or `--registry crates-io`
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
