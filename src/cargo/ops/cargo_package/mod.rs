@@ -417,6 +417,11 @@ fn local_deps<T>(packages: impl Iterator<Item = (Package, T)>) -> LocalDependenc
                 continue;
             };
 
+            // We don't care about cycles
+            if dep.source_id() == pkg.package_id().source_id() {
+                continue;
+            }
+
             if let Some(dep_pkg) = source_to_pkg.get(&dep.source_id()) {
                 graph.link(pkg.package_id(), *dep_pkg);
             }

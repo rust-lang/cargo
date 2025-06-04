@@ -7560,6 +7560,39 @@ fn unpublished_cyclic_dev_dependencies() {
     );
 }
 
+#[cargo_test]
+fn unpublished_cyclic_dev_dependencies_nightly() {
+    registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+
+                [dev-dependencies]
+                foo = { path = ".", version = "0.0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify --exclude-lockfile -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+}
+
 // A failing case from <https://github.com/rust-lang/cargo/issues/15059>
 #[cargo_test]
 fn unpublished_dependency() {
