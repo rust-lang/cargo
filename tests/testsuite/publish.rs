@@ -2522,8 +2522,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn with_duplicate_spec_in_members() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2630,8 +2629,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn in_virtual_workspace() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2668,8 +2666,7 @@ fn in_virtual_workspace() {
 
 #[cargo_test]
 fn in_virtual_workspace_with_p() {
-    // `publish` generally requires a remote registry
-    let registry = registry::RegistryBuilder::new().http_api().build();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2771,8 +2768,7 @@ fn in_package_workspace_not_found() {
 
 #[cargo_test]
 fn in_package_workspace_found_multiple() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2828,8 +2824,7 @@ fn in_package_workspace_found_multiple() {
 #[cargo_test]
 // https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -3403,7 +3398,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
-fn package_selection() {
+fn package_selection_nightly() {
     let registry = registry::RegistryBuilder::new().http_api().build();
     let p = project()
         .file(
@@ -3478,18 +3473,24 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 "#]])
         .with_stdout_data(str![[r#""#]])
         .run();
+}
 
-    p.cargo("publish --no-verify --dry-run --package a --package b")
-        .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
-
-"#]])
-        .with_stdout_data(str![[r#""#]])
-        .run();
+#[cargo_test]
+fn package_selection() {
+    let registry = registry::RegistryBuilder::new().http_api().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
+        .build();
 
     p.cargo("publish --no-verify --dry-run --workspace")
         .replace_crates_io(registry.index_url())
@@ -3498,6 +3499,18 @@ See https://github.com/rust-lang/cargo/issues/10948 for more information about t
 [ERROR] the `--workspace` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
 See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--workspace` flag.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
 
 "#]])
         .with_stdout_data(str![[r#""#]])
