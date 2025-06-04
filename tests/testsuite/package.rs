@@ -6886,6 +6886,75 @@ fn registry_inferred_from_unique_option() {
 }
 
 #[cargo_test]
+fn registry_not_inferred_because_of_conflict() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = ["alternative"]
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = ["alternative2"]
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn registry_not_inferred_because_of_conflict_nightly() {
     let alt_reg = registry::RegistryBuilder::new()
         .http_api()
@@ -7074,6 +7143,75 @@ fn registry_inference_ignores_unpublishable() {
 }
 
 #[cargo_test]
+fn registry_not_inferred_because_of_multiple_options() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = ["alternative", "alternative2"]
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = ["alternative", "alternative2"]
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn registry_not_inferred_because_of_multiple_options_nightly() {
     let _alt_reg = registry::RegistryBuilder::new()
         .http_api()
@@ -7150,6 +7288,76 @@ fn registry_not_inferred_because_of_multiple_options_nightly() {
 [COMPILING] dep v0.1.0 (registry `alternative`)
 [COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn registry_not_inferred_because_of_mismatch() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = ["alternative"]
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        // No `publish` field means "any registry", but the presence of this package
+        // will stop us from inferring a registry.
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
