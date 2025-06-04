@@ -766,7 +766,7 @@ fn multiple_crates_git_all() {
         )
         .build();
 
-    cargo_process(&format!("install --git {} bin1 bin2", p.url().to_string())).run();
+    cargo_process(&format!("install --git {} bin1 bin2", p.url())).run();
 }
 
 #[cargo_test]
@@ -2148,7 +2148,7 @@ fn git_install_reads_workspace_manifest() {
         )
         .build();
 
-    cargo_process(&format!("install --git {}", p.url().to_string()))
+    cargo_process(&format!("install --git {}", p.url()))
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/foo`

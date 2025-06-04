@@ -88,10 +88,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     let mut pkgs = ws.members_with_features(&specs, &opts.cli_features)?;
     // In `members_with_features_old`, it will add "current" package (determined by the cwd)
     // So we need filter
-    pkgs = pkgs
-        .into_iter()
-        .filter(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())))
-        .collect();
+    pkgs.retain(|(m, _)| specs.iter().any(|spec| spec.matches(m.package_id())));
 
     let (unpublishable, pkgs): (Vec<_>, Vec<_>) = pkgs
         .into_iter()

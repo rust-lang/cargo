@@ -546,7 +546,7 @@ fn check_resolver_change<'gctx>(
             }
             // Only trigger if updating the root package from 2018.
             let pkgs = opts.compile_opts.spec.get_packages(ws)?;
-            if !pkgs.iter().any(|&pkg| pkg == root_pkg) {
+            if !pkgs.contains(&root_pkg) {
                 // The root is not being migrated.
                 return Ok(());
             }

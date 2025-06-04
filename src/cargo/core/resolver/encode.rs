@@ -698,7 +698,7 @@ impl ser::Serialize for Resolve {
                     None => "<none>",
                 };
                 let id = encodable_package_id(id, &state, self.version());
-                metadata.insert(format!("checksum {}", id.to_string()), checksum.to_string());
+                metadata.insert(format!("checksum {}", id), checksum.to_string());
             }
         }
 

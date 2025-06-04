@@ -975,7 +975,7 @@ impl GitFeatures {
     }
 
     fn expecting() -> String {
-        let fields = vec!["`shallow-index`", "`shallow-deps`"];
+        let fields = ["`shallow-index`", "`shallow-deps`"];
         format!(
             "unstable 'git' only takes {} as valid inputs",
             fields.join(" and ")
@@ -1087,7 +1087,7 @@ impl GitoxideFeatures {
     }
 
     fn expecting() -> String {
-        let fields = vec!["`fetch`", "`checkout`", "`internal-use-git2`"];
+        let fields = ["`fetch`", "`checkout`", "`internal-use-git2`"];
         format!(
             "unstable 'gitoxide' only takes {} as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`",
             fields.join(" and ")

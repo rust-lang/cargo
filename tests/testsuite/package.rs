@@ -1457,7 +1457,7 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     });
     git::add_submodule(
         &repo,
-        &submodule.root().to_url().to_string(),
+        submodule.root().to_url().as_ref(),
         Path::new("submodule"),
     );
     p.symlink("submodule/file.txt", "isengard/src/file.txt");
@@ -3595,7 +3595,7 @@ fn larger_filesizes() {
                 description = "foo"
                 documentation = "https://example.com/"
             "#;
-    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let lots_of_crabs = "🦀".repeat(1337);
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
     let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
         package size beyond 1KiB.
@@ -3711,7 +3711,7 @@ fn symlink_filesizes() {
                 description = "foo"
                 homepage = "https://example.com/"
             "#;
-    let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
+    let lots_of_crabs = "🦀".repeat(1337);
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
     let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
         package size beyond 1KiB.

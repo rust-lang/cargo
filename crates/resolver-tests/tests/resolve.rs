@@ -741,8 +741,8 @@ fn incomplete_information_skipping() {
     let new_reg = registry(
         input
             .iter()
+            .filter(|&x| package_to_yank != x.package_id())
             .cloned()
-            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);
@@ -810,8 +810,8 @@ fn incomplete_information_skipping_2() {
     let new_reg = registry(
         input
             .iter()
+            .filter(|&x| package_to_yank != x.package_id())
             .cloned()
-            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);
@@ -860,8 +860,8 @@ fn incomplete_information_skipping_3() {
     let new_reg = registry(
         input
             .iter()
+            .filter(|&x| package_to_yank != x.package_id())
             .cloned()
-            .filter(|x| package_to_yank != x.package_id())
             .collect(),
     );
     assert_eq!(input.len(), new_reg.len() + 1);

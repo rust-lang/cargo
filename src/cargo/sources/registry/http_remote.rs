@@ -869,7 +869,7 @@ mod tls {
     use super::Downloads;
     use std::cell::Cell;
 
-    thread_local!(static PTR: Cell<usize> = Cell::new(0));
+    thread_local!(static PTR: Cell<usize> = const { Cell::new(0) });
 
     pub(super) fn with<R>(f: impl FnOnce(Option<&Downloads<'_>>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());

@@ -466,7 +466,7 @@ fn inherit_own_detailed_dependencies() {
         .build();
 
     Package::new("dep", "0.1.2")
-        .feature("testing", &vec![])
+        .feature("testing", &[])
         .publish();
 
     p.cargo("check")

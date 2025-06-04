@@ -1391,7 +1391,7 @@ fn update_precise_git_revisions() {
 
     // Now make a tag looks like an oid.
     // It requires a git fetch, as the oid cannot be found in preexisting git db.
-    let arbitrary_tag: String = std::iter::repeat('a').take(head_id.len()).collect();
+    let arbitrary_tag: String = "a".repeat(head_id.len());
     git::tag(&git_repo, &arbitrary_tag);
 
     p.cargo("update git --precise")

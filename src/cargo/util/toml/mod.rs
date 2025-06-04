@@ -1482,7 +1482,7 @@ pub fn to_real_manifest(
                 warnings.push(format!(
                     "file `{}` found to be present in multiple \
                  build targets:\n{}",
-                    target_path.display().to_string(),
+                    target_path.display(),
                     conflicts
                         .iter()
                         .map(|t| format!("  * `{}` target `{}`", t.kind().description(), t.name(),))
@@ -1986,7 +1986,7 @@ fn validate_dependencies(
             None => "dependencies",
         };
         let table_in_toml = if let Some(platform) = platform {
-            format!("target.{}.{kind_name}", platform.to_string())
+            format!("target.{platform}.{kind_name}")
         } else {
             kind_name.to_string()
         };
