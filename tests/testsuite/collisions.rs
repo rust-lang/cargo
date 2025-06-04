@@ -404,7 +404,6 @@ fn collision_doc_profile_split() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[CHECKING] common v1.0.0
 [DOCUMENTING] common v1.0.0
 [DOCUMENTING] pm v0.1.0 ([ROOT]/foo/pm)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)

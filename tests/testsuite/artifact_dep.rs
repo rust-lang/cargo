@@ -2416,7 +2416,7 @@ fn doc_lib_true() {
 
     // Verify that it emits rmeta for the bin and lib dependency.
     assert_eq!(p.glob("target/debug/artifact/*.rlib").count(), 0);
-    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 2);
+    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
     p.cargo("doc -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])

@@ -3210,8 +3210,7 @@ fn rmeta_reuse() {
 
     p.cargo("check --verbose")
         .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]`
+[FRESH] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3229,6 +3228,7 @@ fn rmeta_reuse() {
 
     p.cargo("build --verbose")
         .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.0 ([ROOT]/foo): couldn't read metadata for file `target/debug/deps/libfoo-[HASH].rlib`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

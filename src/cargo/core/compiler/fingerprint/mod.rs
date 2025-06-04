@@ -1537,7 +1537,7 @@ fn calculate_normal(
 
     let profile_hash = util::hash_u64((
         &unit.profile,
-        unit.mode,
+        unit.mode.for_reuse(),
         build_runner.bcx.extra_args_for(unit),
         build_runner.lto[unit],
         unit.pkg.manifest().lint_rustflags(),
