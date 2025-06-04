@@ -407,7 +407,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-libsecret"
-version = "0.4.15"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "cargo-credential",

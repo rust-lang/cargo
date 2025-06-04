@@ -27,7 +27,7 @@ blake3 = "1.5.5"
 build-rs = { version = "0.3.1", path = "crates/build-rs" }
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
-cargo-credential-libsecret = { version = "0.4.15", path = "credential/cargo-credential-libsecret" }
+cargo-credential-libsecret = { version = "0.5.0", path = "credential/cargo-credential-libsecret" }
 cargo-credential-macos-keychain = { version = "0.4.15", path = "credential/cargo-credential-macos-keychain" }
 cargo-credential-wincred = { version = "0.4.15", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.3.0" }

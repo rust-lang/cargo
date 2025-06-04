@@ -508,6 +508,27 @@ static BUILT_IN_PROVIDERS: &[&'static str] = &[
     "cargo:libsecret",
 ];
 
+/// Retrieves a cached instance of `LibSecretCredential`.
+/// Must be cached to avoid repeated load/unload cycles, which are not supported by `glib`.
+#[cfg(target_os = "linux")]
+fn get_credential_libsecret(
+) -> CargoResult<&'static cargo_credential_libsecret::LibSecretCredential> {
+    static CARGO_CREDENTIAL_LIBSECRET: std::sync::OnceLock<
+        cargo_credential_libsecret::LibSecretCredential,
+    > = std::sync::OnceLock::new();
+    // Unfortunately `get_or_try_init` is not yet stable. This workaround is not threadsafe but
+    // loading libsecret twice will only temporary increment the ref counter, which is decrement
+    // again when `drop` is called.
+    match CARGO_CREDENTIAL_LIBSECRET.get() {
+        Some(lib) => Ok(lib),
+        None => {
+            let _ = CARGO_CREDENTIAL_LIBSECRET
+                .set(cargo_credential_libsecret::LibSecretCredential::new()?);
+            Ok(CARGO_CREDENTIAL_LIBSECRET.get().unwrap())
+        }
+    }
+}
+
 fn credential_action(
     gctx: &GlobalContext,
     sid: &SourceId,
@@ -545,7 +566,7 @@ fn credential_action(
             #[cfg(target_os = "macos")]
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
             #[cfg(target_os = "linux")]
-            "cargo:libsecret" => Box::new(cargo_credential_libsecret::LibSecretCredential {}),
+            "cargo:libsecret" => Box::new(get_credential_libsecret()?),
             name if BUILT_IN_PROVIDERS.contains(&name) => {
                 Box::new(cargo_credential::UnsupportedCredential {})
             }
