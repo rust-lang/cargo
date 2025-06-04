@@ -2522,8 +2522,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn with_duplicate_spec_in_members() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2630,8 +2629,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn in_virtual_workspace() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2668,8 +2666,7 @@ fn in_virtual_workspace() {
 
 #[cargo_test]
 fn in_virtual_workspace_with_p() {
-    // `publish` generally requires a remote registry
-    let registry = registry::RegistryBuilder::new().http_api().build();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2771,8 +2768,7 @@ fn in_package_workspace_not_found() {
 
 #[cargo_test]
 fn in_package_workspace_found_multiple() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
@@ -2828,8 +2824,7 @@ fn in_package_workspace_found_multiple() {
 #[cargo_test]
 // https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
-    // Use local registry for faster test times since no publish will occur
-    let registry = registry::init();
+    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
         .file(
