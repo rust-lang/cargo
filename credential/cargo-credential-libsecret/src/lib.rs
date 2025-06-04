@@ -119,7 +119,7 @@ mod linux {
         }
     }
 
-    impl Credential for LibSecretCredential {
+    impl Credential for &LibSecretCredential {
         fn perform(
             &self,
             registry: &RegistryInfo<'_>,
