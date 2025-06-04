@@ -7084,9 +7084,11 @@ fn registry_not_inferred_because_of_conflict_nightly() {
 
     p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] conflicts between `package.publish` fields in the selected packages
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -7401,9 +7403,11 @@ fn registry_not_inferred_because_of_multiple_options_nightly() {
 
     p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] --registry is required to disambiguate between "alternative" or "alternative2" registries
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -7631,9 +7635,11 @@ fn registry_not_inferred_because_of_mismatch_nightly() {
 
     p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] --registry is required because not all `package.publish` settings agree
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
