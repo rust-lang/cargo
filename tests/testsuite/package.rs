@@ -6952,6 +6952,56 @@ Caused by:
 
 "#]])
         .run();
+
+    p.cargo("package --exclude-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)`
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify")
+        .with_status(0)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -7006,6 +7056,33 @@ fn registry_not_inferred_because_of_conflict_nightly() {
         .build();
 
     p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] conflicts between `package.publish` fields in the selected packages
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] conflicts between `package.publish` fields in the selected packages
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] conflicts between `package.publish` fields in the selected packages
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -7193,7 +7270,29 @@ fn registry_not_inferred_because_of_multiple_options() {
         .file("dep/src/lib.rs", "")
         .build();
 
-    p.cargo("package")
+    p.cargo("package --exclude-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)`
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
@@ -7206,6 +7305,17 @@ Caused by:
   no matching package named `dep` found
   location searched: `alternative` index
   required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify")
+        .with_status(0)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -7263,6 +7373,33 @@ fn registry_not_inferred_because_of_multiple_options_nightly() {
         .build();
 
     p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required to disambiguate between "alternative" or "alternative2" registries
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required to disambiguate between "alternative" or "alternative2" registries
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required to disambiguate between "alternative" or "alternative2" registries
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -7361,6 +7498,56 @@ Caused by:
 
 "#]])
         .run();
+
+    p.cargo("package --exclude-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)`
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: `alternative` index
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify")
+        .with_status(0)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -7416,6 +7603,33 @@ fn registry_not_inferred_because_of_mismatch_nightly() {
         .build();
 
     p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required because not all `package.publish` settings agree
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required because not all `package.publish` settings agree
+
+"#]])
+        .run();
+
+    p.cargo("package --no-verify -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] --registry is required because not all `package.publish` settings agree
+
+"#]])
+        .run();
+
+    p.cargo("package --exclude-lockfile --no-verify -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
