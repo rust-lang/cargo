@@ -20,30 +20,23 @@ use cargo::util::style;
 
 fn closest_valid_root<'a>(
     cwd: &std::path::Path,
-    config_root: Option<&'a std::path::Path>,
-    env_root: Option<&'a std::path::Path>,
-    cli_root: Option<&'a std::path::Path>,
+    roots: &[&'a std::path::Path],
 ) -> anyhow::Result<Option<&'a std::path::Path>> {
-    for (name, root) in [
-        (".cargo/root", config_root),
-        ("CARGO_ROOT", env_root),
-        ("--root", cli_root),
-    ] {
-        if let Some(root) = root {
-            if !cwd.starts_with(root) {
-                return Err(anyhow::format_err!(
-                    "the {} `{}` is not a parent of the current working directory `{}`",
-                    name,
-                    root.display(),
-                    cwd.display()
-                ));
-            }
-        }
-    }
-    Ok([config_root, env_root, cli_root]
-        .into_iter()
-        .flatten()
-        .max_by_key(|root| root.components().count()))
+    let cwd = cwd
+        .canonicalize()
+        .context("could not canonicalize current working directory")?;
+
+    // Assumes that all roots are canonicalized.
+    let ancestor_roots =
+        roots
+            .iter()
+            .filter_map(|r| if cwd.starts_with(r) { Some(*r) } else { None });
+
+    Ok(ancestor_roots.into_iter().max_by_key(|root| {
+        // Prefer the root that is closest to the current working directory.
+        // This is done by counting the number of components in the path.
+        root.components().count()
+    }))
 }
 
 #[tracing::instrument(skip_all)]
@@ -54,7 +47,6 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
 
     let args = cli(gctx).try_get_matches()?;
 
-    let mut need_reload = false;
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
         // This is a temporary hack.
@@ -76,47 +68,77 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
-        need_reload = true;
     }
 
-    // A root directory can be specified via CARGO_ROOT, --root or the existence of a `.cargo/root` file.
-    // If more than one is specified, the effective root is the one closest to the current working directory.
+    // A root directories can be specified via CARGO_ROOTS, --root or the existence of a `.cargo/root` files.
+    // If more than one root is specified, the effective root is the one closest to the current working directory.
+    // If CARGO_ROOTS is not set, the user's home directory is used as a default root.
 
     let cwd = std::env::current_dir().context("could not get current working directory")?;
     // Windows UNC paths are OK here
     let cwd = cwd
         .canonicalize()
         .context("could not canonicalize current working directory")?;
-    let config_root = paths::ancestors(&cwd, gctx.search_stop_path())
+
+    // XXX: before looking for `.cargo/root` should we first try and resolve roots
+    // from `CARGO_ROOTS` + --root so we can avoid triggering automounter issues?
+    let root_marker = paths::ancestors(&cwd, gctx.search_stop_path())
         .find(|current| current.join(".cargo").join("root").exists());
-    let env_root = gctx
-        .get_env_os("CARGO_ROOT")
-        .map(std::path::PathBuf::from)
-        .map(|p| {
-            p.canonicalize()
-                .context("could not canonicalize CARGO_ROOT")
-        })
-        .transpose()?;
-    let env_root = env_root.as_deref();
 
-    let cli_root = args
-        .get_one::<std::path::PathBuf>("root")
-        .map(|p| {
-            p.canonicalize()
-                .context("could not canonicalize requested root directory")
-        })
-        .transpose()?;
-    let cli_root = cli_root.as_deref();
+    let mut roots: Vec<std::path::PathBuf> = Vec::new();
 
-    if let Some(root) = closest_valid_root(&cwd, config_root, env_root, cli_root)? {
+    if let Some(root_marker) = root_marker {
+        let pb = root_marker
+            .canonicalize()
+            .context("could not canonicalize .cargo/root")?;
+        roots.push(pb);
+    }
+
+    if let Some(paths_os) = gctx.get_env_os("CARGO_ROOTS") {
+        for path in std::env::split_paths(&paths_os) {
+            let pb = path.canonicalize().context(format!(
+                "could not canonicalize CARGO_ROOTS entry `{}`",
+                path.display()
+            ))?;
+            roots.push(pb);
+        }
+    } else if let Some(home) = std::env::home_dir() {
+        // To be safe by default, and not attempt to read config files outside of the
+        // user's home directory, we implicitly add the home directory as a root.
+        // Ref: https://github.com/rust-lang/rfcs/pull/3279
+        let home = home
+            .canonicalize()
+            .context("could not canonicalize home directory")?;
+        tracing::debug!(
+            "implicitly adding home directory as root: {}",
+            home.display()
+        );
+        roots.push(home);
+    }
+
+    if let Some(cli_roots) = args.get_many::<std::path::PathBuf>("root") {
+        for cli_root in cli_roots {
+            let pb = cli_root
+                .canonicalize()
+                .context("could not canonicalize requested root directory")?;
+            roots.push(pb);
+        }
+    }
+
+    let roots: Vec<_> = roots.iter().map(|p| p.as_path()).collect();
+
+    if let Some(root) = closest_valid_root(&cwd, &roots)? {
         tracing::debug!("root directory: {}", root.display());
         gctx.set_search_stop_path(root);
-        need_reload = true;
+    } else {
+        tracing::debug!("root limited to cwd: {}", cwd.display());
+        // If we are not running with _any_ root then we are conservative and don't
+        // allow any ancestor traversal.
+        gctx.set_search_stop_path(&cwd);
     }
 
-    if need_reload {
-        gctx.reload_cwd()?;
-    }
+    // Reload now that we have established the cwd and root
+    gctx.reload_cwd()?;
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
 
@@ -714,6 +736,7 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .help("Define a root that limits searching for workspaces and .cargo/ directories")
                 .long("root")
                 .value_name("ROOT")
+                .action(ArgAction::Append)
                 .value_hint(clap::ValueHint::DirPath)
                 .value_parser(clap::builder::ValueParser::path_buf()),
         )
