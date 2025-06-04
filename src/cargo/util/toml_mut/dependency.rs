@@ -1269,7 +1269,7 @@ mod tests {
             .unwrap();
             let dep = dep.set_source(WorkspaceSource::new());
             local
-                .insert_into_table(&vec![], &dep, &gctx, &crate_root, &Features::default())
+                .insert_into_table(&[], &dep, &gctx, &crate_root, &Features::default())
                 .unwrap();
             assert_eq!(local.data.to_string(), "dep.workspace = true\n");
         }

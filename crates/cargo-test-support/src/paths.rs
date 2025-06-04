@@ -66,7 +66,7 @@ pub fn global_root() -> PathBuf {
 // [*] It does set the thread name, but only when running concurrently. If not
 // running concurrently, all tests are run on the main thread.
 thread_local! {
-    static TEST_ID: RefCell<Option<usize>> = RefCell::new(None);
+    static TEST_ID: RefCell<Option<usize>> = const { RefCell::new(None) };
 }
 
 /// See [`init_root`]

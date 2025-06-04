@@ -646,15 +646,15 @@ pub struct HttpServerHandle {
 
 impl HttpServerHandle {
     pub fn index_url(&self) -> Url {
-        Url::parse(&format!("sparse+http://{}/index/", self.addr.to_string())).unwrap()
+        Url::parse(&format!("sparse+http://{}/index/", self.addr)).unwrap()
     }
 
     pub fn api_url(&self) -> Url {
-        Url::parse(&format!("http://{}/", self.addr.to_string())).unwrap()
+        Url::parse(&format!("http://{}/", self.addr)).unwrap()
     }
 
     pub fn dl_url(&self) -> Url {
-        Url::parse(&format!("http://{}/dl", self.addr.to_string())).unwrap()
+        Url::parse(&format!("http://{}/dl", self.addr)).unwrap()
     }
 
     fn stop(&self) {
@@ -892,7 +892,7 @@ impl HttpServer {
 
         // - The URL matches the registry base URL
         if footer.url != "https://github.com/rust-lang/crates.io-index"
-            && footer.url != &format!("sparse+http://{}/index/", self.addr.to_string())
+            && footer.url != &format!("sparse+http://{}/index/", self.addr)
         {
             return false;
         }

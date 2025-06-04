@@ -322,7 +322,7 @@ fn split_index_features(mut features: FeatureMap) -> (FeatureMap, Option<Feature
             .iter()
             .any(|value| value.starts_with("dep:") || value.contains("?/"))
         {
-            let new_values = values.drain(..).collect();
+            let new_values = std::mem::take(values);
             features2.insert(feat.clone(), new_values);
         }
     }

@@ -206,8 +206,7 @@ fn run_doc_tests(
         p.arg("--test");
 
         add_path_args(ws, unit, &mut p);
-        p.arg("--test-run-directory")
-            .arg(unit.pkg.root().to_path_buf());
+        p.arg("--test-run-directory").arg(unit.pkg.root());
 
         if let CompileKind::Target(target) = unit.kind {
             // use `rustc_target()` to properly handle JSON target paths

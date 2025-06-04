@@ -136,22 +136,19 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         // Mirror `--workspace` and never avoid workspace members.
         // Filtering them out here so the above processes them normally
         // so their dependencies can be updated as requested
-        to_avoid = to_avoid
-            .into_iter()
-            .filter(|id| {
-                for package in ws.members() {
-                    let member_id = package.package_id();
-                    // Skip checking the `version` because `previous_resolve` might have a stale
-                    // value.
-                    // When dealing with workspace members, the other fields should be a
-                    // sufficiently unique match.
-                    if id.name() == member_id.name() && id.source_id() == member_id.source_id() {
-                        return false;
-                    }
+        to_avoid.retain(|id| {
+            for package in ws.members() {
+                let member_id = package.package_id();
+                // Skip checking the `version` because `previous_resolve` might have a stale
+                // value.
+                // When dealing with workspace members, the other fields should be a
+                // sufficiently unique match.
+                if id.name() == member_id.name() && id.source_id() == member_id.source_id() {
+                    return false;
                 }
-                true
-            })
-            .collect();
+            }
+            true
+        });
 
         registry.add_sources(sources)?;
     }

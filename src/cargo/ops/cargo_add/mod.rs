@@ -813,7 +813,7 @@ fn latest_compatible<'s>(
                 .unwrap_or(true)
         })
         .map(|(s, _)| s)
-        .last()
+        .next_back()
         .copied()
 }
 

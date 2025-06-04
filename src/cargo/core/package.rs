@@ -1182,7 +1182,7 @@ mod tls {
 
     use super::Downloads;
 
-    thread_local!(static PTR: Cell<usize> = Cell::new(0));
+    thread_local!(static PTR: Cell<usize> = const { Cell::new(0) });
 
     pub(crate) fn with<R>(f: impl FnOnce(Option<&Downloads<'_, '_>>) -> R) -> R {
         let ptr = PTR.with(|p| p.get());

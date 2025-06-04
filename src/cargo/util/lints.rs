@@ -152,9 +152,9 @@ fn verify_feature_enabled(
                 &["workspace", "lints", "cargo", lint_name],
                 false,
             )
-            .expect(&format!(
-                "could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` "
-            ));
+            .unwrap_or_else(|| {
+                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+            });
 
             let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
                 get_span(manifest.document(), &["lints", "workspace"], false),
@@ -556,9 +556,9 @@ fn output_unknown_lints(
                 &["workspace", "lints", "cargo", lint_name],
                 false,
             )
-            .expect(&format!(
-                "could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` "
-            ));
+            .unwrap_or_else(|| {
+                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+            });
 
             let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
                 get_span(manifest.document(), &["lints", "workspace"], false),

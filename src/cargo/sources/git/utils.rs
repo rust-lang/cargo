@@ -1126,7 +1126,7 @@ fn fetch_with_gitoxide(
     let config_overrides = cargo_config_to_gitoxide_overrides(gctx)?;
     let repo_reinitialized = AtomicBool::default();
     let res = oxide::with_retry_and_progress(
-        &git2_repo.path().to_owned(),
+        git2_repo.path(),
         gctx,
         &|repo_path,
           should_interrupt,

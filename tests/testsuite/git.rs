@@ -1475,7 +1475,7 @@ fn dep_with_changed_submodule() {
     });
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let mut sub = git::add_submodule(&repo, &git_project2.url().to_string(), Path::new("src"));
+    let mut sub = git::add_submodule(&repo, git_project2.url().as_ref(), Path::new("src"));
     git::commit(&repo);
 
     let p = project
@@ -1537,7 +1537,7 @@ project2
             .remote_add_fetch("origin", "refs/heads/*:refs/heads/*")
             .unwrap();
         subrepo
-            .remote_set_url("origin", &git_project3.url().to_string())
+            .remote_set_url("origin", git_project3.url().as_ref())
             .unwrap();
         let mut origin = subrepo.find_remote("origin").unwrap();
         origin.fetch(&Vec::<String>::new(), None, None).unwrap();

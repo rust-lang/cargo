@@ -258,9 +258,7 @@ impl Cache {
         extra_fingerprint: u64,
     ) -> CargoResult<(String, String)> {
         let key = process_fingerprint(cmd, extra_fingerprint);
-        if self.data.outputs.contains_key(&key) {
-            debug!("rustc info cache hit");
-        } else {
+        if let std::collections::hash_map::Entry::Vacant(e) = self.data.outputs.entry(key) {
             debug!("rustc info cache miss");
             debug!("running {}", cmd);
             let output = cmd.output()?;
@@ -270,21 +268,20 @@ impl Cache {
             let stderr = String::from_utf8(output.stderr)
                 .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
                 .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
-            self.data.outputs.insert(
-                key,
-                Output {
-                    success: output.status.success(),
-                    status: if output.status.success() {
-                        String::new()
-                    } else {
-                        cargo_util::exit_status_to_string(output.status)
-                    },
-                    code: output.status.code(),
-                    stdout,
-                    stderr,
+            e.insert(Output {
+                success: output.status.success(),
+                status: if output.status.success() {
+                    String::new()
+                } else {
+                    cargo_util::exit_status_to_string(output.status)
                 },
-            );
+                code: output.status.code(),
+                stdout,
+                stderr,
+            });
             self.dirty = true;
+        } else {
+            debug!("rustc info cache hit");
         }
         let output = &self.data.outputs[&key];
         if output.success {

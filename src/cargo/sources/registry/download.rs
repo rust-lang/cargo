@@ -72,13 +72,7 @@ pub(super) fn download(
         && !url.contains(CHECKSUM_TEMPLATE)
     {
         // Original format before customizing the download URL was supported.
-        write!(
-            url,
-            "/{}/{}/download",
-            pkg.name(),
-            pkg.version().to_string()
-        )
-        .unwrap();
+        write!(url, "/{}/{}/download", pkg.name(), pkg.version()).unwrap();
     } else {
         let prefix = make_dep_path(&pkg.name(), true);
         url = url

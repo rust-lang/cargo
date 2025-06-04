@@ -202,10 +202,8 @@ impl<'gctx> InstallablePackage<'gctx> {
             // If we're installing in --locked mode and there's no `Cargo.lock` published
             // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
             } else if !ws.root().join("Cargo.lock").exists() {
-                gctx.shell().warn(format!(
-                    "no Cargo.lock file published in {}",
-                    pkg.to_string()
-                ))?;
+                gctx.shell()
+                    .warn(format!("no Cargo.lock file published in {}", pkg))?;
             }
         }
         let pkg = if source_id.is_git() {

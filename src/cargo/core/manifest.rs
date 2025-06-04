@@ -151,7 +151,7 @@ impl ManifestMetadata {
     /// Whether the given env var should be tracked by Cargo's dep-info.
     pub fn should_track(env_key: &str) -> bool {
         let keys = MetadataEnvs::keys();
-        keys.iter().any(|k| *k == env_key)
+        keys.contains(&env_key)
     }
 
     pub fn env_var<'a>(&'a self, env_key: &str) -> Option<Cow<'a, str>> {
@@ -1016,21 +1016,21 @@ impl Target {
 
     pub fn is_dylib(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Dylib),
+            TargetKind::Lib(libs) => libs.contains(&CrateType::Dylib),
             _ => false,
         }
     }
 
     pub fn is_cdylib(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Cdylib),
+            TargetKind::Lib(libs) => libs.contains(&CrateType::Cdylib),
             _ => false,
         }
     }
 
     pub fn is_staticlib(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(libs) => libs.iter().any(|l| *l == CrateType::Staticlib),
+            TargetKind::Lib(libs) => libs.contains(&CrateType::Staticlib),
             _ => false,
         }
     }
