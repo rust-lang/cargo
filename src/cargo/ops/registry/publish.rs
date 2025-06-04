@@ -274,7 +274,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
                 opts.gctx.shell().note(format!(
                     "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
-                    You may press ctrl-c to skip waiting; the crate should be available shortly."
+                    You may press ctrl-c to skip waiting; the {crate} should be available shortly.",
+                    crate = if to_confirm.len() == 1 { "crate" } else {"crates"}
                 ))?;
 
                 let timeout = Duration::from_secs(timeout);
@@ -299,10 +300,15 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     opts.gctx.shell().warn(format!(
                         "timed out waiting for {short_pkg_descriptions} to be available in {source_description}",
                     ))?;
-                    opts.gctx.shell().note(
+                    opts.gctx.shell().note(format!(
                         "the registry may have a backlog that is delaying making the \
-                        crate available. The crate should be available soon.",
-                    )?;
+                        {crate} available. The {crate} should be available soon.",
+                        crate = if to_confirm.len() == 1 {
+                            "crate"
+                        } else {
+                            "crates"
+                        }
+                    ))?;
                 }
                 confirmed
             } else {

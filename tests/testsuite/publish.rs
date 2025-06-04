@@ -3890,7 +3890,7 @@ fn workspace_parallel() {
 [UPLOADED] b v0.0.1 to registry `crates-io`
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for `a v0.0.1` or `b v0.0.1` to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+You may press ctrl-c to skip waiting; the crates should be available shortly.
 [PUBLISHED] a v0.0.1, b v0.0.1 at registry `crates-io`
 [UPLOADING] c v0.0.1 ([ROOT]/foo/c)
 [UPLOADED] c v0.0.1 to registry `crates-io`
