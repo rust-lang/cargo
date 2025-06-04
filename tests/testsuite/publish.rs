@@ -3398,7 +3398,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
-fn package_selection() {
+fn package_selection_nightly() {
     let registry = registry::RegistryBuilder::new().http_api().build();
     let p = project()
         .file(
@@ -3473,6 +3473,24 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 "#]])
         .with_stdout_data(str![[r#""#]])
         .run();
+}
+
+#[cargo_test]
+fn package_selection() {
+    let registry = registry::RegistryBuilder::new().http_api().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
+        .build();
 
     p.cargo("publish --no-verify --dry-run --package a --package b")
         .replace_crates_io(registry.index_url())
