@@ -6886,7 +6886,7 @@ fn registry_inferred_from_unique_option() {
 }
 
 #[cargo_test]
-fn registry_not_inferred_because_of_conflict() {
+fn registry_not_inferred_because_of_conflict_nightly() {
     let alt_reg = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
@@ -7074,7 +7074,7 @@ fn registry_inference_ignores_unpublishable() {
 }
 
 #[cargo_test]
-fn registry_not_inferred_because_of_multiple_options() {
+fn registry_not_inferred_because_of_multiple_options_nightly() {
     let _alt_reg = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
@@ -7156,7 +7156,7 @@ fn registry_not_inferred_because_of_multiple_options() {
 }
 
 #[cargo_test]
-fn registry_not_inferred_because_of_mismatch() {
+fn registry_not_inferred_because_of_mismatch_nightly() {
     let _alt_reg = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
