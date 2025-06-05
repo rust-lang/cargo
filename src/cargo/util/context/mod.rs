@@ -202,6 +202,9 @@ pub struct GlobalContext {
     /// The full set of root directories that limit config file searching.
     /// Sorted by path length, longest first.
     sorted_roots: Vec<PathBuf>,
+    /// In case we are running outside of any user-configured root directory, we
+    /// add the directory of the first manifest as as root directory.
+    fallback_manifest_root: RefCell<Option<PathBuf>>,
     /// Directories to search for config files (invalidated if roots or cwd changes).
     config_search_route: RefCell<Option<SearchRoute>>,
     /// Directories to search for manifest files (invalidated if roots or starting point changes).
@@ -319,6 +322,7 @@ impl GlobalContext {
             shell: RefCell::new(shell),
             cwd,
             sorted_roots: Vec::new(),
+            fallback_manifest_root: RefCell::new(None),
             config_search_route: RefCell::new(None),
             manifest_search_route: RefCell::new(None),
             values: LazyCell::new(),
@@ -617,6 +621,24 @@ impl GlobalContext {
         Ok(())
     }
 
+    pub fn ensure_fallback_root<P: AsRef<Path>>(&self, path: P) {
+        let path = path
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        if self.fallback_manifest_root.borrow_mut().is_none() {
+            tracing::debug!("Setting fallback manifest root to {:?}", path);
+            *self.fallback_manifest_root.borrow_mut() = Some(path);
+            *self.config_search_route.borrow_mut() = None;
+            *self.manifest_search_route.borrow_mut() = None;
+        } else {
+            tracing::debug!(
+                "Fallback manifest root already set to {:?}, not changing",
+                self.fallback_manifest_root.borrow()
+            );
+        }
+    }
+
     fn find_nearest_root<P: AsRef<Path>>(
         &self,
         start: P,
@@ -626,7 +648,10 @@ impl GlobalContext {
             .canonicalize()
             .context("couldn't canonicalize path")?;
 
-        tracing::debug!("Searching sorted roots for start {:?}", self.sorted_roots);
+        tracing::debug!(
+            "Searching sorted roots for closest ancestor {:?}",
+            self.sorted_roots
+        );
         let root = self
             .sorted_roots
             .iter()
@@ -636,6 +661,9 @@ impl GlobalContext {
         if let Some(root) = root {
             tracing::debug!("Found candidate root {:?}", root);
             Ok(Some((start, root)))
+        } else if let Some(fallback_root) = self.fallback_manifest_root.borrow().as_ref() {
+            tracing::debug!("Using manifest path as fallback root");
+            Ok(Some((start, fallback_root.clone())))
         } else {
             tracing::debug!("No candidate root found for start {:?}", start);
             Ok(None)

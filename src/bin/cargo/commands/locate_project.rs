@@ -30,10 +30,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let workspace;
     let root = match WhatToFind::parse(args) {
         WhatToFind::CurrentManifest => {
+            tracing::trace!("locate-project::exec(): finding root manifest");
             root_manifest = args.root_manifest(gctx)?;
             &root_manifest
         }
         WhatToFind::Workspace => {
+            tracing::trace!("locate-project::exec(): finding workspace root manifest");
             workspace = args.workspace(gctx)?;
             workspace.root_manifest()
         }
