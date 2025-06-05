@@ -3391,7 +3391,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 2 remaining crates to be published
 [WARNING] timed out waiting for dep v0.0.1 to be available in registry `crates-io`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
-[ERROR] unable to publish main v0.0.1 and other v0.0.1 due to time out while waiting for published dependencies to be available.
+[ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for published dependencies to be available.
 
 "#]])
         .run();

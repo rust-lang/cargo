@@ -329,7 +329,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 break;
             } else {
                 let failed_list = package_list(plan.iter(), "and");
-                bail!("unable to publish {failed_list} due to time out while waiting for published dependencies to be available.");
+                bail!("unable to publish {failed_list} due to a timeout while waiting for published dependencies to be available.");
             }
         }
         for id in &confirmed {
