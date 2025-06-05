@@ -272,11 +272,20 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             if 0 < timeout {
                 let source_description = source.source_id().to_string();
                 let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
-                opts.gctx.shell().note(format!(
+                if plan.is_empty() {
+                    opts.gctx.shell().note(format!(
                     "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
                     You may press ctrl-c to skip waiting; the {crate} should be available shortly.",
                     crate = if to_confirm.len() == 1 { "crate" } else {"crates"}
                 ))?;
+                } else {
+                    opts.gctx.shell().note(format!(
+                    "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
+                    {count} remaining {crate} to be published",
+                    count = plan.len(),
+                    crate = if plan.len() == 1 { "crate" } else {"crates"}
+                ))?;
+                }
 
                 let timeout = Duration::from_secs(timeout);
                 let confirmed = wait_for_any_publish_confirmation(
@@ -694,6 +703,10 @@ impl PublishPlan {
 
     fn is_empty(&self) -> bool {
         self.dependencies_count.is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.dependencies_count.len()
     }
 
     /// Returns the set of packages that are ready for publishing (i.e. have no outstanding dependencies).
