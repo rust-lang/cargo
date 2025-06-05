@@ -286,11 +286,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     timeout,
                 )?;
                 if !confirmed.is_empty() {
-                    let short_pkg_description = confirmed
-                        .iter()
-                        .map(|pkg| format!("{} v{}", pkg.name(), pkg.version()))
-                        .sorted()
-                        .join(", ");
+                    let short_pkg_description = package_list(confirmed.iter().copied(), "and");
                     opts.gctx.shell().status(
                         "Published",
                         format!("{short_pkg_description} at {source_description}"),
