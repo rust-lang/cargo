@@ -2719,7 +2719,7 @@ fn nonexistence_package_together_with_workspace() {
 
 // A failing case from <https://github.com/rust-lang/cargo/issues/15625>
 #[cargo_test]
-fn clippy_fix_all_members_in_a_workspace() {
+fn fix_only_check_manifest_path_member() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2751,8 +2751,11 @@ fn clippy_fix_all_members_in_a_workspace() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("clippy --manifest-path foo/Cargo.toml --fix --allow-no-vcs")
-        .with_stderr_contains("[CHECKING] foo v0.1.0 ([ROOT]/foo/foo)")
-        .with_stderr_contains("[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)")
+    p.cargo("fix --manifest-path foo/Cargo.toml --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }

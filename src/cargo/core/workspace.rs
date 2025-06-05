@@ -306,7 +306,7 @@ impl<'gctx> Workspace<'gctx> {
     /// This is useful if the workspace has been updated, such as with `cargo
     /// fix` modifying the `Cargo.toml` file.
     pub fn reload(&self, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
-        let mut ws = Workspace::new(self.root_manifest(), gctx)?;
+        let mut ws = Workspace::new(&self.current_manifest, gctx)?;
         ws.set_resolve_honors_rust_version(Some(self.resolve_honors_rust_version));
         ws.set_resolve_feature_unification(self.resolve_feature_unification);
         ws.set_requested_lockfile_path(self.requested_lockfile_path.clone());
