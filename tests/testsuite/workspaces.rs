@@ -2716,3 +2716,43 @@ fn nonexistence_package_together_with_workspace() {
 "#]])
         .run();
 }
+
+// A failing case from <https://github.com/rust-lang/cargo/issues/15625>
+#[cargo_test]
+fn clippy_fix_all_members_in_a_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            resolver = "3"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2021"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            edition = "2021"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("clippy --manifest-path foo/Cargo.toml --fix --allow-no-vcs")
+        .with_stderr_contains("[CHECKING] foo v0.1.0 ([ROOT]/foo/foo)")
+        .with_stderr_contains("[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)")
+        .run();
+}
