@@ -18,34 +18,93 @@ use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
 use cargo::util::style;
 
-fn closest_valid_root<'a>(
-    cwd: &std::path::Path,
-    roots: &[&'a std::path::Path],
-) -> anyhow::Result<Option<&'a std::path::Path>> {
-    let cwd = cwd
-        .canonicalize()
-        .context("could not canonicalize current working directory")?;
-
-    // Assumes that all roots are canonicalized.
-    let ancestor_roots =
-        roots
-            .iter()
-            .filter_map(|r| if cwd.starts_with(r) { Some(*r) } else { None });
-
-    Ok(ancestor_roots.into_iter().max_by_key(|root| {
-        // Prefer the root that is closest to the current working directory.
-        // This is done by counting the number of components in the path.
-        root.components().count()
-    }))
-}
-
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
 
+    // Register root directories.
+    //
+    // A root directory limits how far Cargo can search for files.
+    //
+    // Internally there are two notable roots we need to resolve:
+    //   1. The root when searching for config files (starting directory = cwd).
+    //   2. The root when searching for manifests (starting directory = manifest-path or cwd directory)
+    //
+    // Root directories can be specified via CARGO_ROOTS, --root or the existence of `.cargo/root` files.
+    //
+    // If CARGO_ROOTS is not set, the user's home directory is used as a default root.
+    // - This is a safety measure to avoid reading unsafe config files outside of the user's home
+    //   directory.
+    // - This is also a measure to avoid triggering home directory automounter issues on some
+    //   systems.
+    //
+    // The roots are deduplicated and sorted by their length so we can quickly find the closest root
+    // to a given starting directory (longest ancestor).
+    //
+    // A `SearchRoute` represents a route from a starting directory to the closest root directory.
+    //
+    // When there are no roots above a given starting directory, then a `SearchRoute` will use the
+    // starting directory itself is used as the root.
+    // - This is a safety measure to avoid reading unsafe config files in unknown locations (such as
+    // `/tmp`).
+    //
+    // There are two cached `SearchRoute`s, one for config files and one for workspace manifests,
+    // which are used to avoid repeatedly finding the nearest root directory.
+
+    // Should it be an error if a given root doesn't exist?
+    // A user might configure a root under a `/mnt` directory that is not always mounted?
+
+    let roots_env = gctx.get_env_os("CARGO_ROOTS").map(|s| s.to_owned());
+    if let Some(paths_os) = roots_env {
+        for path in std::env::split_paths(&paths_os) {
+            gctx.add_root(&path)?;
+        }
+    } else {
+        //HACK: avoid reading `~/.cargo/config` when testing Cargo itself.
+        let test_root = gctx.get_env_os("__CARGO_TEST_ROOT").map(|s| s.to_owned());
+        if let Some(test_root) = test_root {
+            tracing::debug!(
+                "no CARGO_ROOTS set, using __CARGO_TEST_ROOT as root: {}",
+                test_root.display()
+            );
+            // This is a hack to avoid reading `~/.cargo/config` when testing Cargo itself.
+            gctx.add_root(&test_root)?;
+        } else if let Some(home) = std::env::home_dir() {
+            tracing::debug!(
+                "no CARGO_ROOTS set, using home directory as root: {}",
+                home.display()
+            );
+            // To be safe by default, and not attempt to read config files outside of the
+            // user's home directory, we implicitly add the home directory as a root.
+            // Ref: https://github.com/rust-lang/rfcs/pull/3279
+            //
+            // This is also a measure to avoid triggering home directory automounter issues
+            gctx.add_root(&home)?;
+        }
+    }
+
     let args = cli(gctx).try_get_matches()?;
+
+    if let Some(cli_roots) = args.get_many::<std::path::PathBuf>("root") {
+        for cli_root in cli_roots {
+            gctx.add_root(cli_root)?;
+        }
+    }
+
+    // Look for any `.cargo/root` markers after we have registered all other roots so
+    // that other roots can stop us from triggering automounter issues.
+    let search_route = gctx.find_config_search_route(gctx.cwd());
+
+    let root_marker = paths::ancestors(&search_route.start, search_route.root.as_deref())
+        .find(|current| current.join(".cargo").join("root").exists());
+    if let Some(marker) = root_marker {
+        tracing::debug!("found .cargo/root marker at {}", marker.display());
+        gctx.add_root(marker)?;
+    } else {
+        tracing::debug!("no .cargo/root marker found");
+    }
 
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
@@ -68,73 +127,6 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
-    }
-
-    // A root directories can be specified via CARGO_ROOTS, --root or the existence of a `.cargo/root` files.
-    // If more than one root is specified, the effective root is the one closest to the current working directory.
-    // If CARGO_ROOTS is not set, the user's home directory is used as a default root.
-
-    let cwd = std::env::current_dir().context("could not get current working directory")?;
-    // Windows UNC paths are OK here
-    let cwd = cwd
-        .canonicalize()
-        .context("could not canonicalize current working directory")?;
-
-    // XXX: before looking for `.cargo/root` should we first try and resolve roots
-    // from `CARGO_ROOTS` + --root so we can avoid triggering automounter issues?
-    let root_marker = paths::ancestors(&cwd, gctx.search_stop_path())
-        .find(|current| current.join(".cargo").join("root").exists());
-
-    let mut roots: Vec<std::path::PathBuf> = Vec::new();
-
-    if let Some(root_marker) = root_marker {
-        let pb = root_marker
-            .canonicalize()
-            .context("could not canonicalize .cargo/root")?;
-        roots.push(pb);
-    }
-
-    if let Some(paths_os) = gctx.get_env_os("CARGO_ROOTS") {
-        for path in std::env::split_paths(&paths_os) {
-            let pb = path.canonicalize().context(format!(
-                "could not canonicalize CARGO_ROOTS entry `{}`",
-                path.display()
-            ))?;
-            roots.push(pb);
-        }
-    } else if let Some(home) = std::env::home_dir() {
-        // To be safe by default, and not attempt to read config files outside of the
-        // user's home directory, we implicitly add the home directory as a root.
-        // Ref: https://github.com/rust-lang/rfcs/pull/3279
-        let home = home
-            .canonicalize()
-            .context("could not canonicalize home directory")?;
-        tracing::debug!(
-            "implicitly adding home directory as root: {}",
-            home.display()
-        );
-        roots.push(home);
-    }
-
-    if let Some(cli_roots) = args.get_many::<std::path::PathBuf>("root") {
-        for cli_root in cli_roots {
-            let pb = cli_root
-                .canonicalize()
-                .context("could not canonicalize requested root directory")?;
-            roots.push(pb);
-        }
-    }
-
-    let roots: Vec<_> = roots.iter().map(|p| p.as_path()).collect();
-
-    if let Some(root) = closest_valid_root(&cwd, &roots)? {
-        tracing::debug!("root directory: {}", root.display());
-        gctx.set_search_stop_path(root);
-    } else {
-        tracing::debug!("root limited to cwd: {}", cwd.display());
-        // If we are not running with _any_ root then we are conservative and don't
-        // allow any ancestor traversal.
-        gctx.set_search_stop_path(&cwd);
     }
 
     // Reload now that we have established the cwd and root
