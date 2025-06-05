@@ -79,7 +79,7 @@ fn publish() {
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADED] foo v0.1.0 to registry `alternative`
-[NOTE] waiting for `foo v0.1.0` to be available at registry `alternative`.
+[NOTE] waiting for foo v0.1.0 to be available at registry `alternative`.
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 at registry `alternative`
 
