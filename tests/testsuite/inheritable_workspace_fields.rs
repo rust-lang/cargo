@@ -167,7 +167,7 @@ fn inherit_own_workspace_fields() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v1.2.3 ([ROOT]/foo)
 [UPLOADED] foo v1.2.3 to registry `crates-io`
-[NOTE] waiting for `foo v1.2.3` to be available at registry `crates-io`.
+[NOTE] waiting for foo v1.2.3 to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v1.2.3 at registry `crates-io`
 
@@ -334,7 +334,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
-[NOTE] waiting for `bar v0.2.0` to be available at registry `crates-io`.
+[NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] bar v0.2.0 at registry `crates-io`
 
@@ -501,7 +501,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
-[NOTE] waiting for `bar v0.2.0` to be available at registry `crates-io`.
+[NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] bar v0.2.0 at registry `crates-io`
 
@@ -762,7 +762,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-lice
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)
 [UPLOADED] bar v1.2.3 to registry `crates-io`
-[NOTE] waiting for `bar v1.2.3` to be available at registry `crates-io`.
+[NOTE] waiting for bar v1.2.3 to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] bar v1.2.3 at registry `crates-io`
 
@@ -936,7 +936,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo/bar)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
-[NOTE] waiting for `bar v0.2.0` to be available at registry `crates-io`.
+[NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] bar v0.2.0 at registry `crates-io`
 

@@ -736,7 +736,7 @@ impl PublishPlan {
 fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> String {
     let mut names: Vec<_> = pkgs
         .into_iter()
-        .map(|pkg| format!("`{} v{}`", pkg.name(), pkg.version()))
+        .map(|pkg| format!("{} v{}", pkg.name(), pkg.version()))
         .collect();
     names.sort();
 
