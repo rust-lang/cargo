@@ -617,12 +617,10 @@ impl GlobalContext {
         Ok(())
     }
 
-    /// Find shortest route between `start` and one of the roots in [Self::sorted_roots].
-    ///
-    /// If no root is found then fallback to root == start so we only search one directory.
-    /// - This is a safety measure to reduce the risk of reading unsafe state from locations
-    ///   that are not owned by the user (for example building under `/tmp`).
-    fn find_search_route<P: AsRef<Path>>(&self, start: P) -> CargoResult<SearchRoute> {
+    fn find_nearest_root<P: AsRef<Path>>(
+        &self,
+        start: P,
+    ) -> CargoResult<Option<(PathBuf, PathBuf)>> {
         let start = start
             .as_ref()
             .canonicalize()
@@ -632,31 +630,33 @@ impl GlobalContext {
         let root = self
             .sorted_roots
             .iter()
-            .filter_map(|root| {
-                if start.starts_with(root) {
-                    tracing::debug!(
-                        "Found candidate search root {:?} for start {:?}",
-                        root,
-                        start
-                    );
-                    Some(root.clone())
-                } else {
-                    tracing::debug!(
-                        "Skipping candidate search root {:?} for start {:?}",
-                        root,
-                        start
-                    );
-                    None
-                }
-            })
-            .next();
+            .find(|root| start.starts_with(root))
+            .cloned();
+
+        if let Some(root) = root {
+            tracing::debug!("Found candidate root {:?}", root);
+            Ok(Some((start, root)))
+        } else {
+            tracing::debug!("No candidate root found for start {:?}", start);
+            Ok(None)
+        }
+    }
+
+    /// Find shortest route between `start` and one of the roots in [Self::sorted_roots].
+    ///
+    /// If no root is found then fallback to root == start so we only search one directory.
+    /// - This is a safety measure to reduce the risk of reading unsafe state from locations
+    ///   that are not owned by the user (for example building under `/tmp`).
+    fn find_search_route<P: AsRef<Path>>(&self, start: P) -> CargoResult<SearchRoute> {
+        let start = start.as_ref();
+        let route = self.find_nearest_root(&start)?;
 
         // Cargo no longer allows searching up to the root of the filesystem unless the root is
         // explicitly added to `sorted_roots`.
-        let root = root.unwrap_or_else(|| start.clone());
+        let route = route.unwrap_or_else(|| (start.to_owned(), start.to_owned()));
         Ok(SearchRoute {
-            start,
-            root: Some(root),
+            start: route.0,
+            root: Some(route.1),
         })
     }
 
@@ -711,7 +711,51 @@ impl GlobalContext {
         config_search_route
     }
 
-    pub fn find_manifest_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+    pub fn find_package_manifest_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+        tracing::trace!(
+            "Finding package manifest search route starting at {:?}",
+            start.as_ref()
+        );
+
+        let start = start
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        // Return the existing route if the start == path.
+        if let Some(route) = &*self.manifest_search_route.borrow() {
+            if route.start == start {
+                return route.clone();
+            }
+        }
+
+        // As a special case, we allow the traversal of parent directories, when
+        // outside of all root directories to find the package manifest.
+        //
+        // This is a trade off between safety and convenience, so it's e.g.
+        // possible to unpack a package under `/tmp` and start a build from
+        // `/tmp/my-package/sub/dir` and find `/tmp/my-package/Cargo.toml`, but
+        // not allow a potentially unsafe `/tmp/Cargo.toml` workspace to be loaded.
+        let manifest_search_route =
+            if let Some((start, root)) = self.find_nearest_root(&start).ok().flatten() {
+                SearchRoute {
+                    start,
+                    root: Some(root),
+                }
+            } else {
+                SearchRoute {
+                    start,
+                    root: None, // Allow searching up to the root of the filesystem.
+                }
+            };
+        *self.manifest_search_route.borrow_mut() = Some(manifest_search_route.clone());
+        manifest_search_route.clone()
+    }
+
+    pub fn find_workspace_manifest_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+        tracing::trace!(
+            "Finding workspace manifest search route starting at {:?}",
+            start.as_ref()
+        );
         let start = start
             .as_ref()
             .canonicalize()

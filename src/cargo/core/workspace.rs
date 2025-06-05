@@ -2024,7 +2024,7 @@ fn find_workspace_root_with_loader(
     gctx: &GlobalContext,
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
-    let search_route = gctx.find_manifest_search_route(manifest_path);
+    let search_route = gctx.find_workspace_manifest_search_route(manifest_path);
 
     // Check if there are any workspace roots that have already been found that would work
     {

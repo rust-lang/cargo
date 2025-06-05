@@ -10,7 +10,7 @@ pub fn find_root_manifest_for_wd(gctx: &GlobalContext, cwd: &Path) -> CargoResul
     let invalid_cargo_toml_file_name = "cargo.toml";
     let mut invalid_cargo_toml_path_exists = false;
 
-    let search_route = gctx.find_manifest_search_route(cwd);
+    let search_route = gctx.find_package_manifest_search_route(cwd);
     for current in paths::ancestors(&search_route.start, search_route.root.as_deref()) {
         let manifest = current.join(valid_cargo_toml_file_name);
         if manifest.exists() {
