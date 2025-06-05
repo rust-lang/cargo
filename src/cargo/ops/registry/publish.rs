@@ -270,13 +270,41 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 DEFAULT_TIMEOUT
             };
             if 0 < timeout {
+                let source_description = source.source_id().to_string();
+                let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
+                opts.gctx.shell().note(format!(
+                    "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
+                    You may press ctrl-c to skip waiting; the crate should be available shortly."
+                ))?;
+
                 let timeout = Duration::from_secs(timeout);
-                wait_for_any_publish_confirmation(
+                let confirmed = wait_for_any_publish_confirmation(
                     opts.gctx,
                     source_ids.original,
                     &to_confirm,
                     timeout,
-                )?
+                )?;
+                if !confirmed.is_empty() {
+                    let short_pkg_description = confirmed
+                        .iter()
+                        .map(|pkg| format!("{} v{}", pkg.name(), pkg.version()))
+                        .sorted()
+                        .join(", ");
+                    opts.gctx.shell().status(
+                        "Published",
+                        format!("{short_pkg_description} at {source_description}"),
+                    )?;
+                } else {
+                    let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
+                    opts.gctx.shell().warn(format!(
+                        "timed out waiting for {short_pkg_descriptions} to be available in {source_description}",
+                    ))?;
+                    opts.gctx.shell().note(
+                        "the registry may have a backlog that is delaying making the \
+                        crate available. The crate should be available soon.",
+                    )?;
+                }
+                confirmed
             } else {
                 BTreeSet::new()
             }
@@ -317,17 +345,10 @@ fn wait_for_any_publish_confirmation(
     // of independent progress bars can be a little confusing. There is an
     // overall progress bar managed here.
     source.set_quiet(true);
-    let source_description = source.source_id().to_string();
 
     let now = std::time::Instant::now();
     let sleep_time = Duration::from_secs(1);
     let max = timeout.as_secs() as usize;
-    // Short does not include the registry name.
-    let short_pkg_descriptions = package_list(pkgs.iter().copied(), "or");
-    gctx.shell().note(format!(
-        "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
-        You may press ctrl-c to skip waiting; the crate should be available shortly."
-    ))?;
     let mut progress = Progress::with_style("Waiting", ProgressStyle::Ratio, gctx);
     progress.tick_now(0, max, "")?;
     let available = loop {
@@ -356,30 +377,12 @@ fn wait_for_any_publish_confirmation(
 
         let elapsed = now.elapsed();
         if timeout < elapsed {
-            gctx.shell().warn(format!(
-                "timed out waiting for {short_pkg_descriptions} to be available in {source_description}",
-            ))?;
-            gctx.shell().note(
-                "the registry may have a backlog that is delaying making the \
-                crate available. The crate should be available soon.",
-            )?;
             break BTreeSet::new();
         }
 
         progress.tick_now(elapsed.as_secs() as usize, max, "")?;
         std::thread::sleep(sleep_time);
     };
-    if !available.is_empty() {
-        let short_pkg_description = available
-            .iter()
-            .map(|pkg| format!("{} v{}", pkg.name(), pkg.version()))
-            .sorted()
-            .join(", ");
-        gctx.shell().status(
-            "Published",
-            format!("{short_pkg_description} at {source_description}"),
-        )?;
-    }
 
     Ok(available)
 }
