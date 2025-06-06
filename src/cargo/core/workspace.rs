@@ -21,7 +21,7 @@ use crate::core::{
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
-use crate::util::context::FeatureUnification;
+use crate::util::context::{FeatureUnification, SearchRoute};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -746,6 +746,7 @@ impl<'gctx> Workspace<'gctx> {
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path) -> CargoResult<Option<PathBuf>> {
+        debug!("find_root - {}", manifest_path.display());
         let current = self.packages.load(manifest_path)?;
         match current
             .workspace_config()
@@ -2023,12 +2024,14 @@ fn find_workspace_root_with_loader(
     gctx: &GlobalContext,
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
+    let search_route = gctx.find_workspace_manifest_search_route(manifest_path);
+
     // Check if there are any workspace roots that have already been found that would work
     {
         let roots = gctx.ws_roots.borrow();
         // Iterate through the manifests parent directories until we find a workspace
         // root. Note we skip the first item since that is just the path itself
-        for current in manifest_path.ancestors().skip(1) {
+        for current in paths::ancestors(&search_route.start, search_route.root.as_deref()).skip(1) {
             if let Some(ws_config) = roots.get(current) {
                 if !ws_config.is_excluded(manifest_path) {
                     // Add `Cargo.toml` since ws_root is the root and not the file
@@ -2038,7 +2041,7 @@ fn find_workspace_root_with_loader(
         }
     }
 
-    for ances_manifest_path in find_root_iter(manifest_path, gctx) {
+    for ances_manifest_path in find_root_iter(&search_route, gctx) {
         debug!("find_root - trying {}", ances_manifest_path.display());
         if let Some(ws_root_path) = loader(&ances_manifest_path)? {
             return Ok(Some(ws_root_path));
@@ -2058,10 +2061,10 @@ fn read_root_pointer(member_manifest: &Path, root_link: &str) -> PathBuf {
 }
 
 fn find_root_iter<'a>(
-    manifest_path: &'a Path,
+    search_route: &'a SearchRoute,
     gctx: &'a GlobalContext,
 ) -> impl Iterator<Item = PathBuf> + 'a {
-    LookBehind::new(paths::ancestors(manifest_path, None).skip(2))
+    LookBehind::new(paths::ancestors(&search_route.start, search_route.root.as_deref()).skip(2))
         .take_while(|path| !path.curr.ends_with("target/package"))
         // Don't walk across `CARGO_HOME` when we're looking for the
         // workspace root. Sometimes a package will be organized with
