@@ -840,6 +840,7 @@ unstable_cli_options!(
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
+    multiple_build_scripts: bool = ("Enables the use of multiple build scripts"),
     next_lockfile_bump: bool,
     no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
@@ -1361,6 +1362,7 @@ impl CliUnstable {
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
+            "multiple-build-scripts" => self.multiple_build_scripts = parse_empty(k, v)?,
             "no-embed-metadata" => self.no_embed_metadata = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "package-workspace" => self.package_workspace = parse_empty(k, v)?,
