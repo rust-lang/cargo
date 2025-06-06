@@ -577,6 +577,9 @@ features! {
 
     /// Allows use of editions that are not yet stable.
     (unstable, unstable_editions, "", "reference/unstable.html#unstable-editions"),
+
+    /// Allows use of multiple build scripts.
+    (unstable, multiple_build_scripts, "", "reference/unstable.html#multiple-build-scripts"),
 }
 
 /// Status and metadata for a single unstable feature.
