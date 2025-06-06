@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
+use tracing::warn;
 
 use super::commands;
 use super::list_commands;
@@ -131,6 +132,10 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
 
     // Reload now that we have established the cwd and root
     gctx.reload_cwd()?;
+
+    if gctx.find_nearest_root(gctx.cwd())?.is_none() {
+        gctx.shell().warn("Cargo is running outside of any root directory, limiting loading of ancestor configs and manifest")?;
+    }
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
 

@@ -639,7 +639,7 @@ impl GlobalContext {
         }
     }
 
-    fn find_nearest_root<P: AsRef<Path>>(
+    pub fn find_nearest_root<P: AsRef<Path>>(
         &self,
         start: P,
     ) -> CargoResult<Option<(PathBuf, PathBuf)>> {
