@@ -1505,6 +1505,7 @@ impl CargoCommandExt for snapbox::cmd::Command {
         Self::new(cargo_exe())
             .with_assert(compare::assert_ui())
             .env("CARGO_TERM_COLOR", "always")
+            .env("CARGO_TERM_HYPERLINKS", "true")
             .test_env()
     }
 }
