@@ -169,7 +169,8 @@ fn registry<'gctx>(
     } else {
         None
     };
-    let handle = http_handle(gctx)?;
+    let mut handle = http_handle(gctx)?;
+    handle.follow_location(true)?;
     Ok((
         Registry::new_handle(api_host, token, handle, cfg.auth_required),
         src,
