@@ -250,6 +250,26 @@ impl CompileMode {
     pub fn generates_executable(self) -> bool {
         matches!(self, CompileMode::Test | CompileMode::Build)
     }
+
+    /// Maximizes artifact reuse between different modes.
+    ///
+    /// As of this writing, it aims to reuse `rmeta` between build and check modes.
+    /// (one emits rmeta + rlib, and the other emits rmeta)
+    ///
+    /// This has a caveat that `DefId` in rmeta files might not match between rustc
+    /// invocations with different `--emits` values, and that might lead to rustc
+    /// rejecting the input rmeta. To avoid failures in rustc, this is currently
+    /// guarded by fingerprint to ensure all output files present, if not, rerun.
+    /// This make running `check` after `build` safe: `build`'s rmeta files might
+    /// have more information and rustc is correct on rejection.
+    pub fn for_reuse(self) -> CompileMode {
+        match self {
+            // We might want to reuse `Test` and `Check { test: true }`,
+            // but those are usually local so dont bother it
+            CompileMode::Build | CompileMode::Check { test: false } => CompileMode::Build,
+            m => m,
+        }
+    }
 }
 
 /// Represents the high-level operation requested by the user.
