@@ -269,7 +269,7 @@
         "build": {
           "anyOf": [
             {
-              "$ref": "#/$defs/StringOrBool"
+              "$ref": "#/$defs/TomlPackageBuild"
             },
             {
               "type": "null"
@@ -540,13 +540,15 @@
         }
       ]
     },
-    "StringOrBool": {
+    "TomlPackageBuild": {
       "anyOf": [
         {
-          "type": "string"
+          "description": "If build scripts are disabled or enabled.\n If true, `build.rs` in the root folder will be the build script.",
+          "type": "boolean"
         },
         {
-          "type": "boolean"
+          "description": "Path of Build Script if there's just one script.",
+          "type": "string"
         }
       ]
     },
@@ -593,6 +595,16 @@
         {
           "description": "The type when inheriting from a workspace.",
           "$ref": "#/$defs/TomlInheritedField"
+        }
+      ]
+    },
+    "StringOrBool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
         }
       ]
     },
