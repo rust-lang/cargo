@@ -898,16 +898,16 @@ fn profile_hint_mostly_unused_warn_without_gate() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [WARNING] ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
-[COMPILING] bar v1.0.0
+[CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -937,16 +937,16 @@ fn profile_hint_mostly_unused_nightly() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("build -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[COMPILING] bar v1.0.0
+[CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..] -Zhint-mostly-unused [..]`
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
