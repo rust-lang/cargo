@@ -924,6 +924,25 @@ profile-rustflags = true
 rustflags = [ "-C", "..." ]
 ```
 
+## Profile `hint-mostly-unused` option
+* Tracking Issue: [#15644](https://github.com/rust-lang/cargo/issues/15644)
+
+This feature provides a new option in the `[profile]` section to enable the
+rustc `hint-mostly-unused` option. This is primarily useful to enable for
+specific dependencies:
+
+```toml
+[profile.dev.package.huge-mostly-unused-dependency]
+hint-mostly-unused = true
+```
+
+To enable this feature, pass `-Zprofile-hint-mostly-unused`. However, since
+this option is a hint, using it without passing `-Zprofile-hint-mostly-unused`
+will only warn and ignore the profile option. Versions of Cargo prior to the
+introduction of this feature will give an "unused manifest key" warning, but
+will otherwise function without erroring. This allows using the hint in a
+crate's `Cargo.toml` without mandating the use of a newer Cargo to build it.
+
 ## rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
