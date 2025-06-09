@@ -1496,7 +1496,7 @@ impl TomlPlatform {
 #[derive(Serialize, Debug, Clone)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct InheritableLints {
-    #[serde(skip_serializing_if = "is_false")]
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     #[cfg_attr(feature = "unstable-schema", schemars(default))]
     pub workspace: bool,
     #[serde(flatten)]
@@ -1511,10 +1511,6 @@ impl InheritableLints {
             Ok(&self.lints)
         }
     }
-}
-
-fn is_false(b: &bool) -> bool {
-    !b
 }
 
 impl<'de> Deserialize<'de> for InheritableLints {
