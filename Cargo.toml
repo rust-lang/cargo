@@ -49,7 +49,7 @@ flate2 = { version = "1.1.2", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.2"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
-gix = { version = "0.73.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "parallel", "dirwalk", "status"] }
+gix = { version = "0.73.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
 glob = "0.3.2"
 # Pinned due to https://github.com/sunng87/handlebars-rust/issues/711
 handlebars = { version = "=6.3.1", features = ["dir_source"] }
@@ -271,10 +271,15 @@ test = false
 doc = false
 
 [features]
+default = ["http-transport-curl"]
 vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 # This is primarily used by rust-lang/rust distributing cargo the executable.
 all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx', 'vendored-libgit2']
+# Exactly one of 'http-transport-curl' or 'http-transport-reqwest' must be enabled
+# when using Cargo as a library. By default, it is 'http-transport-curl'.
+http-transport-curl = ["gix/blocking-http-transport-curl"]
+http-transport-reqwest = ["gix/blocking-http-transport-reqwest"]
 
 [lints]
 workspace = true
