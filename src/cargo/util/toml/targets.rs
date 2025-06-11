@@ -105,7 +105,8 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
-        let custom_build = Path::new(custom_build);
+        assert_eq!(custom_build.len(), 1);
+        let custom_build = Path::new(&custom_build[0]);
         let name = format!(
             "build-script-{}",
             custom_build
