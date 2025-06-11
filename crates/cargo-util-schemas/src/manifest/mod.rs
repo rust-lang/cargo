@@ -254,12 +254,12 @@ impl TomlPackage {
         self.authors.as_ref().map(|v| v.normalized()).transpose()
     }
 
-    pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
+    pub fn normalized_build(&self) -> Result<Option<&[String]>, UnresolvedError> {
         let build = self.build.as_ref().ok_or(UnresolvedError)?;
         match build {
             TomlPackageBuild::Auto(false) => Ok(None),
             TomlPackageBuild::Auto(true) => Err(UnresolvedError),
-            TomlPackageBuild::SingleScript(value) => Ok(Some(value)),
+            TomlPackageBuild::SingleScript(value) => Ok(Some(std::slice::from_ref(value))),
         }
     }
 
