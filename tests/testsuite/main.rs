@@ -68,6 +68,7 @@ mod check;
 mod check_cfg;
 mod clean;
 mod collisions;
+mod compile_time_deps;
 mod concurrent;
 mod config;
 mod config_cli;
