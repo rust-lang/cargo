@@ -221,8 +221,8 @@ Then populate
 
 The project, stdout, and stderr snapshots can be updated by running with the
 `SNAPSHOTS=overwrite` environment variable, like:
-```console
-$ SNAPSHOTS=overwrite cargo test
+```bash
+SNAPSHOTS=overwrite cargo test
 ```
 
 Be sure to check the snapshots to make sure they make sense.
@@ -265,18 +265,22 @@ expect, or you just generally want to experiment within the sandbox
 environment. The general process is:
 
 1. Build the sandbox for the test you want to investigate. For example:
-
-   `cargo test --test testsuite -- features2::inactivate_targets`.
+  ```bash
+  cargo test --test testsuite -- features2::inactivate_targets
+  ```
 2. In another terminal, head into the sandbox directory to inspect the files and run `cargo` directly.
     1. The sandbox directories start with `t0` for the first test.
-
-       `cd target/tmp/cit/t0`
+      ```bash
+      cd target/tmp/cit/t0
+      ```
     2. Set up the environment so that the sandbox configuration takes effect:
-
-       `export CARGO_HOME=$(pwd)/home/.cargo`
+      ```bash
+      export CARGO_HOME=$(pwd)/home/.cargo
+      ```
     3. Most tests create a `foo` project, so head into that:
-
-       `cd foo`
+      ```bash
+      cd foo
+      ```
 3. Run whatever cargo command you want. See [Running Cargo] for more details
    on running the correct `cargo` process. Some examples:
 

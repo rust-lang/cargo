@@ -8,7 +8,7 @@ It also supports filtering for specific modules with comma-separated [directives
 Feel free to use [shorthand macros] to help with diagnosing problems.
 We're looking forward to making Cargo logging mechanism more structural!
 
-```sh
+```bash
 # Outputs all logs with levels debug and higher
 CARGO_LOG=debug cargo generate-lockfile
 
