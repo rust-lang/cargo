@@ -838,7 +838,7 @@
 - ❗️ Lockfile format v4 is now the default for creating/updating a lockfile.
   Rust toolchains 1.78+ support lockfile v4.
   For compatibility with earlier MSRV,
-  consdier setting the `package.rust-version` to 1.82 or earlier.
+  consider setting the `package.rust-version` to 1.82 or earlier.
   [#14595](https://github.com/rust-lang/cargo/pull/14595)
 - ❗️ cargo-package: When using the `--package` flag, only the specified
   packages are packaged. Previously, the package in the current working
