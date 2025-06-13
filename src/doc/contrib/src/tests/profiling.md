@@ -13,9 +13,9 @@ At process exit, your trace will be in a file like `trace-1668480819035032.json`
 Open that file with [ui.perfetto.dev](https://ui.perfetto.dev) (or chrome://tracing) to browse your trace.
 
 Example:
-```console
-$ # Output first three levels of profiling info
-$ CARGO_LOG_PROFILE=true cargo generate-lockfile
+```bash
+# Output first three levels of profiling info
+CARGO_LOG_PROFILE=true cargo generate-lockfile
 ```
 
 **Note:** This is intended for the development of cargo and there are no compatibility guarantees on this functionality.
