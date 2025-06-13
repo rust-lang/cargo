@@ -3131,7 +3131,7 @@ fn disables_multiplexing_for_bad_curl(
     use crate::util::network;
 
     if network::proxy::http_proxy_exists(http, gctx) && http.multiplexing.is_none() {
-        let bad_curl_versions = ["7.87.0", "7.88.0", "7.88.1"];
+        let bad_curl_versions = ["7.79.0", "7.87.0", "7.88.0", "7.88.1"];
         if bad_curl_versions
             .iter()
             .any(|v| curl_version.starts_with(v))
