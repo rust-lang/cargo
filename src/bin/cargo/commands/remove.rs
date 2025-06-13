@@ -25,7 +25,10 @@ pub fn cli() -> clap::Command {
             .required(true)
             .num_args(1..)
             .value_name("DEP_ID")
-            .help("Dependencies to be removed")])
+            .help("Dependencies to be removed")
+            .add(clap_complete::ArgValueCandidates::new(
+                get_direct_dependencies_pkg_name_candidates,
+            ))])
         .arg_dry_run("Don't actually write the manifest")
         .arg_silent_suggestion()
         .next_help_heading("Section")
