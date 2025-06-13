@@ -152,6 +152,8 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 
         unknown_features.sort();
 
+        print_dep_table_msg(&mut options.gctx.shell(), &dep, &unknown_features)?;
+
         if !unknown_features.is_empty() {
             let (mut activated, mut deactivated) = dep.features();
             // Since the unknown features have been added to the DependencyUI we need to remove
@@ -232,8 +234,6 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             }
             anyhow::bail!(message.trim().to_owned());
         }
-
-        print_dep_table_msg(&mut options.gctx.shell(), &dep)?;
 
         manifest.insert_into_table(
             &dep_table,
@@ -1130,7 +1130,11 @@ fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -
     shell.status("Adding", message)
 }
 
-fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()> {
+fn print_dep_table_msg(
+    shell: &mut Shell,
+    dep: &DependencyUI,
+    unknown_features: &Vec<&str>,
+) -> CargoResult<()> {
     if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
         return Ok(());
     }
@@ -1140,6 +1144,15 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     let error = style::ERROR;
 
     let (activated, deactivated) = dep.features();
+    let activated: Vec<&str> = activated
+        .into_iter()
+        .filter(|&feature_name| {
+            !unknown_features
+                .iter()
+                .any(|&unknown_feature| unknown_feature == feature_name)
+        })
+        .collect();
+
     if !activated.is_empty() || !deactivated.is_empty() {
         let prefix = format!("{:>13}", " ");
         let suffix = format_features_version_suffix(&dep);

@@ -1,4 +1,4 @@
-<svg width="740px" height="200px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="380px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -21,23 +21,43 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">      Adding</tspan><tspan> foo (workspace) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> unrecognized feature for crate foo: not_recognized</tspan>
+    <tspan x="10px" y="46px"><tspan>             Features as of v0.0.0:</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> default-base</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>disabled features:</tspan>
+    <tspan x="10px" y="82px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> default-merge-base</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>    merge, merge-base, unrelated</tspan>
+    <tspan x="10px" y="100px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> default-test-base</tspan>
 </tspan>
-    <tspan x="10px" y="118px">
+    <tspan x="10px" y="118px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> long-feature-name-because-of-formatting-reasons</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>enabled features:</tspan>
+    <tspan x="10px" y="136px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> test</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>    default-base, default-merge-base, default-test-base</tspan>
+    <tspan x="10px" y="154px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> test-base</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>    long-feature-name-because-of-formatting-reasons, test, test-base</tspan>
+    <tspan x="10px" y="172px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> merge</tspan>
 </tspan>
-    <tspan x="10px" y="190px">
+    <tspan x="10px" y="190px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> merge-base</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> unrelated</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> unrecognized feature for crate foo: not_recognized</tspan>
+</tspan>
+    <tspan x="10px" y="244px">
+</tspan>
+    <tspan x="10px" y="262px"><tspan>disabled features:</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>    merge, merge-base, unrelated</tspan>
+</tspan>
+    <tspan x="10px" y="298px">
+</tspan>
+    <tspan x="10px" y="316px"><tspan>enabled features:</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>    default-base, default-merge-base, default-test-base</tspan>
+</tspan>
+    <tspan x="10px" y="352px"><tspan>    long-feature-name-because-of-formatting-reasons, test, test-base</tspan>
+</tspan>
+    <tspan x="10px" y="370px">
 </tspan>
   </text>
 
