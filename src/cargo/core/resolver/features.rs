@@ -306,7 +306,7 @@ impl CliFeatures {
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(InternedString::new)
+            .map(|s| s.into())
             .map(FeatureValue::new)
             .collect()
     }

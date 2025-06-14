@@ -116,7 +116,7 @@ impl BuildConfig {
             requested_kinds,
             jobs,
             keep_going,
-            requested_profile: InternedString::new("dev"),
+            requested_profile: "dev".into(),
             intent,
             message_format: MessageFormat::Human,
             force_rebuild: false,

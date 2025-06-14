@@ -79,7 +79,7 @@ impl Rustc {
                 })
         };
 
-        let host = InternedString::new(extract("host: ")?);
+        let host = extract("host: ")?.into();
         let version = semver::Version::parse(extract("release: ")?).with_context(|| {
             format!(
                 "rustc version does not appear to be a valid semver version, from:\n{}",

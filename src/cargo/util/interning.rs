@@ -176,7 +176,7 @@ impl<'de> serde::Deserialize<'de> for InternedString {
     {
         UntaggedEnumVisitor::new()
             .expecting("an String like thing")
-            .string(|value| Ok(InternedString::new(value)))
+            .string(|value| Ok(value.into()))
             .deserialize(deserializer)
     }
 }

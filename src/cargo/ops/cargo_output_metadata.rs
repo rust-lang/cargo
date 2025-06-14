@@ -302,7 +302,7 @@ fn build_resolve_graph_r(
                         // Given that Cargo doesn't know which target it should resolve to,
                         // when an artifact dep is specified with { target = "target" },
                         // keep it with a special "<target>" string,
-                        .or_else(|| Some(InternedString::new("<target>"))),
+                        .or_else(|| Some("<target>".into())),
                     None => None,
                 };
 
@@ -334,7 +334,7 @@ fn build_resolve_graph_r(
                 },
                 // No lib target exists but contains artifact deps.
                 (None, 1..) => Dep {
-                    name: InternedString::new(""),
+                    name: "".into(),
                     pkg: pkg_id.to_spec(),
                     pkg_id,
                     dep_kinds,

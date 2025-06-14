@@ -135,7 +135,7 @@ pub(super) fn pretty_view(
         )?;
     }
 
-    let activated = &[InternedString::new("default")];
+    let activated = &["default".into()];
     let resolved_features = resolve_features(activated, summary.features());
     pretty_features(
         resolved_features.clone(),

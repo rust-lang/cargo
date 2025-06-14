@@ -683,7 +683,7 @@ impl Summaries {
     /// represents information previously cached by Cargo.
     pub fn parse_cache(contents: Vec<u8>) -> CargoResult<(Summaries, InternedString)> {
         let cache = SummariesCache::parse(&contents)?;
-        let index_version = InternedString::new(cache.index_version);
+        let index_version = cache.index_version.into();
         let mut ret = Summaries::default();
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);

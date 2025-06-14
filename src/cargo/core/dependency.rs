@@ -632,7 +632,7 @@ impl ArtifactKind {
             _ => {
                 return kind
                     .strip_prefix("bin:")
-                    .map(|bin_name| ArtifactKind::SelectedBinary(InternedString::new(bin_name)))
+                    .map(|bin_name| ArtifactKind::SelectedBinary(bin_name.into()))
                     .ok_or_else(|| anyhow::anyhow!("'{}' is not a valid artifact specifier", kind))
             }
         })
