@@ -377,15 +377,15 @@ impl FeatureValue {
             Some((dep, dep_feat)) => {
                 let dep_name = dep.strip_suffix('?');
                 FeatureValue::DepFeature {
-                    dep_name: InternedString::new(dep_name.unwrap_or(dep)),
-                    dep_feature: InternedString::new(dep_feat),
+                    dep_name: dep_name.unwrap_or(dep).into(),
+                    dep_feature: dep_feat.into(),
                     weak: dep_name.is_some(),
                 }
             }
             None => {
                 if let Some(dep_name) = feature.strip_prefix("dep:") {
                     FeatureValue::Dep {
-                        dep_name: InternedString::new(dep_name),
+                        dep_name: dep_name.into(),
                     }
                 } else {
                     FeatureValue::Feature(feature)

@@ -198,7 +198,7 @@ impl<'gctx> RemoteRegistry<'gctx> {
         if let Some(sha) = self.current_sha.get() {
             return Some(sha);
         }
-        let sha = InternedString::new(&self.head().ok()?.to_string());
+        let sha = self.head().ok()?.to_string().into();
         self.current_sha.set(Some(sha));
         Some(sha)
     }
