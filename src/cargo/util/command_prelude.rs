@@ -403,7 +403,7 @@ pub trait CommandExt: Sized {
                  a global configuration.",
             )
             .value_name("VCS")
-            .value_parser(["git", "hg", "pijul", "fossil", "none"]),
+            .value_parser(["git", "hg", "pijul", "fossil", "rcs", "none"]),
         )
         ._arg(
             flag("bin", "Use a binary (application) template [default]")
@@ -906,6 +906,7 @@ Run `{cmd}` to see possible targets."
             "hg" => VersionControl::Hg,
             "pijul" => VersionControl::Pijul,
             "fossil" => VersionControl::Fossil,
+            "rcs" => VersionControl::Rcs,
             "none" => VersionControl::NoVcs,
             vcs => panic!("Impossible vcs: {:?}", vcs),
         });

@@ -28,7 +28,7 @@ _cargo()
 		fi
 	done
 
-	local vcs='git hg none pijul fossil'
+	local vcs='git hg none pijul fossil rcs'
 	local color='auto always never'
 	local msg_format='human json short'
 

@@ -44,7 +44,7 @@ Possible values: 2015, 2018, 2021, 2024</dd>
 
 <dt class="option-term" id="option-cargo-new---vcs"><a class="option-anchor" href="#option-cargo-new---vcs"></a><code>--vcs</code> <em>vcs</em></dt>
 <dd class="option-desc">Initialize a new VCS repository for the given version control system (git,
-hg, pijul, or fossil) or do not initialize any version control at all
+hg, pijul, fossil, or rcs) or do not initialize any version control at all
 (none). If not specified, defaults to <code>git</code> or the configuration value
 <code>cargo-new.vcs</code>, or <code>none</code> if already inside a VCS repository.</dd>
 
