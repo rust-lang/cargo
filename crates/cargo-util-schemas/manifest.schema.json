@@ -1385,6 +1385,14 @@
             }
           ],
           "default": null
+        },
+        "hint-mostly-unused": {
+          "description": "Unstable feature `hint-mostly-unused`",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
         }
       }
     },
