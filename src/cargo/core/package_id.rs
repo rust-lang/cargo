@@ -78,7 +78,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
         let (field, rest) = string
             .split_once(' ')
             .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
-        let name = InternedString::new(field);
+        let name = field.into();
 
         let (field, rest) = rest
             .split_once(' ')

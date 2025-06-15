@@ -7,7 +7,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 impl FromSql for InternedString {
     fn column_result(value: rusqlite::types::ValueRef<'_>) -> Result<Self, FromSqlError> {
-        value.as_str().map(InternedString::new)
+        value.as_str().map(InternedString::from)
     }
 }
 

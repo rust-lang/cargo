@@ -10,7 +10,6 @@ use cargo::ops::cargo_add::AddOptions;
 use cargo::ops::cargo_add::DepOp;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
-use cargo::util::interning::InternedString;
 use cargo::util::toml_mut::manifest::DepTable;
 use cargo::CargoResult;
 
@@ -287,7 +286,7 @@ fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult
         .map(String::as_str)
         .flat_map(parse_feature)
     {
-        let parsed_value = FeatureValue::new(InternedString::new(feature));
+        let parsed_value = FeatureValue::new(feature.into());
         match parsed_value {
             FeatureValue::Feature(_) => {
                 if 1 < crates.len() {

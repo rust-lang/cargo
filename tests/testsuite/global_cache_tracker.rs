@@ -16,7 +16,6 @@ use std::time::{Duration, SystemTime};
 
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
-use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
@@ -137,7 +136,7 @@ fn populate_cache(
         .join(".cargo/registry/index/example.com-a6c4a5adcb232b9a")
         .mkdir_p();
     let mut create = |name: &str, age, crate_size: u64, src_size: u64| {
-        let crate_filename = InternedString::new(&format!("{name}.crate"));
+        let crate_filename = format!("{name}.crate").into();
         deferred.mark_registry_crate_used_stamp(
             global_cache_tracker::RegistryCrate {
                 encoded_registry_name: "example.com-a6c4a5adcb232b9a".into(),

@@ -681,7 +681,7 @@ Run `{cmd}` to see possible targets."
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                return Ok(InternedString::new(name));
+                return Ok(name.into());
             }
             _ => {}
         }
@@ -708,7 +708,7 @@ Run `{cmd}` to see possible targets."
             }
         };
 
-        Ok(InternedString::new(name))
+        Ok(name.into())
     }
 
     fn packages_from_flags(&self) -> CargoResult<Packages> {
@@ -1133,7 +1133,7 @@ fn get_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
 fn get_workspace_profile_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
-    let profiles = Profiles::new(&ws, InternedString::new("dev"))?;
+    let profiles = Profiles::new(&ws, "dev".into())?;
 
     let mut candidates = Vec::new();
     for name in profiles.profile_names() {

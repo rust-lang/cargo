@@ -198,7 +198,8 @@ impl IndexSummary {
 #[derive(Deserialize, Serialize)]
 pub struct IndexPackage<'a> {
     /// Name of the package.
-    pub name: InternedString,
+    #[serde(borrow)]
+    pub name: Cow<'a, str>,
     /// The version of this dependency.
     pub vers: Version,
     /// All kinds of direct dependencies of the package, including dev and
@@ -207,14 +208,14 @@ pub struct IndexPackage<'a> {
     pub deps: Vec<RegistryDependency<'a>>,
     /// Set of features defined for the package, i.e., `[features]` table.
     #[serde(default)]
-    pub features: BTreeMap<InternedString, Vec<InternedString>>,
+    pub features: BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
     /// This field contains features with new, extended syntax. Specifically,
     /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
     ///
     /// This is separated from `features` because versions older than 1.19
     /// will fail to load due to not being able to parse the new syntax, even
     /// with a `Cargo.lock` file.
-    pub features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    pub features2: Option<BTreeMap<Cow<'a, str>, Vec<Cow<'a, str>>>>,
     /// Checksum for verifying the integrity of the corresponding downloaded package.
     pub cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
@@ -226,7 +227,7 @@ pub struct IndexPackage<'a> {
     ///
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
-    pub links: Option<InternedString>,
+    pub links: Option<Cow<'a, str>>,
     /// Required version of rust
     ///
     /// Corresponds to `package.rust-version`.
@@ -263,33 +264,32 @@ impl IndexPackage<'_> {
     fn to_summary(&self, source_id: SourceId) -> CargoResult<Summary> {
         // ****CAUTION**** Please be extremely careful with returning errors, see
         // `IndexSummary::parse` for details
-        let pkgid = PackageId::new(self.name.into(), self.vers.clone(), source_id);
+        let pkgid = PackageId::new(self.name.as_ref().into(), self.vers.clone(), source_id);
         let deps = self
             .deps
             .iter()
             .map(|dep| dep.clone().into_dep(source_id))
             .collect::<CargoResult<Vec<_>>>()?;
         let mut features = self.features.clone();
-        if let Some(features2) = &self.features2 {
+        if let Some(features2) = self.features2.clone() {
             for (name, values) in features2 {
-                features.entry(*name).or_default().extend(values);
+                features.entry(name).or_default().extend(values);
             }
         }
-        let mut summary = Summary::new(
-            pkgid,
-            deps,
-            &features,
-            self.links,
-            self.rust_version.clone(),
-        )?;
+        let features = features
+            .into_iter()
+            .map(|(name, values)| (name.into(), values.into_iter().map(|v| v.into()).collect()))
+            .collect::<BTreeMap<_, _>>();
+        let links: Option<InternedString> = self.links.as_ref().map(|l| l.as_ref().into());
+        let mut summary = Summary::new(pkgid, deps, &features, links, self.rust_version.clone())?;
         summary.set_checksum(self.cksum.clone());
         Ok(summary)
     }
 }
 
 #[derive(Deserialize, Serialize)]
-struct IndexPackageMinimum {
-    name: InternedString,
+struct IndexPackageMinimum<'a> {
+    name: Cow<'a, str>,
     vers: Version,
 }
 
@@ -308,13 +308,14 @@ struct IndexPackageV {
 pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
-    pub name: InternedString,
+    #[serde(borrow)]
+    pub name: Cow<'a, str>,
     /// The SemVer requirement for this dependency.
     #[serde(borrow)]
     pub req: Cow<'a, str>,
     /// Set of features enabled for this dependency.
     #[serde(default)]
-    pub features: Vec<InternedString>,
+    pub features: Vec<Cow<'a, str>>,
     /// Whether or not this is an optional dependency.
     #[serde(default)]
     pub optional: bool,
@@ -329,7 +330,7 @@ pub struct RegistryDependency<'a> {
     // `None` if it is from the same index.
     pub registry: Option<Cow<'a, str>>,
     /// The original name if the dependency is renamed.
-    pub package: Option<InternedString>,
+    pub package: Option<Cow<'a, str>>,
     /// Whether or not this is a public dependency. Unstable. See [RFC 1977].
     ///
     /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
@@ -682,7 +683,7 @@ impl Summaries {
     /// represents information previously cached by Cargo.
     pub fn parse_cache(contents: Vec<u8>) -> CargoResult<(Summaries, InternedString)> {
         let cache = SummariesCache::parse(&contents)?;
-        let index_version = InternedString::new(cache.index_version);
+        let index_version = cache.index_version.into();
         let mut ret = Summaries::default();
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
@@ -759,7 +760,7 @@ impl IndexSummary {
             Ok((index, summary)) => (index, summary, true),
             Err(err) => {
                 let Ok(IndexPackageMinimum { name, vers }) =
-                    serde_json::from_slice::<IndexPackageMinimum>(line)
+                    serde_json::from_slice::<IndexPackageMinimum<'_>>(line)
                 else {
                     // If we can't recover, prefer the original error
                     return Err(err);
@@ -833,7 +834,8 @@ impl<'a> RegistryDependency<'a> {
             default
         };
 
-        let mut dep = Dependency::parse(package.unwrap_or(name), Some(&req), id)?;
+        let interned_name = InternedString::new(package.as_ref().unwrap_or(&name));
+        let mut dep = Dependency::parse(interned_name, Some(&req), id)?;
         if package.is_some() {
             dep.set_explicit_name_in_toml(name);
         }

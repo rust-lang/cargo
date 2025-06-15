@@ -10,7 +10,6 @@ use super::dependency::Dependency;
 use crate::core::dependency::DepKind;
 use crate::core::{FeatureValue, Features, Workspace};
 use crate::util::closest;
-use crate::util::interning::InternedString;
 use crate::util::toml::{is_embedded, ScriptSource};
 use crate::{CargoResult, GlobalContext};
 
@@ -533,7 +532,7 @@ impl LocalManifest {
                 .filter_map(|v| v.as_array())
             {
                 for value in values.iter().filter_map(|v| v.as_str()) {
-                    let value = FeatureValue::new(InternedString::new(value));
+                    let value = FeatureValue::new(value.into());
                     if let FeatureValue::Dep { dep_name } = &value {
                         if dep_name.as_str() == dep_key {
                             return true;
@@ -637,7 +636,7 @@ fn fix_feature_activations(
         .enumerate()
         .filter_map(|(idx, value)| value.as_str().map(|s| (idx, s)))
         .filter_map(|(idx, value)| {
-            let parsed_value = FeatureValue::new(InternedString::new(value));
+            let parsed_value = FeatureValue::new(value.into());
             match status {
                 DependencyStatus::None => match (parsed_value, explicit_dep_activation) {
                     (FeatureValue::Feature(dep_name), false)
@@ -666,7 +665,7 @@ fn fix_feature_activations(
     if status == DependencyStatus::Required {
         for value in feature_values.iter_mut() {
             let parsed_value = if let Some(value) = value.as_str() {
-                FeatureValue::new(InternedString::new(value))
+                FeatureValue::new(value.into())
             } else {
                 continue;
             };
