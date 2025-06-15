@@ -2567,9 +2567,23 @@ fn with_duplicate_spec_in_members() {
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] li v0.0.1 ([ROOT]/foo/li)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] bar v0.0.1 ([ROOT]/foo/bar)
+[UPLOADED] bar v0.0.1 to registry `crates-io`
+[UPLOADING] li v0.0.1 ([ROOT]/foo/li)
+[UPLOADED] li v0.0.1 to registry `crates-io`
+[NOTE] waiting for bar v0.0.1 or li v0.0.1 to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crates should be available shortly.
+[PUBLISHED] bar v0.0.1 and li v0.0.1 at registry `crates-io`
 
 "#]])
         .run();
@@ -2656,9 +2670,17 @@ fn in_virtual_workspace() {
 
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified in the root of a virtual workspace
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo/foo)
+[UPLOADED] foo v0.0.1 to registry `crates-io`
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
         .run();
@@ -2813,16 +2835,29 @@ fn in_package_workspace_found_multiple() {
 
     p.cargo("publish -p li* --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] li v0.0.1 ([ROOT]/foo/li)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] lii v0.0.1 ([ROOT]/foo/lii)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] li v0.0.1 ([ROOT]/foo/li)
+[UPLOADED] li v0.0.1 to registry `crates-io`
+[UPLOADING] lii v0.0.1 ([ROOT]/foo/lii)
+[UPLOADED] lii v0.0.1 to registry `crates-io`
+[NOTE] waiting for li v0.0.1 or lii v0.0.1 to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crates should be available shortly.
+[PUBLISHED] li v0.0.1 and lii v0.0.1 at registry `crates-io`
 
 "#]])
         .run();
 }
 
 #[cargo_test]
-// https://github.com/rust-lang/cargo/issues/10536
 fn publish_path_dependency_without_workspace() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
@@ -3367,9 +3402,9 @@ fn timeout_waiting_for_dependency_publish() {
         )
         .build();
 
-    p.cargo("publish --no-verify -Zpublish-timeout -Zpackage-workspace")
+    p.cargo("publish --no-verify -Zpublish-timeout")
         .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["publish-timeout", "package-workspace"])
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -3398,84 +3433,6 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 }
 
 #[cargo_test]
-fn package_selection_nightly() {
-    let registry = registry::RegistryBuilder::new().http_api().build();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = ["a", "b"]
-            "#,
-        )
-        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
-        .file("a/src/lib.rs", "#[test] fn a() {}")
-        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
-        .file("b/src/lib.rs", "#[test] fn b() {}")
-        .build();
-
-    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace")
-        .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
-[WARNING] aborting upload due to dry run
-[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
-[WARNING] aborting upload due to dry run
-
-"#]])
-        .with_stdout_data(str![[r#""#]])
-        .run();
-
-    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --package a --package b")
-        .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
-[WARNING] aborting upload due to dry run
-[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
-[WARNING] aborting upload due to dry run
-
-"#]])
-        .with_stdout_data(str![[r#""#]])
-        .run();
-
-    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace --exclude b")
-        .replace_crates_io(registry.index_url())
-        .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
-[WARNING] aborting upload due to dry run
-
-"#]])
-        .with_stdout_data(str![[r#""#]])
-        .run();
-}
-
-#[cargo_test]
 fn package_selection() {
     let registry = registry::RegistryBuilder::new().http_api().build();
     let p = project()
@@ -3494,11 +3451,20 @@ fn package_selection() {
 
     p.cargo("publish --no-verify --dry-run --workspace")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `--workspace` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--workspace` flag.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3506,23 +3472,35 @@ See https://github.com/rust-lang/cargo/issues/10948 for more information about t
 
     p.cargo("publish --no-verify --dry-run --package a --package b")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
         .run();
 
-    p.cargo("publish --no-verify --dry-run --exclude b")
+    p.cargo("publish --no-verify --dry-run --workspace --exclude b")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `--exclude` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--exclude` flag.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3735,26 +3713,10 @@ fn workspace_with_local_deps_project() -> Project {
 
 #[cargo_test]
 fn workspace_with_local_deps() {
-    let crates_io = registry::init();
-    let p = workspace_with_local_deps_project();
-
-    p.cargo("publish")
-        .replace_crates_io(crates_io.index_url())
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn workspace_with_local_deps_nightly() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
     let p = workspace_with_local_deps_project();
 
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -3861,8 +3823,7 @@ fn workspace_parallel() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(
             str![[r#"
@@ -3951,8 +3912,7 @@ fn workspace_missing_dependency() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("publish -Zpackage-workspace -p b")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish -p b")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -3969,8 +3929,7 @@ Caused by:
 "#]])
         .run();
 
-    p.cargo("publish -Zpackage-workspace -p a")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish -p a")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -3989,8 +3948,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .run();
 
     // Publishing the whole workspace now will fail, as `a` is already published.
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4047,8 +4005,7 @@ fn one_unpublishable_package() {
         .file("dep/src/lib.rs", "")
         .build();
 
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -4127,8 +4084,7 @@ fn virtual_ws_with_multiple_unpublishable_package() {
         .file("publishable/src/lib.rs", "")
         .build();
 
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -4199,8 +4155,7 @@ fn workspace_flag_with_unpublishable_packages() {
         .file("non-publishable/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --workspace -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish --workspace")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -4265,8 +4220,7 @@ fn unpublishable_package_as_versioned_dev_dep() {
 
     // It is expected to find the versioned dev dep not being published,
     // regardless with `--dry-run` or `--no-verify`.
-    p.cargo("publish -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4283,8 +4237,7 @@ Caused by:
 "#]])
         .run();
 
-    p.cargo("publish -Zpackage-workspace --dry-run")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish --dry-run")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4301,8 +4254,7 @@ Caused by:
 "#]])
         .run();
 
-    p.cargo("publish -Zpackage-workspace --no-verify")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4362,8 +4314,7 @@ fn all_unpublishable_packages() {
         .file("non-publishable2/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --workspace -Zpackage-workspace")
-        .masquerade_as_nightly_cargo(&["package-workspace"])
+    p.cargo("publish --workspace")
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [WARNING] nothing to publish, but found 2 unpublishable packages
