@@ -28,7 +28,7 @@ pub fn modify_owners(gctx: &GlobalContext, opts: &OwnersOptions) -> CargoResult<
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
-            let manifest_path = find_root_manifest_for_wd(gctx.cwd())?;
+            let manifest_path = find_root_manifest_for_wd(gctx, gctx.cwd())?;
             let ws = Workspace::new(&manifest_path, gctx)?;
             ws.current()?.package_id().name().to_string()
         }

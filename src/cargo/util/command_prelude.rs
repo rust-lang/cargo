@@ -1077,7 +1077,7 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
         }
         Ok(path)
     } else {
-        find_root_manifest_for_wd(gctx.cwd())
+        find_root_manifest_for_wd(gctx, gctx.cwd())
     }
 }
 
@@ -1132,7 +1132,7 @@ fn get_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
 
 fn get_workspace_profile_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
-    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(&gctx, gctx.cwd())?, &gctx)?;
     let profiles = Profiles::new(&ws, InternedString::new("dev"))?;
 
     let mut candidates = Vec::new();
@@ -1216,7 +1216,7 @@ fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
 fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
     let cwd = std::env::current_dir()?;
     let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(&gctx, &cwd)?, &gctx)?;
 
     let packages = ws.members().collect::<Vec<_>>();
 
@@ -1271,7 +1271,10 @@ fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::Completion
 fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let cwd = std::env::current_dir()?;
     let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+    let ws = Workspace::new(
+        &find_root_manifest_for_wd(&gctx, &PathBuf::from(&cwd))?,
+        &gctx,
+    );
 
     let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
 
@@ -1374,7 +1377,7 @@ pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
 fn get_packages() -> CargoResult<Vec<Package>> {
     let gctx = new_gctx_for_completions()?;
 
-    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(&gctx, gctx.cwd())?, &gctx)?;
 
     let requested_kinds = CompileKind::from_requested_targets(ws.gctx(), &[])?;
     let mut target_data = RustcTargetData::new(&ws, &requested_kinds)?;

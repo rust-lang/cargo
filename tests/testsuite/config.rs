@@ -110,7 +110,7 @@ impl GlobalContextBuilder {
         let mut gctx = GlobalContext::new(shell, cwd, homedir);
         gctx.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
         gctx.set_env(self.env.clone());
-        gctx.set_search_stop_path(&root);
+        gctx.set_config_search_root(&root);
         gctx.configure(
             0,
             false,

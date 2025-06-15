@@ -44,6 +44,19 @@ those configuration files if it is invoked from the workspace root
 > and is the preferred form. If both files exist, Cargo will use the file
 > without the extension.
 
+The root of the search hierarchy can be constrained in three ways:
+
+1. By creating a `.cargo/root` file (empty)
+2. By setting the `CARGO_ROOT` environment variable
+3. Passing `--root`.
+
+If a root directory is given then Cargo will search parent directories up until
+it reaches the root directory, instead of searching all the way up to the root
+of the filesystem. Cargo will still check `$CARGO_HOME/config.toml` even if it
+is outside of the root directory. If multiple paths are specified then the
+effective root is the one that's most-specific (closest to the current working
+directory).
+
 ## Configuration format
 
 Configuration files are written in the [TOML format][toml] (like the

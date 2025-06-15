@@ -159,6 +159,30 @@ pub struct CredentialCacheValue {
     pub operation_independent: bool,
 }
 
+/// A point-to-point route for searching config files or manifests, resolved
+/// based on a starting directory and a set of root directories.
+#[derive(Clone, Debug)]
+pub struct SearchRoute {
+    /// The first directory in the route to search (inclusive)
+    /// The path is canonicalized.
+    pub start: PathBuf,
+    /// The last directory in the route to search (inclusive)
+    /// If not set then the route ends at the root of the filesystem.
+    /// The path is canonicalized.
+    pub root: Option<PathBuf>,
+}
+
+impl SearchRoute {
+    pub fn sentinal(path: impl AsRef<Path>) -> Self {
+        let start = path
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        let root = Some(start.clone());
+        Self { start, root }
+    }
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
@@ -175,8 +199,16 @@ pub struct GlobalContext {
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
     cwd: PathBuf,
-    /// Directory where config file searching should stop (inclusive).
-    search_stop_path: Option<PathBuf>,
+    /// The full set of root directories that limit config file searching.
+    /// Sorted by path length, longest first.
+    sorted_roots: Vec<PathBuf>,
+    /// In case we are running outside of any user-configured root directory, we
+    /// add the directory of the first manifest as as root directory.
+    fallback_manifest_root: RefCell<Option<PathBuf>>,
+    /// Directories to search for config files (invalidated if roots or cwd changes).
+    config_search_route: RefCell<Option<SearchRoute>>,
+    /// Directories to search for manifest files (invalidated if roots or starting point changes).
+    manifest_search_route: RefCell<Option<SearchRoute>>,
     /// The location of the cargo executable (path to current process)
     cargo_exe: LazyCell<PathBuf>,
     /// The location of the rustdoc executable
@@ -281,11 +313,18 @@ impl GlobalContext {
             _ => true,
         };
 
+        // By default only allow searching the current directory, until roots
+        // are set.
+        //let config_search_route = SearchRoute::sentinal(&cwd);
+
         GlobalContext {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             cwd,
-            search_stop_path: None,
+            sorted_roots: Vec::new(),
+            fallback_manifest_root: RefCell::new(None),
+            config_search_route: RefCell::new(None),
+            manifest_search_route: RefCell::new(None),
             values: LazyCell::new(),
             credential_values: LazyCell::new(),
             cli_config: None,
@@ -567,12 +606,200 @@ impl GlobalContext {
         }
     }
 
-    /// Sets the path where ancestor config file searching will stop. The
-    /// given path is included, but its ancestors are not.
-    pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
-        let path = path.into();
-        debug_assert!(self.cwd.starts_with(&path));
-        self.search_stop_path = Some(path);
+    pub fn add_root<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
+        let path = path
+            .as_ref()
+            .canonicalize()
+            .context("couldn't canonicalize path")?;
+        if !self.sorted_roots.iter().any(|root| root == &path) {
+            self.sorted_roots.push(path);
+            self.sorted_roots
+                .sort_by_key(|p| std::cmp::Reverse(p.components().count()));
+            self.config_search_route = RefCell::new(None);
+            self.manifest_search_route = RefCell::new(None);
+        }
+        Ok(())
+    }
+
+    pub fn ensure_fallback_root<P: AsRef<Path>>(&self, path: P) {
+        let path = path
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        if self.fallback_manifest_root.borrow_mut().is_none() {
+            tracing::debug!("Setting fallback manifest root to {:?}", path);
+            *self.fallback_manifest_root.borrow_mut() = Some(path);
+            *self.config_search_route.borrow_mut() = None;
+            *self.manifest_search_route.borrow_mut() = None;
+        } else {
+            tracing::debug!(
+                "Fallback manifest root already set to {:?}, not changing",
+                self.fallback_manifest_root.borrow()
+            );
+        }
+    }
+
+    pub fn find_nearest_root<P: AsRef<Path>>(
+        &self,
+        start: P,
+    ) -> CargoResult<Option<(PathBuf, PathBuf)>> {
+        let start = start
+            .as_ref()
+            .canonicalize()
+            .context("couldn't canonicalize path")?;
+
+        tracing::debug!(
+            "Searching sorted roots for closest ancestor {:?}",
+            self.sorted_roots
+        );
+        let root = self
+            .sorted_roots
+            .iter()
+            .find(|root| start.starts_with(root))
+            .cloned();
+
+        if let Some(root) = root {
+            tracing::debug!("Found candidate root {:?}", root);
+            Ok(Some((start, root)))
+        } else if let Some(fallback_root) = self.fallback_manifest_root.borrow().as_ref() {
+            tracing::debug!("Using manifest path as fallback root");
+            Ok(Some((start, fallback_root.clone())))
+        } else {
+            tracing::debug!("No candidate root found for start {:?}", start);
+            Ok(None)
+        }
+    }
+
+    /// Find shortest route between `start` and one of the roots in [Self::sorted_roots].
+    ///
+    /// If no root is found then fallback to root == start so we only search one directory.
+    /// - This is a safety measure to reduce the risk of reading unsafe state from locations
+    ///   that are not owned by the user (for example building under `/tmp`).
+    fn find_search_route<P: AsRef<Path>>(&self, start: P) -> CargoResult<SearchRoute> {
+        let start = start.as_ref();
+        let route = self.find_nearest_root(&start)?;
+
+        // Cargo no longer allows searching up to the root of the filesystem unless the root is
+        // explicitly added to `sorted_roots`.
+        let route = route.unwrap_or_else(|| (start.to_owned(), start.to_owned()));
+        Ok(SearchRoute {
+            start: route.0,
+            root: Some(route.1),
+        })
+    }
+
+    /// Ignore any configured roots and define a config search route between
+    /// `cwd` and `path`. If `path` is `None`, then the search route will go to
+    /// the root of the filesystem which could be unsafe.
+    ///
+    /// Normally [`update_config_search_route`] should be used instead.
+    pub fn set_config_search_root<P: Into<PathBuf>>(&mut self, root: Option<P>) {
+        let Ok(start) = self.cwd().canonicalize() else {
+            *self.config_search_route.borrow_mut() = None;
+            return;
+        };
+        if let Some(path) = root {
+            let root = path.into();
+            debug_assert!(self.cwd.starts_with(&root));
+            let Ok(root) = root.canonicalize() else {
+                *self.config_search_route.borrow_mut() = None;
+                return;
+            };
+            *self.config_search_route.borrow_mut() = Some(SearchRoute {
+                start,
+                root: Some(root),
+            });
+        } else {
+            *self.config_search_route.borrow_mut() = Some(SearchRoute { start, root: None });
+        }
+    }
+
+    pub fn find_config_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+        tracing::trace!(
+            "Finding config search route starting at {:?}",
+            start.as_ref()
+        );
+
+        let start = start
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize cwd");
+        // Return the existing route if the start == path.
+        if let Some(route) = &*self.config_search_route.borrow() {
+            if route.start == start {
+                tracing::trace!("Using cached config search route: {:?}", route);
+                return route.clone();
+            }
+        }
+
+        let config_search_route = self
+            .find_search_route(start)
+            .expect("failed to find config file search route");
+        *self.config_search_route.borrow_mut() = Some(config_search_route.clone());
+        config_search_route
+    }
+
+    pub fn find_package_manifest_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+        tracing::trace!(
+            "Finding package manifest search route starting at {:?}",
+            start.as_ref()
+        );
+
+        let start = start
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        // Return the existing route if the start == path.
+        if let Some(route) = &*self.manifest_search_route.borrow() {
+            if route.start == start {
+                return route.clone();
+            }
+        }
+
+        // As a special case, we allow the traversal of parent directories, when
+        // outside of all root directories to find the package manifest.
+        //
+        // This is a trade off between safety and convenience, so it's e.g.
+        // possible to unpack a package under `/tmp` and start a build from
+        // `/tmp/my-package/sub/dir` and find `/tmp/my-package/Cargo.toml`, but
+        // not allow a potentially unsafe `/tmp/Cargo.toml` workspace to be loaded.
+        let manifest_search_route =
+            if let Some((start, root)) = self.find_nearest_root(&start).ok().flatten() {
+                SearchRoute {
+                    start,
+                    root: Some(root),
+                }
+            } else {
+                SearchRoute {
+                    start,
+                    root: None, // Allow searching up to the root of the filesystem.
+                }
+            };
+        *self.manifest_search_route.borrow_mut() = Some(manifest_search_route.clone());
+        manifest_search_route.clone()
+    }
+
+    pub fn find_workspace_manifest_search_route<P: AsRef<Path>>(&self, start: P) -> SearchRoute {
+        tracing::trace!(
+            "Finding workspace manifest search route starting at {:?}",
+            start.as_ref()
+        );
+        let start = start
+            .as_ref()
+            .canonicalize()
+            .expect("failed to canonicalize path");
+        // Return the existing route if the start == path.
+        if let Some(route) = &*self.manifest_search_route.borrow() {
+            if route.start == start {
+                return route.clone();
+            }
+        }
+
+        let manifest_search_route = self
+            .find_search_route(start)
+            .expect("failed to find manifest search route");
+        *self.manifest_search_route.borrow_mut() = Some(manifest_search_route.clone());
+        manifest_search_route.clone()
     }
 
     /// Switches the working directory to [`std::env::current_dir`]
@@ -589,6 +816,7 @@ impl GlobalContext {
         })?;
 
         self.cwd = cwd;
+        *self.config_search_route.borrow_mut() = None;
         self.home_path = Filesystem::new(homedir);
         self.reload_rooted_at(self.cwd.clone())?;
         Ok(())
@@ -1257,7 +1485,7 @@ impl GlobalContext {
         let mut result = Vec::new();
         let mut seen = HashSet::new();
         let home = self.home_path.clone().into_path_unlocked();
-        self.walk_tree(&self.cwd, &home, |path| {
+        self.walk_config_search_route(&self.cwd, &home, |path| {
             let mut cv = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
             if self.cli_unstable().config_include {
                 self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
@@ -1298,7 +1526,7 @@ impl GlobalContext {
         let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
         let home = self.home_path.clone().into_path_unlocked();
 
-        self.walk_tree(path, &home, |path| {
+        self.walk_config_search_route(path, &home, |path| {
             let value = self.load_file(path)?;
             cfg.merge(value, false).with_context(|| {
                 format!("failed to merge configuration at `{}`", path.display())
@@ -1676,13 +1904,14 @@ impl GlobalContext {
         }
     }
 
-    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
+    fn walk_config_search_route<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
         let mut seen_dir = HashSet::new();
 
-        for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
+        let search_route = self.find_config_search_route(pwd);
+        for current in paths::ancestors(&search_route.start, search_route.root.as_deref()) {
             let config_root = current.join(".cargo");
             if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
@@ -3152,7 +3381,6 @@ mod tests {
     #[test]
     fn disables_multiplexing() {
         let mut gctx = GlobalContext::new(Shell::new(), "".into(), "".into());
-        gctx.set_search_stop_path(std::path::PathBuf::new());
         gctx.set_env(Default::default());
 
         let mut http = CargoHttpConfig::default();

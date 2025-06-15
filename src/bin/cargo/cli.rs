@@ -2,12 +2,14 @@ use anyhow::{anyhow, Context as _};
 use cargo::core::{features, CliUnstable};
 use cargo::util::context::TermConfig;
 use cargo::{drop_print, drop_println, CargoResult};
+use cargo_util::paths;
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
+use tracing::warn;
 
 use super::commands;
 use super::list_commands;
@@ -23,7 +25,87 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
 
+    // Register root directories.
+    //
+    // A root directory limits how far Cargo can search for files.
+    //
+    // Internally there are two notable roots we need to resolve:
+    //   1. The root when searching for config files (starting directory = cwd).
+    //   2. The root when searching for manifests (starting directory = manifest-path or cwd directory)
+    //
+    // Root directories can be specified via CARGO_ROOTS, --root or the existence of `.cargo/root` files.
+    //
+    // If CARGO_ROOTS is not set, the user's home directory is used as a default root.
+    // - This is a safety measure to avoid reading unsafe config files outside of the user's home
+    //   directory.
+    // - This is also a measure to avoid triggering home directory automounter issues on some
+    //   systems.
+    //
+    // The roots are deduplicated and sorted by their length so we can quickly find the closest root
+    // to a given starting directory (longest ancestor).
+    //
+    // A `SearchRoute` represents a route from a starting directory to the closest root directory.
+    //
+    // When there are no roots above a given starting directory, then a `SearchRoute` will use the
+    // starting directory itself is used as the root.
+    // - This is a safety measure to avoid reading unsafe config files in unknown locations (such as
+    // `/tmp`).
+    //
+    // There are two cached `SearchRoute`s, one for config files and one for workspace manifests,
+    // which are used to avoid repeatedly finding the nearest root directory.
+
+    // Should it be an error if a given root doesn't exist?
+    // A user might configure a root under a `/mnt` directory that is not always mounted?
+
+    let roots_env = gctx.get_env_os("CARGO_ROOTS").map(|s| s.to_owned());
+    if let Some(paths_os) = roots_env {
+        for path in std::env::split_paths(&paths_os) {
+            gctx.add_root(&path)?;
+        }
+    } else {
+        //HACK: avoid reading `~/.cargo/config` when testing Cargo itself.
+        let test_root = gctx.get_env_os("__CARGO_TEST_ROOT").map(|s| s.to_owned());
+        if let Some(test_root) = test_root {
+            tracing::debug!(
+                "no CARGO_ROOTS set, using __CARGO_TEST_ROOT as root: {}",
+                test_root.display()
+            );
+            // This is a hack to avoid reading `~/.cargo/config` when testing Cargo itself.
+            gctx.add_root(&test_root)?;
+        } else if let Some(home) = std::env::home_dir() {
+            tracing::debug!(
+                "no CARGO_ROOTS set, using home directory as root: {}",
+                home.display()
+            );
+            // To be safe by default, and not attempt to read config files outside of the
+            // user's home directory, we implicitly add the home directory as a root.
+            // Ref: https://github.com/rust-lang/rfcs/pull/3279
+            //
+            // This is also a measure to avoid triggering home directory automounter issues
+            gctx.add_root(&home)?;
+        }
+    }
+
     let args = cli(gctx).try_get_matches()?;
+
+    if let Some(cli_roots) = args.get_many::<std::path::PathBuf>("root") {
+        for cli_root in cli_roots {
+            gctx.add_root(cli_root)?;
+        }
+    }
+
+    // Look for any `.cargo/root` markers after we have registered all other roots so
+    // that other roots can stop us from triggering automounter issues.
+    let search_route = gctx.find_config_search_route(gctx.cwd());
+
+    let root_marker = paths::ancestors(&search_route.start, search_route.root.as_deref())
+        .find(|current| current.join(".cargo").join("root").exists());
+    if let Some(marker) = root_marker {
+        tracing::debug!("found .cargo/root marker at {}", marker.display());
+        gctx.add_root(marker)?;
+    } else {
+        tracing::debug!("no .cargo/root marker found");
+    }
 
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
@@ -46,7 +128,13 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
-        gctx.reload_cwd()?;
+    }
+
+    // Reload now that we have established the cwd and root
+    gctx.reload_cwd()?;
+
+    if gctx.find_nearest_root(gctx.cwd())?.is_none() {
+        gctx.shell().warn("Cargo is running outside of any root directory, limiting loading of ancestor configs and manifest")?;
     }
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
@@ -639,6 +727,15 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .global(true)
                 .value_parser(["auto", "always", "never"])
                 .ignore_case(true),
+        )
+        .arg(
+            Arg::new("root")
+                .help("Define a root that limits searching for workspaces and .cargo/ directories")
+                .long("root")
+                .value_name("ROOT")
+                .action(ArgAction::Append)
+                .value_hint(clap::ValueHint::DirPath)
+                .value_parser(clap::builder::ValueParser::path_buf()),
         )
         .arg(
             Arg::new("directory")
