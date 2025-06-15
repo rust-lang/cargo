@@ -650,7 +650,7 @@ fn compute_metadata(
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut shared_hasher);
-    unit.mode.hash(&mut shared_hasher);
+    unit.mode.for_reuse().hash(&mut shared_hasher);
     build_runner.lto[unit].hash(&mut shared_hasher);
 
     // Artifacts compiled for the host should have a different

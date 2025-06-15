@@ -600,12 +600,23 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
             for output in self.outputs(unit)?.iter() {
                 if let Some(other_unit) = output_collisions.insert(output.path.clone(), unit) {
+                    let is_check = |u: &Unit| matches!(u.mode, CompileMode::Check { test: false });
+                    let is_build = |u: &Unit| matches!(u.mode, CompileMode::Build);
+                    let is_build_check_reuse =
+                        |a, b| (is_check(a) && is_build(b)) || (is_check(b) && is_build(a));
+
                     if unit.mode.is_doc() {
                         // See https://github.com/rust-lang/rust/issues/56169
                         // and https://github.com/rust-lang/rust/issues/61378
                         report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
                     } else {
-                        report_collision(unit, other_unit, &output.path, suggestion)?;
+                        if is_build_check_reuse(unit, other_unit) {
+                            tracing::debug!(
+                                "reusing artifacts between {unit:?} and {other_unit:?}"
+                            );
+                        } else {
+                            report_collision(unit, other_unit, &output.path, suggestion)?;
+                        }
                     }
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
