@@ -13,7 +13,7 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
-    TomlWorkspace,
+    TomlPackageBuild, TomlWorkspace,
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
@@ -344,6 +344,7 @@ fn normalize_toml(
             is_embedded,
             gctx,
             &inherit,
+            features,
         )?;
         let package_name = &normalized_package
             .normalized_name()
@@ -607,6 +608,7 @@ fn normalize_package_toml<'a>(
     is_embedded: bool,
     gctx: &GlobalContext,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
+    features: &Features,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
     let package_root = manifest_file.parent().unwrap();
 
@@ -670,9 +672,12 @@ fn normalize_package_toml<'a>(
         .transpose()?
         .map(manifest::InheritableField::Value);
     let build = if is_embedded {
-        Some(StringOrBool::Bool(false))
+        Some(TomlPackageBuild::Auto(false))
     } else {
-        targets::normalize_build(original_package.build.as_ref(), package_root)
+        if let Some(TomlPackageBuild::MultipleScript(_)) = original_package.build {
+            features.require(Feature::multiple_build_scripts())?;
+        }
+        targets::normalize_build(original_package.build.as_ref(), package_root)?
     };
     let metabuild = original_package.metabuild.clone();
     let default_target = original_package.default_target.clone();
@@ -2885,7 +2890,8 @@ fn prepare_toml_for_publish(
 
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
-    if let Some(StringOrBool::String(path)) = &package.build {
+    // Validates if build script file exists. If not, warn and ignore.
+    if let Some(TomlPackageBuild::SingleScript(path)) = &package.build {
         let path = Path::new(path).to_path_buf();
         let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
         let build = if included {
@@ -2894,13 +2900,13 @@ fn prepare_toml_for_publish(
                 .into_string()
                 .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
             let path = normalize_path_string_sep(path);
-            StringOrBool::String(path)
+            TomlPackageBuild::SingleScript(path)
         } else {
             ws.gctx().shell().warn(format!(
                 "ignoring `package.build` as `{}` is not included in the published package",
                 path.display()
             ))?;
-            StringOrBool::Bool(false)
+            TomlPackageBuild::Auto(false)
         };
         package.build = Some(build);
     }
