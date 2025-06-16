@@ -2,6 +2,7 @@ use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
+use crate::core::Dependency;
 use crate::core::{profiles::Profiles, shell, Edition, Package, Target, TargetKind, Workspace};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
@@ -23,8 +24,10 @@ use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
+use indexmap::IndexSet;
+use itertools::Itertools;
 use semver::Version;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -1402,6 +1405,56 @@ fn get_packages() -> CargoResult<Vec<Package>> {
         .collect::<Vec<_>>();
 
     Ok(packages)
+}
+
+pub fn get_direct_dependencies_pkg_name_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    let (current_package_deps, all_package_deps) = match get_dependencies_from_metadata() {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    let current_package_deps_package_names = current_package_deps
+        .into_iter()
+        .map(|dep| dep.package_name().to_string())
+        .sorted();
+    let all_package_deps_package_names = all_package_deps
+        .into_iter()
+        .map(|dep| dep.package_name().to_string())
+        .sorted();
+
+    let mut package_names_set = IndexSet::new();
+    package_names_set.extend(current_package_deps_package_names);
+    package_names_set.extend(all_package_deps_package_names);
+
+    package_names_set
+        .into_iter()
+        .map(|name| name.into())
+        .collect_vec()
+}
+
+fn get_dependencies_from_metadata() -> CargoResult<(Vec<Dependency>, Vec<Dependency>)> {
+    let cwd = std::env::current_dir()?;
+    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+    let current_package = ws.current().ok();
+
+    let current_package_dependencies = ws
+        .current()
+        .map(|current| current.dependencies())
+        .unwrap_or_default()
+        .to_vec();
+    let all_other_packages_dependencies = ws
+        .members()
+        .filter(|&member| Some(member) != current_package)
+        .flat_map(|pkg| pkg.dependencies().into_iter().cloned())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    Ok((
+        current_package_dependencies,
+        all_other_packages_dependencies,
+    ))
 }
 
 pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
