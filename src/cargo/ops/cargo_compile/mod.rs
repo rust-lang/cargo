@@ -287,13 +287,13 @@ pub fn create_bcx<'a, 'gctx>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
+    let build_std = gctx.cli_unstable().build_std.is_some() || target_data.build_std();
+    let std_resolve_features = if build_std {
         let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
             ws,
             &mut target_data,
             &build_config,
-            crates,
-            &build_config.requested_kinds,
+            gctx.cli_unstable().build_std.as_deref(),
         )?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
@@ -354,14 +354,6 @@ pub fn create_bcx<'a, 'gctx>(
     // assuming `--target $HOST` was specified. See
     // `rebuild_unit_graph_shared` for more on why this is done.
     let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
-    let explicit_host_kinds: Vec<_> = build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| match kind {
-            CompileKind::Host => explicit_host_kind,
-            CompileKind::Target(t) => CompileKind::Target(*t),
-        })
-        .collect();
 
     // Passing `build_config.requested_kinds` instead of
     // `explicit_host_kinds` here so that `generate_root_units` can do
@@ -398,14 +390,13 @@ pub fn create_bcx<'a, 'gctx>(
         Vec::new()
     };
 
-    let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
+    let std_roots = if build_std {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
-            &crates,
+            gctx.cli_unstable().build_std.as_deref(),
             &units,
             std_resolve,
             std_features,
-            &explicit_host_kinds,
             &pkg_set,
             interner,
             &profiles,

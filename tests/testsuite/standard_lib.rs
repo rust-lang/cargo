@@ -864,3 +864,176 @@ fn fetch() {
         .with_stderr_does_not_contain("[DOWNLOADED] [..]")
         .run();
 }
+
+// TODO: doing for a different target does not trigger the error
+#[cargo_test(build_std_mock)]
+fn target_config_gate() {
+    let host = rustc_host();
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{host}]
+                build-std = ['core']
+            "#
+            ),
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib");
+    build.masquerade_as_nightly_cargo(&["build-std"]).with_stderr_data(str![[
+            r#"
+[ERROR] the `build_std` and `build_std_features` fields on targets are unstable, pass `-Z unstable-options` on the nightly channel to enable it
+
+"#]])
+        .with_status(101);
+
+    build.run();
+}
+
+#[cargo_test(build_std_mock)]
+fn target_config() {
+    let setup = setup();
+    let host = rustc_host();
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {
+                    core::custom_api();
+                }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{host}]
+                build-std = ['core']
+            "#
+            ),
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib -Zunstable-options");
+    enable_build_std(&mut build, &setup);
+
+    build.run();
+}
+
+// check that per-pkg-target interacts with target configured build-std nicely in that:
+// - the forced target is used over the explicitly requested target
+// - the build-std config on the forced target works correctly
+#[cargo_test(build_std_mock)]
+fn per_pkg_target() {
+    let setup = setup();
+    let host = rustc_host();
+    let alternate = "aarch64-unknown-none";
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                forced-target = "{host}"
+            "#
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {
+                    core::custom_api();
+                }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{host}]
+                build-std = ['core']
+            "#
+            ),
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib -Zunstable-options");
+    build
+        .arg("--target")
+        .arg(alternate)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] core v0.1.0 ([..]/library/core)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]--target [HOST_TARGET][..]`
+[RUNNING] `[..] rustc --crate-name core [..]--target [HOST_TARGET][..]`
+[RUNNING] `[..] rustc --crate-name foo [..]--target [HOST_TARGET][..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .with_stderr_does_not_contain("aarch64-unknown-none");
+    enable_build_std(&mut build, &setup);
+
+    build.run();
+}
+
+// configuring `build-std` for a different target does not cause us to automatically build std for
+// the current target.
+#[cargo_test(build_std_mock)]
+fn other_target_config() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![no_std]
+                pub fn foo() {}
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.aarch64-unknown-none]
+                build-std = ['core']
+            "#
+            ),
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib");
+    build.target_host().with_status(101).with_stderr_data(
+        str![[r#"
+...
+error[E0463]: can't find crate for `core`
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]]
+        .unordered(),
+    );
+    enable_build_std(&mut build, &setup);
+
+    build.run();
+}

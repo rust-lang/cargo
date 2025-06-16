@@ -21,7 +21,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use cargo_test_support::prelude::*;
-use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs};
+use cargo_test_support::{basic_manifest, cross_compile, paths, project, rustc_host, str, Execs};
 use std::env;
 use std::path::Path;
 
@@ -440,4 +440,76 @@ fn test_panic_abort() {
         .env("RUSTFLAGS", "-C panic=abort")
         .arg("-Zbuild-std-features=panic_immediate_abort")
         .run();
+}
+
+#[cargo_test(build_std_real)]
+fn bindeps() {
+    if !cross_compile::requires_target_installed("aarch64-unknown-none") {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar/", artifact = "staticlib", target = "aarch64-unknown-none" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            edition = "2021"
+
+            [lib]
+            crate-type = ["staticlib"]
+        "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+            #![no_std]
+            pub fn bar() {}
+            #[panic_handler]
+            fn panic(info: &core::panic::PanicInfo) -> ! {
+                loop {}
+            }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.aarch64-unknown-none]
+                build-std = ['core']
+                "#
+            ),
+        )
+        .build();
+    let mut build = p.cargo("build -v --lib -Zunstable-options -Zbindeps");
+    build
+        .target_host()
+        .masquerade_as_nightly_cargo(&["build-std"])
+        .with_stderr_data(
+            str![[r#"
+...
+[RUNNING] `rustc --crate-name bar [..]--target aarch64-unknown-none[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        );
+
+    build.run();
 }

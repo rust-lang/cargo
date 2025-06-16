@@ -65,14 +65,15 @@ pub fn fetch<'a>(
         deps_to_fetch.extend(deps);
     }
 
+    let build_std = gctx.cli_unstable().build_std.is_some() || data.build_std();
+
     // If -Zbuild-std was passed, download dependencies for the standard library.
-    if let Some(crates) = &gctx.cli_unstable().build_std {
+    if build_std {
         let (std_package_set, _, _) = standard_lib::resolve_std(
             ws,
             &mut data,
             &build_config,
-            crates,
-            &build_config.requested_kinds,
+            gctx.cli_unstable().build_std.as_deref(),
         )?;
         packages.add_set(std_package_set);
     }
