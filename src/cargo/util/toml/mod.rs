@@ -1697,7 +1697,7 @@ pub fn to_real_manifest(
                 .iter()
                 .map(|(k, v)| {
                     (
-                        InternedString::new(k),
+                        k.to_string().into(),
                         v.iter().map(InternedString::from).collect(),
                     )
                 })
@@ -3090,7 +3090,7 @@ fn prepare_toml_for_publish(
 
         features.values_mut().for_each(|feature_deps| {
             feature_deps.retain(|feature_dep| {
-                let feature_value = FeatureValue::new(InternedString::new(feature_dep));
+                let feature_value = FeatureValue::new(feature_dep.into());
                 match feature_value {
                     FeatureValue::Dep { dep_name } | FeatureValue::DepFeature { dep_name, .. } => {
                         let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();

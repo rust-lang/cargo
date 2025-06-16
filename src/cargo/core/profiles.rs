@@ -93,7 +93,7 @@ impl Profiles {
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
         for (predef_name, mut predef_prof) in Self::predefined_profiles().into_iter() {
-            match profiles.entry(InternedString::new(predef_name)) {
+            match profiles.entry(predef_name.into()) {
                 Entry::Vacant(vac) => {
                     vac.insert(predef_prof);
                 }
@@ -119,9 +119,9 @@ impl Profiles {
     /// Returns the hard-coded directory names for built-in profiles.
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
         [
-            (InternedString::new("dev"), InternedString::new("debug")),
-            (InternedString::new("test"), InternedString::new("debug")),
-            (InternedString::new("bench"), InternedString::new("release")),
+            ("dev".into(), "debug".into()),
+            ("test".into(), "debug".into()),
+            ("bench".into(), "release".into()),
         ]
         .into()
     }
@@ -134,12 +134,12 @@ impl Profiles {
         trim_paths_enabled: bool,
     ) {
         profile_makers.by_name.insert(
-            InternedString::new("dev"),
+            "dev".into(),
             ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
         );
 
         profile_makers.by_name.insert(
-            InternedString::new("release"),
+            "release".into(),
             ProfileMaker::new(
                 Profile::default_release(trim_paths_enabled),
                 profiles.get("release").cloned(),
@@ -185,7 +185,7 @@ impl Profiles {
         match &profile.dir_name {
             None => {}
             Some(dir_name) => {
-                self.dir_names.insert(name, InternedString::new(dir_name));
+                self.dir_names.insert(name, dir_name.into());
             }
         }
 
@@ -230,7 +230,7 @@ impl Profiles {
                 self.get_profile_maker(&inherits_name).unwrap().clone()
             }
             Some(inherits_name) => {
-                let inherits_name = InternedString::new(&inherits_name);
+                let inherits_name = inherits_name.into();
                 if !set.insert(inherits_name) {
                     bail!(
                         "profile inheritance loop detected with profile `{}` inheriting `{}`",
@@ -297,7 +297,7 @@ impl Profiles {
                 CompileKind::Target(target) => target.short_name(),
             };
             if target.contains("-apple-") {
-                profile.split_debuginfo = Some(InternedString::new("unpacked"));
+                profile.split_debuginfo = Some("unpacked".into());
             }
         }
 
@@ -455,7 +455,7 @@ impl ProfileMaker {
             // basically turning down the optimization level and avoid limiting
             // codegen units. This ensures that we spend little time optimizing as
             // well as enabling parallelism by not constraining codegen units.
-            profile.opt_level = InternedString::new("0");
+            profile.opt_level = "0".into();
             profile.codegen_units = None;
 
             // For build dependencies, we usually don't need debuginfo, and
@@ -531,12 +531,12 @@ fn merge_toml_overrides(
 /// Does not merge overrides (see `merge_toml_overrides`).
 fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(ref opt_level) = toml.opt_level {
-        profile.opt_level = InternedString::new(&opt_level.0);
+        profile.opt_level = opt_level.0.as_str().into();
     }
     match toml.lto {
         Some(StringOrBool::Bool(b)) => profile.lto = Lto::Bool(b),
         Some(StringOrBool::String(ref n)) if is_off(n.as_str()) => profile.lto = Lto::Off,
-        Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(InternedString::new(n)),
+        Some(StringOrBool::String(ref n)) => profile.lto = Lto::Named(n.into()),
         None => {}
     }
     if toml.codegen_backend.is_some() {
@@ -552,7 +552,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.debug_assertions = debug_assertions;
     }
     if let Some(split_debuginfo) = &toml.split_debuginfo {
-        profile.split_debuginfo = Some(InternedString::new(split_debuginfo));
+        profile.split_debuginfo = Some(split_debuginfo.into());
     }
     if let Some(rpath) = toml.rpath {
         profile.rpath = rpath;
@@ -578,16 +578,12 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.trim_paths = Some(trim_paths.clone());
     }
     profile.strip = match toml.strip {
-        Some(StringOrBool::Bool(true)) => {
-            Strip::Resolved(StripInner::Named(InternedString::new("symbols")))
-        }
+        Some(StringOrBool::Bool(true)) => Strip::Resolved(StripInner::Named("symbols".into())),
         Some(StringOrBool::Bool(false)) => Strip::Resolved(StripInner::None),
         Some(StringOrBool::String(ref n)) if n.as_str() == "none" => {
             Strip::Resolved(StripInner::None)
         }
-        Some(StringOrBool::String(ref n)) => {
-            Strip::Resolved(StripInner::Named(InternedString::new(n)))
-        }
+        Some(StringOrBool::String(ref n)) => Strip::Resolved(StripInner::Named(n.into())),
         None => Strip::Deferred(StripInner::None),
     };
 }
@@ -635,8 +631,8 @@ pub struct Profile {
 impl Default for Profile {
     fn default() -> Profile {
         Profile {
-            name: InternedString::new(""),
-            opt_level: InternedString::new("0"),
+            name: "".into(),
+            opt_level: "0".into(),
             root: ProfileRoot::Debug,
             lto: Lto::Bool(false),
             codegen_backend: None,
@@ -710,7 +706,7 @@ impl Profile {
     /// Returns a built-in `dev` profile.
     fn default_dev() -> Profile {
         Profile {
-            name: InternedString::new("dev"),
+            name: "dev".into(),
             root: ProfileRoot::Debug,
             debuginfo: DebugInfo::Resolved(TomlDebugInfo::Full),
             debug_assertions: true,
@@ -724,9 +720,9 @@ impl Profile {
     fn default_release(trim_paths_enabled: bool) -> Profile {
         let trim_paths = trim_paths_enabled.then(|| TomlTrimPathsValue::Object.into());
         Profile {
-            name: InternedString::new("release"),
+            name: "release".into(),
             root: ProfileRoot::Release,
-            opt_level: InternedString::new("3"),
+            opt_level: "3".into(),
             trim_paths,
             ..Profile::default()
         }
@@ -1274,13 +1270,13 @@ fn merge_config_profiles(
             profile.merge(&config_profile);
         }
         if let Some(inherits) = &profile.inherits {
-            check_to_add.insert(InternedString::new(inherits));
+            check_to_add.insert(inherits.into());
         }
     }
     // Add the built-in profiles. This is important for things like `cargo
     // test` which implicitly use the "dev" profile for dependencies.
-    for name in &["dev", "release", "test", "bench"] {
-        check_to_add.insert(InternedString::new(name));
+    for name in ["dev", "release", "test", "bench"] {
+        check_to_add.insert(name.into());
     }
     // Add config-only profiles.
     // Need to iterate repeatedly to get all the inherits values.
@@ -1291,7 +1287,7 @@ fn merge_config_profiles(
             if !profiles.contains_key(name.as_str()) {
                 if let Some(config_profile) = get_config_profile(ws, &name)? {
                     if let Some(inherits) = &config_profile.inherits {
-                        check_to_add.insert(InternedString::new(inherits));
+                        check_to_add.insert(inherits.into());
                     }
                     profiles.insert(name, config_profile);
                 }

@@ -844,7 +844,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     dep.package_name().replace('-', "_"),
                     dep.package_name().replace('_', "-"),
                 ] {
-                    let name_permutation = InternedString::new(&name_permutation);
+                    let name_permutation = name_permutation.into();
                     if name_permutation == dep.package_name() {
                         continue;
                     }

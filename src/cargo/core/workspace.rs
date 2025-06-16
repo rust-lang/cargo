@@ -1549,7 +1549,7 @@ impl<'gctx> Workspace<'gctx> {
             .flatten()
             .unique()
             .filter(|element| {
-                let feature = FeatureValue::new(InternedString::new(element));
+                let feature = FeatureValue::new(element.into());
                 !cli_features.features.contains(&feature) && !found_features.contains(&feature)
             })
             .sorted()

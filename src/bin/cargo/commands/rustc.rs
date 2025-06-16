@@ -1,6 +1,5 @@
 use crate::command_prelude::*;
 use cargo::ops;
-use cargo::util::interning::InternedString;
 
 const PRINT_ARG_NAME: &str = "print";
 const CRATE_TYPE_ARG_NAME: &str = "crate-type";
@@ -77,7 +76,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         ProfileChecking::LegacyRustc,
     )?;
     if compile_opts.build_config.requested_profile == "check" {
-        compile_opts.build_config.requested_profile = InternedString::new("dev");
+        compile_opts.build_config.requested_profile = "dev".into();
     }
     let target_args = values(args, "args");
     compile_opts.target_rustc_args = if target_args.is_empty() {

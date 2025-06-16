@@ -14,7 +14,6 @@
 
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
-use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
 use rand::prelude::*;
 use std::collections::HashMap;
@@ -57,7 +56,7 @@ fn main() {
     let cache_dir = real_home.join("registry/cache");
     for dir_ent in fs::read_dir(cache_dir).unwrap() {
         let registry = dir_ent.unwrap();
-        let encoded_registry_name = InternedString::new(&registry.file_name().to_string_lossy());
+        let encoded_registry_name = registry.file_name().to_string_lossy().into();
         for krate in fs::read_dir(registry.path()).unwrap() {
             let krate = krate.unwrap();
             let meta = krate.metadata().unwrap();
@@ -77,7 +76,7 @@ fn main() {
     let cache_dir = real_home.join("registry/src");
     for dir_ent in fs::read_dir(cache_dir).unwrap() {
         let registry = dir_ent.unwrap();
-        let encoded_registry_name = InternedString::new(&registry.file_name().to_string_lossy());
+        let encoded_registry_name = registry.file_name().to_string_lossy().into();
         for krate in fs::read_dir(registry.path()).unwrap() {
             let krate = krate.unwrap();
             let meta = krate.metadata().unwrap();
@@ -95,7 +94,7 @@ fn main() {
     let git_co_dir = real_home.join("git/checkouts");
     for dir_ent in fs::read_dir(git_co_dir).unwrap() {
         let git_source = dir_ent.unwrap();
-        let encoded_git_name = InternedString::new(&git_source.file_name().to_string_lossy());
+        let encoded_git_name = git_source.file_name().to_string_lossy().into();
         for co in fs::read_dir(git_source.path()).unwrap() {
             let co = co.unwrap();
             let meta = co.metadata().unwrap();
