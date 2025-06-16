@@ -167,6 +167,16 @@
         }
       ]
     },
+    "hints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Hints"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "workspace": {
       "anyOf": [
         {
@@ -1015,6 +1025,17 @@
       ],
       "additionalProperties": {
         "$ref": "#/$defs/TomlValue"
+      }
+    },
+    "Hints": {
+      "type": "object",
+      "properties": {
+        "mostly-unused": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
       }
     },
     "TomlWorkspace": {
