@@ -5,7 +5,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{project, str};
 
 #[cargo_test]
-fn empty_hints_warn() {
+fn empty_hints_no_warn() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -22,7 +22,6 @@ fn empty_hints_warn() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: hints
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -50,7 +49,7 @@ fn unknown_hints_warn() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: hints
+[WARNING] unused manifest key: hints.this-is-an-unknown-hint
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -92,16 +91,19 @@ fn hint_unknown_type_warn() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("check -v")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[CHECKING] bar v1.0.0
-[RUNNING] `rustc --crate-name bar [..]`
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] invalid type: integer `1`, expected a boolean
+ --> ../home/.cargo/registry/src/-[HASH]/bar-1.0.0/Cargo.toml:8:29
+  |
+8 |             mostly-unused = 1
+  |                             ^
+  |
+[ERROR] failed to download replaced source registry `crates-io`
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
@@ -146,6 +148,7 @@ fn hints_mostly_unused_warn_without_gate() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[WARNING] ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -197,7 +200,7 @@ fn hints_mostly_unused_nightly() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
-[RUNNING] `rustc --crate-name bar [..]`
+[RUNNING] `rustc --crate-name bar [..] -Zhint-mostly-unused [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -284,7 +287,6 @@ fn mostly_unused_profile_overrides_hints_on_self_nightly() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: hints
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

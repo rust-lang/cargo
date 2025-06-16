@@ -316,6 +316,7 @@ fn normalize_toml(
         build_dependencies2: None,
         target: None,
         lints: None,
+        hints: None,
         workspace: original_toml.workspace.clone().or_else(|| {
             // Prevent looking for a workspace by `read_manifest_from_str`
             is_embedded.then(manifest::TomlWorkspace::default)
@@ -558,6 +559,8 @@ fn normalize_toml(
             workspace: false,
             lints,
         });
+
+        normalized_toml.hints = original_toml.hints.clone();
 
         normalized_toml.badges = original_toml.badges.clone();
     } else {
@@ -1608,6 +1611,8 @@ pub fn to_real_manifest(
             .unwrap_or(&default),
     )?;
 
+    let hints = normalized_toml.hints.clone();
+
     let metadata = ManifestMetadata {
         description: normalized_package
             .normalized_description()
@@ -1799,6 +1804,7 @@ pub fn to_real_manifest(
         metabuild,
         resolve_behavior,
         rustflags,
+        hints,
         is_embedded,
     );
     if manifest
@@ -3050,6 +3056,7 @@ fn prepare_toml_for_publish(
             None => None,
         },
         lints: me.lints.clone(),
+        hints: me.hints.clone(),
         workspace: None,
         profile: me.profile.clone(),
         patch: None,

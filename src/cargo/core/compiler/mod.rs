@@ -1138,6 +1138,7 @@ fn build_base_args(
         hint_mostly_unused,
         ..
     } = unit.profile.clone();
+    let hints = unit.pkg.hints().cloned().unwrap_or_default();
     let test = unit.mode.is_any_test();
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
@@ -1326,13 +1327,19 @@ fn build_base_args(
         opt(cmd, "-C", "incremental=", Some(dir));
     }
 
-    if hint_mostly_unused {
+    if hint_mostly_unused.or(hints.mostly_unused).unwrap_or(false) {
         if bcx.gctx.cli_unstable().profile_hint_mostly_unused {
             cmd.arg("-Zhint-mostly-unused");
         } else {
-            bcx.gctx
-                .shell()
-                .warn("ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it")?;
+            if hint_mostly_unused.is_some() {
+                bcx.gctx
+                    .shell()
+                    .warn("ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it")?;
+            } else if hints.mostly_unused.is_some() {
+                bcx.gctx
+                    .shell()
+                    .warn("ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it")?;
+            }
         }
     }
 
