@@ -1,4 +1,5 @@
 use cargo::ops::{self, OutputMetadataOptions};
+use jsonpath_rust::JsonPath;
 
 use crate::command_prelude::*;
 
@@ -23,6 +24,11 @@ pub fn cli() -> Command {
             opt("format-version", "Format version")
                 .value_name("VERSION")
                 .value_parser(["1"]),
+        )
+        .arg(
+            opt("query", "Return only a value for the given JSON path")
+                .value_name("QUERY")
+                .value_parser(clap::value_parser!(String)),
         )
         .arg_silent_suggestion()
         .arg_features()
@@ -55,6 +61,32 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    gctx.shell().print_json(&result)?;
+
+    if let Some(json_path) = args.get_one::<String>("query") {
+        let serialised = serde_json::to_value(&result).map_err(|e| {
+            CliError::from(anyhow::Error::msg(format!(
+                "Failed to serialize metadata: {e}"
+            )))
+        })?;
+        let json_value = serialised.query(json_path).map_err(|e| {
+            let paths = serialised
+                .query_only_path("$.*")
+                .unwrap_or_else(|_| vec![]);
+            CliError::from(anyhow::Error::msg(format!(
+                "Failed to access the value at provided JSON path '{json_path}': {e}.\nThe root paths available: {paths:?}."
+            )))
+        })?;
+
+        if json_value.len() == 1 {
+            // If the JSON path returns a single value, we can unwrap it
+            // to avoid printing an array with a single element.
+            gctx.shell().print_json(&json_value[0])?;
+        } else {
+            gctx.shell().print_json(&json_value)?;
+        }
+    } else {
+        gctx.shell().print_json(&result)?;
+    }
+
     Ok(())
 }

@@ -184,6 +184,7 @@ indexmap.workspace = true
 itertools.workspace = true
 jiff.workspace = true
 jobserver.workspace = true
+jsonpath-rust = "1"
 lazycell.workspace = true
 libgit2-sys.workspace = true
 memchr.workspace = true

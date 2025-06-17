@@ -339,6 +339,7 @@ dependencies = [
  "itertools 0.14.0",
  "jiff",
  "jobserver",
+ "jsonpath-rust",
  "lazycell",
  "libc",
  "libgit2-sys",
@@ -2470,6 +2471,19 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "jsonpath-rust"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b37465feaf9d41f74df7da98c6c1c31ca8ea06d11b5bf7869c8f1ccc51a793f"
+dependencies = [
+ "pest",
+ "pest_derive",
+ "regex",
+ "serde_json",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
