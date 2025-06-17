@@ -256,6 +256,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - run: rustup update nightly && rustup default nightly
+    - run: rustup target add aarch64-unknown-none
     - run: rustup component add rust-src
     - run: cargo build
     - run: cargo test -p cargo --test build-std
