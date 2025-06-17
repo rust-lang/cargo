@@ -8,13 +8,11 @@ fn gated_by_unstable_opts() {
         .build();
 
     p.cargo("check --compile-time-deps")
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--compile-time-deps' found
-
-Usage: cargo check [OPTIONS]
-
-For more information, try '--help'.
+[ERROR] the `--compile-time-deps` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/14434 for more information about the `--compile-time-deps` flag.
 
 "#]])
         .run();
@@ -55,11 +53,10 @@ fn non_comp_time_dep() {
         .file("bar/src/lib.rs", r#"pub fn bar() {}"#)
         .build();
 
-    p.cargo("check")
+    p.cargo("-Zunstable-options check --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -151,11 +148,11 @@ fn proc_macro_dep() {
         .file("baz/src/lib.rs", r#"pub fn baz() {}"#)
         .build();
 
-    p.cargo("check --package foo")
+    p.cargo("-Zunstable-options check --package foo --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.0.1 ([ROOT]/foo/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -163,10 +160,9 @@ fn proc_macro_dep() {
 
     p.cargo("clean").run();
 
-    p.cargo("check --package bar")
+    p.cargo("-Zunstable-options check --package bar --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
-[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -174,10 +170,11 @@ fn proc_macro_dep() {
 
     p.cargo("clean").run();
 
-    p.cargo("check --package bar --all-targets")
+    p.cargo("-Zunstable-options check --package bar --all-targets --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
-[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] baz v0.0.1 ([ROOT]/foo/baz)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -241,7 +238,8 @@ fn build_dep() {
         .file("bar/baz/src/lib.rs", r#"pub fn baz() {}"#)
         .build();
 
-    p.cargo("check")
+    p.cargo("-Zunstable-options check --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
@@ -314,12 +312,12 @@ fn indirect_comp_time_dep() {
         .file("bar/baz/src/lib.rs", r#"pub fn baz() {}"#)
         .build();
 
-    p.cargo("check")
+    p.cargo("-Zunstable-options check --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -379,21 +377,21 @@ fn tests_target() {
         )
         .build();
 
-    p.cargo("check --tests")
+    p.cargo("-Zunstable-options check --tests --compile-time-deps")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .run();
 
     p.cargo("clean").run();
 
-    p.cargo("check")
+    p.cargo("-Zunstable-options check --compile-time-deps")
+        .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

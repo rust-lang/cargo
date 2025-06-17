@@ -521,6 +521,10 @@ pub trait CommandExt: Sized {
             .hide(true),
         )
     }
+
+    fn arg_compile_time_deps(self) -> Self {
+        self._arg(flag("compile-time-deps", "").hide(true))
+    }
 }
 
 impl CommandExt for Command {
@@ -806,6 +810,7 @@ Run `{cmd}` to see possible targets."
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
+        build_config.compile_time_deps_only = self.flag("compile-time-deps");
 
         if self._contains("timings") {
             for timing_output in self._values_of("timings") {
@@ -839,6 +844,10 @@ Run `{cmd}` to see possible targets."
         if build_config.unit_graph {
             gctx.cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
+        }
+        if build_config.compile_time_deps_only {
+            gctx.cli_unstable()
+                .fail_if_stable_opt("--compile-time-deps", 14434)?;
         }
 
         let opts = CompileOptions {

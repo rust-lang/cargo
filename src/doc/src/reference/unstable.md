@@ -2190,3 +2190,17 @@ More information can be found in the [config chapter](config.md#cache).
 ## doctest-xcompile
 
 Doctest cross-compiling is now unconditionally enabled starting in Rust 1.89. Running doctests with `cargo test` will now honor the `--target` flag.
+
+## compile-time-deps
+
+This permanently-unstable flag to only build proc-macros and build scripts (and their required dependencies),
+as well as run the build scripts.
+
+It is intended for use by tools like rust-analyzer and will never be stabilized.
+
+Example:
+
+```console
+cargo +nightly build --compile-time-deps -Z unstable-options
+cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
+```
