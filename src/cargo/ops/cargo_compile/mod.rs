@@ -449,6 +449,7 @@ pub fn create_bcx<'a, 'gctx>(
         &units,
         &scrape_units,
         host_kind_requested.then_some(explicit_host_kind),
+        build_config.compile_time_deps_only,
     );
 
     let mut extra_compiler_args = HashMap::new();
@@ -582,12 +583,16 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
 /// This is also responsible for adjusting the `debug` setting for host
 /// dependencies, turning off debug if the user has not explicitly enabled it,
 /// and the unit is not shared with a target unit.
+///
+/// This is also responsible for adjusting whether each unit should be compiled
+/// or not regarding `--compile-time-deps` flag.
 fn rebuild_unit_graph_shared(
     interner: &UnitInterner,
     unit_graph: UnitGraph,
     roots: &[Unit],
     scrape_units: &[Unit],
     to_host: Option<CompileKind>,
+    compile_time_deps_only: bool,
 ) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
     let mut result = UnitGraph::new();
     // Map of the old unit to the new unit, used to avoid recursing into units
@@ -602,8 +607,10 @@ fn rebuild_unit_graph_shared(
                 &mut result,
                 &unit_graph,
                 root,
+                true,
                 false,
                 to_host,
+                compile_time_deps_only,
             )
         })
         .collect();
@@ -628,14 +635,21 @@ fn traverse_and_share(
     new_graph: &mut UnitGraph,
     unit_graph: &UnitGraph,
     unit: &Unit,
+    unit_is_root: bool,
     unit_is_for_host: bool,
     to_host: Option<CompileKind>,
+    compile_time_deps_only: bool,
 ) -> Unit {
     if let Some(new_unit) = memo.get(unit) {
         // Already computed, no need to recompute.
         return new_unit.clone();
     }
     let mut dep_hash = StableHasher::new();
+    let skip_non_compile_time_deps = compile_time_deps_only
+        && (!unit.target.is_compile_time_dependency() ||
+            // Root unit is not a dependency unless other units are dependant
+            // to it.
+            unit_is_root);
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {
@@ -645,8 +659,13 @@ fn traverse_and_share(
                 new_graph,
                 unit_graph,
                 &dep.unit,
+                false,
                 dep.unit_for.is_for_host(),
                 to_host,
+                // If we should compile the current unit, we should also compile
+                // its dependencies. And if not, we should compile compile time
+                // dependencies only.
+                skip_non_compile_time_deps,
             );
             new_dep_unit.hash(&mut dep_hash);
             UnitDep {
@@ -712,6 +731,7 @@ fn traverse_and_share(
             unit.dep_hash,
             unit.artifact,
             unit.artifact_target_for_features,
+            unit.skip_non_compile_time_dep,
         );
 
         // We can now turn the deferred value into its actual final value.
@@ -742,8 +762,11 @@ fn traverse_and_share(
         // Since `dep_hash` is now filled in, there's no need to specify the artifact target
         // for target-dependent feature resolution
         None,
+        skip_non_compile_time_deps,
     );
-    assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
+    if !unit_is_root || !compile_time_deps_only {
+        assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
+    }
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
     new_unit
 }
@@ -904,6 +927,7 @@ fn override_rustc_crate_types(
             unit.dep_hash,
             unit.artifact,
             unit.artifact_target_for_features,
+            unit.skip_non_compile_time_dep,
         )
     };
     units[0] = match unit.target.kind() {

@@ -1079,6 +1079,11 @@ impl Target {
         *self.kind() == TargetKind::CustomBuild
     }
 
+    /// Returns `true` if it is a compile time depencencies, e.g., build script or proc macro
+    pub fn is_compile_time_dependency(&self) -> bool {
+        self.is_custom_build() || self.proc_macro()
+    }
+
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<CrateType> {
         self.kind().rustc_crate_types()

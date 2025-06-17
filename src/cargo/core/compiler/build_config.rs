@@ -50,6 +50,8 @@ pub struct BuildConfig {
     pub timing_outputs: Vec<TimingOutput>,
     /// Output SBOM precursor files.
     pub sbom: bool,
+    /// Build compile time dependencies only, e.g., build scripts and proc macros
+    pub compile_time_deps_only: bool,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -129,6 +131,7 @@ impl BuildConfig {
             future_incompat_report: false,
             timing_outputs: Vec::new(),
             sbom,
+            compile_time_deps_only: false,
         })
     }
 

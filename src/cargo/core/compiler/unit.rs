@@ -112,6 +112,13 @@ pub struct UnitInner {
     ///
     /// [`FeaturesFor::ArtifactDep`]: crate::core::resolver::features::FeaturesFor::ArtifactDep
     pub artifact_target_for_features: Option<CompileTarget>,
+
+    /// Skip compiling this unit because `--compile-time-deps` flag is set and
+    /// this is not a compile time dependency.
+    ///
+    /// Since dependencies of this unit might be compile time dependencies, we
+    /// set this field instead of completely dropping out this unit from unit graph.
+    pub skip_non_compile_time_dep: bool,
 }
 
 impl UnitInner {
@@ -245,6 +252,7 @@ impl UnitInterner {
         dep_hash: u64,
         artifact: IsArtifact,
         artifact_target_for_features: Option<CompileTarget>,
+        skip_non_compile_time_dep: bool,
     ) -> Unit {
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
@@ -281,6 +289,7 @@ impl UnitInterner {
             dep_hash,
             artifact,
             artifact_target_for_features,
+            skip_non_compile_time_dep,
         });
         Unit { inner }
     }

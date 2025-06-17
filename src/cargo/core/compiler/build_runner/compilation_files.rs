@@ -448,6 +448,10 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
+            _ if unit.skip_non_compile_time_dep => {
+                // This skips compilations so no outputs
+                vec![]
+            }
             CompileMode::Doc => {
                 let path = if bcx.build_config.intent.wants_doc_json_output() {
                     self.out_dir(unit)

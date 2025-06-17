@@ -210,6 +210,7 @@ fn generate_roots(
                 /*dep_hash*/ 0,
                 IsArtifact::No,
                 None,
+                false,
             ));
         }
     }
