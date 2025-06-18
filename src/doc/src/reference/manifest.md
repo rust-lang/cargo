@@ -50,6 +50,7 @@ Every manifest file consists of the following sections:
 * [`[badges]`](#the-badges-section) --- Badges to display on a registry.
 * [`[features]`](features.md) --- Conditional compilation features.
 * [`[lints]`](#the-lints-section) --- Configure linters for this package.
+* [`[hints]`](#the-hints-section) --- Provide hints for compiling this package.
 * [`[patch]`](overriding-dependencies.md#the-patch-section) --- Override dependencies.
 * [`[replace]`](overriding-dependencies.md#the-replace-section) --- Override dependencies (deprecated).
 * [`[profile]`](profiles.md) --- Compiler settings and optimizations.
@@ -564,6 +565,26 @@ As for dependents, Cargo suppresses lints from non-path dependencies with featur
 [`--cap-lints`](../../rustc/lints/levels.html#capping-lints).
 
 > **MSRV:** Respected as of 1.74
+
+## The `[hints]` section
+
+The `[hints]` section allows specifying hints for compiling this package. Cargo
+will respect these hints by default when compiling this package, though the
+top-level package being built can override these values through the `[profile]`
+mechanism. Hints are, by design, always safe for Cargo to ignore; if Cargo
+encounters a hint it doesn't understand, or a hint it understands but with a
+value it doesn't understand, it will warn, but not error. As a result,
+specifying hints in a crate does not impact the MSRV of the crate.
+
+Individual hints may have an associated unstable feature gate that you need to
+pass in order to apply the configuration they specify, but if you don't specify
+that unstable feature gate, you will again get only a warning, not an error.
+
+There are no stable hints at this time. See the [hint-mostly-unused
+documentation](unstable.md#profile-hint-mostly-unused-option) for information
+on an unstable hint.
+
+> **MSRV:** Respected as of 1.90.
 
 ## The `[badges]` section
 
