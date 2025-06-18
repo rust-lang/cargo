@@ -105,22 +105,21 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
-        if custom_build.len() > 1 {
-            anyhow::bail!("multiple build scripts feature is not implemented yet! ")
+        for script in custom_build {
+            let script_path = Path::new(script);
+            let name = format!(
+                "build-script-{}",
+                script_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+            );
+            targets.push(Target::custom_build_target(
+                &name,
+                package_root.join(script_path),
+                edition,
+            ));
         }
-        let custom_build = Path::new(&custom_build[0]);
-        let name = format!(
-            "build-script-{}",
-            custom_build
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-        );
-        targets.push(Target::custom_build_target(
-            &name,
-            package_root.join(custom_build),
-            edition,
-        ));
     }
     if let Some(metabuild) = metabuild {
         // Verify names match available build deps.
@@ -1107,9 +1106,7 @@ pub fn normalize_build(
         Some(TomlPackageBuild::Auto(true)) => {
             Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
         }
-        Some(TomlPackageBuild::MultipleScript(_scripts)) => {
-            anyhow::bail!("multiple build scripts feature is not implemented yet!");
-        }
+        Some(TomlPackageBuild::MultipleScript(_scripts)) => Ok(build.cloned()),
     }
 }
 
