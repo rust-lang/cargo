@@ -105,6 +105,7 @@ mod git_shallow;
 mod glob_targets;
 mod global_cache_tracker;
 mod help;
+mod hints;
 mod https;
 mod inheritable_workspace_fields;
 mod install;
