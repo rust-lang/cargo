@@ -119,7 +119,9 @@ strip = "debuginfo"
 ```
 
 Possible string values of `strip` are `"none"`, `"debuginfo"`, and `"symbols"`.
-The default is `"none"`.
+The default is `"none"`. However, if [`debug`](#debug) is not enabled for any
+package in the dependency graph and `strip` is not explicitly set, it is
+overridden to `"debuginfo"`.
 
 You can also configure this option with the boolean values `true` or `false`.
 `strip = true` is equivalent to `strip = "symbols"`. `strip = false` is
@@ -304,6 +306,9 @@ incremental = false
 codegen-units = 16
 rpath = false
 ```
+
+Note that `strip` may automatically be overridden as described in
+[its section](#strip).
 
 ### test
 
