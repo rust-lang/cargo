@@ -11,8 +11,18 @@ const MINIMAL_LIB: &str = r#"
 #![feature(lang_items)]
 #![no_core]
 
+#[lang = "pointee_sized"]
+pub trait PointeeSized {
+    // Empty.
+}
+
+#[lang = "meta_sized"]
+pub trait MetaSized: PointeeSized {
+    // Empty.
+}
+
 #[lang = "sized"]
-pub trait Sized {
+pub trait Sized: MetaSized {
     // Empty.
 }
 #[lang = "copy"]

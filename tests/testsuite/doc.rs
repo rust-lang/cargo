@@ -815,8 +815,14 @@ fn doc_target() {
                 #![feature(no_core, lang_items)]
                 #![no_core]
 
+                #[lang = "pointee_sized"]
+                trait PointeeSized {}
+
+                #[lang = "meta_sized"]
+                trait MetaSized: PointeeSized {}
+
                 #[lang = "sized"]
-                trait Sized {}
+                trait Sized: MetaSized {}
 
                 extern {
                     pub static A: u32;
