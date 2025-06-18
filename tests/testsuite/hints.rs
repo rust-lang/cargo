@@ -91,19 +91,17 @@ fn hint_unknown_type_warn() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("check -v")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[ERROR] invalid type: integer `1`, expected a boolean
- --> ../home/.cargo/registry/src/-[HASH]/bar-1.0.0/Cargo.toml:8:29
-  |
-8 |             mostly-unused = 1
-  |                             ^
-  |
-[ERROR] failed to download replaced source registry `crates-io`
+[WARNING] ignoring unsupported value type (integer) for 'hints.mostly-unused', which expects a boolean
+[CHECKING] bar v1.0.0
+[RUNNING] `rustc --crate-name bar [..]`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
