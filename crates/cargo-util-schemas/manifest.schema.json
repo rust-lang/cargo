@@ -1012,9 +1012,13 @@
       "type": "object",
       "properties": {
         "mostly-unused": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlValue"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       }
