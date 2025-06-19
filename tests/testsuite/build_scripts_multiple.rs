@@ -26,12 +26,14 @@ fn build_without_feature_enabled_aborts_with_error() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: sequence, expected a boolean or string
- --> Cargo.toml:6:25
-  |
-6 |                 build = ["build1.rs", "build2.rs"]
-  |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `multiple-build-scripts` is required
+
+  The package requires the Cargo feature called `multiple-build-scripts`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider adding `cargo-features = ["multiple-build-scripts"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#multiple-build-scripts for more information about the status of this feature.
 
 "#]])
         .run();
@@ -64,12 +66,10 @@ fn empty_multiple_build_script_project() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: sequence, expected a boolean or string
- --> Cargo.toml:8:25
-  |
-8 |                 build = ["build1.rs", "build2.rs"]
-  |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  multiple build scripts feature is not implemented yet!
 
 "#]])
         .run();
@@ -82,12 +82,10 @@ fn multiple_build_scripts_metadata() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: sequence, expected a boolean or string
- --> Cargo.toml:8:25
-  |
-8 |                 build = ["build1.rs", "build2.rs"]
-  |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  multiple build scripts feature is not implemented yet!
 
 "#]])
         .run();
@@ -123,12 +121,10 @@ fn verify_package_multiple_build_scripts() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: sequence, expected a boolean or string
-  --> Cargo.toml:13:25
-   |
-13 |                 build = ["build1.rs", "build2.rs"]
-   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  multiple build scripts feature is not implemented yet!
 
 "#]])
         .run();
@@ -187,12 +183,6 @@ fn verify_vendor_multiple_build_scripts() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep`
-[ERROR] invalid type: sequence, expected a boolean or string
-  --> ../home/.cargo/git/checkouts/dep-[HASH]/[..]/Cargo.toml:13:25
-   |
-13 |                 build = ["build1.rs", "build2.rs"]
-   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
 [ERROR] failed to sync
 
 Caused by:
@@ -206,6 +196,12 @@ Caused by:
 
 Caused by:
   Unable to update [ROOTURL]/dep
+
+Caused by:
+  failed to parse manifest at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/Cargo.toml`
+
+Caused by:
+  multiple build scripts feature is not implemented yet!
 
 "#]])
         .run();
@@ -258,7 +254,7 @@ fn bar() {
     // Editing bar.txt will recompile
 
     p.change_file("assets/bar.txt", "bar updated");
-    p.cargo("build -v")      
+    p.cargo("build -v")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.1.0 ([ROOT]/foo): the file `assets/bar.txt` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
