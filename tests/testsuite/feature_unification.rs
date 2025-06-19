@@ -131,7 +131,7 @@ fn package_feature_unification() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -240,14 +240,21 @@ fn package_feature_unification() {
     p.cargo("check -p a -p b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] features were unified")
+        .with_stderr_data(
+            str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
     p.cargo("check")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] features were unified")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // Sanity check that compilation without package feature unification does not work
     p.cargo("check -p a -p b")
@@ -266,7 +273,7 @@ fn package_feature_unification_default_features() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -361,17 +368,9 @@ fn package_feature_unification_default_features() {
     p.cargo("check")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
-[CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -386,7 +385,7 @@ fn package_feature_unification_cli_features() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -458,17 +457,12 @@ fn package_feature_unification_cli_features() {
     p.cargo("check -p a -p b -F a,b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[CHECKING] a v0.1.0 ([ROOT]/foo/a)
+[CHECKING] b v0.1.0 ([ROOT]/foo/b)
 
 "#]]
             .unordered(),
@@ -477,16 +471,8 @@ fn package_feature_unification_cli_features() {
     p.cargo("check --workspace --exclude common -F a,b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -494,16 +480,8 @@ fn package_feature_unification_cli_features() {
     p.cargo("check -p a -p b -F a/a,b/b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -550,7 +528,7 @@ fn package_feature_unification_weak_dependencies() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -622,17 +600,12 @@ fn package_feature_unification_weak_dependencies() {
     p.cargo("check -p a -p b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[CHECKING] a v0.1.0 ([ROOT]/foo/a)
+[CHECKING] b v0.1.0 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -641,16 +614,9 @@ fn package_feature_unification_weak_dependencies() {
     p.cargo("check")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[ERROR] features were unified
- --> common/src/lib.rs:3:17
-  |
-3 |                 compile_error!("features were unified");
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-[ERROR] could not compile `common` (lib) due to 1 previous error
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -805,27 +771,27 @@ common v0.1.0 ([ROOT]/foo/common)
     p.cargo("tree -e features")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected") // To be changed to package later
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .with_stdout_data(str![[r#"
+common v0.1.0 ([ROOT]/foo/common)
 a v0.1.0 ([ROOT]/foo/a)
 ├── common feature "a"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line)
+├── common feature "default"
 │   └── common v0.1.0 ([ROOT]/foo/common)
 ├── outside feature "a"
 │   └── outside v0.1.0
 └── outside feature "default"
     └── outside v0.1.0
-
 b v0.1.0 ([ROOT]/foo/b)
 ├── common feature "b"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line) (*)
+├── common feature "default"
+│   └── common v0.1.0 ([ROOT]/foo/common)
 ├── outside feature "b"
 │   └── outside v0.1.0
-└── outside feature "default" (*)
-
-common v0.1.0 ([ROOT]/foo/common)
+└── outside feature "default"
+    └── outside v0.1.0
 
 "#]])
         .run();
@@ -905,7 +871,7 @@ fn cargo_install_ignores_config() {
         .arg(p.root())
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .with_stderr_data(str![[r#"
 [INSTALLING] a v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -961,7 +927,7 @@ edition = "2021"
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
@@ -1043,10 +1009,10 @@ fn edition_v2_resolver_report() {
         .build();
 
     p.cargo("fix --edition --allow-no-vcs --workspace")
-        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [MIGRATING] Cargo.toml from 2018 edition to 2021
@@ -1057,26 +1023,7 @@ fn edition_v2_resolver_report() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] opt_dep v1.0.0 (registry `dummy-registry`)
 [MIGRATING] bar/Cargo.toml from 2018 edition to 2021
-[NOTE] Switching to Edition 2021 will enable the use of the version 2 feature resolver in Cargo.
-This may cause some dependencies to be built with fewer features enabled than previously.
-More information about the resolver changes may be found at https://doc.rust-lang.org/nightly/edition-guide/rust-2021/default-cargo-resolver.html
-When building the following dependencies, the given features will no longer be used:
-
-  common v1.0.0 removed features: dev-feat, f1, opt_dep
-  common v1.0.0 (as host dependency) removed features: dev-feat, f1
-
-The following differences only apply when building with dev-dependencies:
-
-  common v1.0.0 removed features: f1, opt_dep
-
-[CHECKING] opt_dep v1.0.0
-[CHECKING] bar v1.0.0
-[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[MIGRATING] bar/src/lib.rs from 2018 edition to 2021
-[CHECKING] common v1.0.0
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[MIGRATING] src/lib.rs from 2018 edition to 2021
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] cannot fix edition when using `feature-unification = "package"`.
 
 "#]]
             .unordered(),
