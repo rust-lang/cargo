@@ -162,6 +162,7 @@ pub fn resolve_ws_with_opts<'gctx>(
         FeatureUnification::Workspace => {
             vec![ops::Packages::All(Vec::new()).to_package_id_specs(ws)?]
         }
+        FeatureUnification::Package => specs.iter().map(|spec| vec![spec.clone()]).collect(),
     };
     let specs: Vec<_> = individual_specs
         .iter()
@@ -269,7 +270,28 @@ pub fn resolve_ws_with_opts<'gctx>(
     for specs in individual_specs {
         let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
 
+        // We want to narrow the features to the current specs so that stuff like `cargo check -p a
+        // -p b -F a/a,b/b` works and the resolver does not contain that `a` does not have feature
+        // `b` and vice-versa. However, resolver v1 needs to see even features of unselected
+        // packages turned on if it was because of working directory being inside the unselected
+        // package, because they might turn on a feature of a selected package.
         let narrowed_features = match feature_unification {
+            FeatureUnification::Package => {
+                let mut narrowed_features = cli_features.clone();
+                let enabled_features = members_with_features
+                    .iter()
+                    .filter_map(|(package, cli_features)| {
+                        specs
+                            .iter()
+                            .any(|spec| spec.matches(package.package_id()))
+                            .then_some(cli_features.features.iter())
+                    })
+                    .flatten()
+                    .cloned()
+                    .collect();
+                narrowed_features.features = Rc::new(enabled_features);
+                Cow::Owned(narrowed_features)
+            }
             FeatureUnification::Selected | FeatureUnification::Workspace => {
                 Cow::Borrowed(cli_features)
             }
