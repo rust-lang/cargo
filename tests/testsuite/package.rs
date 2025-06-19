@@ -3856,7 +3856,7 @@ fn normalize_case() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring `package.build` entry `build.rs` as it is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
@@ -3885,7 +3885,7 @@ src/lib.rs
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring `package.build` entry `build.rs` as it is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
@@ -4486,7 +4486,7 @@ fn discovery_inferred_build_rs_excluded() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring `package.build` entry `build.rs` as it is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
@@ -4654,7 +4654,7 @@ fn discovery_explicit_build_rs_excluded() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring `package.build` entry `build.rs` as it is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)

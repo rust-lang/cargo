@@ -2890,25 +2890,32 @@ fn prepare_toml_for_publish(
 
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
-    // Validates if build script file exists. If not, warn and ignore.
-    if let Some(TomlPackageBuild::SingleScript(path)) = &package.build {
-        let path = Path::new(path).to_path_buf();
-        let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
-        let build = if included {
-            let path = path
-                .into_os_string()
-                .into_string()
-                .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
-            let path = normalize_path_string_sep(path);
-            TomlPackageBuild::SingleScript(path)
-        } else {
-            ws.gctx().shell().warn(format!(
-                "ignoring `package.build` as `{}` is not included in the published package",
-                path.display()
-            ))?;
-            TomlPackageBuild::Auto(false)
-        };
-        package.build = Some(build);
+    // Validates if build script file is included in package. If not, warn and ignore.
+    if let Some(custom_build_scripts) = package.normalized_build().expect("previously normalized") {
+        let mut included_scripts = Vec::new();
+        for script in custom_build_scripts {
+            let path = Path::new(script).to_path_buf();
+            let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
+            if included {
+                let path = path
+                    .into_os_string()
+                    .into_string()
+                    .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
+                let path = normalize_path_string_sep(path);
+                included_scripts.push(path);
+            } else {
+                ws.gctx().shell().warn(format!(
+                    "ignoring `package.build` entry `{}` as it is not included in the published package",
+                    path.display()
+                ))?;
+            }
+        }
+
+        package.build = Some(match included_scripts.len() {
+            0 => TomlPackageBuild::Auto(false),
+            1 => TomlPackageBuild::SingleScript(included_scripts[0].clone()),
+            _ => TomlPackageBuild::MultipleScript(included_scripts),
+        });
     }
     let current_resolver = package
         .resolver
