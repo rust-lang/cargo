@@ -131,7 +131,7 @@ fn package_feature_unification() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -240,14 +240,21 @@ fn package_feature_unification() {
     p.cargo("check -p a -p b")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] features were unified")
+        .with_stderr_data(
+            str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
     p.cargo("check")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] features were unified")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     // Sanity check that compilation without package feature unification does not work
     p.cargo("check -p a -p b")
@@ -266,7 +273,7 @@ fn package_feature_unification_default_features() {
             ".cargo/config.toml",
             r#"
                 [resolver]
-                feature-unification = "selected"
+                feature-unification = "package"
             "#,
         )
         .file(
@@ -361,8 +368,13 @@ fn package_feature_unification_default_features() {
     p.cargo("check")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
-        .with_status(101)
-        .with_stderr_contains("[ERROR] features were unified")
+        .with_stderr_data(
+            str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -502,6 +514,34 @@ common v0.1.0 ([ROOT]/foo/common)
 
 "#]])
         .run();
+
+    p.cargo("tree -e features")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
+        .with_stdout_data(str![[r#"
+common v0.1.0 ([ROOT]/foo/common)
+a v0.1.0 ([ROOT]/foo/a)
+├── common feature "a"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── common feature "default"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── outside feature "a"
+│   └── outside v0.1.0
+└── outside feature "default"
+    └── outside v0.1.0
+b v0.1.0 ([ROOT]/foo/b)
+├── common feature "b"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── common feature "default"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── outside feature "b"
+│   └── outside v0.1.0
+└── outside feature "default"
+    └── outside v0.1.0
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -574,6 +614,20 @@ fn cargo_install_ignores_config() {
 
 "#]])
         .run();
+    cargo_process("install --path")
+        .arg(p.root())
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
+        .with_stderr_data(str![[r#"
+[INSTALLING] a v0.1.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/a
+[REPLACED] package `a v0.1.0 ([ROOT]/foo)` with `a v0.1.0 ([ROOT]/foo)` (executable `a`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -620,6 +674,7 @@ edition = "2021"
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
