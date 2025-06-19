@@ -216,6 +216,7 @@ fn verify_package_multiple_build_scripts() {
         .with_status(0)
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] ignoring `package.build` entry `build2.rs` as it is not included in the published package
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
@@ -256,10 +257,7 @@ edition = "2024"
 name = "foo"
 version = "0.1.0"
 authors = []
-build = [
-    "build1.rs",
-    "build2.rs",
-]
+build = "build1.rs"
 include = [
     "src/main.rs",
     "build1.rs",
