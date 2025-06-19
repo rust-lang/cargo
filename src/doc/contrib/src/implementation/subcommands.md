@@ -17,7 +17,7 @@ automatically search for a subcommand named `cargo-{NAME}` in the users `PATH`
 to execute the subcommand.
 
 
-[`clap`]: https://clap.rs/
+[`clap`]: https://docs.rs/clap
 [`src/bin/cargo/commands/build.rs`]: https://github.com/rust-lang/cargo/tree/master/src/bin/cargo/commands/build.rs
 [`src/cargo/ops`]: https://github.com/rust-lang/cargo/tree/master/src/cargo/ops
 [`src/bin/cargo/commands`]: https://github.com/rust-lang/cargo/tree/master/src/bin/cargo/commands
