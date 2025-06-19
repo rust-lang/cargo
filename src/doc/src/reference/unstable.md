@@ -1899,7 +1899,7 @@ Specify which packages participate in [feature unification](../reference/feature
 * `selected`: Merge dependency features from all packages specified for the current build.
 * `workspace`: Merge dependency features across all workspace members,
   regardless of which packages are specified for the current build.
-* `package` _(unimplemented)_: Dependency features are considered on a package-by-package basis,
+* `package`: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
 
 ## Package message format
