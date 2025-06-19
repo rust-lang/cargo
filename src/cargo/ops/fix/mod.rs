@@ -588,7 +588,15 @@ fn check_resolver_change<'gctx>(
             feature_opts,
         )?;
 
-        let diffs = v2_features.compare_legacy(&ws_resolve.resolved_features);
+        if ws_resolve.specs_and_features.len() != 1 {
+            bail!(r#"cannot fix edition when using `feature-unification = "package"`."#);
+        }
+        let resolved_features = &ws_resolve
+            .specs_and_features
+            .first()
+            .expect("We've already checked that there is exactly one.")
+            .resolved_features;
+        let diffs = v2_features.compare_legacy(resolved_features);
         Ok((ws_resolve, diffs))
     };
     let (_, without_dev_diffs) = resolve_differences(HasDevUnits::No)?;
