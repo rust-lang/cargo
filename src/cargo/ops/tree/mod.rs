@@ -5,6 +5,7 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
+use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
 use crate::{drop_print, drop_println};
@@ -179,61 +180,67 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .map(|pkg| (pkg.package_id(), pkg))
         .collect();
 
-    let mut graph = graph::build(
-        ws,
-        &ws_resolve.targeted_resolve,
-        &ws_resolve.resolved_features,
-        &specs,
-        &opts.cli_features,
-        &target_data,
-        &requested_kinds,
-        package_map,
-        opts,
-    )?;
-
-    let root_specs = if opts.invert.is_empty() {
-        specs
-    } else {
-        opts.invert
-            .iter()
-            .map(|p| PackageIdSpec::parse(p))
-            .collect::<Result<Vec<PackageIdSpec>, _>>()?
-    };
-    let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
-    let root_indexes = graph.indexes_from_ids(&root_ids);
-
-    let root_indexes = if opts.duplicates {
-        // `-d -p foo` will only show duplicates within foo's subtree
-        graph = graph.from_reachable(root_indexes.as_slice());
-        graph.find_duplicates()
-    } else {
-        root_indexes
-    };
-
-    if !opts.invert.is_empty() || opts.duplicates {
-        graph.invert();
-    }
-
-    // Packages to prune.
-    let pkgs_to_prune = opts
-        .pkgs_to_prune
-        .iter()
-        .map(|p| PackageIdSpec::parse(p).map_err(Into::into))
-        .map(|r| {
-            // Provide an error message if pkgid is not within the resolved
-            // dependencies graph.
-            r.and_then(|spec| spec.query(ws_resolve.targeted_resolve.iter()).and(Ok(spec)))
-        })
-        .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
-
-    if root_indexes.len() == 0 {
-        ws.gctx().shell().warn(
-            "nothing to print.\n\n\
-        To find dependencies that require specific target platforms, \
-        try to use option `--target all` first, and then narrow your search scope accordingly.",
+    for SpecsAndResolvedFeatures {
+        specs,
+        resolved_features,
+    } in ws_resolve.specs_and_features
+    {
+        let mut graph = graph::build(
+            ws,
+            &ws_resolve.targeted_resolve,
+            &resolved_features,
+            &specs,
+            &opts.cli_features,
+            &target_data,
+            &requested_kinds,
+            package_map.clone(),
+            opts,
         )?;
-    } else {
-        print(ws, opts, root_indexes, &pkgs_to_prune, &graph)?;
+
+        let root_specs = if opts.invert.is_empty() {
+            specs
+        } else {
+            opts.invert
+                .iter()
+                .map(|p| PackageIdSpec::parse(p))
+                .collect::<Result<Vec<PackageIdSpec>, _>>()?
+        };
+        let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
+        let root_indexes = graph.indexes_from_ids(&root_ids);
+
+        let root_indexes = if opts.duplicates {
+            // `-d -p foo` will only show duplicates within foo's subtree
+            graph = graph.from_reachable(root_indexes.as_slice());
+            graph.find_duplicates()
+        } else {
+            root_indexes
+        };
+
+        if !opts.invert.is_empty() || opts.duplicates {
+            graph.invert();
+        }
+
+        // Packages to prune.
+        let pkgs_to_prune = opts
+            .pkgs_to_prune
+            .iter()
+            .map(|p| PackageIdSpec::parse(p).map_err(Into::into))
+            .map(|r| {
+                // Provide an error message if pkgid is not within the resolved
+                // dependencies graph.
+                r.and_then(|spec| spec.query(ws_resolve.targeted_resolve.iter()).and(Ok(spec)))
+            })
+            .collect::<CargoResult<Vec<PackageIdSpec>>>()?;
+
+        if root_indexes.len() == 0 {
+            ws.gctx().shell().warn(
+                "nothing to print.\n\n\
+            To find dependencies that require specific target platforms, \
+            try to use option `--target all` first, and then narrow your search scope accordingly.",
+            )?;
+        } else {
+            print(ws, opts, root_indexes, &pkgs_to_prune, &graph)?;
+        }
     }
     Ok(())
 }
