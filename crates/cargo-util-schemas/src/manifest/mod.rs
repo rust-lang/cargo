@@ -260,6 +260,7 @@ impl TomlPackage {
             TomlPackageBuild::Auto(false) => Ok(None),
             TomlPackageBuild::Auto(true) => Err(UnresolvedError),
             TomlPackageBuild::SingleScript(value) => Ok(Some(std::slice::from_ref(value))),
+            TomlPackageBuild::MultipleScript(scripts) => Ok(Some(scripts)),
         }
     }
 
@@ -1712,6 +1713,9 @@ pub enum TomlPackageBuild {
 
     /// Path of Build Script if there's just one script.
     SingleScript(String),
+
+    /// Vector of paths if multiple build script are to be used.
+    MultipleScript(Vec<String>),
 }
 
 impl<'de> Deserialize<'de> for TomlPackageBuild {
@@ -1722,6 +1726,7 @@ impl<'de> Deserialize<'de> for TomlPackageBuild {
         UntaggedEnumVisitor::new()
             .bool(|b| Ok(TomlPackageBuild::Auto(b)))
             .string(|s| Ok(TomlPackageBuild::SingleScript(s.to_owned())))
+            .seq(|value| value.deserialize().map(TomlPackageBuild::MultipleScript))
             .deserialize(deserializer)
     }
 }

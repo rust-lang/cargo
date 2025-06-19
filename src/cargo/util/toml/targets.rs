@@ -105,7 +105,9 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
-        assert_eq!(custom_build.len(), 1);
+        if custom_build.len() > 1 {
+            anyhow::bail!("multiple build scripts feature is not implemented yet! ")
+        }
         let custom_build = Path::new(&custom_build[0]);
         let name = format!(
             "build-script-{}",
@@ -1080,7 +1082,7 @@ Cargo doesn't know which to use because multiple target files found at `{}` and 
 pub fn normalize_build(
     build: Option<&TomlPackageBuild>,
     package_root: &Path,
-) -> Option<TomlPackageBuild> {
+) -> CargoResult<Option<TomlPackageBuild>> {
     const BUILD_RS: &str = "build.rs";
     match build {
         None => {
@@ -1088,22 +1090,25 @@ pub fn normalize_build(
             // a build script.
             let build_rs = package_root.join(BUILD_RS);
             if build_rs.is_file() {
-                Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned()))
+                Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
             } else {
-                Some(TomlPackageBuild::Auto(false))
+                Ok(Some(TomlPackageBuild::Auto(false)))
             }
         }
         // Explicitly no build script.
-        Some(TomlPackageBuild::Auto(false)) => build.cloned(),
+        Some(TomlPackageBuild::Auto(false)) => Ok(build.cloned()),
         Some(TomlPackageBuild::SingleScript(build_file)) => {
             let build_file = paths::normalize_path(Path::new(build_file));
             let build = build_file.into_os_string().into_string().expect(
                 "`build_file` started as a String and `normalize_path` shouldn't have changed that",
             );
-            Some(TomlPackageBuild::SingleScript(build))
+            Ok(Some(TomlPackageBuild::SingleScript(build)))
         }
         Some(TomlPackageBuild::Auto(true)) => {
-            Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned()))
+            Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
+        }
+        Some(TomlPackageBuild::MultipleScript(_scripts)) => {
+            anyhow::bail!("multiple build scripts feature is not implemented yet!");
         }
     }
 }

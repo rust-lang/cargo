@@ -344,6 +344,7 @@ fn normalize_toml(
             is_embedded,
             gctx,
             &inherit,
+            features,
         )?;
         let package_name = &normalized_package
             .normalized_name()
@@ -607,6 +608,7 @@ fn normalize_package_toml<'a>(
     is_embedded: bool,
     gctx: &GlobalContext,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
+    features: &Features,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
     let package_root = manifest_file.parent().unwrap();
 
@@ -672,7 +674,10 @@ fn normalize_package_toml<'a>(
     let build = if is_embedded {
         Some(TomlPackageBuild::Auto(false))
     } else {
-        targets::normalize_build(original_package.build.as_ref(), package_root)
+        if let Some(TomlPackageBuild::MultipleScript(_)) = original_package.build {
+            features.require(Feature::multiple_build_scripts())?;
+        }
+        targets::normalize_build(original_package.build.as_ref(), package_root)?
     };
     let metabuild = original_package.metabuild.clone();
     let default_target = original_package.default_target.clone();

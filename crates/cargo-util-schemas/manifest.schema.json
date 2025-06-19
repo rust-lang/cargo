@@ -549,6 +549,13 @@
         {
           "description": "Path of Build Script if there's just one script.",
           "type": "string"
+        },
+        {
+          "description": "Vector of paths if multiple build script are to be used.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
