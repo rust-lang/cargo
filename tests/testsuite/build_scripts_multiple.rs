@@ -353,6 +353,7 @@ fn verify_vendor_multiple_build_scripts() {
 [UPDATING] git repository `[ROOTURL]/dep`
 [LOCKING] 1 package to latest [..] compatible version
    Vendoring dep v0.1.0 ([ROOTURL]/dep#[..]) ([ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]) to vendor/dep
+[WARNING] ignoring `package.build` entry `build2.rs` as it is not included in the published package
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
 
@@ -381,10 +382,7 @@ edition = "2024"
 name = "dep"
 version = "0.1.0"
 authors = []
-build = [
-    "build1.rs",
-    "build2.rs",
-]
+build = "build1.rs"
 include = [
     "src/main.rs",
     "build1.rs",
