@@ -180,50 +180,55 @@ fn compile<'gctx>(
         return Ok(());
     }
 
-    // Build up the work to be done to compile this unit, enqueuing it once
-    // we've got everything constructed.
-    fingerprint::prepare_init(build_runner, unit)?;
+    // If we are in `--compile-time-deps` and the given unit is not a compile time
+    // dependency, skip compling the unit and jumps to dependencies, which still
+    // have chances to be compile time dependencies
+    if !unit.skip_non_compile_time_dep {
+        // Build up the work to be done to compile this unit, enqueuing it once
+        // we've got everything constructed.
+        fingerprint::prepare_init(build_runner, unit)?;
 
-    let job = if unit.mode.is_run_custom_build() {
-        custom_build::prepare(build_runner, unit)?
-    } else if unit.mode.is_doc_test() {
-        // We run these targets later, so this is just a no-op for now.
-        Job::new_fresh()
-    } else if build_plan {
-        Job::new_dirty(
-            rustc(build_runner, unit, &exec.clone())?,
-            DirtyReason::FreshBuild,
-        )
-    } else {
-        let force = exec.force_rebuild(unit) || force_rebuild;
-        let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
-        job.before(if job.freshness().is_dirty() {
-            let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-                rustdoc(build_runner, unit)?
-            } else {
-                rustc(build_runner, unit, exec)?
-            };
-            work.then(link_targets(build_runner, unit, false)?)
+        let job = if unit.mode.is_run_custom_build() {
+            custom_build::prepare(build_runner, unit)?
+        } else if unit.mode.is_doc_test() {
+            // We run these targets later, so this is just a no-op for now.
+            Job::new_fresh()
+        } else if build_plan {
+            Job::new_dirty(
+                rustc(build_runner, unit, &exec.clone())?,
+                DirtyReason::FreshBuild,
+            )
         } else {
-            // We always replay the output cache,
-            // since it might contain future-incompat-report messages
-            let show_diagnostics = unit.show_warnings(bcx.gctx)
-                && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
-            let work = replay_output_cache(
-                unit.pkg.package_id(),
-                PathBuf::from(unit.pkg.manifest_path()),
-                &unit.target,
-                build_runner.files().message_cache_path(unit),
-                build_runner.bcx.build_config.message_format,
-                show_diagnostics,
-            );
-            // Need to link targets on both the dirty and fresh.
-            work.then(link_targets(build_runner, unit, true)?)
-        });
+            let force = exec.force_rebuild(unit) || force_rebuild;
+            let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
+            job.before(if job.freshness().is_dirty() {
+                let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+                    rustdoc(build_runner, unit)?
+                } else {
+                    rustc(build_runner, unit, exec)?
+                };
+                work.then(link_targets(build_runner, unit, false)?)
+            } else {
+                // We always replay the output cache,
+                // since it might contain future-incompat-report messages
+                let show_diagnostics = unit.show_warnings(bcx.gctx)
+                    && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
+                let work = replay_output_cache(
+                    unit.pkg.package_id(),
+                    PathBuf::from(unit.pkg.manifest_path()),
+                    &unit.target,
+                    build_runner.files().message_cache_path(unit),
+                    build_runner.bcx.build_config.message_format,
+                    show_diagnostics,
+                );
+                // Need to link targets on both the dirty and fresh.
+                work.then(link_targets(build_runner, unit, true)?)
+            });
 
-        job
-    };
-    jobs.enqueue(build_runner, unit, job)?;
+            job
+        };
+        jobs.enqueue(build_runner, unit, job)?;
+    }
 
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.

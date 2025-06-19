@@ -866,6 +866,7 @@ fn new_unit_dep_with_profile(
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),
         artifact_target,
+        false,
     );
     Ok(UnitDep {
         unit,
