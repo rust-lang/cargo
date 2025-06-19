@@ -159,6 +159,7 @@ pub fn resolve_ws_with_opts<'gctx>(
         FeatureUnification::Workspace => {
             vec![ops::Packages::All(Vec::new()).to_package_id_specs(ws)?]
         }
+        FeatureUnification::Package => specs.iter().map(|spec| vec![spec.clone()]).collect(),
     };
     let specs: Vec<_> = individual_specs
         .iter()
