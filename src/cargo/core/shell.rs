@@ -415,7 +415,11 @@ impl Shell {
         writeln!(
             self.err(),
             "{}",
-            Renderer::styled().term_width(term_width).render(message)
+            Renderer::styled()
+                .note(NOTE)
+                .help(HELP)
+                .term_width(term_width)
+                .render(message)
         )
     }
 }
