@@ -577,6 +577,9 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(trim_paths) = &toml.trim_paths {
         profile.trim_paths = Some(trim_paths.clone());
     }
+    if let Some(hint_mostly_unused) = toml.hint_mostly_unused {
+        profile.hint_mostly_unused = hint_mostly_unused;
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Resolved(StripInner::Named("symbols".into())),
         Some(StringOrBool::Bool(false)) => Strip::Resolved(StripInner::None),
@@ -626,6 +629,8 @@ pub struct Profile {
     // remove when `-Ztrim-paths` is stablized
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trim_paths: Option<TomlTrimPaths>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub hint_mostly_unused: bool,
 }
 
 impl Default for Profile {
@@ -647,6 +652,7 @@ impl Default for Profile {
             strip: Strip::Deferred(StripInner::None),
             rustflags: vec![],
             trim_paths: None,
+            hint_mostly_unused: false,
         }
     }
 }
@@ -676,6 +682,7 @@ compact_debug! {
                 strip
                 rustflags
                 trim_paths
+                hint_mostly_unused
             )]
         }
     }

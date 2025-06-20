@@ -1135,6 +1135,7 @@ fn build_base_args(
         strip,
         rustflags: profile_rustflags,
         trim_paths,
+        hint_mostly_unused,
         ..
     } = unit.profile.clone();
     let test = unit.mode.is_any_test();
@@ -1323,6 +1324,16 @@ fn build_base_args(
             .incremental()
             .as_os_str();
         opt(cmd, "-C", "incremental=", Some(dir));
+    }
+
+    if hint_mostly_unused {
+        if bcx.gctx.cli_unstable().profile_hint_mostly_unused {
+            cmd.arg("-Zhint-mostly-unused");
+        } else {
+            bcx.gctx
+                .shell()
+                .warn("ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it")?;
+        }
     }
 
     let strip = strip.into_inner();

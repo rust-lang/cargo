@@ -907,6 +907,8 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     /// Unstable feature `-Ztrim-paths`.
     pub trim_paths: Option<TomlTrimPaths>,
+    /// Unstable feature `hint-mostly-unused`
+    pub hint_mostly_unused: Option<bool>,
 }
 
 impl TomlProfile {
@@ -997,6 +999,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.trim_paths {
             self.trim_paths = Some(v.clone())
+        }
+
+        if let Some(v) = profile.hint_mostly_unused {
+            self.hint_mostly_unused = Some(v);
         }
     }
 }

@@ -101,6 +101,7 @@ Each new feature described below should explain how to use it.
     * [rustdoc-depinfo](#rustdoc-depinfo) --- Use dep-info files in rustdoc rebuild detection.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
+    * [Profile `hint-mostly-unused` option](#profile-hint-mostly-unused-option) --- Hint that a dependency is mostly unused, to optimize compilation time.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
@@ -923,6 +924,25 @@ profile-rustflags = true
 [profile.release]
 rustflags = [ "-C", "..." ]
 ```
+
+## Profile `hint-mostly-unused` option
+* Tracking Issue: [#15644](https://github.com/rust-lang/cargo/issues/15644)
+
+This feature provides a new option in the `[profile]` section to enable the
+rustc `hint-mostly-unused` option. This is primarily useful to enable for
+specific dependencies:
+
+```toml
+[profile.dev.package.huge-mostly-unused-dependency]
+hint-mostly-unused = true
+```
+
+To enable this feature, pass `-Zprofile-hint-mostly-unused`. However, since
+this option is a hint, using it without passing `-Zprofile-hint-mostly-unused`
+will only warn and ignore the profile option. Versions of Cargo prior to the
+introduction of this feature will give an "unused manifest key" warning, but
+will otherwise function without erroring. This allows using the hint in a
+crate's `Cargo.toml` without mandating the use of a newer Cargo to build it.
 
 ## rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
