@@ -378,7 +378,11 @@ fn resolve_dependency(
         };
         selected
     } else if let Some(raw_path) = &arg.path {
-        let path = paths::normalize_path(&std::env::current_dir()?.join(raw_path));
+        let relative_path = Path::new(raw_path);
+        if relative_path.ends_with("Cargo.toml") {
+            anyhow::bail!("local crate paths must be specified without /Cargo.toml: {}", relative_path.parent().unwrap().display());
+        }
+        let path = paths::normalize_path(&std::env::current_dir()?.join(relative_path));
         let mut src = PathSource::new(path);
         src.base = arg.base.clone();
 
