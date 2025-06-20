@@ -1096,6 +1096,24 @@ impl<'gctx> RustcTargetData<'gctx> {
         }
     }
 
+    /// Returns an iterator that contains all possible non-host targets for this session,
+    /// including those set by artifact dependencies or per-pkg-targets.
+    ///
+    /// Should be called only after workspace resolution to ensure that all targets have
+    /// been collected.
+    pub fn all_kinds(&self) -> impl Iterator<Item = CompileKind> + '_ {
+        self.target_config.keys().copied().map(CompileKind::Target)
+    }
+
+    /// Returns whether `build_std` was enabled in any of the targets we have queried.
+    pub fn build_std(&self) -> bool {
+        self.host_config.build_std.is_some()
+            || self
+                .target_config
+                .values()
+                .any(|config| config.build_std.is_some())
+    }
+
     pub fn get_unsupported_std_targets(&self) -> Vec<&str> {
         let mut unsupported = Vec::new();
         for (target, target_info) in &self.target_info {

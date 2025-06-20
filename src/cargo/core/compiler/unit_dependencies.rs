@@ -177,16 +177,19 @@ fn attach_std_deps(
     let mut found = false;
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
-                unit: unit.clone(),
-                unit_for: UnitFor::new_normal(unit.kind),
-                extern_crate_name: unit.pkg.name(),
-                dep_name: None,
-                // TODO: Does this `public` make sense?
-                public: true,
-                noprelude: true,
-            }));
-            found = true;
+            // only attach roots for which the user has requested `build-std` for.
+            if let Some(roots) = std_roots.get(&unit.kind) {
+                deps.extend(roots.iter().map(|unit| UnitDep {
+                    unit: unit.clone(),
+                    unit_for: UnitFor::new_normal(unit.kind),
+                    extern_crate_name: unit.pkg.name(),
+                    dep_name: None,
+                    // TODO: Does this `public` make sense?
+                    public: true,
+                    noprelude: true,
+                }));
+                found = true;
+            }
         }
     }
     // And also include the dependencies of the standard library itself. Don't
