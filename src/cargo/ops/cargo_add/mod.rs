@@ -14,6 +14,7 @@ use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::PathBaseName;
 use cargo_util_schemas::manifest::RustVersion;
+use crate_spec::CrateSpecResolutionError;
 use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::Item as TomlItem;
@@ -104,6 +105,10 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     options.gctx,
                     &mut registry,
                 )
+                .map_err(|err| match err.downcast::<CrateSpecResolutionError>() {
+                    Ok(err) => add_spec_fix_suggestion(err, raw),
+                    Err(other) => other,
+                })
             })
             .collect::<CargoResult<Vec<_>>>()?
     };
@@ -1257,4 +1262,101 @@ fn precise_version(version_req: &semver::VersionReq) -> Option<String> {
         })
         .max()
         .map(|v| v.to_string())
+}
+
+/// Help with invalid arguments to `cargo add`
+fn add_spec_fix_suggestion(err: CrateSpecResolutionError, arg: &DepOp) -> crate::Error {
+    if let Some(note) = spec_fix_suggestion_inner(arg) {
+        return anyhow::format_err!("{err}\nnote: {note}");
+    }
+    err.into()
+}
+
+fn spec_fix_suggestion_inner(arg: &DepOp) -> Option<&'static str> {
+    let spec = arg.crate_spec.as_deref()?;
+
+    let looks_like_git_url = spec.starts_with("git@")
+        || spec.starts_with("ssh:")
+        || spec.ends_with(".git")
+        || spec.starts_with("https://git"); // compromise between favoring a couple of top sites vs trying to list every git host
+
+    // check if the arg is present to avoid suggesting it redundantly
+    if arg.git.is_none() && looks_like_git_url {
+        Some("git URLs must be specified with --git <URL>")
+    } else if arg.registry.is_none()
+        && (spec.starts_with("registry+") || spec.starts_with("sparse+"))
+    {
+        Some("registy can be specified with --registry <NAME>")
+    } else if spec.contains("://") || looks_like_git_url {
+        Some("`cargo add` expects crates specified as 'name' or 'name@version', not URLs")
+    } else if arg.path.is_none() && spec.contains('/') {
+        Some("local crates can be added with --path <DIR>")
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_spec_fix_suggestion() {
+    fn dep(crate_spec: &str) -> DepOp {
+        DepOp {
+            crate_spec: Some(crate_spec.into()),
+            rename: None,
+            features: None,
+            default_features: None,
+            optional: None,
+            public: None,
+            registry: None,
+            path: None,
+            base: None,
+            git: None,
+            branch: None,
+            rev: None,
+            tag: None,
+        }
+    }
+
+    #[track_caller]
+    fn err_for(dep: &DepOp) -> String {
+        add_spec_fix_suggestion(
+            CrateSpec::resolve(dep.crate_spec.as_deref().unwrap()).unwrap_err(),
+            &dep,
+        )
+        .to_string()
+    }
+
+    for path in ["../some/path", "/absolute/path", "~/dir/Cargo.toml"] {
+        let mut dep = dep(path);
+        assert!(err_for(&dep).contains("note: local crates can be added with --path <DIR>"));
+
+        dep.path = Some(".".into());
+        assert!(!err_for(&dep).contains("--git"));
+        assert!(!err_for(&dep).contains("--registry"));
+        assert!(!err_for(&dep).contains("--path"));
+    }
+
+    assert!(err_for(&dep(
+        "registry+https://private.local:8000/index#crate@0.0.1"
+    ))
+    .contains("--registry <NAME>"));
+
+    for git_url in [
+        "git@host:dir/repo.git",
+        "https://gitlab.com/~user/crate.git",
+        "ssh://host/path",
+    ] {
+        let mut dep = dep(git_url);
+        let msg = err_for(&dep);
+        assert!(
+            msg.contains("note: git URLs must be specified with --git <URL>"),
+            "{msg} {dep:?}"
+        );
+        assert!(!err_for(&dep).contains("--path"));
+        assert!(!err_for(&dep).contains("--registry"));
+
+        dep.git = Some("true".into());
+        let msg = err_for(&dep);
+        assert!(!msg.contains("--git"));
+        assert!(msg.contains("'name@version', not URLs"), "{msg} {dep:?}");
+    }
 }
