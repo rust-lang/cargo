@@ -769,6 +769,8 @@ fn custom_build_env_var_trim_paths() {
     }
 }
 
+// This test is disabled, as it currently doesn't work due to issues with lldb.
+#[cfg(any())]
 #[cfg(unix)]
 #[cargo_test(requires = "lldb", nightly, reason = "-Zremap-path-scope is unstable")]
 fn lldb_works_after_trimmed() {
