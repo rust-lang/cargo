@@ -12,6 +12,7 @@ use std::str::FromStr;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
+use cargo_util_schemas::manifest::NameValidationError;
 use cargo_util_schemas::manifest::PathBaseName;
 use cargo_util_schemas::manifest::RustVersion;
 use indexmap::IndexSet;
@@ -104,6 +105,14 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     options.gctx,
                     &mut registry,
                 )
+                .map_err(|err| {
+                    if err.is::<NameValidationError>() {
+                        if let Some(note) = spec_fix_suggestion(raw) {
+                            return anyhow::format_err!("{err}\nnote: {note}");
+                        }
+                    }
+                    err
+                })
             })
             .collect::<CargoResult<Vec<_>>>()?
     };
@@ -329,6 +338,27 @@ pub struct DepOp {
     pub tag: Option<String>,
 }
 
+fn spec_fix_suggestion(arg: &DepOp) -> Option<&'static str> {
+    let spec = arg.crate_spec.as_deref()?;
+
+    // check if the arg is present to avoid suggesting it redundantly
+    if arg.git.is_none()
+        && (spec.starts_with("git@") || spec.starts_with("ssh:") || spec.ends_with(".git"))
+    {
+        Some("git URLs must be specified with --git")
+    } else if arg.registry.is_none()
+        && (spec.starts_with("registry+") || spec.starts_with("sparse+"))
+    {
+        Some("registy can be specified with --registry name")
+    } else if spec.contains("://") {
+        Some("`cargo add` expects crates specified as 'name' or 'name@version', not URLs")
+    } else if arg.path.is_none() && spec.contains('/') {
+        Some("local crates can be added with --path")
+    } else {
+        None
+    }
+}
+
 fn resolve_dependency(
     manifest: &LocalManifest,
     arg: &DepOp,
@@ -378,7 +408,11 @@ fn resolve_dependency(
         };
         selected
     } else if let Some(raw_path) = &arg.path {
-        let path = paths::normalize_path(&std::env::current_dir()?.join(raw_path));
+        let relative_path = Path::new(raw_path);
+        if relative_path.ends_with("Cargo.toml") {
+            anyhow::bail!("local crate paths must be specified without /Cargo.toml: {}", relative_path.parent().unwrap().display());
+        }
+        let path = paths::normalize_path(&std::env::current_dir()?.join(relative_path));
         let mut src = PathSource::new(path);
         src.base = arg.base.clone();
 
