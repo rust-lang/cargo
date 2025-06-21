@@ -96,7 +96,7 @@ fn hint_unknown_type_warn() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] ignoring unsupported value type (integer) for 'hints.mostly-unused', which expects a boolean
+[WARNING] bar@1.0.0: ignoring unsupported value type (integer) for 'hints.mostly-unused', which expects a boolean
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -146,7 +146,7 @@ fn hints_mostly_unused_warn_without_gate() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] bar@1.0.0: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
