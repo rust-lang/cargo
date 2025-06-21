@@ -6,29 +6,6 @@
 //! # use cargo_test_support::registry::RegistryBuilder;
 //! # use cargo_test_support::publish::validate_upload;
 //! # use cargo_test_support::project;
-//! // This replaces `registry::init()` and must be called before `Package::new().publish()`
-//! let registry = RegistryBuilder::new().http_api().http_index().build();
-//!
-//! let p = project()
-//!     .file(
-//!         "Cargo.toml",
-//!         r#"
-//!             [package]
-//!             name = "foo"
-//!             version = "0.0.1"
-//!             edition = "2015"
-//!             authors = []
-//!             license = "MIT"
-//!             description = "foo"
-//!         "#,
-//!     )
-//!     .file("src/main.rs", "fn main() {}")
-//!     .build();
-//!
-//! p.cargo("publish --no-verify")
-//!     .replace_crates_io(registry.index_url())
-//!     .run();
-//!
 //! validate_upload(
 //!     r#"
 //!     {

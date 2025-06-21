@@ -490,28 +490,6 @@ impl Project {
         execs().with_process_builder(p)
     }
 
-    /// Creates a `ProcessBuilder` to run cargo.
-    ///
-    /// Arguments can be separated by spaces.
-    ///
-    /// For `cargo run`, see [`Project::rename_run`].
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # let p = cargo_test_support::project().build();
-    /// p.cargo("build --bin foo").run();
-    /// ```
-    pub fn cargo(&self, cmd: &str) -> Execs {
-        let cargo = cargo_exe();
-        let mut execs = self.process(&cargo);
-        if let Some(ref mut p) = execs.process_builder {
-            p.env("CARGO", cargo);
-            p.arg_line(cmd);
-        }
-        execs
-    }
-
     /// Safely run a process after `cargo build`.
     ///
     /// Windows has a problem where a process cannot be reliably

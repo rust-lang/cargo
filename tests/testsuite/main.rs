@@ -196,6 +196,7 @@ mod yank;
 use crate::prelude::*;
 
 pub mod prelude {
+    pub use crate::utils::ext::CargoProjectExt;
     pub use cargo_test_support::prelude::*;
     pub use cargo_test_support::CargoCommandExt;
 }
