@@ -7,12 +7,12 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
+use crate::utils::tools::echo_subcommand;
 use cargo_test_support::basic_manifest;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
 use cargo_test_support::str;
-use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{
     basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
 };

@@ -3,12 +3,13 @@
 use std::fs;
 use std::str;
 
+use crate::utils::tools;
 use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
-use cargo_test_support::{rustc_host, symlink_supported, tools};
+use cargo_test_support::{rustc_host, symlink_supported};
 
 #[cargo_test]
 fn simple() {

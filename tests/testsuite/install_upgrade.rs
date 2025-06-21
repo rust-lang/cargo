@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo::core::PackageId;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths;
@@ -468,7 +469,7 @@ fn change_profile_rebuilds() {
 
 #[cargo_test]
 fn change_target_rebuilds() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     pkg("foo", "1.0.0");

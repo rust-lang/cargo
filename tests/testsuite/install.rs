@@ -18,6 +18,7 @@ use cargo_test_support::{
 };
 use cargo_util::{ProcessBuilder, ProcessError};
 
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, exe};
 use cargo_test_support::paths;
 
@@ -1604,7 +1605,7 @@ fn install_target_native() {
 
 #[cargo_test]
 fn install_target_foreign() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 

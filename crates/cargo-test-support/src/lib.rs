@@ -110,7 +110,6 @@ pub mod install;
 pub mod paths;
 pub mod publish;
 pub mod registry;
-pub mod tools;
 
 pub mod prelude {
     pub use crate::cargo_test;
@@ -643,8 +642,8 @@ pub struct RawOutput {
 ///
 /// Construct with
 /// - [`execs`]
-/// - [`cargo_process`]
 /// - [`Project`] methods
+/// - `cargo_process` in testsuite
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {

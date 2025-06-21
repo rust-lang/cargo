@@ -183,6 +183,7 @@ mod timings;
 mod tool_paths;
 mod unit_graph;
 mod update;
+mod utils;
 mod vendor;
 mod verify_project;
 mod version;
@@ -197,5 +198,5 @@ use cargo_test_support::prelude::*;
 #[cargo_test]
 fn aaa_trigger_cross_compile_disabled_check() {
     // This triggers the cross compile disabled check to run ASAP, see #5141
-    cargo_test_support::cross_compile::disabled();
+    crate::utils::cross_compile::disabled();
 }

@@ -11,6 +11,8 @@ use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
 use cargo_util::paths::dylib_path_envvar;
 
+use crate::utils::cross_compile::can_run_on_host as cross_compile_can_run_on_host;
+
 #[cargo_test]
 fn cargo_test_simple() {
     let p = project()
@@ -4786,7 +4788,7 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
     reason = "waiting for 1.88 to be stable for doctest xcompile flags"
 )]
 fn cargo_test_doctest_xcompile_runner() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
@@ -4872,7 +4874,7 @@ this is a runner
     reason = "waiting for 1.88 to be stable for doctest xcompile flags"
 )]
 fn cargo_test_doctest_xcompile_no_runner() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
