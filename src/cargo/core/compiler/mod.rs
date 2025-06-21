@@ -1141,6 +1141,14 @@ fn build_base_args(
     let hints = unit.pkg.hints().cloned().unwrap_or_default();
     let test = unit.mode.is_any_test();
 
+    let warn = |msg: &str| {
+        bcx.gctx.shell().warn(format!(
+            "{}@{}: {msg}",
+            unit.pkg.package_id().name(),
+            unit.pkg.package_id().version()
+        ))
+    };
+
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     let edition = unit.target.edition();
@@ -1331,7 +1339,7 @@ fn build_base_args(
         None => None,
         Some(toml::Value::Boolean(b)) => Some(b),
         Some(v) => {
-            bcx.gctx.shell().warn(format!(
+            warn(&format!(
                 "ignoring unsupported value type ({}) for 'hints.mostly-unused', which expects a boolean",
                 v.type_str()
             ))?;
@@ -1346,13 +1354,13 @@ fn build_base_args(
             cmd.arg("-Zhint-mostly-unused");
         } else {
             if profile_hint_mostly_unused.is_some() {
-                bcx.gctx
-                    .shell()
-                    .warn("ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it")?;
+                warn(
+                    "ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it",
+                )?;
             } else if pkg_hint_mostly_unused.is_some() {
-                bcx.gctx
-                    .shell()
-                    .warn("ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it")?;
+                warn(
+                    "ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it",
+                )?;
             }
         }
     }
