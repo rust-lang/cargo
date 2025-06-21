@@ -182,7 +182,7 @@ pub struct TomlPackage {
     pub name: Option<PackageName>,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
-    pub build: Option<StringOrBool>,
+    pub build: Option<TomlPackageBuild>,
     pub metabuild: Option<StringOrVec>,
     pub default_target: Option<String>,
     pub forced_target: Option<String>,
@@ -254,12 +254,13 @@ impl TomlPackage {
         self.authors.as_ref().map(|v| v.normalized()).transpose()
     }
 
-    pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
-        let readme = self.build.as_ref().ok_or(UnresolvedError)?;
-        match readme {
-            StringOrBool::Bool(false) => Ok(None),
-            StringOrBool::Bool(true) => Err(UnresolvedError),
-            StringOrBool::String(value) => Ok(Some(value)),
+    pub fn normalized_build(&self) -> Result<Option<&[String]>, UnresolvedError> {
+        let build = self.build.as_ref().ok_or(UnresolvedError)?;
+        match build {
+            TomlPackageBuild::Auto(false) => Ok(None),
+            TomlPackageBuild::Auto(true) => Err(UnresolvedError),
+            TomlPackageBuild::SingleScript(value) => Ok(Some(std::slice::from_ref(value))),
+            TomlPackageBuild::MultipleScript(scripts) => Ok(Some(scripts)),
         }
     }
 
@@ -1698,6 +1699,34 @@ impl<'de> Deserialize<'de> for StringOrBool {
         UntaggedEnumVisitor::new()
             .bool(|b| Ok(StringOrBool::Bool(b)))
             .string(|s| Ok(StringOrBool::String(s.to_owned())))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
+#[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub enum TomlPackageBuild {
+    /// If build scripts are disabled or enabled.
+    /// If true, `build.rs` in the root folder will be the build script.
+    Auto(bool),
+
+    /// Path of Build Script if there's just one script.
+    SingleScript(String),
+
+    /// Vector of paths if multiple build script are to be used.
+    MultipleScript(Vec<String>),
+}
+
+impl<'de> Deserialize<'de> for TomlPackageBuild {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .bool(|b| Ok(TomlPackageBuild::Auto(b)))
+            .string(|s| Ok(TomlPackageBuild::SingleScript(s.to_owned())))
+            .seq(|value| value.deserialize().map(TomlPackageBuild::MultipleScript))
             .deserialize(deserializer)
     }
 }
