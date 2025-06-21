@@ -1148,6 +1148,13 @@ fn build_base_args(
             unit.pkg.package_id().version()
         ))
     };
+    let unit_capped_warn = |msg: &str| {
+        if unit.show_warnings(bcx.gctx) {
+            warn(msg)
+        } else {
+            Ok(())
+        }
+    };
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
@@ -1339,7 +1346,7 @@ fn build_base_args(
         None => None,
         Some(toml::Value::Boolean(b)) => Some(b),
         Some(v) => {
-            warn(&format!(
+            unit_capped_warn(&format!(
                 "ignoring unsupported value type ({}) for 'hints.mostly-unused', which expects a boolean",
                 v.type_str()
             ))?;
@@ -1354,11 +1361,12 @@ fn build_base_args(
             cmd.arg("-Zhint-mostly-unused");
         } else {
             if profile_hint_mostly_unused.is_some() {
+                // Profiles come from the top-level unit, so we don't use `unit_capped_warn` here.
                 warn(
                     "ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it",
                 )?;
             } else if pkg_hint_mostly_unused.is_some() {
-                warn(
+                unit_capped_warn(
                     "ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it",
                 )?;
             }
