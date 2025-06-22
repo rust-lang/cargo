@@ -518,7 +518,7 @@ higher v0.0.1 ([ROOT]/foo)
 #[cargo_test]
 fn resolve_edition2024() {
     Package::new("only-newer", "1.6.0")
-        .rust_version("1.90.0")
+        .rust_version("1.999.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.5.0")
@@ -526,7 +526,7 @@ fn resolve_edition2024() {
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.6.0")
-        .rust_version("1.90.0")
+        .rust_version("1.999.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
 
@@ -554,8 +554,8 @@ fn resolve_edition2024() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
@@ -573,8 +573,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
@@ -593,8 +593,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
@@ -611,7 +611,7 @@ foo v0.0.1 ([ROOT]/foo)
 #[cargo_test]
 fn resolve_v3() {
     Package::new("only-newer", "1.6.0")
-        .rust_version("1.90.0")
+        .rust_version("1.999.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.5.0")
@@ -619,7 +619,7 @@ fn resolve_v3() {
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.6.0")
-        .rust_version("1.90.0")
+        .rust_version("1.999.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
 
@@ -648,8 +648,8 @@ fn resolve_v3() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
@@ -667,8 +667,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
@@ -687,8 +687,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
 "#]])
         .run();
