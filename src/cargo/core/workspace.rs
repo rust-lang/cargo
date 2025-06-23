@@ -1287,7 +1287,7 @@ impl<'gctx> Workspace<'gctx> {
         self.target_dir = Some(target_dir);
     }
 
-    /// Returns a Vec of `(&Package, RequestedFeatures)` tuples that
+    /// Returns a Vec of `(&Package, CliFeatures)` tuples that
     /// represent the workspace members that were requested on the command-line.
     ///
     /// `specs` may be empty, which indicates it should return all workspace
