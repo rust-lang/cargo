@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
-    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+    PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget, TomlLibTarget,
+    TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
@@ -105,19 +105,21 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
-        let custom_build = Path::new(custom_build);
-        let name = format!(
-            "build-script-{}",
-            custom_build
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-        );
-        targets.push(Target::custom_build_target(
-            &name,
-            package_root.join(custom_build),
-            edition,
-        ));
+        for script in custom_build {
+            let script_path = Path::new(script);
+            let name = format!(
+                "build-script-{}",
+                script_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+            );
+            targets.push(Target::custom_build_target(
+                &name,
+                package_root.join(script_path),
+                edition,
+            ));
+        }
     }
     if let Some(metabuild) = metabuild {
         // Verify names match available build deps.
@@ -1076,7 +1078,10 @@ Cargo doesn't know which to use because multiple target files found at `{}` and 
 
 /// Returns the path to the build script if one exists for this crate.
 #[tracing::instrument(skip_all)]
-pub fn normalize_build(build: Option<&StringOrBool>, package_root: &Path) -> Option<StringOrBool> {
+pub fn normalize_build(
+    build: Option<&TomlPackageBuild>,
+    package_root: &Path,
+) -> CargoResult<Option<TomlPackageBuild>> {
     const BUILD_RS: &str = "build.rs";
     match build {
         None => {
@@ -1084,21 +1089,24 @@ pub fn normalize_build(build: Option<&StringOrBool>, package_root: &Path) -> Opt
             // a build script.
             let build_rs = package_root.join(BUILD_RS);
             if build_rs.is_file() {
-                Some(StringOrBool::String(BUILD_RS.to_owned()))
+                Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
             } else {
-                Some(StringOrBool::Bool(false))
+                Ok(Some(TomlPackageBuild::Auto(false)))
             }
         }
         // Explicitly no build script.
-        Some(StringOrBool::Bool(false)) => build.cloned(),
-        Some(StringOrBool::String(build_file)) => {
+        Some(TomlPackageBuild::Auto(false)) => Ok(build.cloned()),
+        Some(TomlPackageBuild::SingleScript(build_file)) => {
             let build_file = paths::normalize_path(Path::new(build_file));
             let build = build_file.into_os_string().into_string().expect(
                 "`build_file` started as a String and `normalize_path` shouldn't have changed that",
             );
-            Some(StringOrBool::String(build))
+            Ok(Some(TomlPackageBuild::SingleScript(build)))
         }
-        Some(StringOrBool::Bool(true)) => Some(StringOrBool::String(BUILD_RS.to_owned())),
+        Some(TomlPackageBuild::Auto(true)) => {
+            Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
+        }
+        Some(TomlPackageBuild::MultipleScript(_scripts)) => Ok(build.cloned()),
     }
 }
 

@@ -2733,7 +2733,7 @@ fn bad_opt_level() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: integer `3`, expected a boolean or string
+[ERROR] invalid type: integer `3`, expected a boolean, string or array
  --> Cargo.toml:7:25
   |
 7 |                 build = 3
