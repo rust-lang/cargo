@@ -408,7 +408,10 @@ impl CacheState {
                     .lock_exclusive(gctx, DOWNLOAD_EXCLUSIVE_DESCR, blocking)
                 {
                     Ok(LockAcquired) => {}
-                    Ok(WouldBlock) => return Ok(WouldBlock),
+                    Ok(WouldBlock) => {
+                        self.mutate_lock.decrement();
+                        return Ok(WouldBlock);
+                    }
                     Err(e) => {
                         self.mutate_lock.decrement();
                         return Err(e);
