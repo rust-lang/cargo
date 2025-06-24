@@ -1,6 +1,9 @@
 //! Tests for the `cargo pkgid` command.
 
+use std::path::PathBuf;
+
 use crate::prelude::*;
+use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::basic_lib_manifest;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
@@ -291,11 +294,12 @@ Please re-run this command with one of the following specifications:
 // * Package ID specifications
 // * machine-readable message via `--message-format=json`
 // * `cargo metadata` output
+// * SBOMs
 #[cargo_test]
 fn pkgid_json_message_metadata_consistency() {
     let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "fn unused() {}")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
         .file("build.rs", "fn main() {}")
         .build();
 
@@ -319,12 +323,6 @@ fn pkgid_json_message_metadata_consistency() {
   {
     "package_id": "path+[ROOTURL]/foo#0.5.0",
     "reason": "build-script-executed",
-    "...": "{...}"
-  },
-  {
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.5.0",
-    "reason": "compiler-message",
     "...": "{...}"
   },
   {
@@ -404,4 +402,53 @@ fn pkgid_json_message_metadata_consistency() {
             .is_json(),
         )
         .run();
+
+    p.cargo("build -Zsbom")
+        .env("CARGO_BUILD_SBOM", "true")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
+
+    let path = {
+        let mut path = p.bin("foo").into_os_string();
+        path.push(".cargo-sbom.json");
+        PathBuf::from(path)
+    };
+
+    assert!(path.is_file());
+    let output = std::fs::read_to_string(&path).unwrap();
+    assert_e2e().eq(
+        output,
+        snapbox::str![[r#"
+{
+  "crates": [
+    {
+      "dependencies": [
+        {
+          "index": 1,
+          "kind": "build"
+        }
+      ],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.5.0",
+      "kind": [
+        "bin"
+      ]
+    },
+    {
+      "dependencies": [],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.5.0",
+      "kind": [
+        "custom-build"
+      ]
+    }
+  ],
+  "root": 0,
+  "rustc": "{...}",
+  "target": "[HOST_TARGET]",
+  "version": 1
+}
+"#]]
+        .is_json(),
+    );
 }
