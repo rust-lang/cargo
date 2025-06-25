@@ -1286,10 +1286,12 @@ pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
 
         // If a package has a build script, add itself as something to inspect for linking.
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
-            let script_meta = build_runner
-                .find_build_script_metadata(unit)
+            let script_metas = build_runner
+                .find_build_script_metadatas(unit)
                 .expect("has_custom_build should have RunCustomBuild");
-            add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
+            for script_meta in script_metas {
+                add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
+            }
         }
 
         if unit.mode.is_run_custom_build() {

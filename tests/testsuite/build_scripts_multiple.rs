@@ -524,7 +524,7 @@ fn build_script_with_conflicting_environment_variables() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(0)
         .with_stdout_data(str![[r#"
-bar1
+bar2
 
 "#]])
         .run();
