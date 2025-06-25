@@ -2986,7 +2986,7 @@ fn cargo_env_changes() {
         )
         .build();
 
-    let cargo_exe = cargo_test_support::cargo_exe();
+    let cargo_exe = crate::utils::cargo_exe();
     let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
     std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
     let other_cargo = || {

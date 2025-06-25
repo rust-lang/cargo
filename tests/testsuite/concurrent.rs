@@ -8,7 +8,7 @@ use std::thread;
 use std::{env, str};
 
 use crate::prelude::*;
-use cargo_test_support::cargo_process;
+use crate::utils::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::paths;

@@ -1,7 +1,8 @@
 //! Tests for workspace feature unification.
 
 use crate::prelude::*;
-use cargo_test_support::{basic_manifest, cargo_process, project, str};
+use crate::utils::cargo_process;
+use cargo_test_support::{basic_manifest, project, str};
 
 #[cargo_test]
 fn workspace_feature_unification() {

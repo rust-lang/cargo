@@ -3,13 +3,14 @@
 use std::fs::File;
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::paths;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, cargo_process, project, rustc_host, Project};
+use cargo_test_support::{basic_manifest, project, rustc_host, Project};
 
 /// Switches Cargo.toml to use `resolver = "2"`.
 pub fn switch_to_resolver_2(p: &Project) {

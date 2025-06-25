@@ -6,6 +6,8 @@ use std::io::Read;
 use std::process::Stdio;
 
 use crate::prelude::*;
+use crate::utils::cargo_exe;
+use crate::utils::cargo_process;
 use crate::utils::tools;
 use cargo::core::compiler::UserIntent;
 use cargo::core::Shell;
@@ -17,9 +19,8 @@ use cargo_test_support::paths::root;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, cargo_process, git,
-    is_nightly, main_file, paths, process, project, rustc_host, sleep_ms, symlink_supported, t,
-    Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, git, is_nightly, main_file, paths,
+    process, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
 use cargo_util::paths::dylib_path_envvar;
 

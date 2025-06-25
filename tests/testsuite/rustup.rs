@@ -7,8 +7,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo_test_support::paths::{home, root};
-use cargo_test_support::{cargo_process, process, project, str};
+use cargo_test_support::{process, project, str};
 
 /// Helper to generate an executable.
 fn make_exe(dest: &Path, name: &str, contents: &str, env: &[(&str, PathBuf)]) -> PathBuf {
@@ -207,7 +208,7 @@ fn custom_calls_other_cargo() {
     let custom_bin = root().join("custom-bin");
     custom_bin.mkdir_p();
     // `cargo` points to the real cargo.
-    let cargo_exe = cargo_test_support::cargo_exe();
+    let cargo_exe = crate::utils::cargo_exe();
     fs::hard_link(&cargo_exe, custom_bin.join(cargo_exe.file_name().unwrap())).unwrap();
     // `rustc` executes the real rustc.
     real_rustc_wrapper(&custom_bin, "custom toolchain rustc running");

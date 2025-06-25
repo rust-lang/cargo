@@ -115,7 +115,6 @@ pub mod prelude {
     pub use crate::cargo_test;
     pub use crate::paths::CargoPathExt;
     pub use crate::ArgLineCommandExt;
-    pub use crate::CargoCommandExt;
     pub use crate::ChannelChangerCommandExt;
     pub use crate::TestEnvCommandExt;
     pub use snapbox::IntoData;
@@ -596,11 +595,6 @@ pub fn main_file(println: &str, externed_deps: &[&str]) -> String {
     buf.push_str("); }\n");
 
     buf
-}
-
-/// Path to the cargo binary
-pub fn cargo_exe() -> PathBuf {
-    snapbox::cmd::cargo_bin("cargo")
 }
 
 /// This is the raw output from the process.
@@ -1472,21 +1466,6 @@ impl TestEnvCommandExt for snapbox::cmd::Command {
     }
 }
 
-/// Test the cargo command
-pub trait CargoCommandExt {
-    fn cargo_ui() -> Self;
-}
-
-impl CargoCommandExt for snapbox::cmd::Command {
-    fn cargo_ui() -> Self {
-        Self::new(cargo_exe())
-            .with_assert(compare::assert_ui())
-            .env("CARGO_TERM_COLOR", "always")
-            .env("CARGO_TERM_HYPERLINKS", "true")
-            .test_env()
-    }
-}
-
 /// Add a list of arguments as a line
 pub trait ArgLineCommandExt: Sized {
     fn arg_line(mut self, s: &str) -> Self {
@@ -1522,15 +1501,6 @@ impl ArgLineCommandExt for snapbox::cmd::Command {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
         self.arg(s)
     }
-}
-
-/// Run `cargo $arg_line`, see [`Execs`]
-pub fn cargo_process(arg_line: &str) -> Execs {
-    let cargo = cargo_exe();
-    let mut p = process(&cargo);
-    p.env("CARGO", cargo);
-    p.arg_line(arg_line);
-    execs().with_process_builder(p)
 }
 
 /// Run `git $arg_line`, see [`ProcessBuilder`]

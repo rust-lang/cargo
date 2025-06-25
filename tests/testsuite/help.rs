@@ -5,9 +5,10 @@ use std::path::Path;
 use std::str::from_utf8;
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, cargo_process, paths, project};
+use cargo_test_support::{basic_manifest, paths, project};
 
 #[cargo_test]
 fn help() {

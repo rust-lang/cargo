@@ -8,14 +8,13 @@ use std::path::PathBuf;
 use std::thread;
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::str;
-use cargo_test_support::{
-    basic_manifest, cargo_process, project, project_in, symlink_supported, t,
-};
+use cargo_test_support::{basic_manifest, project, project_in, symlink_supported, t};
 use cargo_util::{ProcessBuilder, ProcessError};
 
 use crate::utils::cross_compile::disabled as cross_compile_disabled;

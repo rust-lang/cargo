@@ -2,9 +2,10 @@
 
 use super::login::check_token;
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo_test_support::paths;
 use cargo_test_support::registry::TestRegistry;
-use cargo_test_support::{cargo_process, registry, str};
+use cargo_test_support::{registry, str};
 
 fn simple_logout_test(registry: &TestRegistry, reg: Option<&str>, flag: &str, note: &str) {
     let msg = reg.unwrap_or("crates-io");

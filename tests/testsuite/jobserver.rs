@@ -6,8 +6,8 @@ use std::process::Command;
 use std::thread;
 
 use crate::prelude::*;
+use crate::utils::cargo_exe;
 use cargo_test_support::basic_bin_manifest;
-use cargo_test_support::cargo_exe;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::paths;
 use cargo_test_support::{project, rustc_host, str};

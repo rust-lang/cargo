@@ -6,6 +6,7 @@ use std::io;
 use std::thread;
 
 use crate::prelude::*;
+use crate::utils::cargo_exe;
 use crate::utils::cross_compile::{
     can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
 };
@@ -14,9 +15,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::cargo_home;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{
-    basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project, project_in,
-};
+use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
 use cargo_test_support::{git, rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
 

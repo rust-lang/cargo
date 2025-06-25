@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo::util::cache_lock::CacheLockMode;
-use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{RegistryBuilder, Response};
 use cargo_test_support::str;
