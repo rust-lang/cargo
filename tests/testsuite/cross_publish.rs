@@ -2,8 +2,8 @@
 
 use std::fs::File;
 
+use crate::prelude::*;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
-use cargo_test_support::prelude::*;
 use cargo_test_support::{cross_compile, project, publish, registry, str};
 
 #[cargo_test]

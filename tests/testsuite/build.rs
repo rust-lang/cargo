@@ -5,6 +5,7 @@ use std::fs;
 use std::io::Read;
 use std::process::Stdio;
 
+use crate::prelude::*;
 use crate::utils::tools;
 use cargo::core::compiler::UserIntent;
 use cargo::core::Shell;
@@ -13,7 +14,6 @@ use cargo::ops::CompileOptions;
 use cargo::GlobalContext;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::root;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{

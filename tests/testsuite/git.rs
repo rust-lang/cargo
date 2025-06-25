@@ -9,10 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+use crate::prelude::*;
 use cargo_test_support::git::{add_submodule, cargo_uses_gitoxide};
 use cargo_test_support::paths;
-use cargo_test_support::prelude::IntoData;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, project};
 use cargo_test_support::{sleep_ms, str, t, Project};

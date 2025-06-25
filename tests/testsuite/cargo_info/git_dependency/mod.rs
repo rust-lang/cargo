@@ -1,4 +1,4 @@
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{basic_manifest, file, git, project};
 
 use super::init_registry_without_token;

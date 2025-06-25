@@ -4,6 +4,7 @@ use std::fs;
 
 use snapbox::str;
 
+use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::registry::{Package, RegistryBuilder};

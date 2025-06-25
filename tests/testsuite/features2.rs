@@ -2,10 +2,10 @@
 
 use std::fs::File;
 
+use crate::prelude::*;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;

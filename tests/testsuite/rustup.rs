@@ -6,8 +6,8 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::prelude::*;
 use cargo_test_support::paths::{home, root};
-use cargo_test_support::prelude::*;
 use cargo_test_support::{cargo_process, process, project, str};
 
 /// Helper to generate an executable.

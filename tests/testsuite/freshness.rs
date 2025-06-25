@@ -9,8 +9,8 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
+use crate::prelude::*;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,

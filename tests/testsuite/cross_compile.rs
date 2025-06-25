@@ -2,7 +2,7 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::rustc_host;
 use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};

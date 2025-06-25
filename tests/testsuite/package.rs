@@ -3,7 +3,7 @@
 use std::fs::{self, read_to_string, File};
 use std::path::Path;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{

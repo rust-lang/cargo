@@ -9,9 +9,9 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
+use crate::prelude::*;
 use cargo_test_support::containers::{Container, ContainerHandle, MkFile};
 use cargo_test_support::git::cargo_uses_gitoxide;
-use cargo_test_support::prelude::*;
 use cargo_test_support::{paths, process, project, str, Project};
 
 fn ssh_repo_url(container: &ContainerHandle, name: &str) -> String {

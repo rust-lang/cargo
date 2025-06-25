@@ -2,8 +2,8 @@
 
 use std::env;
 
+use crate::prelude::*;
 use crate::utils::tools::echo_subcommand;
-use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, project};
 

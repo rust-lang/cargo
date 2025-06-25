@@ -1,6 +1,6 @@
 //! Tests for selecting pre-release versions with `update --precise`.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{project, str};
 
 #[cargo_test]

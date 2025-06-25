@@ -1,7 +1,7 @@
 //! Tests for the `cargo fetch` command.
 
+use crate::prelude::*;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_manifest, cross_compile, project, str};

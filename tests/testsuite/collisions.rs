@@ -3,8 +3,8 @@
 //! Ideally these should never happen, but I don't think we'll ever be able to
 //! prevent all collisions.
 
+use crate::prelude::*;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cross_compile, project};

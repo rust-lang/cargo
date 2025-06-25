@@ -1,5 +1,6 @@
 //! Tests for overriding warning behavior using `build.warnings` config option.
 
+use crate::prelude::*;
 use crate::utils::tools;
 use cargo_test_support::{cargo_test, project, str, Project};
 

@@ -1,6 +1,6 @@
 //! Tests for the `cargo read-manifest` command.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{basic_bin_manifest, main_file, project, str};
 
 pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {

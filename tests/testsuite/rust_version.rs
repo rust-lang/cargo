@@ -1,6 +1,6 @@
 //! Tests for targets with `rust-version`.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{cargo_process, project, registry::Package, str};
 
 #[cargo_test]

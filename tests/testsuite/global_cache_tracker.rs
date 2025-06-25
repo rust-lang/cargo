@@ -14,12 +14,12 @@ use std::process::Stdio;
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime};
 
+use crate::prelude::*;
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::GlobalContext;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     basic_manifest, cargo_process, execs, git, process, project, retry, sleep_ms, str,

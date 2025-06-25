@@ -7,10 +7,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::thread;
 
+use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::str;
 use cargo_test_support::{

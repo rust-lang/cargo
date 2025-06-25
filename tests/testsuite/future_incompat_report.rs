@@ -7,7 +7,7 @@
 //! So we pick some random lint that will likely always be the same
 //! over time.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project, str, Project};
 

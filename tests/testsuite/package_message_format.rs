@@ -1,6 +1,6 @@
 //! Tests for the `--message-format` flag for `cargo package`.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 

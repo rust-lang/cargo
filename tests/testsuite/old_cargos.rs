@@ -12,8 +12,8 @@
 
 use std::fs;
 
+use crate::prelude::*;
 use cargo::CargoResult;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Dependency, Package};
 use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host, str};
 use cargo_util::{ProcessBuilder, ProcessError};

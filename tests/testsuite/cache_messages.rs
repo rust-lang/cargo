@@ -1,7 +1,7 @@
 //! Tests for caching compiler diagnostics.
 
+use crate::prelude::*;
 use crate::utils::tools;
-use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};
 

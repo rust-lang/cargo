@@ -1,6 +1,6 @@
 //! Tests for displaying the cargo version.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{cargo_process, project};
 
 #[cargo_test]

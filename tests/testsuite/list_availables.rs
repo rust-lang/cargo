@@ -1,7 +1,7 @@
 //! Tests for packages/target filter flags giving suggestions on which
 //! packages/targets are available.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 use snapbox::IntoData;

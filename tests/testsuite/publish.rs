@@ -3,8 +3,8 @@
 use std::fs;
 use std::sync::{Arc, Mutex};
 
+use crate::prelude::*;
 use cargo_test_support::git::{self, repo};
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package, RegistryBuilder, Response};
 use cargo_test_support::{basic_manifest, project, publish, str};
 use cargo_test_support::{paths, Project};

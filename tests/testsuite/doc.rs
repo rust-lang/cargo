@@ -3,9 +3,9 @@
 use std::fs;
 use std::str;
 
+use crate::prelude::*;
 use crate::utils::tools;
 use cargo::core::compiler::RustDocFingerprint;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};

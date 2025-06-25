@@ -1,4 +1,4 @@
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{compare::assert_ui, registry::RegistryBuilder, Project};
 use cargo_test_support::{current_dir, file};
 

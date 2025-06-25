@@ -1,11 +1,11 @@
 //! Tests specific to artifact dependencies, designated using
 //! the new `dep = { artifact = "bin", … }` syntax in manifests.
 
+use crate::prelude::*;
 use crate::utils::cross_compile::{
     can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
 };
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{

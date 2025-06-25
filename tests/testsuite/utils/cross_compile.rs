@@ -9,6 +9,7 @@
 //!
 //! These tests are all disabled on rust-lang/rust's CI, but run in Cargo's CI.
 
+use crate::prelude::*;
 use cargo_test_support::{basic_manifest, cross_compile::alternate, main_file, project};
 use cargo_util::ProcessError;
 use std::fmt::Write;

@@ -2,7 +2,7 @@
 //! example, the `test` profile applying to test targets, but not other
 //! targets, etc.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{basic_manifest, project, str, Project};
 
 fn all_target_project() -> Project {

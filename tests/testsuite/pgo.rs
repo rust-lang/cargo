@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 
