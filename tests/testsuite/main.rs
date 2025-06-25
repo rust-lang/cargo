@@ -193,7 +193,12 @@ mod weak_dep_features;
 mod workspaces;
 mod yank;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
+
+pub mod prelude {
+    pub use cargo_test_support::prelude::*;
+    pub use cargo_test_support::CargoCommandExt;
+}
 
 #[cargo_test]
 fn aaa_trigger_cross_compile_disabled_check() {
