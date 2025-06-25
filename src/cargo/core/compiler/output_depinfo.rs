@@ -75,18 +75,20 @@ fn add_deps_for_unit(
     }
 
     // Add rerun-if-changed dependencies
-    if let Some(metadata) = build_runner.find_build_script_metadata(unit) {
-        if let Some(output) = build_runner
-            .build_script_outputs
-            .lock()
-            .unwrap()
-            .get(metadata)
-        {
-            for path in &output.rerun_if_changed {
-                // The paths we have saved from the unit are of arbitrary relativeness and may be
-                // relative to the crate root of the dependency.
-                let path = unit.pkg.root().join(path);
-                deps.insert(path);
+    if let Some(metadata_vec) = build_runner.find_build_script_metadatas(unit) {
+        for metadata in metadata_vec {
+            if let Some(output) = build_runner
+                .build_script_outputs
+                .lock()
+                .unwrap()
+                .get(metadata)
+            {
+                for path in &output.rerun_if_changed {
+                    // The paths we have saved from the unit are of arbitrary relativeness and may be
+                    // relative to the crate root of the dependency.
+                    let path = unit.pkg.root().join(path);
+                    deps.insert(path);
+                }
             }
         }
     }

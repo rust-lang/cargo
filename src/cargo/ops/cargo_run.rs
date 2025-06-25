@@ -95,7 +95,7 @@ pub fn run(
     let UnitOutput {
         unit,
         path,
-        script_meta,
+        script_metas,
     } = &compile.binaries[0];
     let exe = match path.strip_prefix(gctx.cwd()) {
         Ok(path) if path.file_name() == Some(path.as_os_str()) => Path::new(".").join(path),
@@ -103,7 +103,7 @@ pub fn run(
         Err(_) => path.to_path_buf(),
     };
     let pkg = bins[0].0;
-    let mut process = compile.target_process(exe, unit.kind, pkg, *script_meta)?;
+    let mut process = compile.target_process(exe, unit.kind, pkg, script_metas.as_ref())?;
 
     // Sets the working directory of the child process to the current working
     // directory of the parent process.
