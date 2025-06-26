@@ -43,6 +43,7 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
+use crate::util::errors::ManifestError;
 use crate::util::toml::prepare_for_publish;
 use crate::util::Graph;
 use crate::util::Progress;
@@ -171,7 +172,15 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
         for (pkg, _) in &pkgs {
             verify_unpublished(pkg, &mut source, &source_ids, opts.dry_run, opts.gctx)?;
-            verify_dependencies(pkg, &registry, source_ids.original)?;
+            verify_dependencies(pkg, &registry, source_ids.original).map_err(|err| {
+                ManifestError::new(
+                    err.context(format!(
+                        "failed to verify manifest at `{}`",
+                        pkg.manifest_path().display()
+                    )),
+                    pkg.manifest_path().into(),
+                )
+            })?;
         }
     }
 

@@ -24,6 +24,7 @@ use crate::sources::{PathSource, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
+use crate::util::errors::ManifestError;
 use crate::util::restricted_names;
 use crate::util::toml::prepare_for_publish;
 use crate::util::FileLock;
@@ -133,7 +134,15 @@ fn create_package(
 
     // Check that the package dependencies are safe to deploy.
     for dep in pkg.dependencies() {
-        super::check_dep_has_version(dep, false)?;
+        super::check_dep_has_version(dep, false).map_err(|err| {
+            ManifestError::new(
+                err.context(format!(
+                    "failed to verify manifest at `{}`",
+                    pkg.manifest_path().display()
+                )),
+                pkg.manifest_path().into(),
+            )
+        })?;
     }
 
     let filename = pkg.package_id().tarball_name();
