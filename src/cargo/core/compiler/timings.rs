@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
 use std::time::{Duration, Instant};
+use tracing::warn;
 
 /// Tracking information for the entire build.
 ///
@@ -63,6 +64,14 @@ pub struct Timings<'gctx> {
     cpu_usage: Vec<(f64, f64)>,
 }
 
+/// Section of compilation.
+struct TimingSection {
+    /// Start of the section, as an offset in seconds from `UnitTime::start`.
+    start: f64,
+    /// End of the section, as an offset in seconds from `UnitTime::start`.
+    end: Option<f64>,
+}
+
 /// Tracking information for an individual unit.
 struct UnitTime {
     unit: Unit,
@@ -79,6 +88,8 @@ struct UnitTime {
     unlocked_units: Vec<Unit>,
     /// Same as `unlocked_units`, but unlocked by rmeta.
     unlocked_rmeta_units: Vec<Unit>,
+    /// Individual compilation section durations, gathered from `--json=timings`.
+    sections: HashMap<String, TimingSection>,
 }
 
 /// Periodic concurrency tracking information.
@@ -181,6 +192,7 @@ impl<'gctx> Timings<'gctx> {
             rmeta_time: None,
             unlocked_units: Vec::new(),
             unlocked_rmeta_units: Vec::new(),
+            sections: Default::default(),
         };
         assert!(self.active.insert(id, unit_time).is_none());
     }
@@ -231,6 +243,26 @@ impl<'gctx> Timings<'gctx> {
             crate::drop_println!(self.gctx, "{}", msg);
         }
         self.unit_times.push(unit_time);
+    }
+
+    /// Handle the start/end of a compilation section.
+    pub fn unit_section_timing(&mut self, id: JobId, section_timing: &SectionTiming) {
+        if !self.enabled {
+            return;
+        }
+        let Some(unit_time) = self.active.get_mut(&id) else {
+            return;
+        };
+        let now = self.start.elapsed().as_secs_f64();
+
+        match section_timing.event {
+            SectionTimingEvent::Start => {
+                unit_time.start_section(&section_timing.name, now);
+            }
+            SectionTimingEvent::End => {
+                unit_time.end_section(&section_timing.name, now);
+            }
+        }
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
@@ -578,6 +610,46 @@ impl UnitTime {
     fn name_ver(&self) -> String {
         format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
     }
+
+    fn start_section(&mut self, name: &str, now: f64) {
+        if self
+            .sections
+            .insert(
+                name.to_string(),
+                TimingSection {
+                    start: now - self.start,
+                    end: None,
+                },
+            )
+            .is_some()
+        {
+            warn!("Compilation section {name} started more than once");
+        }
+    }
+
+    fn end_section(&mut self, name: &str, now: f64) {
+        let Some(section) = self.sections.get_mut(name) else {
+            warn!("Compilation section {name} ended, but it has no start recorded");
+            return;
+        };
+        section.end = Some(now - self.start);
+    }
+}
+
+/// Start or end of a section timing.
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum SectionTimingEvent {
+    Start,
+    End,
+}
+
+/// Represents a certain section (phase) of rustc compilation.
+/// It is emitted by rustc when the `--json=timings` flag is used.
+#[derive(serde::Deserialize, Debug)]
+pub struct SectionTiming {
+    pub name: String,
+    pub event: SectionTimingEvent,
 }
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
