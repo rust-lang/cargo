@@ -52,7 +52,7 @@ use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
-use crate::ops::resolve::WorkspaceResolve;
+use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
 use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, StableHasher};
@@ -284,7 +284,7 @@ pub fn create_bcx<'a, 'gctx>(
         mut pkg_set,
         workspace_resolve,
         targeted_resolve: resolve,
-        resolved_features,
+        specs_and_features,
     } = resolve;
 
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
@@ -363,72 +363,91 @@ pub fn create_bcx<'a, 'gctx>(
         })
         .collect();
 
-    // Passing `build_config.requested_kinds` instead of
-    // `explicit_host_kinds` here so that `generate_root_units` can do
-    // its own special handling of `CompileKind::Host`. It will
-    // internally replace the host kind by the `explicit_host_kind`
-    // before setting as a unit.
-    let generator = UnitGenerator {
-        ws,
-        packages: &to_builds,
-        spec,
-        target_data: &target_data,
-        filter,
-        requested_kinds: &build_config.requested_kinds,
-        explicit_host_kind,
-        intent: build_config.intent,
-        resolve: &resolve,
-        workspace_resolve: &workspace_resolve,
-        resolved_features: &resolved_features,
-        package_set: &pkg_set,
-        profiles: &profiles,
-        interner,
-        has_dev_units,
-    };
-    let mut units = generator.generate_root_units()?;
+    let mut units = Vec::new();
+    let mut unit_graph = HashMap::new();
+    let mut scrape_units = Vec::new();
 
-    if let Some(args) = target_rustc_crate_types {
-        override_rustc_crate_types(&mut units, args, interner)?;
-    }
-
-    let should_scrape = build_config.intent.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
-    let mut scrape_units = if should_scrape {
-        generator.generate_scrape_units(&units)?
-    } else {
-        Vec::new()
-    };
-
-    let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
-        let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
-        standard_lib::generate_std_roots(
-            &crates,
-            &units,
-            std_resolve,
-            std_features,
-            &explicit_host_kinds,
-            &pkg_set,
+    for SpecsAndResolvedFeatures {
+        specs,
+        resolved_features,
+    } in &specs_and_features
+    {
+        // Passing `build_config.requested_kinds` instead of
+        // `explicit_host_kinds` here so that `generate_root_units` can do
+        // its own special handling of `CompileKind::Host`. It will
+        // internally replace the host kind by the `explicit_host_kind`
+        // before setting as a unit.
+        let spec_names = specs.iter().map(|spec| spec.name()).collect::<Vec<_>>();
+        let packages = to_builds
+            .iter()
+            .filter(|package| spec_names.contains(&package.name().as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        let generator = UnitGenerator {
+            ws,
+            packages: &packages,
+            spec,
+            target_data: &target_data,
+            filter,
+            requested_kinds: &build_config.requested_kinds,
+            explicit_host_kind,
+            intent: build_config.intent,
+            resolve: &resolve,
+            workspace_resolve: &workspace_resolve,
+            resolved_features: &resolved_features,
+            package_set: &pkg_set,
+            profiles: &profiles,
             interner,
-            &profiles,
-            &target_data,
-        )?
-    } else {
-        Default::default()
-    };
+            has_dev_units,
+        };
+        let mut targeted_root_units = generator.generate_root_units()?;
 
-    let mut unit_graph = build_unit_dependencies(
-        ws,
-        &pkg_set,
-        &resolve,
-        &resolved_features,
-        std_resolve_features.as_ref(),
-        &units,
-        &scrape_units,
-        &std_roots,
-        build_config.intent,
-        &target_data,
-        &profiles,
-        interner,
-    )?;
+        if let Some(args) = target_rustc_crate_types {
+            override_rustc_crate_types(&mut targeted_root_units, args, interner)?;
+        }
+
+        let should_scrape =
+            build_config.intent.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
+        let targeted_scrape_units = if should_scrape {
+            generator.generate_scrape_units(&targeted_root_units)?
+        } else {
+            Vec::new()
+        };
+
+        let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
+            let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
+            standard_lib::generate_std_roots(
+                &crates,
+                &targeted_root_units,
+                std_resolve,
+                std_features,
+                &explicit_host_kinds,
+                &pkg_set,
+                interner,
+                &profiles,
+                &target_data,
+            )?
+        } else {
+            Default::default()
+        };
+
+        unit_graph.extend(build_unit_dependencies(
+            ws,
+            &pkg_set,
+            &resolve,
+            &resolved_features,
+            std_resolve_features.as_ref(),
+            &targeted_root_units,
+            &targeted_scrape_units,
+            &std_roots,
+            build_config.intent,
+            &target_data,
+            &profiles,
+            interner,
+        )?);
+        units.extend(targeted_root_units);
+        scrape_units.extend(targeted_scrape_units);
+    }
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
