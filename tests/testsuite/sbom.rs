@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::prelude::*;
 use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_test;
 use cargo_test_support::compare::assert_e2e;

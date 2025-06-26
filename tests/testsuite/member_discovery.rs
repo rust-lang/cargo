@@ -1,9 +1,9 @@
 //! Tests for workspace member discovery.
 
+use crate::prelude::*;
 use cargo::core::{Shell, Workspace};
 use cargo::util::context::GlobalContext;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry;
 

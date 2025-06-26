@@ -1,6 +1,6 @@
 //! Tests for inheriting Cargo.toml fields with field.workspace = true
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, git, paths, project, publish, registry, str,

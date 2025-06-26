@@ -2,13 +2,15 @@
 
 use std::fs::File;
 
-use cargo_test_support::cross_compile::{self, alternate};
+use crate::prelude::*;
+use crate::utils::cargo_process;
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
+use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, cargo_process, project, rustc_host, Project};
+use cargo_test_support::{basic_manifest, project, rustc_host, Project};
 
 /// Switches Cargo.toml to use `resolver = "2"`.
 pub fn switch_to_resolver_2(p: &Project) {
@@ -263,7 +265,7 @@ common
 #[cargo_test]
 fn itarget_proc_macro() {
     // itarget inside a proc-macro while cross-compiling
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("hostdep", "1.0.0").publish();
@@ -1312,7 +1314,7 @@ fn has_dev_dep_for_test() {
 #[cargo_test]
 fn build_dep_activated() {
     // Build dependencies always match the host for [target.*.build-dependencies].
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("somedep", "1.0.0")

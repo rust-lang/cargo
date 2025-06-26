@@ -1,8 +1,11 @@
 //! Tests specific to artifact dependencies, designated using
 //! the new `dep = { artifact = "bin", … }` syntax in manifests.
 
+use crate::prelude::*;
+use crate::utils::cross_compile::{
+    can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
+};
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{
@@ -340,7 +343,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
 
 #[cargo_test]
 fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -455,7 +458,7 @@ For more information about this error, try `rustc --explain E0425`.
 
 #[cargo_test]
 fn feature_resolution_works_for_cfg_target_specification() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -1079,7 +1082,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate() {
 
 #[cargo_test]
 fn build_script_deps_adopt_specified_target_unconditionally() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1137,7 +1140,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
 /// inverse RFC-3176
 #[cargo_test]
 fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_and_same_version() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1196,7 +1199,7 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
 
 #[cargo_test]
 fn non_build_script_deps_adopt_specified_target_unconditionally() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1247,7 +1250,7 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
 
 #[cargo_test]
 fn cross_doctests_works_with_artifacts() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1302,7 +1305,7 @@ fn cross_doctests_works_with_artifacts() {
     println!("c");
     let target = cross_compile::alternate();
 
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
@@ -1327,7 +1330,7 @@ fn cross_doctests_works_with_artifacts() {
 
 #[cargo_test]
 fn build_script_deps_adopts_target_platform_if_target_equals_target() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1498,7 +1501,7 @@ foo v0.0.0 ([ROOT]/foo)
 
 #[cargo_test]
 fn artifact_dep_target_specified() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -1554,7 +1557,7 @@ foo v0.0.0 ([ROOT]/foo)
 /// *   the target is not activated.
 #[cargo_test]
 fn dep_of_artifact_dep_same_target_specified() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -1629,7 +1632,7 @@ foo v0.1.0 ([ROOT]/foo)
 
 #[cargo_test]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -1675,7 +1678,7 @@ fn targets_are_picked_up_from_non_workspace_artifact_deps() {
 
 #[cargo_test]
 fn index_version_filtering() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -1748,7 +1751,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 fn proc_macro_in_artifact_dep() {
     // Forcing FeatureResolver to check a proc-macro for a dependency behind a
     // target dependency.
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("pm", "1.0.0")
@@ -2563,7 +2566,7 @@ fn build_script_features_for_shared_dependency() {
     //
     // When common is built as a dependency of foo, it should have features
     // `f1` (for the library and the build script).
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -2728,7 +2731,7 @@ fn calc_bin_artifact_fingerprint() {
 #[cargo_test]
 fn with_target_and_optional() {
     // See rust-lang/cargo#10526
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();

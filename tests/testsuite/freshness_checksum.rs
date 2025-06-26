@@ -6,8 +6,8 @@ use std::net::TcpListener;
 use std::process::Stdio;
 use std::thread;
 
+use crate::prelude::*;
 use cargo_test_support::assert_deps_contains;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, project, rustc_host, rustc_host_env, str,

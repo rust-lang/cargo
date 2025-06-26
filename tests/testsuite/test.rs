@@ -2,14 +2,15 @@
 
 use std::fs;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
+use crate::utils::cargo_exe;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project, str,
-};
+use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project, str};
 use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
 use cargo_util::paths::dylib_path_envvar;
+
+use crate::utils::cross_compile::can_run_on_host as cross_compile_can_run_on_host;
 
 #[cargo_test]
 fn cargo_test_simple() {
@@ -3910,7 +3911,7 @@ test env_test ... ok
         .run();
 
     // Check that `cargo test` propagates the environment's $CARGO
-    let cargo_exe = cargo_test_support::cargo_exe();
+    let cargo_exe = cargo_exe();
     let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
     std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
     let stderr_other_cargo = format!(
@@ -4786,7 +4787,7 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
     reason = "waiting for 1.88 to be stable for doctest xcompile flags"
 )]
 fn cargo_test_doctest_xcompile_runner() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
@@ -4872,7 +4873,7 @@ this is a runner
     reason = "waiting for 1.88 to be stable for doctest xcompile flags"
 )]
 fn cargo_test_doctest_xcompile_no_runner() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 

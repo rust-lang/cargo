@@ -1,6 +1,6 @@
 //! Tests for public/private dependencies.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;

@@ -1,5 +1,5 @@
+use crate::prelude::*;
 use cargo_test_support::file;
-use cargo_test_support::prelude::*;
 
 use super::init_registry_without_token;
 

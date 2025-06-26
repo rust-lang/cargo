@@ -2,14 +2,18 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::rustc_host;
 use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 
+use crate::utils::cross_compile::{
+    can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
+};
+
 #[cargo_test]
 fn simple_cross() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -54,14 +58,14 @@ fn simple_cross() {
     p.cargo("build -v --target").arg(&target).run();
     assert!(p.target_bin(target, "foo").is_file());
 
-    if cross_compile::can_run_on_host() {
+    if cross_compile_can_run_on_host() {
         p.process(&p.target_bin(target, "foo")).run();
     }
 }
 
 #[cargo_test]
 fn simple_cross_config() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -116,14 +120,14 @@ fn simple_cross_config() {
     p.cargo("build -v").run();
     assert!(p.target_bin(target, "foo").is_file());
 
-    if cross_compile::can_run_on_host() {
+    if cross_compile_can_run_on_host() {
         p.process(&p.target_bin(target, "foo")).run();
     }
 }
 
 #[cargo_test]
 fn simple_deps() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -153,7 +157,7 @@ fn simple_deps() {
     p.cargo("build --target").arg(&target).run();
     assert!(p.target_bin(target, "foo").is_file());
 
-    if cross_compile::can_run_on_host() {
+    if cross_compile_can_run_on_host() {
         p.process(&p.target_bin(target, "foo")).run();
     }
 }
@@ -165,7 +169,7 @@ fn per_crate_target_test(
     forced_target: Option<&'static str>,
     arg_target: Option<&'static str>,
 ) {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -226,7 +230,7 @@ fn per_crate_target_test(
         .run();
     assert!(p.target_bin(cross_compile::alternate(), "foo").is_file());
 
-    if cross_compile::can_run_on_host() {
+    if cross_compile_can_run_on_host() {
         p.process(&p.target_bin(cross_compile::alternate(), "foo"))
             .run();
     }
@@ -262,7 +266,7 @@ fn per_crate_forced_target_does_not_get_overridden() {
 
 #[cargo_test]
 fn workspace_with_multiple_targets() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -360,7 +364,7 @@ fn workspace_with_multiple_targets() {
     assert!(p.target_bin(cross_compile::alternate(), "cross").is_file());
 
     p.process(&p.bin("native")).run();
-    if cross_compile::can_run_on_host() {
+    if cross_compile_can_run_on_host() {
         p.process(&p.target_bin(cross_compile::alternate(), "cross"))
             .run();
     }
@@ -368,7 +372,7 @@ fn workspace_with_multiple_targets() {
 
 #[cargo_test]
 fn linker() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -415,7 +419,7 @@ please set bin.path in Cargo.toml
 
 #[cargo_test]
 fn cross_tests() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
@@ -503,7 +507,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 #[cargo_test]
 fn simple_cargo_run() {
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 
@@ -528,7 +532,7 @@ fn simple_cargo_run() {
 
 #[cargo_test]
 fn cross_with_a_build_script() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -589,7 +593,7 @@ fn cross_with_a_build_script() {
 
 #[cargo_test]
 fn build_script_needed_for_host_and_target() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -700,7 +704,7 @@ fn build_script_needed_for_host_and_target() {
 
 #[cargo_test]
 fn build_deps_for_the_right_arch() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -745,7 +749,7 @@ fn build_deps_for_the_right_arch() {
 
 #[cargo_test]
 fn build_script_only_host() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -798,7 +802,7 @@ fn build_script_only_host() {
 
 #[cargo_test]
 fn build_script_with_platform_specific_dependencies() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -872,7 +876,7 @@ fn build_script_with_platform_specific_dependencies() {
 
 #[cargo_test]
 fn platform_specific_dependencies_do_not_leak() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -932,7 +936,7 @@ error[E0463]: can't find crate for `d2`
 
 #[cargo_test]
 fn platform_specific_variables_reflected_in_build_scripts() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1031,7 +1035,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
     ignore = "don't have a dylib cross target on macos"
 )]
 fn cross_test_dylib() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1137,7 +1141,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     reason = "waiting for 1.88 to be stable for doctest xcompile flags"
 )]
 fn doctest_xcompile_linker() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -1183,7 +1187,7 @@ fn doctest_xcompile_linker() {
 
 #[cargo_test]
 fn always_emit_warnings_as_warnings_when_learning_target_info() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 

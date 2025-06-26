@@ -39,7 +39,7 @@
 //!     "#)
 //!     .build();
 //!
-//! p.cargo("run").with_stdout_data(str!["24"]).run();
+//! // p.cargo("run").with_stdout_data(str!["24"]).run();
 //! ```
 
 use crate::git::repo;

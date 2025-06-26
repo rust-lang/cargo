@@ -20,10 +20,10 @@
 
 #![allow(clippy::disallowed_methods)]
 
-use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs};
+use cargo_test_support::{prelude::*, Project};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 fn enable_build_std(e: &mut Execs, arg: Option<&str>, isolated: bool) {
     if !isolated {
@@ -440,4 +440,35 @@ fn test_panic_abort() {
         .env("RUSTFLAGS", "-C panic=abort")
         .arg("-Zbuild-std-features=panic_immediate_abort")
         .run();
+}
+
+pub trait CargoProjectExt {
+    /// Creates a `ProcessBuilder` to run cargo.
+    ///
+    /// Arguments can be separated by spaces.
+    ///
+    /// For `cargo run`, see [`Project::rename_run`].
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.cargo("build --bin foo").run();
+    /// ```
+    fn cargo(&self, cmd: &str) -> Execs;
+}
+
+impl CargoProjectExt for Project {
+    fn cargo(&self, cmd: &str) -> Execs {
+        let cargo = cargo_exe();
+        let mut execs = self.process(&cargo);
+        execs.env("CARGO", cargo);
+        execs.arg_line(cmd);
+        execs
+    }
+}
+
+/// Path to the cargo binary
+pub fn cargo_exe() -> PathBuf {
+    snapbox::cmd::cargo_bin!("cargo").to_path_buf()
 }

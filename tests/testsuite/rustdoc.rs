@@ -1,8 +1,10 @@
 //! Tests for the `cargo rustdoc` command.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cross_compile, project};
+
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 
 #[cargo_test]
 fn rustdoc_simple() {
@@ -280,7 +282,7 @@ fn proc_macro_crate_type() {
 
 #[cargo_test]
 fn rustdoc_target() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 

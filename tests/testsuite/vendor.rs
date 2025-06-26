@@ -6,9 +6,9 @@
 
 use std::fs;
 
+use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, paths, project, Project};

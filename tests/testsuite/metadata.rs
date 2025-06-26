@@ -1,7 +1,7 @@
 //! Tests for the `cargo metadata` command.
 
+use crate::prelude::*;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, main_file, project, rustc_host, str,

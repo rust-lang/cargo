@@ -1,8 +1,8 @@
 //! Tests for the `cargo config` command.
 
 use super::config::write_config_at;
+use crate::prelude::*;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use std::fs;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 mod help;
 
 fn cargo_process(s: &str) -> cargo_test_support::Execs {
-    let mut p = cargo_test_support::cargo_process(s);
+    let mut p = crate::utils::cargo_process(s);
     // Clear out some of the environment added by the default cargo_process so
     // the tests don't need to deal with it.
     p.env_remove("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO")

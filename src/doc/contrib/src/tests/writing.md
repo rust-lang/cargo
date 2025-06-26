@@ -29,7 +29,7 @@ stdout and stderr output against the expected output.
 
 Generally, a functional test will be placed in `tests/testsuite/<command>.rs` and will look roughly like:
 ```rust,ignore
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::project;
 
@@ -123,7 +123,7 @@ Tests that need to do cross-compilation should include this at the top of the
 test to disable it in scenarios where cross compilation isn't available:
 
 ```rust,ignore
-if cargo_test_support::cross_compile::disabled() {
+if crate::utils::cross_compile::disabled() {
     return;
 }
 ```
@@ -146,7 +146,7 @@ If the test needs to run the cross-compiled binary, then it should have
 something like this to exit the test before doing so:
 
 ```rust,ignore
-if cargo_test_support::cross_compile::can_run_on_host() {
+if crate::utils::cross_compile::can_run_on_host() {
     return;
 }
 ```
@@ -165,10 +165,10 @@ mod <case>;
 
 `tests/testsuite/<command>/<case>/mod.rs`:
 ```rust,ignore
+use crate::prelude::*;
 use cargo_test_support::compare::assert_ui;
 use cargo_test_support::current_dir;
 use cargo_test_support::file;
-use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
 #[cargo_test]

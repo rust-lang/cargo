@@ -1,5 +1,5 @@
+use crate::prelude::*;
 use cargo_test_support::file;
-use cargo_test_support::prelude::*;
 
 #[cargo_test]
 fn case() {

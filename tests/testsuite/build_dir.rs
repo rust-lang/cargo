@@ -11,6 +11,7 @@
 
 use std::path::PathBuf;
 
+use crate::prelude::*;
 use cargo_test_support::{paths, project, str};
 use cargo_test_support::{prelude::*, Project};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};

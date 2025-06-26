@@ -2,8 +2,8 @@
 
 use std::fs;
 
+use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;

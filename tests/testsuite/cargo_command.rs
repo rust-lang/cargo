@@ -7,15 +7,15 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str;
 
+use crate::prelude::*;
+use crate::utils::cargo_exe;
+use crate::utils::cargo_process;
+use crate::utils::tools::echo_subcommand;
 use cargo_test_support::basic_manifest;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
 use cargo_test_support::str;
-use cargo_test_support::tools::echo_subcommand;
-use cargo_test_support::{
-    basic_bin_manifest, cargo_exe, cargo_process, paths, project, project_in_home,
-};
+use cargo_test_support::{basic_bin_manifest, paths, project, project_in_home};
 use cargo_util::paths::join_paths;
 
 fn path() -> Vec<PathBuf> {
@@ -601,7 +601,7 @@ fn overwrite_cargo_environment_variable() {
 
     // Create two other cargo binaries in the project root, one with the wrong
     // name and one with the right name.
-    let cargo_exe = cargo_test_support::cargo_exe();
+    let cargo_exe = crate::utils::cargo_exe();
     let wrong_name_path = p
         .root()
         .join(format!("wrong_name{}", env::consts::EXE_SUFFIX));

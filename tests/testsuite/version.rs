@@ -1,7 +1,8 @@
 //! Tests for displaying the cargo version.
 
-use cargo_test_support::prelude::*;
-use cargo_test_support::{cargo_process, project};
+use crate::prelude::*;
+use crate::utils::cargo_process;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn simple() {

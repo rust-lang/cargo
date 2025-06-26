@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_manifest, paths, project, project_in_home, rustc_host, str, RawOutput,

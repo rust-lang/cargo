@@ -1,7 +1,8 @@
 //! Tests for the `cargo tree` command.
 
-use cargo_test_support::cross_compile::{self, alternate};
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
+use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
@@ -352,7 +353,7 @@ a v0.1.0 ([ROOT]/foo)
 #[cargo_test]
 fn filters_target() {
     // --target flag
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("targetdep", "1.0.0").publish();
@@ -481,7 +482,7 @@ foo v0.1.0 ([ROOT]/foo)
 #[cargo_test]
 fn no_selected_target_dependency() {
     // --target flag
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("targetdep", "1.0.0").publish();
@@ -1008,7 +1009,7 @@ cat v2.0.0
 #[cargo_test]
 fn duplicates_with_target() {
     // --target flag
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     Package::new("a", "1.0.0").publish();

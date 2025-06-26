@@ -1,9 +1,9 @@
 //! Tests for targets with `required-features`.
 
+use crate::prelude::*;
 use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe};
 use cargo_test_support::is_nightly;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 

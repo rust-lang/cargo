@@ -1,6 +1,6 @@
 //! Tests for Cargo usage of rustc `--check-cfg`.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{basic_manifest, project, str};
 
 macro_rules! x {

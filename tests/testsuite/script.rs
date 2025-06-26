@@ -1,8 +1,8 @@
 use std::fs;
 
+use crate::prelude::*;
 use cargo_test_support::basic_manifest;
 use cargo_test_support::paths::cargo_home;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 

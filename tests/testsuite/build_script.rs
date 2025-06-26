@@ -5,15 +5,17 @@ use std::fs;
 use std::io;
 use std::thread;
 
+use crate::prelude::*;
+use crate::utils::cargo_exe;
+use crate::utils::cross_compile::{
+    can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
+};
+use crate::utils::tools;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::cargo_home;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::tools;
-use cargo_test_support::{
-    basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project, project_in,
-};
+use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
 use cargo_test_support::{git, rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
 
@@ -427,7 +429,7 @@ fn custom_build_env_var_rustc_workspace_wrapper() {
 
 #[cargo_test]
 fn custom_build_env_var_rustc_linker() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let target = cross_compile::alternate();
@@ -466,7 +468,7 @@ fn custom_build_env_var_rustc_linker() {
 #[cargo_test]
 #[cfg(target_os = "linux")]
 fn custom_build_env_var_rustc_linker_with_target_cfg() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -4795,7 +4797,7 @@ fn rename_with_link_search_path() {
     ignore = "don't have a cdylib cross target on macos"
 )]
 fn rename_with_link_search_path_cross() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 
@@ -5515,7 +5517,7 @@ fn duplicate_script_with_extra_env() {
     // Test where a build script is run twice, that emits different rustc-env
     // and rustc-cfg values. In this case, one is run for host, the other for
     // target.
-    if !cross_compile::can_run_on_host() {
+    if !cross_compile_can_run_on_host() {
         return;
     }
 

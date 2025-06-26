@@ -9,8 +9,8 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
+use crate::prelude::*;
 use cargo_test_support::paths;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,
@@ -2986,7 +2986,7 @@ fn cargo_env_changes() {
         )
         .build();
 
-    let cargo_exe = cargo_test_support::cargo_exe();
+    let cargo_exe = crate::utils::cargo_exe();
     let other_cargo_path = p.root().join(cargo_exe.file_name().unwrap());
     std::fs::hard_link(&cargo_exe, &other_cargo_path).unwrap();
     let other_cargo = || {

@@ -110,13 +110,11 @@ pub mod install;
 pub mod paths;
 pub mod publish;
 pub mod registry;
-pub mod tools;
 
 pub mod prelude {
     pub use crate::cargo_test;
     pub use crate::paths::CargoPathExt;
     pub use crate::ArgLineCommandExt;
-    pub use crate::CargoCommandExt;
     pub use crate::ChannelChangerCommandExt;
     pub use crate::TestEnvCommandExt;
     pub use snapbox::IntoData;
@@ -491,28 +489,6 @@ impl Project {
         execs().with_process_builder(p)
     }
 
-    /// Creates a `ProcessBuilder` to run cargo.
-    ///
-    /// Arguments can be separated by spaces.
-    ///
-    /// For `cargo run`, see [`Project::rename_run`].
-    ///
-    /// # Example:
-    ///
-    /// ```no_run
-    /// # let p = cargo_test_support::project().build();
-    /// p.cargo("build --bin foo").run();
-    /// ```
-    pub fn cargo(&self, cmd: &str) -> Execs {
-        let cargo = cargo_exe();
-        let mut execs = self.process(&cargo);
-        if let Some(ref mut p) = execs.process_builder {
-            p.env("CARGO", cargo);
-            p.arg_line(cmd);
-        }
-        execs
-    }
-
     /// Safely run a process after `cargo build`.
     ///
     /// Windows has a problem where a process cannot be reliably
@@ -621,11 +597,6 @@ pub fn main_file(println: &str, externed_deps: &[&str]) -> String {
     buf
 }
 
-/// Path to the cargo binary
-pub fn cargo_exe() -> PathBuf {
-    snapbox::cmd::cargo_bin("cargo")
-}
-
 /// This is the raw output from the process.
 ///
 /// This is similar to `std::process::Output`, however the `status` is
@@ -643,8 +614,8 @@ pub struct RawOutput {
 ///
 /// Construct with
 /// - [`execs`]
-/// - [`cargo_process`]
 /// - [`Project`] methods
+/// - `cargo_process` in testsuite
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {
@@ -1495,21 +1466,6 @@ impl TestEnvCommandExt for snapbox::cmd::Command {
     }
 }
 
-/// Test the cargo command
-pub trait CargoCommandExt {
-    fn cargo_ui() -> Self;
-}
-
-impl CargoCommandExt for snapbox::cmd::Command {
-    fn cargo_ui() -> Self {
-        Self::new(cargo_exe())
-            .with_assert(compare::assert_ui())
-            .env("CARGO_TERM_COLOR", "always")
-            .env("CARGO_TERM_HYPERLINKS", "true")
-            .test_env()
-    }
-}
-
 /// Add a list of arguments as a line
 pub trait ArgLineCommandExt: Sized {
     fn arg_line(mut self, s: &str) -> Self {
@@ -1545,15 +1501,6 @@ impl ArgLineCommandExt for snapbox::cmd::Command {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
         self.arg(s)
     }
-}
-
-/// Run `cargo $arg_line`, see [`Execs`]
-pub fn cargo_process(arg_line: &str) -> Execs {
-    let cargo = cargo_exe();
-    let mut p = process(&cargo);
-    p.env("CARGO", cargo);
-    p.arg_line(arg_line);
-    execs().with_process_builder(p)
 }
 
 /// Run `git $arg_line`, see [`ProcessBuilder`]

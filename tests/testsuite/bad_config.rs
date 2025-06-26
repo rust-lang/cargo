@@ -1,7 +1,7 @@
 //! Tests for some invalid .cargo/config files.
 
+use crate::prelude::*;
 use cargo_test_support::git::cargo_uses_gitoxide;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project, rustc_host};

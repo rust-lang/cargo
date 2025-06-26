@@ -1,6 +1,6 @@
 //! Tests for named profiles.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::{basic_lib_manifest, project, str};
 
 #[cargo_test]

@@ -2,12 +2,12 @@
 
 use std::fmt::{self, Write};
 
+use crate::prelude::*;
+use crate::utils::tools;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::exe;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::tools;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, project};
 
 #[cargo_test]

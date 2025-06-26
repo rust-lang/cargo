@@ -1,7 +1,8 @@
 //! Tests for targets with `rust-version`.
 
-use cargo_test_support::prelude::*;
-use cargo_test_support::{cargo_process, project, registry::Package, str};
+use crate::prelude::*;
+use crate::utils::cargo_process;
+use cargo_test_support::{project, registry::Package, str};
 
 #[cargo_test]
 fn rust_version_satisfied() {

@@ -2,12 +2,13 @@
 
 use std::fs::File;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::{cross_compile, project, publish, registry, str};
 
 #[cargo_test]
 fn simple_cross_package() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
     let p = project()
@@ -64,7 +65,7 @@ fn simple_cross_package() {
 
 #[cargo_test]
 fn publish_with_target() {
-    if cross_compile::disabled() {
+    if cross_compile_disabled() {
         return;
     }
 

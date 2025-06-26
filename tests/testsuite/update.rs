@@ -1,7 +1,7 @@
 //! Tests for the `cargo update` command.
 
+use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, str};

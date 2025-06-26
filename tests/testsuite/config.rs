@@ -7,6 +7,7 @@ use std::io;
 use std::os;
 use std::path::{Path, PathBuf};
 
+use crate::prelude::*;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::auth::RegistryConfig;
@@ -15,7 +16,6 @@ use cargo::util::context::{
 };
 use cargo::CargoResult;
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
 use cargo_util_schemas::manifest::TomlTrimPaths;

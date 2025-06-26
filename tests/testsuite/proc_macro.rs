@@ -1,6 +1,6 @@
 //! Tests for proc-macros.
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 

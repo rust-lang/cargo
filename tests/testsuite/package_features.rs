@@ -2,7 +2,7 @@
 
 use std::fmt::Write;
 
-use cargo_test_support::prelude::*;
+use crate::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project, str};
 
