@@ -32,6 +32,10 @@ pub struct TargetConfig {
     pub rustdocflags: OptValue<StringList>,
     /// The path of the linker for this target.
     pub linker: OptValue<ConfigRelativePath>,
+    /// The list of crates from the standard library to compile for this target.
+    pub build_std: OptValue<StringList>,
+    /// Features enabled for the standard library itself when building the standard library.
+    pub build_std_features: OptValue<StringList>,
     /// Build script override for the given library name.
     ///
     /// Any package with a `links` value for the given library name will skip
@@ -125,6 +129,19 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     let rustflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustflags"))?;
     let rustdocflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustdocflags"))?;
     let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{prefix}.linker"))?;
+    let build_std: OptValue<StringList> = gctx.get(&format!("{prefix}.build-std"))?;
+    let build_std_features: OptValue<StringList> =
+        gctx.get(&format!("{prefix}.build-std-features"))?;
+
+    if (build_std.is_some() || build_std_features.is_some())
+        && !gctx.cli_unstable().unstable_options
+    {
+        return Err(anyhow::format_err!(
+            "the `build_std` and `build_std_features` fields on targets are unstable, \
+                 pass `-Z unstable-options` on the nightly channel to enable it"
+        )
+        .into());
+    }
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match gctx.get_table(&target_key)? {
@@ -136,6 +153,8 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
         rustflags,
         rustdocflags,
         linker,
+        build_std,
+        build_std_features,
         links_overrides: Rc::new(links_overrides),
     })
 }
@@ -150,7 +169,8 @@ fn parse_links_overrides(
         // Skip these keys, it shares the namespace with `TargetConfig`.
         match lib_name.as_str() {
             // `ar` is a historical thing.
-            "ar" | "linker" | "runner" | "rustflags" | "rustdocflags" => continue,
+            "ar" | "linker" | "runner" | "rustflags" | "rustdocflags" | "build-std"
+            | "build-std-features" => continue,
             _ => {}
         }
         let mut output = BuildOutput::default();
