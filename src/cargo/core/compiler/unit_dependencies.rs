@@ -343,7 +343,11 @@ fn compute_deps(
     if unit.target.is_custom_build() {
         return Ok(ret);
     }
-    ret.extend(dep_build_script(unit, unit_for, state)?);
+    ret.extend(
+        dep_build_script(unit, unit_for, state)?
+            .into_iter()
+            .flatten(),
+    );
 
     // If this target is a binary, test, example, etc, then it depends on
     // the library of the same package. The call to `resolve.deps` above
@@ -645,7 +649,11 @@ fn compute_deps_doc(
     }
 
     // Be sure to build/run the build script for documented libraries.
-    ret.extend(dep_build_script(unit, unit_for, state)?);
+    ret.extend(
+        dep_build_script(unit, unit_for, state)?
+            .into_iter()
+            .flatten(),
+    );
 
     // If we document a binary/example, we need the library available.
     if unit.target.is_bin() || unit.target.is_example() {
@@ -731,54 +739,57 @@ fn dep_build_script(
     unit: &Unit,
     unit_for: UnitFor,
     state: &State<'_, '_>,
-) -> CargoResult<Option<UnitDep>> {
-    unit.pkg
-        .targets()
-        .iter()
-        .find(|t| t.is_custom_build())
-        .map(|t| {
-            // The profile stored in the Unit is the profile for the thing
-            // the custom build script is running for.
-            let profile = state.profiles.get_profile_run_custom_build(&unit.profile);
-            // UnitFor::for_custom_build is used because we want the `host` flag set
-            // for all of our build dependencies (so they all get
-            // build-override profiles), including compiling the build.rs
-            // script itself.
-            //
-            // If `is_for_host_features` here is `false`, that means we are a
-            // build.rs script for a normal dependency and we want to set the
-            // CARGO_FEATURE_* environment variables to the features as a
-            // normal dep.
-            //
-            // If `is_for_host_features` here is `true`, that means that this
-            // package is being used as a build dependency or proc-macro, and
-            // so we only want to set CARGO_FEATURE_* variables for the host
-            // side of the graph.
-            //
-            // Keep in mind that the RunCustomBuild unit and the Compile
-            // build.rs unit use the same features. This is because some
-            // people use `cfg!` and `#[cfg]` expressions to check for enabled
-            // features instead of just checking `CARGO_FEATURE_*` at runtime.
-            // In the case with the new feature resolver (decoupled host
-            // deps), and a shared dependency has different features enabled
-            // for normal vs. build, then the build.rs script will get
-            // compiled twice. I believe it is not feasible to only build it
-            // once because it would break a large number of scripts (they
-            // would think they have the wrong set of features enabled).
-            let script_unit_for = unit_for.for_custom_build();
-            new_unit_dep_with_profile(
-                state,
-                unit,
-                &unit.pkg,
-                t,
-                script_unit_for,
-                unit.kind,
-                CompileMode::RunCustomBuild,
-                profile,
-                IS_NO_ARTIFACT_DEP,
-            )
-        })
-        .transpose()
+) -> CargoResult<Option<Vec<UnitDep>>> {
+    Some(
+        unit.pkg
+            .targets()
+            .iter()
+            .filter(|t| t.is_custom_build())
+            .map(|t| {
+                // The profile stored in the Unit is the profile for the thing
+                // the custom build script is running for.
+                let profile = state.profiles.get_profile_run_custom_build(&unit.profile);
+                // UnitFor::for_custom_build is used because we want the `host` flag set
+                // for all of our build dependencies (so they all get
+                // build-override profiles), including compiling the build.rs
+                // script itself.
+                //
+                // If `is_for_host_features` here is `false`, that means we are a
+                // build.rs script for a normal dependency and we want to set the
+                // CARGO_FEATURE_* environment variables to the features as a
+                // normal dep.
+                //
+                // If `is_for_host_features` here is `true`, that means that this
+                // package is being used as a build dependency or proc-macro, and
+                // so we only want to set CARGO_FEATURE_* variables for the host
+                // side of the graph.
+                //
+                // Keep in mind that the RunCustomBuild unit and the Compile
+                // build.rs unit use the same features. This is because some
+                // people use `cfg!` and `#[cfg]` expressions to check for enabled
+                // features instead of just checking `CARGO_FEATURE_*` at runtime.
+                // In the case with the new feature resolver (decoupled host
+                // deps), and a shared dependency has different features enabled
+                // for normal vs. build, then the build.rs script will get
+                // compiled twice. I believe it is not feasible to only build it
+                // once because it would break a large number of scripts (they
+                // would think they have the wrong set of features enabled).
+                let script_unit_for = unit_for.for_custom_build();
+                new_unit_dep_with_profile(
+                    state,
+                    unit,
+                    &unit.pkg,
+                    t,
+                    script_unit_for,
+                    unit.kind,
+                    CompileMode::RunCustomBuild,
+                    profile,
+                    IS_NO_ARTIFACT_DEP,
+                )
+            })
+            .collect(),
+    )
+    .transpose()
 }
 
 /// Choose the correct mode for dependencies.

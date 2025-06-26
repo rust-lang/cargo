@@ -436,13 +436,12 @@ fn custom_build_script_first_index_script_failed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build1 --edition=2024 build1.rs [..]--crate-type bin [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
+...
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1` ([EXIT_STATUS]: 101)
-
+...
 "#]])
         .run();
 }
@@ -472,14 +471,15 @@ fn custom_build_script_second_index_script_failed() {
 
     p.cargo("check -v")
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build1 --edition=2024 build1.rs [..]--crate-type bin [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
-[RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
+[ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build2` ([EXIT_STATUS]: 101)
+...
 "#]])
         .run();
 }
