@@ -90,7 +90,7 @@ fn check_dep_has_version(dep: &crate::core::Dependency, publish: bool) -> crate:
             |registry_id| registry_id.display_registry_name(),
         );
         anyhow::bail!(
-            "all dependencies must have a version specified when {}.\n\
+            "all dependencies must have a version requirement specified when {}.\n\
              dependency `{}` does not specify a version\n\
              Note: The {} dependency will use the version from {},\n\
              the `{}` specification will be removed from the dependency declaration.",

@@ -398,10 +398,13 @@ fn git_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] all dependencies must have a version specified when publishing.
-dependency `foo` does not specify a version
-Note: The published dependency will use the version from crates.io,
-the `git` specification will be removed from the dependency declaration.
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  all dependencies must have a version requirement specified when publishing.
+  dependency `foo` does not specify a version
+  Note: The published dependency will use the version from crates.io,
+  the `git` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -438,10 +441,13 @@ fn path_dependency_no_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] all dependencies must have a version specified when publishing.
-dependency `bar` does not specify a version
-Note: The published dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  all dependencies must have a version requirement specified when publishing.
+  dependency `bar` does not specify a version
+  Note: The published dependency will use the version from crates.io,
+  the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();

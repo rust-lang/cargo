@@ -288,9 +288,12 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] crates cannot be published to crates.io with dependencies sourced from other
-registries. `bar` needs to be published to crates.io before publishing this crate.
-(crate `bar` is pulled from registry `alternative`)
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  crates cannot be published to crates.io with dependencies sourced from other
+  registries. `bar` needs to be published to crates.io before publishing this crate.
+  (crate `bar` is pulled from registry `alternative`)
 
 "#]])
         .run();
@@ -304,9 +307,12 @@ registries. `bar` needs to be published to crates.io before publishing this crat
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] crates cannot be published to crates.io with dependencies sourced from other
-registries. `bar` needs to be published to crates.io before publishing this crate.
-(crate `bar` is pulled from registry `alternative`)
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  crates cannot be published to crates.io with dependencies sourced from other
+  registries. `bar` needs to be published to crates.io before publishing this crate.
+  (crate `bar` is pulled from registry `alternative`)
 
 "#]])
         .run();

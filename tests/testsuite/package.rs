@@ -368,10 +368,13 @@ fn path_dependency_no_version() {
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version
-Note: The packaged dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  all dependencies must have a version requirement specified when packaging.
+  dependency `bar` does not specify a version
+  Note: The packaged dependency will use the version from crates.io,
+  the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -405,10 +408,13 @@ fn git_dependency_no_version() {
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] all dependencies must have a version specified when packaging.
-dependency `foo` does not specify a version
-Note: The packaged dependency will use the version from crates.io,
-the `git` specification will be removed from the dependency declaration.
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  all dependencies must have a version requirement specified when packaging.
+  dependency `foo` does not specify a version
+  Note: The packaged dependency will use the version from crates.io,
+  the `git` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -2989,10 +2995,13 @@ src/main.rs
     p.cargo("package")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] all dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version
-Note: The packaged dependency will use the version from crates.io,
-the `path` specification will be removed from the dependency declaration.
+[ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  all dependencies must have a version requirement specified when packaging.
+  dependency `bar` does not specify a version
+  Note: The packaged dependency will use the version from crates.io,
+  the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
