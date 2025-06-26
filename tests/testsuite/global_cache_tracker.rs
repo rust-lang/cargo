@@ -1987,11 +1987,9 @@ fn compatible_with_older_cargo() {
             middle = "1.0"
         "#,
     );
-    // TODO: Remove -Zgc after 1.82 is stabilized.
     rustup_cargo()
-        .args(&["+stable", "check", "-Zgc"])
+        .args(&["+stable", "check"])
         .cwd(p.root())
-        .masquerade_as_nightly_cargo(&["gc"])
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(2))
         .run();
     assert_eq!(get_registry_names("src"), ["middle-1.0.0", "new-1.0.0"]);

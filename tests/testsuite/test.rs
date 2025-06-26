@@ -4742,10 +4742,7 @@ fn test_dep_with_dev() {
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
-)]
+#[cargo_test]
 fn cargo_test_doctest_xcompile_ignores() {
     // Check ignore-TARGET syntax.
     let p = project()
@@ -4782,10 +4779,7 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
-)]
+#[cargo_test]
 fn cargo_test_doctest_xcompile_runner() {
     if !cross_compile_can_run_on_host() {
         return;
@@ -4868,10 +4862,7 @@ this is a runner
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
-)]
+#[cargo_test]
 fn cargo_test_doctest_xcompile_no_runner() {
     if !cross_compile_can_run_on_host() {
         return;

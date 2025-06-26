@@ -1136,10 +1136,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "waiting for 1.88 to be stable for doctest xcompile flags"
-)]
+#[cargo_test]
 fn doctest_xcompile_linker() {
     if cross_compile_disabled() {
         return;
