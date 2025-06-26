@@ -436,13 +436,12 @@ fn custom_build_script_first_index_script_failed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build1 --edition=2024 build1.rs [..]--crate-type bin [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
+...
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1` ([EXIT_STATUS]: 101)
-
+...
 "#]])
         .run();
 }
@@ -472,14 +471,15 @@ fn custom_build_script_second_index_script_failed() {
 
     p.cargo("check -v")
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build1 --edition=2024 build1.rs [..]--crate-type bin [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
-[RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
+[ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build2` ([EXIT_STATUS]: 101)
+...
 "#]])
         .run();
 }
@@ -602,7 +602,7 @@ fn build_script_with_conflicting_out_dirs() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(0)
         .with_stdout_data(str![[r#"
-Hello, from Build Script 1!
+Hello, from Build Script 2!
 
 "#]])
         .run();
@@ -614,23 +614,34 @@ fn rerun_untracks_other_files() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["multiple-build-scripts"]
+
                 [package]
                 name = "foo"
                 version = "0.1.0"
                 edition = "2024"
+                build = ["build1.rs", "build2.rs"]
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
-            "build.rs",
+            "build1.rs",
             r#"
 fn main() {
     foo();
-    bar();
 }
 fn foo() {
     let _path = "assets/foo.txt";
 }
+"#,
+        )
+        .file(
+            "build2.rs",
+            r#"
+fn main() {
+    bar();
+}
+
 fn bar() {
     let path = "assets/bar.txt";
     println!("cargo::rerun-if-changed={path}");
@@ -639,27 +650,34 @@ fn bar() {
         .file("assets/foo.txt", "foo")
         .file("assets/bar.txt", "bar")
         .build();
-    p.cargo("check").run();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .run();
 
-    // Editing foo.txt won't recompile, leading to unnoticed changes
-
+    // Editing foo.txt will also recompile now since they are separate build scripts
     p.change_file("assets/foo.txt", "foo updated");
     p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_stderr_data(str![[r#"
-[FRESH] foo v0.1.0 ([ROOT]/foo)
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
+[RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    // Editing bar.txt will recompile
+    // Editing bar.txt will also recompile now since they are separate build scripts
 
     p.change_file("assets/bar.txt", "bar updated");
     p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `assets/bar.txt` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
 [RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
