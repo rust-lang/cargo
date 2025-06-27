@@ -639,12 +639,12 @@ fn bar() {
         .file("assets/foo.txt", "foo")
         .file("assets/bar.txt", "bar")
         .build();
-    p.cargo("build").run();
+    p.cargo("check").run();
 
     // Editing foo.txt won't recompile, leading to unnoticed changes
 
     p.change_file("assets/foo.txt", "foo updated");
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -655,7 +655,7 @@ fn bar() {
     // Editing bar.txt will recompile
 
     p.change_file("assets/bar.txt", "bar updated");
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.1.0 ([ROOT]/foo): the file `assets/bar.txt` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
