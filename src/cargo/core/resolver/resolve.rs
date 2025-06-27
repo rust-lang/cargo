@@ -390,6 +390,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.checksums
     }
 
+    pub fn set_checksum(&mut self, pkg_id: PackageId, checksum: String) {
+        self.checksums.insert(pkg_id, Some(checksum));
+    }
+
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }

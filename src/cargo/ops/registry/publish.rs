@@ -202,6 +202,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             keep_going: opts.keep_going,
             cli_features: opts.cli_features.clone(),
             reg_or_index: reg_or_index.clone(),
+            dry_run: opts.dry_run,
         },
         pkgs,
     )?;

@@ -4427,7 +4427,6 @@ fn checksum_changed() {
     p.cargo("publish --dry-run --workspace -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] crate dep@1.0.0 already exists on crates.io index
@@ -4436,18 +4435,21 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] dep v1.0.0 ([ROOT]/foo/dep)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  checksum for `dep v1.0.0` changed between lock files
-
-  this could be indicative of a few possible errors:
-
-      * the lock file is corrupt
-      * a replacement source in use (e.g., a mirror) returned a different checksum
-      * the source itself may be corrupt in one way or another
-
-  unable to verify that `dep v1.0.0` is the same as when the lockfile was generated
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v1.0.0 ([ROOT]/foo/dep)
+[COMPILING] dep v1.0.0 ([ROOT]/foo/target/package/dep-1.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[UNPACKING] dep v1.0.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] dep v1.0.0
+[COMPILING] transitive v1.0.0
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] dep v1.0.0 ([ROOT]/foo/dep)
+[WARNING] aborting upload due to dry run
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .run();
