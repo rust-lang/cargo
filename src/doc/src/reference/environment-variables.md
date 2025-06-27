@@ -106,6 +106,7 @@ In summary, the supported environment variables are:
 * `CARGO_HTTP_PROXY` --- Enables HTTP proxy, see [`http.proxy`].
 * `CARGO_HTTP_TIMEOUT` --- The HTTP timeout, see [`http.timeout`].
 * `CARGO_HTTP_CAINFO` --- The TLS certificate Certificate Authority file, see [`http.cainfo`].
+* `CARGO_HTTP_PROXY_CAINFO` --- The proxy TLS certificate Certificate Authority file, see [`http.proxy-cainfo`].
 * `CARGO_HTTP_CHECK_REVOKE` --- Disables TLS certificate revocation checks, see [`http.check-revoke`].
 * `CARGO_HTTP_SSL_VERSION` --- The TLS version to use, see [`http.ssl-version`].
 * `CARGO_HTTP_LOW_SPEED_LIMIT` --- The HTTP low-speed limit, see [`http.low-speed-limit`].
@@ -173,6 +174,7 @@ In summary, the supported environment variables are:
 [`http.proxy`]: config.md#httpproxy
 [`http.timeout`]: config.md#httptimeout
 [`http.cainfo`]: config.md#httpcainfo
+[`http.proxy-cainfo`]: config.md#httpproxy-cainfo
 [`http.check-revoke`]: config.md#httpcheck-revoke
 [`http.ssl-version`]: config.md#httpssl-version
 [`http.low-speed-limit`]: config.md#httplow-speed-limit
