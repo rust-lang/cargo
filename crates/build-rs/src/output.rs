@@ -13,7 +13,7 @@ use std::{fmt::Display, fmt::Write as _};
 use crate::ident::{is_ascii_ident, is_ident};
 
 fn emit(directive: &str, value: impl Display) {
-    println!("cargo::{}={}", directive, value);
+    println!("cargo::{directive}={value}");
 }
 
 /// The `rerun-if-changed` instruction tells Cargo to re-run the build script if the
@@ -97,7 +97,7 @@ pub fn rustc_link_arg_bin(bin: &str, flag: &str) {
     if flag.contains([' ', '\n']) {
         panic!("cannot emit rustc-link-arg-bin: invalid flag {flag:?}");
     }
-    emit("rustc-link-arg-bin", format_args!("{}={}", bin, flag));
+    emit("rustc-link-arg-bin", format_args!("{bin}={flag}"));
 }
 
 /// The `rustc-link-arg-bins` instruction tells Cargo to pass the
@@ -433,5 +433,5 @@ pub fn metadata(key: &str, val: &str) {
         panic!("cannot emit metadata: invalid value {val:?}");
     }
 
-    emit("metadata", format_args!("{}={}", key, val));
+    emit("metadata", format_args!("{key}={val}"));
 }
