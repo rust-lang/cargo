@@ -5602,17 +5602,14 @@ test check_target ... ok
 "#]])
         .run();
 
-    // Remove check once 1.88 is stable
-    if cargo_test_support::is_nightly() {
-        p.cargo("test --workspace --doc --target")
-            .arg(&target)
-            .with_stdout_data(str![[r#"
+    p.cargo("test --workspace --doc --target")
+        .arg(&target)
+        .with_stdout_data(str![[r#"
 ...
 test foo/src/lib.rs - (line 2) ... ok
 ...
 "#]])
-            .run();
-    }
+        .run();
 }
 
 #[cargo_test]
