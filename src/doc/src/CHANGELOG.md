@@ -62,13 +62,13 @@
   [#15623](https://github.com/rust-lang/cargo/pull/15623)
 - cargo-credential-libsecret: load libsecret only once
   [#15295](https://github.com/rust-lang/cargo/pull/15295)
-- fix(fingerprint): When failing to find the mtime of a file, report an explicit reason rather than "stale; unknown reason".
+- When failing to find the mtime of a file for rebuild detection, report an explicit reason rather than "stale; unknown reason".
   [#15617](https://github.com/rust-lang/cargo/pull/15617)
 - Fixed cargo add overwriting symlinked Cargo.toml files
   [#15281](https://github.com/rust-lang/cargo/pull/15281)
-- fix(vendor)!: vendor files with .rej/.orig suffix
+- Vendor files with .rej/.orig suffix
   [#15569](https://github.com/rust-lang/cargo/pull/15569)
-- fix(vendor)!: use direct extraction for registry sources. This should ensure that vendored files now always match the originals.
+- Vendor using direct extraction for registry sources. This should ensure that vendored files now always match the originals.
   [#15514](https://github.com/rust-lang/cargo/pull/15514)
 - In the network retry message, use singular "try" for the last retry.
   [#15328](https://github.com/rust-lang/cargo/pull/15328)
@@ -96,27 +96,27 @@
   [#15470](https://github.com/rust-lang/cargo/pull/15470)
 - Added custom completer for `cargo remove <TAB>`
   [#15662](https://github.com/rust-lang/cargo/pull/15662)
-- test(publish): Improvements in prep for `-Zpackage-workspace` stabilization
+- Test improvements in prep for `-Zpackage-workspace` stabilization
   [#15628](https://github.com/rust-lang/cargo/pull/15628)
-- fix(package): Allow packaging of self-cycles with `-Zpackage-workspace`
+- Allow packaging of self-cycles with `-Zpackage-workspace`
   [#15626](https://github.com/rust-lang/cargo/pull/15626)
-- fix(trim-paths): remap all paths to `build.build-dir`
+- With trim-paths, remap all paths to `build.build-dir`
   [#15614](https://github.com/rust-lang/cargo/pull/15614)
-- test(trim-paths): enable more tests for windows-msvc
+- Enable more trim-paths tests for windows-msvc
   [#15621](https://github.com/rust-lang/cargo/pull/15621)
-- fix(doc): pass `toolchain-shared-resources` to get doc styled for rustdoc-depinfo tracking
+- Fix doc rebuild detection by passing `toolchain-shared-resources` to get doc styled for rustdoc-depinfo tracking
   [#15605](https://github.com/rust-lang/cargo/pull/15605)
-- fix(embedded): Resolve multiple bugs in frontmatter parser for `-Zscript`
+- Resolve multiple bugs in frontmatter parser for `-Zscript`
   [#15573](https://github.com/rust-lang/cargo/pull/15573)
-- fix(toml): Remove workaround for rustc frontmatter support for `-Zscript`
+- Remove workaround for rustc frontmatter support for `-Zscript`
   [#15570](https://github.com/rust-lang/cargo/pull/15570)
 - Allow configuring arbitrary codegen backends
   [#15562](https://github.com/rust-lang/cargo/pull/15562)
-- feat: skip `publish=false` pkg when publishing entire workspace for `-Zpackage-workspace`.
+- skip `publish=false` pkg when publishing entire workspace for `-Zpackage-workspace`.
   [#15525](https://github.com/rust-lang/cargo/pull/15525)
-- doc: Update instructions on using native-completions
+- Update instructions on using native-completions
   [#15480](https://github.com/rust-lang/cargo/pull/15480)
-- fix(package): Skip registry check if its not needed with `-Zpackage-workspace`.
+- Skip registry check if its not needed with `-Zpackage-workspace`.
   [#15629](https://github.com/rust-lang/cargo/pull/15629)
 
 ### Documentation
