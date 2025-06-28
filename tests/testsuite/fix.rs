@@ -2410,7 +2410,8 @@ fn fix_only_once_for_duplicates() {
             r#"
 macro_rules! foo {
     () => {
-        &1;
+        let x = Box::new(1);
+        std::mem::forget(&x);
     };
 }
 
@@ -2438,7 +2439,8 @@ fn main() {
 
 macro_rules! foo {
     () => {
-        let _ = &1;
+        let x = Box::new(1);
+        let _ = &x;
     };
 }
 
