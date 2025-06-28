@@ -2682,22 +2682,20 @@ fn nonexistence_package_together_with_workspace() {
 "#]])
         .run();
 
-    p.cargo("publish --dry-run --package nonexistence -Zpackage-workspace --workspace")
+    p.cargo("publish --dry-run --package nonexistence --workspace")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package(s) `nonexistence` not found in workspace `[ROOT]/foo`
 
 "#]])
-        .masquerade_as_nightly_cargo(&["package-workspace"])
         .run();
     // With pattern *
-    p.cargo("publish --dry-run --package nonpattern* -Zpackage-workspace --workspace")
+    p.cargo("publish --dry-run --package nonpattern* --workspace")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package pattern(s) `nonpattern*` not found in workspace `[ROOT]/foo`
 
 "#]])
-        .masquerade_as_nightly_cargo(&["package-workspace"])
         .run();
 
     p.cargo("tree --package nonexistence  --workspace")
