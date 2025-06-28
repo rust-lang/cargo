@@ -86,6 +86,19 @@ pub struct PackageOpts<'gctx> {
     pub targets: Vec<String>,
     pub cli_features: CliFeatures,
     pub reg_or_index: Option<ops::RegistryOrIndex>,
+    /// Whether this packaging job is meant for a publishing dry-run.
+    ///
+    /// Packaging on its own has no side effects, so a dry-run doesn't
+    /// make sense from that point of view. But dry-run publishing needs
+    /// special packaging behavior, which this flag turns on.
+    ///
+    /// Specifically, we want dry-run packaging to work even if versions
+    /// have not yet been bumped. But then if you dry-run packaging in
+    /// a workspace with some declared versions that are already published,
+    /// the package verification step can fail with checksum mismatches.
+    /// So when dry-run is true, the verification step does some extra
+    /// checksum fudging in the lock file.
+    pub dry_run: bool,
 }
 
 const ORIGINAL_MANIFEST_FILE: &str = "Cargo.toml.orig";
@@ -125,6 +138,7 @@ enum GeneratedFile {
 #[tracing::instrument(skip_all)]
 fn create_package(
     ws: &Workspace<'_>,
+    opts: &PackageOpts<'_>,
     pkg: &Package,
     ar_files: Vec<ArchiveFile>,
     local_reg: Option<&TmpRegistry<'_>>,
@@ -159,7 +173,7 @@ fn create_package(
     gctx.shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    let uncompressed_size = tar(ws, pkg, local_reg, ar_files, dst.file(), &filename)
+    let uncompressed_size = tar(ws, opts, pkg, local_reg, ar_files, dst.file(), &filename)
         .context("failed to prepare local package for uploading")?;
 
     dst.seek(SeekFrom::Start(0))?;
@@ -311,7 +325,7 @@ fn do_package<'a>(
                 }
             }
         } else {
-            let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
+            let tarball = create_package(ws, &opts, &pkg, ar_files, local_reg.as_ref())?;
             if let Some(local_reg) = local_reg.as_mut() {
                 if pkg.publish() != &Some(Vec::new()) {
                     local_reg.add_package(ws, &pkg, &tarball)?;
@@ -720,11 +734,12 @@ fn error_custom_build_file_not_in_package(
 /// Construct `Cargo.lock` for the package to be published.
 fn build_lock(
     ws: &Workspace<'_>,
+    opts: &PackageOpts<'_>,
     publish_pkg: &Package,
     local_reg: Option<&TmpRegistry<'_>>,
 ) -> CargoResult<String> {
     let gctx = ws.gctx();
-    let orig_resolve = ops::load_pkg_lockfile(ws)?;
+    let mut orig_resolve = ops::load_pkg_lockfile(ws)?;
 
     let mut tmp_ws = Workspace::ephemeral(publish_pkg.clone(), ws.gctx(), None, true)?;
 
@@ -736,6 +751,18 @@ fn build_lock(
             local_reg.upstream,
             local_reg.root.as_path_unlocked().to_owned(),
         );
+        if opts.dry_run {
+            if let Some(orig_resolve) = orig_resolve.as_mut() {
+                let upstream_in_lock = if local_reg.upstream.is_crates_io() {
+                    SourceId::crates_io(gctx)?
+                } else {
+                    local_reg.upstream
+                };
+                for (p, s) in local_reg.checksums() {
+                    orig_resolve.set_checksum(p.with_source_id(upstream_in_lock), s.to_owned());
+                }
+            }
+        }
     }
     let mut tmp_reg = tmp_ws.package_registry()?;
 
@@ -811,6 +838,7 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
 /// Returns the uncompressed size of the contents of the new archive file.
 fn tar(
     ws: &Workspace<'_>,
+    opts: &PackageOpts<'_>,
     pkg: &Package,
     local_reg: Option<&TmpRegistry<'_>>,
     ar_files: Vec<ArchiveFile>,
@@ -868,7 +896,7 @@ fn tar(
                     GeneratedFile::Manifest(_) => {
                         publish_pkg.manifest().to_normalized_contents()?
                     }
-                    GeneratedFile::Lockfile(_) => build_lock(ws, &publish_pkg, local_reg)?,
+                    GeneratedFile::Lockfile(_) => build_lock(ws, opts, &publish_pkg, local_reg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
                 header.set_entry_type(EntryType::file());
@@ -1062,6 +1090,7 @@ struct TmpRegistry<'a> {
     gctx: &'a GlobalContext,
     upstream: SourceId,
     root: Filesystem,
+    checksums: HashMap<PackageId, String>,
     _lock: FileLock,
 }
 
@@ -1073,6 +1102,7 @@ impl<'a> TmpRegistry<'a> {
             gctx,
             root,
             upstream,
+            checksums: HashMap::new(),
             _lock,
         };
         // If there's an old temporary registry, delete it.
@@ -1117,6 +1147,8 @@ impl<'a> TmpRegistry<'a> {
         let cksum = cargo_util::Sha256::new()
             .update_file(tar.file())?
             .finish_hex();
+
+        self.checksums.insert(package.package_id(), cksum.clone());
 
         let deps: Vec<_> = new_crate
             .deps
@@ -1177,5 +1209,9 @@ impl<'a> TmpRegistry<'a> {
         )?;
         dst.write_all(index_line.as_bytes())?;
         Ok(())
+    }
+
+    fn checksums(&self) -> impl Iterator<Item = (PackageId, &str)> {
+        self.checksums.iter().map(|(p, s)| (*p, s.as_str()))
     }
 }
