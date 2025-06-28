@@ -963,6 +963,18 @@ introduction of this feature will give an "unused manifest key" warning, but
 will otherwise function without erroring. This allows using the hint in a
 crate's `Cargo.toml` without mandating the use of a newer Cargo to build it.
 
+A crate can also provide this hint automatically for crates that depend on it,
+using the `[hints]` table (which will likewise be ignored by older Cargo):
+
+```toml
+[hints]
+mostly-unused = true
+```
+
+This will cause the crate to default to hint-mostly-unused, unless overridden
+via `profile`, which takes precedence, and which can only be specified in the
+top-level crate being built.
+
 ## rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
