@@ -22,12 +22,14 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
+use std::env;
 
 const CRATE_TEMPLATE: &str = "{crate}";
 const VERSION_TEMPLATE: &str = "{version}";
 const PREFIX_TEMPLATE: &str = "{prefix}";
 const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
 const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
+const CARGO_CRATES_DOWNLOAD_URL: &str = "CARGO_CRATES_DOWNLOAD_URL";
 
 /// Checks if `pkg` is downloaded and ready under the directory at `cache_path`.
 /// If not, returns a URL to download it from.
@@ -65,6 +67,14 @@ pub(super) fn download(
     }
 
     let mut url = registry_config.dl;
+    let cargo_crates_download_url = env::var(CARGO_CRATES_DOWNLOAD_URL);
+    url = if cargo_crates_download_url.is_ok() {
+        // If the environment variable is set, use it as the download URL.
+        cargo_crates_download_url.unwrap()
+    } else {
+        // Otherwise, use the download URL from the registry config.
+        url
+    };
     if !url.contains(CRATE_TEMPLATE)
         && !url.contains(VERSION_TEMPLATE)
         && !url.contains(PREFIX_TEMPLATE)

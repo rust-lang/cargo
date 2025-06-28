@@ -80,6 +80,9 @@ system:
 * `RUSTFMT` --- Instead of running `rustfmt`,
   [`cargo fmt`](https://github.com/rust-lang/rustfmt) will execute this specified
   `rustfmt` instance instead.
+* `CARGO_CRATES_DOWNLOAD_URL` --- Set the download URL, replace the dl in the
+  registry index config.json, and download through the proxy when in the intranet
+  and without external network
 
 ### Configuration environment variables
 
