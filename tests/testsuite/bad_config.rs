@@ -3,8 +3,7 @@
 use crate::prelude::*;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, project, rustc_host};
+use cargo_test_support::{basic_manifest, project, rustc_host, str, Project};
 
 #[cargo_test]
 fn bad1() {
@@ -3039,6 +3038,86 @@ fn bad_trim_paths() {
 8 |                 trim-paths = "split-debuginfo"
   |                              ^^^^^^^^^^^^^^^^^
   |
+
+"#]])
+        .run();
+}
+
+fn bad_target_name_project(target: &str, path: &str, name: &str) -> Project {
+    project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+[package]
+name = "bad-{target}-name"
+edition = "2024"
+
+[[{target}]]
+name = "{name}"
+"#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(format!("{path}/{name}"), "")
+        .build()
+}
+
+#[cargo_test]
+fn bad_bin_name() {
+    bad_target_name_project("bin", "src/bin", "bin.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `bin.rs` bin at `src/bin/bin.rs` or `src/bin/bin.rs/main.rs`. Please specify bin.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_example_name() {
+    bad_target_name_project("example", "examples", "example.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `example.rs` example at `examples/example.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_test_name() {
+    bad_target_name_project("test", "tests", "test.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `test.rs` test at `tests/test.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_bench_name() {
+    bad_target_name_project("bench", "benches", "bench.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `bench.rs` bench at `benches/bench.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
 
 "#]])
         .run();
