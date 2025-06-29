@@ -958,18 +958,12 @@ fn target_path_not_found_error_message(
         match (kind, commonly_wrong) {
             // commonly wrong paths
             ("test" | "bench" | "example", true) => target_path.push(kind),
-            ("bin", true) => {
-                target_path.push("src");
-                target_path.push("bins");
-            }
+            ("bin", true) => target_path.extend(["src", "bins"]),
             // default inferred paths
             ("test", false) => target_path.push(DEFAULT_TEST_DIR_NAME),
             ("bench", false) => target_path.push(DEFAULT_BENCH_DIR_NAME),
             ("example", false) => target_path.push(DEFAULT_EXAMPLE_DIR_NAME),
-            ("bin", false) => {
-                target_path.push("src");
-                target_path.push("bin");
-            }
+            ("bin", false) => target_path.extend(["src", "bin"]),
             _ => unreachable!("invalid target kind: {}", kind),
         }
 
@@ -988,36 +982,26 @@ fn target_path_not_found_error_message(
     let target_name = name_or_panic(target);
     let commonly_wrong_paths = possible_target_paths(&target_name, target_kind, true);
     let possible_paths = possible_target_paths(&target_name, target_kind, false);
-    let existing_wrong_path_index = match (
-        package_root.join(&commonly_wrong_paths[0]).exists(),
-        package_root.join(&commonly_wrong_paths[1]).exists(),
-    ) {
-        (true, _) => Some(0),
-        (_, true) => Some(1),
-        _ => None,
-    };
 
-    if let Some(i) = existing_wrong_path_index {
-        return format!(
-            "\
-can't find `{name}` {kind} at default paths, but found a file at `{wrong_path}`.
-Perhaps rename the file to `{possible_path}` for target auto-discovery, \
-or specify {kind}.path if you want to use a non-default path.",
-            name = target_name,
-            kind = target_kind,
-            wrong_path = commonly_wrong_paths[i].display(),
-            possible_path = possible_paths[i].display(),
-        );
+    if let Some((wrong_path, possible_path)) = commonly_wrong_paths
+        .iter()
+        .zip(possible_paths.iter())
+        .filter(|(wp, _)| package_root.join(wp).exists())
+        .next()
+    {
+        let [wrong_path, possible_path] = [wrong_path, possible_path].map(|p| p.display());
+        format!(
+            "can't find `{target_name}` {target_kind} at default paths, but found a file at `{wrong_path}`.\n\
+             Perhaps rename the file to `{possible_path}` for target auto-discovery, \
+             or specify {target_kind}.path if you want to use a non-default path."
+        )
+    } else {
+        let [path_file, path_dir] = possible_paths.each_ref().map(|p| p.display());
+        format!(
+            "can't find `{target_name}` {target_kind} at `{path_file}` or `{path_dir}`. \
+             Please specify {target_kind}.path if you want to use a non-default path."
+        )
     }
-
-    format!(
-        "can't find `{name}` {kind} at `{path_file}` or `{path_dir}`. \
-        Please specify {kind}.path if you want to use a non-default path.",
-        name = target_name,
-        kind = target_kind,
-        path_file = possible_paths[0].display(),
-        path_dir = possible_paths[1].display(),
-    )
 }
 
 fn target_path(
