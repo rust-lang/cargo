@@ -972,15 +972,14 @@ fn target_path_not_found_error_message(
             }
             _ => unreachable!("invalid target kind: {}", kind),
         }
-        target_path.push(name);
 
         let target_path_file = {
             let mut path = target_path.clone();
-            path.set_extension("rs");
+            path.push(format!("{name}.rs"));
             path
         };
         let target_path_subdir = {
-            target_path.push("main.rs");
+            target_path.extend([name, "main.rs"]);
             target_path
         };
         return [target_path_file, target_path_subdir];
