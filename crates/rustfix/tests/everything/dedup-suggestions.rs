@@ -1,7 +1,8 @@
 // See <https://github.com/rust-lang/cargo/issues/13027>
 macro_rules! foo {
     () => {
-        &1;
+        let x = Box::new(1);
+        std::mem::forget(&x);
     };
 }
 

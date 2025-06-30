@@ -1,323 +1,583 @@
 {
   "$message_type": "diagnostic",
-  "message": "unused borrow that must be used",
-  "code": {
-    "code": "unused_must_use",
-    "explanation": null
-  },
-  "level": "warning",
-  "spans": [
-    {
-      "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-      "byte_start": 96,
-      "byte_end": 98,
-      "line_start": 4,
-      "line_end": 4,
-      "column_start": 9,
-      "column_end": 11,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "        &1;",
-          "highlight_start": 9,
-          "highlight_end": 11
-        }
-      ],
-      "label": "the borrow produces a value",
-      "suggested_replacement": null,
-      "suggestion_applicability": null,
-      "expansion": {
-        "span": {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 126,
-          "byte_end": 132,
-          "line_start": 9,
-          "line_end": 9,
-          "column_start": 5,
-          "column_end": 11,
-          "is_primary": false,
-          "text": [
-            {
-              "text": "    foo!();",
-              "highlight_start": 5,
-              "highlight_end": 11
-            }
-          ],
-          "label": null,
-          "suggested_replacement": null,
-          "suggestion_applicability": null,
-          "expansion": null
-        },
-        "macro_decl_name": "foo!",
-        "def_site_span": {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 57,
-          "byte_end": 73,
-          "line_start": 2,
-          "line_end": 2,
-          "column_start": 1,
-          "column_end": 17,
-          "is_primary": false,
-          "text": [
-            {
-              "text": "macro_rules! foo {",
-              "highlight_start": 1,
-              "highlight_end": 17
-            }
-          ],
-          "label": null,
-          "suggested_replacement": null,
-          "suggestion_applicability": null,
-          "expansion": null
-        }
-      }
-    }
-  ],
   "children": [
     {
-      "message": "`#[warn(unused_must_use)]` on by default",
+      "children": [],
       "code": null,
       "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
+      "message": "`#[warn(forgetting_references)]` on by default",
+      "rendered": null,
+      "spans": []
     },
     {
-      "message": "use `let _ = ...` to ignore the resulting value",
+      "children": [],
       "code": null,
       "level": "help",
+      "message": "use `let _ = ...` to ignore the expression or result",
+      "rendered": null,
       "spans": [
         {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 96,
-          "byte_end": 96,
-          "line_start": 4,
-          "line_end": 4,
+          "byte_end": 142,
+          "byte_start": 125,
+          "column_end": 26,
           "column_start": 9,
-          "column_end": 9,
-          "is_primary": true,
-          "text": [
-            {
-              "text": "        &1;",
-              "highlight_start": 9,
-              "highlight_end": 9
-            }
-          ],
-          "label": null,
-          "suggested_replacement": "let _ = ",
-          "suggestion_applicability": "MaybeIncorrect",
           "expansion": {
-            "span": {
-              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-              "byte_start": 126,
-              "byte_end": 132,
-              "line_start": 9,
-              "line_end": 9,
-              "column_start": 5,
-              "column_end": 11,
+            "def_site_span": {
+              "byte_end": 73,
+              "byte_start": 57,
+              "column_end": 17,
+              "column_start": 1,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
               "is_primary": false,
-              "text": [
-                {
-                  "text": "    foo!();",
-                  "highlight_start": 5,
-                  "highlight_end": 11
-                }
-              ],
               "label": null,
+              "line_end": 2,
+              "line_start": 2,
               "suggested_replacement": null,
               "suggestion_applicability": null,
-              "expansion": null
+              "text": [
+                {
+                  "highlight_end": 17,
+                  "highlight_start": 1,
+                  "text": "macro_rules! foo {"
+                }
+              ]
             },
             "macro_decl_name": "foo!",
-            "def_site_span": {
-              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-              "byte_start": 57,
-              "byte_end": 73,
-              "line_start": 2,
-              "line_end": 2,
-              "column_start": 1,
-              "column_end": 17,
+            "span": {
+              "byte_end": 179,
+              "byte_start": 173,
+              "column_end": 11,
+              "column_start": 5,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
               "is_primary": false,
-              "text": [
-                {
-                  "text": "macro_rules! foo {",
-                  "highlight_start": 1,
-                  "highlight_end": 17
-                }
-              ],
               "label": null,
+              "line_end": 10,
+              "line_start": 10,
               "suggested_replacement": null,
               "suggestion_applicability": null,
-              "expansion": null
+              "text": [
+                {
+                  "highlight_end": 11,
+                  "highlight_start": 5,
+                  "text": "    foo!();"
+                }
+              ]
             }
-          }
+          },
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": true,
+          "label": null,
+          "line_end": 5,
+          "line_start": 5,
+          "suggested_replacement": "let _ = ",
+          "suggestion_applicability": "MaybeIncorrect",
+          "text": [
+            {
+              "highlight_end": 26,
+              "highlight_start": 9,
+              "text": "        std::mem::forget(&x);"
+            }
+          ]
+        },
+        {
+          "byte_end": 145,
+          "byte_start": 144,
+          "column_end": 29,
+          "column_start": 28,
+          "expansion": {
+            "def_site_span": {
+              "byte_end": 73,
+              "byte_start": 57,
+              "column_end": 17,
+              "column_start": 1,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 2,
+              "line_start": 2,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 17,
+                  "highlight_start": 1,
+                  "text": "macro_rules! foo {"
+                }
+              ]
+            },
+            "macro_decl_name": "foo!",
+            "span": {
+              "byte_end": 179,
+              "byte_start": 173,
+              "column_end": 11,
+              "column_start": 5,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 10,
+              "line_start": 10,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 11,
+                  "highlight_start": 5,
+                  "text": "    foo!();"
+                }
+              ]
+            }
+          },
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": true,
+          "label": null,
+          "line_end": 5,
+          "line_start": 5,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MaybeIncorrect",
+          "text": [
+            {
+              "highlight_end": 29,
+              "highlight_start": 28,
+              "text": "        std::mem::forget(&x);"
+            }
+          ]
         }
-      ],
-      "children": [],
-      "rendered": null
+      ]
     }
   ],
-  "rendered": "warning: unused borrow that must be used\n --> ./tests/everything/dedup-insert-only-replacements.rs:4:9\n  |\n4 |         &1;\n  |         ^^ the borrow produces a value\n...\n9 |     foo!();\n  |     ------ in this macro invocation\n  |\n  = note: `#[warn(unused_must_use)]` on by default\n  = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: use `let _ = ...` to ignore the resulting value\n  |\n4 |         let _ = &1;\n  |         +++++++\n\n"
-}
-{
-  "$message_type": "diagnostic",
-  "message": "unused borrow that must be used",
   "code": {
-    "code": "unused_must_use",
+    "code": "forgetting_references",
     "explanation": null
   },
   "level": "warning",
+  "message": "calls to `std::mem::forget` with a reference instead of an owned value does nothing",
+  "rendered": "warning: calls to `std::mem::forget` with a reference instead of an owned value does nothing/n  --> ./tests/everything/dedup-suggestions.rs:5:9/n   |/n5  |         std::mem::forget(&x);/n   |         ^^^^^^^^^^^^^^^^^--^/n   |                          |/n   |                          argument has type `&Box<i32>`/n.../n10 |     foo!();/n   |     ------ in this macro invocation/n   |/n   = note: `#[warn(forgetting_references)]` on by default/n   = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)/nhelp: use `let _ = ...` to ignore the expression or result/n   |/n5  -         std::mem::forget(&x);/n5  +         let _ = &x;/n   |/n/n",
   "spans": [
     {
-      "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-      "byte_start": 96,
-      "byte_end": 98,
-      "line_start": 4,
-      "line_end": 4,
-      "column_start": 9,
-      "column_end": 11,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "        &1;",
-          "highlight_start": 9,
-          "highlight_end": 11
-        }
-      ],
-      "label": "the borrow produces a value",
-      "suggested_replacement": null,
-      "suggestion_applicability": null,
+      "byte_end": 144,
+      "byte_start": 142,
+      "column_end": 28,
+      "column_start": 26,
       "expansion": {
-        "span": {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 138,
-          "byte_end": 144,
-          "line_start": 10,
-          "line_end": 10,
-          "column_start": 5,
-          "column_end": 11,
+        "def_site_span": {
+          "byte_end": 73,
+          "byte_start": 57,
+          "column_end": 17,
+          "column_start": 1,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
           "is_primary": false,
-          "text": [
-            {
-              "text": "    foo!();",
-              "highlight_start": 5,
-              "highlight_end": 11
-            }
-          ],
           "label": null,
+          "line_end": 2,
+          "line_start": 2,
           "suggested_replacement": null,
           "suggestion_applicability": null,
-          "expansion": null
+          "text": [
+            {
+              "highlight_end": 17,
+              "highlight_start": 1,
+              "text": "macro_rules! foo {"
+            }
+          ]
         },
         "macro_decl_name": "foo!",
-        "def_site_span": {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 57,
-          "byte_end": 73,
-          "line_start": 2,
-          "line_end": 2,
-          "column_start": 1,
-          "column_end": 17,
+        "span": {
+          "byte_end": 179,
+          "byte_start": 173,
+          "column_end": 11,
+          "column_start": 5,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
           "is_primary": false,
-          "text": [
-            {
-              "text": "macro_rules! foo {",
-              "highlight_start": 1,
-              "highlight_end": 17
-            }
-          ],
           "label": null,
+          "line_end": 10,
+          "line_start": 10,
           "suggested_replacement": null,
           "suggestion_applicability": null,
-          "expansion": null
-        }
-      }
-    }
-  ],
-  "children": [
-    {
-      "message": "use `let _ = ...` to ignore the resulting value",
-      "code": null,
-      "level": "help",
-      "spans": [
-        {
-          "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-          "byte_start": 96,
-          "byte_end": 96,
-          "line_start": 4,
-          "line_end": 4,
-          "column_start": 9,
-          "column_end": 9,
-          "is_primary": true,
           "text": [
             {
-              "text": "        &1;",
-              "highlight_start": 9,
-              "highlight_end": 9
+              "highlight_end": 11,
+              "highlight_start": 5,
+              "text": "    foo!();"
             }
-          ],
-          "label": null,
-          "suggested_replacement": "let _ = ",
-          "suggestion_applicability": "MaybeIncorrect",
-          "expansion": {
-            "span": {
-              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-              "byte_start": 138,
-              "byte_end": 144,
-              "line_start": 10,
-              "line_end": 10,
-              "column_start": 5,
-              "column_end": 11,
-              "is_primary": false,
-              "text": [
-                {
-                  "text": "    foo!();",
-                  "highlight_start": 5,
-                  "highlight_end": 11
-                }
-              ],
-              "label": null,
-              "suggested_replacement": null,
-              "suggestion_applicability": null,
-              "expansion": null
-            },
-            "macro_decl_name": "foo!",
-            "def_site_span": {
-              "file_name": "./tests/everything/dedup-insert-only-replacements.rs",
-              "byte_start": 57,
-              "byte_end": 73,
-              "line_start": 2,
-              "line_end": 2,
-              "column_start": 1,
-              "column_end": 17,
-              "is_primary": false,
-              "text": [
-                {
-                  "text": "macro_rules! foo {",
-                  "highlight_start": 1,
-                  "highlight_end": 17
-                }
-              ],
-              "label": null,
-              "suggested_replacement": null,
-              "suggestion_applicability": null,
-              "expansion": null
-            }
-          }
+          ]
         }
-      ],
-      "children": [],
-      "rendered": null
+      },
+      "file_name": "./tests/everything/dedup-suggestions.rs",
+      "is_primary": false,
+      "label": "argument has type `&Box<i32>`",
+      "line_end": 5,
+      "line_start": 5,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "text": [
+        {
+          "highlight_end": 28,
+          "highlight_start": 26,
+          "text": "        std::mem::forget(&x);"
+        }
+      ]
+    },
+    {
+      "byte_end": 145,
+      "byte_start": 125,
+      "column_end": 29,
+      "column_start": 9,
+      "expansion": {
+        "def_site_span": {
+          "byte_end": 73,
+          "byte_start": 57,
+          "column_end": 17,
+          "column_start": 1,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 2,
+          "line_start": 2,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 17,
+              "highlight_start": 1,
+              "text": "macro_rules! foo {"
+            }
+          ]
+        },
+        "macro_decl_name": "foo!",
+        "span": {
+          "byte_end": 179,
+          "byte_start": 173,
+          "column_end": 11,
+          "column_start": 5,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 10,
+          "line_start": 10,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 11,
+              "highlight_start": 5,
+              "text": "    foo!();"
+            }
+          ]
+        }
+      },
+      "file_name": "./tests/everything/dedup-suggestions.rs",
+      "is_primary": true,
+      "label": null,
+      "line_end": 5,
+      "line_start": 5,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "text": [
+        {
+          "highlight_end": 29,
+          "highlight_start": 9,
+          "text": "        std::mem::forget(&x);"
+        }
+      ]
     }
-  ],
-  "rendered": "warning: unused borrow that must be used\n  --> ./tests/everything/dedup-insert-only-replacements.rs:4:9\n   |\n4  |         &1;\n   |         ^^ the borrow produces a value\n...\n10 |     foo!();\n   |     ------ in this macro invocation\n   |\n   = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: use `let _ = ...` to ignore the resulting value\n   |\n4  |         let _ = &1;\n   |         +++++++\n\n"
+  ]
 }
 {
   "$message_type": "diagnostic",
-  "message": "2 warnings emitted",
+  "children": [
+    {
+      "children": [],
+      "code": null,
+      "level": "help",
+      "message": "use `let _ = ...` to ignore the expression or result",
+      "rendered": null,
+      "spans": [
+        {
+          "byte_end": 142,
+          "byte_start": 125,
+          "column_end": 26,
+          "column_start": 9,
+          "expansion": {
+            "def_site_span": {
+              "byte_end": 73,
+              "byte_start": 57,
+              "column_end": 17,
+              "column_start": 1,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 2,
+              "line_start": 2,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 17,
+                  "highlight_start": 1,
+                  "text": "macro_rules! foo {"
+                }
+              ]
+            },
+            "macro_decl_name": "foo!",
+            "span": {
+              "byte_end": 191,
+              "byte_start": 185,
+              "column_end": 11,
+              "column_start": 5,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 11,
+              "line_start": 11,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 11,
+                  "highlight_start": 5,
+                  "text": "    foo!();"
+                }
+              ]
+            }
+          },
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": true,
+          "label": null,
+          "line_end": 5,
+          "line_start": 5,
+          "suggested_replacement": "let _ = ",
+          "suggestion_applicability": "MaybeIncorrect",
+          "text": [
+            {
+              "highlight_end": 26,
+              "highlight_start": 9,
+              "text": "        std::mem::forget(&x);"
+            }
+          ]
+        },
+        {
+          "byte_end": 145,
+          "byte_start": 144,
+          "column_end": 29,
+          "column_start": 28,
+          "expansion": {
+            "def_site_span": {
+              "byte_end": 73,
+              "byte_start": 57,
+              "column_end": 17,
+              "column_start": 1,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 2,
+              "line_start": 2,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 17,
+                  "highlight_start": 1,
+                  "text": "macro_rules! foo {"
+                }
+              ]
+            },
+            "macro_decl_name": "foo!",
+            "span": {
+              "byte_end": 191,
+              "byte_start": 185,
+              "column_end": 11,
+              "column_start": 5,
+              "expansion": null,
+              "file_name": "./tests/everything/dedup-suggestions.rs",
+              "is_primary": false,
+              "label": null,
+              "line_end": 11,
+              "line_start": 11,
+              "suggested_replacement": null,
+              "suggestion_applicability": null,
+              "text": [
+                {
+                  "highlight_end": 11,
+                  "highlight_start": 5,
+                  "text": "    foo!();"
+                }
+              ]
+            }
+          },
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": true,
+          "label": null,
+          "line_end": 5,
+          "line_start": 5,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MaybeIncorrect",
+          "text": [
+            {
+              "highlight_end": 29,
+              "highlight_start": 28,
+              "text": "        std::mem::forget(&x);"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "code": {
+    "code": "forgetting_references",
+    "explanation": null
+  },
+  "level": "warning",
+  "message": "calls to `std::mem::forget` with a reference instead of an owned value does nothing",
+  "rendered": "warning: calls to `std::mem::forget` with a reference instead of an owned value does nothing/n  --> ./tests/everything/dedup-suggestions.rs:5:9/n   |/n5  |         std::mem::forget(&x);/n   |         ^^^^^^^^^^^^^^^^^--^/n   |                          |/n   |                          argument has type `&Box<i32>`/n.../n11 |     foo!();/n   |     ------ in this macro invocation/n   |/n   = note: this warning originates in the macro `foo` (in Nightly builds, run with -Z macro-backtrace for more info)/nhelp: use `let _ = ...` to ignore the expression or result/n   |/n5  -         std::mem::forget(&x);/n5  +         let _ = &x;/n   |/n/n",
+  "spans": [
+    {
+      "byte_end": 144,
+      "byte_start": 142,
+      "column_end": 28,
+      "column_start": 26,
+      "expansion": {
+        "def_site_span": {
+          "byte_end": 73,
+          "byte_start": 57,
+          "column_end": 17,
+          "column_start": 1,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 2,
+          "line_start": 2,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 17,
+              "highlight_start": 1,
+              "text": "macro_rules! foo {"
+            }
+          ]
+        },
+        "macro_decl_name": "foo!",
+        "span": {
+          "byte_end": 191,
+          "byte_start": 185,
+          "column_end": 11,
+          "column_start": 5,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 11,
+          "line_start": 11,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 11,
+              "highlight_start": 5,
+              "text": "    foo!();"
+            }
+          ]
+        }
+      },
+      "file_name": "./tests/everything/dedup-suggestions.rs",
+      "is_primary": false,
+      "label": "argument has type `&Box<i32>`",
+      "line_end": 5,
+      "line_start": 5,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "text": [
+        {
+          "highlight_end": 28,
+          "highlight_start": 26,
+          "text": "        std::mem::forget(&x);"
+        }
+      ]
+    },
+    {
+      "byte_end": 145,
+      "byte_start": 125,
+      "column_end": 29,
+      "column_start": 9,
+      "expansion": {
+        "def_site_span": {
+          "byte_end": 73,
+          "byte_start": 57,
+          "column_end": 17,
+          "column_start": 1,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 2,
+          "line_start": 2,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 17,
+              "highlight_start": 1,
+              "text": "macro_rules! foo {"
+            }
+          ]
+        },
+        "macro_decl_name": "foo!",
+        "span": {
+          "byte_end": 191,
+          "byte_start": 185,
+          "column_end": 11,
+          "column_start": 5,
+          "expansion": null,
+          "file_name": "./tests/everything/dedup-suggestions.rs",
+          "is_primary": false,
+          "label": null,
+          "line_end": 11,
+          "line_start": 11,
+          "suggested_replacement": null,
+          "suggestion_applicability": null,
+          "text": [
+            {
+              "highlight_end": 11,
+              "highlight_start": 5,
+              "text": "    foo!();"
+            }
+          ]
+        }
+      },
+      "file_name": "./tests/everything/dedup-suggestions.rs",
+      "is_primary": true,
+      "label": null,
+      "line_end": 5,
+      "line_start": 5,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "text": [
+        {
+          "highlight_end": 29,
+          "highlight_start": 9,
+          "text": "        std::mem::forget(&x);"
+        }
+      ]
+    }
+  ]
+}
+{
+  "$message_type": "diagnostic",
+  "children": [],
   "code": null,
   "level": "warning",
-  "spans": [],
-  "children": [],
-  "rendered": "warning: 2 warnings emitted\n\n"
+  "message": "2 warnings emitted",
+  "rendered": "warning: 2 warnings emitted/n/n",
+  "spans": []
 }
