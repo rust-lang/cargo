@@ -4378,3 +4378,79 @@ fn all_unpublishable_packages() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn checksum_changed() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    Package::new("dep", "1.0.0").publish();
+    Package::new("transitive", "1.0.0")
+        .dep("dep", "1.0.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["dep"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+
+                [dependencies]
+                dep = { path = "./dep", version = "1.0.0" }
+                transitive = "1.0.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "1.0.0"
+                edition = "2015"
+            "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    p.cargo("publish --dry-run --workspace -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate dep@1.0.0 already exists on crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] dep v1.0.0 ([ROOT]/foo/dep)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v1.0.0 ([ROOT]/foo/dep)
+[COMPILING] dep v1.0.0 ([ROOT]/foo/target/package/dep-1.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[UNPACKING] dep v1.0.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] dep v1.0.0
+[COMPILING] transitive v1.0.0
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] dep v1.0.0 ([ROOT]/foo/dep)
+[WARNING] aborting upload due to dry run
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+}
