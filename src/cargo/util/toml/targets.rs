@@ -21,12 +21,11 @@ use cargo_util_schemas::manifest::{
     TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
-use crate::core::compiler::rustdoc::RustdocScrapeExamples;
-use crate::core::compiler::CrateType;
+use crate::core::compiler::{rustdoc::RustdocScrapeExamples, CrateType};
 use crate::core::{Edition, Feature, Features, Target};
-use crate::util::errors::CargoResult;
-use crate::util::restricted_names;
-use crate::util::toml::deprecated_underscore;
+use crate::util::{
+    closest_msg, errors::CargoResult, restricted_names, toml::deprecated_underscore,
+};
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
@@ -952,73 +951,59 @@ fn target_path_not_found_error_message(
     package_root: &Path,
     target: &TomlTarget,
     target_kind: &str,
+    inferred: &[(String, PathBuf)],
 ) -> String {
     fn possible_target_paths(name: &str, kind: &str, commonly_wrong: bool) -> [PathBuf; 2] {
         let mut target_path = PathBuf::new();
         match (kind, commonly_wrong) {
             // commonly wrong paths
             ("test" | "bench" | "example", true) => target_path.push(kind),
-            ("bin", true) => {
-                target_path.push("src");
-                target_path.push("bins");
-            }
+            ("bin", true) => target_path.extend(["src", "bins"]),
             // default inferred paths
             ("test", false) => target_path.push(DEFAULT_TEST_DIR_NAME),
             ("bench", false) => target_path.push(DEFAULT_BENCH_DIR_NAME),
             ("example", false) => target_path.push(DEFAULT_EXAMPLE_DIR_NAME),
-            ("bin", false) => {
-                target_path.push("src");
-                target_path.push("bin");
-            }
+            ("bin", false) => target_path.extend(["src", "bin"]),
             _ => unreachable!("invalid target kind: {}", kind),
         }
-        target_path.push(name);
 
         let target_path_file = {
             let mut path = target_path.clone();
-            path.set_extension("rs");
+            path.push(format!("{name}.rs"));
             path
         };
         let target_path_subdir = {
-            target_path.push("main.rs");
+            target_path.extend([name, "main.rs"]);
             target_path
         };
         return [target_path_file, target_path_subdir];
     }
 
     let target_name = name_or_panic(target);
+
     let commonly_wrong_paths = possible_target_paths(&target_name, target_kind, true);
     let possible_paths = possible_target_paths(&target_name, target_kind, false);
-    let existing_wrong_path_index = match (
-        package_root.join(&commonly_wrong_paths[0]).exists(),
-        package_root.join(&commonly_wrong_paths[1]).exists(),
-    ) {
-        (true, _) => Some(0),
-        (_, true) => Some(1),
-        _ => None,
-    };
 
-    if let Some(i) = existing_wrong_path_index {
-        return format!(
-            "\
-can't find `{name}` {kind} at default paths, but found a file at `{wrong_path}`.
-Perhaps rename the file to `{possible_path}` for target auto-discovery, \
-or specify {kind}.path if you want to use a non-default path.",
-            name = target_name,
-            kind = target_kind,
-            wrong_path = commonly_wrong_paths[i].display(),
-            possible_path = possible_paths[i].display(),
-        );
+    let msg = closest_msg(target_name, inferred.iter(), |(n, _p)| n, target_kind);
+    if let Some((wrong_path, possible_path)) = commonly_wrong_paths
+        .iter()
+        .zip(possible_paths.iter())
+        .filter(|(wp, _)| package_root.join(wp).exists())
+        .next()
+    {
+        let [wrong_path, possible_path] = [wrong_path, possible_path].map(|p| p.display());
+        format!(
+            "can't find `{target_name}` {target_kind} at default paths, but found a file at `{wrong_path}`.\n\
+             Perhaps rename the file to `{possible_path}` for target auto-discovery, \
+             or specify {target_kind}.path if you want to use a non-default path.{msg}",
+        )
+    } else {
+        let [path_file, path_dir] = possible_paths.each_ref().map(|p| p.display());
+        format!(
+            "can't find `{target_name}` {target_kind} at `{path_file}` or `{path_dir}`. \
+             Please specify {target_kind}.path if you want to use a non-default path.{msg}"
+        )
     }
-
-    format!(
-        "can't find `{name}` {kind} at `{path_file}` or `{path_dir}`. \
-        Please specify {kind}.path if you want to use a non-default path.",
-        name = target_name,
-        kind = target_kind,
-        path_file = possible_paths[0].display(),
-        path_dir = possible_paths[1].display(),
-    )
 }
 
 fn target_path(
@@ -1054,6 +1039,7 @@ fn target_path(
                 package_root,
                 target,
                 target_kind,
+                inferred,
             ))
         }
         (Some(p0), Some(p1)) => {

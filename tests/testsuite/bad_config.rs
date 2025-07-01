@@ -3,8 +3,7 @@
 use crate::prelude::*;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, project, rustc_host};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, project, rustc_host, str, Project};
 
 #[cargo_test]
 fn bad1() {
@@ -419,16 +418,13 @@ fn bad_crate_type() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about crate-type bad_type information
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[ERROR] unknown crate type: `bad_type`, expected one of: `lib`, `rlib`, `staticlib`, `dylib`, `cdylib`, `bin`, `proc-macro`
 
-Caused by:
-  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --crate-type bad_type` ([EXIT_STATUS]: 1)
-  --- stderr
-  [ERROR] unknown crate type: `bad_type`[..]
-
+[ERROR] could not compile `foo` (lib) due to 1 previous error
 
 "#]])
         .run();
@@ -3039,6 +3035,512 @@ fn bad_trim_paths() {
 8 |                 trim-paths = "split-debuginfo"
   |                              ^^^^^^^^^^^^^^^^^
   |
+
+"#]])
+        .run();
+}
+
+fn bad_target_name_project(target: &str, path: &str, name: &str) -> Project {
+    project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+[package]
+name = "bad-{target}-name"
+edition = "2024"
+
+[[{target}]]
+name = "{name}"
+"#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(format!("{path}/{name}"), "")
+        .build()
+}
+
+#[cargo_test]
+fn bad_bin_name() {
+    bad_target_name_project("bin", "src/bin", "bin.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `bin.rs` bin at `src/bin/bin.rs.rs` or `src/bin/bin.rs/main.rs`. Please specify bin.path if you want to use a non-default path.
+
+  [HELP] a bin with a similar name exists: `bin`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_example_name() {
+    bad_target_name_project("example", "examples", "example.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
+
+  [HELP] a example with a similar name exists: `example`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_test_name() {
+    bad_target_name_project("test", "tests", "test.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
+
+  [HELP] a test with a similar name exists: `test`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn bad_bench_name() {
+    bad_target_name_project("bench", "benches", "bench.rs")
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
+
+  [HELP] a bench with a similar name exists: `bench`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check --tests -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. Please specify test.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[example]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check --examples -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. Please specify example.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "hello"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check --benches -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. Please specify bench.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_existing_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bin/ehlo.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
+
+  [HELP] a bin with a similar name exists: `ehlo`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[test]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("test/foo.rs", "")
+        .build();
+
+    p.cargo("check --tests -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` test at default paths, but found a file at `test/foo.rs`.
+  Perhaps rename the file to `tests/foo.rs` for target auto-discovery, or specify test.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_example() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[example]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("example/foo.rs", "")
+        .build();
+
+    p.cargo("check --examples -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` example at default paths, but found a file at `example/foo.rs`.
+  Perhaps rename the file to `examples/foo.rs` for target auto-discovery, or specify example.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_of_benchmark() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+
+                [lib]
+                name = "foo"
+                path = "src/lib.rs"
+
+                [[bench]]
+                name = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bench/foo.rs", "")
+        .build();
+
+    p.cargo("check --benches -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
+  Perhaps rename the file to `benches/foo.rs` for target auto-discovery, or specify bench.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo.rs`.
+  Perhaps rename the file to `src/bin/foo.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn commonly_wrong_path_subdir_binary() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bins/foo/main.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  can't find `foo` bin at default paths, but found a file at `src/bins/foo/main.rs`.
+  Perhaps rename the file to `src/bin/foo/main.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn found_multiple_target_files() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/lib.rs", "")
+        .file("src/bin/foo.rs", "")
+        .file("src/bin/foo/main.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        // Don't assert the inferred paths since the order is non-deterministic.
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  cannot infer path for `foo` bin
+  Cargo doesn't know which to use because multiple target files found at `src/bin/foo[..]rs` and `src/bin/foo[..].rs`.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn legacy_binary_paths_warnings() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
+disables Cargo from automatically inferring other binary targets.
+This inference behavior will change in the Rust 2018 edition and the following
+files will be included as a binary target:
+
+* src/main.rs
+
+This is likely to break cargo build or cargo test as these files may not be
+ready to be compiled as a binary target today. You can future-proof yourself
+and disable this warning by adding `autobins = false` to your [package]
+section. You may also move the files to a location where Cargo would not
+automatically infer them to be a target, such as in subfolders.
+
+For more information on this warning you can consult
+https://github.com/rust-lang/cargo/issues/5330
+[WARNING] path `src/main.rs` was erroneously implicitly accepted for binary `bar`,
+please set bin.path in Cargo.toml
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
+disables Cargo from automatically inferring other binary targets.
+This inference behavior will change in the Rust 2018 edition and the following
+files will be included as a binary target:
+
+* src/bin/main.rs
+
+This is likely to break cargo build or cargo test as these files may not be
+ready to be compiled as a binary target today. You can future-proof yourself
+and disable this warning by adding `autobins = false` to your [package]
+section. You may also move the files to a location where Cargo would not
+automatically infer them to be a target, such as in subfolders.
+
+For more information on this warning you can consult
+https://github.com/rust-lang/cargo/issues/5330
+[WARNING] path `src/bin/main.rs` was erroneously implicitly accepted for binary `bar`,
+please set bin.path in Cargo.toml
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("src/bar.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[WARNING] path `src/bar.rs` was erroneously implicitly accepted for binary `bar`,
+please set bin.path in Cargo.toml
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
