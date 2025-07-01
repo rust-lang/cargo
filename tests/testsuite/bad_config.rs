@@ -418,16 +418,13 @@ fn bad_crate_type() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about crate-type bad_type information
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[ERROR] unknown crate type: `bad_type`, expected one of: `lib`, `rlib`, `staticlib`, `dylib`, `cdylib`, `bin`, `proc-macro`
 
-Caused by:
-  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --crate-type bad_type` ([EXIT_STATUS]: 1)
-  --- stderr
-  [ERROR] unknown crate type: `bad_type`[..]
-
+[ERROR] could not compile `foo` (lib) due to 1 previous error
 
 "#]])
         .run();
@@ -3153,7 +3150,7 @@ fn non_existing_test() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --tests -v")
+    p.cargo("check --tests -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3187,7 +3184,7 @@ fn non_existing_example() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --examples -v")
+    p.cargo("check --examples -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3221,7 +3218,7 @@ fn non_existing_benchmark() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --benches -v")
+    p.cargo("check --benches -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3241,7 +3238,7 @@ fn non_existing_binary() {
         .file("src/bin/ehlo.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3278,7 +3275,7 @@ fn commonly_wrong_path_of_test() {
         .file("test/foo.rs", "")
         .build();
 
-    p.cargo("build --tests -v")
+    p.cargo("check --tests -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3314,7 +3311,7 @@ fn commonly_wrong_path_of_example() {
         .file("example/foo.rs", "")
         .build();
 
-    p.cargo("build --examples -v")
+    p.cargo("check --examples -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3350,7 +3347,7 @@ fn commonly_wrong_path_of_benchmark() {
         .file("bench/foo.rs", "")
         .build();
 
-    p.cargo("build --benches -v")
+    p.cargo("check --benches -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3371,7 +3368,7 @@ fn commonly_wrong_path_binary() {
         .file("src/bins/foo.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3392,7 +3389,7 @@ fn commonly_wrong_path_subdir_binary() {
         .file("src/bins/foo/main.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -3414,7 +3411,7 @@ fn found_multiple_target_files() {
         .file("src/bin/foo/main.rs", "")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_status(101)
         // Don't assert the inferred paths since the order is non-deterministic.
         .with_stderr_data(str![[r#"
@@ -3448,7 +3445,7 @@ fn legacy_binary_paths_warnings() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other binary targets.
@@ -3467,7 +3464,7 @@ For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [WARNING] path `src/main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3493,7 +3490,7 @@ please set bin.path in Cargo.toml
         .file("src/bin/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other binary targets.
@@ -3512,7 +3509,7 @@ For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [WARNING] path `src/bin/main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3537,11 +3534,11 @@ please set bin.path in Cargo.toml
         .file("src/bar.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] path `src/bar.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
+[CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
