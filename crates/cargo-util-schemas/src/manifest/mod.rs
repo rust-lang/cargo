@@ -1009,6 +1009,7 @@ impl TomlProfile {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum ProfilePackageSpec {
     Spec(PackageIdSpec),
     All,
@@ -1356,6 +1357,7 @@ macro_rules! str_newtype {
         /// Verified string newtype
         #[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
         #[serde(transparent)]
+        #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
         pub struct $name<T: AsRef<str> = String>(T);
 
         impl<T: AsRef<str>> $name<T> {

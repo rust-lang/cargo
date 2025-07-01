@@ -35,13 +35,13 @@ cargo-test-macro = { version = "0.4.4", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.8.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.22", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.9.0", path = "crates/cargo-util-schemas" }
-cargo_metadata = "0.19.2"
+cargo_metadata = "0.20.0"
 clap = "4.5.40"
 clap_complete = { version = "4.5.54", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.12", path = "crates/crates-io" }
-criterion = { version = "0.5.1", features = ["html_reports"] }
+criterion = { version = "0.6.0", features = ["html_reports"] }
 curl = "0.4.48"
 curl-sys = "0.4.82"
 filetime = "0.2.25"
@@ -69,7 +69,7 @@ libgit2-sys = "0.18.2"
 libloading = "0.8.8"
 memchr = "2.7.5"
 miow = "0.6.0"
-opener = "0.7.2"
+opener = "0.8.2"
 openssl = "0.10.73"
 openssl-sys = "0.9.109"
 os_info = { version = "3.12.0", default-features = false }
@@ -81,12 +81,12 @@ proptest = "1.7.0"
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
 rand = "0.9.1"
 regex = "1.11.1"
-rusqlite = { version = "0.34.0", features = ["bundled"] }
+rusqlite = { version = "0.36.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
 rustfix = { version = "0.9.2", path = "crates/rustfix" }
 same-file = "1.0.6"
-schemars = "0.9.0"
+schemars = "1.0.3"
 security-framework = "3.2.0"
 semver = { version = "1.0.26", features = ["serde"] }
 serde = "1.0.219"
@@ -117,7 +117,7 @@ unicode-xid = "0.2.6"
 url = "2.5.4"
 varisat = "0.2.2"
 walkdir = "2.5.0"
-windows-sys = "0.59"
+windows-sys = "0.60"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?

@@ -315,7 +315,7 @@ dependencies = [
  "cargo-platform 0.3.0",
  "cargo-test-support",
  "cargo-util",
- "cargo-util-schemas",
+ "cargo-util-schemas 0.9.1",
  "clap",
  "clap_complete",
  "color-print",
@@ -379,7 +379,7 @@ dependencies = [
  "unicode-xid",
  "url",
  "walkdir",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -393,7 +393,7 @@ dependencies = [
  "snapbox",
  "thiserror 2.0.12",
  "time",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -427,14 +427,14 @@ name = "cargo-credential-wincred"
 version = "0.4.16"
 dependencies = [
  "cargo-credential",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "cargo-platform"
-version = "0.1.9"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e35af189006b9c0f00a064685c727031e3ed2d8020f7ba284d78cc2671bd36ea"
+checksum = "84982c6c0ae343635a3a4ee6dedef965513735c8b183caa7289fa6e27399ebd4"
 dependencies = [
  "serde",
 ]
@@ -475,7 +475,7 @@ dependencies = [
  "toml",
  "url",
  "walkdir",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -496,7 +496,23 @@ dependencies = [
  "tempfile",
  "tracing",
  "walkdir",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "cargo-util-schemas"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e63d2780ac94487eb9f1fea7b0d56300abc9eb488800854ca217f102f5caccca"
+dependencies = [
+ "semver",
+ "serde",
+ "serde-untagged",
+ "serde-value",
+ "thiserror 1.0.69",
+ "toml",
+ "unicode-xid",
+ "url",
 ]
 
 [[package]]
@@ -518,12 +534,13 @@ dependencies = [
 
 [[package]]
 name = "cargo_metadata"
-version = "0.19.2"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd5eb614ed4c27c5d706420e4320fbe3216ab31fa1c33cd8246ac36dae4479ba"
+checksum = "4f7835cfc6135093070e95eb2b53e5d9b5c403dc3a6be6040ee026270aa82502"
 dependencies = [
  "camino",
- "cargo-platform 0.1.9",
+ "cargo-platform 0.2.0",
+ "cargo-util-schemas 0.2.0",
  "semver",
  "serde",
  "serde_json",
@@ -722,25 +739,22 @@ dependencies = [
 
 [[package]]
 name = "criterion"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2b12d017a929603d80db1831cd3a24082f8137ce19c69e6447f54f5fc8d692f"
+checksum = "3bf7af66b0989381bd0be551bd7cc91912a655a58c6918420c9527b1fd8b4679"
 dependencies = [
  "anes",
  "cast",
  "ciborium",
  "clap",
  "criterion-plot",
- "is-terminal",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "num-traits",
- "once_cell",
  "oorandom",
  "plotters",
  "rayon",
  "regex",
  "serde",
- "serde_derive",
  "serde_json",
  "tinytemplate",
  "walkdir",
@@ -888,17 +902,6 @@ dependencies = [
  "darling_core",
  "quote",
  "syn 2.0.104",
-]
-
-[[package]]
-name = "dbus"
-version = "0.9.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bb21987b9fb1613058ba3843121dd18b163b254d8a6e797e144cbac14d96d1b"
-dependencies = [
- "libc",
- "libdbus-sys",
- "winapi",
 ]
 
 [[package]]
@@ -2139,12 +2142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermit-abi"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f154ce46856750ed433c8649605bf7ed2de3bc35fd9d2a9f30cddd873c80cb08"
-
-[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2181,7 +2178,7 @@ dependencies = [
 name = "home"
 version = "0.5.12"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2356,17 +2353,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "is-terminal"
-version = "0.4.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
-dependencies = [
- "hermit-abi",
- "libc",
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "is_executable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2386,6 +2372,15 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -2506,16 +2501,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 
 [[package]]
-name = "libdbus-sys"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06085512b750d640299b79be4bad3d2fa90a9c00b1fd9e1b46364f66f0485c72"
-dependencies = [
- "cc",
- "pkg-config",
-]
-
-[[package]]
 name = "libgit2-sys"
 version = "0.18.2+1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2536,7 +2521,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.53.2",
 ]
 
 [[package]]
@@ -2562,9 +2547,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.32.0"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbb8270bb4060bd76c6e96f20c52d80620f1d82a3470885694e41e0f81ef6fe7"
+checksum = "91632f3b4fb6bd1d72aa3d78f41ffecfcf2b1a6648d8c241dbe7dbfaf4875e15"
 dependencies = [
  "cc",
  "pkg-config",
@@ -2791,12 +2776,11 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "opener"
-version = "0.7.2"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0812e5e4df08da354c851a3376fead46db31c2214f849d3de356d774d057681"
+checksum = "771b9704f8cd8b424ec747a320b30b47517a6966ba2c7da90047c16f4a962223"
 dependencies = [
  "bstr",
- "dbus",
  "normpath",
  "windows-sys 0.59.0",
 ]
@@ -3389,7 +3373,7 @@ dependencies = [
  "cargo",
  "cargo-platform 0.3.0",
  "cargo-util",
- "cargo-util-schemas",
+ "cargo-util-schemas 0.9.1",
  "proptest",
  "varisat",
 ]
@@ -3406,9 +3390,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.34.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37e34486da88d8e051c7c0e23c3f15fd806ea8546260aa2fec247e97242ec143"
+checksum = "3de23c3319433716cf134eed225fe9986bc24f63bed9be9f20c329029e672dc7"
 dependencies = [
  "bitflags",
  "fallible-iterator",
@@ -3509,9 +3493,9 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "0.9.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd191f9397d57d581cddd31014772520aa448f65ef991055d7f61582c65165f"
+checksum = "1375ba8ef45a6f15d83fa8748f1079428295d403d6ea991d09ab100155fbc06d"
 dependencies = [
  "dyn-clone",
  "ref-cast",
@@ -3523,9 +3507,9 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "0.9.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5016d94c77c6d32f0b8e08b781f7dc8a90c2007d4e77472cc2807bc10a8438fe"
+checksum = "2b13ed22d6d49fe23712e068770b5c4df4a693a2b02eeff8e7ca3135627a24f6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4482,7 +4466,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
