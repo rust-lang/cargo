@@ -2369,6 +2369,8 @@ fn non_existing_binary() {
 Caused by:
   can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
 
+  [HELP] a bin with a similar name exists: `ehlo`
+
 "#]])
         .run();
 }

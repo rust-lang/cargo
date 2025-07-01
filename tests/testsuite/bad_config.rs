@@ -3074,6 +3074,8 @@ fn bad_bin_name() {
 Caused by:
   can't find `bin.rs` bin at `src/bin/bin.rs.rs` or `src/bin/bin.rs/main.rs`. Please specify bin.path if you want to use a non-default path.
 
+  [HELP] a bin with a similar name exists: `bin`
+
 "#]])
         .run();
 }
@@ -3088,6 +3090,8 @@ fn bad_example_name() {
 
 Caused by:
   can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
+
+  [HELP] a example with a similar name exists: `example`
 
 "#]])
         .run();
@@ -3104,6 +3108,8 @@ fn bad_test_name() {
 Caused by:
   can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
 
+  [HELP] a test with a similar name exists: `test`
+
 "#]])
         .run();
 }
@@ -3118,6 +3124,8 @@ fn bad_bench_name() {
 
 Caused by:
   can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
+
+  [HELP] a bench with a similar name exists: `bench`
 
 "#]])
         .run();

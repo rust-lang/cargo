@@ -21,12 +21,11 @@ use cargo_util_schemas::manifest::{
     TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
-use crate::core::compiler::rustdoc::RustdocScrapeExamples;
-use crate::core::compiler::CrateType;
+use crate::core::compiler::{rustdoc::RustdocScrapeExamples, CrateType};
 use crate::core::{Edition, Feature, Features, Target};
-use crate::util::errors::CargoResult;
-use crate::util::restricted_names;
-use crate::util::toml::deprecated_underscore;
+use crate::util::{
+    closest_msg, errors::CargoResult, restricted_names, toml::deprecated_underscore,
+};
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
@@ -952,6 +951,7 @@ fn target_path_not_found_error_message(
     package_root: &Path,
     target: &TomlTarget,
     target_kind: &str,
+    inferred: &[(String, PathBuf)],
 ) -> String {
     fn possible_target_paths(name: &str, kind: &str, commonly_wrong: bool) -> [PathBuf; 2] {
         let mut target_path = PathBuf::new();
@@ -980,9 +980,11 @@ fn target_path_not_found_error_message(
     }
 
     let target_name = name_or_panic(target);
+
     let commonly_wrong_paths = possible_target_paths(&target_name, target_kind, true);
     let possible_paths = possible_target_paths(&target_name, target_kind, false);
 
+    let msg = closest_msg(target_name, inferred.iter(), |(n, _p)| n, target_kind);
     if let Some((wrong_path, possible_path)) = commonly_wrong_paths
         .iter()
         .zip(possible_paths.iter())
@@ -993,13 +995,13 @@ fn target_path_not_found_error_message(
         format!(
             "can't find `{target_name}` {target_kind} at default paths, but found a file at `{wrong_path}`.\n\
              Perhaps rename the file to `{possible_path}` for target auto-discovery, \
-             or specify {target_kind}.path if you want to use a non-default path."
+             or specify {target_kind}.path if you want to use a non-default path.{msg}",
         )
     } else {
         let [path_file, path_dir] = possible_paths.each_ref().map(|p| p.display());
         format!(
             "can't find `{target_name}` {target_kind} at `{path_file}` or `{path_dir}`. \
-             Please specify {target_kind}.path if you want to use a non-default path."
+             Please specify {target_kind}.path if you want to use a non-default path.{msg}"
         )
     }
 }
@@ -1037,6 +1039,7 @@ fn target_path(
                 package_root,
                 target,
                 target_kind,
+                inferred,
             ))
         }
         (Some(p0), Some(p1)) => {
