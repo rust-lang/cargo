@@ -2864,6 +2864,7 @@ pub enum IncompatibleRustVersions {
 #[derive(Copy, Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FeatureUnification {
+    Package,
     Selected,
     Workspace,
 }

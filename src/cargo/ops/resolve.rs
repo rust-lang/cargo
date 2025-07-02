@@ -81,7 +81,9 @@ use crate::util::CanonicalUrl;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use tracing::{debug, trace};
 
 /// Filter for keep using Package ID from previous lockfile.
@@ -96,9 +98,18 @@ pub struct WorkspaceResolve<'gctx> {
     /// This may be `None` for things like `cargo install` and `-Zavoid-dev-deps`.
     /// This does not include `paths` overrides.
     pub workspace_resolve: Option<Resolve>,
-    /// The narrowed resolve, with the specific features enabled, and only the
-    /// given package specs requested.
+    /// The narrowed resolve, with the specific features enabled.
     pub targeted_resolve: Resolve,
+    /// Package specs requested for compilation along with specific features enabled. This usually
+    /// has the length of one but there may be more specs with different features when using the
+    /// `package` feature resolver.
+    pub specs_and_features: Vec<SpecsAndResolvedFeatures>,
+}
+
+/// Pair of package specs requested for compilation along with enabled features.
+pub struct SpecsAndResolvedFeatures {
+    /// Packages that are supposed to be built.
+    pub specs: Vec<PackageIdSpec>,
     /// The features activated per package.
     pub resolved_features: ResolvedFeatures,
 }
@@ -145,10 +156,21 @@ pub fn resolve_ws_with_opts<'gctx>(
     force_all_targets: ForceAllTargets,
     dry_run: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
-    let specs = match ws.resolve_feature_unification() {
-        FeatureUnification::Selected => specs,
-        FeatureUnification::Workspace => &ops::Packages::All(Vec::new()).to_package_id_specs(ws)?,
+    let feature_unification = ws.resolve_feature_unification();
+    let individual_specs = match feature_unification {
+        FeatureUnification::Selected => vec![specs.to_owned()],
+        FeatureUnification::Workspace => {
+            vec![ops::Packages::All(Vec::new()).to_package_id_specs(ws)?]
+        }
+        FeatureUnification::Package => specs.iter().map(|spec| vec![spec.clone()]).collect(),
     };
+    let specs: Vec<_> = individual_specs
+        .iter()
+        .map(|specs| specs.iter())
+        .flatten()
+        .cloned()
+        .collect();
+    let specs = &specs[..];
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
@@ -229,9 +251,9 @@ pub fn resolve_ws_with_opts<'gctx>(
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
-    let member_ids = ws
-        .members_with_features(specs, cli_features)?
-        .into_iter()
+    let members_with_features = ws.members_with_features(specs, cli_features)?;
+    let member_ids = members_with_features
+        .iter()
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
     pkg_set.download_accessible(
@@ -243,33 +265,70 @@ pub fn resolve_ws_with_opts<'gctx>(
         force_all_targets,
     )?;
 
-    let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
-    let resolved_features = FeatureResolver::resolve(
-        ws,
-        target_data,
-        &resolved_with_overrides,
-        &pkg_set,
-        cli_features,
-        specs,
-        requested_targets,
-        feature_opts,
-    )?;
+    let mut specs_and_features = Vec::new();
 
-    pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
-        ws,
-        &resolved_with_overrides,
-        &member_ids,
-        has_dev_units,
-        requested_targets,
-        target_data,
-        force_all_targets,
-    )?;
+    for specs in individual_specs {
+        let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
+
+        // We want to narrow the features to the current specs so that stuff like `cargo check -p a
+        // -p b -F a/a,b/b` works and the resolver does not contain that `a` does not have feature
+        // `b` and vice-versa. However, resolver v1 needs to see even features of unselected
+        // packages turned on if it was because of working directory being inside the unselected
+        // package, because they might turn on a feature of a selected package.
+        let narrowed_features = match feature_unification {
+            FeatureUnification::Package => {
+                let mut narrowed_features = cli_features.clone();
+                let enabled_features = members_with_features
+                    .iter()
+                    .filter_map(|(package, cli_features)| {
+                        specs
+                            .iter()
+                            .any(|spec| spec.matches(package.package_id()))
+                            .then_some(cli_features.features.iter())
+                    })
+                    .flatten()
+                    .cloned()
+                    .collect();
+                narrowed_features.features = Rc::new(enabled_features);
+                Cow::Owned(narrowed_features)
+            }
+            FeatureUnification::Selected | FeatureUnification::Workspace => {
+                Cow::Borrowed(cli_features)
+            }
+        };
+
+        let resolved_features = FeatureResolver::resolve(
+            ws,
+            target_data,
+            &resolved_with_overrides,
+            &pkg_set,
+            &*narrowed_features,
+            &specs,
+            requested_targets,
+            feature_opts,
+        )?;
+
+        pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
+            ws,
+            &resolved_with_overrides,
+            &member_ids,
+            has_dev_units,
+            requested_targets,
+            target_data,
+            force_all_targets,
+        )?;
+
+        specs_and_features.push(SpecsAndResolvedFeatures {
+            specs,
+            resolved_features,
+        });
+    }
 
     Ok(WorkspaceResolve {
         pkg_set,
         workspace_resolve: resolve,
         targeted_resolve: resolved_with_overrides,
-        resolved_features,
+        specs_and_features,
     })
 }
 
