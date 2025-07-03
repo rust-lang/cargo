@@ -1277,8 +1277,7 @@ fn unused_ambiguous_published_deps() {
     p.cargo("build").run();
     p.cargo("run")
         .with_stderr_data(str![[r#"
-[ERROR] invalid table header
-expected `.`, `]`
+[ERROR] unclosed table, expected `]`
  --> ../home/.cargo/git/checkouts/dep-[HASH]/[..]/invalid/Cargo.toml:2:29
   |
 2 |                     [package
@@ -2809,11 +2808,11 @@ fn invalid_git_dependency_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] duplicate key `categories` in table `package`
+[ERROR] duplicate key
  --> ../home/.cargo/git/checkouts/dep1-[HASH]/[..]/Cargo.toml:9:21
   |
 9 |                     categories = ["algorithms"]
-  |                     ^
+  |                     ^^^^^^^^^^
   |
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 

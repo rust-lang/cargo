@@ -58,8 +58,7 @@ Caused by:
     |
   3 |                 b-cargo-test = `
     |                                ^
-  invalid string
-  expected `"`, `'`
+  string values must be quoted, expected literal string
 
 "#]])
         .run();

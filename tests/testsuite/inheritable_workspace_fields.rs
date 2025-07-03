@@ -1407,12 +1407,11 @@ fn error_malformed_workspace_root() {
         .cwd("bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid array
-expected `]`
- --> ../Cargo.toml:3:24
+[ERROR] unclosed array, expected `]`
+ --> ../Cargo.toml:4:13
   |
-3 |             members = [invalid toml
-  |                        ^
+4 | ...
+  | ^
   |
 
 "#]])

@@ -402,7 +402,7 @@ Caused by:
   |
 1 | abc
   |    ^
-expected `.`, `=`
+key with no value, expected `=`
 
 "#]],
     );
@@ -580,7 +580,7 @@ Caused by:
   |
 1 | missing.toml
   |             ^
-expected `.`, `=`
+key with no value, expected `=`
 
 "#]],
     );

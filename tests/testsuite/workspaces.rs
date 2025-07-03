@@ -1114,7 +1114,7 @@ fn new_warning_with_corrupt_ws() {
     let p = project().file("Cargo.toml", "asdf").build();
     p.cargo("new bar").with_stderr_data(str![[r#"
 [CREATING] binary (application) `bar` package
-[ERROR] expected `.`, `=`
+[ERROR] key with no value, expected `=`
  --> Cargo.toml:1:5
   |
 1 | asdf
@@ -1395,7 +1395,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
         .cwd("bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] expected `.`, `=`
+[ERROR] key with no value, expected `=`
  --> ../Cargo.toml:1:9
   |
 1 | Totally not a TOML file

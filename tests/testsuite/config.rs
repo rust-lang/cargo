@@ -859,7 +859,7 @@ Caused by:
   |
 1 | asdf
   |     ^
-expected `.`, `=`
+key with no value, expected `=`
 
 "#]],
     );
@@ -931,9 +931,8 @@ expected a list, but found a integer for `l3` in [ROOT]/.cargo/config.toml
 error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 2
   |
 1 | [zzz]
-  |  ^
-invalid array
-expected `]`
+  |  ^^^
+string values must be quoted, expected literal string
 
 "#]],
     );
@@ -1221,8 +1220,8 @@ Caused by:
   TOML parse error at line 3, column 1
   |
 3 | ssl-version.min = 'tlsv1.2'
-  | ^
-dotted key `ssl-version` attempted to extend non-table type (string)
+  | ^^^^^^^^^^^
+cannot extend value of type string with a dotted key
 
 "#]],
     );
