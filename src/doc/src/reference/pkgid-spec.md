@@ -16,11 +16,7 @@ ambiguity, additional qualifiers can be added to make it unique. For example,
 if there are two versions of the `regex` package in the graph, then it can be
 qualified with a version to make it unique, such as `regex@1.4.3`.
 
-Fully qualified package ID specifications are output by Cargo in:
-* [cargo pkgid](../commands/cargo-pkgid.md)
-* [cargo metadata](../commands/cargo-metadata.md)
-* [compiler artifact json messages](./external-tools.md#json-messages)
-* [SBOM pre-cursor files](./unstable.md#sbom)
+Package ID specifications output by cargo, for example in [cargo metadata](../commands/cargo-metadata.md) output, are fully qualified.
 
 ### Specification grammar
 
