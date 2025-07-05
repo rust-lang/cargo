@@ -248,23 +248,25 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 args.extend(compiler::features_args(unit));
                 args.extend(compiler::check_cfg_args(unit));
 
-                let script_meta = self.find_build_script_metadata(unit);
-                if let Some(meta) = script_meta {
-                    if let Some(output) = self.build_script_outputs.lock().unwrap().get(meta) {
-                        for cfg in &output.cfgs {
-                            args.push("--cfg".into());
-                            args.push(cfg.into());
-                        }
+                let script_metas = self.find_build_script_metadatas(unit);
+                if let Some(meta_vec) = script_metas.clone() {
+                    for meta in meta_vec {
+                        if let Some(output) = self.build_script_outputs.lock().unwrap().get(meta) {
+                            for cfg in &output.cfgs {
+                                args.push("--cfg".into());
+                                args.push(cfg.into());
+                            }
 
-                        for check_cfg in &output.check_cfgs {
-                            args.push("--check-cfg".into());
-                            args.push(check_cfg.into());
-                        }
+                            for check_cfg in &output.check_cfgs {
+                                args.push("--check-cfg".into());
+                                args.push(check_cfg.into());
+                            }
 
-                        for (lt, arg) in &output.linker_args {
-                            if lt.applies_to(&unit.target, unit.mode) {
-                                args.push("-C".into());
-                                args.push(format!("link-arg={}", arg).into());
+                            for (lt, arg) in &output.linker_args {
+                                if lt.applies_to(&unit.target, unit.mode) {
+                                    args.push("-C".into());
+                                    args.push(format!("link-arg={}", arg).into());
+                                }
                             }
                         }
                     }
@@ -285,7 +287,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     args,
                     unstable_opts,
                     linker: self.compilation.target_linker(unit.kind).clone(),
-                    script_meta,
+                    script_metas,
                     env: artifact::get_env(&self, self.unit_deps(unit))?,
                 });
             }
@@ -420,29 +422,40 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         &self.bcx.unit_graph[unit]
     }
 
-    /// Returns the `RunCustomBuild` Unit associated with the given Unit.
+    /// Returns the `RunCustomBuild` Units associated with the given Unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_unit(&self, unit: &Unit) -> Option<Unit> {
+    pub fn find_build_script_units(&self, unit: &Unit) -> Option<Vec<Unit>> {
         if unit.mode.is_run_custom_build() {
-            return Some(unit.clone());
+            return Some(vec![unit.clone()]);
         }
-        self.bcx.unit_graph[unit]
+
+        let build_script_units: Vec<Unit> = self.bcx.unit_graph[unit]
             .iter()
-            .find(|unit_dep| {
+            .filter(|unit_dep| {
                 unit_dep.unit.mode.is_run_custom_build()
                     && unit_dep.unit.pkg.package_id() == unit.pkg.package_id()
             })
             .map(|unit_dep| unit_dep.unit.clone())
+            .collect();
+        if build_script_units.is_empty() {
+            None
+        } else {
+            Some(build_script_units)
+        }
     }
 
     /// Returns the metadata hash for the `RunCustomBuild` Unit associated with
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<UnitHash> {
-        let script_unit = self.find_build_script_unit(unit)?;
-        Some(self.get_run_build_script_metadata(&script_unit))
+    pub fn find_build_script_metadatas(&self, unit: &Unit) -> Option<Vec<UnitHash>> {
+        self.find_build_script_units(unit).map(|units| {
+            units
+                .iter()
+                .map(|u| self.get_run_build_script_metadata(u))
+                .collect()
+        })
     }
 
     /// Returns the metadata hash for a `RunCustomBuild` unit.
@@ -480,11 +493,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// Returns a [`UnitOutput`] which represents some information about the
     /// output of a unit.
     pub fn unit_output(&self, unit: &Unit, path: &Path) -> UnitOutput {
-        let script_meta = self.find_build_script_metadata(unit);
+        let script_metas = self.find_build_script_metadatas(unit);
         UnitOutput {
             unit: unit.clone(),
             path: path.to_path_buf(),
-            script_meta,
+            script_metas,
         }
     }
 
