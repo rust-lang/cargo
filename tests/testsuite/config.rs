@@ -617,11 +617,12 @@ c = ['c']
     let gctx = GlobalContextBuilder::new().env("CARGO_A", "x y").build();
     assert_error(
         gctx.get::<VSOB>("a").unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_A`: could not load config key `a`
 
 Caused by:
-  invalid type: string \"x y\", expected a boolean or vector of strings",
+  invalid type: string "x y", expected a boolean or vector of strings
+"#]],
     );
 
     // Normal env.
@@ -647,12 +648,12 @@ Caused by:
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
-failed to merge --config key `a` into `[..]/.cargo/config.toml`
+        str![[r#"
+failed to merge --config key `a` into `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to merge config value from `--config cli option` into `[..]/.cargo/config.toml`: \
-expected boolean, but found array",
+  failed to merge config value from `--config cli option` into `[ROOT]/.cargo/config.toml`: expected boolean, but found array
+"#]],
     );
 
     // config-cli and advanced-env
@@ -697,11 +698,12 @@ opt-level = 'foo'
     assert_error(
         gctx.get::<cargo_toml::TomlProfile>("profile.dev")
             .unwrap_err(),
-        "\
-error in [..]/.cargo/config.toml: could not load config key `profile.dev.opt-level`
+        str![[r#"
+error in [ROOT]/.cargo/config.toml: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"foo\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: "foo"
+"#]],
     );
 
     let gctx = GlobalContextBuilder::new()
@@ -709,12 +711,14 @@ Caused by:
         .build();
 
     assert_error(
-        gctx.get::<cargo_toml::TomlProfile>("profile.dev").unwrap_err(),
-        "\
+        gctx.get::<cargo_toml::TomlProfile>("profile.dev")
+            .unwrap_err(),
+        str![[r#"
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
 Caused by:
-  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"asdf\"",
+  must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: "asdf"
+"#]],
     );
 }
 
@@ -772,37 +776,39 @@ big = 123456789
         .build();
     assert_error(
         gctx.get::<i64>("foo").unwrap_err(),
-        "missing config key `foo`",
+        str!["missing config key `foo`"],
     );
     assert_error(
         gctx.get::<i64>("foo.bar").unwrap_err(),
-        "missing config key `foo.bar`",
+        str!["missing config key `foo.bar`"],
     );
     assert_error(
         gctx.get::<i64>("S.f2").unwrap_err(),
-        "error in [..]/.cargo/config.toml: `S.f2` expected an integer, but found a string",
+        str!["error in [ROOT]/.cargo/config.toml: `S.f2` expected an integer, but found a string"],
     );
     assert_error(
         gctx.get::<u8>("S.big").unwrap_err(),
-        "\
-error in [..].cargo/config.toml: could not load config key `S.big`
+        str![[r#"
+error in [ROOT]/.cargo/config.toml: could not load config key `S.big`
 
 Caused by:
-  invalid value: integer `123456789`, expected u8",
+  invalid value: integer `123456789`, expected u8
+"#]],
     );
 
     // Environment variable type errors.
     assert_error(
         gctx.get::<i64>("e.s").unwrap_err(),
-        "error in environment variable `CARGO_E_S`: invalid digit found in string",
+        str!["error in environment variable `CARGO_E_S`: invalid digit found in string"],
     );
     assert_error(
         gctx.get::<i8>("e.big").unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_E_BIG`: could not load config key `e.big`
 
 Caused by:
-  invalid value: integer `123456789`, expected i8",
+  invalid value: integer `123456789`, expected i8
+"#]],
     );
 
     #[derive(Debug, Deserialize)]
@@ -813,7 +819,7 @@ Caused by:
         f3: i64,
         big: i64,
     }
-    assert_error(gctx.get::<S>("S").unwrap_err(), "missing field `f3`");
+    assert_error(gctx.get::<S>("S").unwrap_err(), str!["missing field `f3`"]);
 }
 
 #[cargo_test]
@@ -842,11 +848,11 @@ fn config_bad_toml() {
     let gctx = new_gctx();
     assert_error(
         gctx.get::<i32>("foo").unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/.cargo/config.toml`
+  could not parse TOML configuration in `[ROOT]/.cargo/config.toml`
 
 Caused by:
   TOML parse error at line 1, column 5
@@ -854,7 +860,8 @@ Caused by:
 1 | asdf
   |     ^
 expected `.`, `=`
-",
+
+"#]],
     );
 }
 
@@ -899,9 +906,10 @@ l = ['y']
     assert_eq!(gctx.get::<L>("l2").unwrap(), vec!["one", "two"]);
     assert_error(
         gctx.get::<L>("l3").unwrap_err(),
-        "\
+        str![[r#"
 invalid configuration for key `l3`
-expected a list, but found a integer for `l3` in [..]/.cargo/config.toml",
+expected a list, but found a integer for `l3` in [ROOT]/.cargo/config.toml
+"#]],
     );
     assert_eq!(
         gctx.get::<L>("l4").unwrap(),
@@ -913,21 +921,21 @@ expected a list, but found a integer for `l3` in [..]/.cargo/config.toml",
     assert_eq!(gctx.get::<L>("env-num").unwrap(), vec!["1".to_string()]);
     assert_error(
         gctx.get::<L>("env-num-list").unwrap_err(),
-        "error in environment variable `CARGO_ENV_NUM_LIST`: \
-         expected string, found integer",
+        str!["error in environment variable `CARGO_ENV_NUM_LIST`: expected string, found integer"],
     );
     assert_eq!(gctx.get::<L>("env-text").unwrap(), vec!["asdf".to_string()]);
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
         gctx.get::<L>("bad-env").unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 2
   |
 1 | [zzz]
   |  ^
 invalid array
 expected `]`
-",
+
+"#]],
     );
 
     // Try some other sequence-like types.
@@ -998,7 +1006,7 @@ ns2 = 456
     assert_eq!(gctx.get::<NewS>("nse").unwrap(), NewS(987));
     assert_error(
         gctx.get::<NewS>("unset").unwrap_err(),
-        "missing config key `unset`",
+        str!["missing config key `unset`"],
     );
 }
 
@@ -1086,35 +1094,39 @@ i64max = 9223372036854775807
 
     assert_error(
         gctx.get::<u32>("nneg").unwrap_err(),
-        "\
-error in [..].cargo/config.toml: could not load config key `nneg`
+        str![[r#"
+error in [ROOT]/.cargo/config.toml: could not load config key `nneg`
 
 Caused by:
-  invalid value: integer `-123456789`, expected u32",
+  invalid value: integer `-123456789`, expected u32
+"#]],
     );
     assert_error(
         gctx.get::<u32>("eneg").unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_ENEG`: could not load config key `eneg`
 
 Caused by:
-  invalid value: integer `-1`, expected u32",
+  invalid value: integer `-1`, expected u32
+"#]],
     );
     assert_error(
         gctx.get::<i8>("npos").unwrap_err(),
-        "\
-error in [..].cargo/config.toml: could not load config key `npos`
+        str![[r#"
+error in [ROOT]/.cargo/config.toml: could not load config key `npos`
 
 Caused by:
-  invalid value: integer `123456789`, expected i8",
+  invalid value: integer `123456789`, expected i8
+"#]],
     );
     assert_error(
         gctx.get::<i8>("epos").unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_EPOS`: could not load config key `epos`
 
 Caused by:
-  invalid value: integer `123456789`, expected i8",
+  invalid value: integer `123456789`, expected i8
+"#]],
     );
 }
 
@@ -1198,11 +1210,11 @@ ssl-version.max = 'tlsv1.3'
     assert_error(
         gctx.get::<SslVersionConfig>("http.ssl-version")
             .unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/.cargo/config.toml`
+  could not parse TOML configuration in `[ROOT]/.cargo/config.toml`
 
 Caused by:
   TOML parse error at line 3, column 1
@@ -1210,7 +1222,8 @@ Caused by:
 3 | ssl-version.min = 'tlsv1.2'
   | ^
 dotted key `ssl-version` attempted to extend non-table type (string)
-",
+
+"#]],
     );
 }
 
@@ -1318,21 +1331,21 @@ fn table_merge_failure() {
     let gctx = GlobalContextBuilder::new().cwd("foo").build();
     assert_error(
         gctx.get::<Table>("table").unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to merge configuration at `[..]/.cargo/config.toml`
+  failed to merge configuration at `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to merge key `table` between [..]/foo/.cargo/config.toml and [..]/.cargo/config.toml
+  failed to merge key `table` between [ROOT]/foo/.cargo/config.toml and [ROOT]/.cargo/config.toml
 
 Caused by:
-  failed to merge key `key` between [..]/foo/.cargo/config.toml and [..]/.cargo/config.toml
+  failed to merge key `key` between [ROOT]/foo/.cargo/config.toml and [ROOT]/.cargo/config.toml
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/config.toml` into `[..]/foo/.cargo/config.toml`: \
-  expected array, but found string",
+  failed to merge config value from `[ROOT]/.cargo/config.toml` into `[ROOT]/foo/.cargo/config.toml`: expected array, but found string
+"#]],
     );
 }
 
@@ -1343,17 +1356,18 @@ fn non_string_in_array() {
     let gctx = new_gctx();
     assert_error(
         gctx.get::<Vec<i32>>("foo").unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to load TOML configuration from `[..]/.cargo/config.toml`
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
 
 Caused by:
   failed to parse key `foo`
 
 Caused by:
-  expected string but found integer in list",
+  expected string but found integer in list
+"#]],
     );
 }
 
@@ -1564,9 +1578,10 @@ fn string_list_wrong_type() {
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
         gctx.get::<StringList>("some_list").unwrap_err(),
-        "\
+        str![[r#"
 invalid configuration for key `some_list`
-expected a string or array of strings, but found a integer for `some_list` in [..]/.cargo/config.toml",
+expected a string or array of strings, but found a integer for `some_list` in [ROOT]/.cargo/config.toml
+"#]],
     );
 
     write_config_toml("some_list = \"1 2\"");
@@ -1590,7 +1605,7 @@ fn string_list_advanced_env() {
     assert_eq!(x.as_slice(), &["1 2".to_string(), "3".to_string()]);
     assert_error(
         gctx.get::<StringList>("key3").unwrap_err(),
-        "error in environment variable `CARGO_KEY3`: expected string, found integer",
+        str!["error in environment variable `CARGO_KEY3`: expected string, found integer"],
     );
 }
 
@@ -1626,7 +1641,7 @@ target-dir = ''
 
     assert_error(
         gctx.target_dir().unwrap_err(),
-        "the target directory is set to an empty string in [..]/.cargo/config.toml",
+        str!["the target directory is set to an empty string in [ROOT]/.cargo/config.toml"],
     );
 }
 
@@ -1931,11 +1946,12 @@ fn missing_fields() {
         .build();
     assert_error(
         gctx.get::<Foo>("foo").unwrap_err(),
-        "\
+        str![[r#"
 could not load config key `foo.bar`
 
 Caused by:
-  missing field `bax`",
+  missing field `bax`
+"#]],
     );
     let gctx: GlobalContext = GlobalContextBuilder::new()
         .env("CARGO_FOO_BAR_BAZ", "true")
@@ -1950,11 +1966,12 @@ Caused by:
         .build();
     assert_error(
         gctx.get::<Foo>("foo").unwrap_err(),
-        "\
+        str![[r#"
 error in --config cli option: could not load config key `foo.bar`
 
 Caused by:
-  missing field `bax`",
+  missing field `bax`
+"#]],
     );
 }
 
@@ -1977,11 +1994,12 @@ fn git_features() {
     assert_error(
         gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
             .unwrap_err(),
-        "\
+        str![[r#"
 error in environment variable `CARGO_UNSTABLE_GIT`: could not load config key `unstable.git`
 
 Caused by:
-[..]unstable 'git' only takes [..] as valid inputs",
+  unstable 'git' only takes `shallow-index` and `shallow-deps` as valid inputs
+"#]],
     );
 
     let gctx = GlobalContextBuilder::new()
@@ -2091,14 +2109,15 @@ fn gitoxide_features() {
         .build();
 
     assert_error(
-    gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
-        .unwrap_err(),
-    "\
+        gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
+            .unwrap_err(),
+        str![[r#"
 error in environment variable `CARGO_UNSTABLE_GITOXIDE`: could not load config key `unstable.gitoxide`
 
 Caused by:
-[..]unstable 'gitoxide' only takes [..] as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`",
-);
+  unstable 'gitoxide' only takes `fetch` and `checkout` and `internal-use-git2` as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`
+"#]],
+    );
 
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_UNSTABLE_GITOXIDE", "true")

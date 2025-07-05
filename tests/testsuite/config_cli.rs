@@ -394,7 +394,7 @@ fn bad_parse() {
     let gctx = GlobalContextBuilder::new().config_arg("abc").build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 failed to parse value from --config argument `abc` as a dotted key expression
 
 Caused by:
@@ -403,13 +403,16 @@ Caused by:
 1 | abc
   |    ^
 expected `.`, `=`
-",
+
+"#]],
     );
 
     let gctx = GlobalContextBuilder::new().config_arg("").build_err();
     assert_error(
         gctx.unwrap_err(),
-        "--config argument `` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+        str![
+            "--config argument `` was not a TOML dotted key expression (such as `build.jobs = 2`)"
+        ],
     );
 }
 
@@ -421,9 +424,10 @@ fn too_many_values() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 --config argument `a=1
-b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+b=2` was not a TOML dotted key expression (such as `build.jobs = 2`)
+"#]],
     );
 }
 
@@ -434,28 +438,28 @@ fn no_disallowed_values() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "registry.token cannot be set through --config for security reasons",
+        str!["registry.token cannot be set through --config for security reasons"],
     );
     let gctx = GlobalContextBuilder::new()
         .config_arg("registries.crates-io.token=\"hello\"")
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "registries.crates-io.token cannot be set through --config for security reasons",
+        str!["registries.crates-io.token cannot be set through --config for security reasons"],
     );
     let gctx = GlobalContextBuilder::new()
         .config_arg("registry.secret-key=\"hello\"")
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "registry.secret-key cannot be set through --config for security reasons",
+        str!["registry.secret-key cannot be set through --config for security reasons"],
     );
     let gctx = GlobalContextBuilder::new()
         .config_arg("registries.crates-io.secret-key=\"hello\"")
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "registries.crates-io.secret-key cannot be set through --config for security reasons",
+        str!["registries.crates-io.secret-key cannot be set through --config for security reasons"],
     );
 }
 
@@ -467,7 +471,9 @@ fn no_inline_table_value() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "--config argument `a.b={c = \"d\"}` sets a value to an inline table, which is not accepted",
+        str![[
+            r#"--config argument `a.b={c = "d"}` sets a value to an inline table, which is not accepted"#
+        ]],
     );
 }
 
@@ -479,9 +485,10 @@ fn no_array_of_tables_values() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 --config argument `[[a.b]]
-c = \"d\"` was not a TOML dotted key expression (such as `build.jobs = 2`)",
+c = "d"` was not a TOML dotted key expression (such as `build.jobs = 2`)
+"#]],
     );
 }
 
@@ -493,8 +500,7 @@ fn no_comments() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
---config argument `a.b = \"c\" # exactly` includes non-whitespace decoration",
+        str![[r#"--config argument `a.b = "c" # exactly` includes non-whitespace decoration"#]],
     );
 
     let gctx = GlobalContextBuilder::new()
@@ -502,8 +508,10 @@ fn no_comments() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
---config argument `# exactly\na.b = \"c\"` includes non-whitespace decoration",
+        str![[r#"
+--config argument `# exactly
+a.b = "c"` includes non-whitespace decoration
+"#]],
     );
 }
 
@@ -515,14 +523,15 @@ fn bad_cv_convert() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 failed to convert --config argument `a=2019-12-01`
 
 Caused by:
   failed to parse key `a`
 
 Caused by:
-  found TOML configuration value of unknown type `datetime`",
+  found TOML configuration value of unknown type `datetime`
+"#]],
     );
 }
 
@@ -536,15 +545,15 @@ fn fail_to_merge_multiple_args() {
     // This is a little repetitive, but hopefully the user can figure it out.
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 failed to merge --config argument `foo=['a']`
 
 Caused by:
   failed to merge key `foo` between --config cli option and --config cli option
 
 Caused by:
-  failed to merge config value from `--config cli option` into `--config cli option`: \
-  expected string, but found array",
+  failed to merge config value from `--config cli option` into `--config cli option`: expected string, but found array
+"#]],
     );
 }
 
@@ -563,7 +572,7 @@ fn cli_path() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 failed to parse value from --config argument `missing.toml` as a dotted key expression
 
 Caused by:
@@ -572,6 +581,7 @@ Caused by:
 1 | missing.toml
   |             ^
 expected `.`, `=`
-",
+
+"#]],
     );
 }
