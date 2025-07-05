@@ -1,6 +1,11 @@
-use cargo_platform::{Cfg, CfgExpr, Ident, Platform};
 use std::fmt;
 use std::str::FromStr;
+
+use cargo_platform::{Cfg, CfgExpr, CfgRustVersion, Ident, Platform};
+use semver::{BuildMetadata, Prerelease};
+use snapbox::assert_data_eq;
+use snapbox::prelude::*;
+use snapbox::str;
 
 macro_rules! c {
     ($a:ident) => {
@@ -33,6 +38,18 @@ macro_rules! c {
             $e.to_string(),
         )
     };
+    (version($minor:literal)) => {
+        Cfg::Version(CfgRustVersion {
+            minor: $minor,
+            patch: None,
+        })
+    };
+    (version($minor:literal, $patch:literal)) => {
+        Cfg::Version(CfgRustVersion {
+            minor: $minor,
+            patch: Some($patch),
+        })
+    };
 }
 
 macro_rules! e {
@@ -45,6 +62,7 @@ macro_rules! e {
     ($($t:tt)*) => (CfgExpr::Value(c!($($t)*)));
 }
 
+#[track_caller]
 fn good<T>(s: &str, expected: T)
 where
     T: FromStr + PartialEq + fmt::Debug,
@@ -57,23 +75,17 @@ where
     assert_eq!(c, expected);
 }
 
-fn bad<T>(s: &str, err: &str)
+#[track_caller]
+fn bad<T>(input: &str, expected: impl IntoData)
 where
     T: FromStr + fmt::Display,
     T::Err: fmt::Display,
 {
-    let e = match T::from_str(s) {
-        Ok(cfg) => panic!("expected `{}` to not parse but got {}", s, cfg),
+    let actual = match T::from_str(input) {
+        Ok(cfg) => panic!("expected `{input}` to not parse but got {cfg}"),
         Err(e) => e.to_string(),
     };
-    assert!(
-        e.contains(err),
-        "when parsing `{}`,\n\"{}\" not contained \
-         inside: {}",
-        s,
-        err,
-        e
-    );
+    assert_data_eq!(actual, expected.raw());
 }
 
 #[test]
@@ -89,28 +101,80 @@ fn cfg_syntax() {
     good(" foo=\"3\"      ", c!(foo = "3"));
     good("foo = \"3 e\"", c!(foo = "3 e"));
     good(" r#foo = \"3 e\"", c!(r # foo = "3 e"));
+    good("version(\"1.23.4\")", c!(version(23, 4)));
+    good("version(\"1.23\")", c!(version(23)));
+    good("version(\"1.234.56\")", c!(version(234, 56)));
+    good(" version(\"1.23.4\")", c!(version(23, 4)));
+    good("version(\"1.23.4\") ", c!(version(23, 4)));
+    good(" version(\"1.23.4\") ", c!(version(23, 4)));
+    good("version = \"1.23.4\"", c!(version = "1.23.4"));
 }
 
 #[test]
 fn cfg_syntax_bad() {
-    bad::<Cfg>("", "but cfg expression ended");
-    bad::<Cfg>(" ", "but cfg expression ended");
-    bad::<Cfg>("\t", "unexpected character");
-    bad::<Cfg>("7", "unexpected character");
-    bad::<Cfg>("=", "expected identifier");
-    bad::<Cfg>(",", "expected identifier");
-    bad::<Cfg>("(", "expected identifier");
-    bad::<Cfg>("foo (", "unexpected content `(` found after cfg expression");
-    bad::<Cfg>("bar =", "expected a string");
-    bad::<Cfg>("bar = \"", "unterminated string");
     bad::<Cfg>(
-        "foo, bar",
-        "unexpected content `, bar` found after cfg expression",
+        "",
+        str![
+            "failed to parse `` as a cfg expression: expected identifier, but cfg expression ended"
+        ],
     );
-    bad::<Cfg>("r# foo", "unexpected character");
-    bad::<Cfg>("r #foo", "unexpected content");
-    bad::<Cfg>("r#\"foo\"", "unexpected character");
-    bad::<Cfg>("foo = r#\"\"", "unexpected character");
+    bad::<Cfg>(" ", str!["failed to parse ` ` as a cfg expression: expected identifier, but cfg expression ended"]);
+    bad::<Cfg>("\t", str!["failed to parse `	` as a cfg expression: unexpected character `	` in cfg, expected parens, a comma, an identifier, or a string"]);
+    bad::<Cfg>("7", str!["failed to parse `7` as a cfg expression: unexpected character `7` in cfg, expected parens, a comma, an identifier, or a string"]);
+    bad::<Cfg>(
+        "=",
+        str!["failed to parse `=` as a cfg expression: expected identifier, found `=`"],
+    );
+    bad::<Cfg>(
+        ",",
+        str!["failed to parse `,` as a cfg expression: expected identifier, found `,`"],
+    );
+    bad::<Cfg>(
+        "(",
+        str!["failed to parse `(` as a cfg expression: expected identifier, found `(`"],
+    );
+    bad::<Cfg>(
+        "version(\"1\")",
+        str![[
+            r#"failed to parse `version("1")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.\")",
+        str![[
+            r#"failed to parse `version("1.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.\")",
+        str![[
+            r#"failed to parse `version("1.2.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.3.\")",
+        str![[
+            r#"failed to parse `version("1.2.3.")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"1.2.3-stable\")",
+        str![[
+            r#"failed to parse `version("1.2.3-stable")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"2.3\")",
+        str![[
+            r#"failed to parse `version("2.3")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
+    bad::<Cfg>(
+        "version(\"0.99.9\")",
+        str![[
+            r#"failed to parse `version("0.99.9")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`"#
+        ]],
+    );
 }
 
 #[test]
@@ -133,52 +197,88 @@ fn cfg_expr() {
     good("all(a, )", e!(all(a)));
     good("not(a = \"b\")", e!(not(a = "b")));
     good("not(all(a))", e!(not(all(a))));
+    good("not(version(\"1.23.4\"))", e!(not(version(23, 4))));
 }
 
 #[test]
 fn cfg_expr_bad() {
-    bad::<CfgExpr>(" ", "but cfg expression ended");
-    bad::<CfgExpr>(" all", "expected `(`");
-    bad::<CfgExpr>("all(a", "expected `)`");
-    bad::<CfgExpr>("not", "expected `(`");
-    bad::<CfgExpr>("not(a", "expected `)`");
-    bad::<CfgExpr>("a = ", "expected a string");
-    bad::<CfgExpr>("all(not())", "expected identifier");
+    bad::<CfgExpr>(" ", str!["failed to parse ` ` as a cfg expression: expected start of a cfg expression, but cfg expression ended"]);
     bad::<CfgExpr>(
-        "foo(a)",
-        "unexpected content `(a)` found after cfg expression",
+        " all",
+        str!["failed to parse ` all` as a cfg expression: expected `(`, but cfg expression ended"],
     );
+    bad::<CfgExpr>(
+        "all(a",
+        str!["failed to parse `all(a` as a cfg expression: expected `)`, but cfg expression ended"],
+    );
+    bad::<CfgExpr>(
+        "not",
+        str!["failed to parse `not` as a cfg expression: expected `(`, but cfg expression ended"],
+    );
+    bad::<CfgExpr>(
+        "not(a",
+        str!["failed to parse `not(a` as a cfg expression: expected `)`, but cfg expression ended"],
+    );
+    bad::<CfgExpr>("a = ", str!["failed to parse `a = ` as a cfg expression: expected a string, but cfg expression ended"]);
+    bad::<CfgExpr>(
+        "all(not())",
+        str!["failed to parse `all(not())` as a cfg expression: expected identifier, found `)`"],
+    );
+    bad::<CfgExpr>("foo(a)", str!["failed to parse `foo(a)` as a cfg expression: unexpected content `(a)` found after cfg expression"]);
 }
 
 #[test]
 fn cfg_matches() {
-    assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)]));
-    assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)]));
-    assert!(e!(any(foo, bar)).matches(&[c!(bar)]));
-    assert!(e!(any(foo, bar)).matches(&[c!(foo)]));
-    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(not(foo)).matches(&[c!(bar)]));
-    assert!(e!(not(foo)).matches(&[]));
-    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(bar)]));
-    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo), c!(bar)]));
-    assert!(e!(foo).matches(&[c!(r # foo)]));
-    assert!(e!(r # foo).matches(&[c!(foo)]));
-    assert!(e!(r # foo).matches(&[c!(r # foo)]));
+    let v87 = semver::Version::new(1, 87, 0);
+    assert!(e!(foo).matches(&[c!(bar), c!(foo), c!(baz)], &v87));
+    assert!(e!(any(foo)).matches(&[c!(bar), c!(foo), c!(baz)], &v87));
+    assert!(e!(any(foo, bar)).matches(&[c!(bar)], &v87));
+    assert!(e!(any(foo, bar)).matches(&[c!(foo)], &v87));
+    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(all(foo, bar)).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(not(foo)).matches(&[c!(bar)], &v87));
+    assert!(e!(not(foo)).matches(&[], &v87));
+    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(bar)], &v87));
+    assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo), c!(bar)], &v87));
+    assert!(e!(foo).matches(&[c!(r # foo)], &v87));
+    assert!(e!(r # foo).matches(&[c!(foo)], &v87));
+    assert!(e!(r # foo).matches(&[c!(r # foo)], &v87));
 
-    assert!(!e!(foo).matches(&[]));
-    assert!(!e!(foo).matches(&[c!(bar)]));
-    assert!(!e!(foo).matches(&[c!(fo)]));
-    assert!(!e!(any(foo)).matches(&[]));
-    assert!(!e!(any(foo)).matches(&[c!(bar)]));
-    assert!(!e!(any(foo)).matches(&[c!(bar), c!(baz)]));
-    assert!(!e!(all(foo)).matches(&[c!(bar), c!(baz)]));
-    assert!(!e!(all(foo, bar)).matches(&[c!(bar)]));
-    assert!(!e!(all(foo, bar)).matches(&[c!(foo)]));
-    assert!(!e!(all(foo, bar)).matches(&[]));
-    assert!(!e!(not(bar)).matches(&[c!(bar)]));
-    assert!(!e!(not(bar)).matches(&[c!(baz), c!(bar)]));
-    assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)]));
+    assert!(!e!(foo).matches(&[], &v87));
+    assert!(!e!(foo).matches(&[c!(bar)], &v87));
+    assert!(!e!(foo).matches(&[c!(fo)], &v87));
+    assert!(!e!(any(foo)).matches(&[], &v87));
+    assert!(!e!(any(foo)).matches(&[c!(bar)], &v87));
+    assert!(!e!(any(foo)).matches(&[c!(bar), c!(baz)], &v87));
+    assert!(!e!(all(foo)).matches(&[c!(bar), c!(baz)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[c!(bar)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[c!(foo)], &v87));
+    assert!(!e!(all(foo, bar)).matches(&[], &v87));
+    assert!(!e!(not(bar)).matches(&[c!(bar)], &v87));
+    assert!(!e!(not(bar)).matches(&[c!(baz), c!(bar)], &v87));
+    assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)], &v87));
+
+    assert!(e!(version(87)).matches(&[], &v87));
+    assert!(e!(version(87, 0)).matches(&[], &v87));
+    assert!(e!(version(86)).matches(&[], &v87));
+    assert!(e!(version(86, 1)).matches(&[], &v87));
+    assert!(!e!(version(87, 1)).matches(&[], &v87));
+    assert!(!e!(version(88)).matches(&[], &v87));
+    assert!(!e!(version(88, 1)).matches(&[], &v87));
+    assert!(e!(not(version(88))).matches(&[], &v87));
+    assert!(e!(not(version(88, 1))).matches(&[], &v87));
+
+    let v89_nightly = semver::Version {
+        major: 1,
+        minor: 89,
+        patch: 0,
+        pre: Prerelease::new("nightly").unwrap(),
+        build: BuildMetadata::EMPTY,
+    };
+    assert!(e!(version(89)).matches(&[], &v89_nightly));
+    assert!(!e!(version(89, 0)).matches(&[], &v89_nightly));
+    assert!(e!(version(88)).matches(&[], &v89_nightly));
+    assert!(e!(version(88, 0)).matches(&[], &v89_nightly));
 }
 
 #[test]

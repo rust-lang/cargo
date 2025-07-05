@@ -444,7 +444,9 @@ fn target_runner(
         .target_cfgs()?
         .iter()
         .filter_map(|(key, cfg)| cfg.runner.as_ref().map(|runner| (key, runner)))
-        .filter(|(key, _runner)| CfgExpr::matches_key(key, target_cfg));
+        .filter(|(key, _runner)| {
+            CfgExpr::matches_key(key, target_cfg, &bcx.target_data.rustc.version)
+        });
     let matching_runner = cfgs.next();
     if let Some((key, runner)) = cfgs.next() {
         anyhow::bail!(
@@ -485,7 +487,9 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         .target_cfgs()?
         .iter()
         .filter_map(|(key, cfg)| cfg.linker.as_ref().map(|linker| (key, linker)))
-        .filter(|(key, _linker)| CfgExpr::matches_key(key, target_cfg));
+        .filter(|(key, _linker)| {
+            CfgExpr::matches_key(key, target_cfg, &bcx.target_data.rustc.version)
+        });
     let matching_linker = cfgs.next();
     if let Some((key, linker)) = cfgs.next() {
         anyhow::bail!(

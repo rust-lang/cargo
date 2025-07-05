@@ -157,8 +157,15 @@ impl TargetInfo {
         rustc: &Rustc,
         kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let mut rustflags =
-            extra_args(gctx, requested_kinds, &rustc.host, None, kind, Flags::Rust)?;
+        let mut rustflags = extra_args(
+            gctx,
+            requested_kinds,
+            &rustc.host,
+            None,
+            kind,
+            Flags::Rust,
+            &rustc.version,
+        )?;
         let mut turn = 0;
         loop {
             let extra_fingerprint = kind.fingerprint_hash();
@@ -281,6 +288,7 @@ impl TargetInfo {
                 Some(&cfg),
                 kind,
                 Flags::Rust,
+                &rustc.version,
             )?;
 
             // Tricky: `RUSTFLAGS` defines the set of active `cfg` flags, active
@@ -353,6 +361,7 @@ impl TargetInfo {
                     Some(&cfg),
                     kind,
                     Flags::Rustdoc,
+                    &rustc.version,
                 )?
                 .into(),
                 cfg,
@@ -774,6 +783,7 @@ fn extra_args(
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
     flags: Flags,
+    rustc_version: &semver::Version,
 ) -> CargoResult<Vec<String>> {
     let target_applies_to_host = gctx.target_applies_to_host()?;
 
@@ -802,7 +812,7 @@ fn extra_args(
     if let Some(rustflags) = rustflags_from_env(gctx, flags) {
         Ok(rustflags)
     } else if let Some(rustflags) =
-        rustflags_from_target(gctx, host_triple, target_cfg, kind, flags)?
+        rustflags_from_target(gctx, host_triple, target_cfg, kind, flags, rustc_version)?
     {
         Ok(rustflags)
     } else if let Some(rustflags) = rustflags_from_build(gctx, flags)? {
@@ -846,6 +856,7 @@ fn rustflags_from_target(
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
     flag: Flags,
+    rustc_version: &semver::Version,
 ) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
@@ -872,7 +883,7 @@ fn rustflags_from_target(
                     Flags::Rustdoc => None,
                 }
             })
-            .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
+            .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg, rustc_version))
             .for_each(|(_key, cfg_rustflags)| {
                 rustflags.extend(cfg_rustflags.as_slice().iter().cloned());
             });
@@ -1060,7 +1071,7 @@ impl<'gctx> RustcTargetData<'gctx> {
             return true;
         };
         let name = self.short_name(&kind);
-        platform.matches(name, self.cfg(kind))
+        platform.matches(name, self.cfg(kind), &self.rustc.version)
     }
 
     /// Gets the list of `cfg`s printed out from the compiler for the specified kind.

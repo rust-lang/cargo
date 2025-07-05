@@ -18,6 +18,7 @@ pub enum ParseErrorKind {
     IncompleteExpr(&'static str),
     UnterminatedExpression(String),
     InvalidTarget(String),
+    InvalidVersion,
 }
 
 impl fmt::Display for ParseError {
@@ -51,6 +52,10 @@ impl fmt::Display for ParseErrorKind {
                 write!(f, "unexpected content `{}` found after cfg expression", s)
             }
             InvalidTarget(s) => write!(f, "invalid target specifier: {}", s),
+            InvalidVersion => write!(
+                f,
+                "invalid Rust cfg version, expected format `version(\"1.23.4\")` or `version(\"1.23\")`"
+            ),
         }
     }
 }

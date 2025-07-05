@@ -817,3 +817,144 @@ fn cfg_booleans_rustflags_no_effect() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cfg_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                edition = "2015"
+
+                [target.'cfg(version("1.87.0"))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+    p.cargo("check -v").run();
+}
+
+#[cargo_test]
+fn cfg_version_short() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                edition = "2015"
+
+                [target.'cfg(version("1.87"))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+    p.cargo("check -v").run();
+}
+
+#[cargo_test]
+fn cfg_bad_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [target.'cfg(version("1"))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `version("1")` as a cfg expression: invalid Rust cfg version, expected format `version("1.23.4")` or `version("1.23")`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_bad_version2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [target.'cfg(version(1.87.0))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `version(1.87.0)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_bad_version3() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [target.'cfg(version = "1.87.0")'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+error[E0463]: can't find crate for `b`
+ --> src/lib.rs:1:1
+  |
+1 | extern crate b;
+  | ^^^^^^^^^^^^^^^ can't find crate
+
+For more information about this error, try `rustc --explain E0463`.
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]])
+        .run();
+}
