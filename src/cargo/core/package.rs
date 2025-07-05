@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
-use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::manifest::{Hints, RustVersion};
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
@@ -95,6 +95,8 @@ pub struct SerializedPackage {
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
     rust_version: Option<RustVersion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hints: Option<Hints>,
 }
 
 impl Package {
@@ -172,6 +174,11 @@ impl Package {
         self.manifest().rust_version()
     }
 
+    /// Gets the package's hints.
+    pub fn hints(&self) -> Option<&Hints> {
+        self.manifest().hints()
+    }
+
     /// Returns `true` if the package uses a custom build script for any target.
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
@@ -241,6 +248,7 @@ impl Package {
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
             rust_version: self.rust_version().cloned(),
+            hints: self.hints().cloned(),
         }
     }
 }
