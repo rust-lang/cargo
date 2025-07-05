@@ -480,7 +480,7 @@ that are uplifted into the target or artifact directories.
   // crate is compiled differently (different opt-level, features, etc).
   "crates": [
     {
-      // Package ID specification
+      // Fully qualified package ID specification
       "id": "path+file:///sample-package#0.1.0",
       // List of target kinds: bin, lib, rlib, dylib, cdylib, staticlib, proc-macro, example, test, bench, custom-build
       "kind": ["bin"],
