@@ -26,7 +26,11 @@ fn main() {
     examples.push(target.as_str());
     for example in examples {
         let p = Platform::from_str(example).unwrap();
-        println!("{:?} matches: {:?}", example, p.matches(&target, &cfgs));
+        println!(
+            "{:?} matches: {:?}",
+            example,
+            p.matches(&target, &cfgs, &semver::Version::new(0, 0, 0))
+        );
     }
 }
 
