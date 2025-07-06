@@ -46,7 +46,7 @@ fn home_dir_crt() -> Option<PathBuf> {
     None
 }
 
-extern "C" {
+unsafe extern "C" {
     fn wcslen(buf: *const u16) -> usize;
 }
 
