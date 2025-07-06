@@ -447,7 +447,7 @@ fn activate_deps_loop(
                             frame
                                 .remaining_siblings
                                 .remaining()
-                                .find_map(|(ref new_dep, _, _)| {
+                                .find_map(|(new_dep, _, _)| {
                                     past_conflicting_activations.conflicting(&resolver_ctx, new_dep)
                                 })
                         {

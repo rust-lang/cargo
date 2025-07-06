@@ -376,12 +376,12 @@ impl<'gctx> InstallablePackage<'gctx> {
             // behavior for this fallback case as well.
             if let CompileFilter::Only { bins, examples, .. } = &self.opts.filter {
                 let mut any_specific = false;
-                if let FilterRule::Just(ref v) = bins {
+                if let FilterRule::Just(v) = bins {
                     if !v.is_empty() {
                         any_specific = true;
                     }
                 }
-                if let FilterRule::Just(ref v) = examples {
+                if let FilterRule::Just(v) = examples {
                     if !v.is_empty() {
                         any_specific = true;
                     }

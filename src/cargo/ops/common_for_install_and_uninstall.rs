@@ -785,11 +785,7 @@ pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String>
             .filter(|target| target.is_executable())
             .map(|target| to_exe(target.name()))
             .collect(),
-        CompileFilter::Only {
-            ref bins,
-            ref examples,
-            ..
-        } => {
+        CompileFilter::Only { bins, examples, .. } => {
             let collect = |rule: &_, f: fn(&Target) -> _| match rule {
                 FilterRule::All => pkg
                     .targets()

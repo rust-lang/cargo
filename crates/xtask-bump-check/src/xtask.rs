@@ -368,7 +368,7 @@ fn changed<'r, 'ws>(
     for delta in diff.deltas() {
         let old = delta.old_file().path().unwrap();
         let new = delta.new_file().path().unwrap();
-        for (ref pkg_root, pkg) in ws_members.iter() {
+        for (pkg_root, pkg) in ws_members.iter() {
             if old.starts_with(pkg_root) || new.starts_with(pkg_root) {
                 changed_members.insert(pkg.name().as_str(), *pkg);
                 break;

@@ -956,7 +956,7 @@ fn load_inheritable_fields(
     match workspace_config {
         WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
         WorkspaceConfig::Member {
-            root: Some(ref path_to_root),
+            root: Some(path_to_root),
         } => {
             let path = normalized_path
                 .parent()
@@ -1674,7 +1674,7 @@ pub fn to_real_manifest(
         .normalized_publish()
         .expect("previously normalized")
     {
-        Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
+        Some(manifest::VecStringOrBool::VecString(vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
         Some(manifest::VecStringOrBool::Bool(true)) => None,
         None => version.is_none().then_some(vec![]),

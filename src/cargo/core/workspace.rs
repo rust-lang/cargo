@@ -584,7 +584,7 @@ impl<'gctx> Workspace<'gctx> {
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let MaybePackage::Package(p) = package {
                     return Some(p);
                 }
             }
@@ -615,7 +615,7 @@ impl<'gctx> Workspace<'gctx> {
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let MaybePackage::Package(p) = package {
                     return Some(p);
                 }
             }
@@ -722,7 +722,7 @@ impl<'gctx> Workspace<'gctx> {
         if let Some(root_path) = &self.root_manifest {
             let root_package = self.packages.load(root_path)?;
             match root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
+                WorkspaceConfig::Root(root_config) => {
                     return Ok(Some(root_config.clone()));
                 }
 

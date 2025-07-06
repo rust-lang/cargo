@@ -1003,7 +1003,7 @@ impl Target {
 
     pub fn doctestable(&self) -> bool {
         match self.kind() {
-            TargetKind::Lib(ref kinds) => kinds.iter().any(|k| {
+            TargetKind::Lib(kinds) => kinds.iter().any(|k| {
                 *k == CrateType::Rlib || *k == CrateType::Lib || *k == CrateType::ProcMacro
             }),
             _ => false,
