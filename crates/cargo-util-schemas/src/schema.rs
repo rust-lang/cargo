@@ -12,8 +12,8 @@ impl JsonSchema for TomlValueWrapper {
         "TomlValue".into()
     }
 
-    fn json_schema(gen: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
         // HACK: this is both more and less permissive than `TomlValue` but its close
-        gen.subschema_for::<serde_json::Value>().into()
+        generator.subschema_for::<serde_json::Value>().into()
     }
 }
