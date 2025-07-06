@@ -5,13 +5,13 @@ use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{ProcessBuilder, paths};
 
-use crate::core::compiler::apply_env_config;
-use crate::core::compiler::BuildContext;
-use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::core::Package;
-use crate::util::{context, CargoResult, GlobalContext};
+use crate::core::compiler::BuildContext;
+use crate::core::compiler::apply_env_config;
+use crate::core::compiler::{CompileKind, Unit, UnitHash};
+use crate::util::{CargoResult, GlobalContext, context};
 
 /// Represents the kind of process we are creating.
 #[derive(Debug)]

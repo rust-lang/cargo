@@ -1,9 +1,9 @@
-use cargo::core::{dependency::DepKind, Dependency};
+use cargo::core::{Dependency, dependency::DepKind};
 
 use resolver_tests::{
     helpers::{
-        dep, dep_kind, dep_req, dep_req_kind, pkg, pkg_dep, pkg_dep_link, pkg_dep_with,
-        pkg_id_source, registry, ToDep,
+        ToDep, dep, dep_kind, dep_req, dep_req_kind, pkg, pkg_dep, pkg_dep_link, pkg_dep_with,
+        pkg_id_source, registry,
     },
     pkg, resolve, resolve_and_validated, resolve_and_validated_raw,
     sat::SatResolver,

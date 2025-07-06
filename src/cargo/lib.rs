@@ -139,13 +139,13 @@
 //! [The Cargo Book]: https://doc.rust-lang.org/cargo/
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
 
-use crate::core::shell::Verbosity::Verbose;
 use crate::core::Shell;
+use crate::core::shell::Verbosity::Verbose;
 use anyhow::Error;
 use tracing::debug;
 
 pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
-pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, GlobalContext};
+pub use crate::util::{CargoResult, CliError, CliResult, GlobalContext, indented_lines};
 pub use crate::version::version;
 
 pub const CARGO_ENV: &str = "CARGO";

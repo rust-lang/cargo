@@ -1,27 +1,27 @@
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, btree_map};
 use std::env;
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::task::Poll;
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{Context as _, bail, format_err};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
-use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::Target;
+use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::sources::PathSource;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
-use crate::sources::PathSource;
+use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
-use crate::util::GlobalContext;
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -637,9 +637,10 @@ where
                     } else {
                         String::new()
                     };
-                    bail!("\
+                    bail!(
+                        "\
 cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while the currently active rustc version is {current}{extra}"
-)
+                    )
                 }
             }
             let pkg = Box::new(source).download_now(summary.package_id(), gctx)?;

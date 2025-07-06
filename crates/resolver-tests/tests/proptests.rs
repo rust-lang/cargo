@@ -4,10 +4,10 @@ use cargo::util::GlobalContext;
 use cargo_util::is_ci;
 
 use resolver_tests::{
+    PrettyPrintRegistry,
     helpers::{dep_req, registry, remove_dep},
     registry_strategy, resolve, resolve_and_validated, resolve_with_global_context,
     sat::SatResolver,
-    PrettyPrintRegistry,
 };
 
 use proptest::prelude::*;

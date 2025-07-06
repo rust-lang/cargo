@@ -3,8 +3,8 @@
 use anyhow::Context as _;
 
 use super::Dependency;
-use crate::util::toml_mut::dependency::RegistrySource;
 use crate::CargoResult;
+use crate::util::toml_mut::dependency::RegistrySource;
 use cargo_util_schemas::manifest::PackageName;
 
 /// User-specified crate

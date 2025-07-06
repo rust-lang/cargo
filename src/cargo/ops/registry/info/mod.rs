@@ -6,7 +6,7 @@ use cargo_util_schemas::core::{PackageIdSpec, PartialVersion};
 use crate::core::registry::PackageRegistry;
 use crate::core::{Dependency, Package, PackageId, PackageIdSpecQuery, Registry, Workspace};
 use crate::ops::registry::info::view::pretty_view;
-use crate::ops::registry::{get_source_id_with_package_id, RegistryOrIndex, RegistrySourceIds};
+use crate::ops::registry::{RegistryOrIndex, RegistrySourceIds, get_source_id_with_package_id};
 use crate::ops::resolve_ws;
 use crate::sources::source::QueryKind;
 use crate::sources::{IndexSummary, SourceConfigMap};

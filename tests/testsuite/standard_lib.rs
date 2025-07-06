@@ -7,10 +7,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
+use cargo_test_support::ProjectBuilder;
 use cargo_test_support::cross_compile;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::ProjectBuilder;
-use cargo_test_support::{paths, project, rustc_host, str, Execs};
+use cargo_test_support::{Execs, paths, project, rustc_host, str};
 
 struct Setup {
     rustc_wrapper: PathBuf,
@@ -742,12 +742,14 @@ fn ignores_incremental() {
         .map(|e| e.unwrap())
         .collect();
     assert_eq!(incremental.len(), 1);
-    assert!(incremental[0]
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .starts_with("foo-"));
+    assert!(
+        incremental[0]
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("foo-")
+    );
 }
 
 #[cargo_test(build_std_mock)]

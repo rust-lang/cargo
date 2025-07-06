@@ -4,10 +4,10 @@ use std::collections::BTreeSet;
 
 use crate::core::{Package, PackageIdSpecQuery};
 use crate::core::{PackageIdSpec, Workspace};
-use crate::util::restricted_names::is_glob_pattern;
 use crate::util::CargoResult;
+use crate::util::restricted_names::is_glob_pattern;
 
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 
 /// Represents the selected packages that will be built.
 ///

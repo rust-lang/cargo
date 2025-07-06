@@ -1,10 +1,10 @@
 //! Benchmarks for the global cache tracker.
 
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
+use cargo::util::GlobalContext;
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
-use cargo::util::GlobalContext;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::fs;
 use std::path::{Path, PathBuf};
 

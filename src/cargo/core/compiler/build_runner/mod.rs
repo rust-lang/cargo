@@ -4,12 +4,12 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use crate::core::compiler::compilation::{self, UnitOutput};
-use crate::core::compiler::{self, artifact, Unit};
 use crate::core::PackageId;
+use crate::core::compiler::compilation::{self, UnitOutput};
+use crate::core::compiler::{self, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
@@ -507,12 +507,10 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 path.display()
             )
         };
-        let suggestion =
-            "Consider changing their names to be unique or compiling them separately.\n\
+        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
              This may become a hard error in the future; see \
              <https://github.com/rust-lang/cargo/issues/6313>.";
-        let rustdoc_suggestion =
-            "This is a known bug where multiple crates with the same name use\n\
+        let rustdoc_suggestion = "This is a known bug where multiple crates with the same name use\n\
              the same path; see <https://github.com/rust-lang/cargo/issues/6313>.";
         let report_collision = |unit: &Unit,
                                 other_unit: &Unit,

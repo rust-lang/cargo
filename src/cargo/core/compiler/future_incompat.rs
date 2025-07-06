@@ -35,11 +35,11 @@
 
 use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, Workspace};
-use crate::sources::source::QueryKind;
 use crate::sources::SourceConfigMap;
-use crate::util::cache_lock::CacheLockMode;
+use crate::sources::source::QueryKind;
 use crate::util::CargoResult;
-use anyhow::{bail, format_err, Context};
+use crate::util::cache_lock::CacheLockMode;
+use anyhow::{Context, bail, format_err};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;

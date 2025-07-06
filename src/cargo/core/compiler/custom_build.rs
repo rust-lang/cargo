@@ -31,17 +31,17 @@
 //! [`CompileMode::RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, get_dynamic_search_path, BuildRunner, Job, Unit, Work};
+use super::{BuildRunner, Job, Unit, Work, fingerprint, get_dynamic_search_path};
+use crate::core::compiler::CompileMode;
 use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
-use crate::core::compiler::CompileMode;
-use crate::core::{profiles::ProfileRoot, PackageId, Target};
+use crate::core::{PackageId, Target, profiles::ProfileRoot};
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RustVersion;
@@ -836,7 +836,9 @@ impl BuildOutput {
                         )
                     } else if flag.starts_with("metadata=") {
                         let old_format_flag = flag.strip_prefix("metadata=").unwrap();
-                        format!("Switch to the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n")
+                        format!(
+                            "Switch to the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n"
+                        )
                     } else {
                         String::new()
                     };
@@ -1067,7 +1069,8 @@ impl BuildOutput {
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
-                            bail!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                            bail!(
+                                "Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
                                 note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,

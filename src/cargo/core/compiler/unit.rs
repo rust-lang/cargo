@@ -1,13 +1,13 @@
 //! Types and impls for [`Unit`].
 
+use crate::core::Package;
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
-use crate::core::Package;
+use crate::util::GlobalContext;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
-use crate::util::GlobalContext;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;

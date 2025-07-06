@@ -11,11 +11,11 @@ use curl::easy::SslVersion;
 use tracing::debug;
 use tracing::trace;
 
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::util::context::SslVersionConfig;
 use crate::util::context::SslVersionConfigRange;
 use crate::version;
-use crate::CargoResult;
-use crate::GlobalContext;
 
 /// Creates a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(gctx: &GlobalContext) -> CargoResult<Easy> {

@@ -44,7 +44,7 @@
 use crate::cross_compile::try_alternate;
 use crate::paths;
 use crate::rustc_host;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use snapbox::Data;
 use snapbox::IntoData;
 use std::fmt;

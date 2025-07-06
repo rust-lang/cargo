@@ -16,8 +16,8 @@ use std::fmt::Write;
 use std::{
     process::{Command, Output},
     sync::{
-        atomic::{AtomicBool, Ordering},
         Once,
+        atomic::{AtomicBool, Ordering},
     },
 };
 

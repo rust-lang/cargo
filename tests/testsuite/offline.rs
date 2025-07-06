@@ -4,9 +4,9 @@ use std::fs;
 
 use crate::prelude::*;
 use cargo_test_support::{
-    basic_manifest, git, main_file, project,
+    Execs, basic_manifest, git, main_file, project,
     registry::{Package, RegistryBuilder},
-    str, Execs,
+    str,
 };
 
 #[cargo_test]

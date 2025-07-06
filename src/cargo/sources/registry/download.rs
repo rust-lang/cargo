@@ -6,11 +6,11 @@
 use crate::util::interning::InternedString;
 use anyhow::Context as _;
 use cargo_credential::Operation;
-use cargo_util::registry::make_dep_path;
 use cargo_util::Sha256;
+use cargo_util::registry::make_dep_path;
 
-use crate::core::global_cache_tracker;
 use crate::core::PackageId;
+use crate::core::global_cache_tracker;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
@@ -19,8 +19,8 @@ use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
 use std::fmt::Write as FmtWrite;
 use std::fs::{self, File, OpenOptions};
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::str;
 
 const CRATE_TEMPLATE: &str = "{crate}";

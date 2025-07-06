@@ -834,10 +834,11 @@ fn doc_target() {
 
     p.cargo("doc --verbose --target").arg(TARGET).run();
     assert!(p.root().join(&format!("target/{}/doc", TARGET)).is_dir());
-    assert!(p
-        .root()
-        .join(&format!("target/{}/doc/foo/index.html", TARGET))
-        .is_file());
+    assert!(
+        p.root()
+            .join(&format!("target/{}/doc/foo/index.html", TARGET))
+            .is_file()
+    );
 }
 
 #[cargo_test]
@@ -1759,10 +1760,11 @@ fn doc_private_items() {
     foo.cargo("doc --document-private-items").run();
 
     assert!(foo.root().join("target/doc").is_dir());
-    assert!(foo
-        .root()
-        .join("target/doc/foo/private/index.html")
-        .is_file());
+    assert!(
+        foo.root()
+            .join("target/doc/foo/private/index.html")
+            .is_file()
+    );
 }
 
 #[cargo_test]
@@ -2041,12 +2043,13 @@ fn doc_example() {
         .build();
 
     p.cargo("doc").run();
-    assert!(p
-        .build_dir()
-        .join("doc")
-        .join("ex1")
-        .join("fn.x.html")
-        .exists());
+    assert!(
+        p.build_dir()
+            .join("doc")
+            .join("ex1")
+            .join("fn.x.html")
+            .exists()
+    );
 }
 
 #[cargo_test]
@@ -2107,12 +2110,13 @@ fn doc_example_with_deps() {
         .build();
 
     p.cargo("doc --examples").run();
-    assert!(p
-        .build_dir()
-        .join("doc")
-        .join("ex")
-        .join("fn.x.html")
-        .exists());
+    assert!(
+        p.build_dir()
+            .join("doc")
+            .join("ex")
+            .join("fn.x.html")
+            .exists()
+    );
 }
 
 #[cargo_test]
@@ -2155,15 +2159,17 @@ fn bin_private_items() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
     assert!(p.root().join("target/doc/foo/fn.foo_pub.html").is_file());
     assert!(p.root().join("target/doc/foo/fn.foo_priv.html").is_file());
-    assert!(p
-        .root()
-        .join("target/doc/foo/struct.FooStruct.html")
-        .is_file());
+    assert!(
+        p.root()
+            .join("target/doc/foo/struct.FooStruct.html")
+            .is_file()
+    );
     assert!(p.root().join("target/doc/foo/enum.FooEnum.html").is_file());
-    assert!(p
-        .root()
-        .join("target/doc/foo/trait.FooTrait.html")
-        .is_file());
+    assert!(
+        p.root()
+            .join("target/doc/foo/trait.FooTrait.html")
+            .is_file()
+    );
     assert!(p.root().join("target/doc/foo/type.FooType.html").is_file());
     assert!(p.root().join("target/doc/foo/foo_mod/index.html").is_file());
 }
@@ -2621,11 +2627,13 @@ LLVM version: 9.0
     // It should also remove the bogus file we created above.
     dummy_project.cargo("doc --target").arg(rustc_host()).run();
 
-    assert!(!dummy_project
-        .build_dir()
-        .join(rustc_host())
-        .join("doc/bogus_file")
-        .exists());
+    assert!(
+        !dummy_project
+            .build_dir()
+            .join(rustc_host())
+            .join("doc/bogus_file")
+            .exists()
+    );
 
     let fingerprint: RustDocFingerprint =
         serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))

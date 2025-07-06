@@ -4,13 +4,13 @@
 
 use cargo_util_schemas::core::PackageIdSpec;
 
+use crate::GlobalContext;
+use crate::core::Target;
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::profiles::{Profile, UnitFor};
-use crate::core::Target;
-use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use crate::GlobalContext;
+use crate::util::interning::InternedString;
 use std::collections::HashMap;
 
 /// The dependency graph of Units.

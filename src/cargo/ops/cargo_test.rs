@@ -5,7 +5,7 @@ use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
-use crate::util::{add_path_args, CliError, CliResult, GlobalContext};
+use crate::util::{CliError, CliResult, GlobalContext, add_path_args};
 use anyhow::format_err;
 use cargo_util::{ProcessBuilder, ProcessError};
 use std::ffi::OsString;

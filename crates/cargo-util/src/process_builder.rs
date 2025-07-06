@@ -1,7 +1,7 @@
 use crate::process_error::ProcessError;
 use crate::read2;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use jobserver::Client;
 use shell_escape::escape;
 use tempfile::NamedTempFile;
@@ -564,7 +564,7 @@ fn close_tempfile_and_log_error(file: NamedTempFile) {
 
 #[cfg(unix)]
 mod imp {
-    use super::{close_tempfile_and_log_error, debug_force_argfile, ProcessBuilder, ProcessError};
+    use super::{ProcessBuilder, ProcessError, close_tempfile_and_log_error, debug_force_argfile};
     use anyhow::Result;
     use std::io;
     use std::os::unix::process::CommandExt;
@@ -606,9 +606,9 @@ mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
     use std::io;
-    use windows_sys::core::BOOL;
     use windows_sys::Win32::Foundation::{FALSE, TRUE};
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
+    use windows_sys::core::BOOL;
 
     unsafe extern "system" fn ctrlc_handler(_: u32) -> BOOL {
         // Do nothing; let the child process handle it.

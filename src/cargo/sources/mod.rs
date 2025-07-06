@@ -33,7 +33,7 @@ pub use self::path::PathEntry;
 pub use self::path::PathSource;
 pub use self::path::RecursivePathSource;
 pub use self::registry::{
-    IndexSummary, RegistrySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY,
+    CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, IndexSummary, RegistrySource,
 };
 pub use self::replaced::ReplacedSource;
 

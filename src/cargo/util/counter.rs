@@ -31,11 +31,7 @@ impl<const N: usize> MetricsCounter<N> {
         let oldest = self.slots[self.index];
         let duration = (latest.1 - oldest.1).as_secs_f32();
         let avg = (latest.0 - oldest.0) as f32 / duration;
-        if f32::is_nan(avg) {
-            0f32
-        } else {
-            avg
-        }
+        if f32::is_nan(avg) { 0f32 } else { avg }
     }
 }
 

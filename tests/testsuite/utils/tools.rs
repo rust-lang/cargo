@@ -1,7 +1,7 @@
 //! Common executables that can be reused by various tests.
 
 use crate::prelude::*;
-use cargo_test_support::{basic_manifest, paths, project, Project};
+use cargo_test_support::{Project, basic_manifest, paths, project};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::OnceLock;

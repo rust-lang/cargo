@@ -328,10 +328,11 @@ fn collision_doc_host_target_feature_split() {
         .run();
 
     assert!(p.build_dir().join("doc/common_dep/fn.f.html").exists());
-    assert!(!p
-        .build_dir()
-        .join("doc/common_dep/fn.bdep_func.html")
-        .exists());
+    assert!(
+        !p.build_dir()
+            .join("doc/common_dep/fn.bdep_func.html")
+            .exists()
+    );
     assert!(p.build_dir().join("doc/common/fn.f.html").exists());
     assert!(p.build_dir().join("doc/pm/macro.pm.html").exists());
     assert!(p.build_dir().join("doc/foo/fn.f.html").exists());

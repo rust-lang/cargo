@@ -23,7 +23,7 @@ use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::{CargoResult, GlobalContext};
-use anyhow::{format_err, Context as _};
+use anyhow::{Context as _, format_err};
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -430,7 +430,7 @@ pub fn parse_human_size(input: &str) -> CargoResult<u64> {
         None => {
             return cap[1]
                 .parse()
-                .with_context(|| format!("expected an integer size, got `{}`", &cap[1]))
+                .with_context(|| format!("expected an integer size, got `{}`", &cap[1]));
         }
     };
     let num = cap[1]

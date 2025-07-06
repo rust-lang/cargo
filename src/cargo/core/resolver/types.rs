@@ -1,8 +1,8 @@
 use super::features::{CliFeatures, RequestedFeatures};
 use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::GlobalContext;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::num::NonZeroU64;

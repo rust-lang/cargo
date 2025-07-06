@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use crate::prelude::*;
 use cargo_test_support::containers::{Container, ContainerHandle, MkFile};
 use cargo_test_support::git::cargo_uses_gitoxide;
-use cargo_test_support::{paths, process, project, str, Project};
+use cargo_test_support::{Project, paths, process, project, str};
 
 fn ssh_repo_url(container: &ContainerHandle, name: &str) -> String {
     let port = container.port_mappings[&22];

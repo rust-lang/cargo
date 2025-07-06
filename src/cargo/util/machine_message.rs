@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
 use cargo_util_schemas::core::PackageIdSpec;
-use serde::ser;
 use serde::Serialize;
+use serde::ser;
 use serde_json::{json, value::RawValue};
 
-use crate::core::compiler::CompileMode;
 use crate::core::Target;
+use crate::core::compiler::CompileMode;
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;

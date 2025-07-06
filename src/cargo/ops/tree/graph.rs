@@ -3,11 +3,11 @@
 use super::TreeOptions;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
+use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
-use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::CargoResult;
+use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
@@ -546,10 +546,12 @@ fn add_pkg(
         }
     }
     if opts.graph_features {
-        assert!(graph
-            .dep_name_map
-            .insert(from_index, dep_name_map)
-            .is_none());
+        assert!(
+            graph
+                .dep_name_map
+                .insert(from_index, dep_name_map)
+                .is_none()
+        );
     }
 
     from_index

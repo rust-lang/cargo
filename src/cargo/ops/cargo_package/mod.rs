@@ -2,38 +2,38 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::dependency::DepKind;
-use crate::core::manifest::Target;
-use crate::core::resolver::CliFeatures;
-use crate::core::resolver::HasDevUnits;
 use crate::core::PackageIdSpecQuery;
 use crate::core::Shell;
 use crate::core::Verbosity;
 use crate::core::Workspace;
+use crate::core::dependency::DepKind;
+use crate::core::manifest::Target;
+use crate::core::resolver::CliFeatures;
+use crate::core::resolver::HasDevUnits;
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::ops::lockfile::LOCKFILE_NAME;
-use crate::ops::registry::{infer_registry, RegistryOrIndex};
+use crate::ops::registry::{RegistryOrIndex, infer_registry};
 use crate::sources::path::PathEntry;
 use crate::sources::registry::index::{IndexPackage, RegistryDependency};
-use crate::sources::{PathSource, CRATES_IO_REGISTRY};
+use crate::sources::{CRATES_IO_REGISTRY, PathSource};
+use crate::util::FileLock;
+use crate::util::Filesystem;
+use crate::util::GlobalContext;
+use crate::util::Graph;
+use crate::util::HumanBytes;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::errors::ManifestError;
 use crate::util::restricted_names;
 use crate::util::toml::prepare_for_publish;
-use crate::util::FileLock;
-use crate::util::Filesystem;
-use crate::util::GlobalContext;
-use crate::util::Graph;
-use crate::util::HumanBytes;
 use crate::{drop_println, ops};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::messages;
 use flate2::{Compression, GzBuilder};
@@ -714,9 +714,11 @@ fn error_custom_build_file_not_in_package(
     let tip = {
         let description_name = target.description_named();
         if path.is_file() {
-            format!("the source file of {description_name} doesn't appear to be a path inside of the package.\n\
+            format!(
+                "the source file of {description_name} doesn't appear to be a path inside of the package.\n\
             It is at `{}`, whereas the root the package is `{}`.\n",
-            path.display(), pkg.root().display()
+                path.display(),
+                pkg.root().display()
             )
         } else {
             format!("the source file of {description_name} doesn't appear to exist.\n",)
@@ -726,7 +728,8 @@ fn error_custom_build_file_not_in_package(
         "{}\
         This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.\n\
         Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
-        tip,  pkg.manifest_path().display()
+        tip,
+        pkg.manifest_path().display()
     );
     anyhow::bail!(msg)
 }

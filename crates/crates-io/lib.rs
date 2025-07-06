@@ -8,7 +8,7 @@ use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
 
 use curl::easy::{Easy, List};
-use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{NON_ALPHANUMERIC, percent_encode};
 use serde::{Deserialize, Serialize};
 use url::Url;
 

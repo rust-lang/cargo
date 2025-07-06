@@ -3,15 +3,15 @@ use cargo::util::print_available_packages;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 
-use cargo::core::dependency::DepKind;
+use cargo::CargoResult;
 use cargo::core::FeatureValue;
-use cargo::ops::cargo_add::add;
+use cargo::core::dependency::DepKind;
 use cargo::ops::cargo_add::AddOptions;
 use cargo::ops::cargo_add::DepOp;
+use cargo::ops::cargo_add::add;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
 use cargo::util::toml_mut::manifest::DepTable;
-use cargo::CargoResult;
 
 pub fn cli() -> Command {
     clap::Command::new("add")
@@ -300,7 +300,10 @@ fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult
                             )
                         })
                         .collect::<Vec<_>>();
-                    anyhow::bail!("feature `{feature}` must be qualified by the dependency it's being activated for, like {}", candidates.join(", "));
+                    anyhow::bail!(
+                        "feature `{feature}` must be qualified by the dependency it's being activated for, like {}",
+                        candidates.join(", ")
+                    );
                 }
                 crates
                     .first_mut()
@@ -318,7 +321,9 @@ fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult
                 ..
             } => {
                 if infer_crate_name {
-                    anyhow::bail!("`{feature}` is unsupported when inferring the crate name, use `{dep_feature}`");
+                    anyhow::bail!(
+                        "`{feature}` is unsupported when inferring the crate name, use `{dep_feature}`"
+                    );
                 }
                 if dep_feature.contains('/') {
                     anyhow::bail!("multiple slashes in feature `{feature}` is not allowed");

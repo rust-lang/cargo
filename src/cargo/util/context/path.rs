@@ -1,6 +1,6 @@
 use super::{GlobalContext, StringList, Value};
 use regex::Regex;
-use serde::{de::Error, Deserialize};
+use serde::{Deserialize, de::Error};
 use std::path::PathBuf;
 
 /// Use with the `get` API to fetch a string that will be converted to a

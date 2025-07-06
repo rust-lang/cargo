@@ -101,8 +101,8 @@
 //! When cross-compiling, the layout is the same, except it appears in
 //! `target/$TRIPLE`.
 
-use crate::core::compiler::CompileTarget;
 use crate::core::Workspace;
+use crate::core::compiler::CompileTarget;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
 use std::path::{Path, PathBuf};

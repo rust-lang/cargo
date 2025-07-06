@@ -3,9 +3,9 @@
 //! This module implements some simple tracking information for timing of how
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
+use crate::core::PackageId;
 use crate::core::compiler::job_queue::JobId;
 use crate::core::compiler::{BuildContext, BuildRunner, TimingOutput};
-use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
 use crate::util::style;

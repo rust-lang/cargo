@@ -1,10 +1,10 @@
+use super::RequestedFeatures;
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ActivationsKey, ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
-use super::RequestedFeatures;
 use crate::core::{Dependency, PackageId, Summary};
-use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::Graph;
+use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::format_err;
 use std::collections::{BTreeSet, HashMap};
 use tracing::debug;

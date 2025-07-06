@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use cargo_test_support::{execs, process, ArgLineCommandExt, Execs};
+use cargo_test_support::{ArgLineCommandExt, Execs, execs, process};
 
 pub mod cross_compile;
 pub mod ext;

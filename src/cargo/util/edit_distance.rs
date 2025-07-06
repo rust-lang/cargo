@@ -126,7 +126,7 @@ pub fn closest_msg<'a, T>(
 
 #[test]
 fn test_edit_distance() {
-    use std::char::{from_u32, MAX};
+    use std::char::{MAX, from_u32};
     // Test bytelength agnosticity
     for c in (0u32..MAX as u32)
         .filter_map(from_u32)

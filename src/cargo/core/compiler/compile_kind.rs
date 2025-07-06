@@ -3,7 +3,7 @@
 use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{try_canonicalize, GlobalContext, StableHasher};
+use crate::util::{GlobalContext, StableHasher, try_canonicalize};
 use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;

@@ -4,7 +4,7 @@ use crate::core::compiler::build_runner::BuildRunner;
 use crate::core::compiler::unit::Unit;
 use crate::core::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::errors::{internal, CargoResult};
+use crate::util::errors::{CargoResult, internal};
 use cargo_util::ProcessBuilder;
 use std::collections::HashMap;
 use std::collections::HashSet;

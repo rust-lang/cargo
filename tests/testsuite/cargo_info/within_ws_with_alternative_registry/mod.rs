@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use cargo_test_support::{compare::assert_ui, registry::RegistryBuilder, Project};
+use cargo_test_support::{Project, compare::assert_ui, registry::RegistryBuilder};
 use cargo_test_support::{current_dir, file};
 
 use super::init_registry_without_token;

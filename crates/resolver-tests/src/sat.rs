@@ -4,7 +4,7 @@ use std::fmt::Write;
 
 use cargo::core::dependency::DepKind;
 use cargo::core::{Dependency, FeatureMap, FeatureValue, PackageId, Summary};
-use cargo::util::interning::{InternedString, INTERNED_DEFAULT};
+use cargo::util::interning::{INTERNED_DEFAULT, InternedString};
 use cargo_platform::Platform;
 use varisat::ExtendFormula;
 

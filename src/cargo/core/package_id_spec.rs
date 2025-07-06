@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 
 use crate::core::PackageId;
 use crate::core::PackageIdSpec;
@@ -165,53 +165,77 @@ mod tests {
         assert!(PackageIdSpec::parse("foo@1.2.3").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("foo@1.2.2").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo@1.2").unwrap().matches(foo));
-        assert!(PackageIdSpec::parse("https://example.com#foo@1.2")
-            .unwrap()
-            .matches(foo));
-        assert!(!PackageIdSpec::parse("https://bob.com#foo@1.2")
-            .unwrap()
-            .matches(foo));
-        assert!(PackageIdSpec::parse("registry+https://example.com#foo@1.2")
-            .unwrap()
-            .matches(foo));
-        assert!(!PackageIdSpec::parse("git+https://example.com#foo@1.2")
-            .unwrap()
-            .matches(foo));
+        assert!(
+            PackageIdSpec::parse("https://example.com#foo@1.2")
+                .unwrap()
+                .matches(foo)
+        );
+        assert!(
+            !PackageIdSpec::parse("https://bob.com#foo@1.2")
+                .unwrap()
+                .matches(foo)
+        );
+        assert!(
+            PackageIdSpec::parse("registry+https://example.com#foo@1.2")
+                .unwrap()
+                .matches(foo)
+        );
+        assert!(
+            !PackageIdSpec::parse("git+https://example.com#foo@1.2")
+                .unwrap()
+                .matches(foo)
+        );
 
         let meta = PackageId::try_new("meta", "1.2.3+hello", sid).unwrap();
         assert!(PackageIdSpec::parse("meta").unwrap().matches(meta));
         assert!(PackageIdSpec::parse("meta@1").unwrap().matches(meta));
         assert!(PackageIdSpec::parse("meta@1.2").unwrap().matches(meta));
         assert!(PackageIdSpec::parse("meta@1.2.3").unwrap().matches(meta));
-        assert!(!PackageIdSpec::parse("meta@1.2.3-alpha.0")
-            .unwrap()
-            .matches(meta));
-        assert!(PackageIdSpec::parse("meta@1.2.3+hello")
-            .unwrap()
-            .matches(meta));
-        assert!(!PackageIdSpec::parse("meta@1.2.3+bye")
-            .unwrap()
-            .matches(meta));
+        assert!(
+            !PackageIdSpec::parse("meta@1.2.3-alpha.0")
+                .unwrap()
+                .matches(meta)
+        );
+        assert!(
+            PackageIdSpec::parse("meta@1.2.3+hello")
+                .unwrap()
+                .matches(meta)
+        );
+        assert!(
+            !PackageIdSpec::parse("meta@1.2.3+bye")
+                .unwrap()
+                .matches(meta)
+        );
 
         let pre = PackageId::try_new("pre", "1.2.3-alpha.0", sid).unwrap();
         assert!(PackageIdSpec::parse("pre").unwrap().matches(pre));
         assert!(!PackageIdSpec::parse("pre@1").unwrap().matches(pre));
         assert!(!PackageIdSpec::parse("pre@1.2").unwrap().matches(pre));
         assert!(!PackageIdSpec::parse("pre@1.2.3").unwrap().matches(pre));
-        assert!(PackageIdSpec::parse("pre@1.2.3-alpha.0")
-            .unwrap()
-            .matches(pre));
-        assert!(!PackageIdSpec::parse("pre@1.2.3-alpha.1")
-            .unwrap()
-            .matches(pre));
-        assert!(!PackageIdSpec::parse("pre@1.2.3-beta.0")
-            .unwrap()
-            .matches(pre));
-        assert!(!PackageIdSpec::parse("pre@1.2.3+hello")
-            .unwrap()
-            .matches(pre));
-        assert!(!PackageIdSpec::parse("pre@1.2.3-alpha.0+hello")
-            .unwrap()
-            .matches(pre));
+        assert!(
+            PackageIdSpec::parse("pre@1.2.3-alpha.0")
+                .unwrap()
+                .matches(pre)
+        );
+        assert!(
+            !PackageIdSpec::parse("pre@1.2.3-alpha.1")
+                .unwrap()
+                .matches(pre)
+        );
+        assert!(
+            !PackageIdSpec::parse("pre@1.2.3-beta.0")
+                .unwrap()
+                .matches(pre)
+        );
+        assert!(
+            !PackageIdSpec::parse("pre@1.2.3+hello")
+                .unwrap()
+                .matches(pre)
+        );
+        assert!(
+            !PackageIdSpec::parse("pre@1.2.3-alpha.0+hello")
+                .unwrap()
+                .matches(pre)
+        );
     }
 }

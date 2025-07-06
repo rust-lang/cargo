@@ -13,18 +13,18 @@ use std::fmt;
 use std::task::Poll;
 use std::time::Instant;
 
-use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::Resolve;
 use cargo::core::ResolveVersion;
 use cargo::core::SourceId;
+use cargo::core::dependency::DepKind;
+use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
+use cargo::sources::source::QueryKind;
 use cargo::util::interning::InternedString;
 use cargo::util::{CargoResult, GlobalContext};
 
-use crate::helpers::{dep_req, dep_req_kind, pkg_dep, pkg_id, ToPkgId};
+use crate::helpers::{ToPkgId, dep_req, dep_req_kind, pkg_dep, pkg_id};
 use crate::sat::SatResolver;
 
 use proptest::collection::{btree_map, vec};
@@ -406,24 +406,24 @@ mod tests {
     #[test]
     fn meta_test_deep_pretty_print_registry() {
         assert_eq!(
-        &format!(
-            "{:?}",
-            PrettyPrintRegistry(vec![
-                pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
-                pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
-                pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
-                pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
+            &format!(
+                "{:?}",
+                PrettyPrintRegistry(vec![
+                    pkg!(("foo", "1.0.1") => [dep_req("bar", "1")]),
+                    pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
+                    pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
+                    pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
                                           dep_req("other", "1")]),
-                pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
-                pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
-                pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
-                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
-                pkg!(("dep_req", "1.0.0")),
-                pkg!(("dep_req", "2.0.0")),
-            ])
-        ),
-        "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
+                    pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
+                    pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
+                    pkg!(("baz", "1.0.1")),
+                    pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
+                    pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
+                    pkg!(("dep_req", "1.0.0")),
+                    pkg!(("dep_req", "2.0.0")),
+                ])
+            ),
+            "vec![pkg!((\"foo\", \"1.0.1\") => [dep_req(\"bar\", \"^1\"),]),\
          pkg!((\"foo\", \"1.0.0\") => [dep_req(\"bar\", \"^2\"),]),\
          pkg!((\"foo\", \"2.0.0\") => [dep(\"bar\"),]),\
          pkg!((\"bar\", \"1.0.0\") => [dep_req(\"baz\", \"=1.0.2\"),dep_req(\"other\", \"^1\"),]),\
@@ -434,7 +434,7 @@ mod tests {
          pkg!((\"cat\", \"1.0.3\") => [dep_req_kind(\"other\", \"^2\", DepKind::Development, false),]),\
          pkg!((\"dep_req\", \"1.0.0\")),\
          pkg!((\"dep_req\", \"2.0.0\")),]"
-    )
+        )
     }
 
     /// This test is to test the generator to ensure

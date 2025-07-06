@@ -99,7 +99,7 @@ use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal};
-use cargo_util::{paths, ProcessBuilder, ProcessError};
+use cargo_util::{ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
@@ -1398,7 +1398,7 @@ fn trim_paths_args_rustdoc(
     match trim_paths {
         // rustdoc supports diagnostics trimming only.
         TomlTrimPaths::Values(values) if !values.contains(&TomlTrimPathsValue::Diagnostics) => {
-            return Ok(())
+            return Ok(());
         }
         _ => {}
     }

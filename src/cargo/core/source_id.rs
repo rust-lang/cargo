@@ -3,10 +3,10 @@ use crate::core::PackageId;
 use crate::core::SourceKind;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
-use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::interning::InternedString;
-use crate::util::{context, CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
+use crate::util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl, context};
 use anyhow::Context as _;
 use serde::de;
 use serde::ser;
@@ -809,12 +809,12 @@ mod tests {
         use std::hash::Hasher;
         use std::path::Path;
 
+        use snapbox::IntoData as _;
         use snapbox::assert_data_eq;
         use snapbox::str;
-        use snapbox::IntoData as _;
 
-        use crate::util::hex::short_hash;
         use crate::util::StableHasher;
+        use crate::util::hex::short_hash;
 
         #[cfg(not(windows))]
         let ws_root = Path::new("/tmp/ws");

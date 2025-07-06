@@ -35,13 +35,13 @@
 //! ```
 
 use crate::compare::InMemoryDir;
-use crate::registry::{self, alt_api_path, FeatureMap};
+use crate::registry::{self, FeatureMap, alt_api_path};
 use flate2::read::GzDecoder;
 use snapbox::prelude::*;
 use std::collections::HashSet;
 use std::fs;
 use std::fs::File;
-use std::io::{self, prelude::*, SeekFrom};
+use std::io::{self, SeekFrom, prelude::*};
 use std::path::Path;
 use tar::Archive;
 

@@ -7,11 +7,11 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
-use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
+use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
 use crate::util::context::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, IntoUrl};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use std::collections::{HashMap, HashSet};
 use tracing::debug;
 use url::Url;

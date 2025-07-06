@@ -1,7 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
+use crate::util::CargoResult;
 use crate::util::closest_msg;
 use crate::util::interning::InternedString;
-use crate::util::CargoResult;
 use anyhow::bail;
 use cargo_util_schemas::manifest::FeatureName;
 use cargo_util_schemas::manifest::RustVersion;
@@ -246,7 +246,7 @@ fn build_feature_map(
                             bail!(
                                 "feature `{feature}` includes `{fv}` which is neither a dependency \
                                  nor another feature{closest}"
-                              );
+                            );
                         }
                         if is_optional_dep {
                             if !map.contains_key(f) {
@@ -257,15 +257,19 @@ fn build_feature_map(
                                 );
                             }
                         } else {
-                            bail!("feature `{feature}` includes `{fv}`, but `{f}` is not an optional dependency\n\
+                            bail!(
+                                "feature `{feature}` includes `{fv}`, but `{f}` is not an optional dependency\n\
                                 A non-optional dependency of the same name is defined; \
-                                consider adding `optional = true` to its definition.");
+                                consider adding `optional = true` to its definition."
+                            );
                         }
                     }
                 }
                 Dep { dep_name } => {
                     if !is_any_dep {
-                        bail!("feature `{feature}` includes `{fv}`, but `{dep_name}` is not listed as a dependency");
+                        bail!(
+                            "feature `{feature}` includes `{fv}`, but `{dep_name}` is not listed as a dependency"
+                        );
                     }
                     if !is_optional_dep {
                         bail!(
@@ -282,7 +286,9 @@ fn build_feature_map(
                 } => {
                     // Early check for some unlikely syntax.
                     if dep_feature.contains('/') {
-                        bail!("multiple slashes in feature `{fv}` (included by feature `{feature}`) are not allowed");
+                        bail!(
+                            "multiple slashes in feature `{fv}` (included by feature `{feature}`) are not allowed"
+                        );
                     }
 
                     // dep: cannot be combined with /

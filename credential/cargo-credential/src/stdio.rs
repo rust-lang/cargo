@@ -28,7 +28,7 @@ mod imp {
     use windows_sys::Win32::{
         Foundation::{HANDLE, INVALID_HANDLE_VALUE},
         System::Console::{
-            GetStdHandle, SetStdHandle, STD_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+            GetStdHandle, STD_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetStdHandle,
         },
     };
     pub const OUT_DEVICE: &str = "CONOUT$";
@@ -82,7 +82,7 @@ mod imp {
 #[cfg(unix)]
 mod imp {
     use super::Stdio;
-    use libc::{close, dup, dup2, STDIN_FILENO, STDOUT_FILENO};
+    use libc::{STDIN_FILENO, STDOUT_FILENO, close, dup, dup2};
     use std::{fs::File, io::Error, os::fd::AsRawFd};
     pub const IN_DEVICE: &str = "/dev/tty";
     pub const OUT_DEVICE: &str = "/dev/tty";
@@ -138,8 +138,8 @@ mod test {
     use std::fs::OpenOptions;
     use std::io::{Seek, Write};
 
-    use super::imp::ReplacementGuard;
     use super::Stdio;
+    use super::imp::ReplacementGuard;
 
     #[test]
     fn stdin() {

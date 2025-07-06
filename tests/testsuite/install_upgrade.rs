@@ -13,7 +13,7 @@ use cargo::core::PackageId;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{basic_manifest, cross_compile, execs, git, process, project, str, Execs};
+use cargo_test_support::{Execs, basic_manifest, cross_compile, execs, git, process, project, str};
 
 fn pkg_maybe_yanked(name: &str, vers: &str, yanked: bool) {
     Package::new(name, vers)

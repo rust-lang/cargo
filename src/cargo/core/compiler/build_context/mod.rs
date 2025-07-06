@@ -1,14 +1,14 @@
 //! [`BuildContext`] is a (mostly) static information about a build task.
 
+use crate::core::PackageSet;
+use crate::core::Workspace;
 use crate::core::compiler::unit_graph::UnitGraph;
 use crate::core::compiler::{BuildConfig, CompileKind, Unit};
 use crate::core::profiles::Profiles;
-use crate::core::PackageSet;
-use crate::core::Workspace;
+use crate::util::Rustc;
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::Rustc;
 use std::collections::{HashMap, HashSet};
 
 mod target_info;

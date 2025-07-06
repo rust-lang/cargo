@@ -1,20 +1,20 @@
+use crate::core::Registry as _;
 use crate::core::dependency::Dependency;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::shell::Verbosity;
-use crate::core::Registry as _;
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
-use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
+use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
 use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
-use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
+use crate::util::{OptVersionReq, style};
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
 use indexmap::IndexMap;
@@ -460,8 +460,7 @@ pub fn write_manifest_upgrades(
                 let [comparator] = &new_req.comparators[..] else {
                     trace!(
                         "skipping dependency `{}` with multiple version comparators: {:?}",
-                        name,
-                        new_req.comparators
+                        name, new_req.comparators
                     );
                     continue;
                 };

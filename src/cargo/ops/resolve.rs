@@ -55,6 +55,14 @@
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads
 
+use crate::core::Dependency;
+use crate::core::GitReference;
+use crate::core::PackageId;
+use crate::core::PackageIdSpec;
+use crate::core::PackageIdSpecQuery;
+use crate::core::PackageSet;
+use crate::core::SourceId;
+use crate::core::Workspace;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
@@ -64,20 +72,12 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::Dependency;
-use crate::core::GitReference;
-use crate::core::PackageId;
-use crate::core::PackageIdSpec;
-use crate::core::PackageIdSpecQuery;
-use crate::core::PackageSet;
-use crate::core::SourceId;
-use crate::core::Workspace;
 use crate::ops;
 use crate::sources::RecursivePathSource;
+use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::FeatureUnification;
 use crate::util::errors::CargoResult;
-use crate::util::CanonicalUrl;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;

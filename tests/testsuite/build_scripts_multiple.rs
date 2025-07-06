@@ -5,7 +5,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::str;
-use cargo_test_support::{project, Project};
+use cargo_test_support::{Project, project};
 use std::fs::File;
 
 #[cargo_test]

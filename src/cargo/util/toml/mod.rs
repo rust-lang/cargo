@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
-use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
-use anyhow::{anyhow, bail, Context as _};
+use crate::core::summary::MissingDependencyError;
+use anyhow::{Context as _, anyhow, bail};
 use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
@@ -26,7 +26,7 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable, FeatureValue};
+use crate::core::{CliUnstable, FeatureValue, find_workspace_root, resolve_relative_path};
 use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
@@ -34,7 +34,7 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lints::{get_span, rel_cwd_manifest_path};
-use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
+use crate::util::{self, GlobalContext, IntoUrl, OptVersionReq, context::ConfigRelativePath};
 
 mod embedded;
 mod targets;
@@ -1133,11 +1133,13 @@ fn lints_inherit_with(
 ) -> CargoResult<manifest::TomlLints> {
     if lints.workspace {
         if !lints.lints.is_empty() {
-            anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
+            anyhow::bail!(
+                "cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints"
+            );
         }
-        get_ws_inheritable().with_context(|| {
-            "error inheriting `lints` from workspace root manifest's `workspace.lints`"
-        })
+        get_ws_inheritable().with_context(
+            || "error inheriting `lints` from workspace root manifest's `workspace.lints`",
+        )
     } else {
         Ok(lints.lints)
     }
@@ -1498,7 +1500,9 @@ pub fn to_real_manifest(
 
     if let Some(links) = &normalized_package.links {
         if !targets.iter().any(|t| t.is_custom_build()) {
-            bail!("package specifies that it links to `{links}` but does not have a custom build script")
+            bail!(
+                "package specifies that it links to `{links}` but does not have a custom build script"
+            )
         }
     }
 
@@ -2795,7 +2799,9 @@ fn deprecated_underscore<T>(
 ) -> CargoResult<()> {
     let old_path = new_path.replace("-", "_");
     if old.is_some() && Edition::Edition2024 <= edition {
-        anyhow::bail!("`{old_path}` is unsupported as of the 2024 edition; instead use `{new_path}`\n(in the `{name}` {kind})");
+        anyhow::bail!(
+            "`{old_path}` is unsupported as of the 2024 edition; instead use `{new_path}`\n(in the `{name}` {kind})"
+        );
     } else if old.is_some() && new.is_some() {
         warnings.push(format!(
             "`{old_path}` is redundant with `{new_path}`, preferring `{new_path}` in the `{name}` {kind}"

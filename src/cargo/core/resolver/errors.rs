@@ -3,8 +3,8 @@ use std::fmt::Write as _;
 use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
+use crate::sources::source::QueryKind;
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -327,7 +327,10 @@ pub(super) fn activation_error(
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
-            let _ = write!(&mut hints, "\nif you are looking for the prerelease package it needs to be specified explicitly");
+            let _ = write!(
+                &mut hints,
+                "\nif you are looking for the prerelease package it needs to be specified explicitly"
+            );
             let _ = write!(
                 &mut hints,
                 "\n    {} = {{ version = \"{}\" }}",

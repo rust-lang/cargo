@@ -4,7 +4,7 @@ use cargo::core::features;
 use cargo::core::shell::Shell;
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
-use cargo::util::{self, closest_msg, command_prelude, CargoResult};
+use cargo::util::{self, CargoResult, closest_msg, command_prelude};
 use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::StringOrVec;
 use std::collections::BTreeMap;
@@ -278,15 +278,16 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
     let command = match path {
         Some(command) => command,
         None => {
-            let script_suggestion =
-                if gctx.cli_unstable().script && std::path::Path::new(cmd).is_file() {
-                    let sep = std::path::MAIN_SEPARATOR;
-                    format!(
+            let script_suggestion = if gctx.cli_unstable().script
+                && std::path::Path::new(cmd).is_file()
+            {
+                let sep = std::path::MAIN_SEPARATOR;
+                format!(
                     "\nhelp: To run the file `{cmd}`, provide a relative path like `.{sep}{cmd}`"
                 )
-                } else {
-                    "".to_owned()
-                };
+            } else {
+                "".to_owned()
+            };
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
                     "no such command: `{cmd}`\n\n\

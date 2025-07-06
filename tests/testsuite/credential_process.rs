@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo_test_support::registry::{Package, TestRegistry};
-use cargo_test_support::{basic_manifest, paths, project, registry, str, Project};
+use cargo_test_support::{Project, basic_manifest, paths, project, registry, str};
 
 fn toml_bin(proj: &Project, name: &str) -> String {
     proj.bin(name).display().to_string().replace('\\', "\\\\")

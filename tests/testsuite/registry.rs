@@ -11,7 +11,7 @@ use crate::utils::cargo_process;
 use cargo::core::SourceId;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{
-    self, registry_path, Dependency, Package, RegistryBuilder, Response, TestRegistry,
+    self, Dependency, Package, RegistryBuilder, Response, TestRegistry, registry_path,
 };
 use cargo_test_support::{basic_manifest, project, str};
 use cargo_test_support::{git, t};

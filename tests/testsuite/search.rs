@@ -94,8 +94,8 @@ fn not_update() {
     let registry = setup().build();
 
     use cargo::core::{Shell, SourceId};
-    use cargo::sources::source::Source;
     use cargo::sources::RegistrySource;
+    use cargo::sources::source::Source;
     use cargo::util::GlobalContext;
 
     let sid = SourceId::for_registry(registry.index_url()).unwrap();

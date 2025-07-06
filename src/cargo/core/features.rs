@@ -124,17 +124,16 @@ use std::fmt::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{bail, Error};
+use anyhow::{Error, bail};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
+use crate::GlobalContext;
 use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
-use crate::GlobalContext;
 
-pub const SEE_CHANNELS: &str =
-    "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
+pub const SEE_CHANNELS: &str = "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
 /// Value of [`allow-features`](CliUnstable::allow_features)

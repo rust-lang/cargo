@@ -10,19 +10,19 @@
 //! while the latter involves operations on the registry Web API.
 
 use std::collections::{HashMap, HashSet};
-use std::task::{ready, Poll};
+use std::task::{Poll, ready};
 
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::sources::IndexSummary;
 use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::source::SourceMap;
-use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use tracing::{debug, trace};
 use url::Url;
 
@@ -709,7 +709,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         let source = self.sources.get_mut(dep.source_id());
         match (override_summary, source) {
             (Some(_), None) => {
-                return Poll::Ready(Err(anyhow::anyhow!("override found but no real ones")))
+                return Poll::Ready(Err(anyhow::anyhow!("override found but no real ones")));
             }
             (None, None) => return Poll::Ready(Ok(())),
 

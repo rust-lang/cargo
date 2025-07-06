@@ -10,7 +10,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
-    basic_bin_manifest, cargo_test, paths, project, symlink_supported, ProjectBuilder,
+    ProjectBuilder, basic_bin_manifest, cargo_test, paths, project, symlink_supported,
 };
 ///////////////////////////////
 //// Unstable feature tests start
@@ -391,10 +391,11 @@ bar = "0.1.0"
         .arg(lockfile_path)
         .run();
 
-    assert!(p
-        .root()
-        .join("target/package/test_foo-0.5.0/Cargo.lock")
-        .is_file());
+    assert!(
+        p.root()
+            .join("target/package/test_foo-0.5.0/Cargo.lock")
+            .is_file()
+    );
 
     let path = p.root().join("target/package/test_foo-0.5.0/Cargo.lock");
     let contents = fs::read_to_string(path).unwrap();

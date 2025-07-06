@@ -2,10 +2,10 @@ use crate::cli;
 use crate::command_prelude::*;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
-use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
 use cargo::ops::Packages;
-use cargo::util::print_available_packages;
+use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
 use cargo::util::CargoResult;
+use cargo::util::print_available_packages;
 use std::collections::HashSet;
 use std::str::FromStr;
 

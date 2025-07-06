@@ -11,8 +11,8 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Context as _;
+use anyhow::bail;
 use cargo_credential::Operation;
 use cargo_credential::Secret;
 use cargo_util::paths;
@@ -21,36 +21,36 @@ use crates_io::NewCrateDependency;
 use crates_io::Registry;
 use itertools::Itertools;
 
-use crate::core::dependency::DepKind;
-use crate::core::manifest::ManifestMetadata;
-use crate::core::resolver::CliFeatures;
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::core::Dependency;
 use crate::core::Package;
 use crate::core::PackageId;
 use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
 use crate::core::Workspace;
+use crate::core::dependency::DepKind;
+use crate::core::manifest::ManifestMetadata;
+use crate::core::resolver::CliFeatures;
 use crate::ops;
-use crate::ops::registry::RegistrySourceIds;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::ops::RegistryOrIndex;
-use crate::sources::source::QueryKind;
-use crate::sources::source::Source;
+use crate::ops::registry::RegistrySourceIds;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
-use crate::sources::CRATES_IO_REGISTRY;
+use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
+use crate::util::Graph;
+use crate::util::Progress;
+use crate::util::ProgressStyle;
+use crate::util::VersionExt as _;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::ManifestError;
 use crate::util::toml::prepare_for_publish;
-use crate::util::Graph;
-use crate::util::Progress;
-use crate::util::ProgressStyle;
-use crate::util::VersionExt as _;
-use crate::CargoResult;
-use crate::GlobalContext;
 
 use super::super::check_dep_has_version;
 
@@ -339,7 +339,9 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 break;
             } else {
                 let failed_list = package_list(plan.iter(), "and");
-                bail!("unable to publish {failed_list} due to a timeout while waiting for published dependencies to be available.");
+                bail!(
+                    "unable to publish {failed_list} due to a timeout while waiting for published dependencies to be available."
+                );
             }
         }
         for id in &confirmed {
@@ -494,12 +496,14 @@ fn verify_dependencies(
             // but also prevents someone using `--index` to specify
             // something that points to crates.io.
             if registry_src.is_crates_io() || registry.host_is_crates_io() {
-                bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                bail!(
+                    "crates cannot be published to crates.io with dependencies sourced from other\n\
                        registries. `{}` needs to be published to crates.io before publishing this crate.\n\
                        (crate `{}` is pulled from {})",
-                      dep.package_name(),
-                      dep.package_name(),
-                      dep.source_id());
+                    dep.package_name(),
+                    dep.package_name(),
+                    dep.source_id()
+                );
             }
         }
     }

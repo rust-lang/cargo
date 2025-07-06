@@ -114,18 +114,18 @@
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
-use crate::core::gc::GcOpts;
 use crate::core::Verbosity;
+use crate::core::gc::GcOpts;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
-use crate::util::sqlite::{self, basic_migration, Migration};
+use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
 use crate::{CargoResult, GlobalContext};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_util::paths;
-use rusqlite::{params, Connection, ErrorCode};
-use std::collections::{hash_map, HashMap};
+use rusqlite::{Connection, ErrorCode, params};
+use std::collections::{HashMap, hash_map};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
@@ -1743,7 +1743,9 @@ impl DeferredGlobalLastUse {
                     &encoded_registry_name,
                 )?
                 else {
-                    bail!("expected registry_index {encoded_registry_name} to exist, but wasn't found");
+                    bail!(
+                        "expected registry_index {encoded_registry_name} to exist, but wasn't found"
+                    );
                 };
                 self.registry_keys.insert(encoded_registry_name, id);
                 Ok(id)

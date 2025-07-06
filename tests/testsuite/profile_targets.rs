@@ -3,7 +3,7 @@
 //! targets, etc.
 
 use crate::prelude::*;
-use cargo_test_support::{basic_manifest, project, str, Project};
+use cargo_test_support::{Project, basic_manifest, project, str};
 
 fn all_target_project() -> Project {
     // This abuses the `codegen-units` setting so that we can verify exactly

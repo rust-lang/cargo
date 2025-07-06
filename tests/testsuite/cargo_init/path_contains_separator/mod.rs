@@ -3,7 +3,7 @@ use cargo_test_support::compare::assert_ui;
 use cargo_test_support::current_dir;
 use cargo_test_support::file;
 use cargo_test_support::str;
-use cargo_test_support::{t, Project};
+use cargo_test_support::{Project, t};
 
 #[cargo_test]
 fn case() {

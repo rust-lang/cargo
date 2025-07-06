@@ -4,10 +4,10 @@ use std::{cell::Cell, marker, sync::Arc};
 
 use cargo_util::ProcessBuilder;
 
+use crate::CargoResult;
 use crate::core::compiler::build_runner::OutputFile;
 use crate::core::compiler::future_incompat::FutureBreakageItem;
 use crate::util::Queue;
-use crate::CargoResult;
 
 use super::{Artifact, DiagDedupe, Job, JobId, Message};
 

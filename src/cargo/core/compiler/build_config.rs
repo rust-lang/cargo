@@ -2,7 +2,7 @@ use crate::core::compiler::CompileKind;
 use crate::util::context::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, RustfixDiagnosticServer};
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_util::ProcessBuilder;
 use serde::ser;
 use std::cell::RefCell;
@@ -96,8 +96,9 @@ impl BuildConfig {
                 JobsConfig::String(j) => match j.as_str() {
                     "default" => default_parallelism()?,
                     _ => {
-                        anyhow::bail!(
-			    format!("could not parse `{j}`. Number of parallel jobs should be `default` or a number."))
+                        anyhow::bail!(format!(
+                            "could not parse `{j}`. Number of parallel jobs should be `default` or a number."
+                        ))
                     }
                 },
             },

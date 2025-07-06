@@ -4,8 +4,8 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::task::Poll;
 
-use crate::core::package::PackageSet;
 use crate::core::SourceId;
+use crate::core::package::PackageSet;
 use crate::core::{Dependency, Package, PackageId};
 use crate::sources::IndexSummary;
 use crate::util::{CargoResult, GlobalContext};

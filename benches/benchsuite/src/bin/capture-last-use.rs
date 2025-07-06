@@ -12,9 +12,9 @@
 //! The database is kept in git. It usually shouldn't need to be re-generated
 //! unless there is a change in the schema or the benchmark.
 
+use cargo::GlobalContext;
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
-use cargo::GlobalContext;
 use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs;

@@ -20,8 +20,8 @@
 
 #![allow(clippy::disallowed_methods)]
 
-use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs};
-use cargo_test_support::{prelude::*, Project};
+use cargo_test_support::{Execs, basic_manifest, paths, project, rustc_host, str};
+use cargo_test_support::{Project, prelude::*};
 use std::env;
 use std::path::{Path, PathBuf};
 

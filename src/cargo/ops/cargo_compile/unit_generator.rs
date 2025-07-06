@@ -2,23 +2,23 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
+use crate::core::Workspace;
+use crate::core::compiler::UserIntent;
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::IsArtifact;
-use crate::core::compiler::UserIntent;
 use crate::core::compiler::{CompileKind, CompileMode, Unit};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::Workspace;
 use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
 use crate::util::restricted_names::is_glob_pattern;
-use crate::util::{closest_msg, CargoResult};
+use crate::util::{CargoResult, closest_msg};
 
+use super::Packages;
 use super::compile_filter::{CompileFilter, FilterRule, LibRule};
 use super::packages::build_glob;
-use super::Packages;
 
 /// A proposed target.
 ///

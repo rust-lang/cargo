@@ -1151,7 +1151,7 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
                         return Err(serde_untagged::de::Error::invalid_value(
                             Unexpected::Signed(value),
                             &expecting,
-                        ))
+                        ));
                     }
                 };
                 Ok(debuginfo)
@@ -1167,7 +1167,7 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
                         return Err(serde_untagged::de::Error::invalid_value(
                             Unexpected::Str(value),
                             &expecting,
-                        ))
+                        ));
                     }
                 };
                 Ok(debuginfo)

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use anyhow::{bail, Error};
+use anyhow::{Error, bail};
 
 use self::parse::{Parser, RawChunk};
 use super::{Graph, Node, NodeId};

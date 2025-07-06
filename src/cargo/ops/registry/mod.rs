@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::str;
 use std::task::Poll;
 
-use anyhow::{bail, format_err, Context as _};
+use anyhow::{Context as _, bail, format_err};
 use cargo_credential::{Operation, Secret};
 use crates_io::Registry;
 use url::Url;
@@ -31,10 +31,10 @@ use crate::util::network::http::http_handle;
 pub use self::info::info;
 pub use self::login::registry_login;
 pub use self::logout::registry_logout;
-pub use self::owner::modify_owners;
 pub use self::owner::OwnersOptions;
-pub use self::publish::publish;
+pub use self::owner::modify_owners;
 pub use self::publish::PublishOpts;
+pub use self::publish::publish;
 pub use self::search::search;
 pub use self::yank::yank;
 

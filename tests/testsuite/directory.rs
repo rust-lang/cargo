@@ -8,9 +8,9 @@ use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths;
-use cargo_test_support::registry::{cksum, Package};
+use cargo_test_support::registry::{Package, cksum};
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, project, t, ProjectBuilder};
+use cargo_test_support::{ProjectBuilder, basic_manifest, project, t};
 use serde::Serialize;
 
 fn setup() {

@@ -1,8 +1,8 @@
 //! Markdown formatter.
 
-use crate::util::unwrap;
 use crate::ManMap;
-use anyhow::{bail, format_err, Error};
+use crate::util::unwrap;
+use anyhow::{Error, bail, format_err};
 use std::fmt::Write;
 
 pub struct MdFormatter {

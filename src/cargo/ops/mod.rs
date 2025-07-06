@@ -1,35 +1,39 @@
 use crate::sources::CRATES_IO_DOMAIN;
 
-pub use self::cargo_clean::{clean, CleanContext, CleanOptions};
-pub use self::cargo_compile::{
-    compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features, CompileOptions,
-};
+pub use self::cargo_clean::{CleanContext, CleanOptions, clean};
 pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
-pub use self::cargo_doc::{doc, DocOptions, OutputFormat};
-pub use self::cargo_fetch::{fetch, FetchOptions};
+pub use self::cargo_compile::{
+    CompileOptions, compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features,
+};
+pub use self::cargo_doc::{DocOptions, OutputFormat, doc};
+pub use self::cargo_fetch::{FetchOptions, fetch};
 pub use self::cargo_install::{install, install_list};
-pub use self::cargo_new::{init, new, NewOptions, NewProjectKind, VersionControl};
-pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
-pub use self::cargo_package::check_yanked;
-pub use self::cargo_package::package;
+pub use self::cargo_new::{NewOptions, NewProjectKind, VersionControl, init, new};
+pub use self::cargo_output_metadata::{ExportInfo, OutputMetadataOptions, output_metadata};
 pub use self::cargo_package::PackageMessageFormat;
 pub use self::cargo_package::PackageOpts;
+pub use self::cargo_package::check_yanked;
+pub use self::cargo_package::package;
 pub use self::cargo_pkgid::pkgid;
 pub use self::cargo_read_manifest::read_package;
 pub use self::cargo_run::run;
-pub use self::cargo_test::{run_benches, run_tests, TestOptions};
+pub use self::cargo_test::{TestOptions, run_benches, run_tests};
 pub use self::cargo_uninstall::uninstall;
+pub use self::cargo_update::UpdateOptions;
 pub use self::cargo_update::generate_lockfile;
 pub use self::cargo_update::print_lockfile_changes;
 pub use self::cargo_update::update_lockfile;
 pub use self::cargo_update::upgrade_manifests;
 pub use self::cargo_update::write_manifest_upgrades;
-pub use self::cargo_update::UpdateOptions;
-pub use self::common_for_install_and_uninstall::{resolve_root, InstallTracker};
+pub use self::common_for_install_and_uninstall::{InstallTracker, resolve_root};
 pub use self::fix::{
-    fix, fix_edition, fix_exec_rustc, fix_get_proxy_lock_addr, EditionFixMode, FixOptions,
+    EditionFixMode, FixOptions, fix, fix_edition, fix_exec_rustc, fix_get_proxy_lock_addr,
 };
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
+pub use self::registry::OwnersOptions;
+pub use self::registry::PublishOpts;
+pub use self::registry::RegistryCredentialConfig;
+pub use self::registry::RegistryOrIndex;
 pub use self::registry::info;
 pub use self::registry::modify_owners;
 pub use self::registry::publish;
@@ -37,15 +41,11 @@ pub use self::registry::registry_login;
 pub use self::registry::registry_logout;
 pub use self::registry::search;
 pub use self::registry::yank;
-pub use self::registry::OwnersOptions;
-pub use self::registry::PublishOpts;
-pub use self::registry::RegistryCredentialConfig;
-pub use self::registry::RegistryOrIndex;
 pub use self::resolve::{
-    add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws, resolve_ws_with_opts,
-    WorkspaceResolve,
+    WorkspaceResolve, add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws,
+    resolve_ws_with_opts,
 };
-pub use self::vendor::{vendor, VendorOptions};
+pub use self::vendor::{VendorOptions, vendor};
 
 pub mod cargo_add;
 mod cargo_clean;

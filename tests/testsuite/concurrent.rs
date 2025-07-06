@@ -164,16 +164,18 @@ fn multiple_registry_fetches() {
     execs().run_output(&b);
 
     let suffix = env::consts::EXE_SUFFIX;
-    assert!(p
-        .root()
-        .join("a/target/debug")
-        .join(format!("foo{}", suffix))
-        .is_file());
-    assert!(p
-        .root()
-        .join("b/target/debug")
-        .join(format!("bar{}", suffix))
-        .is_file());
+    assert!(
+        p.root()
+            .join("a/target/debug")
+            .join(format!("foo{}", suffix))
+            .is_file()
+    );
+    assert!(
+        p.root()
+            .join("b/target/debug")
+            .join(format!("bar{}", suffix))
+            .is_file()
+    );
 }
 
 #[cargo_test]

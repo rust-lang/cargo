@@ -4,7 +4,7 @@ use crate::core::PackageId;
 use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
-use cargo_util::{paths, Sha256};
+use cargo_util::{Sha256, paths};
 use std::fs::File;
 use std::io::SeekFrom;
 use std::io::{self, prelude::*};

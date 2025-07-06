@@ -1,12 +1,12 @@
-use crate::core::compiler::standard_lib;
 use crate::core::compiler::BuildConfig;
 use crate::core::compiler::RustcTargetData;
 use crate::core::compiler::UserIntent;
+use crate::core::compiler::standard_lib;
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
-use crate::util::context::JobsConfig;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
+use crate::util::context::JobsConfig;
 use std::collections::HashSet;
 
 pub struct FetchOptions<'a> {

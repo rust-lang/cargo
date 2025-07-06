@@ -7,15 +7,15 @@ use std::task::Poll;
 
 use crate::core::{Dependency, EitherManifest, Manifest, Package, PackageId, SourceId};
 use crate::ops;
+use crate::sources::IndexSummary;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
-use crate::sources::IndexSummary;
+use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::internal;
 use crate::util::toml::read_manifest;
-use crate::util::GlobalContext;
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
@@ -1042,9 +1042,9 @@ fn read_packages(
             None => {
                 if find_project_manifest_exact(path, "cargo.toml").is_ok() {
                     Err(anyhow::format_err!(
-                "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
-                path.display()
-            ))
+                        "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
+                        path.display()
+                    ))
                 } else {
                     Err(anyhow::format_err!(
                         "Could not find Cargo.toml in `{}`",

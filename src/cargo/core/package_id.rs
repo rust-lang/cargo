@@ -12,8 +12,8 @@ use serde::ser;
 
 use crate::core::PackageIdSpec;
 use crate::core::SourceId;
-use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::util::interning::InternedString;
 
 static PACKAGE_ID_CACHE: OnceLock<Mutex<HashSet<&'static PackageIdInner>>> = OnceLock::new();
 

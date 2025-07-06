@@ -54,8 +54,8 @@ use std::sync::OnceLock;
 use std::thread::JoinHandle;
 use std::time::{self, Duration};
 
-use anyhow::{bail, Result};
-use cargo_util::{is_ci, ProcessError};
+use anyhow::{Result, bail};
+use cargo_util::{ProcessError, is_ci};
 use snapbox::IntoData as _;
 use url::Url;
 
@@ -112,11 +112,11 @@ pub mod publish;
 pub mod registry;
 
 pub mod prelude {
-    pub use crate::cargo_test;
-    pub use crate::paths::CargoPathExt;
     pub use crate::ArgLineCommandExt;
     pub use crate::ChannelChangerCommandExt;
     pub use crate::TestEnvCommandExt;
+    pub use crate::cargo_test;
+    pub use crate::paths::CargoPathExt;
     pub use snapbox::IntoData;
 }
 
