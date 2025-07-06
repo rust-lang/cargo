@@ -53,7 +53,7 @@ pub fn check_token(expected_token: Option<&str>, registry: Option<&str>) {
             .get("registry")
             .and_then(|registry_table| registry_table.get("token"))
             .and_then(|v| match v {
-                toml::Value::String(ref token) => Some(token.as_str().to_string()),
+                toml::Value::String(token) => Some(token.as_str().to_string()),
                 _ => None,
             }),
     };
@@ -336,7 +336,10 @@ k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
         .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(credentials, "[registries.alternative]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n");
+    assert_eq!(
+        credentials,
+        "[registries.alternative]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"
+    );
 }
 
 #[cargo_test]

@@ -190,7 +190,7 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::task::{ready, Poll};
+use std::task::{Poll, ready};
 
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
@@ -203,15 +203,15 @@ use tracing::debug;
 use crate::core::dependency::Dependency;
 use crate::core::global_cache_tracker;
 use crate::core::{Package, PackageId, SourceId};
+use crate::sources::PathSource;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
-use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::network::PollExt;
-use crate::util::{hex, VersionExt};
-use crate::util::{restricted_names, CargoResult, Filesystem, GlobalContext, LimitErrorReader};
+use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
+use crate::util::{VersionExt, hex};
 
 /// The `.cargo-ok` file is used to track if the source is already unpacked.
 /// See [`RegistrySource::unpack_package`] for more.
@@ -408,7 +408,7 @@ pub trait RegistryData {
     ///
     /// Returns a [`File`] handle to the `.crate` file, positioned at the start.
     fn finish_download(&mut self, pkg: PackageId, checksum: &str, data: &[u8])
-        -> CargoResult<File>;
+    -> CargoResult<File>;
 
     /// Returns whether or not the `.crate` file is already downloaded.
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
@@ -750,16 +750,17 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         // updated, so we fall back to performing a lazy update.
         if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
-            ready!(self
-                .index
-                .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
-                    if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
-                        && dep.matches(s.as_summary())
-                    {
-                        // We are looking for a package from a lock file so we do not care about yank
-                        callback(s)
-                    }
-                },))?;
+            ready!(
+                self.index
+                    .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                        if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
+                            && dep.matches(s.as_summary())
+                        {
+                            // We are looking for a package from a lock file so we do not care about yank
+                            callback(s)
+                        }
+                    },)
+            )?;
             if called {
                 Poll::Ready(Ok(()))
             } else {
@@ -769,53 +770,62 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             }
         } else {
             let mut precise_yanked_in_use = false;
-            ready!(self
-                .index
-                .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
-                    let matched = match kind {
-                        QueryKind::Exact | QueryKind::RejectedVersions => {
-                            if req.is_precise() && self.gctx.cli_unstable().unstable_options {
-                                dep.matches_prerelease(s.as_summary())
-                            } else {
-                                dep.matches(s.as_summary())
+            ready!(
+                self.index
+                    .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                        let matched = match kind {
+                            QueryKind::Exact | QueryKind::RejectedVersions => {
+                                if req.is_precise() && self.gctx.cli_unstable().unstable_options {
+                                    dep.matches_prerelease(s.as_summary())
+                                } else {
+                                    dep.matches(s.as_summary())
+                                }
+                            }
+                            QueryKind::AlternativeNames => true,
+                            QueryKind::Normalized => true,
+                        };
+                        if !matched {
+                            return;
+                        }
+                        // Next filter out all yanked packages. Some yanked packages may
+                        // leak through if they're in a whitelist (aka if they were
+                        // previously in `Cargo.lock`
+                        match s {
+                            s @ _ if kind == QueryKind::RejectedVersions => callback(s),
+                            s @ IndexSummary::Candidate(_) => callback(s),
+                            s @ IndexSummary::Yanked(_) => {
+                                if self.yanked_whitelist.contains(&s.package_id()) {
+                                    callback(s);
+                                } else if req.is_precise() {
+                                    precise_yanked_in_use = true;
+                                    callback(s);
+                                }
+                            }
+                            IndexSummary::Unsupported(summary, v) => {
+                                tracing::debug!(
+                                    "unsupported schema version {} ({} {})",
+                                    v,
+                                    summary.name(),
+                                    summary.version()
+                                );
+                            }
+                            IndexSummary::Invalid(summary) => {
+                                tracing::debug!(
+                                    "invalid ({} {})",
+                                    summary.name(),
+                                    summary.version()
+                                );
+                            }
+                            IndexSummary::Offline(summary) => {
+                                tracing::debug!(
+                                    "offline ({} {})",
+                                    summary.name(),
+                                    summary.version()
+                                );
                             }
                         }
-                        QueryKind::AlternativeNames => true,
-                        QueryKind::Normalized => true,
-                    };
-                    if !matched {
-                        return;
-                    }
-                    // Next filter out all yanked packages. Some yanked packages may
-                    // leak through if they're in a whitelist (aka if they were
-                    // previously in `Cargo.lock`
-                    match s {
-                        s @ _ if kind == QueryKind::RejectedVersions => callback(s),
-                        s @ IndexSummary::Candidate(_) => callback(s),
-                        s @ IndexSummary::Yanked(_) => {
-                            if self.yanked_whitelist.contains(&s.package_id()) {
-                                callback(s);
-                            } else if req.is_precise() {
-                                precise_yanked_in_use = true;
-                                callback(s);
-                            }
-                        }
-                        IndexSummary::Unsupported(summary, v) => {
-                            tracing::debug!(
-                                "unsupported schema version {} ({} {})",
-                                v,
-                                summary.name(),
-                                summary.version()
-                            );
-                        }
-                        IndexSummary::Invalid(summary) => {
-                            tracing::debug!("invalid ({} {})", summary.name(), summary.version());
-                        }
-                        IndexSummary::Offline(summary) => {
-                            tracing::debug!("offline ({} {})", summary.name(), summary.version());
-                        }
-                    }
-                }))?;
+                    })
+            )?;
             if precise_yanked_in_use {
                 let name = dep.package_name();
                 let version = req

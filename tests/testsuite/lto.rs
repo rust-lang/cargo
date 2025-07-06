@@ -1,8 +1,8 @@
 use crate::prelude::*;
 use cargo::core::compiler::Lto;
-use cargo_test_support::registry::Package;
 use cargo_test_support::RawOutput;
-use cargo_test_support::{basic_manifest, project, str, Project};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{Project, basic_manifest, project, str};
 
 #[cargo_test]
 fn with_deps() {

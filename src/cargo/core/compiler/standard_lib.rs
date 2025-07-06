@@ -1,11 +1,11 @@
 //! Code for building the standard library.
 
-use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::UnitInterner;
+use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
+use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{PackageId, PackageSet, Resolve, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;

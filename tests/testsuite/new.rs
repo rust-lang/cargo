@@ -81,9 +81,11 @@ fn simple_bin() {
     assert!(paths::root().join("foo/src/main.rs").is_file());
 
     cargo_process("build").cwd(&paths::root().join("foo")).run();
-    assert!(paths::root()
-        .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
-        .is_file());
+    assert!(
+        paths::root()
+            .join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX))
+            .is_file()
+    );
 }
 
 #[cargo_test]
@@ -273,9 +275,11 @@ fn git_prefers_command_line() {
 
     cargo_process("new foo --vcs git").run();
     assert!(paths::root().join("foo/.gitignore").exists());
-    assert!(!fs::read_to_string(paths::root().join("foo/Cargo.toml"))
-        .unwrap()
-        .contains("authors ="));
+    assert!(
+        !fs::read_to_string(paths::root().join("foo/Cargo.toml"))
+            .unwrap()
+            .contains("authors =")
+    );
 }
 
 #[cargo_test]
@@ -289,12 +293,16 @@ fn subpackage_no_git() {
     fs::create_dir(&subpackage).unwrap();
     cargo_process("new foo/components/subcomponent").run();
 
-    assert!(!paths::root()
-        .join("foo/components/subcomponent/.git")
-        .is_file());
-    assert!(!paths::root()
-        .join("foo/components/subcomponent/.gitignore")
-        .is_file());
+    assert!(
+        !paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_file()
+    );
+    assert!(
+        !paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
+    );
 }
 
 #[cargo_test]
@@ -311,12 +319,16 @@ fn subpackage_git_with_gitignore() {
     fs::create_dir(&subpackage).unwrap();
     cargo_process("new foo/components/subcomponent").run();
 
-    assert!(paths::root()
-        .join("foo/components/subcomponent/.git")
-        .is_dir());
-    assert!(paths::root()
-        .join("foo/components/subcomponent/.gitignore")
-        .is_file());
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_dir()
+    );
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
+    );
 }
 
 #[cargo_test]
@@ -327,12 +339,16 @@ fn subpackage_git_with_vcs_arg() {
     fs::create_dir(&subpackage).unwrap();
     cargo_process("new foo/components/subcomponent --vcs git").run();
 
-    assert!(paths::root()
-        .join("foo/components/subcomponent/.git")
-        .is_dir());
-    assert!(paths::root()
-        .join("foo/components/subcomponent/.gitignore")
-        .is_file());
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.git")
+            .is_dir()
+    );
+    assert!(
+        paths::root()
+            .join("foo/components/subcomponent/.gitignore")
+            .is_file()
+    );
 }
 
 #[cargo_test]

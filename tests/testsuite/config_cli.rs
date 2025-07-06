@@ -9,7 +9,7 @@ use cargo_test_support::paths;
 use cargo_test_support::str;
 
 use super::config::{
-    assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
+    GlobalContextBuilder, assert_error, read_output, write_config_at, write_config_toml,
 };
 
 #[cargo_test]

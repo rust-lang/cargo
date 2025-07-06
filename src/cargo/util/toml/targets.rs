@@ -21,7 +21,7 @@ use cargo_util_schemas::manifest::{
     TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
-use crate::core::compiler::{rustdoc::RustdocScrapeExamples, CrateType};
+use crate::core::compiler::{CrateType, rustdoc::RustdocScrapeExamples};
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::{
     closest_msg, errors::CargoResult, restricted_names, toml::deprecated_underscore,

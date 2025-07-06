@@ -2,9 +2,9 @@
 
 use crate::{
     core::features::cargo_docs_link,
-    util::{context::ConfigKey, CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
+    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl, context::ConfigKey},
 };
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, LoginOptions, Operation, RegistryInfo,
     Secret,
@@ -167,9 +167,12 @@ fn credential_provider(
                             secret_key.definition
                         ))?;
                     } else {
-                        warn(format!("{sid} has a `token` configured in {} that will be ignored \
+                        warn(format!(
+                            "{sid} has a `token` configured in {} that will be ignored \
                         because a `secret_key` is also configured, and the `cargo:paseto` provider is \
-                        configured with higher precedence", token.definition))?;
+                        configured with higher precedence",
+                            token.definition
+                        ))?;
                     }
                 }
                 (_, _) => {
@@ -511,8 +514,8 @@ static BUILT_IN_PROVIDERS: &[&'static str] = &[
 /// Retrieves a cached instance of `LibSecretCredential`.
 /// Must be cached to avoid repeated load/unload cycles, which are not supported by `glib`.
 #[cfg(target_os = "linux")]
-fn get_credential_libsecret(
-) -> CargoResult<&'static cargo_credential_libsecret::LibSecretCredential> {
+fn get_credential_libsecret()
+-> CargoResult<&'static cargo_credential_libsecret::LibSecretCredential> {
     static CARGO_CREDENTIAL_LIBSECRET: std::sync::OnceLock<
         cargo_credential_libsecret::LibSecretCredential,
     > = std::sync::OnceLock::new();
@@ -592,7 +595,7 @@ fn credential_action(
                         "credential provider `{}` failed action `{action}`",
                         args.join(" ")
                     )
-                })
+                });
             }
         }
     }
@@ -676,7 +679,9 @@ fn auth_token_optional(
         operation_independent,
     } = credential_response
     else {
-        bail!("credential provider produced unexpected response for `get` request: {credential_response:?}")
+        bail!(
+            "credential provider produced unexpected response for `get` request: {credential_response:?}"
+        )
     };
     let token = Secret::from(token);
     tracing::trace!("found token");
@@ -716,7 +721,9 @@ pub fn logout(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<()> {
     }
     let credential_response = credential_response?;
     let CredentialResponse::Logout = credential_response else {
-        bail!("credential provider produced unexpected response for `logout` request: {credential_response:?}")
+        bail!(
+            "credential provider produced unexpected response for `logout` request: {credential_response:?}"
+        )
     };
     Ok(())
 }
@@ -731,7 +738,9 @@ pub fn login(
     let credential_response =
         credential_action(gctx, sid, Action::Login(options), vec![], args, false)?;
     let CredentialResponse::Login = credential_response else {
-        bail!("credential provider produced unexpected response for `login` request: {credential_response:?}")
+        bail!(
+            "credential provider produced unexpected response for `login` request: {credential_response:?}"
+        )
     };
     Ok(())
 }

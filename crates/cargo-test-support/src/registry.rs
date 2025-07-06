@@ -45,10 +45,10 @@
 use crate::git::repo;
 use crate::paths;
 use crate::publish::{create_index_line, write_to_index};
-use cargo_util::paths::append;
 use cargo_util::Sha256;
-use flate2::write::GzEncoder;
+use cargo_util::paths::append;
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
 use pasetors::paserk::FormatAsPaserk;
 use pasetors::token::UntrustedToken;

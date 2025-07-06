@@ -1,7 +1,7 @@
 use cargo_util_schemas::manifest::PackageName;
 
-use crate::util::restricted_names;
 use crate::CargoResult;
+use crate::util::restricted_names;
 
 pub(super) fn expand_manifest(content: &str) -> CargoResult<String> {
     let source = ScriptSource::parse(content)?;
@@ -10,9 +10,13 @@ pub(super) fn expand_manifest(content: &str) -> CargoResult<String> {
             Some("cargo") | None => {}
             Some(other) => {
                 if let Some(remainder) = other.strip_prefix("cargo,") {
-                    anyhow::bail!("cargo does not support frontmatter infostring attributes like `{remainder}` at this time")
+                    anyhow::bail!(
+                        "cargo does not support frontmatter infostring attributes like `{remainder}` at this time"
+                    )
                 } else {
-                    anyhow::bail!("frontmatter infostring `{other}` is unsupported by cargo; specify `cargo` for embedding a manifest")
+                    anyhow::bail!(
+                        "frontmatter infostring `{other}` is unsupported by cargo; specify `cargo` for embedding a manifest"
+                    )
                 }
             }
         }
@@ -820,14 +824,14 @@ content: "fn main() {}\n"
     #[test]
     fn split_crlf() {
         assert_source(
-                "#!/usr/bin/env cargo\r\n---\r\n[dependencies]\r\ntime=\"0.1.25\"\r\n---\r\nfn main() {}",
+            "#!/usr/bin/env cargo\r\n---\r\n[dependencies]\r\ntime=\"0.1.25\"\r\n---\r\nfn main() {}",
             str![[r##"
 shebang: "#!/usr/bin/env cargo\r\n"
 info: None
 frontmatter: "[dependencies]\r\ntime=\"0.1.25\"\r\n"
 content: "fn main() {}"
 
-"##]]
+"##]],
         );
     }
 

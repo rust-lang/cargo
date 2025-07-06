@@ -14,7 +14,7 @@
 
 #![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use rustfix::apply_suggestions;
 use serde_json::Value;
 use snapbox::data::DataFormat;

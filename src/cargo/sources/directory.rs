@@ -4,16 +4,16 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use crate::core::{Dependency, Package, PackageId, SourceId};
+use crate::sources::IndexSummary;
+use crate::sources::PathSource;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
-use crate::sources::IndexSummary;
-use crate::sources::PathSource;
-use crate::util::errors::CargoResult;
 use crate::util::GlobalContext;
+use crate::util::errors::CargoResult;
 
 use anyhow::Context as _;
-use cargo_util::{paths, Sha256};
+use cargo_util::{Sha256, paths};
 use serde::Deserialize;
 
 /// `DirectorySource` contains a number of crates on the file system. It was

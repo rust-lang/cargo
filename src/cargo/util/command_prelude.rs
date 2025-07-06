@@ -1,9 +1,10 @@
+use crate::CargoResult;
+use crate::core::Dependency;
 use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::core::Dependency;
-use crate::core::{profiles::Profiles, shell, Edition, Package, Target, TargetKind, Workspace};
+use crate::core::{Edition, Package, Target, TargetKind, Workspace, profiles::Profiles, shell};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -16,7 +17,6 @@ use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
-use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::ProfileName;
@@ -34,12 +34,12 @@ use std::path::PathBuf;
 
 pub use crate::core::compiler::UserIntent;
 pub use crate::{CliError, CliResult, GlobalContext};
-pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
+pub use clap::{Arg, ArgAction, ArgMatches, value_parser};
 
 pub use clap::Command;
 
-use super::context::JobsConfig;
 use super::IntoUrl;
+use super::context::JobsConfig;
 
 pub mod heading {
     pub const PACKAGE_SELECTION: &str = "Package Selection";
@@ -139,7 +139,9 @@ pub trait CommandExt: Sized {
         command: &'static str,
         supported_mode: &'static str,
     ) -> Self {
-        let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
+        let msg = format!(
+            "`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported"
+        );
         let value_parser = UnknownArgumentValueParser::suggest(msg);
         self._arg(
             flag(default_mode, "")
@@ -1107,7 +1109,9 @@ pub fn lockfile_path(
     let path = gctx.cwd().join(lockfile_path);
 
     if !path.ends_with(LOCKFILE_NAME) {
-        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})")
+        bail!(
+            "the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})"
+        )
     }
     if path.is_dir() {
         bail!(

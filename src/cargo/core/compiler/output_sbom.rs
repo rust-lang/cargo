@@ -8,10 +8,10 @@ use cargo_util_schemas::core::PackageIdSpec;
 use itertools::Itertools;
 use serde::Serialize;
 
-use crate::core::TargetKind;
-use crate::util::interning::InternedString;
-use crate::util::Rustc;
 use crate::CargoResult;
+use crate::core::TargetKind;
+use crate::util::Rustc;
+use crate::util::interning::InternedString;
 
 use super::{BuildRunner, CompileMode, Unit};
 

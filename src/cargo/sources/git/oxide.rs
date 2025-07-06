@@ -1,9 +1,9 @@
 //! This module contains all code sporting `gitoxide` for operations on `git` repositories and it mirrors
 //! `utils` closely for now. One day it can be renamed into `utils` once `git2` isn't required anymore.
 
-use crate::util::network::http::HttpTimeout;
 use crate::util::HumanBytes;
-use crate::util::{network, MetricsCounter, Progress};
+use crate::util::network::http::HttpTimeout;
+use crate::util::{MetricsCounter, Progress, network};
 use crate::{CargoResult, GlobalContext};
 use cargo_util::paths;
 use gix::bstr::{BString, ByteSlice};
@@ -19,14 +19,16 @@ use tracing::debug;
 pub fn with_retry_and_progress(
     repo_path: &std::path::Path,
     gctx: &GlobalContext,
-    cb: &(dyn Fn(
+    cb: &(
+         dyn Fn(
         &std::path::Path,
         &AtomicBool,
         &mut gix::progress::tree::Item,
         &mut dyn FnMut(&gix::bstr::BStr),
     ) -> Result<(), crate::sources::git::fetch::Error>
-          + Send
-          + Sync),
+             + Send
+             + Sync
+     ),
 ) -> CargoResult<()> {
     std::thread::scope(|s| {
         let mut progress_bar = Progress::new("Fetch", gctx);
@@ -272,7 +274,7 @@ pub fn open_repo(
 /// Convert `git` related cargo configuration into the respective `git` configuration which can be
 /// used when opening new repositories.
 pub fn cargo_config_to_gitoxide_overrides(gctx: &GlobalContext) -> CargoResult<Vec<BString>> {
-    use gix::config::tree::{gitoxide, Core, Http, Key};
+    use gix::config::tree::{Core, Http, Key, gitoxide};
     let timeout = HttpTimeout::new(gctx)?;
     let http = gctx.http_config()?;
 

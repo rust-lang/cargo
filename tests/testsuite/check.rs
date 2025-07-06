@@ -781,11 +781,12 @@ fn check_artifacts() {
     p.cargo("check --example ex1").run();
     assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
-    assert!(!p
-        .root()
-        .join("target/debug/examples")
-        .join(exe("ex1"))
-        .is_file());
+    assert!(
+        !p.root()
+            .join("target/debug/examples")
+            .join(exe("ex1"))
+            .is_file()
+    );
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rmeta").count(), 1);
     assert_eq!(p.glob("target/debug/examples/libex1-*.rmeta").count(), 1);
 

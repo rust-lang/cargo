@@ -6,8 +6,8 @@ use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use super::{fingerprint, BuildRunner, FileFlavor, Unit};
-use crate::util::{internal, CargoResult};
+use super::{BuildRunner, FileFlavor, Unit, fingerprint};
+use crate::util::{CargoResult, internal};
 use cargo_util::paths;
 use tracing::debug;
 

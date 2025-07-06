@@ -1,7 +1,7 @@
 //! Utilities to help with working with sqlite.
 
-use crate::util::interning::InternedString;
 use crate::CargoResult;
+use crate::util::interning::InternedString;
 use rusqlite::types::{FromSql, FromSqlError, ToSql, ToSqlOutput};
 use rusqlite::{Connection, TransactionBehavior};
 

@@ -1,6 +1,6 @@
 use crate::util::CargoResult;
-use cargo_util::paths;
 use cargo_util::ProcessBuilder;
+use cargo_util::paths;
 use std::path::Path;
 
 // Check if we are in an existing repo. We define that to be true if either:

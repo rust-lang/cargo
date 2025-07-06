@@ -1,6 +1,6 @@
 ///! General utilities.
 use crate::EventIter;
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::{Context, Error, bail, format_err};
 use pulldown_cmark::{CowStr, Event, TagEnd};
 
 /// Splits the text `foo(1)` into "foo" and `1`.

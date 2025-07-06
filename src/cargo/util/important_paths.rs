@@ -20,10 +20,10 @@ pub fn find_root_manifest_for_wd(cwd: &Path) -> CargoResult<PathBuf> {
 
     if invalid_cargo_toml_path_exists {
         anyhow::bail!(
-        "could not find `{}` in `{}` or any parent directory, but found cargo.toml please try to rename it to Cargo.toml",
-        valid_cargo_toml_file_name,
-        cwd.display()
-    )
+            "could not find `{}` in `{}` or any parent directory, but found cargo.toml please try to rename it to Cargo.toml",
+            valid_cargo_toml_file_name,
+            cwd.display()
+        )
     } else {
         anyhow::bail!(
             "could not find `{}` in `{}` or any parent directory",

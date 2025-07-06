@@ -1,9 +1,9 @@
 use crate::core::compiler::{Compilation, CompileKind};
-use crate::core::{shell::Verbosity, Shell, Workspace};
+use crate::core::{Shell, Workspace, shell::Verbosity};
 use crate::ops;
-use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::CargoResult;
-use anyhow::{bail, Error};
+use crate::util::context::{GlobalContext, PathAndArgs};
+use anyhow::{Error, bail};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;

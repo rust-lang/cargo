@@ -8,7 +8,7 @@
 //! [CVE-2022-46176]: https://blog.rust-lang.org/2023/01/10/cve-2022-46176.html
 
 pub use self::source::GitSource;
-pub use self::utils::{fetch, resolve_ref, GitCheckout, GitDatabase, GitRemote};
+pub use self::utils::{GitCheckout, GitDatabase, GitRemote, fetch, resolve_ref};
 mod known_hosts;
 mod oxide;
 mod source;
@@ -16,8 +16,8 @@ mod utils;
 
 /// For `-Zgitoxide` integration.
 pub mod fetch {
-    use crate::core::features::GitFeatures;
     use crate::GlobalContext;
+    use crate::core::features::GitFeatures;
 
     /// The kind remote repository to fetch.
     #[derive(Debug, Copy, Clone)]

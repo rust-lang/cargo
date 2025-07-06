@@ -6,22 +6,22 @@
 
 #[cfg(windows)]
 mod win {
-    use cargo_credential::{read_token, Action, CacheControl, CredentialResponse, RegistryInfo};
+    use cargo_credential::{Action, CacheControl, CredentialResponse, RegistryInfo, read_token};
     use cargo_credential::{Credential, Error};
     use std::ffi::OsStr;
 
     use std::os::windows::ffi::OsStrExt;
 
-    use windows_sys::core::PWSTR;
     use windows_sys::Win32::Foundation::ERROR_NOT_FOUND;
     use windows_sys::Win32::Foundation::FILETIME;
     use windows_sys::Win32::Foundation::TRUE;
-    use windows_sys::Win32::Security::Credentials::CredReadW;
-    use windows_sys::Win32::Security::Credentials::CredWriteW;
-    use windows_sys::Win32::Security::Credentials::CREDENTIALW;
     use windows_sys::Win32::Security::Credentials::CRED_PERSIST_LOCAL_MACHINE;
     use windows_sys::Win32::Security::Credentials::CRED_TYPE_GENERIC;
+    use windows_sys::Win32::Security::Credentials::CREDENTIALW;
+    use windows_sys::Win32::Security::Credentials::CredReadW;
+    use windows_sys::Win32::Security::Credentials::CredWriteW;
     use windows_sys::Win32::Security::Credentials::{CredDeleteW, CredFree};
+    use windows_sys::core::PWSTR;
 
     pub struct WindowsCredential;
 

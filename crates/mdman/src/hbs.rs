@@ -5,8 +5,8 @@ use std::path::Path;
 
 use anyhow::Error;
 use handlebars::{
-    handlebars_helper, Context, Decorator, DirectorySourceOptions, Handlebars, Helper, HelperDef,
-    HelperResult, Output, RenderContext, RenderError, RenderErrorReason, Renderable,
+    Context, Decorator, DirectorySourceOptions, Handlebars, Helper, HelperDef, HelperResult,
+    Output, RenderContext, RenderError, RenderErrorReason, Renderable, handlebars_helper,
 };
 
 use crate::format::Formatter;

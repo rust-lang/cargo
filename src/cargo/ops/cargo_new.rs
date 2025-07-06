@@ -1,13 +1,13 @@
 use crate::core::{Edition, Shell, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{restricted_names, GlobalContext};
-use anyhow::{anyhow, Context as _};
+use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
+use crate::util::{GlobalContext, restricted_names};
+use anyhow::{Context as _, anyhow};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
-use serde::de;
 use serde::Deserialize;
+use serde::de;
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
@@ -627,7 +627,7 @@ impl IgnoreList {
                         return Err(anyhow!(
                             "Character at line {} is invalid. Cargo only supports UTF-8.",
                             i
-                        ))
+                        ));
                     }
                     _ => return Err(anyhow!(err)),
                 },

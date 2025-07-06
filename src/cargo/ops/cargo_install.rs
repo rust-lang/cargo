@@ -5,8 +5,8 @@ use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
-use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
+use crate::ops::{FilterRule, common_for_install_and_uninstall::*};
 use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::context::FeatureUnification;
@@ -14,7 +14,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};
 
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use itertools::Itertools;
@@ -376,12 +376,12 @@ impl<'gctx> InstallablePackage<'gctx> {
             // behavior for this fallback case as well.
             if let CompileFilter::Only { bins, examples, .. } = &self.opts.filter {
                 let mut any_specific = false;
-                if let FilterRule::Just(ref v) = bins {
+                if let FilterRule::Just(v) = bins {
                     if !v.is_empty() {
                         any_specific = true;
                     }
                 }
-                if let FilterRule::Just(ref v) = examples {
+                if let FilterRule::Just(v) = examples {
                     if !v.is_empty() {
                         any_specific = true;
                     }

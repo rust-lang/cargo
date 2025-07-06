@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::utils::tools;
-use cargo_test_support::{cargo_test, project, str, Project};
+use cargo_test_support::{Project, cargo_test, project, str};
 
 fn make_project_with_rustc_warning() -> Project {
     project()

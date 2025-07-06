@@ -7,7 +7,7 @@ use std::slice;
 
 use windows_sys::Win32::Foundation::S_OK;
 use windows_sys::Win32::System::Com::CoTaskMemFree;
-use windows_sys::Win32::UI::Shell::{FOLDERID_Profile, SHGetKnownFolderPath, KF_FLAG_DONT_VERIFY};
+use windows_sys::Win32::UI::Shell::{FOLDERID_Profile, KF_FLAG_DONT_VERIFY, SHGetKnownFolderPath};
 
 pub fn home_dir_inner() -> Option<PathBuf> {
     env::var_os("USERPROFILE")
@@ -46,7 +46,7 @@ fn home_dir_crt() -> Option<PathBuf> {
     None
 }
 
-extern "C" {
+unsafe extern "C" {
     fn wcslen(buf: *const u16) -> usize;
 }
 
@@ -62,17 +62,23 @@ mod tests {
     fn test_with_without() {
         let olduserprofile = env::var_os("USERPROFILE").unwrap();
 
-        env::remove_var("HOME");
-        env::remove_var("USERPROFILE");
+        unsafe {
+            env::remove_var("HOME");
+            env::remove_var("USERPROFILE");
+        }
 
         assert_eq!(home_dir_inner(), Some(PathBuf::from(olduserprofile)));
 
         let home = Path::new(r"C:\Users\foo tar baz");
 
-        env::set_var("HOME", home.as_os_str());
+        unsafe {
+            env::set_var("HOME", home.as_os_str());
+        }
         assert_ne!(home_dir_inner().as_ref().map(Deref::deref), Some(home));
 
-        env::set_var("USERPROFILE", home.as_os_str());
+        unsafe {
+            env::set_var("USERPROFILE", home.as_os_str());
+        }
         assert_eq!(home_dir_inner().as_ref().map(Deref::deref), Some(home));
     }
 }

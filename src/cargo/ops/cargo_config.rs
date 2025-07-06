@@ -3,7 +3,7 @@
 use crate::util::context::{ConfigKey, ConfigValue as CV, Definition, GlobalContext};
 use crate::util::errors::CargoResult;
 use crate::{drop_eprintln, drop_println};
-use anyhow::{bail, format_err, Error};
+use anyhow::{Error, bail, format_err};
 use serde_json::json;
 use std::borrow::Cow;
 use std::fmt;
@@ -105,11 +105,7 @@ fn maybe_env<'gctx>(
         .filter(|(env_key, _val)| env_key.starts_with(&format!("{}_", key.as_env_key())))
         .collect();
     env.sort_by_key(|x| x.0);
-    if env.is_empty() {
-        None
-    } else {
-        Some(env)
-    }
+    if env.is_empty() { None } else { Some(env) }
 }
 
 fn print_toml(gctx: &GlobalContext, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) {

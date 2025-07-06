@@ -9,14 +9,14 @@ use pasetors::{
     keys::{AsymmetricKeyPair, AsymmetricPublicKey, AsymmetricSecretKey, Generate},
     paserk::FormatAsPaserk,
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use url::Url;
 
 use crate::{
+    GlobalContext,
     core::SourceId,
     ops::RegistryCredentialConfig,
     util::{auth::registry_credential_config_raw, command_prelude::opt, context},
-    GlobalContext,
 };
 
 /// The main body of an asymmetric token as describe in RFC 3231.

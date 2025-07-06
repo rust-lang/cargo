@@ -1,11 +1,11 @@
-use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
+use cargo::core::dependency::DepKind;
 use cargo::util::GlobalContext;
 
 use resolver_tests::{
     helpers::{
-        assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg,
-        pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry, ToDep, ToPkgId,
+        ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names,
+        names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
     },
     pkg, resolve, resolve_with_global_context,
 };

@@ -7,11 +7,11 @@ use std::cmp;
 use anyhow::Context as _;
 use url::Url;
 
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::util::style;
 use crate::util::style::LITERAL;
 use crate::util::truncate_with_ellipsis;
-use crate::CargoResult;
-use crate::GlobalContext;
 
 use super::RegistryOrIndex;
 

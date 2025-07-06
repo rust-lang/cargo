@@ -102,7 +102,7 @@ mod error_serialize {
     use std::error::Error as StdError;
     use std::ops::Deref;
 
-    use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serializer};
+    use serde::{Deserialize, Deserializer, Serializer, ser::SerializeStruct};
 
     use crate::error::StringTypedError;
 

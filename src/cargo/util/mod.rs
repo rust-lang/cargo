@@ -2,13 +2,13 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub use self::canonical_url::CanonicalUrl;
-pub use self::context::{homedir, ConfigValue, GlobalContext};
+pub use self::context::{ConfigValue, GlobalContext, homedir};
 pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
 pub use self::edit_distance::{closest, closest_msg, edit_distance};
 pub use self::errors::CliError;
-pub use self::errors::{internal, CargoResult, CliResult};
+pub use self::errors::{CargoResult, CliResult, internal};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;
 pub use self::hasher::StableHasher;
@@ -22,7 +22,7 @@ pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::rustc::Rustc;
 pub use self::semver_ext::{OptVersionReq, VersionExt};
-pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
+pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,
     print_available_examples, print_available_packages, print_available_tests,

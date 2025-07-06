@@ -5,7 +5,7 @@ use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::cross_compile::alternate;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
+use cargo_test_support::{Project, basic_manifest, git, project, rustc_host};
 
 use crate::features2::switch_to_resolver_2;
 

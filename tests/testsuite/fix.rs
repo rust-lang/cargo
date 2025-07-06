@@ -192,9 +192,10 @@ fn prepare_for_2018() {
 
     println!("{}", p.read_file("src/lib.rs"));
     assert!(p.read_file("src/lib.rs").contains("use crate::foo::FOO;"));
-    assert!(p
-        .read_file("src/lib.rs")
-        .contains("let x = crate::foo::FOO;"));
+    assert!(
+        p.read_file("src/lib.rs")
+            .contains("let x = crate::foo::FOO;")
+    );
 }
 
 #[cargo_test]

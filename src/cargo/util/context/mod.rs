@@ -58,8 +58,8 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
-use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -70,24 +70,24 @@ use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
 use crate::core::shell::Verbosity;
-use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
+use crate::core::{CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig, features};
 use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::{closest_msg, internal, CanonicalUrl};
+use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
-use anyhow::{anyhow, bail, format_err, Context as _};
+use anyhow::{Context as _, anyhow, bail, format_err};
 use cargo_credential::Secret;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
 use itertools::Itertools;
 use lazycell::LazyCell;
-use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
+use serde::de::IntoDeserializer as _;
 use serde_untagged::UntaggedEnumVisitor;
 use time::OffsetDateTime;
 use toml_edit::Item;
@@ -3146,10 +3146,10 @@ fn disables_multiplexing_for_bad_curl(
 
 #[cfg(test)]
 mod tests {
-    use super::disables_multiplexing_for_bad_curl;
     use super::CargoHttpConfig;
     use super::GlobalContext;
     use super::Shell;
+    use super::disables_multiplexing_for_bad_curl;
 
     #[test]
     fn disables_multiplexing() {

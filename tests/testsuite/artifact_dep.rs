@@ -9,8 +9,8 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{
-    basic_bin_manifest, basic_manifest, cross_compile, project, publish, registry, rustc_host,
-    Project,
+    Project, basic_bin_manifest, basic_manifest, cross_compile, project, publish, registry,
+    rustc_host,
 };
 
 #[cargo_test]

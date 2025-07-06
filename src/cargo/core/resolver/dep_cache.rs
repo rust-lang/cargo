@@ -22,7 +22,7 @@ use crate::core::{
 use crate::sources::source::QueryKind;
 use crate::util::closest_msg;
 use crate::util::errors::CargoResult;
-use crate::util::interning::{InternedString, INTERNED_DEFAULT};
+use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};

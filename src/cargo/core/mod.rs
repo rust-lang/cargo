@@ -11,8 +11,8 @@ pub use self::shell::{Shell, Verbosity};
 pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
-    find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
-    WorkspaceRootConfig,
+    MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig, find_workspace_root,
+    resolve_relative_path,
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 

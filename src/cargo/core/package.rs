@@ -27,15 +27,15 @@ use crate::core::{
 };
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
+use crate::util::HumanBytes;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
-use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
+use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
-use crate::util::HumanBytes;
-use crate::util::{self, internal, GlobalContext, Progress, ProgressStyle};
+use crate::util::{self, GlobalContext, Progress, ProgressStyle, internal};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -881,7 +881,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
             match ret {
                 RetryResult::Success(data) => break (dl, data),
                 RetryResult::Err(e) => {
-                    return Err(e.context(format!("failed to download from `{}`", dl.url)))
+                    return Err(e.context(format!("failed to download from `{}`", dl.url)));
                 }
                 RetryResult::Retry(sleep) => {
                     debug!(target: "network", "download retry {} for {sleep}ms", dl.url);

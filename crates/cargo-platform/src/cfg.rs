@@ -261,11 +261,11 @@ impl<'a> Parser<'a> {
                                     expected: "a string",
                                     found: t.classify(),
                                 },
-                            ))
+                            ));
                         }
                         Some(Err(e)) => return Err(e),
                         None => {
-                            return Err(ParseError::new(self.t.orig, IncompleteExpr("a string")))
+                            return Err(ParseError::new(self.t.orig, IncompleteExpr("a string")));
                         }
                     };
                     Cfg::KeyPair(

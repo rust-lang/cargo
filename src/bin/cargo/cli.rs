@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Context as _};
-use cargo::core::{features, CliUnstable};
+use anyhow::{Context as _, anyhow};
+use cargo::core::{CliUnstable, features};
 use cargo::util::context::TermConfig;
-use cargo::{drop_print, drop_println, CargoResult};
+use cargo::{CargoResult, drop_print, drop_println};
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -556,9 +556,13 @@ pub fn cli(gctx: &GlobalContext) -> Command {
     };
 
     let usage = if is_rustup() {
-        color_print::cstr!("<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
+        color_print::cstr!(
+            "<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+        )
     } else {
-        color_print::cstr!("<cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
+        color_print::cstr!(
+            "<cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+        )
     };
 
     let styles = {

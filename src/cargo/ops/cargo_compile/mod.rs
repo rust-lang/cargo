@@ -39,12 +39,12 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::core::compiler::UserIntent;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::{apply_env_config, standard_lib, CrateType, TargetInfo};
 use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
+use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};

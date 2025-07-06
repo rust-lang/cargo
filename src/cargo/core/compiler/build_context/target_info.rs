@@ -15,7 +15,7 @@ use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;
 use cargo_platform::{Cfg, CfgExpr};
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{ProcessBuilder, paths};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
@@ -214,9 +214,9 @@ impl TargetInfo {
 
             let (output, error) = rustc
                 .cached_output(&process, extra_fingerprint)
-                .with_context(|| {
-                    "failed to run `rustc` to learn about target-specific information"
-                })?;
+                .with_context(
+                    || "failed to run `rustc` to learn about target-specific information",
+                )?;
 
             let mut lines = output.lines();
             let mut map = HashMap::new();
@@ -254,7 +254,7 @@ impl TargetInfo {
                                 &process,
                                 &output,
                                 &error,
-                            )
+                            );
                         }
                     }
                 }

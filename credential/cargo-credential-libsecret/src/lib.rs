@@ -8,8 +8,8 @@ mod linux {
 
     use anyhow::Context;
     use cargo_credential::{
-        read_token, Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo,
-        Secret,
+        Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
+        read_token,
     };
     use libloading::{Library, Symbol};
     use std::ffi::{CStr, CString};

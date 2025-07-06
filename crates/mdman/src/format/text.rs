@@ -1,8 +1,8 @@
 //! Text formatter.
 
-use crate::util::{header_text, unwrap};
 use crate::EventIter;
-use anyhow::{bail, Error};
+use crate::util::{header_text, unwrap};
+use anyhow::{Error, bail};
 use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag, TagEnd};
 use std::fmt::Write;
 use std::mem;

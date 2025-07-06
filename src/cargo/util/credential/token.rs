@@ -5,10 +5,10 @@ use cargo_credential::{Action, CacheControl, Credential, CredentialResponse, Err
 use url::Url;
 
 use crate::{
+    GlobalContext,
     core::SourceId,
     ops::RegistryCredentialConfig,
     util::{auth::registry_credential_config_raw, context},
-    GlobalContext,
 };
 
 pub struct TokenCredential<'a> {

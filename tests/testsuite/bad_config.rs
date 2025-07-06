@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{basic_bin_manifest, basic_manifest, project, rustc_host, str, Project};
+use cargo_test_support::{Project, basic_bin_manifest, basic_manifest, project, rustc_host, str};
 
 #[cargo_test]
 fn bad1() {

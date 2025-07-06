@@ -19,21 +19,21 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::trace;
 
+use crate::CargoResult;
+use crate::core::compiler::UserIntent;
 use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
-use crate::core::compiler::UserIntent;
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
 use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
-use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
+use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::{Dependency, Package, PackageId, PackageSet, Target, TargetKind, Workspace};
 use crate::ops::resolve_all_features;
-use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
-use crate::CargoResult;
+use crate::util::interning::InternedString;
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 

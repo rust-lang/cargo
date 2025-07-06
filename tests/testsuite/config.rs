@@ -8,13 +8,13 @@ use std::os;
 use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
+use cargo::CargoResult;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::auth::RegistryConfig;
 use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
 };
-use cargo::CargoResult;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::str;
 use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
@@ -1141,10 +1141,11 @@ hello = 'world'
 
     let gctx = new_gctx();
 
-    assert!(gctx
-        .get::<Option<SslVersionConfig>>("http.ssl-version")
-        .unwrap()
-        .is_none());
+    assert!(
+        gctx.get::<Option<SslVersionConfig>>("http.ssl-version")
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[cargo_test]
@@ -1802,9 +1803,10 @@ fn debuginfo_parsing() {
             .config_arg(format!("profile.dev.debug={err_val}"))
             .build();
         let err = gctx.get::<TomlDebugInfo>("profile.dev.debug").unwrap_err();
-        assert!(err
-            .to_string()
-            .ends_with("could not load config key `profile.dev.debug`"));
+        assert!(
+            err.to_string()
+                .ends_with("could not load config key `profile.dev.debug`")
+        );
     }
 }
 
@@ -1818,10 +1820,11 @@ fn build_jobs_missing() {
 
     let gctx = new_gctx();
 
-    assert!(gctx
-        .get::<Option<JobsConfig>>("build.jobs")
-        .unwrap()
-        .is_none());
+    assert!(
+        gctx.get::<Option<JobsConfig>>("build.jobs")
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[cargo_test]

@@ -108,7 +108,7 @@ mod imp {
     const CPU_STATE_NICE: usize = 3;
     const CPU_STATE_MAX: usize = 4;
 
-    extern "C" {
+    unsafe extern "C" {
         static mut mach_task_self_: mach_port_t;
 
         fn mach_host_self() -> mach_port_t;

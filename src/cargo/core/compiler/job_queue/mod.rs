@@ -122,7 +122,7 @@ use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
 
-use anyhow::{format_err, Context as _};
+use anyhow::{Context as _, format_err};
 use cargo_util::ProcessBuilder;
 use jobserver::{Acquired, HelperThread};
 use semver::Version;
@@ -141,11 +141,11 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, Shell, TargetKind};
+use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
-use crate::util::CargoResult;
 use crate::util::{self, internal};
 use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
 

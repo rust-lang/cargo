@@ -1,4 +1,4 @@
-use super::{ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList, CV};
+use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList};
 use crate::core::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;

@@ -14,7 +14,7 @@ use serde::Serialize;
 use super::build_runner::OutputFile;
 use super::{BuildRunner, CompileKind, CompileMode, Unit};
 use crate::core::TargetKind;
-use crate::util::{internal, CargoResult, GlobalContext};
+use crate::util::{CargoResult, GlobalContext, internal};
 use cargo_util::ProcessBuilder;
 
 #[derive(Debug, Serialize)]

@@ -9,7 +9,7 @@
 #[cfg(target_os = "macos")]
 mod macos {
     use cargo_credential::{
-        read_token, Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo,
+        Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, read_token,
     };
     use security_framework::os::macos::keychain::SecKeychain;
 

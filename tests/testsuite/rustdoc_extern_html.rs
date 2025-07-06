@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{paths, project, str, Project};
+use cargo_test_support::{Project, paths, project, str};
 
 fn basic_project() -> Project {
     Package::new("bar", "1.0.0")
@@ -204,7 +204,9 @@ fn lib_name() {
 "#]])
         .run();
     let myfun = p.read_file("target/doc/foo/fn.myfun.html");
-    assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/rumpelstiltskin/struct.Straw.html""#));
+    assert!(
+        myfun.contains(r#"href="https://docs.rs/bar/1.0.0/rumpelstiltskin/struct.Straw.html""#)
+    );
 }
 
 #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]

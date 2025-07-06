@@ -22,14 +22,14 @@
 //! added (it just adds a little complexity). For example, hostname patterns,
 //! and revoked markers. See "FIXME" comments littered in this file.
 
+use crate::CargoResult;
 use crate::util::context::{Definition, GlobalContext, Value};
 use crate::util::restricted_names::is_glob_pattern;
-use crate::CargoResult;
+use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
-use base64::Engine as _;
-use git2::cert::{Cert, SshHostKeyType};
 use git2::CertificateCheckStatus;
+use git2::cert::{Cert, SshHostKeyType};
 use hmac::Mac;
 use std::collections::HashSet;
 use std::fmt::{Display, Write};
@@ -46,9 +46,21 @@ use std::path::{Path, PathBuf};
 /// These will be ignored if the user adds their own entries for `github.com`,
 /// which can be useful if GitHub ever revokes their old keys.
 static BUNDLED_KEYS: &[(&str, &str, &str)] = &[
-    ("github.com", "ssh-ed25519", "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"),
-    ("github.com", "ecdsa-sha2-nistp256", "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg="),
-    ("github.com", "ssh-rsa", "AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk="),
+    (
+        "github.com",
+        "ssh-ed25519",
+        "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl",
+    ),
+    (
+        "github.com",
+        "ecdsa-sha2-nistp256",
+        "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=",
+    ),
+    (
+        "github.com",
+        "ssh-rsa",
+        "AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=",
+    ),
 ];
 
 /// List of keys that public hosts have rotated away from.
@@ -62,7 +74,11 @@ static BUNDLED_KEYS: &[(&str, &str, &str)] = &[
 /// has their own entries: we *know* that these keys are bad.
 static BUNDLED_REVOCATIONS: &[(&str, &str, &str)] = &[
     // Used until March 24, 2023: https://github.blog/2023-03-23-we-updated-our-rsa-ssh-host-key/
-    ("github.com", "ssh-rsa", "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="),
+    (
+        "github.com",
+        "ssh-rsa",
+        "AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==",
+    ),
 ];
 
 enum KnownHostError {
@@ -194,7 +210,8 @@ pub fn certificate_check(
                 }
                 msg
             };
-            anyhow::bail!("error: unknown SSH host key\n\
+            anyhow::bail!(
+                "error: unknown SSH host key\n\
                 The SSH host key for `{hostname}` is not known and cannot be validated.\n\
                 \n\
                 To resolve this issue, add the host key to {known_hosts_location}\n\
@@ -208,7 +225,8 @@ pub fn certificate_check(
                 {other_hosts_message}\n\
                 See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
                 for more information.\n\
-                ")
+                "
+            )
         }
         Err(KnownHostError::HostKeyHasChanged {
             hostname,
@@ -243,7 +261,8 @@ pub fn certificate_check(
                     )
                 }
             };
-            anyhow::bail!("error: SSH host key has changed for `{hostname}`\n\
+            anyhow::bail!(
+                "error: SSH host key has changed for `{hostname}`\n\
                 *********************************\n\
                 * WARNING: HOST KEY HAS CHANGED *\n\
                 *********************************\n\
@@ -266,7 +285,8 @@ pub fn certificate_check(
                 \n\
                 See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
                 for more information.\n\
-                ")
+                "
+            )
         }
         Err(KnownHostError::HostKeyRevoked {
             hostname,
@@ -769,13 +789,10 @@ mod tests {
         let kh_path = Path::new("/home/abc/.known_hosts");
         let khs = load_hostfile_contents(kh_path, COMMON_CONTENTS);
 
-        assert!(check_ssh_known_hosts_loaded(
-            &khs,
-            "example.com",
-            SshHostKeyType::Rsa,
-            &khs[0].key
-        )
-        .is_ok());
+        assert!(
+            check_ssh_known_hosts_loaded(&khs, "example.com", SshHostKeyType::Rsa, &khs[0].key)
+                .is_ok()
+        );
 
         match check_ssh_known_hosts_loaded(&khs, "example.com", SshHostKeyType::Dss, &khs[0].key) {
             Err(KnownHostError::HostKeyNotFound {

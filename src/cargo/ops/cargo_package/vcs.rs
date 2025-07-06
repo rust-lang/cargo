@@ -9,11 +9,11 @@ use cargo_util::paths;
 use serde::Serialize;
 use tracing::debug;
 
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::core::Package;
 use crate::core::Workspace;
 use crate::sources::PathEntry;
-use crate::CargoResult;
-use crate::GlobalContext;
 
 use super::PackageOpts;
 

@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Context as _, Error};
@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::core::Edition;
+use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::network::LOCALHOST;
-use crate::util::GlobalContext;
 
 const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 

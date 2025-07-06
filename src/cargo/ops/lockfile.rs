@@ -1,8 +1,8 @@
 use std::io::prelude::*;
 
-use crate::core::{resolver, Resolve, ResolveVersion, Workspace};
-use crate::util::errors::CargoResult;
+use crate::core::{Resolve, ResolveVersion, Workspace, resolver};
 use crate::util::Filesystem;
+use crate::util::errors::CargoResult;
 
 use anyhow::Context as _;
 

@@ -5,8 +5,8 @@ use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::resolve_ref;
-use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
+use crate::sources::registry::download;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
@@ -20,7 +20,7 @@ use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
-use std::task::{ready, Poll};
+use std::task::{Poll, ready};
 use tracing::{debug, trace};
 
 /// A remote registry is a registry that lives at a remote URL (such as

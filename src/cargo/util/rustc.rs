@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use anyhow::Context as _;
-use cargo_util::{paths, ProcessBuilder, ProcessError};
+use cargo_util::{ProcessBuilder, ProcessError, paths};
 use filetime::FileTime;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};

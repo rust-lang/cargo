@@ -1,21 +1,21 @@
 //! See [`GitSource`].
 
-use crate::core::global_cache_tracker;
 use crate::core::GitReference;
 use crate::core::SourceId;
+use crate::core::global_cache_tracker;
 use crate::core::{Dependency, Package, PackageId};
-use crate::sources::git::utils::rev_to_oid;
+use crate::sources::IndexSummary;
+use crate::sources::RecursivePathSource;
 use crate::sources::git::utils::GitRemote;
+use crate::sources::git::utils::rev_to_oid;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
-use crate::sources::IndexSummary;
-use crate::sources::RecursivePathSource;
+use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
-use crate::util::GlobalContext;
 use anyhow::Context as _;
 use cargo_util::paths::exclude_from_backups_and_indexing;
 use std::fmt::{self, Debug, Formatter};
@@ -372,8 +372,7 @@ impl<'gctx> Source for GitSource<'gctx> {
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package ID `{}` from `{:?}`",
-            id,
-            self.remote
+            id, self.remote
         );
         self.mark_used()?;
         self.path_source

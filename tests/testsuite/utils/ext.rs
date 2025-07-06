@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use cargo_test_support::{compare, ArgLineCommandExt, Execs, Project, TestEnvCommandExt};
+use cargo_test_support::{ArgLineCommandExt, Execs, Project, TestEnvCommandExt, compare};
 
 pub trait CargoProjectExt {
     /// Creates a `ProcessBuilder` to run cargo.

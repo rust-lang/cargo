@@ -3,7 +3,7 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
+use crate::core::resolver::{ForceAllTargets, HasDevUnits, features::CliFeatures};
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};

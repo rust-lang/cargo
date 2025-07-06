@@ -2,7 +2,7 @@ pub use self::imp::read2;
 
 #[cfg(unix)]
 mod imp {
-    use libc::{c_int, fcntl, F_GETFL, F_SETFL, O_NONBLOCK};
+    use libc::{F_GETFL, F_SETFL, O_NONBLOCK, c_int, fcntl};
     use std::io;
     use std::io::prelude::*;
     use std::mem;
@@ -88,9 +88,9 @@ mod imp {
     use std::process::{ChildStderr, ChildStdout};
     use std::slice;
 
+    use miow::Overlapped;
     use miow::iocp::{CompletionPort, CompletionStatus};
     use miow::pipe::NamedPipe;
-    use miow::Overlapped;
     use windows_sys::Win32::Foundation::ERROR_BROKEN_PIPE;
 
     struct Pipe<'a> {

@@ -6,12 +6,12 @@ use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_credential::Secret;
 
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::core::Workspace;
 use crate::drop_print;
 use crate::drop_println;
 use crate::util::important_paths::find_root_manifest_for_wd;
-use crate::CargoResult;
-use crate::GlobalContext;
 
 use super::RegistryOrIndex;
 

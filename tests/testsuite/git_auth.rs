@@ -1,11 +1,11 @@
 //! Tests for git authentication.
 
 use std::collections::HashSet;
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener};
-use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::thread::{self, JoinHandle};
 
 use crate::prelude::*;

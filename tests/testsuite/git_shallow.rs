@@ -715,7 +715,8 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
         gix::open::Options::isolated(),
     )?;
     assert_eq!(
-        shallow_repo.rev_parse_single("origin/HEAD")?
+        shallow_repo
+            .rev_parse_single("origin/HEAD")?
             .ancestors()
             .all()?
             .count(),

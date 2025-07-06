@@ -11,7 +11,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, paths, project, Project};
+use cargo_test_support::{Project, basic_lib_manifest, basic_manifest, paths, project};
 
 #[cargo_test]
 fn vendor_simple() {
@@ -1714,11 +1714,12 @@ fn ignore_hidden() {
     assert!(p.root().join("vendor/.git").exists());
     // And just for good measure, make sure no files changed.
     let mut opts = git2::StatusOptions::new();
-    assert!(repo
-        .statuses(Some(&mut opts))
-        .unwrap()
-        .iter()
-        .all(|status| status.status() == git2::Status::CURRENT));
+    assert!(
+        repo.statuses(Some(&mut opts))
+            .unwrap()
+            .iter()
+            .all(|status| status.status() == git2::Status::CURRENT)
+    );
 }
 
 #[cargo_test]

@@ -3408,9 +3408,11 @@ fn generate_good_d_files() {
     );
 
     // paths relative to dependency roots should not be allowed
-    assert!(!dot_d
-        .split_whitespace()
-        .any(|v| v == "barkbarkbark" || v == "build.rs"));
+    assert!(
+        !dot_d
+            .split_whitespace()
+            .any(|v| v == "barkbarkbark" || v == "build.rs")
+    );
 
     p.change_file(
         ".cargo/config.toml",
@@ -3434,9 +3436,11 @@ target/debug/meow[EXE]: awoo/barkbarkbark awoo/build.rs awoo/src/lib.rs src/main
     );
 
     // paths relative to dependency roots should not be allowed
-    assert!(!dot_d
-        .split_whitespace()
-        .any(|v| v == "barkbarkbark" || v == "build.rs"));
+    assert!(
+        !dot_d
+            .split_whitespace()
+            .any(|v| v == "barkbarkbark" || v == "build.rs")
+    );
 }
 
 #[cargo_test]

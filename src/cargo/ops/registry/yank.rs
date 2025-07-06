@@ -3,8 +3,8 @@
 //! [yank]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#yank
 //! [unyank]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#unyank
 
-use anyhow::bail;
 use anyhow::Context as _;
+use anyhow::bail;
 use cargo_credential::Operation;
 use cargo_credential::Secret;
 

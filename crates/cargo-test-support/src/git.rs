@@ -40,7 +40,7 @@
 //! tags), you can use `git2::Repository::open()` to open the repository and then
 //! use some of the helper functions in this file to interact with the repository.
 
-use crate::{paths::CargoPathExt, project, Project, ProjectBuilder, SymlinkBuilder};
+use crate::{Project, ProjectBuilder, SymlinkBuilder, paths::CargoPathExt, project};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
@@ -146,7 +146,7 @@ pub fn init(path: &Path) -> git2::Repository {
 
 fn default_search_path() {
     use crate::paths::global_root;
-    use git2::{opts::set_search_path, ConfigLevel};
+    use git2::{ConfigLevel, opts::set_search_path};
 
     static INIT: Once = Once::new();
     INIT.call_once(|| unsafe {

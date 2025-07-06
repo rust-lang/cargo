@@ -18,8 +18,8 @@ use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::Item as TomlItem;
 
-use crate::core::dependency::DepKind;
-use crate::core::registry::PackageRegistry;
+use crate::CargoResult;
+use crate::GlobalContext;
 use crate::core::FeatureValue;
 use crate::core::Features;
 use crate::core::Package;
@@ -27,6 +27,8 @@ use crate::core::Registry;
 use crate::core::Shell;
 use crate::core::Summary;
 use crate::core::Workspace;
+use crate::core::dependency::DepKind;
+use crate::core::registry::PackageRegistry;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::edit_distance;
@@ -40,8 +42,6 @@ use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
-use crate::CargoResult;
-use crate::GlobalContext;
 use crate_spec::CrateSpec;
 
 const MAX_FEATURE_PRINTS: usize = 30;

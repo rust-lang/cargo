@@ -10,7 +10,7 @@ use cargo_test_support::paths;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, project, rustc_host, Project};
+use cargo_test_support::{Project, basic_manifest, project, rustc_host};
 
 /// Switches Cargo.toml to use `resolver = "2"`.
 pub fn switch_to_resolver_2(p: &Project) {
@@ -1126,10 +1126,11 @@ it is true
         .run();
     p.cargo("test --doc").env("TEST_EXPECTS_ENABLED", "1").run();
     p.cargo("doc").run();
-    assert!(p
-        .build_dir()
-        .join("doc/common/constant.FEAT_ONLY_CONST.html")
-        .exists());
+    assert!(
+        p.build_dir()
+            .join("doc/common/constant.FEAT_ONLY_CONST.html")
+            .exists()
+    );
     // cargo doc should clean in-between runs, but it doesn't, and leaves stale files.
     // https://github.com/rust-lang/cargo/issues/6783 (same for removed items)
     p.build_dir().join("doc").rm_rf();
@@ -1145,10 +1146,11 @@ it is false
 
     p.cargo("test --doc").run();
     p.cargo("doc").run();
-    assert!(!p
-        .build_dir()
-        .join("doc/common/constant.FEAT_ONLY_CONST.html")
-        .exists());
+    assert!(
+        !p.build_dir()
+            .join("doc/common/constant.FEAT_ONLY_CONST.html")
+            .exists()
+    );
 }
 
 #[cargo_test]

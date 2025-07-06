@@ -2,8 +2,8 @@
 
 use crate::core::global_cache_tracker;
 use crate::core::{PackageId, SourceId};
-use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
+use crate::sources::registry::download;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::{CargoResult, HttpNotSuccessful};
@@ -11,7 +11,7 @@ use crate::util::interning::InternedString;
 use crate::util::network::http::http_handle;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
-use crate::util::{auth, Filesystem, GlobalContext, IntoUrl, Progress, ProgressStyle};
+use crate::util::{Filesystem, GlobalContext, IntoUrl, Progress, ProgressStyle, auth};
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_util::paths;
@@ -23,7 +23,7 @@ use std::fs::{self, File};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::task::{ready, Poll};
+use std::task::{Poll, ready};
 use std::time::Duration;
 use tracing::{debug, trace};
 use url::Url;

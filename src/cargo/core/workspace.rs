@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::{anyhow, bail, Context as _};
+use anyhow::{Context as _, anyhow, bail};
 use glob::glob;
 use itertools::Itertools;
 use tracing::debug;
@@ -13,23 +13,23 @@ use url::Url;
 use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
+use crate::core::resolver::features::CliFeatures;
 use crate::core::{
     Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery,
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
-use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
+use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
 use crate::util::context::FeatureUnification;
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot};
-use crate::util::toml::{read_manifest, InheritableFields};
+use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{
-    context::CargoResolverConfig, context::ConfigRelativePath, context::IncompatibleRustVersions,
-    Filesystem, GlobalContext, IntoUrl,
+    Filesystem, GlobalContext, IntoUrl, context::CargoResolverConfig, context::ConfigRelativePath,
+    context::IncompatibleRustVersions,
 };
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
@@ -584,7 +584,7 @@ impl<'gctx> Workspace<'gctx> {
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let MaybePackage::Package(p) = package {
                     return Some(p);
                 }
             }
@@ -615,7 +615,7 @@ impl<'gctx> Workspace<'gctx> {
 
         packages.iter_mut().filter_map(move |(path, package)| {
             if members.contains(path) {
-                if let MaybePackage::Package(ref mut p) = package {
+                if let MaybePackage::Package(p) = package {
                     return Some(p);
                 }
             }
@@ -722,7 +722,7 @@ impl<'gctx> Workspace<'gctx> {
         if let Some(root_path) = &self.root_manifest {
             let root_package = self.packages.load(root_path)?;
             match root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => {
+                WorkspaceConfig::Root(root_config) => {
                     return Ok(Some(root_config.clone()));
                 }
 
@@ -1597,7 +1597,10 @@ impl<'gctx> Workspace<'gctx> {
             )
         } else {
             let names = selected_members.iter().map(|m| m.name()).join(", ");
-            format!("none of the selected packages contains {these_features}: {}\nselected packages: {names}", unknown.join(", "))
+            format!(
+                "none of the selected packages contains {these_features}: {}\nselected packages: {names}",
+                unknown.join(", ")
+            )
         };
 
         use std::fmt::Write;

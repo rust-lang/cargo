@@ -2,9 +2,9 @@ use crate::core::PackageId;
 use crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
-use crate::util::errors::CargoResult;
 use crate::util::Filesystem;
 use crate::util::GlobalContext;
+use crate::util::errors::CargoResult;
 use anyhow::bail;
 use std::collections::BTreeSet;
 use std::env;
@@ -16,7 +16,9 @@ pub fn uninstall(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     if specs.len() > 1 && !bins.is_empty() {
-        bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
+        bail!(
+            "A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant."
+        );
     }
 
     let root = resolve_root(root, gctx)?;
@@ -135,13 +137,7 @@ fn uninstall_pkgid(
         }
     }
 
-    let to_remove = {
-        if bins.is_empty() {
-            installed
-        } else {
-            bins
-        }
-    };
+    let to_remove = { if bins.is_empty() { installed } else { bins } };
 
     for bin in to_remove {
         let bin_path = dst.join(&bin);

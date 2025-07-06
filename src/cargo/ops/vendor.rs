@@ -1,16 +1,16 @@
-use crate::core::shell::Verbosity;
 use crate::core::SourceId;
+use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
-use crate::sources::path::PathSource;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
-use crate::sources::CRATES_IO_REGISTRY;
+use crate::sources::path::PathSource;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::{try_canonicalize, CargoResult, GlobalContext};
+use crate::util::{CargoResult, GlobalContext, try_canonicalize};
 
-use anyhow::{bail, Context as _};
-use cargo_util::{paths, Sha256};
+use anyhow::{Context as _, bail};
+use cargo_util::{Sha256, paths};
 use cargo_util_schemas::core::SourceKind;
 use cargo_util_schemas::manifest::TomlPackageBuild;
 use serde::Serialize;

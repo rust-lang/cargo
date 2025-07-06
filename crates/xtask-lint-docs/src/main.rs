@@ -1,4 +1,4 @@
-use cargo::util::command_prelude::{flag, ArgMatchesExt};
+use cargo::util::command_prelude::{ArgMatchesExt, flag};
 use cargo::util::lints::{Lint, LintLevel};
 use itertools::Itertools;
 use std::fmt::Write;

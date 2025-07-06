@@ -383,8 +383,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use anyhow::format_err;
 use anyhow::Context as _;
+use anyhow::format_err;
 use cargo_util::paths;
 use filetime::FileTime;
 use serde::de;
@@ -392,21 +392,21 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
+use crate::core::compiler::unit_graph::UnitDep;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{internal, path_args, StableHasher};
-use crate::{GlobalContext, CARGO_ENV};
+use crate::util::{StableHasher, internal, path_args};
+use crate::{CARGO_ENV, GlobalContext};
 
 use super::custom_build::BuildDeps;
 use super::{BuildContext, BuildRunner, FileFlavor, Job, Unit, Work};
 
+pub use self::dep_info::Checksum;
 pub use self::dep_info::parse_dep_info;
 pub use self::dep_info::parse_rustc_dep_info;
 pub use self::dep_info::translate_dep_info;
-pub use self::dep_info::Checksum;
 pub use self::dirty_reason::DirtyReason;
 
 /// Determines if a [`Unit`] is up-to-date, and if not prepares necessary work to
@@ -1100,7 +1100,7 @@ impl Fingerprint {
                     return DirtyReason::LocalFingerprintTypeChanged {
                         old: b.kind(),
                         new: a.kind(),
-                    }
+                    };
                 }
             }
         }
@@ -1557,7 +1557,7 @@ fn calculate_normal(
     let compile_kind = unit.kind.fingerprint_hash();
     let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
     declared_features.sort(); // to avoid useless rebuild if the user orders it's features
-                              // differently
+    // differently
     Ok(Fingerprint {
         rustc: util::hash_u64(&build_runner.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),

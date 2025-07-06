@@ -20,13 +20,13 @@
 //!
 //! To learn the rationale behind this multi-layer index metadata loading,
 //! see [the documentation of the on-disk index cache](cache).
-use crate::core::dependency::{Artifact, DepKind};
 use crate::core::Dependency;
+use crate::core::dependency::{Artifact, DepKind};
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
-use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
-use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionReq};
+use crate::util::interning::InternedString;
+use crate::util::{CargoResult, Filesystem, GlobalContext, OptVersionReq, internal};
 use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
@@ -36,7 +36,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 use std::str;
-use std::task::{ready, Poll};
+use std::task::{Poll, ready};
 use tracing::info;
 
 mod cache;
