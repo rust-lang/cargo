@@ -36,7 +36,10 @@ mod imp {
         // ALLOWED: For testing cargo itself only.
         #[allow(clippy::disallowed_methods)]
         if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
-            libc::setsid();
+            // SAFETY: I'm unaware of any safety requirements for this function.
+            unsafe {
+                libc::setsid();
+            }
         }
         Some(())
     }
