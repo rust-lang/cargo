@@ -69,17 +69,7 @@ pub struct PublishOpts<'gctx> {
 }
 
 pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
-    let multi_package_mode = ws.gctx().cli_unstable().package_workspace;
     let specs = opts.to_publish.to_package_id_specs(ws)?;
-
-    if !multi_package_mode {
-        if specs.len() > 1 {
-            bail!("the `-p` argument must be specified to select a single package to publish")
-        }
-        if Packages::Default == opts.to_publish && ws.is_virtual() {
-            bail!("the `-p` argument must be specified in the root of a virtual workspace")
-        }
-    }
 
     let member_ids: Vec<_> = ws.members().map(|p| p.package_id()).collect();
     // Check that the specs match members.
@@ -97,13 +87,12 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // If `--workspace` is passed,
     // the intent is more like "publish all publisable packages in this workspace",
     // so skip `publish=false` packages.
-    let allow_unpublishable = multi_package_mode
-        && match &opts.to_publish {
-            Packages::Default => ws.is_virtual(),
-            Packages::All(_) => true,
-            Packages::OptOut(_) => true,
-            Packages::Packages(_) => false,
-        };
+    let allow_unpublishable = match &opts.to_publish {
+        Packages::Default => ws.is_virtual(),
+        Packages::All(_) => true,
+        Packages::OptOut(_) => true,
+        Packages::Packages(_) => false,
+    };
     if !unpublishable.is_empty() && !allow_unpublishable {
         bail!(
             "{} cannot be published.\n\
