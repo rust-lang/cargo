@@ -6,7 +6,6 @@ use pathdiff::diff_paths;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
-use toml_edit::Document;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
@@ -16,7 +15,7 @@ pub fn analyze_cargo_lints_table(
     path: &Path,
     pkg_lints: &TomlToolLints,
     ws_contents: &str,
-    ws_document: &Document<String>,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -116,7 +115,7 @@ fn verify_feature_enabled(
     manifest: &Manifest,
     manifest_path: &str,
     ws_contents: &str,
-    ws_document: &Document<String>,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
@@ -191,43 +190,33 @@ fn verify_feature_enabled(
 }
 
 pub fn get_span(
-    document: &Document<String>,
+    document: &toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
     get_value: bool,
 ) -> Option<Range<usize>> {
-    let mut table = document.as_item().as_table_like()?;
+    let mut table = document.get_ref();
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
-        let (key, item) = table.get_key_value(key)?;
+        let key_s: &str = key.as_ref();
+        let (key, item) = table.get_key_value(key_s)?;
         if iter.peek().is_none() {
             return if get_value {
-                item.span()
+                Some(item.span())
             } else {
-                let leaf_decor = key.dotted_decor();
-                let leaf_prefix_span = leaf_decor.prefix().and_then(|p| p.span());
-                let leaf_suffix_span = leaf_decor.suffix().and_then(|s| s.span());
-                if let (Some(leaf_prefix_span), Some(leaf_suffix_span)) =
-                    (leaf_prefix_span, leaf_suffix_span)
-                {
-                    Some(leaf_prefix_span.start..leaf_suffix_span.end)
-                } else {
-                    key.span()
-                }
+                Some(key.span())
             };
         }
-        if item.is_table_like() {
-            table = item.as_table_like().unwrap();
+        if let Some(next_table) = item.get_ref().as_table() {
+            table = next_table;
         }
-        if item.is_array() && iter.peek().is_some() {
-            let array = item.as_array().unwrap();
-            let next = iter.next().unwrap();
-            return array.iter().find_map(|item| {
-                if next == &item.to_string() {
-                    item.span()
-                } else {
-                    None
-                }
-            });
+        if iter.peek().is_some() {
+            if let Some(array) = item.get_ref().as_array() {
+                let next = iter.next().unwrap();
+                return array.iter().find_map(|item| match item.get_ref() {
+                    toml::de::DeValue::String(s) if s == next => Some(item.span()),
+                    _ => None,
+                });
+            }
         }
     }
     None
@@ -511,7 +500,7 @@ fn output_unknown_lints(
     manifest_path: &str,
     pkg_lints: &TomlToolLints,
     ws_contents: &str,
-    ws_document: &Document<String>,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
