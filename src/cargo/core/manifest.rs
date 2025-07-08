@@ -63,7 +63,7 @@ impl EitherManifest {
 pub struct Manifest {
     // alternate forms of manifests:
     contents: Rc<String>,
-    document: Rc<toml_edit::ImDocument<String>>,
+    document: Rc<toml_edit::Document<String>>,
     original_toml: Rc<TomlManifest>,
     normalized_toml: Rc<TomlManifest>,
     summary: Summary,
@@ -109,7 +109,7 @@ pub struct Warnings(Vec<DelayedWarning>);
 pub struct VirtualManifest {
     // alternate forms of manifests:
     contents: Rc<String>,
-    document: Rc<toml_edit::ImDocument<String>>,
+    document: Rc<toml_edit::Document<String>>,
     original_toml: Rc<TomlManifest>,
     normalized_toml: Rc<TomlManifest>,
 
@@ -496,7 +496,7 @@ compact_debug! {
 impl Manifest {
     pub fn new(
         contents: Rc<String>,
-        document: Rc<toml_edit::ImDocument<String>>,
+        document: Rc<toml_edit::Document<String>>,
         original_toml: Rc<TomlManifest>,
         normalized_toml: Rc<TomlManifest>,
         summary: Summary,
@@ -565,7 +565,7 @@ impl Manifest {
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
     /// Collection of spans for the original TOML
-    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+    pub fn document(&self) -> &toml_edit::Document<String> {
         &self.document
     }
     /// The [`TomlManifest`] as parsed from [`Manifest::document`]
@@ -738,7 +738,7 @@ impl Manifest {
 impl VirtualManifest {
     pub fn new(
         contents: Rc<String>,
-        document: Rc<toml_edit::ImDocument<String>>,
+        document: Rc<toml_edit::Document<String>>,
         original_toml: Rc<TomlManifest>,
         normalized_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
@@ -766,7 +766,7 @@ impl VirtualManifest {
         self.contents.as_str()
     }
     /// Collection of spans for the original TOML
-    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+    pub fn document(&self) -> &toml_edit::Document<String> {
         &self.document
     }
     /// The [`TomlManifest`] as parsed from [`VirtualManifest::document`]

@@ -6,7 +6,7 @@ use pathdiff::diff_paths;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
-use toml_edit::ImDocument;
+use toml_edit::Document;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
@@ -16,7 +16,7 @@ pub fn analyze_cargo_lints_table(
     path: &Path,
     pkg_lints: &TomlToolLints,
     ws_contents: &str,
-    ws_document: &ImDocument<String>,
+    ws_document: &Document<String>,
     ws_path: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -116,7 +116,7 @@ fn verify_feature_enabled(
     manifest: &Manifest,
     manifest_path: &str,
     ws_contents: &str,
-    ws_document: &ImDocument<String>,
+    ws_document: &Document<String>,
     ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
@@ -191,7 +191,7 @@ fn verify_feature_enabled(
 }
 
 pub fn get_span(
-    document: &ImDocument<String>,
+    document: &Document<String>,
     path: &[&str],
     get_value: bool,
 ) -> Option<Range<usize>> {
@@ -511,7 +511,7 @@ fn output_unknown_lints(
     manifest_path: &str,
     pkg_lints: &TomlToolLints,
     ws_contents: &str,
-    ws_document: &ImDocument<String>,
+    ws_document: &Document<String>,
     ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,

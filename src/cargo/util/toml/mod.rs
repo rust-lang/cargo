@@ -19,7 +19,7 @@ use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
-use toml_edit::ImDocument;
+use toml_edit::Document;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -166,13 +166,13 @@ fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> Car
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(contents: &str) -> Result<toml_edit::ImDocument<String>, toml_edit::de::Error> {
-    toml_edit::ImDocument::parse(contents.to_owned()).map_err(Into::into)
+fn parse_document(contents: &str) -> Result<toml_edit::Document<String>, toml_edit::de::Error> {
+    toml_edit::Document::parse(contents.to_owned()).map_err(Into::into)
 }
 
 #[tracing::instrument(skip_all)]
 fn deserialize_toml(
-    document: &toml_edit::ImDocument<String>,
+    document: &toml_edit::Document<String>,
 ) -> Result<manifest::TomlManifest, toml_edit::de::Error> {
     let mut unused = BTreeSet::new();
     let deserializer = toml_edit::de::Deserializer::from(document.clone());
@@ -1256,7 +1256,7 @@ fn deprecated_ws_default_features(
 #[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
     contents: String,
-    document: toml_edit::ImDocument<String>,
+    document: toml_edit::Document<String>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
@@ -1843,7 +1843,7 @@ pub fn to_real_manifest(
 fn missing_dep_diagnostic(
     missing_dep: &MissingDependencyError,
     orig_toml: &TomlManifest,
-    document: &ImDocument<String>,
+    document: &Document<String>,
     contents: &str,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -1921,7 +1921,7 @@ fn missing_dep_diagnostic(
 
 fn to_virtual_manifest(
     contents: String,
-    document: toml_edit::ImDocument<String>,
+    document: toml_edit::Document<String>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
