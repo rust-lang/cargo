@@ -211,7 +211,7 @@ tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 time.workspace = true
-toml = { workspace = true, features = ["std", "serde", "parse", "display"] }
+toml = { workspace = true, features = ["std", "serde", "parse", "display", "preserve_order"] }
 toml_edit.workspace = true
 tracing = { workspace = true, features = ["attributes"] }
 tracing-subscriber.workspace = true
