@@ -45,7 +45,7 @@ pub struct Doctest {
     /// The script metadata, if this unit's package has a build script.
     ///
     /// This is used for indexing [`Compilation::extra_env`].
-    pub script_meta: Option<UnitHash>,
+    pub script_metas: Option<Vec<UnitHash>>,
 
     /// Environment variables to set in the rustdoc process.
     pub env: HashMap<String, OsString>,
@@ -61,7 +61,7 @@ pub struct UnitOutput {
     /// The script metadata, if this unit's package has a build script.
     ///
     /// This is used for indexing [`Compilation::extra_env`].
-    pub script_meta: Option<UnitHash>,
+    pub script_metas: Option<Vec<UnitHash>>,
 }
 
 /// A structure returning the result of a compilation.
@@ -197,14 +197,14 @@ impl<'gctx> Compilation<'gctx> {
     pub fn rustdoc_process(
         &self,
         unit: &Unit,
-        script_meta: Option<UnitHash>,
+        script_metas: Option<&Vec<UnitHash>>,
     ) -> CargoResult<ProcessBuilder> {
         let mut rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
         if self.gctx.extra_verbose() {
             rustdoc.display_env_vars();
         }
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, ToolKind::Rustdoc)?;
+        let mut cmd = self.fill_env(cmd, &unit.pkg, script_metas, unit.kind, ToolKind::Rustdoc)?;
         cmd.retry_with_argfile(true);
         unit.target.edition().cmd_edition_arg(&mut cmd);
 
@@ -248,7 +248,7 @@ impl<'gctx> Compilation<'gctx> {
     /// target platform. This is typically used for `cargo run` and `cargo
     /// test`.
     ///
-    /// `script_meta` is the metadata for the `RunCustomBuild` unit that this
+    /// `script_metas` is the metadata for the `RunCustomBuild` unit that this
     /// unit used for its build script. Use `None` if the package did not have
     /// a build script.
     pub fn target_process<T: AsRef<OsStr>>(
@@ -256,7 +256,7 @@ impl<'gctx> Compilation<'gctx> {
         cmd: T,
         kind: CompileKind,
         pkg: &Package,
-        script_meta: Option<UnitHash>,
+        script_metas: Option<&Vec<UnitHash>>,
     ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((runner, args)) = self.target_runner(kind) {
             let mut builder = ProcessBuilder::new(runner);
@@ -267,7 +267,7 @@ impl<'gctx> Compilation<'gctx> {
             ProcessBuilder::new(cmd)
         };
         let tool_kind = ToolKind::TargetProcess;
-        let mut builder = self.fill_env(builder, pkg, script_meta, kind, tool_kind)?;
+        let mut builder = self.fill_env(builder, pkg, script_metas, kind, tool_kind)?;
 
         if let Some(client) = self.gctx.jobserver_from_env() {
             builder.inherit_jobserver(client);
@@ -285,7 +285,7 @@ impl<'gctx> Compilation<'gctx> {
         &self,
         mut cmd: ProcessBuilder,
         pkg: &Package,
-        script_meta: Option<UnitHash>,
+        script_metas: Option<&Vec<UnitHash>>,
         kind: CompileKind,
         tool_kind: ToolKind,
     ) -> CargoResult<ProcessBuilder> {
@@ -343,10 +343,12 @@ impl<'gctx> Compilation<'gctx> {
         let search_path = paths::join_paths(&search_path, paths::dylib_path_envvar())?;
 
         cmd.env(paths::dylib_path_envvar(), &search_path);
-        if let Some(meta) = script_meta {
-            if let Some(env) = self.extra_env.get(&meta) {
-                for (k, v) in env {
-                    cmd.env(k, v);
+        if let Some(meta_vec) = script_metas {
+            for meta in meta_vec {
+                if let Some(env) = self.extra_env.get(meta) {
+                    for (k, v) in env {
+                        cmd.env(k, v);
+                    }
                 }
             }
         }

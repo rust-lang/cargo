@@ -125,7 +125,7 @@ fn run_unit_tests(
     for UnitOutput {
         unit,
         path,
-        script_meta,
+        script_metas,
     } in compilation.tests.iter()
     {
         let (exe_display, mut cmd) = cmd_builds(
@@ -133,7 +133,7 @@ fn run_unit_tests(
             cwd,
             unit,
             path,
-            script_meta,
+            script_metas.as_ref(),
             test_args,
             compilation,
             "unittests",
@@ -184,12 +184,12 @@ fn run_doc_tests(
             unstable_opts,
             unit,
             linker,
-            script_meta,
+            script_metas,
             env,
         } = doctest_info;
 
         gctx.shell().status("Doc-tests", unit.target.name())?;
-        let mut p = compilation.rustdoc_process(unit, *script_meta)?;
+        let mut p = compilation.rustdoc_process(unit, script_metas.as_ref())?;
 
         for (var, value) in env {
             p.env(var, value);
@@ -295,7 +295,7 @@ fn display_no_run_information(
     for UnitOutput {
         unit,
         path,
-        script_meta,
+        script_metas,
     } in compilation.tests.iter()
     {
         let (exe_display, cmd) = cmd_builds(
@@ -303,7 +303,7 @@ fn display_no_run_information(
             cwd,
             unit,
             path,
-            script_meta,
+            script_metas.as_ref(),
             test_args,
             compilation,
             exec_type,
@@ -327,7 +327,7 @@ fn cmd_builds(
     cwd: &Path,
     unit: &Unit,
     path: &PathBuf,
-    script_meta: &Option<UnitHash>,
+    script_metas: Option<&Vec<UnitHash>>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
     exec_type: &str,
@@ -352,7 +352,7 @@ fn cmd_builds(
         ),
     };
 
-    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
+    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, script_metas)?;
     cmd.args(test_args);
     if unit.target.harness() && gctx.shell().verbosity() == Verbosity::Quiet {
         cmd.arg("--quiet");

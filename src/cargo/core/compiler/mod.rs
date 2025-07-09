@@ -313,7 +313,7 @@ fn rustc(
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
         .to_path_buf();
     let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
-    let script_metadata = build_runner.find_build_script_metadata(unit);
+    let script_metadatas = build_runner.find_build_script_metadatas(unit);
     let is_local = unit.is_local();
     let artifact = unit.artifact;
     let sbom_files = build_runner.sbom_output_files(unit)?;
@@ -371,7 +371,7 @@ fn rustc(
                 )?;
                 add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             }
-            add_custom_flags(&mut rustc, &script_outputs, script_metadata)?;
+            add_custom_flags(&mut rustc, &script_outputs, script_metadatas)?;
         }
 
         for output in outputs.iter() {
@@ -920,7 +920,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
 
     let mut output_options = OutputOptions::new(build_runner, unit);
-    let script_metadata = build_runner.find_build_script_metadata(unit);
+    let script_metadatas = build_runner.find_build_script_metadatas(unit);
     let scrape_outputs = if should_include_scrape_units(build_runner.bcx, unit) {
         Some(
             build_runner
@@ -960,7 +960,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
         add_custom_flags(
             &mut rustdoc,
             &build_script_outputs.lock().unwrap(),
-            script_metadata,
+            script_metadatas,
         )?;
 
         // Add the output of scraped examples to the rustdoc command.
@@ -1686,18 +1686,20 @@ fn build_deps_args(
 fn add_custom_flags(
     cmd: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
-    metadata: Option<UnitHash>,
+    metadata_vec: Option<Vec<UnitHash>>,
 ) -> CargoResult<()> {
-    if let Some(metadata) = metadata {
-        if let Some(output) = build_script_outputs.get(metadata) {
-            for cfg in output.cfgs.iter() {
-                cmd.arg("--cfg").arg(cfg);
-            }
-            for check_cfg in &output.check_cfgs {
-                cmd.arg("--check-cfg").arg(check_cfg);
-            }
-            for (name, value) in output.env.iter() {
-                cmd.env(name, value);
+    if let Some(metadata_vec) = metadata_vec {
+        for metadata in metadata_vec {
+            if let Some(output) = build_script_outputs.get(metadata) {
+                for cfg in output.cfgs.iter() {
+                    cmd.arg("--cfg").arg(cfg);
+                }
+                for check_cfg in &output.check_cfgs {
+                    cmd.arg("--check-cfg").arg(check_cfg);
+                }
+                for (name, value) in output.env.iter() {
+                    cmd.env(name, value);
+                }
             }
         }
     }
