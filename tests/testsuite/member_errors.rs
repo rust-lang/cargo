@@ -50,8 +50,7 @@ fn toml_deserialize_manifest_error() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid string
-expected `"`, `'`
+[ERROR] extra `=`, expected nothing
  --> bar/Cargo.toml:8:25
   |
 8 |                 foobar == "0.55"

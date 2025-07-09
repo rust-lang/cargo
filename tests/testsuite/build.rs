@@ -377,11 +377,11 @@ Caused by:
   could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
 
 Caused by:
-  TOML parse error at line 1, column 1
+  TOML parse error at line 1, column 2
     |
   1 | !
-    | ^
-  invalid key
+    |  ^
+  key with no value, expected `=`
 
 "#]])
         .run();
@@ -418,12 +418,11 @@ fn cargo_compile_with_invalid_manifest2() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid string
-expected `"`, `'`
+[ERROR] string values must be quoted, expected literal string
  --> Cargo.toml:3:23
   |
 3 |                 foo = bar
-  |                       ^
+  |                       ^^^
   |
 
 "#]])
@@ -437,12 +436,11 @@ fn cargo_compile_with_invalid_manifest3() {
     p.cargo("build --manifest-path src/Cargo.toml")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid string
-expected `"`, `'`
+[ERROR] string values must be quoted, expected literal string
  --> src/Cargo.toml:1:5
   |
 1 | a = bar
-  |     ^
+  |     ^^^
   |
 
 "#]])
@@ -2740,7 +2738,7 @@ Caused by:
     |
   1 | this is not valid toml
     |      ^
-  expected `.`, `=`
+  key with no value, expected `=`
 
 "#]])
         .run();

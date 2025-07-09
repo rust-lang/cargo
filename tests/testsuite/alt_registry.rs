@@ -751,13 +751,11 @@ fn bad_registry_name() {
 [ERROR] invalid character ` ` in registry name: `bad name`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 
 
-  --> Cargo.toml:8:17
-   |
- 8 | /                 [dependencies.bar]
- 9 | |                 version = "0.0.1"
-10 | |                 registry = "bad name"
-   | |_____________________________________^
-   |
+ --> Cargo.toml:8:17
+  |
+8 |                 [dependencies.bar]
+  |                 ^^^^^^^^^^^^^^^^^^
+  |
 
 "#]])
         .run();

@@ -1043,10 +1043,9 @@ impl GlobalContext {
         let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
-            let toml_v = toml::Value::deserialize(toml::de::ValueDeserializer::new(&env_val))
-                .map_err(|e| {
-                    ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
-                })?;
+            let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
+                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+            })?;
             let values = toml_v.as_array().expect("env var was not array");
             for value in values {
                 // TODO: support other types.
