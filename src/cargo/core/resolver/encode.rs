@@ -117,6 +117,8 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
 use anyhow::{Context as _, bail};
+use cargo_util_schemas::core::PackageIdSpec;
+use cargo_util_schemas::resolve::{NormalizedDependency, NormalizedPackageId, NormalizedPatch, NormalizedResolve, NormalizedSourceId};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -140,6 +142,14 @@ pub struct EncodableResolve {
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct Patch {
     unused: Vec<EncodableDependency>,
+}
+
+impl Patch {
+    pub fn into_normalized(self) -> NormalizedPatch {
+        NormalizedPatch {
+            unused: self.unused.into_iter().map(|d| d.into_normalized()).collect()
+        }
+    }
 }
 
 pub type Metadata = BTreeMap<String, String>;
@@ -436,6 +446,24 @@ impl EncodableResolve {
             })
         }
     }
+
+    pub fn into_normalized(self) -> NormalizedResolve {
+        let root = self.root.map(|r| r.into_normalized());
+
+        let package = self.package.map(|ps| {
+            ps.into_iter().map(|p| p.into_normalized()).collect()
+        });
+
+        let patch = self.patch.into_normalized();
+
+        NormalizedResolve {
+            root,
+            version: self.version,
+            metadata: self.metadata,
+            package,
+            patch,
+        }
+    }
 }
 
 fn build_path_deps(
@@ -528,6 +556,27 @@ pub struct EncodableDependency {
     replace: Option<EncodablePackageId>,
 }
 
+impl EncodableDependency {
+    pub fn into_normalized(self) -> NormalizedDependency {
+        let mut spec = PackageIdSpec::new(self.name)
+            .with_version(self.version.parse().unwrap());
+
+        if let Some(source) = self.source.clone() {
+            spec.set_url(source.url().clone());
+            spec.set_kind(source.kind().clone());
+        }
+
+        NormalizedDependency {
+            id: spec,
+            replace: self.replace.map(|r| r.into_normalized()),
+            checksum: self.checksum,
+            dependencies: self.dependencies.map(|deps| {
+                deps.into_iter().map(|dep| dep.into_normalized()).collect()
+            }),
+        }
+    }
+}
+
 /// Pretty much equivalent to [`SourceId`] with a different serialization method.
 ///
 /// The serialization for `SourceId` doesn't do URL encode for parameters.
@@ -571,6 +620,13 @@ impl EncodableSourceId {
             self.inner.as_url()
         }
     }
+
+    pub fn into_normalized(self) -> NormalizedSourceId {
+        NormalizedSourceId {
+            url: self.url().clone(),
+            kind: self.kind().clone(),
+        }
+    }
 }
 
 impl std::ops::Deref for EncodableSourceId {
@@ -609,6 +665,16 @@ pub struct EncodablePackageId {
     name: String,
     version: Option<String>,
     source: Option<EncodableSourceId>,
+}
+
+impl EncodablePackageId {
+    pub fn into_normalized(self) -> NormalizedPackageId {
+        NormalizedPackageId {
+            name: self.name,
+            version: self.version,
+            source: self.source.map(|s| s.into_normalized()),
+        }
+    }
 }
 
 impl fmt::Display for EncodablePackageId {
