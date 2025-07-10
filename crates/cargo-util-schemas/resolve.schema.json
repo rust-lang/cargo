@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NormalizedResolve",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "package": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/NormalizedDependency"
+      }
+    },
+    "root": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NormalizedDependency"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "patch": {
+      "$ref": "#/$defs/Patch"
+    }
+  },
+  "$defs": {
+    "NormalizedDependency": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "$ref": "#/$defs/PackageIdSpec"
+        },
+        "checksum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dependencies": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/NormalizedPackageId"
+          }
+        },
+        "replace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NormalizedPackageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "spec"
+      ]
+    },
+    "PackageIdSpec": {
+      "type": "string"
+    },
+    "NormalizedPackageId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NormalizedSourceId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "NormalizedSourceId": {
+      "type": "object"
+    },
+    "Patch": {
+      "type": "object",
+      "properties": {
+        "unused": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NormalizedDependency"
+          }
+        }
+      },
+      "required": [
+        "unused"
+      ]
+    }
+  }
+}

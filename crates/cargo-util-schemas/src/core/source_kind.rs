@@ -1,7 +1,10 @@
 use std::cmp::Ordering;
 
+use serde::{Deserialize, Serialize};
+
 /// The possible kinds of code source.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum SourceKind {
     /// A git repository.
     Git(GitReference),
@@ -83,7 +86,8 @@ impl PartialOrd for SourceKind {
 }
 
 /// Information to find a specific commit in a Git repository.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum GitReference {
     /// From a tag.
     Tag(String),
