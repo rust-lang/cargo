@@ -204,7 +204,7 @@ impl<'a> SummariesCache<'a> {
         let size = self
             .versions
             .iter()
-            .map(|(_version, data)| (10 + data.len()))
+            .map(|(_version, data)| 10 + data.len())
             .sum();
         let mut contents = Vec::with_capacity(size);
         contents.push(CURRENT_CACHE_VERSION);
