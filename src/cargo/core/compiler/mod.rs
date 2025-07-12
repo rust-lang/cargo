@@ -1135,10 +1135,26 @@ fn build_base_args(
         strip,
         rustflags: profile_rustflags,
         trim_paths,
-        hint_mostly_unused,
+        hint_mostly_unused: profile_hint_mostly_unused,
         ..
     } = unit.profile.clone();
+    let hints = unit.pkg.hints().cloned().unwrap_or_default();
     let test = unit.mode.is_any_test();
+
+    let warn = |msg: &str| {
+        bcx.gctx.shell().warn(format!(
+            "{}@{}: {msg}",
+            unit.pkg.package_id().name(),
+            unit.pkg.package_id().version()
+        ))
+    };
+    let unit_capped_warn = |msg: &str| {
+        if unit.show_warnings(bcx.gctx) {
+            warn(msg)
+        } else {
+            Ok(())
+        }
+    };
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
@@ -1326,13 +1342,34 @@ fn build_base_args(
         opt(cmd, "-C", "incremental=", Some(dir));
     }
 
-    if hint_mostly_unused {
+    let pkg_hint_mostly_unused = match hints.mostly_unused {
+        None => None,
+        Some(toml::Value::Boolean(b)) => Some(b),
+        Some(v) => {
+            unit_capped_warn(&format!(
+                "ignoring unsupported value type ({}) for 'hints.mostly-unused', which expects a boolean",
+                v.type_str()
+            ))?;
+            None
+        }
+    };
+    if profile_hint_mostly_unused
+        .or(pkg_hint_mostly_unused)
+        .unwrap_or(false)
+    {
         if bcx.gctx.cli_unstable().profile_hint_mostly_unused {
             cmd.arg("-Zhint-mostly-unused");
         } else {
-            bcx.gctx
-                .shell()
-                .warn("ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it")?;
+            if profile_hint_mostly_unused.is_some() {
+                // Profiles come from the top-level unit, so we don't use `unit_capped_warn` here.
+                warn(
+                    "ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it",
+                )?;
+            } else if pkg_hint_mostly_unused.is_some() {
+                unit_capped_warn(
+                    "ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it",
+                )?;
+            }
         }
     }
 

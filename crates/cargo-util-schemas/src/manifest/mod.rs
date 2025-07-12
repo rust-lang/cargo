@@ -56,6 +56,7 @@ pub struct TomlManifest {
     pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub lints: Option<InheritableLints>,
+    pub hints: Option<Hints>,
 
     pub workspace: Option<TomlWorkspace>,
     pub profile: Option<TomlProfiles>,
@@ -85,6 +86,7 @@ impl TomlManifest {
                 .map(|_| "build-dependencies"),
             self.target.as_ref().map(|_| "target"),
             self.lints.as_ref().map(|_| "lints"),
+            self.hints.as_ref().map(|_| "hints"),
         ]
         .into_iter()
         .flatten()
@@ -1642,6 +1644,17 @@ pub enum TomlLintLevel {
     Deny,
     Warn,
     Allow,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub struct Hints {
+    #[cfg_attr(
+        feature = "unstable-schema",
+        schemars(with = "Option<TomlValueWrapper>")
+    )]
+    pub mostly_unused: Option<toml::Value>,
 }
 
 #[derive(Copy, Clone, Debug)]
