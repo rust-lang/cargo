@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use anyhow::Context as _;
 use cargo_util_schemas::manifest::RustVersion;
-use cargo_util_schemas::manifest::{TomlManifest, TomlProfiles};
+use cargo_util_schemas::manifest::{Hints, TomlManifest, TomlProfiles};
 use semver::Version;
 use serde::Serialize;
 use serde::ser;
@@ -90,6 +90,7 @@ pub struct Manifest {
     metabuild: Option<Vec<String>>,
     resolve_behavior: Option<ResolveBehavior>,
     lint_rustflags: Vec<String>,
+    hints: Option<Hints>,
     embedded: bool,
 }
 
@@ -521,6 +522,7 @@ impl Manifest {
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
         lint_rustflags: Vec<String>,
+        hints: Option<Hints>,
         embedded: bool,
     ) -> Manifest {
         Manifest {
@@ -551,6 +553,7 @@ impl Manifest {
             metabuild,
             resolve_behavior,
             lint_rustflags,
+            hints,
             embedded,
         }
     }
@@ -666,6 +669,10 @@ impl Manifest {
     /// `RUSTFLAGS` from the `[lints]` table
     pub fn lint_rustflags(&self) -> &[String] {
         self.lint_rustflags.as_slice()
+    }
+
+    pub fn hints(&self) -> Option<&Hints> {
+        self.hints.as_ref()
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Manifest {

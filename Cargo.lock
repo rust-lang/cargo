@@ -315,7 +315,7 @@ dependencies = [
  "cargo-platform 0.3.1",
  "cargo-test-support",
  "cargo-util",
- "cargo-util-schemas 0.9.1",
+ "cargo-util-schemas 0.10.0",
  "clap",
  "clap_complete",
  "color-print",
@@ -517,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "schemars",
  "semver",
@@ -3373,7 +3373,7 @@ dependencies = [
  "cargo",
  "cargo-platform 0.3.1",
  "cargo-util",
- "cargo-util-schemas 0.9.1",
+ "cargo-util-schemas 0.10.0",
  "proptest",
  "varisat",
 ]
