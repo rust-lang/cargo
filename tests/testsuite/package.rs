@@ -5,7 +5,6 @@ use std::path::Path;
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
@@ -1475,10 +1474,9 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     p.change_file("submodule/file.txt", "changed");
 
     let mut execs = p.cargo("package --workspace --no-verify");
-    if cargo_uses_gitoxide() {
-        execs
-            .with_status(101)
-            .with_stderr_data(str![[r#"
+    execs
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
 isengard/src/file.txt
@@ -1486,17 +1484,7 @@ isengard/src/file.txt
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
-            .run();
-    } else {
-        // In `git2` this isn't currently implemented, but it could be.
-        execs
-            .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-
-"#]])
-            .run();
-    }
+        .run();
 }
 
 #[cargo_test]

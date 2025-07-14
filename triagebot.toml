@@ -150,7 +150,7 @@ trigger_files = ["src/cargo/util/flock.rs", "src/cargo/util/important_paths.rs"]
 trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
-trigger_files = ["src/cargo/sources/git/", "src/cargo/ops/cargo_package/vcs/mod.rs", "src/cargo/ops/cargo_package/vcs/gix.rs"]
+trigger_files = ["src/cargo/sources/git/", "src/cargo/ops/cargo_package/vcs.rs"]
 
 [autolabel."A-home"]
 trigger_files = ["crates/home/"]

@@ -3159,8 +3159,7 @@ fn dirty_submodule() {
     git_project
         .cargo("package --no-verify")
         .with_status(101)
-        .with_stderr_data(if cargo_uses_gitoxide() {
-            str![[r#"
+        .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
@@ -3170,19 +3169,7 @@ src/lib.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
-"#]]
-        } else {
-            str![[r#"
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-.gitmodules
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-
-"#]]
-        })
+"#]])
         .run();
 
     git::commit(&repo);
@@ -3219,8 +3206,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
     git_project
         .cargo("package --no-verify")
         .with_status(101)
-        .with_stderr_data(if cargo_uses_gitoxide() {
-            str![[r#"
+        .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
@@ -3230,19 +3216,7 @@ src/bar/mod.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
-"#]]
-        } else {
-            str![[r#"
-[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/.gitmodules
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-
-"#]]
-        })
+"#]])
         .run();
 
     // Commit the submodule addition.
