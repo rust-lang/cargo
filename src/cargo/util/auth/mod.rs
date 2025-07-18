@@ -9,6 +9,7 @@ use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, LoginOptions, Operation, RegistryInfo,
     Secret,
 };
+use crates_io::check_token;
 
 use core::fmt;
 use serde::Deserialize;
@@ -239,6 +240,17 @@ pub fn registry_credential_config_raw(
         return Ok(cfg.clone());
     }
     let cfg = registry_credential_config_raw_uncached(gctx, sid)?;
+    if let Some(RegistryConfig {
+        token: Some(token), ..
+    }) = &cfg
+    {
+        check_token(&token.val.as_deref().expose()).with_context(|| {
+            format!(
+                "Token for {sid} is invalid (defined in {})",
+                token.definition
+            )
+        })?;
+    }
     cache.insert(*sid, cfg.clone());
     return Ok(cfg);
 }
