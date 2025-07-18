@@ -443,7 +443,7 @@ impl Dependency {
         Arc::make_mut(&mut self.inner).artifact = Some(artifact);
     }
 
-    pub(crate) fn artifact(&self) -> Option<&Artifact> {
+    pub fn artifact(&self) -> Option<&Artifact> {
         self.inner.artifact.as_ref()
     }
 
@@ -508,15 +508,15 @@ impl Artifact {
         })
     }
 
-    pub(crate) fn kinds(&self) -> &[ArtifactKind] {
+    pub fn kinds(&self) -> &[ArtifactKind] {
         &self.inner
     }
 
-    pub(crate) fn is_lib(&self) -> bool {
+    pub fn is_lib(&self) -> bool {
         self.is_lib
     }
 
-    pub(crate) fn target(&self) -> Option<ArtifactTarget> {
+    pub fn target(&self) -> Option<ArtifactTarget> {
         self.target
     }
 }
