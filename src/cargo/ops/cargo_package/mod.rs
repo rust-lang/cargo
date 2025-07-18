@@ -480,7 +480,6 @@ fn prepare_archive(
 
     // Check (git) repository state, getting the current commit hash.
     let vcs_info = vcs::check_repo_state(pkg, &src_files, ws, &opts)?;
-
     build_ar_list(ws, pkg, src_files, vcs_info, opts.include_lockfile)
 }
 
