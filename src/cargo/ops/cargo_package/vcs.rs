@@ -1,4 +1,5 @@
 //! Helpers to gather the VCS information for `cargo package`.
+
 use crate::core::{Package, Workspace};
 use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
@@ -7,11 +8,11 @@ use anyhow::Context;
 use cargo_util::paths;
 use gix::bstr::ByteSlice;
 use gix::dir::walk::EmissionMode;
+use gix::dirwalk::Options;
 use gix::index::entry::Mode;
 use gix::status::tree_index::TrackRenames;
 use gix::worktree::stack::state::ignore::Source;
 use serde::Serialize;
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -47,7 +48,7 @@ pub fn check_repo_state(
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
     let gctx = ws.gctx();
-    let Ok(repo) = gix::discover(p.root()) else {
+    let Ok(mut repo) = gix::discover(p.root()) else {
         gctx.shell().verbose(|shell| {
             shell.warn(format_args!(
                 "no (git) VCS found for `{}`",
@@ -115,7 +116,7 @@ pub fn check_repo_state(
         path.display(),
         workdir.display(),
     );
-    let Some(git) = git(ws, p, src_files, &repo, &opts)? else {
+    let Some(git) = git(ws, p, src_files, &mut repo, &opts)? else {
         // If the git repo lacks essential field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
@@ -181,31 +182,32 @@ fn git(
     ws: &Workspace<'_>,
     pkg: &Package,
     src_files: &[PathEntry],
-    repo: &gix::Repository,
+    repo: &mut gix::Repository,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<GitVcsInfo>> {
+    {
+        let mut config = repo.config_snapshot_mut();
+        // This currently is only a very minor speedup for the biggest repositories,
+        // but might trigger creating many threads.
+        config.set_value(&gix::config::tree::Index::THREADS, "false")?;
+    }
     // This is a collection of any dirty or untracked files. This covers:
     // - new/modified/deleted/renamed/type change (index or worktree)
     // - untracked files (which are "new" worktree files)
     // - ignored (in case the user has an `include` directive that
     //   conflicts with .gitignore).
-    let (mut dirty_files, mut dirty_files_outside_package_root) = (Vec::new(), Vec::new());
+    let mut dirty_files = Vec::new();
     let workdir = repo.workdir().unwrap();
     collect_statuses(
         repo,
         workdir,
         relative_package_root(repo, pkg.root()).as_deref(),
         &mut dirty_files,
-        &mut dirty_files_outside_package_root,
     )?;
 
     // Include each submodule so that the error message can provide
     // specifically *which* files in a submodule are modified.
-    status_submodules(
-        repo,
-        &mut dirty_files,
-        &mut dirty_files_outside_package_root,
-    )?;
+    status_submodules(repo, &mut dirty_files)?;
 
     // Find the intersection of dirty in git, and the src_files that would
     // be packaged. This is a lazy n^2 check, but seems fine with
@@ -230,10 +232,7 @@ fn git(
             }
         })
         .map(|p| p.as_ref())
-        .chain(
-            dirty_files_outside_pkg_root(ws, pkg, &dirty_files_outside_package_root, src_files)?
-                .iter(),
-        )
+        .chain(dirty_files_outside_pkg_root(ws, pkg, repo, src_files)?.iter())
         .map(|path| {
             pathdiff::diff_paths(path, cwd)
                 .as_ref()
@@ -271,25 +270,17 @@ fn collect_statuses(
     workdir: &Path,
     relative_package_root: Option<&Path>,
     dirty_files: &mut Vec<PathBuf>,
-    dirty_files_outside_package_root: &mut Vec<PathBuf>,
 ) -> CargoResult<()> {
     let statuses = repo
         .status(gix::progress::Discard)?
-        .dirwalk_options(|opts| {
-            opts.emit_untracked(gix::dir::walk::EmissionMode::Matching)
-                // Also pick up ignored files or whole directories
-                // to specifically catch overzealously ignored source files.
-                // Later we will match these dirs by prefix, which is why collapsing
-                // them is desirable here.
-                .emit_ignored(Some(EmissionMode::CollapseDirectory))
-                .emit_tracked(false)
-                .recurse_repositories(false)
-                .symlinks_to_directories_are_ignored_like_directories(true)
-                .emit_empty_directories(false)
-        })
+        .dirwalk_options(configure_dirwalk)
         .tree_index_track_renames(TrackRenames::Disabled)
         .index_worktree_submodules(None)
-        .into_iter(None /* pathspec patterns */)
+        .into_iter(
+            relative_package_root.map(|rela_pkg_root| {
+                gix::path::into_bstr(rela_pkg_root).into_owned()
+            }), /* pathspec patterns */
+        )
         .with_context(|| {
             format!(
                 "failed to begin git status for repo {}",
@@ -307,11 +298,6 @@ fn collect_statuses(
 
         let rel_path = gix::path::from_bstr(status.location());
         let path = workdir.join(&rel_path);
-        if relative_package_root.is_some_and(|pkg_root| !rel_path.starts_with(pkg_root)) {
-            dirty_files_outside_package_root.push(path);
-            continue;
-        }
-
         // It is OK to include Cargo.lock even if it is ignored.
         if path.ends_with("Cargo.lock")
             && matches!(
@@ -330,11 +316,7 @@ fn collect_statuses(
 }
 
 /// Helper to collect dirty statuses while recursing into submodules.
-fn status_submodules(
-    repo: &gix::Repository,
-    dirty_files: &mut Vec<PathBuf>,
-    dirty_files_outside_package_root: &mut Vec<PathBuf>,
-) -> CargoResult<()> {
+fn status_submodules(repo: &gix::Repository, dirty_files: &mut Vec<PathBuf>) -> CargoResult<()> {
     let Some(submodules) = repo.submodules()? else {
         return Ok(());
     };
@@ -345,14 +327,8 @@ fn status_submodules(
             let Some(workdir) = sub_repo.workdir() else {
                 continue;
             };
-            status_submodules(&sub_repo, dirty_files, dirty_files_outside_package_root)?;
-            collect_statuses(
-                &sub_repo,
-                workdir,
-                None,
-                dirty_files,
-                dirty_files_outside_package_root,
-            )?;
+            status_submodules(&sub_repo, dirty_files)?;
+            collect_statuses(&sub_repo, workdir, None, dirty_files)?;
         }
     }
     Ok(())
@@ -374,7 +350,7 @@ fn relative_package_root(repo: &gix::Repository, pkg_root: &Path) -> Option<Path
 /// This currently looks at
 ///
 /// * `package.readme` and `package.license-file` pointing to paths outside package root
-/// * symlinks targets reside outside package root
+/// * symlinks targets residing outside package root
 /// * Any change in the root workspace manifest, regardless of what has changed.
 ///
 /// This is required because those paths may link to a file outside the
@@ -383,10 +359,12 @@ fn relative_package_root(repo: &gix::Repository, pkg_root: &Path) -> Option<Path
 fn dirty_files_outside_pkg_root(
     ws: &Workspace<'_>,
     pkg: &Package,
-    dirty_files_outside_of_package_root: &[PathBuf],
+    repo: &gix::Repository,
     src_files: &[PathEntry],
-) -> CargoResult<HashSet<PathBuf>> {
+) -> CargoResult<Vec<PathBuf>> {
     let pkg_root = pkg.root();
+    let workdir = repo.workdir().unwrap();
+
     let meta = pkg.manifest().metadata();
     let metadata_paths: Vec<_> = [&meta.license_file, &meta.readme]
         .into_iter()
@@ -394,7 +372,7 @@ fn dirty_files_outside_pkg_root(
         .map(|path| paths::normalize_path(&pkg_root.join(path)))
         .collect();
 
-    let dirty_files = src_files
+    let linked_files_outside_package_root: Vec<_> = src_files
         .iter()
         .filter(|p| p.is_symlink_or_under_symlink())
         .map(|p| p.as_ref().as_path())
@@ -403,19 +381,58 @@ fn dirty_files_outside_pkg_root(
         // If inside package root. Don't bother checking git status.
         .filter(|p| paths::strip_prefix_canonical(p, pkg_root).is_err())
         // Handle files outside package root but under git workdir,
-        .filter_map(|src_file| {
-            let canon_src_path = gix::path::realpath_opts(
-                src_file,
-                ws.gctx().cwd(),
-                gix::path::realpath::MAX_SYMLINKS,
-            )
-            .unwrap_or_else(|_| src_file.to_owned());
-
-            dirty_files_outside_of_package_root
-                .iter()
-                .any(|p| canon_src_path.starts_with(p))
-                .then_some(canon_src_path)
-        })
+        .filter_map(|p| paths::strip_prefix_canonical(p, workdir).ok())
         .collect();
+
+    if linked_files_outside_package_root.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let statuses = repo
+        .status(gix::progress::Discard)?
+        .dirwalk_options(configure_dirwalk)
+        // Limit the amount of threads for used for the worktree status, as the pathspec will
+        // prevent most paths from being visited anyway there is not much work.
+        .index_worktree_options_mut(|opts| opts.thread_limit = Some(1))
+        .tree_index_track_renames(TrackRenames::Disabled)
+        .index_worktree_submodules(None)
+        .into_iter(
+            linked_files_outside_package_root
+                .into_iter()
+                .map(|p| gix::path::into_bstr(p).into_owned()),
+        )
+        .with_context(|| {
+            format!(
+                "failed to begin git status for outfor repo {}",
+                repo.path().display()
+            )
+        })?;
+
+    let mut dirty_files = Vec::new();
+    for status in statuses {
+        let status = status.with_context(|| {
+            format!(
+                "failed to retrieve git status from repo {}",
+                repo.path().display()
+            )
+        })?;
+
+        let rel_path = gix::path::from_bstr(status.location());
+        let path = workdir.join(&rel_path);
+        dirty_files.push(path);
+    }
     Ok(dirty_files)
+}
+
+fn configure_dirwalk(opts: Options) -> Options {
+    opts.emit_untracked(gix::dir::walk::EmissionMode::Matching)
+        // Also pick up ignored files or whole directories
+        // to specifically catch overzealously ignored source files.
+        // Later we will match these dirs by prefix, which is why collapsing
+        // them is desirable here.
+        .emit_ignored(Some(EmissionMode::CollapseDirectory))
+        .emit_tracked(false)
+        .recurse_repositories(false)
+        .symlinks_to_directories_are_ignored_like_directories(true)
+        .emit_empty_directories(false)
 }
