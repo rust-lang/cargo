@@ -902,6 +902,7 @@ pub struct TomlProfile {
     pub dir_name: Option<String>,
     pub inherits: Option<String>,
     pub strip: Option<StringOrBool>,
+    pub force_frame_pointers: Option<bool>,
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Option<Vec<String>>,
     // These two fields must be last because they are sub-tables, and TOML
@@ -998,6 +999,10 @@ impl TomlProfile {
 
         if let Some(v) = &profile.strip {
             self.strip = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.force_frame_pointers {
+            self.force_frame_pointers = Some(v.clone());
         }
 
         if let Some(v) = &profile.trim_paths {
