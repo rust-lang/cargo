@@ -189,13 +189,14 @@ fn git(
     // - untracked files (which are "new" worktree files)
     // - ignored (in case the user has an `include` directive that
     //   conflicts with .gitignore).
-    let mut dirty_files = Vec::new();
+    let (mut dirty_files, mut dirty_files_outside_package_root) = (Vec::new(), Vec::new());
     let workdir = repo.workdir().unwrap();
-    let mut dirty_files_outside_of_package_root = collect_statuses(
+    collect_statuses(
         repo,
         workdir,
         relative_package_root(repo, pkg.root()).as_deref(),
         &mut dirty_files,
+        &mut dirty_files_outside_package_root,
     )?;
 
     // Include each submodule so that the error message can provide
@@ -203,7 +204,7 @@ fn git(
     status_submodules(
         repo,
         &mut dirty_files,
-        &mut dirty_files_outside_of_package_root,
+        &mut dirty_files_outside_package_root,
     )?;
 
     // Find the intersection of dirty in git, and the src_files that would
@@ -230,7 +231,7 @@ fn git(
         })
         .map(|p| p.as_ref())
         .chain(
-            dirty_files_outside_pkg_root(ws, pkg, &dirty_files_outside_of_package_root, src_files)?
+            dirty_files_outside_pkg_root(ws, pkg, &dirty_files_outside_package_root, src_files)?
                 .iter(),
         )
         .map(|path| {
@@ -243,8 +244,6 @@ fn git(
         .collect();
     let dirty = !dirty_src_files.is_empty();
     if !dirty || opts.allow_dirty {
-        // Must check whether the repo has no commit firstly; otherwise `revparse_single` would fail on bare commit repo.
-        // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
         let maybe_head_id = repo.head()?.try_peel_to_id_in_place()?;
         Ok(maybe_head_id.map(|id| GitVcsInfo {
             sha1: id.to_string(),
@@ -264,14 +263,16 @@ fn git(
 
 /// Helper to collect dirty statuses for a single repo.
 /// `relative_package_root` is `Some` if the root is a sub-directory of the workdir.
-/// Returns the dirty files outside `relative_package_root`.
+/// Writes dirty files outside `relative_package_root` into `dirty_files_outside_package_root`,
+/// and all *everything else* into `dirty_files`.
 #[must_use]
 fn collect_statuses(
     repo: &gix::Repository,
     workdir: &Path,
     relative_package_root: Option<&Path>,
     dirty_files: &mut Vec<PathBuf>,
-) -> CargoResult<Vec<PathBuf>> {
+    dirty_files_outside_package_root: &mut Vec<PathBuf>,
+) -> CargoResult<()> {
     let statuses = repo
         .status(gix::progress::Discard)?
         .dirwalk_options(|opts| {
@@ -296,7 +297,6 @@ fn collect_statuses(
             )
         })?;
 
-    let mut dirty_files_outside_of_package_root = Vec::new();
     for status in statuses {
         let status = status.with_context(|| {
             format!(
@@ -308,7 +308,7 @@ fn collect_statuses(
         let rel_path = gix::path::from_bstr(status.location());
         let path = workdir.join(&rel_path);
         if relative_package_root.is_some_and(|pkg_root| !rel_path.starts_with(pkg_root)) {
-            dirty_files_outside_of_package_root.push(path);
+            dirty_files_outside_package_root.push(path);
             continue;
         }
 
@@ -326,14 +326,14 @@ fn collect_statuses(
 
         dirty_files.push(path);
     }
-    Ok(dirty_files_outside_of_package_root)
+    Ok(())
 }
 
 /// Helper to collect dirty statuses while recursing into submodules.
 fn status_submodules(
     repo: &gix::Repository,
     dirty_files: &mut Vec<PathBuf>,
-    dirty_files_outside_of_package_root: &mut Vec<PathBuf>,
+    dirty_files_outside_package_root: &mut Vec<PathBuf>,
 ) -> CargoResult<()> {
     let Some(submodules) = repo.submodules()? else {
         return Ok(());
@@ -345,13 +345,14 @@ fn status_submodules(
             let Some(workdir) = sub_repo.workdir() else {
                 continue;
             };
-            status_submodules(&sub_repo, dirty_files, dirty_files_outside_of_package_root)?;
-            dirty_files_outside_of_package_root.extend(collect_statuses(
+            status_submodules(&sub_repo, dirty_files, dirty_files_outside_package_root)?;
+            collect_statuses(
                 &sub_repo,
                 workdir,
                 None,
                 dirty_files,
-            )?);
+                dirty_files_outside_package_root,
+            )?;
         }
     }
     Ok(())

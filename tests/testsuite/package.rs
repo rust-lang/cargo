@@ -1470,11 +1470,9 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     p.symlink("submodule/file.txt", "isengard/src/file.txt");
     git::add(&repo);
     git::commit(&repo);
-    // This dirtiness should be detected in the future.
     p.change_file("submodule/file.txt", "changed");
 
-    let mut execs = p.cargo("package --workspace --no-verify");
-    execs
+    p.cargo("package --workspace --no-verify")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
