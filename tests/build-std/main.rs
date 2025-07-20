@@ -271,7 +271,6 @@ fn cross_custom() {
                 "arch": "x86_64",
                 "target-endian": "little",
                 "target-pointer-width": "64",
-                "target-c-int-width": "32",
                 "os": "none",
                 "linker-flavor": "ld.lld"
             }
@@ -312,7 +311,6 @@ fn custom_test_framework() {
                 "arch": "x86_64",
                 "target-endian": "little",
                 "target-pointer-width": "64",
-                "target-c-int-width": "32",
                 "os": "none",
                 "linker-flavor": "ld.lld",
                 "linker": "rust-lld",
