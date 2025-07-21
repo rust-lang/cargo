@@ -1,0 +1,167 @@
+name: Trusted Publish to crates.io
+
+# This workflow demonstrates how to use the cargo-credential-trusted-publish
+# credential provider for secure publishing to crates.io without storing API tokens.
+
+on:
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: 'Name of crate to publish'
+        required: true
+        default: 'cargo-credential-trusted-publish'
+      version:
+        description: 'Version to publish (e.g., 0.1.0)'
+        required: true
+        default: '0.1.0'
+      dry_run:
+        description: 'Perform a dry run (no actual publishing)'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  trusted-publish:
+    name: Trusted Publish
+    runs-on: ubuntu-latest
+    
+    # REQUIRED: id-token write permission for OIDC token
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build and install trusted-publish credential provider
+        run: |
+          echo "Building cargo-credential-trusted-publish..."
+          cargo build --release -p cargo-credential-trusted-publish
+          
+          echo "Installing credential provider..."
+          cargo install --path credential/cargo-credential-trusted-publish --force
+          
+          echo "Verifying installation..."
+          which cargo-credential-trusted-publish
+          cargo-credential-trusted-publish --help || true
+      
+      - name: Configure Cargo for trusted publishing
+        run: |
+          echo "Creating Cargo configuration..."
+          mkdir -p ~/.cargo
+          
+          cat >> ~/.cargo/config.toml << 'EOF'
+          [registry]
+          global-credential-providers = [
+            # Fallback to existing token methods for non-publish operations
+            "cargo:token",
+            # Use trusted publishing for publish operations
+            "cargo-credential-trusted-publish"
+          ]
+          EOF
+          
+          echo "Cargo configuration:"
+          cat ~/.cargo/config.toml
+      
+      - name: Verify OIDC token availability
+        run: |
+          if [ -n "$ACTIONS_ID_TOKEN" ]; then
+            echo "✅ ACTIONS_ID_TOKEN is available"
+            echo "Token length: ${#ACTIONS_ID_TOKEN}"
+          else
+            echo "❌ ACTIONS_ID_TOKEN is not available"
+            echo "Make sure the workflow has 'id-token: write' permissions"
+            exit 1
+          fi
+      
+      - name: Test credential provider
+        run: |
+          echo "Testing credential provider..."
+          # This should fail gracefully since we're not actually publishing
+          echo '{"v":1,"registry":{"index_url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"get","operation":"publish","name":"test","vers":"0.1.0","cksum":"abc123"}' | cargo-credential-trusted-publish || true
+      
+      - name: Publish to crates.io (dry run)
+        if: ${{ inputs.dry_run }}
+        env:
+          # Explicitly clear any existing token to force use of credential provider
+          CARGO_REGISTRY_TOKEN: ""
+        run: |
+          echo "Performing dry run publish..."
+          cargo publish -p "${{ inputs.crate }}" --dry-run --allow-dirty
+      
+      - name: Publish to crates.io (real)
+        if: ${{ !inputs.dry_run }}
+        env:
+          # Explicitly clear any existing token to force use of credential provider
+          CARGO_REGISTRY_TOKEN: ""
+        run: |
+          echo "Publishing ${{ inputs.crate }} version ${{ inputs.version }} to crates.io..."
+          cargo publish -p "${{ inputs.crate }}" --allow-dirty
+          
+          echo "✅ Successfully published using trusted publishing!"
+      
+      - name: Cleanup (automatic token revocation)
+        if: always()
+        run: |
+          echo "Credential provider will automatically revoke any tokens on exit"
+          echo "No manual cleanup required!"
+
+  # Example job showing workspace publishing
+  workspace-publish:
+    name: Workspace Trusted Publish
+    runs-on: ubuntu-latest
+    if: false  # Disabled by default - set to true to enable
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    strategy:
+      matrix:
+        crate:
+          - cargo-credential-trusted-publish
+          # Add other workspace crates here
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install trusted-publish credential provider
+        run: cargo install --path credential/cargo-credential-trusted-publish
+      
+      - name: Configure Cargo
+        run: |
+          mkdir -p ~/.cargo
+          cat >> ~/.cargo/config.toml << 'EOF'
+          [registry]
+          global-credential-providers = [
+            "cargo:token",
+            "cargo-credential-trusted-publish"
+          ]
+          EOF
+      
+      - name: Publish ${{ matrix.crate }}
+        env:
+          CARGO_REGISTRY_TOKEN: ""
+        run: |
+          cargo publish -p "${{ matrix.crate }}" --dry-run --allow-dirty 
