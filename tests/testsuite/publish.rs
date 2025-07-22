@@ -4404,3 +4404,130 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn workspace_publish_error_reporting() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |req, _| {
+            // Parse the request to get the crate name
+            let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
+            let is_second_package = body.contains(r#""name":"b""#);
+            
+            if is_second_package {
+                // Simulate rate limit error on the second package
+                Response {
+                    body: br#"{"errors": [{"detail": "You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased."}]}"#.to_vec(),
+                    code: 429,
+                    headers: vec![],
+                }
+            } else {
+                // First package succeeds
+                Response {
+                    body: br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#.to_vec(),
+                    code: 200,
+                    headers: vec![],
+                }
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "a"
+                repository = "bar"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "b"
+                repository = "bar"
+
+                [dependencies]
+                a = { path = "../a", version = "0.1.0" }
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "c"
+                repository = "bar"
+
+                [dependencies]
+                b = { path = "../b", version = "0.1.0" }
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // This test demonstrates current inadequate error reporting during workspace publishing.
+    // When a publish fails, users don't know which package failed or which packages are still pending.
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v0.1.0 ([ROOT]/foo/c)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.1.0 ([ROOT]/foo/a)
+[COMPILING] a v0.1.0 ([ROOT]/foo/target/package/a-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.1.0 ([ROOT]/foo/b)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.0
+[COMPILING] a v0.1.0
+[COMPILING] b v0.1.0 ([ROOT]/foo/target/package/b-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] c v0.1.0 ([ROOT]/foo/c)
+[DOWNLOADING] crates ...
+[DOWNLOADED] b v0.1.0
+[COMPILING] b v0.1.0
+[COMPILING] c v0.1.0 ([ROOT]/foo/target/package/c-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[UPLOADED] a v0.1.0 to registry `alternative`
+[NOTE] waiting for a v0.1.0 to be available at registry `alternative`.
+2 remaining crates to be published
+[WARNING] timed out waiting for a v0.1.0 to be available in registry `alternative`
+[NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
+[ERROR] unable to publish b v0.1.0 and c v0.1.0 due to a timeout while waiting for published dependencies to be available.
+
+"#]])
+        .run();
+}
