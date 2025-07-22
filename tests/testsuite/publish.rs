@@ -2261,8 +2261,7 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:40141/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2310,8 +2309,7 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:44521/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2359,8 +2357,7 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:43081/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2417,8 +2414,7 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:35825/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2466,8 +2462,7 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:45899/
 
 Caused by:
   invalid response body from server
@@ -3614,8 +3609,7 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: foo
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:45755/
 
 Caused by:
   token contains invalid characters.
@@ -4577,8 +4571,7 @@ fn transmit_error_includes_package_name() {
 [PACKAGING] my-package v0.1.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] my-package v0.1.0 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: my-package
+[ERROR] failed to publish package 'my-package' to registry at http://127.0.0.1:40039/
 
 Caused by:
   the remote server responded with an error (status 500 Internal Server Error): Server error
@@ -4685,8 +4678,7 @@ fn workspace_transmit_error_includes_remaining_packages() {
 [PACKAGING] c v0.1.0 ([ROOT]/foo/c)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
-Package: a
+[ERROR] failed to publish package 'a' to registry at http://127.0.0.1:35945/
 
 Remaining packages to publish: b v0.1.0 and c v0.1.0
 
