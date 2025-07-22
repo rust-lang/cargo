@@ -2357,12 +2357,11 @@ foo v0.1.0 ([ROOT]/foo)
 "#]])
         .run();
 
-    // change flag order, no-proc-macro takes no effect if followed by other flags
+    // change flag order, expecting the same output
     p.cargo("tree -e no-proc-macro,normal")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-├── dep v1.0.0
-└── pm v1.0.0 (proc-macro)
+└── dep v1.0.0
 
 "#]])
         .run();
