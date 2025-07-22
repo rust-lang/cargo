@@ -145,11 +145,11 @@ mod linux {
             }
 
             let index_url_c = CString::new(registry.index_url).unwrap();
+            let mut error: *mut GError = null_mut();
+            let attr_url = CString::new("url").unwrap();
+            let schema = schema();
             match action {
                 cargo_credential::Action::Get(_) => {
-                    let mut error: *mut GError = null_mut();
-                    let attr_url = CString::new("url").unwrap();
-                    let schema = schema();
                     unsafe {
                         let token_c = secret_password_lookup_sync(
                             &schema,
@@ -187,9 +187,6 @@ mod linux {
                 cargo_credential::Action::Login(options) => {
                     let label = label(registry.name.unwrap_or(registry.index_url));
                     let token = CString::new(read_token(options, registry)?.expose()).unwrap();
-                    let mut error: *mut GError = null_mut();
-                    let attr_url = CString::new("url").unwrap();
-                    let schema = schema();
                     unsafe {
                         secret_password_store_sync(
                             &schema,
@@ -215,9 +212,6 @@ mod linux {
                     Ok(CredentialResponse::Login)
                 }
                 cargo_credential::Action::Logout => {
-                    let schema = schema();
-                    let mut error: *mut GError = null_mut();
-                    let attr_url = CString::new("url").unwrap();
                     unsafe {
                         secret_password_clear_sync(
                             &schema,
