@@ -2262,6 +2262,7 @@ fn api_error_json() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2310,6 +2311,7 @@ fn api_error_200() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2358,6 +2360,7 @@ fn api_error_code() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2415,6 +2418,7 @@ fn api_curl_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2463,6 +2467,7 @@ fn api_other_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   invalid response body from server
@@ -3610,6 +3615,7 @@ fn invalid_token() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: foo
 
 Caused by:
   token contains invalid characters.
@@ -4527,6 +4533,55 @@ fn workspace_publish_error_reporting() {
 [WARNING] timed out waiting for a v0.1.0 to be available in registry `alternative`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 [ERROR] unable to publish b v0.1.0 and c v0.1.0 due to a timeout while waiting for published dependencies to be available.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn transmit_error_includes_package_name() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_, _| {
+            // Simulate a server error
+            Response {
+                body: br#"{"errors": [{"detail": "Server error"}]}"#.to_vec(),
+                code: 500,
+                headers: vec![],
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "my-package"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "my-package"
+                repository = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] my-package v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] my-package v0.1.0 ([ROOT]/foo)
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: my-package
+
+Caused by:
+  the remote server responded with an error (status 500 Internal Server Error): Server error
 
 "#]])
         .run();

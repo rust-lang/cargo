@@ -643,7 +643,7 @@ fn transmit(
 
     let warnings = registry
         .publish(&new_crate, tarball)
-        .with_context(|| format!("failed to publish to registry at {}", registry.host()))?;
+        .with_context(|| format!("failed to publish to registry at {}\nPackage: {}", registry.host(), pkg.name()))?;
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(
