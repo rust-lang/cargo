@@ -4497,8 +4497,8 @@ fn workspace_publish_error_reporting() {
         .file("c/src/lib.rs", "")
         .build();
 
-    // This test demonstrates improved error reporting during workspace publishing.
-    // Now when a publish fails, users can see which packages are still pending.
+    // This test verifies improved error reporting during workspace publishing.
+    // When a timeout occurs, users can see which packages are still pending publication.
     p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr_data(str![[r#"
