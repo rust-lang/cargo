@@ -168,7 +168,7 @@ mod linux {
 
             let index_url_c = CString::new(registry.index_url).unwrap();
             let mut error: *mut GError = null_mut();
-            let attr_url = CString::new("url").unwrap();
+            let attr_url = b"url\0".as_ptr() as *const gchar;
             let schema = schema();
             match action {
                 cargo_credential::Action::Get(_) => {
@@ -177,7 +177,7 @@ mod linux {
                             &schema,
                             null_mut(),
                             &mut error,
-                            attr_url.as_ptr(),
+                            attr_url,
                             index_url_c.as_ptr(),
                             null() as *const gchar,
                         );
@@ -217,7 +217,7 @@ mod linux {
                             token.as_ptr(),
                             null_mut(),
                             &mut error,
-                            attr_url.as_ptr(),
+                            attr_url,
                             index_url_c.as_ptr(),
                             null() as *const gchar,
                         );
@@ -239,7 +239,7 @@ mod linux {
                             &schema,
                             null_mut(),
                             &mut error,
-                            attr_url.as_ptr(),
+                            attr_url,
                             index_url_c.as_ptr(),
                             null() as *const gchar,
                         );
