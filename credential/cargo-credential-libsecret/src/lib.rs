@@ -22,6 +22,12 @@ mod linux {
     #[allow(non_camel_case_types)]
     type gboolean = c_int;
 
+    #[allow(non_camel_case_types)]
+    type gint = c_int;
+
+    #[allow(non_camel_case_types)]
+    type gpointer = *mut ();
+
     type GQuark = u32;
 
     #[repr(C)]
@@ -41,6 +47,14 @@ mod linux {
         name: *const gchar,
         flags: SecretSchemaFlags,
         attributes: [SecretSchemaAttribute; 32],
+        reserved: gint,
+        reserved1: gpointer,
+        reserved2: gpointer,
+        reserved3: gpointer,
+        reserved4: gpointer,
+        reserved5: gpointer,
+        reserved6: gpointer,
+        reserved7: gpointer,
     }
 
     #[repr(C)]
@@ -104,6 +118,14 @@ mod linux {
             name: b"org.rust-lang.cargo.registry\0".as_ptr() as *const gchar,
             flags: SecretSchemaFlags::None,
             attributes,
+            reserved: 0,
+            reserved1: null_mut(),
+            reserved2: null_mut(),
+            reserved3: null_mut(),
+            reserved4: null_mut(),
+            reserved5: null_mut(),
+            reserved6: null_mut(),
+            reserved7: null_mut(),
         }
     }
 
