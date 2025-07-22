@@ -111,11 +111,11 @@ mod linux {
             attr_type: SecretSchemaAttributeType::String,
         }; 32];
         attributes[0] = SecretSchemaAttribute {
-            name: b"url\0".as_ptr() as *const gchar,
+            name: c"url".as_ptr() as *const gchar,
             attr_type: SecretSchemaAttributeType::String,
         };
         SecretSchema {
-            name: b"org.rust-lang.cargo.registry\0".as_ptr() as *const gchar,
+            name: c"org.rust-lang.cargo.registry".as_ptr() as *const gchar,
             flags: SecretSchemaFlags::None,
             attributes,
             reserved: 0,
@@ -168,7 +168,7 @@ mod linux {
 
             let index_url_c = CString::new(registry.index_url).unwrap();
             let mut error: *mut GError = null_mut();
-            let attr_url = b"url\0".as_ptr() as *const gchar;
+            let attr_url = c"url".as_ptr() as *const gchar;
             let schema = schema();
             match action {
                 cargo_credential::Action::Get(_) => unsafe {
@@ -210,7 +210,7 @@ mod linux {
                     unsafe {
                         secret_password_store_sync(
                             &schema,
-                            b"default\0".as_ptr() as *const gchar,
+                            c"default".as_ptr() as *const gchar,
                             label.as_ptr(),
                             token.as_ptr(),
                             null_mut(),
