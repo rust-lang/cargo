@@ -245,7 +245,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     remaining_ids.push(*other_pkg_id);
                 }
             }
-            let remaining_packages = if !remaining_ids.is_empty() {
+            let failed_list = if !remaining_ids.is_empty() {
                 Some(package_list(remaining_ids.into_iter(), "and"))
             } else {
                 None
@@ -259,8 +259,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 &mut registry,
                 source_ids.original,
                 opts.dry_run,
-                Some(&plan),
-                Some(&ready_packages),
+                failed_list,
             )?;
             to_confirm.insert(*pkg_id);
 
@@ -344,9 +343,9 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 // be confirmed.
                 break;
             } else {
-                let remaining_packages = package_list(plan.iter(), "and");
+                let failed_list = package_list(plan.iter(), "and");
                 bail!(
-                    "unable to publish {remaining_packages} due to a timeout while waiting for published dependencies to be available."
+                    "unable to publish {failed_list} due to a timeout while waiting for published dependencies to be available."
                 );
             }
         }
@@ -649,8 +648,7 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
-    plan: Option<&PublishPlan>,
-    ready_packages: Option<&BTreeSet<PackageId>>,
+    failed_list: Option<String>,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -662,22 +660,12 @@ fn transmit(
 
     let warnings = registry.publish(&new_crate, tarball).with_context(|| {
         let mut error_msg = format!(
-            "failed to publish package '{}' to registry at {}",
-            pkg.name(),
-            registry.host()
+            "failed to publish to registry at {}\nPackage: {}",
+            registry.host(),
+            pkg.name()
         );
-        // Calculate remaining packages only if plan and ready_packages are provided
-        if let (Some(plan), Some(ready_packages)) = (plan, ready_packages) {
-            let mut remaining_ids = plan.iter().collect::<Vec<_>>();
-            for other_pkg_id in ready_packages {
-                if other_pkg_id != &pkg.package_id() {
-                    remaining_ids.push(*other_pkg_id);
-                }
-            }
-            if !remaining_ids.is_empty() {
-                let remaining = package_list(remaining_ids.into_iter(), "and");
-                error_msg.push_str(&format!("\n\nRemaining packages to publish: {}", remaining));
-            }
+        if let Some(remaining) = &failed_list {
+            error_msg.push_str(&format!("\n\nRemaining packages to publish: {}", remaining));
         }
         error_msg
     })?;
