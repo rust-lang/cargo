@@ -4497,8 +4497,8 @@ fn workspace_publish_error_reporting() {
         .file("c/src/lib.rs", "")
         .build();
 
-    // This test demonstrates current inadequate error reporting during workspace publishing.
-    // When a publish fails, users don't know which package failed or which packages are still pending.
+    // This test demonstrates improved error reporting during workspace publishing.
+    // Now when a publish fails, users can see which packages are still pending.
     p.cargo("publish --registry alternative")
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4579,6 +4579,110 @@ fn transmit_error_includes_package_name() {
 [UPLOADING] my-package v0.1.0 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 Package: my-package
+
+Caused by:
+  the remote server responded with an error (status 500 Internal Server Error): Server error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_transmit_error_includes_remaining_packages() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |req, _| {
+            // Parse the request to get the crate name
+            let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
+            let is_first_package = body.contains(r#""name":"a""#);
+            
+            if is_first_package {
+                // Simulate server error on the first package
+                Response {
+                    body: br#"{"errors": [{"detail": "Server error"}]}"#.to_vec(),
+                    code: 500,
+                    headers: vec![],
+                }
+            } else {
+                // Other packages would succeed
+                Response {
+                    body: br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#.to_vec(),
+                    code: 200,
+                    headers: vec![],
+                }
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "a"
+                repository = "bar"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "b"
+                repository = "bar"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "c"
+                repository = "bar"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // This should fail when trying to publish package a and show remaining packages
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v0.1.0 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+Package: a
+
+Remaining packages to publish: b v0.1.0 and c v0.1.0
 
 Caused by:
   the remote server responded with an error (status 500 Internal Server Error): Server error
