@@ -658,15 +658,17 @@ fn transmit(
         return Ok(());
     }
 
-    let warnings = registry
-        .publish(&new_crate, tarball)
-        .with_context(|| {
-            let mut error_msg = format!("failed to publish to registry at {}\nPackage: {}", registry.host(), pkg.name());
-            if let Some(remaining) = &remaining_packages {
-                error_msg.push_str(&format!("\n\nRemaining packages to publish: {}", remaining));
-            }
-            error_msg
-        })?;
+    let warnings = registry.publish(&new_crate, tarball).with_context(|| {
+        let mut error_msg = format!(
+            "failed to publish to registry at {}\nPackage: {}",
+            registry.host(),
+            pkg.name()
+        );
+        if let Some(remaining) = &remaining_packages {
+            error_msg.push_str(&format!("\n\nRemaining packages to publish: {}", remaining));
+        }
+        error_msg
+    })?;
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(

@@ -4420,7 +4420,7 @@ fn workspace_publish_error_reporting() {
             // Parse the request to get the crate name
             let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
             let is_second_package = body.contains(r#""name":"b""#);
-            
+
             if is_second_package {
                 // Simulate rate limit error on the second package
                 Response {
@@ -4594,9 +4594,13 @@ fn workspace_transmit_error_includes_remaining_packages() {
         .http_api()
         .add_responder("/api/v1/crates/new", |req, _| {
             // Parse the request to get the crate name
-            let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
+            let body = req
+                .body
+                .as_ref()
+                .map(|b| String::from_utf8_lossy(b))
+                .unwrap_or_default();
             let is_first_package = body.contains(r#""name":"a""#);
-            
+
             if is_first_package {
                 // Simulate server error on the first package
                 Response {
@@ -4607,7 +4611,9 @@ fn workspace_transmit_error_includes_remaining_packages() {
             } else {
                 // Other packages would succeed
                 Response {
-                    body: br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#.to_vec(),
+                    body:
+                        br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#
+                            .to_vec(),
                     code: 200,
                     headers: vec![],
                 }
