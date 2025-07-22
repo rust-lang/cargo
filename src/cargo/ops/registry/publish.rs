@@ -237,20 +237,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 )?));
             }
 
-            // Calculate remaining packages for error reporting
-            // Include packages still in the plan plus other ready packages not yet processed
-            let mut remaining_ids = plan.iter().collect::<Vec<_>>();
-            for other_pkg_id in &ready_packages {
-                if other_pkg_id != pkg_id {
-                    remaining_ids.push(*other_pkg_id);
-                }
-            }
-            let failed_list = if !remaining_ids.is_empty() {
-                Some(package_list(remaining_ids.into_iter(), "and"))
-            } else {
-                None
-            };
-
             transmit(
                 opts.gctx,
                 ws,
@@ -259,7 +245,9 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 &mut registry,
                 source_ids.original,
                 opts.dry_run,
-                failed_list,
+                &plan,
+                &ready_packages,
+                *pkg_id,
             )?;
             to_confirm.insert(*pkg_id);
 
@@ -648,7 +636,9 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
-    failed_list: Option<String>,
+    plan: &PublishPlan,
+    ready_packages: &BTreeSet<PackageId>,
+    current_pkg_id: PackageId,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -659,10 +649,22 @@ fn transmit(
     }
 
     let warnings = registry.publish(&new_crate, tarball).with_context(|| {
+        // Only calculate failed_list if an error occurs
+        let mut remaining_ids = plan.iter().collect::<Vec<_>>();
+        for other_pkg_id in ready_packages {
+            if *other_pkg_id != current_pkg_id {
+                remaining_ids.push(*other_pkg_id);
+            }
+        }
+        let failed_list = if !remaining_ids.is_empty() {
+            Some(package_list(remaining_ids.into_iter(), "and"))
+        } else {
+            None
+        };
         let mut error_msg = format!(
-            "failed to publish to registry at {}\nPackage: {}",
-            registry.host(),
-            pkg.name()
+            "failed to publish package '{}' to registry at {}",
+            pkg.name(),
+            registry.host()
         );
         if let Some(remaining) = &failed_list {
             error_msg.push_str(&format!("\n\nRemaining packages to publish: {}", remaining));
