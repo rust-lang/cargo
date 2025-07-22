@@ -4413,17 +4413,16 @@ fn workspace_publish_error_reporting() {
         .add_responder("/api/v1/crates/new", |req, _| {
             // Parse the request to get the crate name
             let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
-            let is_second_package = body.contains(r#""name":"b""#);
-
-            if is_second_package {
-                // Simulate rate limit error on the second package
+            let is_first_package = body.contains(r#"name":"a""#);
+            if is_first_package {
+                // Simulate a timeout error immediately for the first package
                 Response {
-                    body: br#"{"errors": [{"detail": "You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased."}]}"#.to_vec(),
-                    code: 429,
+                    body: br#"{"errors": [{"detail": "timed out waiting for a v0.1.0 to be available in registry `alternative`"}]}"#.to_vec(),
+                    code: 504,
                     headers: vec![],
                 }
             } else {
-                // First package succeeds
+                // Other packages would succeed
                 Response {
                     body: br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#.to_vec(),
                     code: 200,
@@ -4521,12 +4520,12 @@ fn workspace_publish_error_reporting() {
 [COMPILING] c v0.1.0 ([ROOT]/foo/target/package/c-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
-[UPLOADED] a v0.1.0 to registry `alternative`
-[NOTE] waiting for a v0.1.0 to be available at registry `alternative`.
-2 remaining crates to be published
-[WARNING] timed out waiting for a v0.1.0 to be available in registry `alternative`
-[NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
-[ERROR] unable to publish b v0.1.0 and c v0.1.0 due to a timeout while waiting for published dependencies to be available.
+[ERROR] failed to publish package 'a' to registry at http://127.0.0.1:[..]/
+
+Remaining packages to publish: b v0.1.0 and c v0.1.0
+
+Caused by:
+  the remote server responded with an error (status 504 Gateway Timeout): timed out waiting for a v0.1.0 to be available in registry `alternative`
 
 "#]])
         .run();
