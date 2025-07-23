@@ -1347,7 +1347,7 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     git::commit(&repo);
 
     // Changing files outside pkg root under situations below should be treated
-    // as dirty. `cargo package` is expected to fail on VCS stastus check.
+    // as dirty. `cargo package` is expected to fail on VCS status check.
     //
     // * Changes in files outside package root that source files symlink to
     p.change_file("README.md", "after");
@@ -1355,7 +1355,7 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
     p.change_file("original-dir/file", "after");
     // * Changes in files outside pkg root that `license-file`/`readme` point to
     p.change_file("LICENSE", "after");
-    // * When workspace root manifest has changned,
+    // * When workspace root manifest has changed,
     //   no matter whether workspace inheritance is involved.
     p.change_file(
         "Cargo.toml",
@@ -1367,7 +1367,7 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
             edition = "2021"
         "#,
     );
-    // Changes in files outside git workdir won't affect vcs status check
+    // Changes in files outside git workdir won't affect VCS status check
     p.change_file(
         &main_outside_pkg_root,
         r#"fn main() { eprintln!("after"); }"#,
@@ -1470,13 +1470,16 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
     p.symlink("submodule/file.txt", "isengard/src/file.txt");
     git::add(&repo);
     git::commit(&repo);
-    // This dirtyness should be detected in the future.
     p.change_file("submodule/file.txt", "changed");
 
     p.cargo("package --workspace --no-verify")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
-[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+isengard/src/file.txt
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
