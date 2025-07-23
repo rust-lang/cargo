@@ -254,8 +254,12 @@ fn parse_edge_kinds(
             |es| {
                 es.flat_map(|e| e.split(','))
                     .filter(|e| {
-                        no_proc_macro = *e == "no-proc-macro";
-                        !no_proc_macro
+                        if *e == "no-proc-macro" {
+                            no_proc_macro = true;
+                            false
+                        } else {
+                            true
+                        }
                     })
                     .collect()
             },

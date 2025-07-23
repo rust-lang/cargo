@@ -2318,3 +2318,51 @@ foo v1.0.0 ([ROOT]/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn no_proc_macro_order() {
+    Package::new("dep", "1.0.0").publish();
+    Package::new("pm", "1.0.0").proc_macro(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            pm = "1.0"
+            dep = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── dep v1.0.0
+└── pm v1.0.0 (proc-macro)
+
+"#]])
+        .run();
+
+    // no-proc-macro combined with other edge kinds
+    p.cargo("tree -e normal,no-proc-macro")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── dep v1.0.0
+
+"#]])
+        .run();
+
+    // change flag order, expecting the same output
+    p.cargo("tree -e no-proc-macro,normal")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── dep v1.0.0
+
+"#]])
+        .run();
+}
