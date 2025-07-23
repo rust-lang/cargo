@@ -3162,9 +3162,10 @@ fn dirty_submodule() {
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+[ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
 .gitmodules
+src/lib.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
@@ -3208,9 +3209,10 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+[ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
 src/.gitmodules
+src/bar/mod.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
