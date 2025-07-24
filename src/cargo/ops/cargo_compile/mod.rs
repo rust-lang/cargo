@@ -46,6 +46,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation}
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::dependency::ArtifactTarget;
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -288,15 +289,37 @@ pub fn create_bcx<'a, 'gctx>(
     } = resolve;
 
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
-        let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
-            ws,
-            &mut target_data,
-            &build_config,
-            crates,
-            &build_config.requested_kinds,
-        )?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
+        let mut required_kinds = build_config.requested_kinds.to_vec();
+
+        required_kinds.extend(pkg_set.packages().flat_map(|pkg| {
+            let manifest = pkg.manifest();
+            manifest.forced_kind()
+        }));
+
+        if let Some(requested_std) = gctx.cli_unstable().build_std_targets.as_ref() {
+            required_kinds.retain(|n| match n {
+                CompileKind::Host => false,
+                CompileKind::Target(n) => requested_std.contains(n),
+            });
+        }
+
+        if required_kinds.is_empty() {
+            tracing::trace!("No host targets requested with build-std");
+            None
+        } else {
+            tracing::trace!("Host targets requested with build-std: {required_kinds:#?}");
+
+            let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
+                ws,
+                &mut target_data,
+                &build_config,
+                crates,
+                &required_kinds,
+            )?;
+
+            pkg_set.add_set(std_package_set);
+            Some((std_resolve, std_features))
+        }
     } else {
         None
     };
@@ -415,18 +438,70 @@ pub fn create_bcx<'a, 'gctx>(
         };
 
         let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
-            let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
-            standard_lib::generate_std_roots(
-                &crates,
-                &targeted_root_units,
-                std_resolve,
-                std_features,
-                &explicit_host_kinds,
-                &pkg_set,
-                interner,
-                &profiles,
-                &target_data,
-            )?
+            // Force kinds that require a std build were not collected previously. They must be
+            // present within `build_unit_dependencies` which then attaches std-deps and their
+            // std-roots, by target definition.
+            let mut required_kinds: Vec<_> = packages
+                .iter()
+                .flat_map(|pkg| {
+                    let tr = resolve.transitive_deps_not_replaced(pkg.package_id());
+                    tr.filter_map(|(_, dependency)| match dependency.artifact()?.target()? {
+                        ArtifactTarget::BuildDependencyAssumeTarget => None,
+                        ArtifactTarget::Force(target) => Some(target),
+                    })
+                })
+                .map(CompileKind::Target)
+                .collect();
+
+            if let Some(requested_std) = gctx.cli_unstable().build_std_targets.as_ref() {
+                required_kinds.retain(|n| match n {
+                    CompileKind::Host => true,
+                    CompileKind::Target(n) => requested_std.contains(n),
+                });
+            }
+
+            let custom_targets;
+            let std_build = if !required_kinds.is_empty() {
+                let (_std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
+                    ws,
+                    &mut target_data,
+                    &build_config,
+                    crates,
+                    &required_kinds,
+                )?;
+
+                custom_targets = (std_resolve, std_features);
+                // to_builds.extend(std_package_set.packages());
+                Some(&custom_targets)
+            } else {
+                std_resolve_features.as_ref()
+            };
+
+            let target_kinds = if !required_kinds.is_empty() {
+                tracing::trace!("Build-std artifact targets for {specs:?}: {required_kinds:#?}");
+                &required_kinds
+            } else {
+                tracing::trace!("Build-std host for {specs:?}: {explicit_host_kinds:#?}");
+                &explicit_host_kinds
+            };
+
+            if let Some((std_resolve, std_features)) = std_build {
+                tracing::trace!("Build std targets for {specs:?}: {required_kinds:?}");
+
+                standard_lib::generate_std_roots(
+                    &crates,
+                    &targeted_root_units,
+                    std_resolve,
+                    std_features,
+                    target_kinds,
+                    &pkg_set,
+                    interner,
+                    &profiles,
+                    &target_data,
+                )?
+            } else {
+                Default::default()
+            }
         } else {
             Default::default()
         };

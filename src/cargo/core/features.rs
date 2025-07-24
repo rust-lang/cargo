@@ -129,6 +129,7 @@ use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::GlobalContext;
+use crate::core::compiler::CompileTarget;
 use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
@@ -824,6 +825,8 @@ unstable_cli_options!(
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    #[serde(deserialize_with = "deserialize_target_list")]
+    build_std_targets: Option<Vec<CompileTarget>>  = ("Configure a list of targets that cargo should compile the standard library for"),
     cargo_lints: bool = ("Enable the `[lints.cargo]` table"),
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
@@ -1176,6 +1179,32 @@ fn parse_gitoxide(
     Ok(Some(out))
 }
 
+fn deserialize_target_list<'de, D>(deserializer: D) -> Result<Option<Vec<CompileTarget>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error as _;
+
+    let targets = deserialize_comma_separated_list(deserializer)?;
+
+    let Some(targets) = targets else {
+        return Ok(None);
+    };
+
+    let targets = targets
+        .into_iter()
+        .map(|s| match CompileTarget::new(&s) {
+            Ok(target) => Ok(target),
+            Err(err) => Err(D::Error::custom(err)),
+        })
+        // Dedup
+        .collect::<Result<BTreeSet<_>, D::Error>>()?
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    Ok(Some(targets))
+}
+
 impl CliUnstable {
     /// Parses `-Z` flags from the command line, and returns messages that warn
     /// if any flag has alreardy been stabilized.
@@ -1336,6 +1365,16 @@ impl CliUnstable {
             "bindeps" => self.bindeps = parse_empty(k, v)?,
             "build-dir" => self.build_dir = parse_empty(k, v)?,
             "build-std" => self.build_std = Some(parse_list(v)),
+            "build-std-targets" => {
+                self.build_std_targets = Some(
+                    parse_list(v)
+                        .into_iter()
+                        .map(|s| CompileTarget::new(&s))
+                        .collect::<CargoResult<BTreeSet<_>>>()?
+                        .into_iter()
+                        .collect(),
+                )
+            }
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,

@@ -174,24 +174,27 @@ fn attach_std_deps(
     std_unit_deps: UnitGraph,
 ) {
     // Attach the standard library as a dependency of every target unit.
-    let mut found = false;
+    let mut found = HashSet::new();
     for (unit, deps) in state.unit_dependencies.iter_mut() {
         if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
-                unit: unit.clone(),
-                unit_for: UnitFor::new_normal(unit.kind),
-                extern_crate_name: unit.pkg.name(),
-                dep_name: None,
-                // TODO: Does this `public` make sense?
-                public: true,
-                noprelude: true,
-            }));
-            found = true;
+            if let Some(std_build) = std_roots.get(&unit.kind) {
+                deps.extend(std_build.iter().map(|unit| UnitDep {
+                    unit: unit.clone(),
+                    unit_for: UnitFor::new_normal(unit.kind),
+                    extern_crate_name: unit.pkg.name(),
+                    dep_name: None,
+                    // TODO: Does this `public` make sense?
+                    public: true,
+                    noprelude: true,
+                }));
+
+                found.insert(unit.kind);
+            }
         }
     }
     // And also include the dependencies of the standard library itself. Don't
     // include these if no units actually needed the standard library.
-    if found {
+    if !found.is_empty() {
         for (unit, deps) in std_unit_deps.into_iter() {
             if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
                 panic!("std unit collision with existing unit: {:?}", other_unit);
