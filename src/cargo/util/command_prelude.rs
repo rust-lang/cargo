@@ -732,7 +732,7 @@ Run `{cmd}` to see possible targets."
     fn compile_options(
         &self,
         gctx: &GlobalContext,
-        mode: UserIntent,
+        intent: UserIntent,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
@@ -805,7 +805,7 @@ Run `{cmd}` to see possible targets."
             self.jobs()?,
             self.keep_going(),
             &self.targets()?,
-            mode,
+            intent,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
@@ -901,11 +901,11 @@ Run `{cmd}` to see possible targets."
     fn compile_options_for_single_package(
         &self,
         gctx: &GlobalContext,
-        mode: UserIntent,
+        intent: UserIntent,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
-        let mut compile_opts = self.compile_options(gctx, mode, workspace, profile_checking)?;
+        let mut compile_opts = self.compile_options(gctx, intent, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(restricted_names::is_glob_pattern) {
             anyhow::bail!("Glob patterns on package selection are not supported.")
