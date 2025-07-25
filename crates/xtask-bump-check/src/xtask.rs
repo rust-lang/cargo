@@ -202,13 +202,29 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     if github {
         println!("::group::SemVer Checks against crates.io");
     }
+
     let mut cmd = ProcessBuilder::new("cargo");
     cmd.arg("semver-checks")
         .arg("check-release")
-        .arg("--workspace");
+        .arg("--workspace")
+        .args(&["--exclude", "cargo"]);
 
     gctx.shell().status("Running", &cmd)?;
     cmd.exec()?;
+
+    // Cargo has mutually exclusive features for different HTTP backends, so
+    // pass a specific `--features` instead of including this in the
+    // `--all-features` performed by the previous command.
+    let mut cmd = ProcessBuilder::new("cargo");
+    cmd.arg("semver-checks")
+        .arg("check-release")
+        .args(&["--package", "cargo"])
+        .arg("--default-features")
+        .args(&["--features", "all-static"]);
+
+    gctx.shell().status("Running", &cmd)?;
+    cmd.exec()?;
+
     if github {
         println!("::endgroup::");
     }
