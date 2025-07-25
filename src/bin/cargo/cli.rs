@@ -16,6 +16,9 @@ use crate::command_prelude::*;
 use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
 use cargo::util::style;
+use crate::third_party_subcommands;
+use clap_complete::engine::SubcommandCandidates;
+use clap_complete::CompletionCandidate;
 
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
@@ -583,6 +586,10 @@ pub fn cli(gctx: &GlobalContext) -> Command {
         // We also want these to come before auto-generated `--help`
         .next_display_order(800)
         .allow_external_subcommands(true)
+        .add(SubcommandCandidates::new(|| {
+            let third_party = third_party_subcommands(gctx);
+            vec![CompletionCandidate::new(third_party)]
+        }))
         .color(color)
         .styles(styles)
         // Provide a custom help subcommand for calling into man pages
