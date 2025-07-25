@@ -224,3 +224,34 @@ fn auth_required() {
         .with_stdout_data(SEARCH_RESULTS)
         .run();
 }
+
+#[cargo_test]
+fn follows_redirect() {
+    let _registry = RegistryBuilder::new()
+        .http_api()
+        .add_responder("/api/v1/crates", |req, _server| {
+            let query = req.url.query().unwrap_or("");
+            let redirect_url = format!("/api/v1/crates/redirected?{}", query);
+            Response {
+                code: 302,
+                headers: vec![format!("Location: {}", redirect_url)],
+                body: vec![],
+            }
+        })
+        .add_responder("/api/v1/crates/redirected", |_, _| Response {
+            code: 200,
+            headers: vec![],
+            body: SEARCH_API_RESPONSE.to_vec(),
+        })
+        .build();
+
+    cargo_process("search postgres")
+        .replace_crates_io(&_registry.index_url())
+        .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
+        .run();
+}
