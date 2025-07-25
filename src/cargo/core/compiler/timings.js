@@ -23,6 +23,42 @@ let UNIT_COORDS = {};
 let REVERSE_UNIT_DEPS = {};
 let REVERSE_UNIT_RMETA_DEPS = {};
 
+const MIN_GRAPH_WIDTH = 200;
+const MAX_GRAPH_WIDTH = 4096;
+
+// How many pixels per second is added by each scale value
+const SCALE_PIXELS_PER_SEC = 8;
+
+function scale_to_graph_width(scale) {
+  // The scale corresponds to `SCALE_PIXELS_PER_SEC` pixels per seconds.
+  // We thus multiply it by that, and the total duration, to get the graph width.
+  const width = scale * SCALE_PIXELS_PER_SEC * DURATION;
+
+  // We then cap the size of the graph. It is hard to view if it is too large, and
+  // browsers may not render a large graph because it takes too much memory.
+  // 4096 is still ridiculously large, and probably won't render on mobile
+  // browsers, but should be ok for many desktop environments.
+  // Also use a minimum width of 200.
+  return Math.max(MIN_GRAPH_WIDTH, Math.min(MAX_GRAPH_WIDTH, width));
+}
+
+// This function performs the reverse of `scale_to_graph_width`.
+function width_to_graph_scale(width) {
+  const maxWidth = Math.min(MAX_GRAPH_WIDTH, width);
+  const minWidth = Math.max(MIN_GRAPH_WIDTH, width);
+
+  const trimmedWidth = Math.max(minWidth, Math.min(maxWidth, width));
+
+  const scale = Math.round(trimmedWidth / (DURATION * SCALE_PIXELS_PER_SEC));
+  return Math.max(1, scale);
+}
+
+// Init scale value and limits based on the client's window width and min/max graph width.
+const scaleElement = document.getElementById('scale');
+scaleElement.min = width_to_graph_scale(MIN_GRAPH_WIDTH);
+scaleElement.max = width_to_graph_scale(MAX_GRAPH_WIDTH);
+scaleElement.value = width_to_graph_scale(window.innerWidth * 0.75);
+
 // Colors from css
 const getCssColor = name => getComputedStyle(document.body).getPropertyValue(name);
 const TEXT_COLOR = getCssColor('--text');
@@ -318,11 +354,7 @@ function setup_canvas(id, width, height) {
 
 function draw_graph_axes(id, graph_height) {
   const scale = document.getElementById('scale').valueAsNumber;
-  // Cap the size of the graph. It is hard to view if it is too large, and
-  // browsers may not render a large graph because it takes too much memory.
-  // 4096 is still ridiculously large, and probably won't render on mobile
-  // browsers, but should be ok for many desktop environments.
-  const graph_width = Math.min(scale * DURATION, 4096);
+  const graph_width = scale_to_graph_width(scale);
   const px_per_sec = graph_width / DURATION;
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;

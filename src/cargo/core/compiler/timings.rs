@@ -776,11 +776,18 @@ static HTML_CANVAS: &str = r#"
 <table class="input-table">
   <tr>
     <td><label for="min-unit-time">Min unit time:</label></td>
-    <td><label for="scale">Scale:</label></td>
+    <td title="Scale corresponds to a number of pixels per second. It is automatically initialized based on your viewport width.">
+      <label for="scale">Scale:</label>
+    </td>
   </tr>
   <tr>
     <td><input type="range" min="0" max="30" step="0.1" value="0" id="min-unit-time"></td>
-    <td><input type="range" min="1" max="50" value="20" id="scale"></td>
+    <!--
+        The scale corresponds to some number of "pixels per second".
+        Its min, max, and initial values are automatically set by JavaScript on page load,
+        based on the client viewport.
+    -->
+    <td><input type="range" min="1" max="100" value="50" id="scale"></td>
   </tr>
   <tr>
     <td><output for="min-unit-time" id="min-unit-time-output"></output></td>
