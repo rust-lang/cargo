@@ -73,7 +73,7 @@
 //! about the format of the registry:
 //!
 //! 1. Each crate will have one file corresponding to it. Each version for a
-//!    crate will just be a line in this file (see [`IndexPackage`] for its
+//!    crate will just be a line in this file (see [`cargo_util_schemas::index::IndexPackage`] for its
 //!    representation).
 //! 2. There will be two tiers of directories for crate names, under which
 //!    crates corresponding to those tiers will be located.
@@ -125,7 +125,7 @@
 //!
 //! Each file in the index is the history of one crate over time. Each line in
 //! the file corresponds to one version of a crate, stored in JSON format (see
-//! the [`IndexPackage`] structure).
+//! the [`cargo_util_schemas::index::IndexPackage`] structure).
 //!
 //! As new versions are published, new lines are appended to this file. **The
 //! only modifications to this file that should happen over time are yanks of a
@@ -181,7 +181,6 @@
 //!         ...
 //! ```
 //!
-//! [`IndexPackage`]: index::IndexPackage
 
 use std::collections::HashSet;
 use std::fs;
