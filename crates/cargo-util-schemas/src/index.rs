@@ -5,6 +5,7 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize, Serialize)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct IndexPackage<'a> {
     /// Name of the package.
     #[serde(borrow)]
@@ -43,6 +44,7 @@ pub struct IndexPackage<'a> {
     ///
     /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
     /// can be `None` if published before then or if not set in the manifest.
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<RustVersion>,
     /// The schema version for this entry.
     ///
@@ -71,6 +73,7 @@ pub struct IndexPackage<'a> {
 
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
 #[derive(Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
@@ -92,8 +95,8 @@ pub struct RegistryDependency<'a> {
     pub target: Option<Cow<'a, str>>,
     /// The dependency kind. "dev", "build", and "normal".
     pub kind: Option<Cow<'a, str>>,
-    // The URL of the index of the registry where this dependency is from.
-    // `None` if it is from the same index.
+    /// The URL of the index of the registry where this dependency is from.
+    /// `None` if it is from the same index.
     pub registry: Option<Cow<'a, str>>,
     /// The original name if the dependency is renamed.
     pub package: Option<Cow<'a, str>>,
@@ -101,8 +104,11 @@ pub struct RegistryDependency<'a> {
     ///
     /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
     pub public: Option<bool>,
+    /// The artifacts to build from this dependency.
     pub artifact: Option<Vec<Cow<'a, str>>>,
+    /// The target for bindep.
     pub bindep_target: Option<Cow<'a, str>>,
+    /// Whether or not this is a library dependency.
     #[serde(default)]
     pub lib: bool,
 }
@@ -142,4 +148,12 @@ fn escaped_char_in_index_json_blob() {
         "links":" \n\t\" "}"#,
     )
     .unwrap();
+}
+
+#[cfg(feature = "unstable-schema")]
+#[test]
+fn dump_index_schema() {
+    let schema = schemars::schema_for!(crate::index::IndexPackage<'_>);
+    let dump = serde_json::to_string_pretty(&schema).unwrap();
+    snapbox::assert_data_eq!(dump, snapbox::file!("../index.schema.json").raw());
 }

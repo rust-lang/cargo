@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IndexPackage",
+  "description": "A single line in the index representing a single version of a package.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name of the package.",
+      "type": "string"
+    },
+    "vers": {
+      "description": "The version of this dependency.",
+      "$ref": "#/$defs/SemVer"
+    },
+    "deps": {
+      "description": "All kinds of direct dependencies of the package, including dev and\nbuild dependencies.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RegistryDependency"
+      }
+    },
+    "features": {
+      "description": "Set of features defined for the package, i.e., `[features]` table.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": {}
+    },
+    "features2": {
+      "description": "This field contains features with new, extended syntax. Specifically,\nnamespaced features (`dep:`) and weak dependencies (`pkg?/feat`).\n\nThis is separated from `features` because versions older than 1.19\nwill fail to load due to not being able to parse the new syntax, even\nwith a `Cargo.lock` file.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "cksum": {
+      "description": "Checksum for verifying the integrity of the corresponding downloaded package.",
+      "type": "string"
+    },
+    "yanked": {
+      "description": "If `true`, Cargo will skip this version when resolving.\n\nThis was added in 2014. Everything in the crates.io index has this set\nnow, so this probably doesn't need to be an option anymore.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "links": {
+      "description": "Native library name this package links to.\n\nAdded early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),\ncan be `None` if published before then.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rust_version": {
+      "description": "Required version of rust\n\nCorresponds to `package.rust-version`.\n\nAdded in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),\ncan be `None` if published before then or if not set in the manifest.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "v": {
+      "description": "The schema version for this entry.\n\nIf this is None, it defaults to version `1`. Entries with unknown\nversions are ignored.\n\nVersion `2` schema adds the `features2` field.\n\nVersion `3` schema adds `artifact`, `bindep_targes`, and `lib` for\nartifact dependencies support.\n\nThis provides a method to safely introduce changes to index entries\nand allow older versions of cargo to ignore newer entries it doesn't\nunderstand. This is honored as of 1.51, so unfortunately older\nversions will ignore it, and potentially misinterpret version 2 and\nnewer entries.\n\nThe intent is that versions older than 1.51 will work with a\npre-existing `Cargo.lock`, but they may not correctly process `cargo\nupdate` or build a lock from scratch. In that case, cargo may\nincorrectly select a new package that uses a new index schema. A\nworkaround is to downgrade any packages that are incompatible with the\n`--precise` flag of `cargo update`.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "vers",
+    "deps",
+    "cksum"
+  ],
+  "$defs": {
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "RegistryDependency": {
+      "description": "A dependency as encoded in the [`IndexPackage`] index JSON.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the dependency. If the dependency is renamed, the original\nwould be stored in [`RegistryDependency::package`].",
+          "type": "string"
+        },
+        "req": {
+          "description": "The SemVer requirement for this dependency.",
+          "type": "string"
+        },
+        "features": {
+          "description": "Set of features enabled for this dependency.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "optional": {
+          "description": "Whether or not this is an optional dependency.",
+          "type": "boolean",
+          "default": false
+        },
+        "default_features": {
+          "description": "Whether or not default features are enabled.",
+          "type": "boolean",
+          "default": true
+        },
+        "target": {
+          "description": "The target platform for this dependency.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "description": "The dependency kind. \"dev\", \"build\", and \"normal\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry": {
+          "description": "The URL of the index of the registry where this dependency is from.\n`None` if it is from the same index.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package": {
+          "description": "The original name if the dependency is renamed.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public": {
+          "description": "Whether or not this is a public dependency. Unstable. See [RFC 1977].\n\n[RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "artifact": {
+          "description": "The artifacts to build from this dependency.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "bindep_target": {
+          "description": "The target for bindep.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lib": {
+          "description": "Whether or not this is a library dependency.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "name",
+        "req"
+      ]
+    }
+  }
+}
