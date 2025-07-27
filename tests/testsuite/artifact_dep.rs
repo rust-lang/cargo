@@ -3395,11 +3395,10 @@ staticlib present: true
     );
 }
 
-#[should_panic]
 #[cargo_test]
 fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
     if cross_compile_disabled() {
-        panic!("panic expected");
+        return;
     }
     let bindeps_target = cross_compile::alternate();
     let native_target = cross_compile::native();
@@ -3486,16 +3485,24 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
         )
         .build();
     p.cargo("test -Z bindeps")
-        .with_stderr_data(str![[""]])
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] arch v0.0.1 ([ROOT]/foo/arch)
+[COMPILING] builder v0.0.1 ([ROOT]/foo/builder)
+[COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 }
 
-#[should_panic]
 #[cargo_test]
 fn artifact_dep_target_does_not_propagate_to_proc_macro() {
     if cross_compile_disabled() {
-        panic!("panic expected");
+        return;
     }
     let bindeps_target = cross_compile::alternate();
     let native_target = cross_compile::native();
@@ -3570,7 +3577,16 @@ fn artifact_dep_target_does_not_propagate_to_proc_macro() {
         )
         .build();
     p.cargo("test -Z bindeps")
-        .with_stderr_data(str![[""]])
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] arch v0.0.1 ([ROOT]/foo/arch)
+[COMPILING] macro v0.0.1 ([ROOT]/foo/macro)
+[COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 }
