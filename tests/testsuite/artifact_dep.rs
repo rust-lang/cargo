@@ -3395,7 +3395,6 @@ staticlib present: true
     );
 }
 
-#[should_panic]
 #[cargo_test]
 fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
     if cross_compile_disabled() {
@@ -3490,7 +3489,6 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
         .run();
 }
 
-#[should_panic]
 #[cargo_test]
 fn artifact_dep_target_does_not_propagate_to_proc_macro() {
     if cross_compile_disabled() {
