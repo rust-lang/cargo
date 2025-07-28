@@ -92,6 +92,50 @@ struct UnitTime {
     sections: HashMap<String, TimingSection>,
 }
 
+impl UnitTime {
+    fn aggregate_sections(&self) -> AggregatedSections {
+        let end = self.duration;
+
+        let codegen_section = self.sections.get("codegen");
+        let link_section = self.sections.get("link");
+
+        // Best case: we know all three sections
+        if let (Some(codegen_section), Some(link_section)) = (codegen_section, link_section) {
+            let link_start = link_section.start;
+            let codegen_end = codegen_section.end.unwrap_or(link_start);
+
+            AggregatedSections::Sections {
+                frontend: SectionData {
+                    start: 0.0,
+                    end: codegen_section.start,
+                },
+                codegen: SectionData {
+                    start: codegen_section.start,
+                    end: codegen_end,
+                },
+                linking: SectionData {
+                    start: link_start,
+                    end: link_section.end.unwrap_or(end),
+                },
+            }
+        } else if let Some(rmeta_time) = self.rmeta_time {
+            // We know at least the .rmeta time
+            AggregatedSections::OnlyCodegenDuration {
+                frontend: SectionData {
+                    start: 0.0,
+                    end: rmeta_time,
+                },
+                codegen: SectionData {
+                    start: rmeta_time,
+                    end,
+                },
+            }
+        } else {
+            AggregatedSections::OnlyTotalDuration
+        }
+    }
+}
+
 /// Periodic concurrency tracking information.
 #[derive(serde::Serialize)]
 struct Concurrency {
@@ -104,6 +148,39 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
+}
+
+/// Postprocessed section data that has both start and an end.
+#[derive(serde::Serialize)]
+struct SectionData {
+    /// Start (relative to the start of the unit)
+    start: f64,
+    /// End (relative to the start of the unit)
+    end: f64,
+}
+
+impl SectionData {
+    fn duration(&self) -> f64 {
+        (self.end - self.start).max(0.0)
+    }
+}
+
+/// Contains post-processed data of individual compilation sections.
+#[derive(serde::Serialize)]
+enum AggregatedSections {
+    /// We know only the total duration
+    OnlyTotalDuration,
+    /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
+    OnlyCodegenDuration {
+        frontend: SectionData,
+        codegen: SectionData,
+    },
+    /// We know the durations of the three individual sections.
+    Sections {
+        frontend: SectionData,
+        codegen: SectionData,
+        linking: SectionData,
+    },
 }
 
 impl<'gctx> Timings<'gctx> {
@@ -476,6 +553,7 @@ impl<'gctx> Timings<'gctx> {
             .enumerate()
             .map(|(i, ut)| (ut.unit.clone(), i))
             .collect();
+
         #[derive(serde::Serialize)]
         struct UnitData {
             i: usize,
@@ -549,6 +627,18 @@ impl<'gctx> Timings<'gctx> {
 
     /// Render the table of all units.
     fn write_unit_table(&self, f: &mut impl Write) -> CargoResult<()> {
+        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
+        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+
+        let has_linking_time = units
+            .iter()
+            .any(|u| matches!(u.aggregate_sections(), AggregatedSections::Sections { .. }));
+        // Skip the linker column if we have no data for it
+        let linking_header = if has_linking_time {
+            "<th>Linking</th>"
+        } else {
+            ""
+        };
         write!(
             f,
             r#"
@@ -558,20 +648,38 @@ impl<'gctx> Timings<'gctx> {
       <th></th>
       <th>Unit</th>
       <th>Total</th>
+      <th>Frontend</th>
       <th>Codegen</th>
+      {linking_header}
       <th>Features</th>
     </tr>
   </thead>
   <tbody>
 "#
         )?;
-        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
-        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+
         for (i, unit) in units.iter().enumerate() {
-            let codegen = match unit.codegen_time() {
+            let format_duration = |section: Option<SectionData>| match section {
+                Some(section) => {
+                    let duration = section.duration();
+                    let pct = (duration / unit.duration) * 100.0;
+                    format!("{duration:.1}s ({:.0}%)", pct)
+                }
                 None => "".to_string(),
-                Some((_rt, ctime, cent)) => format!("{:.1}s ({:.0}%)", ctime, cent),
             };
+            let sections = unit.aggregate_sections();
+            let (frontend, codegen, linking) = match sections {
+                AggregatedSections::OnlyTotalDuration => (None, None, None),
+                AggregatedSections::OnlyCodegenDuration { frontend, codegen } => {
+                    (Some(frontend), Some(codegen), None)
+                }
+                AggregatedSections::Sections {
+                    frontend,
+                    codegen,
+                    linking,
+                } => (Some(frontend), Some(codegen), Some(linking)),
+            };
+
             let features = unit.unit.features.join(", ");
             write!(
                 f,
@@ -582,13 +690,21 @@ impl<'gctx> Timings<'gctx> {
   <td>{:.1}s</td>
   <td>{}</td>
   <td>{}</td>
+  {}
+  <td>{}</td>
 </tr>
 "#,
                 i + 1,
                 unit.name_ver(),
                 unit.target,
                 unit.duration,
-                codegen,
+                format_duration(frontend),
+                format_duration(codegen),
+                if has_linking_time {
+                    format!("<td>{}</td>", format_duration(linking))
+                } else {
+                    "".to_string()
+                },
                 features,
             )?;
         }
@@ -598,15 +714,6 @@ impl<'gctx> Timings<'gctx> {
 }
 
 impl UnitTime {
-    /// Returns the codegen time as (`rmeta_time`, `codegen_time`, percent of total)
-    fn codegen_time(&self) -> Option<(f64, f64, f64)> {
-        self.rmeta_time.map(|rmeta_time| {
-            let ctime = self.duration - rmeta_time;
-            let cent = (ctime / self.duration) * 100.0;
-            (rmeta_time, ctime, cent)
-        })
-    }
-
     fn name_ver(&self) -> String {
         format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
     }
