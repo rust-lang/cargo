@@ -3,6 +3,7 @@ use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 
+mod blanket_hint_mostly_unused;
 mod error;
 mod inherited;
 mod unknown_lints;
