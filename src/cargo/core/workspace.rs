@@ -25,7 +25,9 @@ use crate::util::context::FeatureUnification;
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot};
+use crate::util::lints::{
+    analyze_cargo_lints_table, blanket_hint_mostly_unused, check_im_a_teapot,
+};
 use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{
     Filesystem, GlobalContext, IntoUrl, context::CargoResolverConfig, context::ConfigRelativePath,
@@ -1287,9 +1289,9 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_ws_lints(&self) -> CargoResult<()> {
-        let error_count = 0;
+        let mut error_count = 0;
 
-        let _cargo_lints = match self.root_maybe() {
+        let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {
                 let toml = pkg.manifest().normalized_toml();
                 if let Some(ws) = &toml.workspace {
@@ -1312,6 +1314,19 @@ impl<'gctx> Workspace<'gctx> {
 
         if self.gctx.cli_unstable().cargo_lints {
             // Calls to lint functions go in here
+        }
+
+        // This is a short term hack to allow `blanket_hint_mostly_unused`
+        // to run without requiring `-Zcargo-lints`, which should hopefully
+        // improve the testing expierience while we are collecting feedback
+        if self.gctx.cli_unstable().profile_hint_mostly_unused {
+            blanket_hint_mostly_unused(
+                self.root_maybe(),
+                self.root_manifest(),
+                &cargo_lints,
+                &mut error_count,
+                self.gctx,
+            )?;
         }
 
         if error_count > 0 {
