@@ -1200,10 +1200,17 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
         let mut first_emitted_error = None;
+
+        if self.gctx.cli_unstable().cargo_lints {
+            if let Err(e) = self.emit_ws_lints() {
+                first_emitted_error = Some(e);
+            }
+        }
+
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 if self.gctx.cli_unstable().cargo_lints {
-                    if let Err(e) = self.emit_lints(pkg, &path)
+                    if let Err(e) = self.emit_pkg_lints(pkg, &path)
                         && first_emitted_error.is_none()
                     {
                         first_emitted_error = Some(e);
@@ -1242,7 +1249,7 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+    pub fn emit_pkg_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
         let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
@@ -1270,6 +1277,41 @@ impl<'gctx> Workspace<'gctx> {
             self.gctx,
         )?;
         check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+
+        if error_count > 0 {
+            Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
+                "encountered {error_count} errors(s) while running lints"
+            ))
+            .into())
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn emit_ws_lints(&self) -> CargoResult<()> {
+        let error_count = 0;
+
+        let _cargo_lints = match self.root_maybe() {
+            MaybePackage::Package(pkg) => {
+                let toml = pkg.manifest().normalized_toml();
+                if let Some(ws) = &toml.workspace {
+                    ws.lints.as_ref()
+                } else {
+                    toml.lints.as_ref().map(|l| &l.lints)
+                }
+            }
+            MaybePackage::Virtual(vm) => vm
+                .normalized_toml()
+                .workspace
+                .as_ref()
+                .unwrap()
+                .lints
+                .as_ref(),
+        }
+        .and_then(|t| t.get("cargo"))
+        .cloned()
+        .unwrap_or(manifest::TomlToolLints::default());
+
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
