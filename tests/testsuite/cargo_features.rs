@@ -180,6 +180,64 @@ Caused by:
 }
 
 #[cargo_test]
+fn wrong_kind_of_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["build-dir"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  unknown cargo feature `build-dir`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_syntax() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["bad_feature"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  unknown cargo feature `bad_feature`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn stable_feature_warns() {
     let p = project()
         .file(
