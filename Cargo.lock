@@ -313,7 +313,7 @@ dependencies = [
  "cargo_metadata",
  "flate2",
  "tar",
- "toml 0.9.0",
+ "toml 0.9.2",
 ]
 
 [[package]]
@@ -387,8 +387,8 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.12",
  "time",
- "toml 0.9.0",
- "toml_edit 0.23.0",
+ "toml 0.9.2",
+ "toml_edit 0.23.2",
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
@@ -490,7 +490,7 @@ dependencies = [
  "snapbox",
  "tar",
  "time",
- "toml 0.9.0",
+ "toml 0.9.2",
  "url",
  "walkdir",
  "windows-sys 0.60.2",
@@ -545,7 +545,7 @@ dependencies = [
  "serde_json",
  "snapbox",
  "thiserror 2.0.12",
- "toml 0.9.0",
+ "toml 0.9.2",
  "unicode-xid",
  "url",
 ]
@@ -4557,9 +4557,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.9.0"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f271e09bde39ab52250160a67e88577e0559ad77e9085de6e9051a2c4353f8f8"
+checksum = "ed0aee96c12fa71097902e0bb061a5e1ebd766a6636bb605ba401c45c1650eac"
 dependencies = [
  "indexmap",
  "serde",
@@ -4604,9 +4604,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.23.0"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54449f7f7569ce6f57cda7812361961c0f6a77f720802537b5618585b4a7ff4c"
+checksum = "d1dee9dc43ac2aaf7d3b774e2fba5148212bf2bd9374f4e50152ebe9afd03d42"
 dependencies = [
  "indexmap",
  "serde",
@@ -4619,9 +4619,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5c1c469eda89749d2230d8156a5969a69ffe0d6d01200581cdc6110674d293e"
+checksum = "97200572db069e74c512a14117b296ba0a80a30123fbbb5aa1f4a348f639ca30"
 dependencies = [
  "winnow",
 ]
@@ -4634,9 +4634,9 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
 name = "toml_writer"
-version = "1.0.0"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b679217f2848de74cabd3e8fc5e6d66f40b7da40f8e1954d92054d9010690fd5"
+checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 
 [[package]]
 name = "tower"
@@ -5431,7 +5431,7 @@ dependencies = [
 name = "xtask-stale-label"
 version = "0.0.0"
 dependencies = [
- "toml_edit 0.23.0",
+ "toml_edit 0.23.2",
 ]
 
 [[package]]
