@@ -409,10 +409,7 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().profiles(),
-            MaybePackage::Virtual(vm) => vm.profiles(),
-        }
+        self.root_maybe().profiles()
     }
 
     /// Returns the root path of this workspace.
@@ -907,10 +904,7 @@ impl<'gctx> Workspace<'gctx> {
 
     /// Returns the unstable nightly-only features enabled via `cargo-features` in the manifest.
     pub fn unstable_features(&self) -> &Features {
-        match self.root_maybe() {
-            MaybePackage::Package(p) => p.manifest().unstable_features(),
-            MaybePackage::Virtual(vm) => vm.unstable_features(),
-        }
+        self.root_maybe().unstable_features()
     }
 
     pub fn resolve_behavior(&self) -> ResolveBehavior {
@@ -1262,15 +1256,9 @@ impl<'gctx> Workspace<'gctx> {
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
 
-        let ws_contents = match self.root_maybe() {
-            MaybePackage::Package(pkg) => pkg.manifest().contents(),
-            MaybePackage::Virtual(v) => v.contents(),
-        };
+        let ws_contents = self.root_maybe().contents();
 
-        let ws_document = match self.root_maybe() {
-            MaybePackage::Package(pkg) => pkg.manifest().document(),
-            MaybePackage::Virtual(v) => v.document(),
-        };
+        let ws_document = self.root_maybe().document();
 
         analyze_cargo_lints_table(
             pkg,
@@ -1886,6 +1874,41 @@ impl MaybePackage {
         match self {
             MaybePackage::Package(p) => p.manifest().is_embedded(),
             MaybePackage::Virtual(_) => false,
+        }
+    }
+
+    pub fn contents(&self) -> &str {
+        match self {
+            MaybePackage::Package(p) => p.manifest().contents(),
+            MaybePackage::Virtual(v) => v.contents(),
+        }
+    }
+
+    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
+        match self {
+            MaybePackage::Package(p) => p.manifest().document(),
+            MaybePackage::Virtual(v) => v.document(),
+        }
+    }
+
+    pub fn edition(&self) -> Edition {
+        match self {
+            MaybePackage::Package(p) => p.manifest().edition(),
+            MaybePackage::Virtual(_) => Edition::default(),
+        }
+    }
+
+    pub fn profiles(&self) -> Option<&TomlProfiles> {
+        match self {
+            MaybePackage::Package(p) => p.manifest().profiles(),
+            MaybePackage::Virtual(v) => v.profiles(),
+        }
+    }
+
+    pub fn unstable_features(&self) -> &Features {
+        match self {
+            MaybePackage::Package(p) => p.manifest().unstable_features(),
+            MaybePackage::Virtual(vm) => vm.unstable_features(),
         }
     }
 }
