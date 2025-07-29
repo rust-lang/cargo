@@ -105,6 +105,7 @@ use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use rustfix::diagnostics::Applicability;
+pub(crate) use timings::CompilationSection;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 

@@ -6,7 +6,7 @@ use serde::ser;
 use serde_json::{json, value::RawValue};
 
 use crate::core::Target;
-use crate::core::compiler::CompileMode;
+use crate::core::compiler::{CompilationSection, CompileMode};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -95,6 +95,8 @@ pub struct TimingInfo<'a> {
     pub duration: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rmeta_time: Option<f64>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<(String, CompilationSection)>,
 }
 
 impl<'a> Message for TimingInfo<'a> {
