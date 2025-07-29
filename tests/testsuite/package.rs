@@ -1827,6 +1827,46 @@ fn package_two_kinds_of_deps() {
     p.cargo("package --no-verify").run();
 }
 
+#[cargo_test]
+fn package_should_not_use_build_cache() {
+    Package::new("other", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                other = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build once so that the build cache is populated
+    p.cargo("build").run();
+
+    // Run package and verify we rebuild everything
+    p.cargo("package")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `dummy-registry` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] other v1.0.0
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn package_public_dep() {
     Package::new("bar", "1.0.0").publish();
