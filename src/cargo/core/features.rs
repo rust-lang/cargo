@@ -620,7 +620,28 @@ impl Features {
     ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
         let Some((slot, feature)) = self.status(feature_name) else {
-            bail!("unknown cargo feature `{}`", feature_name)
+            let mut msg = format!("unknown Cargo.toml feature `{feature_name}`\n\n");
+
+            if feature_name.contains('_') {
+                let _ = writeln!(msg, "Feature names must use '-' instead of '_'.");
+            } else {
+                let underscore_name = feature_name.replace('-', "_");
+                if CliUnstable::help()
+                    .iter()
+                    .any(|(option, _)| *option == underscore_name)
+                {
+                    let _ = writeln!(
+                        msg,
+                        "This feature can be enabled via -Z{feature_name} or the `[unstable]` section in config.toml."
+                    );
+                }
+            }
+
+            let _ = writeln!(
+                msg,
+                "See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information."
+            );
+            bail!(msg)
         };
 
         if *slot {
