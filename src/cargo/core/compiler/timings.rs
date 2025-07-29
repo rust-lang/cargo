@@ -64,8 +64,9 @@ pub struct Timings<'gctx> {
     cpu_usage: Vec<(f64, f64)>,
 }
 
-/// Section of compilation.
-struct TimingSection {
+/// Section of compilation (e.g. frontend, backend, linking).
+#[derive(Copy, Clone, serde::Serialize)]
+pub struct CompilationSection {
     /// Start of the section, as an offset in seconds from `UnitTime::start`.
     start: f64,
     /// End of the section, as an offset in seconds from `UnitTime::start`.
@@ -89,7 +90,7 @@ struct UnitTime {
     /// Same as `unlocked_units`, but unlocked by rmeta.
     unlocked_rmeta_units: Vec<Unit>,
     /// Individual compilation section durations, gathered from `--json=timings`.
-    sections: HashMap<String, TimingSection>,
+    sections: HashMap<String, CompilationSection>,
 }
 
 impl UnitTime {
@@ -315,6 +316,7 @@ impl<'gctx> Timings<'gctx> {
                 mode: unit_time.unit.mode,
                 duration: unit_time.duration,
                 rmeta_time: unit_time.rmeta_time,
+                sections: unit_time.sections.clone(),
             }
             .to_json_string();
             crate::drop_println!(self.gctx, "{}", msg);
@@ -723,20 +725,20 @@ impl UnitTime {
             .sections
             .insert(
                 name.to_string(),
-                TimingSection {
+                CompilationSection {
                     start: now - self.start,
                     end: None,
                 },
             )
             .is_some()
         {
-            warn!("Compilation section {name} started more than once");
+            warn!("compilation section {name} started more than once");
         }
     }
 
     fn end_section(&mut self, name: &str, now: f64) {
         let Some(section) = self.sections.get_mut(name) else {
-            warn!("Compilation section {name} ended, but it has no start recorded");
+            warn!("compilation section {name} ended, but it has no start recorded");
             return;
         };
         section.end = Some(now - self.start);
