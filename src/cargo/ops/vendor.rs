@@ -293,7 +293,7 @@ fn sync(
                     registry.unpack_package_in(id, staging_dir.path(), &vendor_this)?;
                 if let Err(e) = fs::rename(&unpacked_src, &dst) {
                     // This fallback is mainly for Windows 10 versions earlier than 1607.
-                    // The destination of `fs::rename` can't be a diretory in older versions.
+                    // The destination of `fs::rename` can't be a directory in older versions.
                     // Can be removed once the minimal supported Windows version gets bumped.
                     tracing::warn!("failed to `mv {unpacked_src:?} {dst:?}`: {e}");
                     let paths: Vec<_> = walkdir(&unpacked_src).map(|e| e.into_path()).collect();
