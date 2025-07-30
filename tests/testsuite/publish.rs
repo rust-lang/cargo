@@ -1341,7 +1341,6 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] bar v1.0.0
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
@@ -3746,7 +3745,6 @@ fn workspace_with_local_deps() {
 [VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level3 v0.0.1
 [COMPILING] level2 v0.0.1
 [COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

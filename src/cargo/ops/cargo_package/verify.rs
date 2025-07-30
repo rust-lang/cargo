@@ -66,10 +66,13 @@ pub fn run_verify(
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
 
+    // When packaging we use an ephemeral workspace but reuse the build cache to reduce
+    // verification time if the user has already compiled the dependencies and the fingerprint
+    // is unchanged.
     let target_dir = if gctx.cli_unstable().build_dir {
         Some(ws.build_dir())
     } else {
-        None
+        Some(ws.target_dir())
     };
 
     let mut ws = Workspace::ephemeral(new_pkg, gctx, target_dir, true)?;
