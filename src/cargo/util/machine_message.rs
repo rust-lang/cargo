@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use cargo_util_schemas::core::PackageIdSpec;
@@ -6,7 +7,7 @@ use serde::ser;
 use serde_json::{json, value::RawValue};
 
 use crate::core::Target;
-use crate::core::compiler::CompileMode;
+use crate::core::compiler::{CompilationSection, CompileMode};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -88,6 +89,12 @@ impl<'a> Message for BuildScript<'a> {
 }
 
 #[derive(Serialize)]
+pub struct TimingInfoCompilationSection {
+    start: f64,
+    end: f64,
+}
+
+#[derive(Serialize)]
 pub struct TimingInfo<'a> {
     pub package_id: PackageIdSpec,
     pub target: &'a Target,
@@ -95,6 +102,7 @@ pub struct TimingInfo<'a> {
     pub duration: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rmeta_time: Option<f64>,
+    pub sections: HashMap<String, CompilationSection>,
 }
 
 impl<'a> Message for TimingInfo<'a> {
