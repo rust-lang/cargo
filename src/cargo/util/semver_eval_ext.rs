@@ -384,7 +384,7 @@ mod matches_prerelease_semantic {
 
     #[test]
     fn test_less_upper_bound() {
-        // Lower bound without prerelase tag, so upper bound equivalent to <I.J.K-0
+        // Lower bound without prerelease tag, so upper bound equivalent to <I.J.K-0
         for r in &[
             req(">1.2.3, <2"),
             req(">1.2.3, <2.0"),
@@ -396,7 +396,7 @@ mod matches_prerelease_semantic {
             assert_match_none(r, &["2.0.0-0", "2.0.0", "2.1.2"]);
         }
 
-        // Lower bound has prerelase tag, so upper bound doesn't change.
+        // Lower bound has prerelease tag, so upper bound doesn't change.
         for r in &[
             req(">1.2.3-0, <2"),
             req(">1.2.3-0, <2.0"),

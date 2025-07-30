@@ -48,7 +48,7 @@ trait BuildStd: Sized {
     ///
     /// The environment is not isolated is to avoid excessive network requests
     /// and downloads. A side effect is `[BLOCKING]` will show up in stderr,
-    /// as a sign of package cahce lock contention when running other build-std
+    /// as a sign of package cache lock contention when running other build-std
     /// tests concurrently.
     fn build_std(&mut self) -> &mut Self;
 
