@@ -19,7 +19,7 @@ repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
 annotate-snippets = "0.11.5"
-anstream = "0.6.19"
+anstream = "0.6.20"
 anstyle = "1.0.11"
 anyhow = "1.0.98"
 base64 = "0.22.1"
@@ -36,12 +36,12 @@ cargo-test-support = { version = "0.8.1", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.24", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.10.1", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.21.0"
-clap = "4.5.40"
-clap_complete = { version = "4.5.54", features = ["unstable-dynamic"] }
+clap = "4.5.43"
+clap_complete = { version = "4.5.56", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.14", path = "crates/crates-io" }
-criterion = { version = "0.6.0", features = ["html_reports"] }
+criterion = { version = "0.7.0", features = ["html_reports"] }
 curl = "0.4.48"
 curl-sys = "0.4.82"
 filetime = "0.2.25"
@@ -50,7 +50,7 @@ git2 = "0.20.2"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
 gix = { version = "0.73.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
-glob = "0.3.2"
+glob = "0.3.3"
 # Pinned due to https://github.com/sunng87/handlebars-rust/issues/711
 handlebars = { version = "=6.3.1", features = ["dir_source"] }
 hex = "0.4.3"
@@ -64,7 +64,7 @@ itertools = "0.14.0"
 jiff = { version = "0.2.15", default-features = false, features = [ "std" ] }
 jobserver = "0.1.33"
 lazycell = "1.3.0"
-libc = "0.2.174"
+libc = "0.2.175"
 libgit2-sys = "0.18.2"
 libloading = "0.8.8"
 memchr = "2.7.5"
@@ -73,27 +73,27 @@ opener = "0.8.2"
 openssl = "0.10.73"
 openssl-sys = "0.9.109"
 os_info = { version = "3.12.0", default-features = false }
-pasetors = { version = "0.7.6", features = ["v3", "paserk", "std", "serde"] }
+pasetors = { version = "0.7.7", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
 percent-encoding = "2.3.1"
 pkg-config = "0.3.32"
 proptest = "1.7.0"
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
-rand = "0.9.1"
+rand = "0.9.2"
 regex = "1.11.1"
-rusqlite = { version = "0.36.0", features = ["bundled"] }
+rusqlite = { version = "0.37.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
 rustfix = { version = "0.9.2", path = "crates/rustfix" }
 same-file = "1.0.6"
-schemars = "1.0.3"
-security-framework = "3.2.0"
+schemars = "1.0.4"
+security-framework = "3.3.0"
 semver = { version = "1.0.26", features = ["serde"] }
 serde = "1.0.219"
 serde-untagged = "0.1.7"
 serde-value = "0.7.0"
 serde_ignored = "0.1.12"
-serde_json = "1.0.140"
+serde_json = "1.0.142"
 sha1 = "0.10.6"
 sha2 = "0.10.9"
 shell-escape = "0.1.5"
@@ -105,8 +105,8 @@ tar = { version = "0.4.44", default-features = false }
 tempfile = "3.20.0"
 thiserror = "2.0.12"
 time = { version = "0.3.41", features = ["parsing", "formatting", "serde"] }
-toml = { version = "0.9.0", default-features = false }
-toml_edit = { version = "0.23.0", features = ["serde"] }
+toml = { version = "0.9.5", default-features = false }
+toml_edit = { version = "0.23.3", features = ["serde"] }
 tracing = { version = "0.1.41", default-features = false, features = ["std"] } # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
