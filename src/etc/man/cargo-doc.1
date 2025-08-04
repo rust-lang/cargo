@@ -10,6 +10,32 @@ cargo\-doc \[em] Build a package\[cq]s documentation
 .SH "DESCRIPTION"
 Build the documentation for the local package and all dependencies. The output
 is placed in \fBtarget/doc\fR in rustdoc\[cq]s usual format.
+.sp
+\fBNote:\fR Cargo\[cq]s documentation is \fIcumulative\fR\&. When you run
+.sp
+.RS 4
+.nf
+cargo doc
+.fi
+.RE
+.sp
+Cargo will preserve any existing HTML in \fBtarget/doc/\fR (including your
+dependencies\[cq] docs) rather than deleting it. Flags like \fB\-\-no\-deps\fR
+simply prevent \fIrebuilding\fR those pages\[em]they will remain until you
+explicitly clean them up.
+.SS "Removing old docs"
+If you truly want to start fresh, you have two options:
+.sp
+.RS 4
+\h'-04' 1.\h'+01'\fB\fBcargo clean \-\-doc\fB\fR
+Deletes \fIall\fR documentation (your crate + dependencies).
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'\fBManual deletion\fR
+To remove only specific dependency folders (for example:
+\fBrm \-rf target/doc/foo\-0.1.0/\fR) without nuking everything else.
+.RE
 .SH "OPTIONS"
 .SS "Documentation Options"
 .sp

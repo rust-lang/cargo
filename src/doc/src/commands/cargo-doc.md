@@ -12,6 +12,28 @@ cargo-doc --- Build a package's documentation
 Build the documentation for the local package and all dependencies. The output
 is placed in `target/doc` in rustdoc's usual format.
 
+**Note:** Cargo's documentation is *cumulative*. When you run
+
+```bash
+cargo doc
+```
+
+Cargo will preserve any existing HTML in `target/doc/` (including your
+dependencies' docs) rather than deleting it. Flags like `--no-deps`
+simply prevent *rebuilding* those pages—they will remain until you
+explicitly clean them up.
+
+### Removing old docs
+
+If you truly want to start fresh, you have two options:
+
+1. **`cargo clean --doc`**
+   Deletes *all* documentation (your crate + dependencies).
+2. **Manual deletion**
+   To remove only specific dependency folders (for example:
+   `rm -rf target/doc/foo-0.1.0/`) without nuking everything else.
+
+
 ## OPTIONS
 
 ### Documentation Options
