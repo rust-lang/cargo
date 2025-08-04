@@ -119,6 +119,8 @@ pub fn rustc_link_arg_bins(flag: &str) {
 /// The `rustc-link-arg-tests` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// a tests target.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 #[track_caller]
 pub fn rustc_link_arg_tests(flag: &str) {
     if flag.contains([' ', '\n']) {
@@ -130,6 +132,8 @@ pub fn rustc_link_arg_tests(flag: &str) {
 /// The `rustc-link-arg-examples` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// an examples target.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 #[track_caller]
 pub fn rustc_link_arg_examples(flag: &str) {
     if flag.contains([' ', '\n']) {
@@ -141,6 +145,8 @@ pub fn rustc_link_arg_examples(flag: &str) {
 /// The `rustc-link-arg-benches` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// a benchmark target.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 #[track_caller]
 pub fn rustc_link_arg_benches(flag: &str) {
     if flag.contains([' ', '\n']) {
