@@ -1785,48 +1785,6 @@ Example:
 cargo +nightly metadata --lockfile-path=$LOCKFILES_ROOT/my-project/Cargo.lock -Z unstable-options
 ```
 
-## package-workspace
-* Tracking Issue: [#10948](https://github.com/rust-lang/cargo/issues/10948)
-
-This allows cargo to package (or publish) multiple crates in a workspace, even
-if they have inter-dependencies. For example, consider a workspace containing
-packages `foo` and `dep`, where `foo` depends on `dep`. Then
-
-```sh
-cargo +nightly -Zpackage-workspace package -p foo -p dep
-```
-
-will package both `foo` and `dep`, while
-
-```sh
-cargo +nightly -Zpackage-workspace publish -p foo -p dep
-```
-
-will publish both `foo` and `dep`.
-If `foo` and `dep` are the only crates in the workspace, you can use the `--workspace`
-flag instead of specifying the crates individually:
-
-```sh
-cargo +nightly -Zpackage-workspace package --workspace
-cargo +nightly -Zpackage-workspace publish --workspace
-```
-
-#### Lock-file behavior
-
-When packaging a binary at the same time as one of its dependencies, the binary
-will be packaged with a lock-file pointing at the dependency's registry entry
-*as though the dependency were already published*, even though it has not yet
-been. In this case, `cargo` needs to know the registry that the dependency
-will eventually be published on. `cargo` will attempt to infer this registry
-by examining the [the `publish` field](manifest.md#the-publish-field), falling back
-to `crates.io` if no `publish` field is set. To explicitly set the registry,
-pass a `--registry` or `--index` flag.
-
-```sh
-cargo +nightly -Zpackage-workspace --registry=my-registry package -p foo -p dep
-cargo +nightly -Zpackage-workspace --index=https://example.com package -p foo -p dep
-```
-
 ## native-completions
 * Original Issue: [#6645](https://github.com/rust-lang/cargo/issues/6645)
 * Tracking Issue: [#14520](https://github.com/rust-lang/cargo/issues/14520)
@@ -2241,6 +2199,10 @@ More information can be found in the [config chapter](config.md#cache).
 ## doctest-xcompile
 
 Doctest cross-compiling is now unconditionally enabled starting in Rust 1.89. Running doctests with `cargo test` will now honor the `--target` flag.
+
+## package-workspace
+
+Multi-package publishing has been stabilized in Rust 1.90.0.
 
 ## compile-time-deps
 
