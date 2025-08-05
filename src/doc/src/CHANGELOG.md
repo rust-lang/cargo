@@ -1,7 +1,7 @@
 # Changelog
 
-## Cargo 1.90 (2025-09-18)
-[c24e1064...HEAD](https://github.com/rust-lang/cargo/compare/c24e1064...HEAD)
+## Cargo 1.91 (2025-10-30)
+[840b83a1...HEAD](https://github.com/rust-lang/cargo/compare/840b83a1...HEAD)
 
 ### Added
 
@@ -9,17 +9,97 @@
 
 ### Fixed
 
-- Expanded error messages around path dependency on `cargo package` and `cargo publish`
-  [#15705](https://github.com/rust-lang/cargo/pull/15705)
-
 ### Nightly only
-
-- feat(toml): Parse support for multiple build scripts
-  [#15630](https://github.com/rust-lang/cargo/pull/15630)
 
 ### Documentation
 
 ### Internal
+
+## Cargo 1.90 (2025-09-18)
+[c24e1064...rust-1.90.0](https://github.com/rust-lang/cargo/compare/c24e1064...rust-1.90.0)
+
+### Added
+
+- 🎉 Stabilize multi-package publishing.
+  This allows cargo to publish multiple crates in a workspace, even if they
+  have inter-dependencies. For example, `cargo publish --workspace` or
+  `cargo publish -p foo -p bar`.
+  Note that `cargo publish` is still non-atomic at this time. If there is a
+  server side error during the publish, the workspace will be left in a
+  partially published state.
+  [#15636](https://github.com/rust-lang/cargo/pull/15636)
+  [#15711](https://github.com/rust-lang/cargo/pull/15711)
+- Added `http.proxy-cainfo` config for proxy TLS certificates.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#httpproxy-cainfo)
+  [#15374](https://github.com/rust-lang/cargo/pull/15374)
+
+### Changed
+
+- cargo-package: Use `gix` to speed up Git status check by 10-20%.
+  [#15534](https://github.com/rust-lang/cargo/pull/15534)
+- Make timings graphs scalable to user's window.
+  [#15766](https://github.com/rust-lang/cargo/pull/15766)
+- Report valid file name when we can't find a build target for `name = "foo.rs"` 
+  [#15707](https://github.com/rust-lang/cargo/pull/15707)
+
+### Fixed
+
+- cargo-credential-libsecret: give FFI correctly-sized object 
+  [#15767](https://github.com/rust-lang/cargo/pull/15767)
+- cargo-publish: includes mainfest paths when verifying
+  [#15705](https://github.com/rust-lang/cargo/pull/15705)
+- cargo-tree: Fixed `no-proc-macro` being overridden by subsequent edges.
+  [#15764](https://github.com/rust-lang/cargo/pull/15764)
+
+### Nightly only
+
+- 🔥 `multiple-build-scripts`: Allows you to have multiple build scripts in your package.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#multiple-build-scripts)
+  [#15630](https://github.com/rust-lang/cargo/pull/15630)
+  [#15704](https://github.com/rust-lang/cargo/pull/15704)
+- 🔥 `-Zprofile-hint-mostly-unused`: Add `[hints]` table in `Cargo.toml`,
+  and a `hints.mostly-unused` hint.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-hint-mostly-unused-option)
+  [#15673](https://github.com/rust-lang/cargo/pull/15673)
+- `-Zfeature-unification`: implemented per-package feature unification
+  [#15684](https://github.com/rust-lang/cargo/pull/15684)
+- `-Zsbom`: Clarify package ID specifications in SBOMs are fully qualified 
+  [#15731](https://github.com/rust-lang/cargo/pull/15731)
+
+### Documentation
+
+### Internal
+
+- build-rs: auto-publish on toolchain release
+  [#15708](https://github.com/rust-lang/cargo/pull/15708)
+- cargo-util-schemas: Expose `IndexPackage`, the description of a package within a Registry Index 
+  [#15770](https://github.com/rust-lang/cargo/pull/15770)
+- ci: update cargo-semver-checks to v0.42.0 
+  [#15730](https://github.com/rust-lang/cargo/pull/15730)
+- perf: Speed up TOML parsing by upgrading toml 
+  [#15736](https://github.com/rust-lang/cargo/pull/15736)
+  [#15779](https://github.com/rust-lang/cargo/pull/15779)
+- test: Rework `cargo-test-support` & `testsuite` to use `CARGO_BIN_EXE_*` for Cargo 
+  [#15692](https://github.com/rust-lang/cargo/pull/15692)
+- test: Use a different lint to simulate diagnostic duplicates
+  [#15713](https://github.com/rust-lang/cargo/pull/15713)
+  [#15717](https://github.com/rust-lang/cargo/pull/15717)
+- test: Switch config tests to use snapshots 
+  [#15729](https://github.com/rust-lang/cargo/pull/15729)
+- test: Remove unnecessary target-c-int-width from target specs 
+  [#15759](https://github.com/rust-lang/cargo/pull/15759)
+- test: Mark cachelock tests that rely on interprocess blocking behaviour as unsupported on AIX. 
+  [#15734](https://github.com/rust-lang/cargo/pull/15734)
+- Expose artifact dependency getters in cargo-as-a-library 
+  [#15753](https://github.com/rust-lang/cargo/pull/15753)
+- Allow using Cargo-as-a-library with gix's reqwest backend 
+  [#15653](https://github.com/rust-lang/cargo/pull/15653)
+- Update to Rust 2024
+  [#15732](https://github.com/rust-lang/cargo/pull/15732)
+- Update dependencies.
+  [#15706](https://github.com/rust-lang/cargo/pull/15706)
+  [#15709](https://github.com/rust-lang/cargo/pull/15709)
+  [#15722](https://github.com/rust-lang/cargo/pull/15722)
 
 ## Cargo 1.89 (2025-08-07)
 [873a0649...rust-1.89.0](https://github.com/rust-lang/cargo/compare/873a0649...rust-1.89.0)
