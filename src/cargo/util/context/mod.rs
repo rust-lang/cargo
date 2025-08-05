@@ -1982,7 +1982,7 @@ impl GlobalContext {
         Ok(())
     }
 
-    /// Returns a list of [target.'`cfg()`'] tables.
+    /// Returns a list of `target.'cfg()'` tables.
     ///
     /// The list is sorted by the table name.
     pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
