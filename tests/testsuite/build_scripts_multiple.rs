@@ -681,7 +681,7 @@ fn build_script_with_conflicts_reverse_sorted() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(0)
         .with_stdout_data(str![[r#"
-Hello, from Build Script 2!
+Hello, from Build Script 1!
 
 "#]])
         .run();
