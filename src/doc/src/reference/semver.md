@@ -2028,6 +2028,8 @@ Mitigation strategies:
   [`#[cfg(accessible(..))]`][cfg-accessible] features which provide an opt-in
   mechanism for new features. These are currently unstable and only available
   in the nightly channel.
+* Use [`package.rust-version`] to declare your package’s compatibility.
+  This allows `cargo update` to avoid introducing an incompatible update.
 
 ### Possibly-breaking: changing the platform and environment requirements {#env-change-requirements}
 
@@ -2296,6 +2298,7 @@ document what your commitments are.
 
 [`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
 [`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
+[`package.rust-version`]: https://doc.rust-lang.org/cargo/reference/rust-version.html
 [`pub use`]: ../../reference/items/use-declarations.html
 [Cargo feature]: features.md
 [Cargo features]: features.md
