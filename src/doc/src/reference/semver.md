@@ -2018,6 +2018,10 @@ previous releases). Just keep in mind that some large projects may not be able
 to update their Rust toolchain rapidly.
 
 Mitigation strategies:
+* Document your package’s minimum-supported Rust version by setting
+  [`package.rust-version`], allowing Cargo’s dependency resolution to
+  attempt to [select older versions of your package] when needed.
+  Be sure to consider the [support expectations] when doing so.
 * Use [Cargo features] to make the new features opt-in.
 * Provide a large window of support for older releases.
 * Copy the source of new standard library items if possible so that you
@@ -2028,6 +2032,9 @@ Mitigation strategies:
   [`#[cfg(accessible(..))]`][cfg-accessible] features which provide an opt-in
   mechanism for new features. These are currently unstable and only available
   in the nightly channel.
+
+[select older versions of your package]: https://doc.rust-lang.org/cargo/reference/resolver.html#rust-version
+[support expectations]: https://doc.rust-lang.org/cargo/reference/rust-version.html#support-expectations
 
 ### Possibly-breaking: changing the platform and environment requirements {#env-change-requirements}
 
@@ -2296,6 +2303,7 @@ document what your commitments are.
 
 [`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
 [`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
+[`package.rust-version`]: https://doc.rust-lang.org/cargo/reference/rust-version.html
 [`pub use`]: ../../reference/items/use-declarations.html
 [Cargo feature]: features.md
 [Cargo features]: features.md
