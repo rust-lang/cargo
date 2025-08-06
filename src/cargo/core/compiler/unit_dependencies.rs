@@ -30,7 +30,9 @@ use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
-use crate::core::{Dependency, Package, PackageId, PackageSet, Target, TargetKind, Workspace};
+use crate::core::{
+    Dependency, Feature, Package, PackageId, PackageSet, Target, TargetKind, Workspace,
+};
 use crate::ops::resolve_all_features;
 use crate::util::GlobalContext;
 use crate::util::interning::InternedString;
@@ -142,8 +144,27 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     // which affect the determinism of the build itself. As a result be sure
     // that dependency lists are always sorted to ensure we've always got a
     // deterministic output.
-    for list in state.unit_dependencies.values_mut() {
-        list.sort();
+    for (unit, list) in &mut state.unit_dependencies {
+        let is_multiple_build_scripts_enabled = unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .require(Feature::multiple_build_scripts())
+            .is_ok();
+
+        if is_multiple_build_scripts_enabled {
+            list.sort_by_key(|unit_dep| {
+                if unit_dep.unit.target.is_custom_build() {
+                    // We do not sort build scripts to preserve the user-defined order.
+                    // In terms of determinism, we are assuming nothing interferes with order from when the user set it in `Cargo.toml` to here
+                    (0, None)
+                } else {
+                    (1, Some(unit_dep.clone()))
+                }
+            });
+        } else {
+            list.sort();
+        }
     }
     trace!("ALL UNIT DEPENDENCIES {:#?}", state.unit_dependencies);
 
