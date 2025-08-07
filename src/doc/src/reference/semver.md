@@ -577,7 +577,7 @@ fn main() {
     let p = Packed { a: 1, b: 2 };
     // Some assumption about the size of the type.
     // Without `packed`, this fails since the size is 4.
-    const _: () = assert!(std::mem::size_of::<Packed>() == 3); // Error: evaluation of constant value failed
+    const _: () = assert!(std::mem::size_of::<Packed>() == 3); // Error: assertion failed
 }
 ```
 
@@ -696,7 +696,7 @@ fn main() {
     let p = Packed { a: 1, b: 2 };
     // Some assumption about the size of the type.
     // The alignment has changed from 8 to 4.
-    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: assertion failed
 }
 ```
 
@@ -734,7 +734,7 @@ fn main() {
     let p = Packed { a: 1, b: 2 };
     // Some assumption about the size of the type.
     // The alignment has changed from 8 to 4.
-    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: evaluation of constant value failed
+    const _: () = assert!(std::mem::align_of::<Packed>() == 8); // Error: assertion failed
 }
 ```
 
