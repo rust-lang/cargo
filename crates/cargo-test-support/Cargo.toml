@@ -1,6 +1,6 @@
 [package]
 name = "cargo-test-support"
-version = "0.8.0"
+version = "0.8.1"
 edition.workspace = true
 rust-version = "1.89"  # MSRV:1
 license.workspace = true

@@ -333,7 +333,7 @@ dependencies = [
  "cargo-platform 0.3.1",
  "cargo-test-support",
  "cargo-util",
- "cargo-util-schemas 0.10.0",
+ "cargo-util-schemas 0.10.1",
  "clap",
  "clap_complete",
  "color-print",
@@ -425,7 +425,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-libsecret"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "cargo-credential",
@@ -434,7 +434,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-macos-keychain"
-version = "0.4.16"
+version = "0.4.17"
 dependencies = [
  "cargo-credential",
  "security-framework",
@@ -442,7 +442,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-wincred"
-version = "0.4.16"
+version = "0.4.17"
 dependencies = [
  "cargo-credential",
  "windows-sys 0.60.2",
@@ -466,11 +466,11 @@ dependencies = [
 
 [[package]]
 name = "cargo-test-macro"
-version = "0.4.5"
+version = "0.4.6"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anstream",
  "anstyle",
@@ -498,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util"
-version = "0.2.23"
+version = "0.2.24"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.1",
@@ -535,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "schemars",
  "semver",
@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "crates-io"
-version = "0.40.13"
+version = "0.40.14"
 dependencies = [
  "curl",
  "percent-encoding",
@@ -3734,7 +3734,7 @@ dependencies = [
  "cargo",
  "cargo-platform 0.3.1",
  "cargo-util",
- "cargo-util-schemas 0.10.0",
+ "cargo-util-schemas 0.10.1",
  "proptest",
  "varisat",
 ]
