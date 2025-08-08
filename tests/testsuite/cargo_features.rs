@@ -173,7 +173,72 @@ fn unknown_feature() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  unknown cargo feature `foo`
+  unknown Cargo.toml feature `foo`
+
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn wrong_kind_of_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["build-dir"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  unknown Cargo.toml feature `build-dir`
+
+  This feature can be enabled via -Zbuild-dir or the `[unstable]` section in config.toml.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_syntax() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["bad_feature"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  unknown Cargo.toml feature `bad_feature`
+
+  Feature names must use '-' instead of '_'.
 
 "#]])
         .run();
