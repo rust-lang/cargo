@@ -1,3 +1,4 @@
+use crates_io::check_token;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -744,6 +745,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
         // Add authorization header.
         if let Some(authorization) = authorization {
             let mut headers = curl::easy::List::new();
+            check_token(&authorization)?;
             headers.append(&format!("Authorization: {}", authorization))?;
             handle.http_headers(headers)?;
         }
