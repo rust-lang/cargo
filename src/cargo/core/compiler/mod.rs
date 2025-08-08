@@ -1095,6 +1095,12 @@ fn add_allow_features(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuild
 ///
 /// [`--error-format`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--error-format-control-how-errors-are-produced
 fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuilder) {
+    let enable_timings = build_runner.bcx.gctx.cli_unstable().section_timings
+        && !build_runner.bcx.build_config.timing_outputs.is_empty();
+    if enable_timings {
+        cmd.arg("-Zunstable-options");
+    }
+
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
@@ -1104,6 +1110,11 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
         }
         _ => {}
     }
+
+    if enable_timings {
+        json.push_str(",timings");
+    }
+
     cmd.arg(json);
 
     let gctx = build_runner.bcx.gctx;
