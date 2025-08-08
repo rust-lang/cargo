@@ -20,7 +20,7 @@ fn case() {
             )
             .file("src/lib.rs", "")
     });
-    let find_head = || (git_repo.head().unwrap().peel_to_commit().unwrap());
+    let find_head = || git_repo.head().unwrap().peel_to_commit().unwrap();
     let head = find_head().id().to_string();
     let git_url = git_dep.url().to_string();
 
