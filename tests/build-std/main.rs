@@ -375,7 +375,7 @@ fn remap_path_scope() {
 [FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/[HOST_TARGET]/release/foo`
 ...
-[..]thread '[..]' panicked at [..]src/main.rs:3:[..]:
+[..]thread [..] panicked at [..]src/main.rs:3:[..]:
 [..]remap to /rustc/<hash>[..]
 [..]at /rustc/[..]/library/std/src/[..]
 [..]at ./src/main.rs:3:[..]
