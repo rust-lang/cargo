@@ -7,6 +7,7 @@ use cargo_util::ProcessBuilder;
 use crate::CargoResult;
 use crate::core::compiler::build_runner::OutputFile;
 use crate::core::compiler::future_incompat::FutureBreakageItem;
+use crate::core::compiler::timings::SectionTiming;
 use crate::util::Queue;
 
 use super::{Artifact, DiagDedupe, Job, JobId, Message};
@@ -141,6 +142,10 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         self.rmeta_required.set(false);
         self.messages
             .push(Message::Finish(self.id, Artifact::Metadata, Ok(())));
+    }
+
+    pub fn on_section_timing_emitted(&self, section: SectionTiming) {
+        self.messages.push(Message::SectionTiming(self.id, section));
     }
 
     /// Drives a [`Job`] to finish. This ensures that a [`Message::Finish`] is

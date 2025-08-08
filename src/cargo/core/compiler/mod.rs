@@ -90,6 +90,7 @@ use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
+use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
@@ -1966,6 +1967,12 @@ fn on_stderr_line_inner(
         }
         state.future_incompat_report(report.future_incompat_report);
         return Ok(true);
+    }
+
+    let res = serde_json::from_str::<SectionTiming>(compiler_message.get());
+    if let Ok(timing_record) = res {
+        state.on_section_timing_emitted(timing_record);
+        return Ok(false);
     }
 
     // Depending on what we're emitting from Cargo itself, we figure out what to
