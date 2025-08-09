@@ -105,7 +105,47 @@ impl UnitTime {
     fn aggregate_sections(&self) -> AggregatedSections {
         let end = self.duration;
 
-        if let Some(rmeta) = self.rmeta_time {
+        if !self.sections.is_empty() {
+            // We have some detailed compilation section timings, so we postprocess them
+            // Since it is possible that we do not have an end timestamp for a given compilation
+            // section, we need to iterate them and if an end is missing, we assign the end of
+            // the section to the start of the following section.
+
+            let mut sections = vec![];
+
+            // The frontend section is currently implicit in rustc, it is assumed to start at
+            // compilation start and end when codegen starts. So we hard-code it here.
+            let mut previous_section = (
+                FRONTEND_SECTION_NAME.to_string(),
+                CompilationSection {
+                    start: 0.0,
+                    end: None,
+                },
+            );
+            for (name, section) in self.sections.clone() {
+                // Store the previous section, potentially setting its end to the start of the
+                // current section.
+                sections.push((
+                    previous_section.0.clone(),
+                    SectionData {
+                        start: previous_section.1.start,
+                        end: previous_section.1.end.unwrap_or(section.start),
+                    },
+                ));
+                previous_section = (name, section);
+            }
+            // Store the last section, potentially setting its end to the end of the whole
+            // compilation.
+            sections.push((
+                previous_section.0.clone(),
+                SectionData {
+                    start: previous_section.1.start,
+                    end: previous_section.1.end.unwrap_or(end),
+                },
+            ));
+
+            AggregatedSections::Sections(sections)
+        } else if let Some(rmeta) = self.rmeta_time {
             // We only know when the rmeta time was generated
             AggregatedSections::OnlyMetadataTime {
                 frontend: SectionData {
@@ -153,6 +193,8 @@ impl SectionData {
 /// Contains post-processed data of individual compilation sections.
 #[derive(serde::Serialize)]
 enum AggregatedSections {
+    /// We know the names and durations of individual compilation sections
+    Sections(Vec<(String, SectionData)>),
     /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
     OnlyMetadataTime {
         frontend: SectionData,
@@ -609,15 +651,44 @@ impl<'gctx> Timings<'gctx> {
         let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
         units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
+        // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
+        // should be Unicode compatible.
+        fn capitalize(s: &str) -> String {
+            let first_char = s
+                .chars()
+                .next()
+                .map(|c| c.to_uppercase().to_string())
+                .unwrap_or_default();
+            format!("{first_char}{}", s.chars().skip(1).collect::<String>())
+        }
+
         // We can have a bunch of situations here.
         // - -Zsection-timings is enabled, and we received some custom sections, in which
         // case we use them to determine the headers.
         // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
         // - We only have total durations, so we don't add any additional headers.
-        let aggregated: Vec<AggregatedSections> =
-            units.iter().map(|u| u.aggregate_sections()).collect();
+        let aggregated: Vec<AggregatedSections> = units
+            .iter()
+            .map(|u|
+                // Normalize the section names so that they are capitalized, so that we can later
+                // refer to them with the capitalized name both when computing headers and when
+                // looking up cells.
+                match u.aggregate_sections() {
+                    AggregatedSections::Sections(sections) => AggregatedSections::Sections(
+                        sections.into_iter()
+                            .map(|(name, data)| (capitalize(&name), data))
+                            .collect()
+                    ),
+                    s => s
+                })
+            .collect();
 
-        let headers: Vec<String> = if aggregated
+        let headers: Vec<String> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
+            AggregatedSections::Sections(sections) => Some(sections),
+            _ => None,
+        }) {
+            sections.into_iter().map(|s| s.0.clone()).collect()
+        } else if aggregated
             .iter()
             .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
         {
@@ -664,6 +735,11 @@ impl<'gctx> Timings<'gctx> {
             let mut cells: HashMap<&str, SectionData> = Default::default();
 
             match &aggregated_sections {
+                AggregatedSections::Sections(sections) => {
+                    for (name, data) in sections {
+                        cells.insert(&name, *data);
+                    }
+                }
                 AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
                     cells.insert(FRONTEND_SECTION_NAME, *frontend);
                     cells.insert(CODEGEN_SECTION_NAME, *codegen);
