@@ -133,7 +133,7 @@ pub use self::job::{Job, Work};
 pub use self::job_state::JobState;
 use super::build_runner::OutputFile;
 use super::custom_build::Severity;
-use super::timings::Timings;
+use super::timings::{SectionTiming, Timings};
 use super::{BuildContext, BuildPlan, BuildRunner, CompileMode, Unit};
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
@@ -374,6 +374,7 @@ enum Message {
     Token(io::Result<Acquired>),
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
+    SectionTiming(JobId, SectionTiming),
 }
 
 impl<'gctx> JobQueue<'gctx> {
@@ -713,6 +714,9 @@ impl<'gctx> DrainState<'gctx> {
             Message::Token(acquired_token) => {
                 let token = acquired_token.context("failed to acquire jobserver token")?;
                 self.tokens.push(token);
+            }
+            Message::SectionTiming(id, section) => {
+                self.timings.unit_section_timing(id, &section);
             }
         }
 
