@@ -13,6 +13,7 @@ use crate::util::{CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use indexmap::IndexMap;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
@@ -97,6 +98,29 @@ struct UnitTime {
     sections: IndexMap<String, CompilationSection>,
 }
 
+const FRONTEND_SECTION_NAME: &str = "Frontend";
+const CODEGEN_SECTION_NAME: &str = "Codegen";
+
+impl UnitTime {
+    fn aggregate_sections(&self) -> AggregatedSections {
+        let end = self.duration;
+
+        if let Some(rmeta) = self.rmeta_time {
+            // We only know when the rmeta time was generated
+            AggregatedSections::OnlyMetadataTime {
+                frontend: SectionData {
+                    start: 0.0,
+                    end: rmeta,
+                },
+                codegen: SectionData { start: rmeta, end },
+            }
+        } else {
+            // We only know the total duration
+            AggregatedSections::OnlyTotalDuration
+        }
+    }
+}
+
 /// Periodic concurrency tracking information.
 #[derive(serde::Serialize)]
 struct Concurrency {
@@ -109,6 +133,33 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
+}
+
+/// Postprocessed section data that has both start and an end.
+#[derive(Copy, Clone, serde::Serialize)]
+struct SectionData {
+    /// Start (relative to the start of the unit)
+    start: f64,
+    /// End (relative to the start of the unit)
+    end: f64,
+}
+
+impl SectionData {
+    fn duration(&self) -> f64 {
+        (self.end - self.start).max(0.0)
+    }
+}
+
+/// Contains post-processed data of individual compilation sections.
+#[derive(serde::Serialize)]
+enum AggregatedSections {
+    /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
+    OnlyMetadataTime {
+        frontend: SectionData,
+        codegen: SectionData,
+    },
+    /// We know only the total duration
+    OnlyTotalDuration,
 }
 
 impl<'gctx> Timings<'gctx> {
@@ -555,6 +606,29 @@ impl<'gctx> Timings<'gctx> {
 
     /// Render the table of all units.
     fn write_unit_table(&self, f: &mut impl Write) -> CargoResult<()> {
+        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
+        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+
+        // We can have a bunch of situations here.
+        // - -Zsection-timings is enabled, and we received some custom sections, in which
+        // case we use them to determine the headers.
+        // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
+        // - We only have total durations, so we don't add any additional headers.
+        let aggregated: Vec<AggregatedSections> =
+            units.iter().map(|u| u.aggregate_sections()).collect();
+
+        let headers: Vec<String> = if aggregated
+            .iter()
+            .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
+        {
+            vec![
+                FRONTEND_SECTION_NAME.to_string(),
+                CODEGEN_SECTION_NAME.to_string(),
+            ]
+        } else {
+            vec![]
+        };
+
         write!(
             f,
             r#"
@@ -564,20 +638,48 @@ impl<'gctx> Timings<'gctx> {
       <th></th>
       <th>Unit</th>
       <th>Total</th>
-      <th>Codegen</th>
+      {headers}
       <th>Features</th>
     </tr>
   </thead>
   <tbody>
-"#
+"#,
+            headers = headers.iter().map(|h| format!("<th>{h}</th>")).join("\n")
         )?;
-        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
-        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
-        for (i, unit) in units.iter().enumerate() {
-            let codegen = match unit.codegen_time() {
+
+        for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
+            let format_duration = |section: Option<SectionData>| match section {
+                Some(section) => {
+                    let duration = section.duration();
+                    let pct = (duration / unit.duration) * 100.0;
+                    format!("{duration:.1}s ({:.0}%)", pct)
+                }
                 None => "".to_string(),
-                Some((_rt, ctime, cent)) => format!("{:.1}s ({:.0}%)", ctime, cent),
             };
+
+            // This is a bit complex, as we assume the most general option - we can have an
+            // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
+            // initiate the cells to be empty, and then try to find a corresponding column for which
+            // we might have data.
+            let mut cells: HashMap<&str, SectionData> = Default::default();
+
+            match &aggregated_sections {
+                AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
+                    cells.insert(FRONTEND_SECTION_NAME, *frontend);
+                    cells.insert(CODEGEN_SECTION_NAME, *codegen);
+                }
+                AggregatedSections::OnlyTotalDuration => {}
+            };
+            let cells = headers
+                .iter()
+                .map(|header| {
+                    format!(
+                        "<td>{}</td>",
+                        format_duration(cells.remove(header.as_str()))
+                    )
+                })
+                .join("\n");
+
             let features = unit.unit.features.join(", ");
             write!(
                 f,
@@ -586,16 +688,14 @@ impl<'gctx> Timings<'gctx> {
   <td>{}.</td>
   <td>{}{}</td>
   <td>{:.1}s</td>
-  <td>{}</td>
-  <td>{}</td>
+  {cells}
+  <td>{features}</td>
 </tr>
 "#,
                 i + 1,
                 unit.name_ver(),
                 unit.target,
                 unit.duration,
-                codegen,
-                features,
             )?;
         }
         write!(f, "</tbody>\n</table>\n")?;
@@ -604,15 +704,6 @@ impl<'gctx> Timings<'gctx> {
 }
 
 impl UnitTime {
-    /// Returns the codegen time as (`rmeta_time`, `codegen_time`, percent of total)
-    fn codegen_time(&self) -> Option<(f64, f64, f64)> {
-        self.rmeta_time.map(|rmeta_time| {
-            let ctime = self.duration - rmeta_time;
-            let cent = (ctime / self.duration) * 100.0;
-            (rmeta_time, ctime, cent)
-        })
-    }
-
     fn name_ver(&self) -> String {
         format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
     }
