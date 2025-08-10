@@ -129,6 +129,7 @@ Each new feature described below should explain how to use it.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
     * [`fix-edition`](#fix-edition) --- A permanently unstable edition migration helper.
+    * [check-target-cfgs](#check-target-cfgs) --- Allows checking unexpected cfgs in `[target.'cfg(...)']`
 
 ## allow-features
 
@@ -1936,6 +1937,31 @@ For example:
 
 ```console
 cargo +nightly fix -Zfix-edition=end=2024,future
+```
+
+## check-target-cfgs
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
+on `rustc --print=check-cfg`.
+
+```sh
+cargo check -Zcargo-lints -Zcheck-target-cfgs
+```
+
+It follows the lint Rust `unexpected_cfgs` lint configuration:
+
+```toml
+[target.'cfg(foo)'.dependencies]
+cfg-if = "1.0"
+
+[lints.cargo.unexpected_cfgs]
+level = "deny"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(foo)']
 ```
 
 # Stabilized and removed features
