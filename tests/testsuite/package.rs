@@ -1827,6 +1827,45 @@ fn package_two_kinds_of_deps() {
     p.cargo("package --no-verify").run();
 }
 
+#[cargo_test]
+fn package_should_use_build_cache() {
+    Package::new("other", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                other = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build once so that the build cache is populated
+    p.cargo("build").run();
+
+    // Run package and verify we do not rebuild the `other` crate
+    p.cargo("package")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `dummy-registry` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn package_public_dep() {
     Package::new("bar", "1.0.0").publish();
@@ -5705,7 +5744,6 @@ fn workspace_with_local_deps() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level3 v0.0.1
 [COMPILING] level2 v0.0.1
 [COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -6614,7 +6652,6 @@ fn workspace_with_renamed_member() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] obeli-sk-utils v0.16.2 ([ROOT]/foo/crates/utils)
 [UNPACKING] obeli-sk-concepts v0.16.2 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] obeli-sk-val-json v0.16.2
 [COMPILING] obeli-sk-concepts v0.16.2
 [COMPILING] obeli-sk-utils v0.16.2 ([ROOT]/foo/target/package/obeli-sk-utils-0.16.2)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -6997,7 +7034,6 @@ fn registry_inference_ignores_unpublishable() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
-[COMPILING] dep v0.1.0 (registry `alternative`)
 [COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
