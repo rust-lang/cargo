@@ -90,6 +90,7 @@ use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
+use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
@@ -104,6 +105,7 @@ use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use rustfix::diagnostics::Applicability;
+pub(crate) use timings::CompilationSection;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
 
@@ -1095,6 +1097,12 @@ fn add_allow_features(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuild
 ///
 /// [`--error-format`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--error-format-control-how-errors-are-produced
 fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuilder) {
+    let enable_timings = build_runner.bcx.gctx.cli_unstable().section_timings
+        && !build_runner.bcx.build_config.timing_outputs.is_empty();
+    if enable_timings {
+        cmd.arg("-Zunstable-options");
+    }
+
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
@@ -1104,6 +1112,11 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
         }
         _ => {}
     }
+
+    if enable_timings {
+        json.push_str(",timings");
+    }
+
     cmd.arg(json);
 
     let gctx = build_runner.bcx.gctx;
@@ -1955,6 +1968,12 @@ fn on_stderr_line_inner(
         }
         state.future_incompat_report(report.future_incompat_report);
         return Ok(true);
+    }
+
+    let res = serde_json::from_str::<SectionTiming>(compiler_message.get());
+    if let Ok(timing_record) = res {
+        state.on_section_timing_emitted(timing_record);
+        return Ok(false);
     }
 
     // Depending on what we're emitting from Cargo itself, we figure out what to

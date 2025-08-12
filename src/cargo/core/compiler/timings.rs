@@ -12,10 +12,13 @@ use crate::util::style;
 use crate::util::{CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
+use indexmap::IndexMap;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::thread::available_parallelism;
 use std::time::{Duration, Instant};
+use tracing::warn;
 
 /// Tracking information for the entire build.
 ///
@@ -63,6 +66,15 @@ pub struct Timings<'gctx> {
     cpu_usage: Vec<(f64, f64)>,
 }
 
+/// Section of compilation (e.g. frontend, backend, linking).
+#[derive(Copy, Clone, serde::Serialize)]
+pub struct CompilationSection {
+    /// Start of the section, as an offset in seconds from `UnitTime::start`.
+    start: f64,
+    /// End of the section, as an offset in seconds from `UnitTime::start`.
+    end: Option<f64>,
+}
+
 /// Tracking information for an individual unit.
 struct UnitTime {
     unit: Unit,
@@ -79,6 +91,74 @@ struct UnitTime {
     unlocked_units: Vec<Unit>,
     /// Same as `unlocked_units`, but unlocked by rmeta.
     unlocked_rmeta_units: Vec<Unit>,
+    /// Individual compilation section durations, gathered from `--json=timings`.
+    ///
+    /// IndexMap is used to keep original insertion order, we want to be able to tell which
+    /// sections were started in which order.
+    sections: IndexMap<String, CompilationSection>,
+}
+
+const FRONTEND_SECTION_NAME: &str = "Frontend";
+const CODEGEN_SECTION_NAME: &str = "Codegen";
+
+impl UnitTime {
+    fn aggregate_sections(&self) -> AggregatedSections {
+        let end = self.duration;
+
+        if !self.sections.is_empty() {
+            // We have some detailed compilation section timings, so we postprocess them
+            // Since it is possible that we do not have an end timestamp for a given compilation
+            // section, we need to iterate them and if an end is missing, we assign the end of
+            // the section to the start of the following section.
+
+            let mut sections = vec![];
+
+            // The frontend section is currently implicit in rustc, it is assumed to start at
+            // compilation start and end when codegen starts. So we hard-code it here.
+            let mut previous_section = (
+                FRONTEND_SECTION_NAME.to_string(),
+                CompilationSection {
+                    start: 0.0,
+                    end: None,
+                },
+            );
+            for (name, section) in self.sections.clone() {
+                // Store the previous section, potentially setting its end to the start of the
+                // current section.
+                sections.push((
+                    previous_section.0.clone(),
+                    SectionData {
+                        start: previous_section.1.start,
+                        end: previous_section.1.end.unwrap_or(section.start),
+                    },
+                ));
+                previous_section = (name, section);
+            }
+            // Store the last section, potentially setting its end to the end of the whole
+            // compilation.
+            sections.push((
+                previous_section.0.clone(),
+                SectionData {
+                    start: previous_section.1.start,
+                    end: previous_section.1.end.unwrap_or(end),
+                },
+            ));
+
+            AggregatedSections::Sections(sections)
+        } else if let Some(rmeta) = self.rmeta_time {
+            // We only know when the rmeta time was generated
+            AggregatedSections::OnlyMetadataTime {
+                frontend: SectionData {
+                    start: 0.0,
+                    end: rmeta,
+                },
+                codegen: SectionData { start: rmeta, end },
+            }
+        } else {
+            // We only know the total duration
+            AggregatedSections::OnlyTotalDuration
+        }
+    }
 }
 
 /// Periodic concurrency tracking information.
@@ -93,6 +173,35 @@ struct Concurrency {
     /// Number of units that are not yet ready, because they are waiting for
     /// dependencies to finish.
     inactive: usize,
+}
+
+/// Postprocessed section data that has both start and an end.
+#[derive(Copy, Clone, serde::Serialize)]
+struct SectionData {
+    /// Start (relative to the start of the unit)
+    start: f64,
+    /// End (relative to the start of the unit)
+    end: f64,
+}
+
+impl SectionData {
+    fn duration(&self) -> f64 {
+        (self.end - self.start).max(0.0)
+    }
+}
+
+/// Contains post-processed data of individual compilation sections.
+#[derive(serde::Serialize)]
+enum AggregatedSections {
+    /// We know the names and durations of individual compilation sections
+    Sections(Vec<(String, SectionData)>),
+    /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
+    OnlyMetadataTime {
+        frontend: SectionData,
+        codegen: SectionData,
+    },
+    /// We know only the total duration
+    OnlyTotalDuration,
 }
 
 impl<'gctx> Timings<'gctx> {
@@ -181,6 +290,7 @@ impl<'gctx> Timings<'gctx> {
             rmeta_time: None,
             unlocked_units: Vec::new(),
             unlocked_rmeta_units: Vec::new(),
+            sections: Default::default(),
         };
         assert!(self.active.insert(id, unit_time).is_none());
     }
@@ -226,11 +336,32 @@ impl<'gctx> Timings<'gctx> {
                 mode: unit_time.unit.mode,
                 duration: unit_time.duration,
                 rmeta_time: unit_time.rmeta_time,
+                sections: unit_time.sections.clone().into_iter().collect(),
             }
             .to_json_string();
             crate::drop_println!(self.gctx, "{}", msg);
         }
         self.unit_times.push(unit_time);
+    }
+
+    /// Handle the start/end of a compilation section.
+    pub fn unit_section_timing(&mut self, id: JobId, section_timing: &SectionTiming) {
+        if !self.enabled {
+            return;
+        }
+        let Some(unit_time) = self.active.get_mut(&id) else {
+            return;
+        };
+        let now = self.start.elapsed().as_secs_f64();
+
+        match section_timing.event {
+            SectionTimingEvent::Start => {
+                unit_time.start_section(&section_timing.name, now);
+            }
+            SectionTimingEvent::End => {
+                unit_time.end_section(&section_timing.name, now);
+            }
+        }
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
@@ -517,6 +648,58 @@ impl<'gctx> Timings<'gctx> {
 
     /// Render the table of all units.
     fn write_unit_table(&self, f: &mut impl Write) -> CargoResult<()> {
+        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
+        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+
+        // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
+        // should be Unicode compatible.
+        fn capitalize(s: &str) -> String {
+            let first_char = s
+                .chars()
+                .next()
+                .map(|c| c.to_uppercase().to_string())
+                .unwrap_or_default();
+            format!("{first_char}{}", s.chars().skip(1).collect::<String>())
+        }
+
+        // We can have a bunch of situations here.
+        // - -Zsection-timings is enabled, and we received some custom sections, in which
+        // case we use them to determine the headers.
+        // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
+        // - We only have total durations, so we don't add any additional headers.
+        let aggregated: Vec<AggregatedSections> = units
+            .iter()
+            .map(|u|
+                // Normalize the section names so that they are capitalized, so that we can later
+                // refer to them with the capitalized name both when computing headers and when
+                // looking up cells.
+                match u.aggregate_sections() {
+                    AggregatedSections::Sections(sections) => AggregatedSections::Sections(
+                        sections.into_iter()
+                            .map(|(name, data)| (capitalize(&name), data))
+                            .collect()
+                    ),
+                    s => s
+                })
+            .collect();
+
+        let headers: Vec<String> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
+            AggregatedSections::Sections(sections) => Some(sections),
+            _ => None,
+        }) {
+            sections.into_iter().map(|s| s.0.clone()).collect()
+        } else if aggregated
+            .iter()
+            .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
+        {
+            vec![
+                FRONTEND_SECTION_NAME.to_string(),
+                CODEGEN_SECTION_NAME.to_string(),
+            ]
+        } else {
+            vec![]
+        };
+
         write!(
             f,
             r#"
@@ -526,20 +709,53 @@ impl<'gctx> Timings<'gctx> {
       <th></th>
       <th>Unit</th>
       <th>Total</th>
-      <th>Codegen</th>
+      {headers}
       <th>Features</th>
     </tr>
   </thead>
   <tbody>
-"#
+"#,
+            headers = headers.iter().map(|h| format!("<th>{h}</th>")).join("\n")
         )?;
-        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
-        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
-        for (i, unit) in units.iter().enumerate() {
-            let codegen = match unit.codegen_time() {
+
+        for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
+            let format_duration = |section: Option<SectionData>| match section {
+                Some(section) => {
+                    let duration = section.duration();
+                    let pct = (duration / unit.duration) * 100.0;
+                    format!("{duration:.1}s ({:.0}%)", pct)
+                }
                 None => "".to_string(),
-                Some((_rt, ctime, cent)) => format!("{:.1}s ({:.0}%)", ctime, cent),
             };
+
+            // This is a bit complex, as we assume the most general option - we can have an
+            // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
+            // initiate the cells to be empty, and then try to find a corresponding column for which
+            // we might have data.
+            let mut cells: HashMap<&str, SectionData> = Default::default();
+
+            match &aggregated_sections {
+                AggregatedSections::Sections(sections) => {
+                    for (name, data) in sections {
+                        cells.insert(&name, *data);
+                    }
+                }
+                AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
+                    cells.insert(FRONTEND_SECTION_NAME, *frontend);
+                    cells.insert(CODEGEN_SECTION_NAME, *codegen);
+                }
+                AggregatedSections::OnlyTotalDuration => {}
+            };
+            let cells = headers
+                .iter()
+                .map(|header| {
+                    format!(
+                        "<td>{}</td>",
+                        format_duration(cells.remove(header.as_str()))
+                    )
+                })
+                .join("\n");
+
             let features = unit.unit.features.join(", ");
             write!(
                 f,
@@ -548,16 +764,14 @@ impl<'gctx> Timings<'gctx> {
   <td>{}.</td>
   <td>{}{}</td>
   <td>{:.1}s</td>
-  <td>{}</td>
-  <td>{}</td>
+  {cells}
+  <td>{features}</td>
 </tr>
 "#,
                 i + 1,
                 unit.name_ver(),
                 unit.target,
                 unit.duration,
-                codegen,
-                features,
             )?;
         }
         write!(f, "</tbody>\n</table>\n")?;
@@ -566,18 +780,49 @@ impl<'gctx> Timings<'gctx> {
 }
 
 impl UnitTime {
-    /// Returns the codegen time as (`rmeta_time`, `codegen_time`, percent of total)
-    fn codegen_time(&self) -> Option<(f64, f64, f64)> {
-        self.rmeta_time.map(|rmeta_time| {
-            let ctime = self.duration - rmeta_time;
-            let cent = (ctime / self.duration) * 100.0;
-            (rmeta_time, ctime, cent)
-        })
-    }
-
     fn name_ver(&self) -> String {
         format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
     }
+
+    fn start_section(&mut self, name: &str, now: f64) {
+        if self
+            .sections
+            .insert(
+                name.to_string(),
+                CompilationSection {
+                    start: now - self.start,
+                    end: None,
+                },
+            )
+            .is_some()
+        {
+            warn!("compilation section {name} started more than once");
+        }
+    }
+
+    fn end_section(&mut self, name: &str, now: f64) {
+        let Some(section) = self.sections.get_mut(name) else {
+            warn!("compilation section {name} ended, but it has no start recorded");
+            return;
+        };
+        section.end = Some(now - self.start);
+    }
+}
+
+/// Start or end of a section timing.
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum SectionTimingEvent {
+    Start,
+    End,
+}
+
+/// Represents a certain section (phase) of rustc compilation.
+/// It is emitted by rustc when the `--json=timings` flag is used.
+#[derive(serde::Deserialize, Debug)]
+pub struct SectionTiming {
+    pub name: String,
+    pub event: SectionTimingEvent,
 }
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {

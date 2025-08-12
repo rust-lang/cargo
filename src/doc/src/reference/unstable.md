@@ -1939,6 +1939,18 @@ For example:
 cargo +nightly fix -Zfix-edition=end=2024,future
 ```
 
+## section-timings
+* Original Pull Request: [#15780](https://github.com/rust-lang/cargo/pull/15780)
+* Tracking Issue: [#15817](https://github.com/rust-lang/cargo/issues/15817)
+
+This feature can be used to extend the output of `cargo build --timings`. It will tell rustc
+to produce timings of individual compilation sections, which will be then displayed in the timings
+HTML/JSON output.
+
+```console
+cargo +nightly -Zsection-timings build --timings
+```
+
 # Stabilized and removed features
 
 ## Compile progress
