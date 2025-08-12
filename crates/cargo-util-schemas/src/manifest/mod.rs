@@ -675,6 +675,10 @@ impl InheritableDependency {
             InheritableDependency::Inherit(_) => Err(UnresolvedError),
         }
     }
+
+    pub fn is_inherited(&self) -> bool {
+        matches!(self, InheritableDependency::Inherit(_))
+    }
 }
 
 impl<'de> de::Deserialize<'de> for InheritableDependency {
