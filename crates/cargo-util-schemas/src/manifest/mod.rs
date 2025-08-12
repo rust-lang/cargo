@@ -351,6 +351,10 @@ impl<T> InheritableField<T> {
             InheritableField::Value(defined) => Some(defined),
         }
     }
+
+    pub fn is_inherited(&self) -> bool {
+        matches!(self, Self::Inherit(_))
+    }
 }
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
