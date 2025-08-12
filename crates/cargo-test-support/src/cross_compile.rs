@@ -38,10 +38,8 @@ pub fn alternate() -> &'static str {
 
 /// A possible alternate target-triple to build with.
 pub(crate) fn try_alternate() -> Option<&'static str> {
-    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+    if cfg!(target_os = "macos") {
         Some("x86_64-apple-darwin")
-    } else if cfg!(target_os = "macos") {
-        Some("x86_64-apple-ios")
     } else if cfg!(target_os = "linux") {
         Some("i686-unknown-linux-gnu")
     } else if cfg!(all(target_os = "windows", target_env = "msvc")) {

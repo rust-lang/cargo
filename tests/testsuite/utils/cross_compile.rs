@@ -124,28 +124,12 @@ pub fn disabled() -> bool {
     install the necessary libraries.
     ",
         );
-    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+    } else if cfg!(target_os = "macos") {
         message.push_str(
             "
     macOS on aarch64 cross tests to target x86_64-apple-darwin.
     This should be natively supported via Xcode, nothing additional besides the
     rustup target should be needed.
-    ",
-        );
-    } else if cfg!(target_os = "macos") {
-        message.push_str(
-            "
-    macOS on x86_64 cross tests to target x86_64-apple-ios, which requires the iOS
-    SDK to be installed. This should be included with Xcode automatically. If you
-    are using the Xcode command line tools, you'll need to install the full Xcode
-    app (from the Apple App Store), and switch to it with this command:
-
-        sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-
-    Some cross-tests want to *run* the executables on the host. These tests will
-    be ignored if this is not possible. On macOS, this means you need an iOS
-    simulator installed to run these tests. To install a simulator, open Xcode, go
-    to preferences > Components, and download the latest iOS simulator.
     ",
         );
     } else if cfg!(target_os = "windows") {
@@ -202,19 +186,6 @@ pub fn can_run_on_host() -> bool {
     if disabled() {
         return false;
     }
-    // macos is currently configured to cross compile to x86_64-apple-ios
-    // which requires a simulator to run. Azure's CI image appears to have the
-    // SDK installed, but are not configured to launch iOS images with a
-    // simulator.
-    if cfg!(target_os = "macos") {
-        if CAN_RUN_ON_HOST.load(Ordering::SeqCst) {
-            return true;
-        } else {
-            println!("Note: Cannot run on host, skipping.");
-            return false;
-        }
-    } else {
-        assert!(CAN_RUN_ON_HOST.load(Ordering::SeqCst));
-        return true;
-    }
+    assert!(CAN_RUN_ON_HOST.load(Ordering::SeqCst));
+    return true;
 }

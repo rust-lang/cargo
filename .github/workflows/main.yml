@@ -143,10 +143,6 @@ jobs:
           os: macos-14
           rust: stable
           other: x86_64-apple-darwin
-        - name: macOS x86_64 nightly
-          os: macos-13
-          rust: nightly
-          other: x86_64-apple-ios
         - name: macOS aarch64 nightly
           os: macos-14
           rust: nightly
