@@ -52,18 +52,18 @@ use std::rc::Rc;
 
 /// The key used in various places to store features for a particular dependency.
 /// The actual discrimination happens with the [`FeaturesFor`] type.
-type PackageFeaturesKey = (PackageId, FeaturesFor);
+pub type PackageFeaturesKey = (PackageId, FeaturesFor);
 /// Map of activated features.
-type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
+pub type ActivateMap = HashMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 
 /// Set of all activated features for all packages in the resolve graph.
 pub struct ResolvedFeatures {
-    activated_features: ActivateMap,
+    pub activated_features: ActivateMap,
     /// Optional dependencies that should be built.
     ///
     /// The value is the `name_in_toml` of the dependencies.
-    activated_dependencies: ActivateMap,
-    opts: FeatureOpts,
+    pub activated_dependencies: ActivateMap,
+    pub opts: FeatureOpts,
 }
 
 /// Options for how the feature resolver works.
