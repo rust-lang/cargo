@@ -78,7 +78,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            let paths: &[PathBuf] = if gctx.cli_unstable().build_dir && build_dir != target_dir {
+            let paths: &[PathBuf] = if build_dir != target_dir {
                 &[
                     target_dir.into_path_unlocked(),
                     build_dir.into_path_unlocked(),

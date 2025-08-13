@@ -389,6 +389,7 @@ fn pkgid_json_message_metadata_consistency() {
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"

@@ -170,6 +170,7 @@ fn multiple_build_scripts_metadata() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"

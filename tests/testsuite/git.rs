@@ -3647,6 +3647,7 @@ fn metadata_master_consistency() {
                 "root": "[..]foo#0.1.0"
               },
               "target_directory": "[..]",
+              "build_directory": "[..]",
               "version": 1,
               "workspace_root": "[..]",
               "metadata": null

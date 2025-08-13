@@ -206,7 +206,6 @@ fn wrong_kind_of_feature() {
 Caused by:
   unknown Cargo.toml feature `build-dir`
 
-  This feature can be enabled via -Zbuild-dir or the `[unstable]` section in config.toml.
   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information.
 
 "#]])

@@ -95,6 +95,7 @@ In summary, the supported environment variables are:
 * `CARGO_BUILD_RUSTDOC` --- The `rustdoc` executable, see [`build.rustdoc`].
 * `CARGO_BUILD_TARGET` --- The default target platform, see [`build.target`].
 * `CARGO_BUILD_TARGET_DIR` --- The default output directory, see [`build.target-dir`].
+* `CARGO_BUILD_BUILD_DIR` --- The default build directory, see [`build.build-dir`].
 * `CARGO_BUILD_RUSTFLAGS` --- Extra `rustc` flags, see [`build.rustflags`].
 * `CARGO_BUILD_RUSTDOCFLAGS` --- Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` --- Incremental compilation, see [`build.incremental`].
@@ -160,6 +161,7 @@ In summary, the supported environment variables are:
 [`build.rustdoc`]: config.md#buildrustdoc
 [`build.target`]: config.md#buildtarget
 [`build.target-dir`]: config.md#buildtarget-dir
+[`build.build-dir`]: config.md#buildbuild-dir
 [`build.rustflags`]: config.md#buildrustflags
 [`build.rustdocflags`]: config.md#buildrustdocflags
 [`build.incremental`]: config.md#buildincremental

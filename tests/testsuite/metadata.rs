@@ -77,6 +77,7 @@ fn cargo_metadata_simple() {
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -190,6 +191,7 @@ crate-type = ["lib", "staticlib"]
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -293,6 +295,7 @@ optional_feat = []
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -612,6 +615,7 @@ fn cargo_metadata_with_deps_and_version() {
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -919,6 +923,7 @@ name = "ex"
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -1028,6 +1033,7 @@ crate-type = ["rlib", "dylib"]
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -1188,6 +1194,7 @@ fn workspace_metadata() {
     "root": null
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
@@ -1410,6 +1417,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
@@ -2044,6 +2052,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
     "root": null
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
@@ -2284,6 +2293,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -2360,6 +2370,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -2469,6 +2480,7 @@ fn cargo_metadata_no_deps_cwd() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -2609,6 +2621,7 @@ fn package_metadata() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -2703,6 +2716,7 @@ fn package_publish() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -2800,6 +2814,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
     "root": "path+[ROOTURL]/foo/target/package/bar-0.5.0#bar@0.5.0"
   },
   "target_directory": "[ROOT]/foo/target/package/bar-0.5.0/target",
+  "build_directory": "[ROOT]/foo/target/package/bar-0.5.0/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/target/package/bar-0.5.0#bar@0.5.0"
@@ -2892,6 +2907,7 @@ fn package_edition_2018() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -3044,6 +3060,7 @@ fn target_edition_2018() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -3284,6 +3301,7 @@ fn rename_dependency() {
     "root": "path+[ROOTURL]/foo#0.0.1"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.0.1"
@@ -3389,6 +3407,7 @@ fn metadata_links() {
     "root": "path+[ROOTURL]/foo#0.5.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.5.0"
@@ -3496,6 +3515,7 @@ fn deps_with_bin_only() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -4160,6 +4180,7 @@ fn dep_kinds() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -4277,6 +4298,7 @@ fn dep_kinds_workspace() {
     "root": "path+[ROOTURL]/foo#0.1.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.1.0"
@@ -4307,16 +4329,15 @@ fn build_dir() {
         )
         .build();
 
-    p.cargo("metadata -Z build-dir")
-        .masquerade_as_nightly_cargo(&["build-dir"])
+    p.cargo("metadata")
         .with_stdout_data(
             str![[r#"
 {
-  "build_directory": "[ROOT]/foo/build-dir",
   "metadata": null,
   "packages": "{...}",
   "resolve": "{...}",
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/build-dir",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.0.1"
@@ -4581,6 +4602,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
   ],
   "resolve": null,
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
@@ -4866,6 +4888,7 @@ fn versionless_packages() {
     "root": null
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.0.0",
@@ -4978,6 +5001,7 @@ local-time = 1979-05-27
     "root": "path+[ROOTURL]/foo#0.0.0"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#0.0.0"
