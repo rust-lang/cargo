@@ -126,6 +126,119 @@ fn simple_cross_config() {
 }
 
 #[cargo_test]
+fn target_host_arg() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                rustc_host()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+                    use std::env;
+                    fn main() {{
+                        assert_eq!(env::consts::ARCH, "{}");
+                    }}
+                "#,
+                cross_compile::native_arch()
+            ),
+        )
+        .build();
+
+    let target = rustc_host();
+    p.cargo("build -v --target host").run();
+    assert!(p.target_bin(target, "foo").is_file());
+
+    if cross_compile_can_run_on_host() {
+        p.process(&p.target_bin(target, "foo")).run();
+    }
+}
+
+#[cargo_test]
+fn target_host_config() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [build]
+                    target = "host"
+                "#,
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                rustc_host()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+                    use std::env;
+                    fn main() {{
+                        assert_eq!(env::consts::ARCH, "{}");
+                    }}
+                "#,
+                cross_compile::native_arch()
+            ),
+        )
+        .build();
+
+    let target = rustc_host();
+    p.cargo("build -v").run();
+    assert!(p.target_bin(target, "foo").is_file());
+
+    if cross_compile_can_run_on_host() {
+        p.process(&p.target_bin(target, "foo")).run();
+    }
+}
+
+#[cargo_test]
 fn simple_deps() {
     if cross_compile_disabled() {
         return;
