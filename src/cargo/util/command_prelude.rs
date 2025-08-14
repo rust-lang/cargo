@@ -1248,14 +1248,17 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = Vec::new();
 
     if let Ok(targets) = get_target_triples_from_rustup() {
-        candidates = targets;
+        candidates.extend(targets);
     }
 
     if candidates.is_empty() {
         if let Ok(targets) = get_target_triples_from_rustc() {
-            candidates = targets;
+            candidates.extend(targets);
         }
     }
+
+    // Allow tab-completion for `host` as the desired target.
+    candidates.push(clap_complete::CompletionCandidate::new("host"));
 
     candidates
 }
