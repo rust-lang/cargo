@@ -1248,12 +1248,12 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = Vec::new();
 
     if let Ok(targets) = get_target_triples_from_rustup() {
-        candidates.extend(targets);
+        candidates = targets;
     }
 
     if candidates.is_empty() {
         if let Ok(targets) = get_target_triples_from_rustc() {
-            candidates.extend(targets);
+            candidates = targets;
         }
     }
 
