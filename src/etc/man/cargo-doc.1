@@ -10,6 +10,8 @@ cargo\-doc \[em] Build a package\[cq]s documentation
 .SH "DESCRIPTION"
 Build the documentation for the local package and all dependencies. The output
 is placed in \fBtarget/doc\fR in rustdoc\[cq]s usual format.
+.sp
+\fBNote:\fR Documentation generation is cumulative: existing doc files in the target directory are preserved across different \fBcargo doc\fR invocations. To remove existing generated docs, pass \fB\-\-doc\fR to \fBcargo\-clean\fR(1).
 .SH "OPTIONS"
 .SS "Documentation Options"
 .sp
