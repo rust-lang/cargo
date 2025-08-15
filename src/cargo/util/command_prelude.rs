@@ -670,7 +670,7 @@ pub trait ArgMatchesExt {
             bail!(
                 "\"--target\" takes a target architecture as an argument.
 
-Run `{cmd}` to see possible targets, or specify `host` to build for the host architecture."
+Run `{cmd}` to see possible targets, or specify `host` for the host architecture."
             );
         }
         Ok(self._values_of("target"))
