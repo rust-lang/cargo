@@ -21,7 +21,7 @@ fn case() {
             .file("src/lib.rs", "")
     });
     let branch = "dev";
-    let find_head = || (git_repo.head().unwrap().peel_to_commit().unwrap());
+    let find_head = || git_repo.head().unwrap().peel_to_commit().unwrap();
     git_repo.branch(branch, &find_head(), false).unwrap();
     let git_url = git_dep.url().to_string();
 
