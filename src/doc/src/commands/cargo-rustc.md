@@ -160,14 +160,16 @@ be specified multiple times, which enables all specified features.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-rustc---target"><a class="option-anchor" href="#option-cargo-rustc---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Build for the given architecture. The default is the host architecture. The general format of the triple is
-<code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>. Run <code>rustc --print target-list</code> for a
-list of supported targets. This flag may be specified multiple times.</p>
-<p>This may also be specified with the <code>build.target</code>
-<a href="../reference/config.html">config value</a>.</p>
-<p>Note that specifying this flag makes Cargo run in a different mode where the
-target artifacts are placed in a separate directory. See the
-<a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
+<dd class="option-desc">Build for the specified target (may be specified multiple times) The default is the host architecture. The general format of the triple is
+<code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>.</p>
+<p>You may specify the following kinds of targets:</p>
+<ul>
+<li>Any supported target in <code>rustc --print target-list</code> (note: you have to install/add the target to use it).</li>
+<li><code>host</code>, which will internally be substituted by the host’s target. This can be particularly useful if you’re cross-compiling some crates, and don’t want to specify your host’s machine as a target (for instance, an <code>xtask</code> in a shared project that may be worked on by many hosts).</li>
+<li>A path to a custom target specification (further reading <a href="https://doc.rust-lang.org/rustc/targets/custom.html#custom-target-lookup-path">here</a>).</li>
+</ul>
+<p>This may also be specified with the <code>build.target</code> <a href="../reference/config.html">config value</a>.</p>
+<p><strong>Note</strong>: Specifying this flag makes Cargo run in a different mode where the target artifacts are placed in a separate directory. See the <a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
 <dt class="option-term" id="option-cargo-rustc--r"><a class="option-anchor" href="#option-cargo-rustc--r"></a><code>-r</code></dt>

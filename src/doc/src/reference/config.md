@@ -459,17 +459,16 @@ Sets the executable to use for `rustdoc`.
 
 The default [target platform triples][target triple] to compile to.
 
-This allows passing either a string or an array of strings. Each string value
-is a target platform triple. The selected build targets will be built for each
-of the selected architectures.
-
-The string value may also be a relative path to a `.json` target spec file.
+You may specify the following kinds of targets:
+- Any supported target in `rustc --print target-list` (note: you have to install/add the target to use it).
+- `host`, which will internally be substituted by the host's target. This can be particularly useful if you're cross-compiling some crates, and don't want to specify your host's machine as a target (for instance, an `xtask` in a shared project that may be worked on by many hosts).
+- A path to a custom target specification (further reading [here](https://doc.rust-lang.org/rustc/targets/custom.html#custom-target-lookup-path)).
 
 Can be overridden with the `--target` CLI option.
 
 ```toml
 [build]
-target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+target = ["host", "x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 ```
 
 #### `build.target-dir`
