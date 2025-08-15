@@ -1,10 +1,21 @@
 # Build cache
 
-Cargo stores the output of a build into the "target" directory. By default,
-this is the directory named `target` in the root of your
-[*workspace*][def-workspace]. To change the location, you can set the
+Cargo stores the output of a build into the "target" and "build" directories. By default,
+both directories point to a directory named `target` in the root of your
+[*workspace*][def-workspace]. To change the location of the target-dir, you can set the
 `CARGO_TARGET_DIR` [environment variable], the [`build.target-dir`] config
-value, or the `--target-dir` command-line flag.
+value, or the `--target-dir` command-line flag. To change the location of the build-dir, you can set the
+`CARGO_BUILD_BUILD_DIR` [environment variable] or the [`build.build-dir`] config value.
+
+Artifacts are split in two catagories:
+* Final build artifacts
+  * Final build artifacts are output meant for end users of Cargo
+  * e.g. binaries for bin crates, output of `cargo doc`, Cargo `--timings` reports
+  * Stored in the target-dir
+* Intermediate build artifacts
+  * Intermediate build artifacts are internal to Cargo and the Rust compiler
+  * End users will generally not need to interact with intermediate build artifacts
+  * Stored in the Cargo build-dir
 
 The directory layout depends on whether or not you are using the `--target`
 flag to build for a specific platform. If `--target` is not specified, Cargo
@@ -53,15 +64,15 @@ Directory | Description
 <code style="white-space: nowrap">target/doc/</code> | Contains rustdoc documentation ([`cargo doc`]).
 <code style="white-space: nowrap">target/package/</code> | Contains the output of the [`cargo package`] and [`cargo publish`] commands.
 
-Cargo also creates several other directories and files needed for the build
-process. Their layout is considered internal to Cargo, and is subject to
+Cargo also creates several other directories and files in the build-dir needed for the build
+process. The build-dir layout is considered internal to Cargo, and is subject to
 change. Some of these directories are:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">target/debug/deps/</code> | Dependencies and other artifacts.
-<code style="white-space: nowrap">target/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
-<code style="white-space: nowrap">target/debug/build/</code> | Output from [build scripts].
+<code style="white-space: nowrap">build-dir/debug/deps/</code> | Dependencies and other artifacts.
+<code style="white-space: nowrap">build-dir/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
+<code style="white-space: nowrap">build-dir/debug/build/</code> | Output from [build scripts].
 
 ## Dep-info files
 
@@ -92,6 +103,7 @@ configuration][config]. Refer to sccache documentation for more details.
 [`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
 [`build.rustc-wrapper`]: ../reference/config.md#buildrustc-wrapper
 [`build.target-dir`]: ../reference/config.md#buildtarget-dir
+[`build.build-dir`]: ../reference/config.md#buildbuild-dir
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md

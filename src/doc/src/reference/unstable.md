@@ -80,7 +80,6 @@ Each new feature described below should explain how to use it.
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
-    * [build-dir](#build-dir) --- Adds a directory where intermediate build artifacts are stored.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
     * [root-dir](#root-dir) --- Controls the root directory relative to which paths are printed
 * Compile behavior
@@ -246,34 +245,6 @@ This can also be specified in `.cargo/config.toml` files.
 [build]
 artifact-dir = "out"
 ```
-
-## build-dir
-* Original Issue: [#14125](https://github.com/rust-lang/cargo/issues/14125)
-* Tracking Issue: [#14125](https://github.com/rust-lang/cargo/issues/14125)
-
-The directory where intermediate build artifacts will be stored.
-Intermediate artifacts are produced by Rustc/Cargo during the build process.
-
-```toml
-[build]
-build-dir = "out"
-```
-
-### `build.build-dir`
-
-* Type: string (path)
-* Default: Defaults to the value of `build.target-dir`
-* Environment: `CARGO_BUILD_BUILD_DIR`
-
-The path to where internal files used as part of the build are placed.
-
-This option supports path templating.
-
-Available template variables:
-* `{workspace-root}` resolves to root of the current workspace.
-* `{cargo-cache-home}` resolves to `CARGO_HOME`
-* `{workspace-path-hash}` resolves to a hash of the manifest path
-
 
 ## root-dir
 * Original Issue: [#9887](https://github.com/rust-lang/cargo/issues/9887)
@@ -2230,3 +2201,9 @@ Example:
 cargo +nightly build --compile-time-deps -Z unstable-options
 cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
 ```
+
+## build-dir
+
+Support for `build.build-dir` was stabilized in the 1.91 release.
+See the [config documentation](config.md#buildbuild-dir) for information about changing the build-dir
+

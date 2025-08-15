@@ -1534,6 +1534,7 @@ fn cmd_metadata_with_embedded() {
     "root": "path+[ROOTURL]/foo/script.rs#script@0.0.0"
   },
   "target_directory": "[ROOT]/home/.cargo/target/[HASH]",
+  "build_directory": "[ROOT]/home/.cargo/target/[HASH]",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/script.rs#script@0.0.0"

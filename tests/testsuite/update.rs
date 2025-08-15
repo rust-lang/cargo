@@ -827,6 +827,7 @@ fn update_precise_first_run() {
     "root": "path+[ROOTURL]/foo#bar@0.0.1"
   },
   "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo#bar@0.0.1"

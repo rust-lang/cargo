@@ -443,9 +443,6 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn build_dir(&self) -> Filesystem {
-        if !self.gctx().cli_unstable().build_dir {
-            return self.target_dir();
-        }
         self.build_dir.clone().unwrap_or_else(|| self.target_dir())
     }
 

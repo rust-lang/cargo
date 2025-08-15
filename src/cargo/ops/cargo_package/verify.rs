@@ -69,13 +69,7 @@ pub fn run_verify(
     // When packaging we use an ephemeral workspace but reuse the build cache to reduce
     // verification time if the user has already compiled the dependencies and the fingerprint
     // is unchanged.
-    let target_dir = if gctx.cli_unstable().build_dir {
-        Some(ws.build_dir())
-    } else {
-        Some(ws.target_dir())
-    };
-
-    let mut ws = Workspace::ephemeral(new_pkg, gctx, target_dir, true)?;
+    let mut ws = Workspace::ephemeral(new_pkg, gctx, Some(ws.build_dir()), true)?;
     if let Some(local_reg) = local_reg {
         ws.add_local_overlay(
             local_reg.upstream,
