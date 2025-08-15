@@ -188,12 +188,12 @@ The meaning of the term *target* depends on the context:
   [list of targets][targets] are configured in the `Cargo.toml`
   [*manifest*](#manifest), often inferred automatically by the [directory
   layout] of the source files.
-- **Target Directory** --- Cargo places all built artifacts and intermediate
-  files in the *target* directory. By default this is a directory named
-  `target` at the [*workspace*](#workspace) root, or the package root if not
-  using a workspace. The directory may be changed with the `--target-dir`
-  command-line option, the `CARGO_TARGET_DIR` [environment variable], or the
-  `build.target-dir` [config option].
+- **Target Directory** --- Cargo places built artifacts in the *target* directory.
+  By default this is a directory named `target` at the [*workspace*](#workspace) root,
+  or the package root if not using a workspace. The directory may be changed with 
+  the `--target-dir` command-line option, the `CARGO_TARGET_DIR` [environment variable],
+  or the `build.target-dir` [config option]. 
+  For more information see the [build cache] documentation.
 - **Target Architecture** --- The OS and machine architecture for the built
   artifacts are typically referred to as a *target*.
 - **Target Triple** --- A triple is a specific format for specifying a target
@@ -251,6 +251,7 @@ manifest is located. (Compare with [*package root*](#package).)
 [Directory Sources]: ../reference/source-replacement.md#directory-sources
 [Local Registry Sources]: ../reference/source-replacement.md#local-registry-sources
 [Source Replacement]: ../reference/source-replacement.md
+[build cache]: ../reference/build-cache.html
 [cargo-unstable]: ../reference/unstable.md
 [config option]: ../reference/config.md
 [crates.io]: https://crates.io/

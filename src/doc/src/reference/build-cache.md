@@ -70,9 +70,9 @@ change. Some of these directories are:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">build-dir/debug/deps/</code> | Dependencies and other artifacts.
-<code style="white-space: nowrap">build-dir/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
-<code style="white-space: nowrap">build-dir/debug/build/</code> | Output from [build scripts].
+<code style="white-space: nowrap">\<build-dir>/debug/deps/</code> | Dependencies and other artifacts.
+<code style="white-space: nowrap">\<build-dir>/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
+<code style="white-space: nowrap">\<build-dir>/debug/build/</code> | Output from [build scripts].
 
 ## Dep-info files
 
