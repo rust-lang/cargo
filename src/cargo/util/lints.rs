@@ -8,7 +8,7 @@ use std::ops::Range;
 use std::path::Path;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[IM_A_TEAPOT, INVALID_SPDX_LICENSE_EXPRESSION, UNKNOWN_LINTS];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
@@ -464,6 +464,141 @@ pub fn check_im_a_teapot(
 
         gctx.shell().print_message(message)?;
     }
+    Ok(())
+}
+
+const INVALID_SPDX_LICENSE_EXPRESSION: Lint = Lint {
+    name: "invalid_spdx_license_expression",
+    desc: "invalid SPDX license expression",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: Some((Edition::EditionFuture, LintLevel::Deny)),
+    feature_gate: None,
+    docs: Some(
+        r#"
+"#,
+    ),
+};
+
+pub fn check_invalid_spdx_license_expression(
+    pkg: &Package,
+    path: &Path,
+    pkg_lints: &TomlToolLints,
+    ws_contents: &str,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
+    ws_path: &Path,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+    let (lint_level, reason) = INVALID_SPDX_LICENSE_EXPRESSION.level(
+        pkg_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+    );
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let Some(license) = manifest.metadata().license.as_ref() else {
+        return Ok(());
+    };
+
+    // We must be a subset of crates.io's parse mode:
+    // https://github.com/rust-lang/crates.io/blob/bc421ae1/src/licenses.rs#L3-L8
+    // we don't want to allow something that would be rejected by crates.io
+    let Err(e) = spdx::Expression::parse_mode(license, spdx::ParseMode::STRICT) else {
+        return Ok(());
+    };
+
+    if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+        *error_count += 1;
+    }
+
+    // Check if `package.license` is inherited
+    let is_license_inherited = manifest
+        .original_toml()
+        .package()
+        .and_then(|p| p.license.as_ref())
+        .map(|f| f.is_inherited())
+        .unwrap_or_default();
+
+    let level = lint_level.to_diagnostic_level();
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
+    let emitted_reason = format!(
+        "`cargo::{}` is set to `{lint_level}` {reason}",
+        INVALID_SPDX_LICENSE_EXPRESSION.name
+    );
+
+    let title = format!("{}: `{license}`", INVALID_SPDX_LICENSE_EXPRESSION.desc);
+    let help =
+        Level::Help.title("see https://spdx.org/licenses/ for valid SPDX license expressions");
+    let note = Level::Note.title(&emitted_reason);
+    let error_reason = e.reason.to_string();
+
+    // Calculate the precise error span within the license string,
+    // since ParseError preserves a span for us.
+    let error_span = |license_span: Range<usize>| {
+        let open_quote = 1;
+        let start = license_span.start + open_quote + e.span.start;
+        let end = license_span.start + open_quote + e.span.end;
+        start..end
+    };
+
+    let message = if is_license_inherited {
+        let license_span =
+            get_span(ws_document, &["workspace", "package", "license"], true).unwrap();
+        let span = error_span(license_span);
+        let inherit_title = "the `package.license` field was inherited";
+        let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
+            get_span(
+                manifest.document(),
+                &["package", "license", "workspace"],
+                false,
+            ),
+            get_span(
+                manifest.document(),
+                &["package", "license", "workspace"],
+                true,
+            ),
+        ) {
+            Level::Note.title(inherit_title).snippet(
+                Snippet::source(manifest.contents())
+                    .origin(&manifest_path)
+                    .annotation(Level::Note.span(inherit_span_key.start..inherit_span_value.end))
+                    .fold(true),
+            )
+        } else {
+            Level::Note.title(inherit_title)
+        };
+        level
+            .title(&title)
+            .snippet(
+                Snippet::source(ws_contents)
+                    .origin(&ws_path)
+                    .annotation(level.span(span).label(&error_reason))
+                    .fold(true),
+            )
+            .footer(inherited_note)
+            .footer(note)
+            .footer(help)
+    } else {
+        let license_span = get_span(manifest.document(), &["package", "license"], true).unwrap();
+        let span = error_span(license_span);
+        level
+            .title(&title)
+            .snippet(
+                Snippet::source(manifest.contents())
+                    .origin(&manifest_path)
+                    .annotation(level.span(span).label(&error_reason))
+                    .fold(true),
+            )
+            .footer(note)
+            .footer(help)
+    };
+    gctx.shell().print_message(message)?;
     Ok(())
 }
 

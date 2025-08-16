@@ -5,7 +5,13 @@ Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only 
 ## Warn-by-default
 
 These lints are all set to the 'warn' level by default.
+- [`invalid_spdx_license_expression`](#invalid_spdx_license_expression)
 - [`unknown_lints`](#unknown_lints)
+
+## `invalid_spdx_license_expression`
+Set to `warn` by default
+
+
 
 ## `unknown_lints`
 Set to `warn` by default

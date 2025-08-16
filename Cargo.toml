@@ -98,6 +98,7 @@ sha1 = "0.10.6"
 sha2 = "0.10.9"
 shell-escape = "0.1.5"
 similar = "2.7.0"
+spdx = "0.10.9"
 supports-hyperlinks = "3.1.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "0.6.21", features = ["diff", "dir", "term-svg", "regex", "json"] }
@@ -205,6 +206,7 @@ serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
+spdx.workspace = true
 supports-hyperlinks.workspace = true
 supports-unicode.workspace = true
 tar.workspace = true

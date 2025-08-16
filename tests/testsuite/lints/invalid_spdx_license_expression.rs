@@ -21,6 +21,14 @@ license = "MIT / Apache-2.0"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] invalid SPDX license expression: `MIT / Apache-2.0`
+ --> Cargo.toml:6:16
+  |
+6 | license = "MIT / Apache-2.0"
+  |                ------------ invalid character(s)
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `warn` by default
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -47,6 +55,14 @@ license = "GPL-3.0 with exception"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] invalid SPDX license expression: `GPL-3.0 with exception`
+ --> Cargo.toml:6:20
+  |
+6 | license = "GPL-3.0 with exception"
+  |                    ---- unknown term
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `warn` by default
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -73,6 +89,14 @@ license = "GPL-3.0+"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] invalid SPDX license expression: `GPL-3.0+`
+ --> Cargo.toml:6:19
+  |
+6 | license = "GPL-3.0+"
+  |                   - a GNU license was followed by a `+`
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `warn` by default
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -99,6 +123,14 @@ license = "MIT OR (Apache-2.0"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] invalid SPDX license expression: `MIT OR (Apache-2.0`
+ --> Cargo.toml:6:19
+  |
+6 | license = "MIT OR (Apache-2.0"
+  |                   - unclosed parens
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `warn` by default
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -204,16 +236,16 @@ invalid_spdx_license_expression = "deny"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `invalid_spdx_license_expression`
- --> Cargo.toml:9:1
+[ERROR] invalid SPDX license expression: `MIT / Apache-2.0`
+ --> Cargo.toml:6:16
   |
-9 | invalid_spdx_license_expression = "deny"
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6 | license = "MIT / Apache-2.0"
+  |                ^^^^^^^^^^^^ invalid character(s)
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `deny` in `[lints]`
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 
 "#]])
         .run();
@@ -248,6 +280,20 @@ license.workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] invalid SPDX license expression: `MIT / Apache-2.0`
+ --> Cargo.toml:6:16
+  |
+6 | license = "MIT / Apache-2.0"
+  |                ------------ invalid character(s)
+  |
+[NOTE] the `package.license` field was inherited
+ --> foo/Cargo.toml:6:9
+  |
+6 | license.workspace = true
+  |         ----------------
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `warn` by default
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 [CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -275,9 +321,16 @@ license = "MIT / Apache-2.0"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "unstable-editions"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] invalid SPDX license expression: `MIT / Apache-2.0`
+ --> Cargo.toml:8:16
+  |
+8 | license = "MIT / Apache-2.0"
+  |                ^^^^^^^^^^^^ invalid character(s)
+  |
+  = [NOTE] `cargo::invalid_spdx_license_expression` is set to `deny` in edition future
+  = [HELP] see https://spdx.org/licenses/ for valid SPDX license expressions
 
 "#]])
         .run();

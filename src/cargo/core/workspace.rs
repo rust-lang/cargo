@@ -25,7 +25,9 @@ use crate::util::context::FeatureUnification;
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot};
+use crate::util::lints::analyze_cargo_lints_table;
+use crate::util::lints::check_im_a_teapot;
+use crate::util::lints::check_invalid_spdx_license_expression;
 use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{
     Filesystem, GlobalContext, IntoUrl, context::CargoResolverConfig, context::ConfigRelativePath,
@@ -1270,6 +1272,16 @@ impl<'gctx> Workspace<'gctx> {
             self.gctx,
         )?;
         check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+        check_invalid_spdx_license_expression(
+            pkg,
+            &path,
+            &cargo_lints,
+            ws_contents,
+            ws_document,
+            self.root_manifest(),
+            &mut error_count,
+            self.gctx,
+        )?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
