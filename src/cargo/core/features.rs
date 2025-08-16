@@ -1352,6 +1352,7 @@ impl CliUnstable {
             "lints" => stabilized_warn(k, "1.74", STABILIZED_LINTS),
             "registry-auth" => stabilized_warn(k, "1.74", STABILIZED_REGISTRY_AUTH),
             "check-cfg" => stabilized_warn(k, "1.80", STABILIZED_CHECK_CFG),
+            "doctest-xcompile" => stabilized_warn(k, "1.89", STABILIZED_DOCTEST_XCOMPILE),
             "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
             "build-dir" => stabilized_warn(k, "1.91", STABILIZED_BUILD_DIR),
 
@@ -1368,7 +1369,6 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
-            "doctest-xcompile" => stabilized_warn(k, "1.89", STABILIZED_DOCTEST_XCOMPILE),
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "fix-edition" => {
