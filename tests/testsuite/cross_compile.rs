@@ -169,7 +169,7 @@ fn target_host_arg() {
         .build();
 
     let target = rustc_host();
-    p.cargo("build -v --target host").run();
+    p.cargo(&format!("build -v --target {target}")).run();
     assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile_can_run_on_host() {
