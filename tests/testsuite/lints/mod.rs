@@ -5,6 +5,7 @@ use cargo_test_support::str;
 
 mod error;
 mod inherited;
+mod invalid_spdx_license_expression;
 mod unknown_lints;
 mod warning;
 
