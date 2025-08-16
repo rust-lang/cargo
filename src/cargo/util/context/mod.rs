@@ -2768,6 +2768,15 @@ pub struct CargoBuildConfig {
     pub warnings: Option<WarningHandling>,
     /// Unstable feature `-Zsbom`.
     pub sbom: Option<bool>,
+    /// Unstable feature `-Zbuild-analysis`.
+    pub analysis: Option<CargoBuildAnalysis>,
+}
+
+/// Metrics collection for build analysis.
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoBuildAnalysis {
+    pub enabled: bool,
 }
 
 /// Whether warnings should warn, be allowed, or cause an error.

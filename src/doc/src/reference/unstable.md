@@ -113,6 +113,7 @@ Each new feature described below should explain how to use it.
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
+    * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
 * Configuration
     * [config-include](#config-include) --- Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
@@ -1920,6 +1921,22 @@ HTML/JSON output.
 
 ```console
 cargo +nightly -Zsection-timings build --timings
+```
+
+## Build analysis
+
+* Original Issue: [rust-lang/rust-project-goals#332](https://github.com/rust-lang/rust-project-goals/pull/332)
+* Tracking Issue: [#15844](https://github.com/rust-lang/cargo/issues/15844)
+
+The `-Zbuild-analysis` feature records and persists detailed build metrics
+(timings, rebuild reasons, etc.) across runs, with new commands to query past builds.
+
+```toml
+# Example config.toml file.
+
+# Enable the build metric collection
+[build.analysis]
+enabled = true
 ```
 
 # Stabilized and removed features
