@@ -1,5 +1,6 @@
 use std::io::prelude::*;
 
+use crate::core::resolver::encode::into_resolve;
 use crate::core::{Resolve, ResolveVersion, Workspace, resolver};
 use crate::util::Filesystem;
 use crate::util::errors::CargoResult;
@@ -23,7 +24,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
         let v: resolver::EncodableResolve = toml::from_str(&s)?;
-        Ok(Some(v.into_resolve(&s, ws)?))
+        Ok(Some(into_resolve(v, &s, ws)?))
     })()
     .with_context(|| format!("failed to parse lock file at: {}", f.path().display()))?;
     Ok(resolve)
@@ -208,7 +209,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(orig)?;
             let new: resolver::EncodableResolve = toml::from_str(current)?;
-            Ok(old.into_resolve(orig, ws)? == new.into_resolve(current, ws)?)
+            Ok(into_resolve(old, orig, ws)? == into_resolve(new, current, ws)?)
         })();
         if let Ok(true) = res {
             return true;
