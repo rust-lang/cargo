@@ -155,6 +155,14 @@ jobs:
           os: windows-latest
           rust: nightly-msvc
           other: i686-pc-windows-msvc
+        - name: Windows aarch64 MSVC stable
+          os: windows-11-arm
+          rust: stable-msvc
+          other: i686-pc-windows-msvc
+        - name: Windows aarch64 MSVC nightly
+          os: windows-11-arm
+          rust: nightly-msvc
+          other: i686-pc-windows-msvc
         - name: Windows x86_64 gnu nightly # runs out of space while trying to link the test suite
           os: windows-latest
           rust: nightly-gnu
@@ -183,6 +191,10 @@ jobs:
       shell: pwsh
       run: Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64"
       if: matrix.os == 'windows-latest'
+    - name: Add Windows debuggers bin to PATH
+      shell: pwsh
+      run: Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\Windows Kits\10\Debuggers\arm64"
+      if: matrix.os == 'windows-11-arm'
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
