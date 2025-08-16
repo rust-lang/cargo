@@ -670,7 +670,7 @@ pub trait ArgMatchesExt {
             bail!(
                 "\"--target\" takes a target architecture as an argument.
 
-Run `{cmd}` to see possible targets."
+Run `{cmd}` to see possible targets, or specify `host` for the host architecture."
             );
         }
         Ok(self._values_of("target"))
@@ -1256,6 +1256,11 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
             candidates = targets;
         }
     }
+
+    // Allow tab-completion for `host` as the desired target.
+    candidates.push(clap_complete::CompletionCandidate::new("host").help(Some(
+        concat!("alias for: ", env!("RUST_HOST_TARGET")).into(),
+    )));
 
     candidates
 }
