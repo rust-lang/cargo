@@ -154,27 +154,12 @@ fn target_host_arg() {
                 rustc_host()
             ),
         )
-        .file(
-            "src/main.rs",
-            &format!(
-                r#"
-                    use std::env;
-                    fn main() {{
-                        assert_eq!(env::consts::ARCH, "{}");
-                    }}
-                "#,
-                cross_compile::native_arch()
-            ),
-        )
+        .file("src/lib.rs", r#""#)
         .build();
 
-    let target = rustc_host();
-    p.cargo(&format!("build -v --target {target}")).run();
-    assert!(p.target_bin(target, "foo").is_file());
-
-    if cross_compile_can_run_on_host() {
-        p.process(&p.target_bin(target, "foo")).run();
-    }
+    p.cargo("build -v --target host")
+        .with_stderr_contains("[RUNNING] `rustc [..] --target [HOST_TARGET] [..]`")
+        .run();
 }
 
 #[cargo_test]
@@ -215,27 +200,12 @@ fn target_host_config() {
                 rustc_host()
             ),
         )
-        .file(
-            "src/main.rs",
-            &format!(
-                r#"
-                    use std::env;
-                    fn main() {{
-                        assert_eq!(env::consts::ARCH, "{}");
-                    }}
-                "#,
-                cross_compile::native_arch()
-            ),
-        )
+        .file("src/lib.rs", r#""#)
         .build();
 
-    let target = rustc_host();
-    p.cargo("build -v").run();
-    assert!(p.target_bin(target, "foo").is_file());
-
-    if cross_compile_can_run_on_host() {
-        p.process(&p.target_bin(target, "foo")).run();
-    }
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `rustc [..] --target [HOST_TARGET] [..]`")
+        .run();
 }
 
 #[cargo_test]
