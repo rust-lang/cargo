@@ -25,9 +25,7 @@ use crate::core::Feature;
 use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{
-    PackageId, PackageIdSpec, PackageIdSpecQuery, Resolve, Shell, Target, Workspace,
-};
+use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{CargoResult, GlobalContext, closest_msg, context};
@@ -352,11 +350,11 @@ impl Profiles {
     }
 
     /// Used to check for overrides for non-existing packages.
-    pub fn validate_packages(
+    pub fn validate_packages<I: Iterator<Item = PackageId>>(
         &self,
         profiles: Option<&TomlProfiles>,
         shell: &mut Shell,
-        resolve: &Resolve,
+        packages: impl Fn() -> I,
     ) -> CargoResult<()> {
         for (name, profile) in &self.by_name {
             // If the user did not specify an override, skip this. This is here
@@ -372,13 +370,13 @@ impl Profiles {
             {
                 continue;
             }
-            let found = validate_packages_unique(resolve, name, &profile.toml)?;
+            let found = validate_packages_unique(&packages, name, &profile.toml)?;
             // We intentionally do not validate unmatched packages for config
             // profiles, in case they are defined in a central location. This
             // iterates over the manifest profiles only.
             if let Some(profiles) = profiles {
                 if let Some(toml_profile) = profiles.get(name) {
-                    validate_packages_unmatched(shell, resolve, name, toml_profile, &found)?;
+                    validate_packages_unmatched(shell, &packages, name, toml_profile, &found)?;
                 }
             }
         }
@@ -1335,8 +1333,8 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
 ///
 /// For example `[profile.dev.package.bar]` and `[profile.dev.package."bar:0.5.0"]`
 /// would both match `bar:0.5.0` which would be ambiguous.
-fn validate_packages_unique(
-    resolve: &Resolve,
+fn validate_packages_unique<I: Iterator<Item = PackageId>>(
+    packages: impl Fn() -> I,
     name: &str,
     toml: &Option<TomlProfile>,
 ) -> CargoResult<HashSet<PackageIdSpec>> {
@@ -1348,7 +1346,7 @@ fn validate_packages_unique(
     };
     // Verify that a package doesn't match multiple spec overrides.
     let mut found = HashSet::new();
-    for pkg_id in resolve.iter() {
+    for pkg_id in packages() {
         let matches: Vec<&PackageIdSpec> = overrides
             .keys()
             .filter_map(|key| match *key {
@@ -1389,9 +1387,9 @@ fn validate_packages_unique(
 /// Check for any profile override specs that do not match any known packages.
 ///
 /// This helps check for typos and mistakes.
-fn validate_packages_unmatched(
+fn validate_packages_unmatched<I: Iterator<Item = PackageId>>(
     shell: &mut Shell,
-    resolve: &Resolve,
+    packages: impl Fn() -> I,
     name: &str,
     toml: &TomlProfile,
     found: &HashSet<PackageIdSpec>,
@@ -1411,8 +1409,7 @@ fn validate_packages_unmatched(
     });
     for spec in missing_specs {
         // See if there is an exact name match.
-        let name_matches: Vec<String> = resolve
-            .iter()
+        let name_matches: Vec<String> = packages()
             .filter_map(|pkg_id| {
                 if pkg_id.name() == spec.name() {
                     Some(pkg_id.to_string())
@@ -1422,12 +1419,8 @@ fn validate_packages_unmatched(
             })
             .collect();
         if name_matches.is_empty() {
-            let suggestion = closest_msg(
-                &spec.name(),
-                resolve.iter(),
-                |p| p.name().as_str(),
-                "package",
-            );
+            let suggestion =
+                closest_msg(&spec.name(), packages(), |p| p.name().as_str(), "package");
             shell.warn(format!(
                 "profile package spec `{}` in profile `{}` did not match any packages{}",
                 spec, name, suggestion
