@@ -2260,7 +2260,10 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2308,7 +2311,10 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2356,7 +2362,10 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2413,7 +2422,10 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2461,7 +2473,10 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   invalid response body from server
@@ -3608,7 +3623,10 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1
+
+Caused by:
+  failed to publish to registry at http://127.0.0.1:[..]/
 
 Caused by:
   token contains invalid characters.
@@ -4325,6 +4343,58 @@ fn all_unpublishable_packages() {
 [NOTE] to publish packages, set `package.publish` to `true` or a non-empty list
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_publish_failure_reports_remaining_packages() {
+    use cargo_test_support::project;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+        "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2021"
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            edition = "2021"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.1.0"
+            edition = "2021"
+        "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // Simulate a publish failure for package 'a' (e.g., already published)
+    // The error message should match the actual output from the verify step
+    p.cargo("publish --workspace")
+        .env("CARGO_REGISTRY_TOKEN", "dummy-token")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] crate a@0.1.0 already exists on crates.io index")
         .run();
 }
 

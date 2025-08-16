@@ -210,7 +210,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         // `b`, and we uploaded `a` and `b` but only confirmed `a`, then on
         // the following pass through the outer loop nothing will be ready for
         // upload.
-        for pkg_id in plan.take_ready() {
+        for pkg_id in plan.take_ready().into_iter() {
             let (pkg, (_features, tarball)) = &pkg_dep_graph.packages[&pkg_id];
             opts.gctx.shell().status("Uploading", pkg.package_id())?;
 
@@ -236,7 +236,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 )?));
             }
 
-            transmit(
+            // Always wrap transmit with context for enhanced error reporting
+            let transmit_result = transmit(
                 opts.gctx,
                 ws,
                 pkg,
@@ -244,7 +245,43 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 &mut registry,
                 source_ids.original,
                 opts.dry_run,
-            )?;
+            ).map_err(|e| {
+                // Collect remaining packages that have not been published yet
+                let mut remaining: Vec<_> = plan
+                    .iter()
+                    .filter(|id| *id != pkg_id)
+                    .map(|id| {
+                        let pkg = &pkg_dep_graph.packages[&id].0;
+                        format!("{} v{}", pkg.name(), pkg.version())
+                    })
+                    .collect();
+                // Also include any packages that are still waiting for confirmation
+                for id in to_confirm.iter().filter(|id| **id != pkg_id) {
+                    let pkg = &pkg_dep_graph.packages[&id].0;
+                    let entry = format!("{} v{}", pkg.name(), pkg.version());
+                    if !remaining.contains(&entry) {
+                        remaining.push(entry);
+                    }
+                }
+
+                let message = if !remaining.is_empty() {
+                    format!(
+                        "failed to publish `{}` v{}; the following crates have not been published yet: {}",
+                        pkg.name(),
+                        pkg.version(),
+                        remaining.join(", ")
+                    )
+                } else {
+                    format!("failed to publish `{}` v{}", pkg.name(), pkg.version())
+                };
+
+                e.context(message)
+            });
+
+            if let Err(e) = transmit_result {
+                return Err(e);
+            }
+
             to_confirm.insert(pkg_id);
 
             if !opts.dry_run {
@@ -450,12 +487,13 @@ fn verify_unpublished(
                 source.describe()
             ))?;
         } else {
-            bail!(
+            // Return error instead of bail! so it can be wrapped with enhanced context
+            return Err(anyhow::anyhow!(
                 "crate {}@{} already exists on {}",
                 pkg.name(),
                 pkg.version(),
                 source.describe()
-            );
+            ));
         }
     }
 
