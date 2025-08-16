@@ -2260,7 +2260,7 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2308,7 +2308,7 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2356,7 +2356,7 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2413,7 +2413,7 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2461,7 +2461,7 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   invalid response body from server
@@ -3608,7 +3608,7 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package 'foo' to registry at http://127.0.0.1:[..]/
 
 Caused by:
   token contains invalid characters.
@@ -4398,6 +4398,289 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] aborting upload due to dry run
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_publish_error_reporting() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |req, _| {
+            // Parse the request to get the crate name
+            let body = req.body.as_ref().map(|b| String::from_utf8_lossy(b)).unwrap_or_default();
+            let is_first_package = body.contains(r#"name":"a""#);
+            if is_first_package {
+                // Simulate a timeout error immediately for the first package
+                Response {
+                    body: br#"{"errors": [{"detail": "timed out waiting for a v0.1.0 to be available in registry `alternative`"}]}"#.to_vec(),
+                    code: 504,
+                    headers: vec![],
+                }
+            } else {
+                // Other packages would succeed
+                Response {
+                    body: br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#.to_vec(),
+                    code: 200,
+                    headers: vec![],
+                }
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "a"
+                repository = "bar"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "b"
+                repository = "bar"
+
+                [dependencies]
+                a = { path = "../a", version = "0.1.0" }
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "c"
+                repository = "bar"
+
+                [dependencies]
+                b = { path = "../b", version = "0.1.0" }
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // This test verifies improved error reporting during workspace publishing.
+    // When a timeout occurs, users can see which packages are still pending publication.
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v0.1.0 ([ROOT]/foo/c)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.1.0 ([ROOT]/foo/a)
+[COMPILING] a v0.1.0 ([ROOT]/foo/target/package/a-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.1.0 ([ROOT]/foo/b)
+[DOWNLOADING] crates ...
+[DOWNLOADED] a v0.1.0
+[COMPILING] a v0.1.0
+[COMPILING] b v0.1.0 ([ROOT]/foo/target/package/b-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] c v0.1.0 ([ROOT]/foo/c)
+[DOWNLOADING] crates ...
+[DOWNLOADED] b v0.1.0
+[COMPILING] b v0.1.0
+[COMPILING] c v0.1.0 ([ROOT]/foo/target/package/c-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[ERROR] failed to publish package 'a' to registry at http://127.0.0.1:[..]/
+
+Remaining packages to publish: b v0.1.0 and c v0.1.0
+
+Caused by:
+  the remote server responded with an error (status 504 Gateway Timeout): timed out waiting for a v0.1.0 to be available in registry `alternative`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn transmit_error_includes_package_name() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |_, _| {
+            // Simulate a server error
+            Response {
+                body: br#"{"errors": [{"detail": "Server error"}]}"#.to_vec(),
+                code: 500,
+                headers: vec![],
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "my-package"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "my-package"
+                repository = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] my-package v0.1.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] my-package v0.1.0 ([ROOT]/foo)
+[ERROR] failed to publish package 'my-package' to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  the remote server responded with an error (status 500 Internal Server Error): Server error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_transmit_error_includes_remaining_packages() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |req, _| {
+            // Parse the request to get the crate name
+            let body = req
+                .body
+                .as_ref()
+                .map(|b| String::from_utf8_lossy(b))
+                .unwrap_or_default();
+            let is_first_package = body.contains(r#""name":"a""#);
+
+            if is_first_package {
+                // Simulate server error on the first package
+                Response {
+                    body: br#"{"errors": [{"detail": "Server error"}]}"#.to_vec(),
+                    code: 500,
+                    headers: vec![],
+                }
+            } else {
+                // Other packages would succeed
+                Response {
+                    body:
+                        br#"{"warnings":{"invalid_categories":[],"invalid_badges":[],"other":[]}}"#
+                            .to_vec(),
+                    code: 200,
+                    headers: vec![],
+                }
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "a"
+                repository = "bar"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "b"
+                repository = "bar"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+                [package]
+                name = "c"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "c"
+                repository = "bar"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // This should fail when trying to publish package a and show remaining packages
+    p.cargo("publish --no-verify --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v0.1.0 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[ERROR] failed to publish package 'a' to registry at http://127.0.0.1:[..]/
+
+Remaining packages to publish: b v0.1.0 and c v0.1.0
+
+Caused by:
+  the remote server responded with an error (status 500 Internal Server Error): Server error
 
 "#]])
         .run();
