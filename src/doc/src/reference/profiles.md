@@ -166,16 +166,16 @@ The `lto` setting controls `rustc`'s [`-C lto`], [`-C linker-plugin-lto`], and
 LTO can produce better optimized code, using whole-program analysis, at the cost
 of longer linking time.
 
-The valid options are:
+The valid options from most to least optimizing are:
 
-* `false`: Performs "thin local LTO" which performs "thin" LTO on the local
-  crate only across its [codegen units](#codegen-units). No LTO is performed
-  if codegen units is 1 or [opt-level](#opt-level) is 0.
 * `true` or `"fat"`: Performs "fat" LTO which attempts to perform
   optimizations across all crates within the dependency graph.
 * `"thin"`: Performs ["thin" LTO]. This is similar to "fat", but takes
   substantially less time to run while still achieving performance gains
   similar to "fat".
+* `false`: Performs "thin local LTO" which performs "thin" LTO on the local
+  crate only across its [codegen units](#codegen-units). No LTO is performed
+  if codegen units is 1 or [opt-level](#opt-level) is 0.
 * `"off"`: Disables LTO.
 
 See the [linker-plugin-lto chapter] if you are interested in cross-language LTO.
