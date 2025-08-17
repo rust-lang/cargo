@@ -48,7 +48,7 @@ fn rustc_caching_allow_first() {
 1 | fn main() { let x = 3; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
   |
-  = [NOTE] `#[warn(unused_variables)]` on by default
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [WARNING] `foo` (bin "foo") generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -75,7 +75,7 @@ fn rustc_caching_deny_first() {
 1 | fn main() { let x = 3; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
   |
-  = [NOTE] `#[warn(unused_variables)]` on by default
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [WARNING] `foo` (bin "foo") generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -112,7 +112,7 @@ fn config() {
 1 | fn main() { let x = 3; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
   |
-  = [NOTE] `#[warn(unused_variables)]` on by default
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [WARNING] `foo` (bin "foo") generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -136,7 +136,7 @@ fn config() {
 1 | fn main() { let x = 3; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
   |
-  = [NOTE] `#[warn(unused_variables)]` on by default
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [WARNING] `foo` (bin "foo") generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -160,7 +160,7 @@ fn requires_nightly() {
 1 | fn main() { let x = 3; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
   |
-  = [NOTE] `#[warn(unused_variables)]` on by default
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [WARNING] `foo` (bin "foo") generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
