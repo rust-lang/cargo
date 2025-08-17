@@ -1,70 +1,82 @@
 {
-  "message": "unused variable: `x`",
+  "$message_type": "diagnostic",
+  "children": [
+    {
+      "children": [],
+      "code": null,
+      "level": "note",
+      "message": "`#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default",
+      "rendered": null,
+      "spans": []
+    },
+    {
+      "children": [],
+      "code": null,
+      "level": "help",
+      "message": "if this is intentional, prefix it with an underscore",
+      "rendered": null,
+      "spans": [
+        {
+          "byte_end": 21,
+          "byte_start": 20,
+          "column_end": 10,
+          "column_start": 9,
+          "expansion": null,
+          "file_name": "./tests/everything/replace-only-one-char.rs",
+          "is_primary": true,
+          "label": null,
+          "line_end": 2,
+          "line_start": 2,
+          "suggested_replacement": "_x",
+          "suggestion_applicability": "MaybeIncorrect",
+          "text": [
+            {
+              "highlight_end": 10,
+              "highlight_start": 9,
+              "text": "    let x = 42;"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "code": {
     "code": "unused_variables",
     "explanation": null
   },
   "level": "warning",
+  "message": "unused variable: `x`",
+  "rendered": "warning: unused variable: `x`/n --> ./tests/everything/replace-only-one-char.rs:2:9/n  |/n2 |     let x = 42;/n  |         ^ help: if this is intentional, prefix it with an underscore: `_x`/n  |/n  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default/n/n",
   "spans": [
     {
-      "file_name": "replace-only-one-char.rs",
-      "byte_start": 20,
       "byte_end": 21,
-      "line_start": 2,
-      "line_end": 2,
-      "column_start": 9,
+      "byte_start": 20,
       "column_end": 10,
+      "column_start": 9,
+      "expansion": null,
+      "file_name": "./tests/everything/replace-only-one-char.rs",
       "is_primary": true,
+      "label": null,
+      "line_end": 2,
+      "line_start": 2,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
       "text": [
         {
-          "text": "    let x = 42;",
+          "highlight_end": 10,
           "highlight_start": 9,
-          "highlight_end": 10
+          "text": "    let x = 42;"
         }
-      ],
-      "label": null,
-      "suggested_replacement": null,
-      "expansion": null
+      ]
     }
-  ],
-  "children": [
-    {
-      "message": "#[warn(unused_variables)] on by default",
-      "code": null,
-      "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
-    },
-    {
-      "message": "consider using `_x` instead",
-      "code": null,
-      "level": "help",
-      "spans": [
-        {
-          "file_name": "replace-only-one-char.rs",
-          "byte_start": 20,
-          "byte_end": 21,
-          "line_start": 2,
-          "line_end": 2,
-          "column_start": 9,
-          "column_end": 10,
-          "is_primary": true,
-          "text": [
-            {
-              "text": "    let x = 42;",
-              "highlight_start": 9,
-              "highlight_end": 10
-            }
-          ],
-          "label": null,
-          "suggested_replacement": "_x",
-          "expansion": null
-        }
-      ],
-      "children": [],
-      "rendered": null
-    }
-  ],
-  "rendered": "warning: unused variable: `x`\n --> replace-only-one-char.rs:2:9\n  |\n2 |     let x = 42;\n  |         ^ help: consider using `_x` instead\n  |\n  = note: #[warn(unused_variables)] on by default\n\n"
+  ]
+}
+{
+  "$message_type": "diagnostic",
+  "children": [],
+  "code": null,
+  "level": "warning",
+  "message": "1 warning emitted",
+  "rendered": "warning: 1 warning emitted/n/n",
+  "spans": []
 }
