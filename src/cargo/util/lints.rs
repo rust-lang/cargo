@@ -476,6 +476,37 @@ const INVALID_SPDX_LICENSE_EXPRESSION: Lint = Lint {
     feature_gate: None,
     docs: Some(
         r#"
+### What it does
+
+Checks that the `license` field in `Cargo.toml` is a valid SPDX license expression.
+See the doc of [the `license` field] for the SPDX specification version Cargo currently supports.
+
+[the `license` field]: manifest.md#the-license-and-license-file-fields
+
+### Why it is bad
+
+Build tools, package registries, and compliance systems may fail to handle
+non-SPDX licenses, which can lead to build failures, rejected uploads,
+incorrect license reporting, or legal risks.
+
+### Examples
+
+```toml
+license = "MIT / Apache-2.0"       # Invalid: uses "/" instead of "OR"
+license = "GPL-3.0 with exception" # Invalid: uses lowercase "with" instead of "WITH"
+license = "GPL-3.0+"               # Invalid: uses the deprecated "+" operator instead of "GPL-3.0-or-later"
+license = "MIT OR (Apache-2.0"     # Invalid: unclosed parenthesis
+```
+
+Use instead:
+
+```toml
+license = "MIT OR Apache-2.0"
+license = "GPL-3.0 WITH exception"
+license = "GPL-3.0-or-later"
+license = "(MIT OR Apache-2.0) AND GPL-3.0-or-later WITH Classpath-exception-2.0"
+```
+
 "#,
     ),
 };
