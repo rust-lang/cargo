@@ -162,26 +162,28 @@ Do not activate the \fBdefault\fR feature of the selected packages.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Check for the specified target (may be specified multiple times) The default is the host architecture. The general format of the triple is
+Check for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the triple is
 \fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&.
 .sp
-You may specify the following kinds of targets:
+Possible values:
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'Any supported target in \fBrustc \-\-print target\-list\fR (note: you have to install/add the target to use it).
+\h'-04'\(bu\h'+03'Any supported target in \fBrustc \-\-print target\-list\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'\fBhost\fR, which will internally be substituted by the host\[cq]s target. This can be particularly useful if you\[cq]re cross\-compiling some crates, and don\[cq]t want to specify your host\[cq]s machine as a target (for instance, an \fBxtask\fR in a shared project that may be worked on by many hosts).
+\h'-04'\(bu\h'+03'\fB"host"\fR, which will internally be substituted by the host\[cq]s target. This can be particularly useful if you\[cq]re cross\-compiling some crates, and don\[cq]t want to specify your host\[cq]s machine as a target (for instance, an \fBxtask\fR in a shared project that may be worked on by many hosts).
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'A path to a custom target specification (further reading \fIhere\fR <https://doc.rust\-lang.org/rustc/targets/custom.html#custom\-target\-lookup\-path>).
+\h'-04'\(bu\h'+03'A path to a custom target specification. See \fICustom Target Lookup Path\fR <https://doc.rust\-lang.org/rustc/targets/custom.html#custom\-target\-lookup\-path> for more information.
 .RE
 .sp
 This may also be specified with the \fBbuild.target\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .sp
-\fBNote\fR: Specifying this flag makes Cargo run in a different mode where the target artifacts are placed in a separate directory. See the \fIbuild cache\fR <https://doc.rust\-lang.org/cargo/reference/build\-cache.html> documentation for more details.
+Note that specifying this flag makes Cargo run in a different mode where the
+target artifacts are placed in a separate directory. See the
+\fIbuild cache\fR <https://doc.rust\-lang.org/cargo/reference/build\-cache.html> documentation for more details.
 .RE
 .sp
 \fB\-r\fR, 

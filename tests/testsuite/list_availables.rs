@@ -233,7 +233,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -308,7 +308,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -344,7 +344,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -419,7 +419,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -468,7 +468,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -543,7 +543,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -618,7 +618,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -664,7 +664,7 @@ No binaries available.
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -739,7 +739,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -814,7 +814,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -856,7 +856,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
@@ -880,7 +880,7 @@ Possible packages/workspace members:
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
 
-Run `[..]` to see possible targets, or specify `host` for the host architecture.
+Run `[..]` to see possible targets.
 
 "#]])
             .build(),
