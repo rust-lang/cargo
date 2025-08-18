@@ -126,6 +126,89 @@ fn simple_cross_config() {
 }
 
 #[cargo_test]
+fn target_host_arg() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                rustc_host()
+            ),
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build -v --target host")
+        .with_stderr_contains("[RUNNING] `rustc [..] --target [HOST_TARGET] [..]`")
+        .run();
+}
+
+#[cargo_test]
+fn target_host_config() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [build]
+                    target = "host"
+                "#,
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        assert_eq!(std::env::var("TARGET").unwrap(), "{}");
+                    }}
+                "#,
+                rustc_host()
+            ),
+        )
+        .file("src/lib.rs", r#""#)
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `rustc [..] --target [HOST_TARGET] [..]`")
+        .run();
+}
+
+#[cargo_test]
 fn simple_deps() {
     if cross_compile_disabled() {
         return;

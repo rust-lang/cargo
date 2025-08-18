@@ -1257,6 +1257,11 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
         }
     }
 
+    // Allow tab-completion for `host` as the desired target.
+    candidates.push(clap_complete::CompletionCandidate::new("host").help(Some(
+        concat!("alias for: ", env!("RUST_HOST_TARGET")).into(),
+    )));
+
     candidates
 }
 

@@ -132,12 +132,24 @@ single quotes or double quotes around each pattern.
 .sp
 \fB\-\-target\fR \fItriple\fR
 .RS 4
-Publish for the given architecture. The default is the host architecture. The general format of the triple is
-\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&. Run \fBrustc \-\-print target\-list\fR for a
-list of supported targets. This flag may be specified multiple times.
+Publish for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the triple is
+\fB<arch><sub>\-<vendor>\-<sys>\-<abi>\fR\&.
 .sp
-This may also be specified with the \fBbuild.target\fR
-\fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+Possible values:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Any supported target in \fBrustc \-\-print target\-list\fR\&.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fB"host"\fR, which will internally be substituted by the host\[cq]s target. This can be particularly useful if you\[cq]re cross\-compiling some crates, and don\[cq]t want to specify your host\[cq]s machine as a target (for instance, an \fBxtask\fR in a shared project that may be worked on by many hosts).
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'A path to a custom target specification. See \fICustom Target Lookup Path\fR <https://doc.rust\-lang.org/rustc/targets/custom.html#custom\-target\-lookup\-path> for more information.
+.RE
+.sp
+This may also be specified with the \fBbuild.target\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 .sp
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
