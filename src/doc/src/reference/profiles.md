@@ -166,7 +166,7 @@ The `lto` setting controls `rustc`'s [`-C lto`], [`-C linker-plugin-lto`], and
 LTO can produce better optimized code, using whole-program analysis, at the cost
 of longer linking time.
 
-The valid options from most to least optimizing are:
+The valid options are:
 
 * `true` or `"fat"`: Performs "fat" LTO which attempts to perform
   optimizations across all crates within the dependency graph.
