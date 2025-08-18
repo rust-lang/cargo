@@ -301,6 +301,20 @@ See [Multiple locations](#multiple-locations) section below for detailed explana
 > locations](#multiple-locations) section for a fallback alternative for `git`
 > and `path` dependencies.
 
+### Git submodules
+
+When cloning a `git` dependency,
+Cargo automatically fetches its submodules recursively
+so that all required code is available for the build.
+
+To skip updates for a specific submodule,
+Cargo respects the [`submodule.<name>.update`] setting in `.gitmodules`.
+Setting it to `none` disables updates for that submodule if it isn't needed for the build.
+This is usually set in the repository itself,
+so changes require access to the dependency's repo.
+
+[`submodule.<name>.update`]: https://git-scm.com/docs/gitmodules#Documentation/gitmodules.txt-submodulenameupdate
+
 ### Accessing private Git repositories
 
 See [Git Authentication](../appendix/git-authentication.md) for help with Git authentication for private repos.
