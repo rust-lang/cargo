@@ -14,7 +14,7 @@ USER testuser
 WORKDIR /repos/bar
 RUN git config --global user.email "testuser@example.com" &&\
     git config --global user.name "Test User" &&\
-    git init -b master . &&\
+    git init -b main . &&\
     git add Cargo.toml src &&\
     git commit -m "Initial commit" &&\
     cd .. &&\

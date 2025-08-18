@@ -15,13 +15,13 @@ fn create_default_gitconfig() {
     File::create(gitconfig).unwrap();
 
     // If we're running this under a user account that has a different default branch set up
-    // then tests that assume the default branch is master will fail. We set the default branch
-    // to master explicitly so that tests that rely on this behavior still pass.
+    // then tests that assume the default branch is main will fail. We set the default branch
+    // to main explicitly so that tests that rely on this behavior still pass.
     fs::write(
         paths::home().join(".gitconfig"),
         r#"
         [init]
-            defaultBranch = master
+            defaultBranch = main
         "#,
     )
     .unwrap();
@@ -536,7 +536,7 @@ fn git_default_branch() {
     cargo_process("new foo").run();
     let repo = git2::Repository::open(paths::root().join("foo")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
-    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/master");
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/main");
 
     fs::write(
         paths::home().join(".gitconfig"),
@@ -549,7 +549,7 @@ fn git_default_branch() {
     cargo_process("new bar").run();
     let repo = git2::Repository::open(paths::root().join("bar")).unwrap();
     let head = repo.find_reference("HEAD").unwrap();
-    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/hello");
+    assert_eq!(head.symbolic_target().unwrap(), "refs/heads/main");
 }
 
 #[cargo_test]

@@ -32,7 +32,11 @@ pub struct FossilRepo;
 
 impl GitRepo {
     pub fn init(path: &Path, _: &Path) -> CargoResult<GitRepo> {
-        git2::Repository::init(path)?;
+        // Initialize Git repository with "main" as the default branch,
+        // regardless of the user's global git configuration.
+        let mut opts = git2::RepositoryInitOptions::new();
+        opts.initial_head("main");
+        git2::Repository::init_opts(path, &opts)?;
         Ok(GitRepo)
     }
     pub fn discover(path: &Path, _: &Path) -> Result<git2::Repository, git2::Error> {
