@@ -667,22 +667,3 @@ rand = { workspace = true, optional = true }
 [workspace.dependencies]: workspaces.md#the-dependencies-table
 [optional]: features.md#optional-dependencies
 [features]: features.md
-
-<script>
-(function() {
-    var fragments = {
-        "#overriding-dependencies": "overriding-dependencies.html",
-        "#testing-a-bugfix": "overriding-dependencies.html#testing-a-bugfix",
-        "#working-with-an-unpublished-minor-version": "overriding-dependencies.html#working-with-an-unpublished-minor-version",
-        "#overriding-repository-url": "overriding-dependencies.html#overriding-repository-url",
-        "#prepublishing-a-breaking-change": "overriding-dependencies.html#prepublishing-a-breaking-change",
-        "#overriding-with-local-dependencies": "overriding-dependencies.html#paths-overrides",
-    };
-    var target = fragments[window.location.hash];
-    if (target) {
-        var url = window.location.toString();
-        var base = url.substring(0, url.lastIndexOf('/'));
-        window.location.replace(base + "/" + target);
-    }
-})();
-</script>
