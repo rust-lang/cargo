@@ -845,6 +845,7 @@ unstable_cli_options!(
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     bindeps: bool = ("Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates"),
     build_analysis: bool = ("Record and persist build metrics across runs, with commands to query past builds."),
+    build_dir_new_layout: bool = ("Use the new build-dir filesystem layout"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
@@ -1365,6 +1366,7 @@ impl CliUnstable {
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,
             "build-analysis" => self.build_analysis = parse_empty(k, v)?,
+            "build-dir-new-layout" => self.build_dir_new_layout = parse_empty(k, v)?,
             "build-std" => self.build_std = Some(parse_list(v)),
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
