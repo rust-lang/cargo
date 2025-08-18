@@ -129,29 +129,3 @@ controlled via the [`registries.crates-io.protocol`] config key.
 [config]: config.md
 [crates.io]: https://crates.io/
 [`registries.crates-io.protocol`]: config.md#registriescrates-ioprotocol
-
-
-<script>
-(function() {
-    var fragments = {
-        "#running-a-registry": "running-a-registry.html",
-        "#index-format": "registry-index.html",
-        "#web-api": "registry-web-api.html",
-        "#publish": "registry-web-api.html#publish",
-        "#yank": "registry-web-api.html#yank",
-        "#unyank": "registry-web-api.html#unyank",
-        "#owners": "registry-web-api.html#owners",
-        "#owners-list": "registry-web-api.html#owners-list",
-        "#owners-add": "registry-web-api.html#owners-add",
-        "#owners-remove": "registry-web-api.html#owners-remove",
-        "#search": "registry-web-api.html#search",
-        "#login": "registry-web-api.html#login",
-    };
-    var target = fragments[window.location.hash];
-    if (target) {
-        var url = window.location.toString();
-        var base = url.substring(0, url.lastIndexOf('/'));
-        window.location.replace(base + "/" + target);
-    }
-})();
-</script>

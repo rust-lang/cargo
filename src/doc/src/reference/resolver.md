@@ -697,19 +697,3 @@ circumstances:
   dependency.
 
 [`cargo install`]: ../commands/cargo-install.md
-
-<script>
-(function() {
-    var fragments = {
-        "#version-metadata": "specifying-dependencies.html#version-metadata",
-        "#pre-releases": "specifying-dependencies.html#pre-releases",
-        "#other-constraints": "#constraints-and-heuristics",
-    };
-    var target = fragments[window.location.hash];
-    if (target) {
-        var url = window.location.toString();
-        var base = url.substring(0, url.lastIndexOf('/'));
-        window.location.replace(base + "/" + target);
-    }
-})();
-</script>
