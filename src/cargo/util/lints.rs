@@ -535,6 +535,12 @@ fn output_unknown_lints(
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
 
+        let mut footers = Vec::new();
+        if emitted_source.is_none() {
+            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
+            footers.push(Level::Note.title(emitted_source.as_ref().unwrap()));
+        }
+
         let mut message = if let Some(span) =
             get_span(manifest.document(), &["lints", "cargo", lint_name], false)
         {
@@ -569,25 +575,21 @@ fn output_unknown_lints(
             } else {
                 Level::Note.title(&second_title)
             };
+            footers.push(inherited_note);
 
-            level
-                .title(&title)
-                .snippet(
-                    Snippet::source(ws_contents)
-                        .origin(&ws_path)
-                        .annotation(Level::Error.span(lint_span))
-                        .fold(true),
-                )
-                .footer(inherited_note)
+            level.title(&title).snippet(
+                Snippet::source(ws_contents)
+                    .origin(&ws_path)
+                    .annotation(Level::Error.span(lint_span))
+                    .fold(true),
+            )
         };
 
-        if emitted_source.is_none() {
-            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
-            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
-        }
-
         if let Some(help) = help.as_ref() {
-            message = message.footer(Level::Help.title(help));
+            footers.push(Level::Help.title(help));
+        }
+        for footer in footers {
+            message = message.footer(footer);
         }
 
         gctx.shell().print_message(message)?;
