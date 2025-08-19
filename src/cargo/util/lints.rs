@@ -307,6 +307,10 @@ impl Lint {
             .map(|(_, (l, r, _))| (l, r))
             .unwrap()
     }
+
+    fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
+        format!("`cargo::{}` is set to `{lint_level}` {reason}", self.name,)
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -449,10 +453,7 @@ pub fn check_im_a_teapot(
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = format!(
-            "`cargo::{}` is set to `{lint_level}` {reason}",
-            IM_A_TEAPOT.name
-        );
+        let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
 
         let key_span = get_span(manifest.document(), &["package", "im-a-teapot"], false).unwrap();
         let value_span = get_span(manifest.document(), &["package", "im-a-teapot"], true).unwrap();
@@ -581,10 +582,7 @@ fn output_unknown_lints(
         };
 
         if emitted_source.is_none() {
-            emitted_source = Some(format!(
-                "`cargo::{}` is set to `{lint_level}` {reason}",
-                UNKNOWN_LINTS.name
-            ));
+            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
             message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
         }
 
