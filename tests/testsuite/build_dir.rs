@@ -12,7 +12,6 @@
 use std::path::PathBuf;
 
 use crate::prelude::*;
-use cargo_test_support::{Project, prelude::*};
 use cargo_test_support::{paths, project, str};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 
@@ -32,20 +31,39 @@ fn binary_with_debug() {
 
     p.cargo("build").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
-    assert_exists_patterns_with_base_dir(
-        &p.root(),
-        &[
-            // Check the pre-uplifted binary in the build-dir
-            &format!("build-dir/debug/deps/foo*{EXE_SUFFIX}"),
-            "build-dir/debug/deps/foo*.d",
-            // Verify the binary was copied to the target-dir
-            &format!("target-dir/debug/foo{EXE_SUFFIX}"),
-            "target-dir/debug/foo.d",
-        ],
-    );
     assert_not_exists(&p.root().join("target"));
+
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 }
 
 #[cargo_test]
@@ -64,19 +82,37 @@ fn binary_with_release() {
 
     p.cargo("build --release").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "release");
-    assert_exists(&p.root().join(format!("target-dir/release/foo{EXE_SUFFIX}")));
-    assert_exists_patterns_with_base_dir(
-        &p.root(),
-        &[
-            // Check the pre-uplifted binary in the build-dir
-            &format!("build-dir/release/deps/foo*{EXE_SUFFIX}"),
-            "build-dir/release/deps/foo*.d",
-            // Verify the binary was copied to the target-dir
-            &format!("target-dir/release/foo{EXE_SUFFIX}"),
-            "target-dir/release/foo.d",
-        ],
-    );
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── release
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── release
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 }
 
 #[cargo_test]
@@ -160,8 +196,28 @@ fn should_default_to_target() {
 
     p.cargo("build").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("target"), "debug");
-    assert_exists(&p.root().join(format!("target/debug/foo{EXE_SUFFIX}")));
+    p.root().join("target").verify_file_layout(str![[r#"
+[ROOT]/foo/target
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    ├── foo[EXE]
+    ├── foo.d
+    └── incremental
+
+"#]]);
 }
 
 #[cargo_test]
@@ -175,8 +231,26 @@ fn should_respect_env_var() {
         .enable_mac_dsym()
         .run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_exists(&p.root().join(format!("target/debug/foo{EXE_SUFFIX}")));
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
+
+"#]]);
 }
 
 #[cargo_test]
@@ -246,8 +320,43 @@ fn cargo_tmpdir_should_output_to_build_dir() {
 
     p.cargo("test").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_exists(&p.root().join(format!("build-dir/tmp/foo.txt")));
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+├── debug
+│   ├── .cargo-lock
+│   ├── .fingerprint
+│   │   ├── foo-[HASH]
+...
+│   │   ├── foo-[HASH]
+...
+│   │   └── foo-[HASH]
+...
+│   ├── build
+│   ├── deps
+│   │   ├── foo-[HASH][EXE]
+│   │   ├── foo-[HASH].d
+│   │   ├── foo-[HASH][EXE]
+│   │   ├── foo-[HASH].d
+│   │   ├── foo-[HASH][EXE]
+│   │   └── foo-[HASH].d
+│   ├── examples
+│   └── incremental
+└── tmp
+    └── foo.txt
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    └── foo[EXE]
+
+"#]]);
 }
 
 #[cargo_test]
@@ -267,18 +376,37 @@ fn examples_should_output_to_build_dir_and_uplift_to_target_dir() {
 
     p.cargo("build --examples").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_exists_patterns_with_base_dir(
-        &p.root(),
-        &[
-            // uplifted (target-dir)
-            &format!("target-dir/debug/examples/foo{EXE_SUFFIX}"),
-            "target-dir/debug/examples/foo.d",
-            // pre-uplifted (build-dir)
-            &format!("build-dir/debug/examples/foo*{EXE_SUFFIX}"),
-            "build-dir/debug/examples/foo*.d",
-        ],
-    );
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── dep-example-foo
+    │       ├── example-foo
+    │       ├── example-foo.json
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    ├── examples
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    └── incremental
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    └── examples
+        ├── foo[EXE]
+        └── foo.d
+
+"#]]);
 }
 
 #[cargo_test]
@@ -298,14 +426,38 @@ fn benches_should_output_to_build_dir() {
 
     p.cargo("build --bench=foo").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_exists_patterns_with_base_dir(
-        &p.root(),
-        &[
-            &format!("build-dir/debug/deps/foo*{EXE_SUFFIX}"),
-            "build-dir/debug/deps/foo*.d",
-        ],
-    );
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+├── debug
+│   ├── .cargo-lock
+│   ├── .fingerprint
+│   │   ├── foo-[HASH]
+...
+│   │   └── foo-[HASH]
+...
+│   ├── build
+│   ├── deps
+│   │   ├── foo-[HASH][EXE]
+│   │   ├── foo-[HASH].d
+│   │   ├── foo-[HASH][EXE]
+│   │   └── foo-[HASH].d
+│   ├── examples
+│   └── incremental
+└── tmp
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    └── foo[EXE]
+
+"#]]);
 }
 
 #[cargo_test]
@@ -346,17 +498,41 @@ fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
 
     p.cargo("package").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── debug
+│   ├── .cargo-lock
+│   ├── .fingerprint
+│   │   └── foo-[HASH]
+│   │       ├── bin-foo
+│   │       ├── bin-foo.json
+│   │       ├── dep-bin-foo
+│   │       └── invoked.timestamp
+│   ├── build
+│   ├── deps
+│   │   ├── foo-[HASH][EXE]
+│   │   └── foo-[HASH].d
+│   ├── examples
+│   ├── foo[EXE]
+│   ├── foo.d
+│   └── incremental
+└── package
+    └── foo-0.0.1
+        ├── Cargo.lock
+        ├── Cargo.toml
+        ├── Cargo.toml.orig
+        └── src
+            └── main.rs
 
-    let package_artifact_dir = p.root().join("target-dir/package");
-    assert_exists(&package_artifact_dir);
-    assert_exists(&package_artifact_dir.join("foo-0.0.1.crate"));
-    assert!(package_artifact_dir.join("foo-0.0.1.crate").is_file());
+"#]]);
 
-    let package_build_dir = p.root().join("build-dir/package");
-    assert_exists(&package_build_dir);
-    assert_exists(&package_build_dir.join("foo-0.0.1"));
-    assert!(package_build_dir.join("foo-0.0.1").is_dir());
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+└── package
+    └── foo-0.0.1.crate
+
+"#]]);
 }
 
 #[cargo_test]
@@ -375,7 +551,37 @@ fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
 
     p.cargo("build").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 
     p.cargo("clean").enable_mac_dsym().run();
 
@@ -493,11 +699,37 @@ fn template_workspace_root() {
 
     p.cargo("build").enable_mac_dsym().run();
 
-    assert_build_dir_layout(p.root().join("build-dir"), "debug");
-    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+    p.root().join("build-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
 
-    // Verify the binary was uplifted to the target-dir
-    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 }
 
 #[cargo_test]
@@ -516,11 +748,39 @@ fn template_cargo_cache_home() {
 
     p.cargo("build").enable_mac_dsym().run();
 
-    assert_build_dir_layout(paths::home().join(".cargo/build-dir"), "debug");
-    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
+    paths::cargo_home()
+        .join("build-dir")
+        .verify_file_layout(str![[r#"
+[ROOT]/home/.cargo/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
 
-    // Verify the binary was uplifted to the target-dir
-    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 }
 
 #[cargo_test]
@@ -554,11 +814,38 @@ fn template_workspace_path_hash() {
     let hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
 
     let build_dir = hash_dir.as_path().join("build-dir");
-    assert_build_dir_layout(build_dir, "debug");
-    assert_artifact_dir_layout(p.root().join("target-dir"), "debug");
 
-    // Verify the binary was uplifted to the target-dir
-    assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
+    build_dir.verify_file_layout(str![[r#"
+[ROOT]/foo/foo/[HASH]/build-dir
+├── .rustc_info.json
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── .fingerprint
+    │   └── foo-[HASH]
+    │       ├── bin-foo
+    │       ├── bin-foo.json
+    │       ├── dep-bin-foo
+    │       └── invoked.timestamp
+    ├── build
+    ├── deps
+    │   ├── foo-[HASH][EXE]
+    │   └── foo-[HASH].d
+    ├── examples
+    └── incremental
+
+"#]]);
+
+    p.root().join("target-dir").verify_file_layout(str![[r#"
+[ROOT]/foo/target-dir
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    ├── examples
+    ├── foo[EXE]
+    └── foo.d
+
+"#]]);
 }
 
 /// Verify that the {workspace-path-hash} does not changes if cargo is run from inside of
@@ -600,7 +887,37 @@ fn template_workspace_path_hash_should_handle_symlink() {
     let foo_dir = p.root().join("foo");
     assert_exists(&foo_dir);
     let original_hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
-    verify_layouts(&p, &original_hash_dir);
+
+    original_hash_dir.verify_file_layout(str![[r#"
+[ROOT]/foo/foo/[HASH]
+└── build-dir
+    ├── .rustc_info.json
+    ├── CACHEDIR.TAG
+    └── debug
+        ├── .cargo-lock
+        ├── .fingerprint
+        │   └── foo-[HASH]
+        │       ├── dep-lib-foo
+        │       ├── invoked.timestamp
+        │       ├── lib-foo
+        │       └── lib-foo.json
+        ├── build
+        ├── deps
+        │   ├── foo-[HASH].d
+        │   └── libfoo-[HASH].rmeta
+        ├── examples
+        └── incremental
+
+"#]]);
+
+    p.root().join("target").verify_file_layout(str![[r#"
+[ROOT]/foo/target
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    └── examples
+
+"#]]);
 
     // Create a symlink of the project root.
     let mut symlinked_dir = p.root().clone();
@@ -617,16 +934,40 @@ fn template_workspace_path_hash_should_handle_symlink() {
     // Parse and verify the hash created from the symlinked dir
     assert_exists(&foo_dir);
     let symlink_hash_dir = parse_workspace_manifest_path_hash(&foo_dir);
-    verify_layouts(&p, &symlink_hash_dir);
+
+    symlink_hash_dir.verify_file_layout(str![[r#"
+[ROOT]/foo/foo/[HASH]
+└── build-dir
+    ├── .rustc_info.json
+    ├── CACHEDIR.TAG
+    └── debug
+        ├── .cargo-lock
+        ├── .fingerprint
+        │   └── foo-[HASH]
+        │       ├── dep-lib-foo
+        │       ├── invoked.timestamp
+        │       ├── lib-foo
+        │       └── lib-foo.json
+        ├── build
+        ├── deps
+        │   ├── foo-[HASH].d
+        │   └── libfoo-[HASH].rmeta
+        ├── examples
+        └── incremental
+
+"#]]);
+
+    p.root().join("target").verify_file_layout(str![[r#"
+[ROOT]/foo/target
+├── CACHEDIR.TAG
+└── debug
+    ├── .cargo-lock
+    └── examples
+
+"#]]);
 
     // Verify the hash dir created from the symlinked and non-symlinked dirs are the same.
     assert_eq!(original_hash_dir, symlink_hash_dir);
-
-    fn verify_layouts(p: &Project, build_dir_parent: &PathBuf) {
-        let build_dir = build_dir_parent.as_path().join("build-dir");
-        assert_build_dir_layout(build_dir, "debug");
-        assert_artifact_dir_layout(p.root().join("target"), "debug");
-    }
 }
 
 #[cargo_test]
