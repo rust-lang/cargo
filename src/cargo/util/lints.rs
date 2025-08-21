@@ -307,6 +307,10 @@ impl Lint {
             .map(|(_, (l, r, _))| (l, r))
             .unwrap()
     }
+
+    fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
+        format!("`cargo::{}` is set to `{lint_level}` {reason}", self.name,)
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -329,6 +333,10 @@ impl Display for LintLevel {
 }
 
 impl LintLevel {
+    pub fn is_error(&self) -> bool {
+        self == &LintLevel::Forbid || self == &LintLevel::Deny
+    }
+
     pub fn to_diagnostic_level(self) -> Level {
         match self {
             LintLevel::Allow => unreachable!("allow does not map to a diagnostic level"),
@@ -440,15 +448,12 @@ pub fn check_im_a_teapot(
         .package()
         .is_some_and(|p| p.im_a_teapot.is_some())
     {
-        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+        if lint_level.is_error() {
             *error_count += 1;
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = format!(
-            "`cargo::{}` is set to `{lint_level}` {reason}",
-            IM_A_TEAPOT.name
-        );
+        let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
 
         let key_span = get_span(manifest.document(), &["package", "im-a-teapot"], false).unwrap();
         let value_span = get_span(manifest.document(), &["package", "im-a-teapot"], true).unwrap();
@@ -514,7 +519,7 @@ fn output_unknown_lints(
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
-        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+        if lint_level.is_error() {
             *error_count += 1;
         }
         let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
@@ -529,6 +534,12 @@ fn output_unknown_lints(
         };
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
+
+        let mut footers = Vec::new();
+        if emitted_source.is_none() {
+            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
+            footers.push(Level::Note.title(emitted_source.as_ref().unwrap()));
+        }
 
         let mut message = if let Some(span) =
             get_span(manifest.document(), &["lints", "cargo", lint_name], false)
@@ -564,28 +575,21 @@ fn output_unknown_lints(
             } else {
                 Level::Note.title(&second_title)
             };
+            footers.push(inherited_note);
 
-            level
-                .title(&title)
-                .snippet(
-                    Snippet::source(ws_contents)
-                        .origin(&ws_path)
-                        .annotation(Level::Error.span(lint_span))
-                        .fold(true),
-                )
-                .footer(inherited_note)
+            level.title(&title).snippet(
+                Snippet::source(ws_contents)
+                    .origin(&ws_path)
+                    .annotation(Level::Error.span(lint_span))
+                    .fold(true),
+            )
         };
 
-        if emitted_source.is_none() {
-            emitted_source = Some(format!(
-                "`cargo::{}` is set to `{lint_level}` {reason}",
-                UNKNOWN_LINTS.name
-            ));
-            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
-        }
-
         if let Some(help) = help.as_ref() {
-            message = message.footer(Level::Help.title(help));
+            footers.push(Level::Help.title(help));
+        }
+        for footer in footers {
+            message = message.footer(footer);
         }
 
         gctx.shell().print_message(message)?;
