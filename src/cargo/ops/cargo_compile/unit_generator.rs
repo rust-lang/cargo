@@ -46,7 +46,7 @@ struct Proposal<'a> {
 /// [`generate_root_units`]: UnitGenerator::generate_root_units
 /// [`build_unit_dependencies`]: crate::core::compiler::unit_dependencies::build_unit_dependencies
 /// [`UnitGraph`]: crate::core::compiler::unit_graph::UnitGraph
-pub(super) struct UnitGenerator<'a, 'gctx> {
+pub struct UnitGenerator<'a, 'gctx> {
     pub ws: &'a Workspace<'gctx>,
     pub packages: &'a [&'a Package],
     pub spec: &'a Packages,
