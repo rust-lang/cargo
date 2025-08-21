@@ -60,7 +60,7 @@ use crate::util::{CargoResult, StableHasher};
 mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
-mod unit_generator;
+pub(super) mod unit_generator;
 use unit_generator::UnitGenerator;
 
 mod packages;
