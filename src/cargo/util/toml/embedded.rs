@@ -379,6 +379,55 @@ content: "#![feature(frontmatter)]\n\n---\n//~^ ERROR: expected item, found `-`\
     }
 
     #[test]
+    fn rustc_frontmatter_inner_hyphens_1() {
+        assert_source(
+            r#"---
+x ---🚧️
+---
+
+// Regression test for #141483
+//@check-pass
+
+#![feature(frontmatter)]
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "x ---🚧\u{fe0f}\n"
+content: "\n// Regression test for #141483\n//@check-pass\n\n#![feature(frontmatter)]\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_frontmatter_inner_hyphens_2() {
+        assert_source(
+            r#"---
+x ---y
+---
+
+// Test that hypens are allowed inside frontmatters if there is some
+// non-whitespace character preceding them.
+//@check-pass
+
+#![feature(frontmatter)]
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "x ---y\n"
+content: "\n// Test that hypens are allowed inside frontmatters if there is some\n// non-whitespace character preceding them.\n//@check-pass\n\n#![feature(frontmatter)]\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
     fn rustc_frontmatter_non_lexible_tokens() {
         assert_source(
             r#"---uwu
@@ -495,6 +544,80 @@ frontmatter: ""
 content: "\n//@ check-pass\n// A frontmatter infostring can have leading whitespace.\n\nfn main() {}\n"
 
 "#]],
+        );
+    }
+
+    #[test]
+    fn rustc_hyphen_in_infostring_leading() {
+        // We don't validate infostrings besides `info == "cargo"`
+        assert_source(
+            r#"--- -toml
+//~^ ERROR: invalid infostring for frontmatter
+---
+
+// infostrings cannot have leading hyphens
+
+#![feature(frontmatter)]
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "-toml"
+frontmatter: "//~^ ERROR: invalid infostring for frontmatter\n"
+content: "\n// infostrings cannot have leading hyphens\n\n#![feature(frontmatter)]\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_hyphen_in_infostring_non_leading() {
+        assert_source(
+            r#"--- Cargo-toml
+---
+
+// infostrings can contain hyphens as long as a hyphen isn't the first character.
+//@ check-pass
+
+#![feature(frontmatter)]
+
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "Cargo-toml"
+frontmatter: ""
+content: "\n// infostrings can contain hyphens as long as a hyphen isn't the first character.\n//@ check-pass\n\n#![feature(frontmatter)]\n\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn rustc_included_frontmatter() {
+        // Deferred to rustc since this requires knowledge of Rust grammar
+        assert_source(
+            r#"#![feature(frontmatter)]
+
+//@ check-pass
+
+include!("auxiliary/lib.rs");
+
+// auxiliary/lib.rs contains a frontmatter. Ensure that we can use them in an
+// `include!` macro.
+
+fn main() {
+    foo(1);
+}
+"#,
+            str![[r##"
+shebang: None
+info: None
+frontmatter: None
+content: "#![feature(frontmatter)]\n\n//@ check-pass\n\ninclude!(\"auxiliary/lib.rs\");\n\n// auxiliary/lib.rs contains a frontmatter. Ensure that we can use them in an\n// `include!` macro.\n\nfn main() {\n    foo(1);\n}\n"
+
+"##]],
         );
     }
 
