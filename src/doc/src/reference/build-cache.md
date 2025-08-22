@@ -7,7 +7,7 @@ both directories point to a directory named `target` in the root of your
 value, or the `--target-dir` command-line flag. To change the location of the build-dir, you can set the
 `CARGO_BUILD_BUILD_DIR` [environment variable] or the [`build.build-dir`] config value.
 
-Artifacts are split in two catagories:
+Artifacts are split in two categories:
 * Final build artifacts
   * Final build artifacts are output meant for end users of Cargo
   * e.g. binaries for bin crates, output of `cargo doc`, Cargo `--timings` reports

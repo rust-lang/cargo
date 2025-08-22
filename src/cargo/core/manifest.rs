@@ -1086,7 +1086,7 @@ impl Target {
         *self.kind() == TargetKind::CustomBuild
     }
 
-    /// Returns `true` if it is a compile time depencencies, e.g., build script or proc macro
+    /// Returns `true` if it is a compile time dependencies, e.g., build script or proc macro
     pub fn is_compile_time_dependency(&self) -> bool {
         self.is_custom_build() || self.proc_macro()
     }
