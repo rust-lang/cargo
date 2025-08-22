@@ -2260,7 +2260,7 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2308,7 +2308,7 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2356,7 +2356,7 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2413,7 +2413,7 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2461,7 +2461,7 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   invalid response body from server
@@ -3608,7 +3608,7 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   token contains invalid characters.
@@ -4489,7 +4489,7 @@ fn workspace_publish_rate_limit_error() {
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish package_a v0.1.0 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 429
