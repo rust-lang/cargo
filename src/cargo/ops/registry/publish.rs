@@ -238,67 +238,47 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 )?));
             }
 
-            let transmit_result = if original_packages.len() > 1 {
-                // For workspace publishes, wrap transmit with enhanced error reporting
-                transmit(
-                    opts.gctx,
-                    ws,
-                    pkg,
-                    tarball.file(),
-                    &mut registry,
-                    source_ids.original,
-                    opts.dry_run,
-                ).map_err(|e| {
-                    // Collect remaining packages that have not been published yet
-                    let mut remaining: Vec<_> = original_packages
-                        .iter()
-                        .filter(|id| **id != pkg_id)
-                        .map(|id| {
-                            let pkg = &pkg_dep_graph.packages[&id].0;
-                            format!("{} v{}", pkg.name(), pkg.version())
-                        })
-                        .collect();
-                    // Also include any packages that are still waiting for confirmation
-                    for id in to_confirm.iter().filter(|id| **id != pkg_id) {
+            // Prepare workspace context for error message
+            let workspace_context = if original_packages.len() > 1 {
+                let mut remaining: Vec<_> = original_packages
+                    .iter()
+                    .filter(|id| **id != pkg_id)
+                    .map(|id| {
                         let pkg = &pkg_dep_graph.packages[&id].0;
-                        let entry = format!("{} v{}", pkg.name(), pkg.version());
-                        if !remaining.contains(&entry) {
-                            remaining.push(entry);
-                        }
+                        format!("{} v{}", pkg.name(), pkg.version())
+                    })
+                    .collect();
+                // Also include any packages that are still waiting for confirmation
+                for id in to_confirm.iter().filter(|id| **id != pkg_id) {
+                    let pkg = &pkg_dep_graph.packages[&id].0;
+                    let entry = format!("{} v{}", pkg.name(), pkg.version());
+                    if !remaining.contains(&entry) {
+                        remaining.push(entry);
                     }
+                }
 
-                    let message = if !remaining.is_empty() {
-                        format!(
-                            "failed to publish `{}` v{}; the following crates have not been published yet: {}",
-                            pkg.name(),
-                            pkg.version(),
-                            remaining.join(", ")
-                        )
-                    } else {
-                        format!("failed to publish `{}` v{}", pkg.name(), pkg.version())
-                    };
-
-                    e.context(message)
-                })
-            } else {
-                // For single package publishes, preserve original top-level error message with package name
-                transmit(
-                    opts.gctx,
-                    ws,
-                    pkg,
-                    tarball.file(),
-                    &mut registry,
-                    source_ids.original,
-                    opts.dry_run,
-                )
-                .map_err(|e| {
-                    e.context(format!(
-                        "failed to publish `{}` v{}",
-                        pkg.name(),
-                        pkg.version()
+                if !remaining.is_empty() {
+                    Some(format!(
+                        "the following crates have not been published yet: {}",
+                        remaining.join(", ")
                     ))
-                })
+                } else {
+                    None
+                }
+            } else {
+                None
             };
+
+            let transmit_result = transmit(
+                opts.gctx,
+                ws,
+                pkg,
+                tarball.file(),
+                &mut registry,
+                source_ids.original,
+                opts.dry_run,
+                workspace_context,
+            );
 
             if let Err(e) = transmit_result {
                 return Err(e);
@@ -692,6 +672,7 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
+    workspace_context: Option<String>,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -701,9 +682,24 @@ fn transmit(
         return Ok(());
     }
 
-    let warnings = registry
-        .publish(&new_crate, tarball)
-        .with_context(|| format!("failed to publish to registry at {}", registry.host()))?;
+    let warnings = registry.publish(&new_crate, tarball).with_context(|| {
+        if let Some(context) = workspace_context {
+            format!(
+                "failed to publish `{}` v{} to registry at {}; {}",
+                pkg.name(),
+                pkg.version(),
+                registry.host(),
+                context
+            )
+        } else {
+            format!(
+                "failed to publish `{}` v{} to registry at {}",
+                pkg.name(),
+                pkg.version(),
+                registry.host()
+            )
+        }
+    })?;
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(
