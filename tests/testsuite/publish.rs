@@ -4474,8 +4474,8 @@ fn workspace_publish_rate_limit_error() {
         .file("package_c/src/lib.rs", "")
         .build();
 
-    // This demonstrates the current non-actionable error message
-    // The user doesn't know which package failed or what packages remain to be published
+    // This demonstrates the improved error message after the fix
+    // The user now knows which package failed and what packages remain to be published
     p.cargo("publish --workspace --no-verify")
         .replace_crates_io(registry.index_url())
         .with_status(101)
@@ -4490,6 +4490,10 @@ fn workspace_publish_rate_limit_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
 [ERROR] failed to publish package_a v0.1.0 to registry at http://127.0.0.1:[..]/
+
+[NOTE] the following crates have not been published yet:
+  package_b v0.1.0 ([ROOT]/foo/package_b)
+  package_c v0.1.0 ([ROOT]/foo/package_c)
 
 Caused by:
   failed to get a 200 OK response, got 429

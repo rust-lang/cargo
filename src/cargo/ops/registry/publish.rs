@@ -210,7 +210,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         // `b`, and we uploaded `a` and `b` but only confirmed `a`, then on
         // the following pass through the outer loop nothing will be ready for
         // upload.
-        for pkg_id in plan.take_ready() {
+        let mut ready = plan.take_ready();
+        while let Some(pkg_id) = ready.pop_first() {
             let (pkg, (_features, tarball)) = &pkg_dep_graph.packages[&pkg_id];
             opts.gctx.shell().status("Uploading", pkg.package_id())?;
 
@@ -236,6 +237,19 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 )?));
             }
 
+            let workspace_context = || {
+                let mut remaining = ready.clone();
+                remaining.extend(plan.iter());
+                if !remaining.is_empty() {
+                    format!(
+                        "\n\nnote: the following crates have not been published yet:\n  {}",
+                        remaining.into_iter().join("\n  ")
+                    )
+                } else {
+                    String::new()
+                }
+            };
+
             transmit(
                 opts.gctx,
                 ws,
@@ -244,6 +258,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 &mut registry,
                 source_ids.original,
                 opts.dry_run,
+                workspace_context,
             )?;
             to_confirm.insert(pkg_id);
 
@@ -632,6 +647,7 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
+    workspace_context: impl Fn() -> String,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -643,10 +659,11 @@ fn transmit(
 
     let warnings = registry.publish(&new_crate, tarball).with_context(|| {
         format!(
-            "failed to publish {} v{} to registry at {}",
+            "failed to publish {} v{} to registry at {}{}",
             pkg.name(),
             pkg.version(),
-            registry.host()
+            registry.host(),
+            workspace_context()
         )
     })?;
 
