@@ -2260,7 +2260,7 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2308,7 +2308,7 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2356,7 +2356,7 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2413,7 +2413,7 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2461,7 +2461,7 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   invalid response body from server
@@ -3608,7 +3608,7 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish `foo` v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   token contains invalid characters.
@@ -4323,6 +4323,131 @@ fn all_unpublishable_packages() {
         .with_stderr_data(str![[r#"
 [WARNING] nothing to publish, but found 2 unpublishable packages
 [NOTE] to publish packages, set `package.publish` to `true` or a non-empty list
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_publish_failure_reports_remaining_packages() {
+    use cargo_test_support::project;
+    use cargo_test_support::registry::RegistryBuilder;
+
+    // Create a registry that will fail for package 'a' but succeed for others
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .http_api()
+        .add_responder("/api/v1/crates/new", |req, _| {
+            if let Some(body) = &req.body {
+                let body_str = String::from_utf8_lossy(body);
+                if body_str.contains("\"name\":\"a\"") {
+                    Response {
+                        body: b"{\"errors\":[{\"detail\":\"crate a@0.1.0 already exists on crates.io index\"}]}".to_vec(),
+                        code: 400,
+                        headers: vec!["Content-Type: application/json".to_string()],
+                    }
+                } else {
+                    Response {
+                        body: b"{\"ok\":true}".to_vec(),
+                        code: 200,
+                        headers: vec!["Content-Type: application/json".to_string()],
+                    }
+                }
+            } else {
+                Response {
+                    body: b"{\"ok\":true}".to_vec(),
+                    code: 200,
+                    headers: vec!["Content-Type: application/json".to_string()],
+                }
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+        "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            edition = "2021"
+            authors = []
+            license = "MIT"
+            description = "Package A"
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+            edition = "2021"
+            authors = []
+            license = "MIT"
+            description = "Package B"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.1.0"
+            edition = "2021"
+            authors = []
+            license = "MIT"
+            description = "Package C"
+        "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    // Test that when package 'a' fails to publish, the error message includes
+    // information about which packages remain unpublished
+    p.cargo("publish --workspace --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on edition 2021 which implies `resolver = "2"`
+[NOTE] to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+[NOTE] to use the edition 2021 resolver, specify `workspace.resolver = "2"` in the workspace root's manifest
+[NOTE] for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+[UPDATING] `alternative` index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] c v0.1.0 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.1.0 ([ROOT]/foo/a)
+[COMPILING] a v0.1.0 ([ROOT]/foo/target/package/a-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.1.0 ([ROOT]/foo/b)
+[COMPILING] b v0.1.0 ([ROOT]/foo/target/package/b-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] c v0.1.0 ([ROOT]/foo/c)
+[COMPILING] c v0.1.0 ([ROOT]/foo/target/package/c-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[ERROR] failed to publish `a` v0.1.0 to registry at http://127.0.0.1:[..]/; the following crates have not been published yet: b v0.1.0, c v0.1.0
+
+Caused by:
+  the remote server responded with an error (status 400 Bad Request): crate a@0.1.0 already exists on crates.io index
 
 "#]])
         .run();
