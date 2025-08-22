@@ -26,16 +26,9 @@ impl<'s> ScriptSource<'s> {
         let mut rest = source.content;
 
         // Whitespace may precede a frontmatter but must end with a newline
-        let trimmed = rest.trim_start_matches(is_whitespace);
-        if trimmed.len() != rest.len() {
-            let trimmed_len = rest.len() - trimmed.len();
-            let last_trimmed_index = trimmed_len - 1;
-            if rest.as_bytes()[last_trimmed_index] != b'\n' {
-                // either not a frontmatter or invalid opening
-                return Ok(source);
-            }
+        if let Some(nl_end) = strip_ws_lines(rest) {
+            rest = &rest[nl_end..];
         }
-        rest = trimmed;
 
         // Opens with a line that starts with 3 or more `-` followed by an optional identifier
         const FENCE_CHAR: char = '-';
@@ -131,6 +124,18 @@ pub fn strip_shebang(input: &str) -> Option<usize> {
         }
     }
     None
+}
+
+/// Returns the index after any lines with only whitespace, if present
+pub fn strip_ws_lines(input: &str) -> Option<usize> {
+    let ws_end = input.find(|c| !is_whitespace(c)).unwrap_or(input.len());
+    if ws_end == 0 {
+        return None;
+    }
+
+    let nl_start = input[0..ws_end].rfind('\n')?;
+    let nl_end = nl_start + 1;
+    Some(nl_end)
 }
 
 /// True if `c` is considered a whitespace according to Rust language definition.
