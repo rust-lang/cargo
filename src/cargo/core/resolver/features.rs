@@ -906,11 +906,11 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         // All this may result in a dependency being built multiple times
                         // for various targets which are either specified in the manifest
                         // or on the cargo command-line.
-                        let lib_fk = if fk == FeaturesFor::default() {
-                            (self.track_for_host
-                                && (dep.is_build() || self.has_proc_macro_lib(dep_id)))
-                            .then(|| FeaturesFor::HostDep)
-                            .unwrap_or_default()
+                        let lib_fk = if fk != FeaturesFor::HostDep
+                            && self.track_for_host
+                            && (dep.is_build() || self.has_proc_macro_lib(dep_id))
+                        {
+                            FeaturesFor::HostDep
                         } else {
                             fk
                         };
