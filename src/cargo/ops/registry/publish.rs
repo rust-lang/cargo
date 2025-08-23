@@ -197,6 +197,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
 
     let mut plan = PublishPlan::new(&pkg_dep_graph.graph);
+    // Store the original list of packages to be published for error reporting
+    let original_packages: BTreeSet<_> = plan.iter().collect();
     // May contains packages from previous rounds as `wait_for_any_publish_confirmation` returns
     // after it confirms any packages, not all packages, requiring us to handle the rest in the next
     // iteration.
@@ -236,7 +238,30 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 )?));
             }
 
-            transmit(
+            // Prepare workspace context for error message
+            let workspace_context = if original_packages.len() > 1 {
+                let remaining: Vec<_> = original_packages
+                    .iter()
+                    .filter(|id| **id != pkg_id && !to_confirm.contains(*id))
+                    .map(|id| {
+                        let pkg = &pkg_dep_graph.packages[&id].0;
+                        format!("{} v{}", pkg.name(), pkg.version())
+                    })
+                    .collect();
+
+                if !remaining.is_empty() {
+                    format!(
+                        "the following crates have not been published yet:\n  {}",
+                        remaining.join("\n  ")
+                    )
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+
+            let transmit_result = transmit(
                 opts.gctx,
                 ws,
                 pkg,
@@ -244,7 +269,13 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 &mut registry,
                 source_ids.original,
                 opts.dry_run,
-            )?;
+                workspace_context,
+            );
+
+            if let Err(e) = transmit_result {
+                return Err(e);
+            }
+
             to_confirm.insert(pkg_id);
 
             if !opts.dry_run {
@@ -450,12 +481,13 @@ fn verify_unpublished(
                 source.describe()
             ))?;
         } else {
-            bail!(
+            // Return error instead of bail! so it can be wrapped with enhanced context
+            return Err(anyhow::anyhow!(
                 "crate {}@{} already exists on {}",
                 pkg.name(),
                 pkg.version(),
                 source.describe()
-            );
+            ));
         }
     }
 
@@ -632,6 +664,7 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
+    workspace_context: String,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -641,9 +674,24 @@ fn transmit(
         return Ok(());
     }
 
-    let warnings = registry
-        .publish(&new_crate, tarball)
-        .with_context(|| format!("failed to publish to registry at {}", registry.host()))?;
+    let warnings = registry.publish(&new_crate, tarball).with_context(|| {
+        if workspace_context.is_empty() {
+            format!(
+                "failed to publish `{}` v{} to registry at {}",
+                pkg.name(),
+                pkg.version(),
+                registry.host()
+            )
+        } else {
+            format!(
+                "failed to publish `{}` v{} to registry at {}\n\nnote: {}",
+                pkg.name(),
+                pkg.version(),
+                registry.host(),
+                workspace_context
+            )
+        }
+    })?;
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(
