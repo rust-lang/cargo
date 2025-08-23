@@ -20,7 +20,13 @@
 
 #![allow(clippy::disallowed_methods)]
 
-use cargo_test_support::{Execs, basic_manifest, paths, project, rustc_host, str};
+use cargo_test_support::Execs;
+use cargo_test_support::basic_manifest;
+use cargo_test_support::paths;
+use cargo_test_support::project;
+use cargo_test_support::rustc_host;
+use cargo_test_support::str;
+use cargo_test_support::target_spec_json;
 use cargo_test_support::{Project, prelude::*};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -262,20 +268,7 @@ fn cross_custom() {
         )
         .file("dep/Cargo.toml", &basic_manifest("dep", "0.1.0"))
         .file("dep/src/lib.rs", "#![no_std] pub fn answer() -> u32 { 42 }")
-        .file(
-            "custom-target.json",
-            r#"
-            {
-                "llvm-target": "x86_64-unknown-none-gnu",
-                "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
-                "arch": "x86_64",
-                "target-endian": "little",
-                "target-pointer-width": "64",
-                "os": "none",
-                "linker-flavor": "ld.lld"
-            }
-            "#,
-        )
+        .file("custom-target.json", target_spec_json())
         .build();
 
     p.cargo("build --target custom-target.json -v")
@@ -302,23 +295,7 @@ fn custom_test_framework() {
             }
             "#,
         )
-        .file(
-            "target.json",
-            r#"
-            {
-                "llvm-target": "x86_64-unknown-none-gnu",
-                "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
-                "arch": "x86_64",
-                "target-endian": "little",
-                "target-pointer-width": "64",
-                "os": "none",
-                "linker-flavor": "ld.lld",
-                "linker": "rust-lld",
-                "executables": true,
-                "panic-strategy": "abort"
-            }
-            "#,
-        )
+        .file("target.json", target_spec_json())
         .build();
 
     // This is a bit of a hack to use the rust-lld that ships with most toolchains.
