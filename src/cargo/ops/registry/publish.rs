@@ -212,7 +212,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         // `b`, and we uploaded `a` and `b` but only confirmed `a`, then on
         // the following pass through the outer loop nothing will be ready for
         // upload.
-        for pkg_id in plan.take_ready().into_iter() {
+        for pkg_id in plan.take_ready() {
             let (pkg, (_features, tarball)) = &pkg_dep_graph.packages[&pkg_id];
             opts.gctx.shell().status("Uploading", pkg.package_id())?;
 
@@ -240,33 +240,25 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
             // Prepare workspace context for error message
             let workspace_context = if original_packages.len() > 1 {
-                let mut remaining: Vec<_> = original_packages
+                let remaining: Vec<_> = original_packages
                     .iter()
-                    .filter(|id| **id != pkg_id)
+                    .filter(|id| **id != pkg_id && !to_confirm.contains(*id))
                     .map(|id| {
                         let pkg = &pkg_dep_graph.packages[&id].0;
                         format!("{} v{}", pkg.name(), pkg.version())
                     })
                     .collect();
-                // Also include any packages that are still waiting for confirmation
-                for id in to_confirm.iter().filter(|id| **id != pkg_id) {
-                    let pkg = &pkg_dep_graph.packages[&id].0;
-                    let entry = format!("{} v{}", pkg.name(), pkg.version());
-                    if !remaining.contains(&entry) {
-                        remaining.push(entry);
-                    }
-                }
 
                 if !remaining.is_empty() {
-                    Some(format!(
-                        "the following crates have not been published yet: {}",
-                        remaining.join(", ")
-                    ))
+                    format!(
+                        "the following crates have not been published yet:\n  {}",
+                        remaining.join("\n  ")
+                    )
                 } else {
-                    None
+                    String::new()
                 }
             } else {
-                None
+                String::new()
             };
 
             let transmit_result = transmit(
@@ -672,7 +664,7 @@ fn transmit(
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
-    workspace_context: Option<String>,
+    workspace_context: String,
 ) -> CargoResult<()> {
     let new_crate = prepare_transmit(gctx, ws, pkg, registry_id)?;
 
@@ -683,20 +675,20 @@ fn transmit(
     }
 
     let warnings = registry.publish(&new_crate, tarball).with_context(|| {
-        if let Some(context) = workspace_context {
-            format!(
-                "failed to publish `{}` v{} to registry at {}; {}",
-                pkg.name(),
-                pkg.version(),
-                registry.host(),
-                context
-            )
-        } else {
+        if workspace_context.is_empty() {
             format!(
                 "failed to publish `{}` v{} to registry at {}",
                 pkg.name(),
                 pkg.version(),
                 registry.host()
+            )
+        } else {
+            format!(
+                "failed to publish `{}` v{} to registry at {}\n\nnote: {}",
+                pkg.name(),
+                pkg.version(),
+                registry.host(),
+                workspace_context
             )
         }
     })?;

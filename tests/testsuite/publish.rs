@@ -4507,7 +4507,11 @@ fn workspace_publish_rate_limit_error() {
 [COMPILING] package_c v0.1.0 ([ROOT]/foo/target/package/package_c-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
-[ERROR] failed to publish `package_a` v0.1.0 to registry at http://127.0.0.1:[..]/; the following crates have not been published yet: package_b v0.1.0, package_c v0.1.0
+[ERROR] failed to publish `package_a` v0.1.0 to registry at http://127.0.0.1:[..]/
+
+[NOTE] the following crates have not been published yet:
+  package_b v0.1.0
+  package_c v0.1.0
 
 Caused by:
   failed to get a 200 OK response, got 429
