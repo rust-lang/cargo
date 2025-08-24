@@ -31,6 +31,9 @@ DESCRIPTION
           o  Certain paths, such as package.readme and package.license-file,
              are rewritten if they point outside the package root.
 
+          o  Note: the normalized Cargo.toml is intended to be stable, but its
+             exact form may change between Cargo versions.
+
        2. Create the compressed .crate file.
 
           o  The normalized Cargo.toml is included, and the original manifest

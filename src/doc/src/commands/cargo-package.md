@@ -22,6 +22,8 @@ stored in the `target/package` directory. This performs the following steps:
     - Fields not recognized by the current Cargo version are dropped.
     - Certain paths, such as `package.readme` and `package.license-file`,
       are rewritten if they point outside the package root.
+    - **Note**: the normalized `Cargo.toml` is intended to be stable,
+      but its exact form may change between Cargo versions.
 
 2. Create the compressed `.crate` file.
     - The normalized `Cargo.toml` is included, and the original manifest is
