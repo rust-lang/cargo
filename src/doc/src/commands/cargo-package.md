@@ -13,14 +13,19 @@ This command will create a distributable, compressed `.crate` file with the
 source code of the package in the current directory. The resulting file will be
 stored in the `target/package` directory. This performs the following steps:
 
-1. Load and check the current workspace, performing some basic checks.
-    - Path dependencies are not allowed unless they have a version key. Cargo
-      will ignore the path key for dependencies in published packages.
-      `dev-dependencies` do not have this restriction.
+1. Normalize the original `Cargo.toml`.
+    - The manifest is reformatted into a packaging-specific TOML layout.
+    - Workspace-inherited fields are resolved to their concrete values.
+    - Path and Git dependency specifications are removed.
+    - Development dependencies without a `version` key specified are removed.
+    - `[patch]`, `[replace]`, and `[workspace]` sections are removed.
+    - Fields not recognized by the current Cargo version are dropped.
+    - Certain paths, such as `package.readme` and `package.license-file`,
+      are rewritten if they point outside the package root.
+
 2. Create the compressed `.crate` file.
-    - The original `Cargo.toml` file is rewritten and normalized.
-    - `[patch]`, `[replace]`, and `[workspace]` sections are removed from the
-      manifest.
+    - The normalized `Cargo.toml` is included, and the original manifest is
+      preserved in the package as `Cargo.toml.orig`.
     - `Cargo.lock` is always included. When missing, a new lock file will be
       generated unless the `--exclude-lockfile` flag is used. [cargo-install(1)](cargo-install.html)
       will use the packaged lock file if the `--locked` flag is used.
@@ -35,6 +40,7 @@ stored in the `target/package` directory. This performs the following steps:
     - This will rebuild your package from scratch to ensure that it can be
       built from a pristine state. The `--no-verify` flag can be used to skip
       this step.
+
 4. Check that build scripts did not modify any source files.
 
 See [the reference](../reference/publishing.html) for more details about

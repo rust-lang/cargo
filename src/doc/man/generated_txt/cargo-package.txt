@@ -13,18 +13,28 @@ DESCRIPTION
        file will be stored in the target/package directory. This performs the
        following steps:
 
-       1. Load and check the current workspace, performing some basic checks.
+       1. Normalize the original Cargo.toml.
 
-          o  Path dependencies are not allowed unless they have a version key.
-             Cargo will ignore the path key for dependencies in published
-             packages. dev-dependencies do not have this restriction.
+          o  The manifest is reformatted into a packaging-specific TOML layout.
+
+          o  Workspace-inherited fields are resolved to their concrete values.
+
+          o  Path and Git dependency specifications are removed.
+
+          o  Development dependencies without a version key specified are
+             removed.
+
+          o  [patch], [replace], and [workspace] sections are removed.
+
+          o  Fields not recognized by the current Cargo version are dropped.
+
+          o  Certain paths, such as package.readme and package.license-file,
+             are rewritten if they point outside the package root.
 
        2. Create the compressed .crate file.
 
-          o  The original Cargo.toml file is rewritten and normalized.
-
-          o  [patch], [replace], and [workspace] sections are removed from the
-             manifest.
+          o  The normalized Cargo.toml is included, and the original manifest
+             is preserved in the package as Cargo.toml.orig.
 
           o  Cargo.lock is always included. When missing, a new lock file will
              be generated unless the --exclude-lockfile flag is used.

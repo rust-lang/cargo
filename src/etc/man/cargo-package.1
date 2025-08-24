@@ -13,12 +13,35 @@ source code of the package in the current directory. The resulting file will be
 stored in the \fBtarget/package\fR directory. This performs the following steps:
 .sp
 .RS 4
-\h'-04' 1.\h'+01'Load and check the current workspace, performing some basic checks.
+\h'-04' 1.\h'+01'Normalize the original \fBCargo.toml\fR\&.
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'Path dependencies are not allowed unless they have a version key. Cargo
-will ignore the path key for dependencies in published packages.
-\fBdev\-dependencies\fR do not have this restriction.
+\h'-04'\(bu\h'+03'The manifest is reformatted into a packaging\-specific TOML layout.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Workspace\-inherited fields are resolved to their concrete values.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Path and Git dependency specifications are removed.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Development dependencies without a \fBversion\fR key specified are removed.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Fields not recognized by the current Cargo version are dropped.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'Certain paths, such as \fBpackage.readme\fR and \fBpackage.license\-file\fR,
+are rewritten if they point outside the package root.
 .RE
 .RE
 .sp
@@ -26,12 +49,8 @@ will ignore the path key for dependencies in published packages.
 \h'-04' 2.\h'+01'Create the compressed \fB\&.crate\fR file.
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'The original \fBCargo.toml\fR file is rewritten and normalized.
-.RE
-.sp
-.RS 4
-\h'-04'\(bu\h'+03'\fB[patch]\fR, \fB[replace]\fR, and \fB[workspace]\fR sections are removed from the
-manifest.
+\h'-04'\(bu\h'+03'The normalized \fBCargo.toml\fR is included, and the original manifest is
+preserved in the package as \fBCargo.toml.orig\fR\&.
 .RE
 .sp
 .RS 4
