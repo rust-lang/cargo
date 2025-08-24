@@ -50,6 +50,7 @@ use std::fs;
 use std::os;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::LazyLock;
 use std::sync::OnceLock;
 use std::thread::JoinHandle;
 use std::time::{self, Duration};
@@ -1262,6 +1263,28 @@ pub fn basic_lib_manifest(name: &str) -> String {
     "#,
         name, name
     )
+}
+
+/// Gets a valid target spec JSON from rustc.
+///
+/// To avoid any hardcoded value, this fetches `x86_64-unknown-none` target
+/// spec JSON directly from `rustc`, as Cargo shouldn't know the JSON schema.
+pub fn target_spec_json() -> &'static str {
+    static TARGET_SPEC_JSON: LazyLock<String> = LazyLock::new(|| {
+        let json = std::process::Command::new("rustc")
+            .env("RUSTC_BOOTSTRAP", "1")
+            .arg("--print")
+            .arg("target-spec-json")
+            .arg("-Zunstable-options")
+            .arg("--target")
+            .arg("x86_64-unknown-none")
+            .output()
+            .expect("rustc --print target-spec-json")
+            .stdout;
+        String::from_utf8(json).expect("utf8 target spec json")
+    });
+
+    TARGET_SPEC_JSON.as_str()
 }
 
 struct RustcInfo {
