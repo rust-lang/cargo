@@ -37,9 +37,6 @@ stored in the `target/package` directory. This performs the following steps:
       this step.
 4. Check that build scripts did not modify any source files.
 
-The list of files included can be controlled with the `include` and `exclude`
-fields in the manifest.
-
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
 
