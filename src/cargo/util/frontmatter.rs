@@ -10,6 +10,9 @@ pub struct ScriptSource<'s> {
 
 impl<'s> ScriptSource<'s> {
     pub fn parse(input: &'s str) -> CargoResult<Self> {
+        use winnow::stream::FindSlice as _;
+        use winnow::stream::Stream as _;
+
         let mut source = Self {
             shebang: None,
             info: None,
@@ -17,25 +20,25 @@ impl<'s> ScriptSource<'s> {
             content: input,
         };
 
-        if let Some(shebang_end) = strip_shebang(source.content) {
-            let (shebang, content) = source.content.split_at(shebang_end);
-            source.shebang = Some(shebang);
-            source.content = content;
+        let mut input = winnow::stream::LocatingSlice::new(input);
+
+        if let Some(shebang_end) = strip_shebang(input.as_ref()) {
+            source.shebang = Some(input.next_slice(shebang_end));
+            source.content = input.as_ref();
         }
 
-        let mut rest = source.content;
-
         // Whitespace may precede a frontmatter but must end with a newline
-        if let Some(nl_end) = strip_ws_lines(rest) {
-            rest = &rest[nl_end..];
+        if let Some(nl_end) = strip_ws_lines(input.as_ref()) {
+            let _ = input.next_slice(nl_end);
         }
 
         // Opens with a line that starts with 3 or more `-` followed by an optional identifier
         const FENCE_CHAR: char = '-';
-        let fence_length = rest
+        let fence_length = input
+            .as_ref()
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
-            .unwrap_or(rest.len());
+            .unwrap_or_else(|| input.eof_offset());
         match fence_length {
             0 => {
                 return Ok(source);
@@ -48,11 +51,11 @@ impl<'s> ScriptSource<'s> {
             }
             _ => {}
         }
-        let (fence_pattern, rest) = rest.split_at(fence_length);
-        let Some(info_end_index) = rest.find('\n') else {
+        let fence_pattern = input.next_slice(fence_length);
+        let Some(info_nl) = input.find_slice("\n") else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let (info, rest) = rest.split_at(info_end_index);
+        let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
         if !info.is_empty() {
             source.info = Some(info);
@@ -60,25 +63,28 @@ impl<'s> ScriptSource<'s> {
 
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
-        let Some(frontmatter_nl) = rest.find(&nl_fence_pattern) else {
+        let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let frontmatter = &rest[..frontmatter_nl + 1];
+        let frontmatter = input.next_slice(frontmatter_nl.start + 1);
         let frontmatter = frontmatter
             .strip_prefix('\n')
             .expect("earlier `found` + `split_at` left us here");
         source.frontmatter = Some(frontmatter);
-        let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
+        let _ = input.next_slice(fence_length);
 
-        let (after_closing_fence, rest) = rest.split_once("\n").unwrap_or((rest, ""));
+        let nl = input.find_slice("\n");
+        let after_closing_fence = input.next_slice(
+            nl.map(|span| span.end)
+                .unwrap_or_else(|| input.eof_offset()),
+        );
         let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
             anyhow::bail!("trailing characters found after frontmatter close");
         }
 
-        let frontmatter_len = input.len() - rest.len();
-        source.content = &input[frontmatter_len..];
+        source.content = input.finish();
 
         let repeat = Self::parse(source.content)?;
         if repeat.frontmatter.is_some() {
