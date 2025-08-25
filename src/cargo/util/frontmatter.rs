@@ -1,30 +1,40 @@
 use crate::CargoResult;
 
+type Span = std::ops::Range<usize>;
+
 #[derive(Debug)]
 pub struct ScriptSource<'s> {
-    shebang: Option<&'s str>,
-    info: Option<&'s str>,
-    frontmatter: Option<&'s str>,
-    content: &'s str,
+    raw: &'s str,
+    shebang: Option<Span>,
+    info: Option<Span>,
+    frontmatter: Option<Span>,
+    content: Span,
 }
 
 impl<'s> ScriptSource<'s> {
-    pub fn parse(input: &'s str) -> CargoResult<Self> {
+    pub fn parse(raw: &'s str) -> CargoResult<Self> {
         use winnow::stream::FindSlice as _;
+        use winnow::stream::Location as _;
+        use winnow::stream::Offset as _;
         use winnow::stream::Stream as _;
 
+        let content_end = raw.len();
         let mut source = Self {
+            raw,
             shebang: None,
             info: None,
             frontmatter: None,
-            content: input,
+            content: 0..content_end,
         };
 
-        let mut input = winnow::stream::LocatingSlice::new(input);
+        let mut input = winnow::stream::LocatingSlice::new(raw);
 
         if let Some(shebang_end) = strip_shebang(input.as_ref()) {
-            source.shebang = Some(input.next_slice(shebang_end));
-            source.content = input.as_ref();
+            let shebang_start = input.current_token_start();
+            let _ = input.next_slice(shebang_end);
+            let shebang_end = input.current_token_start();
+            source.shebang = Some(shebang_start..shebang_end);
+            source.content = shebang_end..content_end;
         }
 
         // Whitespace may precede a frontmatter but must end with a newline
@@ -58,7 +68,9 @@ impl<'s> ScriptSource<'s> {
         let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
         if !info.is_empty() {
-            source.info = Some(info);
+            let info_start = info.offset_from(&raw);
+            let info_end = info_start + info.len();
+            source.info = Some(info_start..info_end);
         }
 
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
@@ -66,11 +78,10 @@ impl<'s> ScriptSource<'s> {
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let frontmatter = input.next_slice(frontmatter_nl.start + 1);
-        let frontmatter = frontmatter
-            .strip_prefix('\n')
-            .expect("earlier `found` + `split_at` left us here");
-        source.frontmatter = Some(frontmatter);
+        let frontmatter_start = input.current_token_start() + 1; // skip nl from infostring
+        let _ = input.next_slice(frontmatter_nl.start + 1);
+        let frontmatter_end = input.current_token_start();
+        source.frontmatter = Some(frontmatter_start..frontmatter_end);
         let _ = input.next_slice(fence_length);
 
         let nl = input.find_slice("\n");
@@ -78,15 +89,16 @@ impl<'s> ScriptSource<'s> {
             nl.map(|span| span.end)
                 .unwrap_or_else(|| input.eof_offset()),
         );
+        let content_start = input.current_token_start();
         let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
             anyhow::bail!("trailing characters found after frontmatter close");
         }
 
-        source.content = input.finish();
+        source.content = content_start..content_end;
 
-        let repeat = Self::parse(source.content)?;
+        let repeat = Self::parse(source.content())?;
         if repeat.frontmatter.is_some() {
             anyhow::bail!("only one frontmatter is supported");
         }
@@ -95,19 +107,19 @@ impl<'s> ScriptSource<'s> {
     }
 
     pub fn shebang(&self) -> Option<&'s str> {
-        self.shebang
+        self.shebang.clone().map(|span| &self.raw[span])
     }
 
     pub fn info(&self) -> Option<&'s str> {
-        self.info
+        self.info.clone().map(|span| &self.raw[span])
     }
 
     pub fn frontmatter(&self) -> Option<&'s str> {
-        self.frontmatter
+        self.frontmatter.clone().map(|span| &self.raw[span])
     }
 
     pub fn content(&self) -> &'s str {
-        self.content
+        &self.raw[self.content.clone()]
     }
 }
 
