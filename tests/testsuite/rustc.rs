@@ -1,7 +1,12 @@
 //! Tests for the `cargo rustc` command.
 
 use crate::prelude::*;
-use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project, str};
+use cargo_test_support::basic_bin_manifest;
+use cargo_test_support::basic_lib_manifest;
+use cargo_test_support::basic_manifest;
+use cargo_test_support::project;
+use cargo_test_support::str;
+use cargo_test_support::target_spec_json;
 
 #[cargo_test]
 fn build_lib_for_foo() {
@@ -820,15 +825,7 @@ windows
 fn rustc_with_print_cfg_config_toml_env() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file(
-            "targets/best-target.json",
-            r#"{
-  "llvm-target": "x86_64-unknown-none",
-  "target-pointer-width": "64",
-  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
-  "arch": "x86_64"
-}"#,
-        )
+        .file("targets/best-target.json", target_spec_json())
         .file(
             ".cargo/config.toml",
             r#"

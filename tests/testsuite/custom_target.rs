@@ -3,7 +3,10 @@
 use std::fs;
 
 use crate::prelude::*;
-use cargo_test_support::{basic_manifest, project, str};
+use cargo_test_support::basic_manifest;
+use cargo_test_support::project;
+use cargo_test_support::str;
+use cargo_test_support::target_spec_json;
 
 const MINIMAL_LIB: &str = r#"
 #![allow(internal_features)]
@@ -31,20 +34,6 @@ pub trait Copy {
 }
 "#;
 
-const SIMPLE_SPEC: &str = r#"
-{
-    "llvm-target": "x86_64-unknown-none-gnu",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
-    "arch": "x86_64",
-    "target-endian": "little",
-    "target-pointer-width": "64",
-    "os": "none",
-    "linker-flavor": "ld.lld",
-    "linker": "rust-lld",
-    "executables": true
-}
-"#;
-
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_target_minimal() {
     let p = project()
@@ -59,7 +48,7 @@ fn custom_target_minimal() {
             "
             .replace("__MINIMAL_LIB__", MINIMAL_LIB),
         )
-        .file("custom-target.json", SIMPLE_SPEC)
+        .file("custom-target.json", target_spec_json())
         .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
@@ -127,7 +116,7 @@ fn custom_target_dependency() {
             "
             .replace("__MINIMAL_LIB__", MINIMAL_LIB),
         )
-        .file("custom-target.json", SIMPLE_SPEC)
+        .file("custom-target.json", target_spec_json())
         .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
@@ -146,7 +135,7 @@ fn custom_bin_target() {
             "
             .replace("__MINIMAL_LIB__", MINIMAL_LIB),
         )
-        .file("custom-bin-target.json", SIMPLE_SPEC)
+        .file("custom-bin-target.json", target_spec_json())
         .build();
 
     p.cargo("build --target custom-bin-target.json -v").run();
@@ -167,7 +156,7 @@ fn changing_spec_rebuilds() {
             "
             .replace("__MINIMAL_LIB__", MINIMAL_LIB),
         )
-        .file("custom-target.json", SIMPLE_SPEC)
+        .file("custom-target.json", target_spec_json())
         .build();
 
     p.cargo("build --lib --target custom-target.json -v").run();
@@ -212,7 +201,7 @@ fn changing_spec_relearns_crate_types() {
             "#,
         )
         .file("src/lib.rs", MINIMAL_LIB)
-        .file("custom-target.json", SIMPLE_SPEC)
+        .file("custom-target.json", target_spec_json())
         .build();
 
     p.cargo("build --lib --target custom-target.json -v")
@@ -254,8 +243,8 @@ fn custom_target_ignores_filepath() {
             "
             .replace("__MINIMAL_LIB__", MINIMAL_LIB),
         )
-        .file("b/custom-target.json", SIMPLE_SPEC)
-        .file("a/custom-target.json", SIMPLE_SPEC)
+        .file("b/custom-target.json", target_spec_json())
+        .file("a/custom-target.json", target_spec_json())
         .build();
 
     // Should build the library the first time.
