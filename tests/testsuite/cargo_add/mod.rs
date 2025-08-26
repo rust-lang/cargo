@@ -149,6 +149,7 @@ mod rustc_older;
 mod script_bare;
 mod script_escape;
 mod script_frontmatter;
+mod script_frontmatter_empty;
 mod script_shebang;
 mod sorted_table_with_dotted_item;
 mod symlink;
