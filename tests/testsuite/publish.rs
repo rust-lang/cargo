@@ -2260,7 +2260,7 @@ fn api_error_json() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an error (status 403 Forbidden): you must be logged in
@@ -2308,7 +2308,7 @@ fn api_error_200() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   the remote server responded with an [ERROR] max upload size is 123
@@ -2356,7 +2356,7 @@ fn api_error_code() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   failed to get a 200 OK response, got 400
@@ -2413,7 +2413,7 @@ fn api_curl_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   [52] Server returned nothing (no headers, no data) (Empty reply from server)
@@ -2461,7 +2461,7 @@ fn api_other_error() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   invalid response body from server
@@ -3608,7 +3608,7 @@ fn invalid_token() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:[..]/
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
 
 Caused by:
   token contains invalid characters.
@@ -4398,6 +4398,113 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] aborting upload due to dry run
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_publish_rate_limit_error() {
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .add_responder("/api/v1/crates/new", |_req, _| {
+            // For simplicity, let's just return rate limit error for all requests
+            // This simulates hitting rate limit during workspace publish
+            Response {
+                code: 429,
+                headers: vec!["Retry-After: 3600".to_string()],
+                body: format!(
+                    "You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased."
+                ).into_bytes(),
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["package_a", "package_b", "package_c"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "package_a/Cargo.toml",
+            r#"
+            [package]
+            name = "package_a"
+            version = "0.1.0"
+            edition = "2015"
+            license = "MIT"
+            description = "package a"
+            repository = "https://github.com/test/package_a"
+            "#,
+        )
+        .file("package_a/src/lib.rs", "")
+        .file(
+            "package_b/Cargo.toml",
+            r#"
+            [package]
+            name = "package_b"
+            version = "0.1.0"
+            edition = "2015"
+            license = "MIT"
+            description = "package b"
+            repository = "https://github.com/test/package_b"
+            "#,
+        )
+        .file("package_b/src/lib.rs", "")
+        .file(
+            "package_c/Cargo.toml",
+            r#"
+            [package]
+            name = "package_c"
+            version = "0.1.0"
+            edition = "2015"
+            license = "MIT"
+            description = "package c"
+            repository = "https://github.com/test/package_c"
+
+            [dependencies]
+            package_a = { version = "0.1.0", path = "../package_a" }
+            "#,
+        )
+        .file("package_c/src/lib.rs", "")
+        .build();
+
+    // This demonstrates the improved error message after the fix
+    // The user now knows which package failed and what packages remain to be published
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] package_a v0.1.0 ([ROOT]/foo/package_a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] package_b v0.1.0 ([ROOT]/foo/package_b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] package_c v0.1.0 ([ROOT]/foo/package_c)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
+[ERROR] failed to publish package_a v0.1.0 to registry at http://127.0.0.1:[..]/
+
+[NOTE] the following crates have not been published yet:
+  package_b v0.1.0 ([ROOT]/foo/package_b)
+  package_c v0.1.0 ([ROOT]/foo/package_c)
+
+Caused by:
+  failed to get a 200 OK response, got 429
+  headers:
+  	HTTP/1.1 429
+  	Content-Length: 172
+  	Connection: close
+  	Retry-After: 3600
+  	
+  body:
+  You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased.
 
 "#]])
         .run();
