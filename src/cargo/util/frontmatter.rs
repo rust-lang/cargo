@@ -1,5 +1,3 @@
-use crate::CargoResult;
-
 type Span = std::ops::Range<usize>;
 
 #[derive(Debug)]
@@ -22,7 +20,7 @@ pub struct ScriptSource<'s> {
 }
 
 impl<'s> ScriptSource<'s> {
-    pub fn parse(raw: &'s str) -> CargoResult<Self> {
+    pub fn parse(raw: &'s str) -> Result<Self, FrontmatterError> {
         use winnow::stream::FindSlice as _;
         use winnow::stream::Location as _;
         use winnow::stream::Offset as _;
@@ -67,9 +65,9 @@ impl<'s> ScriptSource<'s> {
             }
             1 | 2 => {
                 // either not a frontmatter or invalid frontmatter opening
-                anyhow::bail!(
+                return Err(FrontmatterError::new(format!(
                     "found {fence_length} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
-                )
+                )));
             }
             _ => {}
         }
@@ -78,7 +76,9 @@ impl<'s> ScriptSource<'s> {
         let open_end = input.current_token_start();
         source.open = Some(open_start..open_end);
         let Some(info_nl) = input.find_slice("\n") else {
-            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+            return Err(FrontmatterError::new(format!(
+                "no closing `{fence_pattern}` found for frontmatter"
+            )));
         };
         let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
@@ -91,7 +91,9 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
-            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+            return Err(FrontmatterError::new(format!(
+                "no closing `{fence_pattern}` found for frontmatter"
+            )));
         };
         let frontmatter_start = input.current_token_start() + 1; // skip nl from infostring
         let _ = input.next_slice(frontmatter_nl.start + 1);
@@ -111,14 +113,18 @@ impl<'s> ScriptSource<'s> {
         let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
-            anyhow::bail!("trailing characters found after frontmatter close");
+            return Err(FrontmatterError::new(format!(
+                "trailing characters found after frontmatter close"
+            )));
         }
 
         source.content = content_start..content_end;
 
         let repeat = Self::parse(source.content())?;
         if repeat.frontmatter.is_some() {
-            anyhow::bail!("only one frontmatter is supported");
+            return Err(FrontmatterError::new(format!(
+                "only one frontmatter is supported"
+            )));
         }
 
         Ok(source)
@@ -231,6 +237,27 @@ fn is_whitespace(c: char) -> bool {
         | '\u{2029}' // PARAGRAPH SEPARATOR
     )
 }
+
+#[derive(Debug)]
+pub struct FrontmatterError {
+    message: String,
+}
+
+impl FrontmatterError {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for FrontmatterError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.message.fmt(fmt)
+    }
+}
+
+impl std::error::Error for FrontmatterError {}
 
 #[cfg(test)]
 mod test {

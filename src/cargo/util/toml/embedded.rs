@@ -1,23 +1,23 @@
 use cargo_util_schemas::manifest::PackageName;
 
-use crate::CargoResult;
+use crate::util::frontmatter::FrontmatterError;
 use crate::util::frontmatter::ScriptSource;
 use crate::util::restricted_names;
 
-pub(super) fn expand_manifest(content: &str) -> CargoResult<String> {
+pub(super) fn expand_manifest(content: &str) -> Result<String, FrontmatterError> {
     let source = ScriptSource::parse(content)?;
     if let Some(span) = source.frontmatter_span() {
         match source.info() {
             Some("cargo") | None => {}
             Some(other) => {
                 if let Some(remainder) = other.strip_prefix("cargo,") {
-                    anyhow::bail!(
+                    return Err(FrontmatterError::new(format!(
                         "cargo does not support frontmatter infostring attributes like `{remainder}` at this time"
-                    )
+                    )));
                 } else {
-                    anyhow::bail!(
+                    return Err(FrontmatterError::new(format!(
                         "frontmatter infostring `{other}` is unsupported by cargo; specify `cargo` for embedding a manifest"
-                    )
+                    )));
                 }
             }
         }
