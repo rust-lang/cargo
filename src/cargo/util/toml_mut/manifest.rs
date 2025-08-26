@@ -277,11 +277,11 @@ impl LocalManifest {
         let mut embedded = None;
         if is_embedded(path) {
             let source = ScriptSource::parse(&data)?;
-            if let Some(frontmatter) = source.frontmatter() {
-                embedded = Some(Embedded::exists(&data, frontmatter));
-                data = frontmatter.to_owned();
-            } else if let Some(shebang) = source.shebang() {
-                embedded = Some(Embedded::after(&data, shebang));
+            if let Some(frontmatter) = source.frontmatter_span() {
+                embedded = Some(Embedded::exists(frontmatter));
+                data = source.frontmatter().unwrap().to_owned();
+            } else if let Some(shebang) = source.shebang_span() {
+                embedded = Some(Embedded::after(shebang));
                 data = String::new();
             } else {
                 embedded = Some(Embedded::start());
@@ -592,31 +592,13 @@ impl Embedded {
         Self::Implicit(0)
     }
 
-    fn after(input: &str, after: &str) -> Self {
-        let span = substr_span(input, after);
-        let end = span.end;
-        Self::Implicit(end)
+    fn after(after: std::ops::Range<usize>) -> Self {
+        Self::Implicit(after.end)
     }
 
-    fn exists(input: &str, exists: &str) -> Self {
-        let span = substr_span(input, exists);
-        Self::Explicit(span)
+    fn exists(exists: std::ops::Range<usize>) -> Self {
+        Self::Explicit(exists)
     }
-}
-
-fn substr_span(haystack: &str, needle: &str) -> std::ops::Range<usize> {
-    let haystack_start_ptr = haystack.as_ptr();
-    let haystack_end_ptr = haystack[haystack.len()..haystack.len()].as_ptr();
-
-    let needle_start_ptr = needle.as_ptr();
-    let needle_end_ptr = needle[needle.len()..needle.len()].as_ptr();
-
-    assert!(needle_end_ptr < haystack_end_ptr);
-    assert!(haystack_start_ptr <= needle_start_ptr);
-    let start = needle_start_ptr as usize - haystack_start_ptr as usize;
-    let end = start + needle.len();
-
-    start..end
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
