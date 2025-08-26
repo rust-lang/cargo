@@ -110,16 +110,32 @@ impl<'s> ScriptSource<'s> {
         self.shebang.clone().map(|span| &self.raw[span])
     }
 
+    pub fn shebang_span(&self) -> Option<Span> {
+        self.shebang.clone()
+    }
+
     pub fn info(&self) -> Option<&'s str> {
         self.info.clone().map(|span| &self.raw[span])
+    }
+
+    pub fn info_span(&self) -> Option<Span> {
+        self.info.clone()
     }
 
     pub fn frontmatter(&self) -> Option<&'s str> {
         self.frontmatter.clone().map(|span| &self.raw[span])
     }
 
+    pub fn frontmatter_span(&self) -> Option<Span> {
+        self.frontmatter.clone()
+    }
+
     pub fn content(&self) -> &'s str {
         &self.raw[self.content.clone()]
+    }
+
+    pub fn content_span(&self) -> Span {
+        self.content.clone()
     }
 }
 
