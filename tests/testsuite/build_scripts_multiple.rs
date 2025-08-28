@@ -764,3 +764,135 @@ fn bar() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn multiple_out_dirs() {
+    // Test to verify access to the `OUT_DIR` of the respective build scripts.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["multiple-build-scripts"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = ["build1.rs", "build2.rs"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                include!(concat!(env!("OUT_DIR"), "/foo.rs"));
+                fn main() {
+                    println!("{}", message());
+                }
+            "#,
+        )
+        .file(
+            "build1.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 1!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .file(
+            "build2.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 2!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .build();
+
+    p.cargo("run -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .with_status(0)
+        .with_stdout_data(str![[r#"
+Hello, from Build Script 2!
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn duplicate_build_script_stems() {
+    // Test to verify that duplicate build script file stems throws error.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["multiple-build-scripts"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = ["build1.rs", "foo/build1.rs"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build1.rs", "fn main() {}")
+        .file("foo/build1.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] output filename collision.
+The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build_script_build1-[HASH]
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[WARNING] output filename collision.
+The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[WARNING] output filename collision.
+The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build_script_build1-[HASH].dwp
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[WARNING] output filename collision.
+The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1.dwp
+The targets should have unique names.
+Consider changing their names to be unique or compiling them separately.
+This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+...
+"#]])
+        .run();
+}
