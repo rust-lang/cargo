@@ -1282,7 +1282,6 @@ fn unused_ambiguous_published_deps() {
   |
 2 |                     [package
   |                             ^
-  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -2813,7 +2812,6 @@ fn invalid_git_dependency_manifest() {
   |
 9 |                     categories = ["algorithms"]
   |                     ^^^^^^^^^^
-  |
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:

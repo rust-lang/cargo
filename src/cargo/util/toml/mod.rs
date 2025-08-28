@@ -1,4 +1,4 @@
-use annotate_snippets::{Level, Snippet};
+use annotate_snippets::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
@@ -1879,12 +1879,11 @@ fn missing_dep_diagnostic(
         "`{}` is an unused optional dependency since no feature enables it",
         &dep_name
     );
-    let message = Level::Error.title(&title);
-    let snippet = Snippet::source(&contents)
-        .origin(&manifest_path)
-        .fold(true)
-        .annotation(Level::Error.span(feature_span.value));
-    let message = if missing_dep.weak_optional {
+    let group = Group::with_title(Level::ERROR.primary_title(&title));
+    let snippet = Snippet::source(contents)
+        .path(manifest_path)
+        .annotation(AnnotationKind::Primary.span(feature_span.value));
+    let group = if missing_dep.weak_optional {
         let mut orig_deps = vec![
             (
                 orig_toml.dependencies.as_ref(),
@@ -1920,17 +1919,20 @@ fn missing_dep_diagnostic(
                 .collect::<Vec<_>>();
             let dep_span = get_key_value_span(&document, &toml_path).unwrap();
 
-            message
-                .snippet(snippet.annotation(Level::Warning.span(dep_span.key).label(&info_label)))
-                .footer(Level::Help.title(&help))
+            group
+                .element(
+                    snippet
+                        .annotation(AnnotationKind::Context.span(dep_span.key).label(info_label)),
+                )
+                .element(Level::HELP.message(help))
         } else {
-            message.snippet(snippet)
+            group.element(snippet)
         }
     } else {
-        message.snippet(snippet)
+        group.element(snippet)
     };
 
-    if let Err(err) = gctx.shell().print_message(message) {
+    if let Err(err) = gctx.shell().print_report(&[group]) {
         return Err(err.into());
     }
     Err(AlreadyPrintedError::new(anyhow!("").into()).into())
@@ -2792,13 +2794,13 @@ fn emit_diagnostic(
         .unwrap_or_else(|| manifest_file.to_path_buf())
         .display()
         .to_string();
-    let message = Level::Error.title(e.message()).snippet(
+    let group = Group::with_title(Level::ERROR.primary_title(e.message())).element(
         Snippet::source(contents)
-            .origin(&manifest_path)
-            .fold(true)
-            .annotation(Level::Error.span(span)),
+            .path(manifest_path)
+            .annotation(AnnotationKind::Primary.span(span)),
     );
-    if let Err(err) = gctx.shell().print_message(message) {
+
+    if let Err(err) = gctx.shell().print_report(&[group]) {
         return err.into();
     }
     return AlreadyPrintedError::new(e.into()).into();

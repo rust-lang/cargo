@@ -305,7 +305,6 @@ workspace = true
   |
 9 | workspace = true
   | ----------------
-  |
 [ERROR] use of unstable lint `test_dummy_unstable`
  --> Cargo.toml:7:1
   |
@@ -318,7 +317,6 @@ workspace = true
   |
 9 | workspace = true
   | ----------------
-  |
 [ERROR] encountered 2 errors(s) while verifying lints
 
 "#]])

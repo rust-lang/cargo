@@ -455,11 +455,12 @@ fn malformed_override() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] newlines are unsupported in inline tables, expected nothing
- --> Cargo.toml:9:27
-  |
-9 |                 native = {
-  |                           ^
-  |
+  --> Cargo.toml:9:27
+   |
+ 9 |                   native = {
+   |  ___________________________^
+10 | |                   foo: "bar"
+   | |_^
 
 "#]])
         .run();
@@ -2635,7 +2636,6 @@ fn bad_dependency() {
   |
 9 |                 bar = 3
   |                       ^
-  |
 
 "#]])
         .run();
@@ -2664,13 +2664,12 @@ fn bad_dependency_true_literal() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid type: boolean `true`, expected a version string like "0.9.8" or a detailed dependency like { version = "0.9.8" }
-[NOTE] if you meant to use a workspace member, you can write
- dep.workspace = true
+       [NOTE] if you meant to use a workspace member, you can write
+        dep.workspace = true
  --> Cargo.toml:9:23
   |
 9 |                 bar = true
   |                       ^^^^
-  |
 
 "#]])
         .run();
@@ -2703,7 +2702,6 @@ fn bad_debuginfo() {
   |
 9 |                 debug = 'a'
   |                         ^^^
-  |
 
 "#]])
         .run();
@@ -2736,7 +2734,6 @@ fn bad_debuginfo2() {
   |
 9 |                 debug = 3.6
   |                         ^^^
-  |
 
 "#]])
         .run();
@@ -2767,7 +2764,6 @@ fn bad_opt_level() {
   |
 7 |                 build = 3
   |                         ^
-  |
 
 "#]])
         .run();
@@ -3067,7 +3063,6 @@ fn bad_trim_paths() {
   |
 8 |                 trim-paths = "split-debuginfo"
   |                              ^^^^^^^^^^^^^^^^^
-  |
 
 "#]])
         .run();

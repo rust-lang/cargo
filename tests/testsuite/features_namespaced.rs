@@ -461,7 +461,6 @@ fn crate_syntax_bad_name() {
    |
 11 |                 "dep:bar" = []
    |                 ^^^^^^^^^
-   |
 
 "#]])
         .run();

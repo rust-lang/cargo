@@ -87,7 +87,6 @@ fn invalid_profile_name() {
   |
 8 |                 [profile.'.release-lto']
   |                          ^^^^^^^^^^^^^^
-  |
 
 "#]])
         .run();
@@ -589,13 +588,12 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
             .with_stderr_data(&format!(
                 "\
 [ERROR] profile name `{name}` is reserved
-Please choose a different name.
-See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+       Please choose a different name.
+       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
  --> Cargo.toml:7:30
   |
 7 |                     [profile.{name}]
   |                              {highlight}
-  |
 "
             ))
             .run();
@@ -620,13 +618,12 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] profile name `debug` is reserved
-To configure the default development profile, use the name `dev` as in [profile.dev]
-See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+       To configure the default development profile, use the name `dev` as in [profile.dev]
+       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
  --> Cargo.toml:8:25
   |
 8 |                [profile.debug]
   |                         ^^^^^
-  |
 
 "#]])
         .run();
