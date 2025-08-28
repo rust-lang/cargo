@@ -764,3 +764,71 @@ fn bar() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn multiple_out_dirs() {
+    // Test for accessing the OUT_DIR of build scripts
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["multiple-build-scripts"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = ["build1.rs", "build2.rs"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                const OUT_DIR: &'static str = env!("OUT_DIR");
+                const BUILD1_OUT_DIR: &'static str = env!("BUILD1_OUT_DIR");
+                const BUILD2_OUT_DIR: &'static str = env!("BUILD2_OUT_DIR");
+
+                fn main() {
+                    println!("{}", OUT_DIR);
+                    println!("{}", BUILD1_OUT_DIR);
+                    println!("{}", BUILD2_OUT_DIR);
+                }
+            "#,
+        )
+        .file("build1.rs", "fn main() {}")
+        .file("build2.rs", "fn main() {}")
+        .build();
+    p.cargo("run -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build[..]`
+[RUNNING] `rustc --crate-name build_script_build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
+[RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs[..]`
+[ERROR] environment variable `BUILD1_OUT_DIR` not defined at compile time
+ --> src/main.rs:3:54
+  |
+3 |                 const BUILD1_OUT_DIR: &'static str = env!("BUILD1_OUT_DIR");
+  |                                                      ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] use `std::env::var("BUILD1_OUT_DIR")` to read the variable at run time
+
+[ERROR] environment variable `BUILD2_OUT_DIR` not defined at compile time
+ --> src/main.rs:4:54
+  |
+4 |                 const BUILD2_OUT_DIR: &'static str = env!("BUILD2_OUT_DIR");
+  |                                                      ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] use `std::env::var("BUILD2_OUT_DIR")` to read the variable at run time
+
+[ERROR] could not compile `foo` (bin "foo") due to 2 previous errors
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name foo --edition=2024 src/main.rs [..]` ([EXIT_STATUS]: 1)
+
+"#]])
+        .run();
+}

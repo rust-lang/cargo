@@ -338,6 +338,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .map(|d| &d.unit)
         .expect("running a script not depending on an actual script");
     let script_dir = build_runner.files().build_script_dir(build_script_unit);
+    // println!("{:?}", script_dir);
     let script_out_dir = build_runner.files().build_script_out_dir(unit);
     let script_run_dir = build_runner.files().build_script_run_dir(unit);
     let build_plan = bcx.build_config.build_plan;
