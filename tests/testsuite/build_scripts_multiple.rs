@@ -764,3 +764,79 @@ fn bar() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn multiple_out_dirs() {
+    // Test to verify access to the `OUT_DIR` of the respective build scripts.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["multiple-build-scripts"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = ["build1.rs", "build2.rs"]
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                include!(concat!(env!("OUT_DIR"), "/foo.rs"));
+                fn main() {
+                    println!("{}", message());
+                }
+            "#,
+        )
+        .file(
+            "build1.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 1!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .file(
+            "build2.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 2!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .build();
+
+    p.cargo("run -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .with_status(0)
+        .with_stdout_data(str![[r#"
+Hello, from Build Script 2!
+
+"#]])
+        .run();
+}
