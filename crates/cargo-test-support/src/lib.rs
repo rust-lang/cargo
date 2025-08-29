@@ -108,6 +108,7 @@ pub mod containers;
 pub mod cross_compile;
 pub mod git;
 pub mod install;
+pub mod layout;
 pub mod paths;
 pub mod publish;
 pub mod registry;
