@@ -15,7 +15,9 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .arg(manifest_path_argument)
         .cwd(p.root().parent().unwrap())
         .with_status(101)
-        .with_stderr_data("[ERROR] the manifest-path must be a path to a Cargo.toml file\n")
+        .with_stderr_data(
+            "[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/[..]`\n",
+        )
         .run();
 }
 
@@ -333,7 +335,7 @@ fn verify_project_dir_containing_cargo_toml() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`"
   }
 ]
 "#]]
@@ -357,7 +359,7 @@ fn verify_project_dir_plus_file() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`"
   }
 ]
 "#]]
@@ -381,7 +383,7 @@ fn verify_project_dir_plus_path() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`"
   }
 ]
 "#]]

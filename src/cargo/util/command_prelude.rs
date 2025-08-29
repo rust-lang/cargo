@@ -1075,7 +1075,10 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
         // but in this particular case we need it to fix #3586.
         let path = paths::normalize_path(&path);
         if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
-            anyhow::bail!("the manifest-path must be a path to a Cargo.toml file")
+            anyhow::bail!(
+                "the manifest-path must be a path to a Cargo.toml file: `{}`",
+                path.display()
+            )
         }
         if !path.exists() {
             anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
