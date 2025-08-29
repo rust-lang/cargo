@@ -64,6 +64,16 @@ test.
   - See [`support::compare`] for an explanation of the string pattern matching.
     Patterns are used to make it easier to match against the expected output.
 
+#### Filesystem layout testing
+
+Tests often to need to verify Cargo created/removed files.
+The `CargoPathExt` trait (implemented by `Path` and `PathBuf`) provides a `assert_dir_layout()` to verify the files in a directory (including nested directories).
+This takes a snapshot of file paths for the given directory and asserts that all files are present and no new files have been created.
+This function also takes a list of patterns to ignore from the snapshot to make working with platform specific files easier.
+
+Note: You will commonly need to call `unordered()` before passing your snapshot to deal with platform differences like binaries having `.exe` on Windows.
+`assert_build_dir_layout` is a more specialized version of `assert_dir_layout()` that is automatically unordered and ignores common platform specific files designed for the Cargo build cache.
+
 #### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
