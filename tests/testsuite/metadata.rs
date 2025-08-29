@@ -2397,7 +2397,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .cwd(p.root().parent().unwrap())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
 
 "#]])
         .run();
@@ -2415,7 +2415,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .cwd(p.root().parent().unwrap())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
 
 "#]])
         .run();

@@ -1358,7 +1358,7 @@ fn cmd_check_with_missing_script_rs() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/script.rs`
 
 "#]])
         .run();
@@ -1373,7 +1373,7 @@ fn cmd_check_with_missing_script() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file
+[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/script`
 
 "#]])
         .run();
