@@ -12,6 +12,25 @@ resolver.
 [dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
 
+## `Cargo.lock` lock-files
+
+The `Cargo.lock` file provides deterministic builds at different times and on
+different systems, by ensuring that the exact same dependencies, versions, and
+sources are used as when the `Cargo.lock` file was last generated.
+Dependancy resolution is not run when cargo reads from `Cargo.lock`.
+
+Not all cargo commands use `Cargo.lock` by default. Examples include
+`cargo install` and `cargo update`.In these cases, `--locked` can usually be
+passed to force cargo to use the dependency graph from an existing `Cargo.lock`
+(if one exists).
+
+### Libraries with `Cargo.lock`
+
+Cargo treats `Cargo.lock` files differently when a crate is used as a library
+dependency where an upper level `Cargo.lock` would exist. In these cases cargo will
+not inspect the dependency's `Cargo.lock` even if it exists, using only the
+top-level `Cargo.lock`.
+
 ## Constraints and Heuristics
 
 In many cases there is no single "best" dependency resolution.
