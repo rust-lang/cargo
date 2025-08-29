@@ -95,7 +95,7 @@ fn credential_provider_auth_failure() {
         .auth_required()
         .alternative()
         .no_configure_token()
-        .credential_provider(&["cargo:token-from-stdout", "true"])
+        .credential_provider(&["cargo:token-from-stdout", "echo", "incorrect token"])
         .build();
 
     cargo_process("install libc --registry=alternative")
