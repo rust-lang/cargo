@@ -1205,10 +1205,15 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
+        let mut first_emitted_error = None;
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 if self.gctx.cli_unstable().cargo_lints {
-                    self.emit_lints(pkg, &path)?
+                    if let Err(e) = self.emit_lints(pkg, &path)
+                        && first_emitted_error.is_none()
+                    {
+                        first_emitted_error = Some(e);
+                    }
                 }
             }
             let warnings = match maybe_pkg {
@@ -1220,7 +1225,9 @@ impl<'gctx> Workspace<'gctx> {
                     let err = anyhow::format_err!("{}", warning.message);
                     let cx =
                         anyhow::format_err!("failed to parse manifest at `{}`", path.display());
-                    return Err(err.context(cx));
+                    if first_emitted_error.is_none() {
+                        first_emitted_error = Some(err.context(cx));
+                    }
                 } else {
                     let msg = if self.root_manifest.is_none() {
                         warning.message.to_string()
@@ -1233,7 +1240,12 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
         }
-        Ok(())
+
+        if let Some(error) = first_emitted_error {
+            Err(error)
+        } else {
+            Ok(())
+        }
     }
 
     pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
