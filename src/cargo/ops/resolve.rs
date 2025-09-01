@@ -1,7 +1,7 @@
 //! High-level APIs for executing the resolver.
 //!
 //! This module provides functions for running the resolver given a workspace, including loading
-//! the `Cargo.lock` file and checkinf if it needs updating.
+//! the `Cargo.lock` file and checking if it needs updating.
 //!
 //! There are roughly 3 main functions:
 //!
@@ -41,7 +41,7 @@
 //!     the information that can be found in a registry index. Queries against the
 //!     `PackageRegistry` yields a `Summary`. The resolver uses the summary
 //!     information to build the dependency graph.
-//! - [`PackageSet`] --- Contains all of the `Package` objects. This works with the
+//! - [`PackageSet`] --- Contains all the `Package` objects. This works with the
 //!   [`Downloads`] struct to coordinate downloading packages. It has a reference
 //!   to the `SourceMap` to get the `Source` objects which tell the `Downloads`
 //!   struct which URLs to fetch.

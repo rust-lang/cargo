@@ -1,4 +1,4 @@
-//! Access to a regstiry on the local filesystem. See [`LocalRegistry`] for more.
+//! Access to a registry on the local filesystem. See [`LocalRegistry`] for more.
 
 use crate::core::PackageId;
 use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
