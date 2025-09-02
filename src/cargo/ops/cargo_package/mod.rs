@@ -163,11 +163,8 @@ fn create_package(
     let filename = pkg.package_id().tarball_name();
     let build_dir = ws.build_dir();
     paths::create_dir_all_excluded_from_backups_atomic(build_dir.as_path_unlocked())?;
-    let dir = build_dir.join("package");
-    let mut dst = {
-        let tmp = format!(".{}", filename);
-        dir.open_rw_exclusive_create(&tmp, gctx, "package scratch space")?
-    };
+    let dir = build_dir.join("package").join("tmp-crate");
+    let dst = dir.open_rw_exclusive_create(&filename, gctx, "package scratch space")?;
 
     // Package up and test a temporary tarball and only move it to the final
     // location if it actually passes all our tests. Any previously existing
@@ -179,14 +176,10 @@ fn create_package(
     let uncompressed_size = tar(ws, opts, pkg, local_reg, ar_files, dst.file(), &filename)
         .context("failed to prepare local package for uploading")?;
 
-    dst.seek(SeekFrom::Start(0))?;
-    let dst_path = dst.parent().join(&filename);
-    dst.rename(&dst_path)?;
-
     let dst_metadata = dst
         .file()
         .metadata()
-        .with_context(|| format!("could not learn metadata for: `{}`", dst_path.display()))?;
+        .with_context(|| format!("could not learn metadata for: `{}`", dst.path().display()))?;
     let compressed_size = dst_metadata.len();
 
     let uncompressed = HumanBytes(uncompressed_size);
@@ -220,23 +213,17 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
 
     let packaged = do_package(ws, opts, pkgs)?;
 
+    // Uplifting artifacts
     let mut result = Vec::new();
     let target_dir = ws.target_dir();
-    let build_dir = ws.build_dir();
-    if target_dir == build_dir {
-        result.extend(packaged.into_iter().map(|(_, _, src)| src));
-    } else {
-        // Uplifting artifacts
-        paths::create_dir_all_excluded_from_backups_atomic(target_dir.as_path_unlocked())?;
-        let artifact_dir = target_dir.join("package");
-        for (pkg, _, src) in packaged {
-            let filename = pkg.package_id().tarball_name();
-            let dst =
-                artifact_dir.open_rw_exclusive_create(filename, ws.gctx(), "uplifted package")?;
-            src.file().seek(SeekFrom::Start(0))?;
-            std::io::copy(&mut src.file(), &mut dst.file())?;
-            result.push(dst);
-        }
+    paths::create_dir_all_excluded_from_backups_atomic(target_dir.as_path_unlocked())?;
+    let artifact_dir = target_dir.join("package");
+    for (pkg, _, src) in packaged {
+        let filename = pkg.package_id().tarball_name();
+        let dst = artifact_dir.open_rw_exclusive_create(filename, ws.gctx(), "uplifted package")?;
+        src.file().seek(SeekFrom::Start(0))?;
+        std::io::copy(&mut src.file(), &mut dst.file())?;
+        result.push(dst);
     }
 
     Ok(result)
