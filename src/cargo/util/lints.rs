@@ -177,8 +177,8 @@ fn verify_feature_enabled(
                         .annotation(Level::Error.span(lint_span.key).label(&label))
                         .fold(true),
                 )
-                .footer(inherited_note)
                 .footer(Level::Help.title(&help))
+                .footer(inherited_note)
         };
 
         *error_count += 1;
@@ -545,6 +545,9 @@ fn output_unknown_lints(
             emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
             footers.push(Level::Note.title(emitted_source.as_ref().unwrap()));
         }
+        if let Some(help) = help.as_ref() {
+            footers.push(Level::Help.title(help));
+        }
 
         let mut message = if let Some(span) =
             get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
@@ -588,9 +591,6 @@ fn output_unknown_lints(
             )
         };
 
-        if let Some(help) = help.as_ref() {
-            footers.push(Level::Help.title(help));
-        }
         for footer in footers {
             message = message.footer(footer);
         }
