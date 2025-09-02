@@ -1954,7 +1954,24 @@ This layout change unblocks work towards caching and locking improvements.
 
 The `-Zdetect-antivirus` flag enables detection of antivirus software that might make launching a binary for the first time slower (which in turn makes Cargo's build scripts and tests slower), and outputs a notice to the user if this is the case.
 
-This feature will be enabled by default in the future.
+This feature will be enabled by default in the future (the flag acts as-if this future is now).
+
+```toml
+# Example ~/.cargo/config.toml
+
+# Disable warning, e.g. if using a workplace-issued Mac that
+# doesn't allow granting Developer Tool permissions.
+[build]
+detect-antivirus = false
+```
+
+### `build.detect-antivirus`
+
+* Type: boolean
+* Default: true (when `-Zdetect-antivirus` is enabled)
+* Environment: CARGO_BUILD_DETECT_ANTIVIRUS
+
+Allow opting out of antivirus detection.
 
 
 # Stabilized and removed features

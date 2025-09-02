@@ -46,7 +46,7 @@
 </tspan>
     <tspan x="10px" y="280px"><tspan>    -Z config-include              Enable the `include` key in config files</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>    -Z detect-antivirus            Enable the experimental antivirus detection</tspan>
+    <tspan x="10px" y="298px"><tspan>    -Z detect-antivirus            Enable the experimental antivirus detection and the config option to disable it</tspan>
 </tspan>
     <tspan x="10px" y="316px"><tspan>    -Z direct-minimal-versions     Resolve minimal dependency versions instead of maximum (direct dependencies only)</tspan>
 </tspan>
