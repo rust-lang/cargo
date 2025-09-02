@@ -217,10 +217,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     // So we need filter
     pkgs.retain(|(pkg, _feats)| specs.iter().any(|spec| spec.matches(pkg.package_id())));
 
-    Ok(do_package(ws, opts, pkgs)?
-        .into_iter()
-        .map(|x| x.2)
-        .collect())
+    let packaged = do_package(ws, opts, pkgs)?;
+
+    let mut result = Vec::new();
+    result.extend(packaged.into_iter().map(|(_, _, src)| src));
+
+    Ok(result)
 }
 
 /// Packages an entire workspace.
