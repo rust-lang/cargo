@@ -854,6 +854,7 @@ unstable_cli_options!(
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
+    detect_antivirus: bool = ("Enable the experimental antivirus detection"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
@@ -1373,6 +1374,7 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
+            "detect-antivirus" => self.detect_antivirus = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "fix-edition" => {

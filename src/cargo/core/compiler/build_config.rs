@@ -52,6 +52,9 @@ pub struct BuildConfig {
     pub sbom: bool,
     /// Build compile time dependencies only, e.g., build scripts and proc macros
     pub compile_time_deps_only: bool,
+    /// Whether we should try to detect and notify the user when antivirus
+    /// software might make newly created binaries slow to launch.
+    pub detect_antivirus: bool,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -127,6 +130,9 @@ impl BuildConfig {
             _ => Vec::new(),
         };
 
+        // Enabled by default (for now only when the unstable flag is set).
+        let detect_antivirus = gctx.cli_unstable().detect_antivirus;
+
         Ok(BuildConfig {
             requested_kinds,
             jobs,
@@ -145,6 +151,7 @@ impl BuildConfig {
             timing_outputs,
             sbom,
             compile_time_deps_only: false,
+            detect_antivirus,
         })
     }
 

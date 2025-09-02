@@ -131,6 +131,7 @@ Each new feature described below should explain how to use it.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
     * [`fix-edition`](#fix-edition) --- A permanently unstable edition migration helper.
     * [Plumbing subcommands](https://github.com/crate-ci/cargo-plumbing) --- Low, level commands that act as APIs for Cargo, like `cargo metadata`
+    * [Detect antivirus](#detect-antivirus) --- Detect whether newly created binaries may be slow to launch due to antivirus.
 
 ## allow-features
 
@@ -1946,6 +1947,14 @@ enabled = true
 
 Enables the new build-dir filesystem layout.
 This layout change unblocks work towards caching and locking improvements.
+
+## Detect Antivirus
+
+* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/0)
+
+The `-Zdetect-antivirus` flag enables detection of antivirus software that might make launching a binary for the first time slower (which in turn makes Cargo's build scripts and tests slower), and outputs a notice to the user if this is the case.
+
+This feature will be enabled by default in the future.
 
 
 # Stabilized and removed features
