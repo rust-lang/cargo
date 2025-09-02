@@ -384,9 +384,7 @@ fn cargo_publish_should_only_touch_build_dir() {
     assert_build_dir_layout(p.root().join("build-dir"), "debug");
 
     let package_artifact_dir = p.root().join("target-dir/package");
-    assert_exists(&package_artifact_dir);
-    assert_exists(&package_artifact_dir.join("foo-0.0.1.crate"));
-    assert!(package_artifact_dir.join("foo-0.0.1.crate").is_file());
+    assert!(!package_artifact_dir.exists());
 
     let package_build_dir = p.root().join("build-dir/package");
     assert_exists(&package_build_dir);
