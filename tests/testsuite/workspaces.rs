@@ -1119,7 +1119,6 @@ fn new_warning_with_corrupt_ws() {
   |
 1 | asdf
   |     ^
-  |
 [WARNING] compiling this new package may not work due to invalid workspace configuration
 
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -1400,7 +1399,6 @@ fn error_if_parent_cargo_toml_is_invalid() {
   |
 1 | Totally not a TOML file
   |         ^
-  |
 
 "#]])
         .run();

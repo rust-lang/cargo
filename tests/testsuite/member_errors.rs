@@ -55,7 +55,6 @@ fn toml_deserialize_manifest_error() {
   |
 8 |                 foobar == "0.55"
   |                         ^
-  |
 [ERROR] failed to load manifest for dependency `bar`
 
 "#]])

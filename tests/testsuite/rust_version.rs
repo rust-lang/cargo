@@ -53,7 +53,6 @@ fn rust_version_error() {
   |
 7 |             rust-version = "^1.43"
   |                            ^^^^^^^
-  |
 
 "#]])
         .run();

@@ -1,6 +1,6 @@
 use crate::core::{Edition, Feature, Features, Manifest, Package};
 use crate::{CargoResult, GlobalContext};
-use annotate_snippets::{Level, Snippet};
+use annotate_snippets::{AnnotationKind, Group, Level, Snippet};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
 use std::fmt::Display;
@@ -133,78 +133,69 @@ fn verify_feature_enabled(
             dash_feature_name
         );
 
-        let message = if let Some(span) =
-            get_span(manifest.document(), &["lints", "cargo", lint_name], false)
+        let (contents, path, span) = if let Some(span) =
+            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
-            Level::Error
-                .title(&title)
-                .snippet(
-                    Snippet::source(manifest.contents())
-                        .origin(&manifest_path)
-                        .annotation(Level::Error.span(span).label(&label))
-                        .fold(true),
-                )
-                .footer(Level::Help.title(&help))
+            (manifest.contents(), manifest_path, span)
+        } else if let Some(lint_span) =
+            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
+        {
+            (ws_contents, ws_path, lint_span)
         } else {
-            let lint_span = get_span(
-                ws_document,
-                &["workspace", "lints", "cargo", lint_name],
-                false,
-            )
-            .unwrap_or_else(|| {
-                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-            });
-
-            let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
-                get_span(manifest.document(), &["lints", "workspace"], false),
-                get_span(manifest.document(), &["lints", "workspace"], true),
-            ) {
-                Level::Note.title(&second_title).snippet(
-                    Snippet::source(manifest.contents())
-                        .origin(&manifest_path)
-                        .annotation(
-                            Level::Note.span(inherit_span_key.start..inherit_span_value.end),
-                        )
-                        .fold(true),
-                )
-            } else {
-                Level::Note.title(&second_title)
-            };
-
-            Level::Error
-                .title(&title)
-                .snippet(
-                    Snippet::source(ws_contents)
-                        .origin(&ws_path)
-                        .annotation(Level::Error.span(lint_span).label(&label))
-                        .fold(true),
-                )
-                .footer(inherited_note)
-                .footer(Level::Help.title(&help))
+            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
         };
 
+        let mut report = Vec::new();
+        report.push(
+            Group::with_title(Level::ERROR.primary_title(title))
+                .element(
+                    Snippet::source(contents)
+                        .path(path)
+                        .annotation(AnnotationKind::Primary.span(span.key).label(label)),
+                )
+                .element(Level::HELP.message(help)),
+        );
+
+        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
+        {
+            report.push(
+                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
+                    Snippet::source(manifest.contents())
+                        .path(manifest_path)
+                        .annotation(
+                            AnnotationKind::Context
+                                .span(inherit_span.key.start..inherit_span.value.end),
+                        ),
+                ),
+            );
+        }
+
         *error_count += 1;
-        gctx.shell().print_message(message)?;
+        gctx.shell().print_report(&report)?;
     }
     Ok(())
 }
 
-pub fn get_span(
+#[derive(Clone)]
+pub struct TomlSpan {
+    pub key: Range<usize>,
+    pub value: Range<usize>,
+}
+
+pub fn get_key_value_span(
     document: &toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
-    get_value: bool,
-) -> Option<Range<usize>> {
+) -> Option<TomlSpan> {
     let mut table = document.get_ref();
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
         let key_s: &str = key.as_ref();
         let (key, item) = table.get_key_value(key_s)?;
         if iter.peek().is_none() {
-            return if get_value {
-                Some(item.span())
-            } else {
-                Some(key.span())
-            };
+            return Some(TomlSpan {
+                key: key.span(),
+                value: item.span(),
+            });
         }
         if let Some(next_table) = item.get_ref().as_table() {
             table = next_table;
@@ -213,7 +204,10 @@ pub fn get_span(
             if let Some(array) = item.get_ref().as_array() {
                 let next = iter.next().unwrap();
                 return array.iter().find_map(|item| match item.get_ref() {
-                    toml::de::DeValue::String(s) if s == next => Some(item.span()),
+                    toml::de::DeValue::String(s) if s == next => Some(TomlSpan {
+                        key: key.span(),
+                        value: item.span(),
+                    }),
                     _ => None,
                 });
             }
@@ -337,12 +331,12 @@ impl LintLevel {
         self == &LintLevel::Forbid || self == &LintLevel::Deny
     }
 
-    pub fn to_diagnostic_level(self) -> Level {
+    pub fn to_diagnostic_level(self) -> Level<'static> {
         match self {
             LintLevel::Allow => unreachable!("allow does not map to a diagnostic level"),
-            LintLevel::Warn => Level::Warning,
-            LintLevel::Deny => Level::Error,
-            LintLevel::Forbid => Level::Error,
+            LintLevel::Warn => Level::WARNING,
+            LintLevel::Deny => Level::ERROR,
+            LintLevel::Forbid => Level::ERROR,
         }
     }
 }
@@ -455,19 +449,17 @@ pub fn check_im_a_teapot(
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
 
-        let key_span = get_span(manifest.document(), &["package", "im-a-teapot"], false).unwrap();
-        let value_span = get_span(manifest.document(), &["package", "im-a-teapot"], true).unwrap();
-        let message = level
-            .title(IM_A_TEAPOT.desc)
-            .snippet(
-                Snippet::source(manifest.contents())
-                    .origin(&manifest_path)
-                    .annotation(level.span(key_span.start..value_span.end))
-                    .fold(true),
-            )
-            .footer(Level::Note.title(&emitted_reason));
+        let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
 
-        gctx.shell().print_message(message)?;
+        let report = &[Group::with_title(level.primary_title(IM_A_TEAPOT.desc))
+            .element(
+                Snippet::source(manifest.contents())
+                    .path(&manifest_path)
+                    .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
+            )
+            .element(Level::NOTE.message(&emitted_reason))];
+
+        gctx.shell().print_report(report)?;
     }
     Ok(())
 }
@@ -535,64 +527,48 @@ fn output_unknown_lints(
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
 
-        let mut footers = Vec::new();
-        if emitted_source.is_none() {
-            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
-            footers.push(Level::Note.title(emitted_source.as_ref().unwrap()));
-        }
-
-        let mut message = if let Some(span) =
-            get_span(manifest.document(), &["lints", "cargo", lint_name], false)
+        let (contents, path, span) = if let Some(span) =
+            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
-            level.title(&title).snippet(
-                Snippet::source(manifest.contents())
-                    .origin(&manifest_path)
-                    .annotation(Level::Error.span(span))
-                    .fold(true),
-            )
+            (manifest.contents(), manifest_path, span)
+        } else if let Some(lint_span) =
+            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
+        {
+            (ws_contents, ws_path, lint_span)
         } else {
-            let lint_span = get_span(
-                ws_document,
-                &["workspace", "lints", "cargo", lint_name],
-                false,
-            )
-            .unwrap_or_else(|| {
-                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-            });
-
-            let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
-                get_span(manifest.document(), &["lints", "workspace"], false),
-                get_span(manifest.document(), &["lints", "workspace"], true),
-            ) {
-                Level::Note.title(&second_title).snippet(
-                    Snippet::source(manifest.contents())
-                        .origin(&manifest_path)
-                        .annotation(
-                            Level::Note.span(inherit_span_key.start..inherit_span_value.end),
-                        )
-                        .fold(true),
-                )
-            } else {
-                Level::Note.title(&second_title)
-            };
-            footers.push(inherited_note);
-
-            level.title(&title).snippet(
-                Snippet::source(ws_contents)
-                    .origin(&ws_path)
-                    .annotation(Level::Error.span(lint_span))
-                    .fold(true),
-            )
+            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
         };
 
-        if let Some(help) = help.as_ref() {
-            footers.push(Level::Help.title(help));
+        let mut report = Vec::new();
+        let mut group = Group::with_title(level.clone().primary_title(title)).element(
+            Snippet::source(contents)
+                .path(path)
+                .annotation(AnnotationKind::Primary.span(span.key)),
+        );
+        if emitted_source.is_none() {
+            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
+            group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
-        for footer in footers {
-            message = message.footer(footer);
+        if let Some(help) = help.as_ref() {
+            group = group.element(Level::HELP.message(help));
+        }
+        report.push(group);
+
+        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
+        {
+            report.push(
+                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
+                    Snippet::source(manifest.contents())
+                        .path(manifest_path)
+                        .annotation(
+                            AnnotationKind::Context
+                                .span(inherit_span.key.start..inherit_span.value.end),
+                        ),
+                ),
+            );
         }
 
-        gctx.shell().print_message(message)?;
+        gctx.shell().print_report(&report)?;
     }
 
     Ok(())

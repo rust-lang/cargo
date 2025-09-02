@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::IsTerminal;
 use std::io::prelude::*;
 
-use annotate_snippets::{Message, Renderer};
+use annotate_snippets::{Renderer, Report};
 use anstream::AutoStream;
 use anstyle::Style;
 
@@ -406,8 +406,8 @@ impl Shell {
         Ok(())
     }
 
-    /// Prints the passed in [Message] to stderr
-    pub fn print_message(&mut self, message: Message<'_>) -> std::io::Result<()> {
+    /// Prints the passed in [`Report`] to stderr
+    pub fn print_report(&mut self, report: Report<'_>) -> std::io::Result<()> {
         let term_width = self
             .err_width()
             .diagnostic_terminal_width()
@@ -415,7 +415,7 @@ impl Shell {
         writeln!(
             self.err(),
             "{}",
-            Renderer::styled().term_width(term_width).render(message)
+            Renderer::styled().term_width(term_width).render(report)
         )
     }
 }

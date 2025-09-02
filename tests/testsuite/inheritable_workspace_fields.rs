@@ -1327,7 +1327,6 @@ fn error_workspace_false() {
   |
 8 |             description = { workspace = false }
   |                                         ^^^^^
-  |
 
 "#]])
         .run();
@@ -1410,9 +1409,8 @@ fn error_malformed_workspace_root() {
 [ERROR] unclosed array, expected `]`
  --> ../Cargo.toml:4:13
   |
-4 | ...
-  | ^
-  |
+4 |             
+  |             ^
 
 "#]])
         .run();

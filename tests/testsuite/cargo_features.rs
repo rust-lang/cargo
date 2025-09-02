@@ -739,7 +739,6 @@ fn wrong_position() {
   |
 6 |                 cargo-features = ["test-dummy-unstable"]
   |                                  ^^^^^^^^^^^^^^^^^^^^^^^
-  |
 
 "#]])
         .run();

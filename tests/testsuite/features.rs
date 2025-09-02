@@ -99,7 +99,6 @@ fn empty_feature_name() {
   |
 9 |                 "" = []
   |                 ^^
-  |
 
 "#]])
         .run();
@@ -348,7 +347,6 @@ fn feature_activates_missing_dep_feature() {
   |
 9 |                 foo = ["bar/baz"]
   |                       ^^^^^^^^^^^
-  |
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 "#]])
@@ -383,7 +381,6 @@ fn feature_activates_feature_inside_feature() {
   |
 9 |                 foo = ["bar/baz"]
   |                       ^^^^^^^^^^^
-  |
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 "#]])
@@ -2306,7 +2303,6 @@ fn invalid_feature_names_error() {
   |
 9 |                 "+foo" = []
   |                 ^^^^^^
-  |
 
 "#]])
         .run();
@@ -2333,7 +2329,6 @@ fn invalid_feature_names_error() {
   |
 9 |             "a&b" = []
   |             ^^^^^
-  |
 
 "#]])
         .run();
@@ -2366,7 +2361,6 @@ fn invalid_feature_name_slash_error() {
   |
 8 |                 "foo/bar" = []
   |                 ^^^^^^^^^
-  |
 
 "#]])
         .run();

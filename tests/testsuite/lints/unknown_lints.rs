@@ -82,7 +82,6 @@ workspace = true
   |
 9 | workspace = true
   | ----------------
-  |
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

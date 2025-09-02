@@ -2111,7 +2111,6 @@ fn cargo_metadata_with_invalid_authors_field() {
   |
 3 |                 authors = ""
   |                           ^^
-  |
 
 "#]])
         .run();
@@ -2138,7 +2137,6 @@ fn cargo_metadata_with_invalid_version_field() {
   |
 3 |                 version = 1
   |                           ^
-  |
 
 "#]])
         .run();
@@ -2165,7 +2163,6 @@ fn cargo_metadata_with_invalid_publish_field() {
   |
 3 |                 publish = "foo"
   |                           ^^^^^
-  |
 
 "#]])
         .run();

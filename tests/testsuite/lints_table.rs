@@ -79,7 +79,6 @@ fn malformed_on_stable() {
   |
 2 |                 lints = 20
   |                         ^^
-  |
 
 "#]])
         .run();
@@ -139,7 +138,6 @@ fn invalid_type_in_lint_value() {
   |
 8 |                 rust-2018-idioms = -1
   |                                    ^^
-  |
 
 "#]])
         .run();
@@ -342,7 +340,6 @@ pub fn foo(num: i32) -> u32 {
   |
 9 |                 workspace = false
   |                             ^^^^^
-  |
 
 "#]])
         .run();
@@ -832,7 +829,7 @@ im_a_teapot = "warn"
  --> Cargo.toml:9:1
   |
 9 | im-a-teapot = true
-  | ------------------
+  | ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
