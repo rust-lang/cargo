@@ -32,7 +32,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::{get_span, rel_cwd_manifest_path};
+use crate::util::lints::{get_key_value_span, rel_cwd_manifest_path};
 use crate::util::{self, GlobalContext, IntoUrl, OptVersionReq, context::ConfigRelativePath};
 
 mod embedded;
@@ -1867,8 +1867,8 @@ fn missing_dep_diagnostic(
 ) -> CargoResult<()> {
     let dep_name = missing_dep.dep_name;
     let manifest_path = rel_cwd_manifest_path(manifest_file, gctx);
-    let feature_value_span =
-        get_span(&document, &["features", missing_dep.feature.as_str()], true).unwrap();
+    let feature_span =
+        get_key_value_span(&document, &["features", missing_dep.feature.as_str()]).unwrap();
 
     let title = format!(
         "feature `{}` includes `{}`, but `{}` is not a dependency",
@@ -1883,7 +1883,7 @@ fn missing_dep_diagnostic(
     let snippet = Snippet::source(&contents)
         .origin(&manifest_path)
         .fold(true)
-        .annotation(Level::Error.span(feature_value_span.start..feature_value_span.end));
+        .annotation(Level::Error.span(feature_span.value));
     let message = if missing_dep.weak_optional {
         let mut orig_deps = vec![
             (
@@ -1918,10 +1918,10 @@ fn missing_dep_diagnostic(
                 .map(|s| *s)
                 .chain(std::iter::once(dep_name.as_str()))
                 .collect::<Vec<_>>();
-            let dep_span = get_span(&document, &toml_path, false).unwrap();
+            let dep_span = get_key_value_span(&document, &toml_path).unwrap();
 
             message
-                .snippet(snippet.annotation(Level::Warning.span(dep_span).label(&info_label)))
+                .snippet(snippet.annotation(Level::Warning.span(dep_span.key).label(&info_label)))
                 .footer(Level::Help.title(&help))
         } else {
             message.snippet(snippet)

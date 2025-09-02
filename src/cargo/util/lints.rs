@@ -134,36 +134,34 @@ fn verify_feature_enabled(
         );
 
         let message = if let Some(span) =
-            get_span(manifest.document(), &["lints", "cargo", lint_name], false)
+            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
             Level::Error
                 .title(&title)
                 .snippet(
                     Snippet::source(manifest.contents())
                         .origin(&manifest_path)
-                        .annotation(Level::Error.span(span).label(&label))
+                        .annotation(Level::Error.span(span.key).label(&label))
                         .fold(true),
                 )
                 .footer(Level::Help.title(&help))
         } else {
-            let lint_span = get_span(
+            let lint_span = get_key_value_span(
                 ws_document,
                 &["workspace", "lints", "cargo", lint_name],
-                false,
             )
             .unwrap_or_else(|| {
                 panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
             });
 
-            let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
-                get_span(manifest.document(), &["lints", "workspace"], false),
-                get_span(manifest.document(), &["lints", "workspace"], true),
-            ) {
+            let inherited_note = if let Some(inherit_span) =
+                get_key_value_span(manifest.document(), &["lints", "workspace"])
+            {
                 Level::Note.title(&second_title).snippet(
                     Snippet::source(manifest.contents())
                         .origin(&manifest_path)
                         .annotation(
-                            Level::Note.span(inherit_span_key.start..inherit_span_value.end),
+                            Level::Note.span(inherit_span.key.start..inherit_span.value.end),
                         )
                         .fold(true),
                 )
@@ -176,7 +174,7 @@ fn verify_feature_enabled(
                 .snippet(
                     Snippet::source(ws_contents)
                         .origin(&ws_path)
-                        .annotation(Level::Error.span(lint_span).label(&label))
+                        .annotation(Level::Error.span(lint_span.key).label(&label))
                         .fold(true),
                 )
                 .footer(inherited_note)
@@ -189,22 +187,26 @@ fn verify_feature_enabled(
     Ok(())
 }
 
-pub fn get_span(
+#[derive(Clone)]
+pub struct TomlSpan {
+    pub key: Range<usize>,
+    pub value: Range<usize>,
+}
+
+pub fn get_key_value_span(
     document: &toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
-    get_value: bool,
-) -> Option<Range<usize>> {
+) -> Option<TomlSpan> {
     let mut table = document.get_ref();
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
         let key_s: &str = key.as_ref();
         let (key, item) = table.get_key_value(key_s)?;
         if iter.peek().is_none() {
-            return if get_value {
-                Some(item.span())
-            } else {
-                Some(key.span())
-            };
+            return Some(TomlSpan {
+                key: key.span(),
+                value: item.span(),
+            });
         }
         if let Some(next_table) = item.get_ref().as_table() {
             table = next_table;
@@ -213,7 +215,10 @@ pub fn get_span(
             if let Some(array) = item.get_ref().as_array() {
                 let next = iter.next().unwrap();
                 return array.iter().find_map(|item| match item.get_ref() {
-                    toml::de::DeValue::String(s) if s == next => Some(item.span()),
+                    toml::de::DeValue::String(s) if s == next => Some(TomlSpan {
+                        key: key.span(),
+                        value: item.span(),
+                    }),
                     _ => None,
                 });
             }
@@ -455,14 +460,14 @@ pub fn check_im_a_teapot(
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
 
-        let key_span = get_span(manifest.document(), &["package", "im-a-teapot"], false).unwrap();
-        let value_span = get_span(manifest.document(), &["package", "im-a-teapot"], true).unwrap();
+        let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
+
         let message = level
             .title(IM_A_TEAPOT.desc)
             .snippet(
                 Snippet::source(manifest.contents())
                     .origin(&manifest_path)
-                    .annotation(level.span(key_span.start..value_span.end))
+                    .annotation(level.span(span.key.start..span.value.end))
                     .fold(true),
             )
             .footer(Level::Note.title(&emitted_reason));
@@ -542,33 +547,31 @@ fn output_unknown_lints(
         }
 
         let mut message = if let Some(span) =
-            get_span(manifest.document(), &["lints", "cargo", lint_name], false)
+            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
             level.title(&title).snippet(
                 Snippet::source(manifest.contents())
                     .origin(&manifest_path)
-                    .annotation(Level::Error.span(span))
+                    .annotation(Level::Error.span(span.key))
                     .fold(true),
             )
         } else {
-            let lint_span = get_span(
+            let lint_span = get_key_value_span(
                 ws_document,
                 &["workspace", "lints", "cargo", lint_name],
-                false,
             )
             .unwrap_or_else(|| {
                 panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
             });
 
-            let inherited_note = if let (Some(inherit_span_key), Some(inherit_span_value)) = (
-                get_span(manifest.document(), &["lints", "workspace"], false),
-                get_span(manifest.document(), &["lints", "workspace"], true),
-            ) {
+            let inherited_note = if let Some(inherit_span) =
+                get_key_value_span(manifest.document(), &["lints", "workspace"])
+            {
                 Level::Note.title(&second_title).snippet(
                     Snippet::source(manifest.contents())
                         .origin(&manifest_path)
                         .annotation(
-                            Level::Note.span(inherit_span_key.start..inherit_span_value.end),
+                            Level::Note.span(inherit_span.key.start..inherit_span.value.end),
                         )
                         .fold(true),
                 )
@@ -580,7 +583,7 @@ fn output_unknown_lints(
             level.title(&title).snippet(
                 Snippet::source(ws_contents)
                     .origin(&ws_path)
-                    .annotation(Level::Error.span(lint_span))
+                    .annotation(Level::Error.span(lint_span.key))
                     .fold(true),
             )
         };
