@@ -133,30 +133,31 @@ fn verify_feature_enabled(
             dash_feature_name
         );
 
-        let message = if let Some(span) =
+        let (contents, path, span) = if let Some(span) =
             get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
-            Level::Error
-                .title(&title)
-                .snippet(
-                    Snippet::source(manifest.contents())
-                        .origin(&manifest_path)
-                        .annotation(Level::Error.span(span.key).label(&label))
-                        .fold(true),
-                )
-                .footer(Level::Help.title(&help))
+            (manifest.contents(), manifest_path, span)
+        } else if let Some(lint_span) =
+            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
+        {
+            (ws_contents, ws_path, lint_span)
         } else {
-            let lint_span = get_key_value_span(
-                ws_document,
-                &["workspace", "lints", "cargo", lint_name],
-            )
-            .unwrap_or_else(|| {
-                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-            });
+            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        };
 
-            let inherited_note = if let Some(inherit_span) =
-                get_key_value_span(manifest.document(), &["lints", "workspace"])
-            {
+        let mut message = Level::Error
+            .title(&title)
+            .snippet(
+                Snippet::source(contents)
+                    .origin(path)
+                    .annotation(Level::Error.span(span.key).label(&label))
+                    .fold(true),
+            )
+            .footer(Level::Help.title(&help));
+
+        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
+        {
+            message = message.footer(
                 Level::Note.title(&second_title).snippet(
                     Snippet::source(manifest.contents())
                         .origin(&manifest_path)
@@ -164,22 +165,9 @@ fn verify_feature_enabled(
                             Level::Note.span(inherit_span.key.start..inherit_span.value.end),
                         )
                         .fold(true),
-                )
-            } else {
-                Level::Note.title(&second_title)
-            };
-
-            Level::Error
-                .title(&title)
-                .snippet(
-                    Snippet::source(ws_contents)
-                        .origin(&ws_path)
-                        .annotation(Level::Error.span(lint_span.key).label(&label))
-                        .fold(true),
-                )
-                .footer(Level::Help.title(&help))
-                .footer(inherited_note)
-        };
+                ),
+            );
+        }
 
         *error_count += 1;
         gctx.shell().print_message(message)?;
@@ -540,36 +528,37 @@ fn output_unknown_lints(
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
 
-        let mut footers = Vec::new();
-        if emitted_source.is_none() {
-            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
-            footers.push(Level::Note.title(emitted_source.as_ref().unwrap()));
-        }
-        if let Some(help) = help.as_ref() {
-            footers.push(Level::Help.title(help));
-        }
-
-        let mut message = if let Some(span) =
+        let (contents, path, span) = if let Some(span) =
             get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
         {
-            level.title(&title).snippet(
-                Snippet::source(manifest.contents())
-                    .origin(&manifest_path)
-                    .annotation(Level::Error.span(span.key))
-                    .fold(true),
-            )
+            (manifest.contents(), manifest_path, span)
+        } else if let Some(lint_span) =
+            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
+        {
+            (ws_contents, ws_path, lint_span)
         } else {
-            let lint_span = get_key_value_span(
-                ws_document,
-                &["workspace", "lints", "cargo", lint_name],
-            )
-            .unwrap_or_else(|| {
-                panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-            });
+            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        };
 
-            let inherited_note = if let Some(inherit_span) =
-                get_key_value_span(manifest.document(), &["lints", "workspace"])
-            {
+        let mut message = level.title(&title).snippet(
+            Snippet::source(contents)
+                .origin(path)
+                .annotation(Level::Error.span(span.key))
+                .fold(true),
+        );
+
+        if emitted_source.is_none() {
+            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
+            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
+        }
+
+        if let Some(help) = help.as_ref() {
+            message = message.footer(Level::Help.title(help));
+        }
+
+        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
+        {
+            message = message.footer(
                 Level::Note.title(&second_title).snippet(
                     Snippet::source(manifest.contents())
                         .origin(&manifest_path)
@@ -577,22 +566,8 @@ fn output_unknown_lints(
                             Level::Note.span(inherit_span.key.start..inherit_span.value.end),
                         )
                         .fold(true),
-                )
-            } else {
-                Level::Note.title(&second_title)
-            };
-            footers.push(inherited_note);
-
-            level.title(&title).snippet(
-                Snippet::source(ws_contents)
-                    .origin(&ws_path)
-                    .annotation(Level::Error.span(lint_span.key))
-                    .fold(true),
+                ),
             )
-        };
-
-        for footer in footers {
-            message = message.footer(footer);
         }
 
         gctx.shell().print_message(message)?;
