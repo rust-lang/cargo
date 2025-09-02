@@ -556,6 +556,10 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         }
     }
 
+    if build_config.detect_antivirus {
+        // TODO(madsmtm): Actually implement the check.
+    }
+
     let bcx = BuildContext::new(
         ws,
         pkg_set,
