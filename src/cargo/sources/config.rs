@@ -1,7 +1,7 @@
 //! Implementation of configuration for various sources.
 //!
 //! This module will parse the various `source.*` TOML configuration keys into a
-//! structure usable by Cargo itself. Currently this is primarily used to map
+//! structure usable by Cargo itself. Currently, this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
 use crate::core::{GitReference, PackageId, SourceId};

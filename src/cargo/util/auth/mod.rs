@@ -42,7 +42,7 @@ pub struct RegistryConfig {
     _protocol: Option<String>,
 }
 
-/// The `[registry]` table, which more keys than the `[registries.NAME]` tables.
+/// The `[registry]` table, which has more keys than the `[registries.NAME]` tables.
 ///
 /// Note: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work
 /// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
