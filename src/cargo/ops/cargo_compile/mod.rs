@@ -55,7 +55,7 @@ use crate::ops;
 use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
 use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, StableHasher};
+use crate::util::{CargoResult, StableHasher, detect_antivirus};
 
 mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
@@ -557,7 +557,18 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
     }
 
     if build_config.detect_antivirus {
-        // TODO(madsmtm): Actually implement the check.
+        // TODO(madsmtm): Maybe only do this when we have above a certain
+        // number of build scripts or test binaries to run?
+
+        // TODO(madsmtm): We probably don't want to do this check when doing
+        // `cargo install`?
+
+        // TODO(madsmtm): Consider only warning once every X days.
+
+        if let Err(err) = detect_antivirus::detect_and_report(gctx) {
+            // Errors in this detection are not fatal.
+            tracing::error!("failed detecting whether binaries may be slow to run: {err}");
+        }
     }
 
     let bcx = BuildContext::new(
