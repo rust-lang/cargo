@@ -517,8 +517,8 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree -i targetdep")
         .with_stderr_data(str![[r#"
 [WARNING] nothing to print.
-
-To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+        
+        To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
 
 "#]])
         .run();

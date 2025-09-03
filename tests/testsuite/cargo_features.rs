@@ -263,7 +263,7 @@ fn stable_feature_warns() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] the cargo feature `test-dummy-stable` has been stabilized in the 1.0 release and is no longer necessary to be listed in the manifest
-  See https://doc.rust-lang.org/cargo/ for more information about using this feature.
+           See https://doc.rust-lang.org/cargo/ for more information about using this feature.
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -699,7 +699,7 @@ fn publish_allowed() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo)
@@ -708,7 +708,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] a v0.0.1 ([ROOT]/foo)
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] a v0.0.1 at registry `crates-io`
 
 "#]])
@@ -752,8 +752,8 @@ fn z_stabilized() {
         .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr_data(str![[r#"
 [WARNING] flag `-Z cache-messages` has been stabilized in the 1.40 release, and is no longer necessary
-  Message caching is now always enabled.
-
+           Message caching is now always enabled.
+         
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

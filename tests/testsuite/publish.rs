@@ -115,13 +115,13 @@ fn simple() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -157,7 +157,7 @@ fn duplicate_version() {
 [UPDATING] crates.io index
 [WARNING] crate foo@0.0.1 already exists on crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -209,13 +209,13 @@ fn simple_publish_with_http() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
 [NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 
 "#]])
@@ -252,13 +252,13 @@ fn simple_publish_with_asymmetric() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
 [NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 
 "#]])
@@ -308,13 +308,13 @@ or use environment variable CARGO_REGISTRY_TOKEN
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -353,13 +353,13 @@ fn simple_with_index() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[ROOT]/registry` index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `[ROOT]/registry`
 [NOTE] waiting for foo v0.0.1 to be available at registry `[ROOT]/registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `[ROOT]/registry`
 
 "#]])
@@ -565,7 +565,7 @@ fn publish_clean() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -614,7 +614,7 @@ fn publish_in_sub_repo() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -663,7 +663,7 @@ fn publish_when_ignored() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -711,7 +711,7 @@ fn ignore_when_crate_ignored() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -782,7 +782,7 @@ fn dry_run() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[ROOT]/registry` index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -902,7 +902,7 @@ fn publish_allowed_registry() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `alternative`
 
 "#]])
@@ -963,7 +963,7 @@ fn publish_implicitly_to_only_allowed_registry() {
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `alternative`
 
 "#]])
@@ -1122,7 +1122,7 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -1131,7 +1131,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1173,7 +1173,7 @@ fn publish_with_select_features() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -1182,7 +1182,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1224,7 +1224,7 @@ fn publish_with_all_features() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -1233,7 +1233,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1336,7 +1336,7 @@ error[E0425]: cannot find function `newfunc` in crate `bar`
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -1346,7 +1346,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1431,7 +1431,7 @@ or use environment variable CARGO_REGISTRY_TOKEN
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -1546,14 +1546,14 @@ fn publish_git_with_version() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
@@ -1809,7 +1809,7 @@ fn publish_dev_dep_stripping() {
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
@@ -2142,13 +2142,13 @@ fn credentials_ambiguous_filename() {
 [UPDATING] crates.io index
 [WARNING] both `[ROOT]/home/.cargo/credentials` and `[ROOT]/home/.cargo/credentials.toml` exist. Using `[ROOT]/home/.cargo/credentials`
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2510,13 +2510,13 @@ fn in_package_workspace() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] li v0.0.1 ([ROOT]/foo/li)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
 [NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2575,11 +2575,11 @@ fn with_duplicate_spec_in_members() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] li v0.0.1 ([ROOT]/foo/li)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] bar v0.0.1 ([ROOT]/foo/bar)
@@ -2587,7 +2587,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
 [NOTE] waiting for bar v0.0.1 or li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crates should be available shortly.
+      You may press ctrl-c to skip waiting; the crates should be available shortly.
 [PUBLISHED] bar v0.0.1 and li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2631,13 +2631,13 @@ fn in_package_workspace_with_members_with_features_old() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] li v0.0.1 ([ROOT]/foo/li)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
 [NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2678,13 +2678,13 @@ fn in_virtual_workspace() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2736,13 +2736,13 @@ fn in_virtual_workspace_with_p() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] li v0.0.1 ([ROOT]/foo/li)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
 [NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2843,11 +2843,11 @@ fn in_package_workspace_found_multiple() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] li v0.0.1 ([ROOT]/foo/li)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] lii v0.0.1 ([ROOT]/foo/lii)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
@@ -2855,7 +2855,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] lii v0.0.1 ([ROOT]/foo/lii)
 [UPLOADED] lii v0.0.1 to registry `crates-io`
 [NOTE] waiting for li v0.0.1 or lii v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crates should be available shortly.
+      You may press ctrl-c to skip waiting; the crates should be available shortly.
 [PUBLISHED] li v0.0.1 and lii v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2931,7 +2931,7 @@ fn http_api_not_noop() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
@@ -2940,7 +2940,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3012,13 +3012,13 @@ fn wait_for_first_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
 [NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3105,13 +3105,13 @@ fn wait_for_first_publish_underscore() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay_with_underscore v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay_with_underscore v0.0.1 to registry `crates-io`
 [NOTE] waiting for delay_with_underscore v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay_with_underscore v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3205,13 +3205,13 @@ fn wait_for_subsequent_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.2 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
 [NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 
 "#]])
@@ -3275,7 +3275,7 @@ fn skip_wait_for_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
@@ -3323,13 +3323,13 @@ fn timeout_waiting_for_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
 [NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [WARNING] timed out waiting for delay v0.0.1 to be available in registry `crates-io`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 
@@ -3414,21 +3414,21 @@ fn timeout_waiting_for_dependency_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] dep v0.0.1 ([ROOT]/foo/dep)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] other v0.0.1 ([ROOT]/foo/other)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] dep v0.0.1 ([ROOT]/foo/dep)
 [UPLOADED] dep v0.0.1 to registry `crates-io`
 [NOTE] waiting for dep v0.0.1 to be available at registry `crates-io`.
-2 remaining crates to be published
+      2 remaining crates to be published
 [WARNING] timed out waiting for dep v0.0.1 to be available in registry `crates-io`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 [ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for published dependencies to be available.
@@ -3459,11 +3459,11 @@ fn package_selection() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] b v0.1.0 ([ROOT]/foo/b)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
@@ -3480,11 +3480,11 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] b v0.1.0 ([ROOT]/foo/b)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
@@ -3501,7 +3501,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
@@ -3547,13 +3547,13 @@ fn wait_for_git_publish() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.2 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
 [NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 
 "#]])
@@ -3751,17 +3751,17 @@ fn workspace_with_local_deps() {
 [UPLOADING] level3 v0.0.1 ([ROOT]/foo/level3)
 [UPLOADED] level3 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level3 v0.0.1 to be available at registry `crates-io`.
-2 remaining crates to be published
+      2 remaining crates to be published
 [PUBLISHED] level3 v0.0.1 at registry `crates-io`
 [UPLOADING] level2 v0.0.1 ([ROOT]/foo/level2)
 [UPLOADED] level2 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level2 v0.0.1 to be available at registry `crates-io`.
-1 remaining crate to be published
+      1 remaining crate to be published
 [PUBLISHED] level2 v0.0.1 at registry `crates-io`
 [UPLOADING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPLOADED] level1 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level1 v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] level1 v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3855,16 +3855,16 @@ fn workspace_parallel() {
 [UPLOADED] b v0.0.1 to registry `crates-io`
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 or b v0.0.1 to be available at registry `crates-io`.
-1 remaining crate to be published
 [PUBLISHED] a v0.0.1 and b v0.0.1 at registry `crates-io`
 [UPLOADING] c v0.0.1 ([ROOT]/foo/c)
 [UPLOADED] c v0.0.1 to registry `crates-io`
 [NOTE] waiting for c v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] c v0.0.1 at registry `crates-io`
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADING] b v0.0.1 ([ROOT]/foo/b)
 [UPDATING] crates.io index
+      1 remaining crate to be published
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 "#]]
             .unordered(),
@@ -3945,7 +3945,7 @@ Caused by:
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] a v0.0.1 at registry `crates-io`
 
 "#]])
@@ -4021,7 +4021,7 @@ fn one_unpublishable_package() {
 [UPLOADING] dep v0.1.0 ([ROOT]/foo/dep)
 [UPLOADED] dep v0.1.0 to registry `crates-io`
 [NOTE] waiting for dep v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] dep v0.1.0 at registry `crates-io`
 
 "#]])
@@ -4100,7 +4100,7 @@ fn virtual_ws_with_multiple_unpublishable_package() {
 [UPLOADING] publishable v0.1.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.1.0 to registry `crates-io`
 [NOTE] waiting for publishable v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] publishable v0.1.0 at registry `crates-io`
 
 "#]])
@@ -4171,7 +4171,7 @@ fn workspace_flag_with_unpublishable_packages() {
 [UPLOADING] publishable v0.0.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.0.0 to registry `crates-io`
 [NOTE] waiting for publishable v0.0.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] publishable v0.0.0 at registry `crates-io`
 
 "#]])
@@ -4379,7 +4379,7 @@ fn checksum_changed() {
 [UPDATING] crates.io index
 [WARNING] crate dep@1.0.0 already exists on crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] dep v1.0.0 ([ROOT]/foo/dep)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)

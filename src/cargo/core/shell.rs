@@ -222,12 +222,18 @@ impl Shell {
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"warning", Some(&message), &WARN, false)
+        let report = &[annotate_snippets::Group::with_title(
+            annotate_snippets::Level::WARNING.secondary_title(message.to_string()),
+        )];
+        self.print_report(report, false)
     }
 
     /// Prints a cyan 'note' message.
     pub fn note<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"note", Some(&message), &NOTE, false)
+        let report = &[annotate_snippets::Group::with_title(
+            annotate_snippets::Level::NOTE.secondary_title(message.to_string()),
+        )];
+        self.print_report(report, false)
     }
 
     /// Updates the verbosity of the shell.
