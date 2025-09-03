@@ -405,6 +405,9 @@ impl Shell {
 
     /// Prints the passed in [`Report`] to stderr
     pub fn print_report(&mut self, report: Report<'_>) -> CargoResult<()> {
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         let term_width = self
             .err_width()
             .diagnostic_terminal_width()
