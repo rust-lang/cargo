@@ -4488,7 +4488,7 @@ WRAPPER CALLED: rustc --crate-name foo [..]
 
 /// Checks what happens when both rust-wrapper and rustc-workspace-wrapper are set.
 #[cargo_test]
-fn rustc_wrapper_precendence() {
+fn rustc_wrapper_precedence() {
     let p = project().file("src/lib.rs", "").build();
     let rustc_wrapper = tools::echo_wrapper();
     let ws_wrapper = rustc_wrapper.with_file_name("rustc-ws-wrapper");

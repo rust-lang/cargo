@@ -11,7 +11,7 @@ use crate::util::{CargoResult, internal};
 use cargo_util::paths;
 use tracing::debug;
 
-/// Bacially just normalizes a given path and converts it to a string.
+/// Basically just normalizes a given path and converts it to a string.
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     fn wrap_path(path: &Path) -> CargoResult<String> {
         path.to_str()

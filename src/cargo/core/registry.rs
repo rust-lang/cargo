@@ -109,7 +109,7 @@ pub struct PackageRegistry<'gctx> {
     /// This is constructed via [`PackageRegistry::register_lock`].
     /// See also [`LockedMap`].
     locked: LockedMap,
-    /// A group of packages tha allows to use even when yanked.
+    /// Packages allowed to be used, even if they are yanked.
     yanked_whitelist: HashSet<PackageId>,
     source_config: SourceConfigMap<'gctx>,
 

@@ -2783,7 +2783,7 @@ fn dry_run_incompatible_package() {
 }
 
 #[cargo_test]
-fn dry_run_incompatible_package_dependecy() {
+fn dry_run_incompatible_package_dependency() {
     let p = project()
         .file(
             "Cargo.toml",

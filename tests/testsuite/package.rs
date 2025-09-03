@@ -3649,7 +3649,7 @@ fn larger_filesizes() {
             "#;
     let lots_of_crabs = "🦀".repeat(1337);
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
-    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+    let bar_txt_contents = "This file is relatively incompressible, to increase the compressed
         package size beyond 1KiB.
         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
         ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
@@ -3765,7 +3765,7 @@ fn symlink_filesizes() {
             "#;
     let lots_of_crabs = "🦀".repeat(1337);
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
-    let bar_txt_contents = "This file is relatively uncompressible, to increase the compressed
+    let bar_txt_contents = "This file is relatively incompressible, to increase the compressed
         package size beyond 1KiB.
         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
         ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation

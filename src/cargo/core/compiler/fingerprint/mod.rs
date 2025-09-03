@@ -1962,12 +1962,12 @@ where
         return Some(StaleItem::MissingFile(reference.to_path_buf()));
     };
 
-    let skipable_dirs = if let Ok(cargo_home) = home::cargo_home() {
-        let skipable_dirs: Vec<_> = ["git", "registry"]
+    let skippable_dirs = if let Ok(cargo_home) = home::cargo_home() {
+        let skippable_dirs: Vec<_> = ["git", "registry"]
             .into_iter()
             .map(|subfolder| cargo_home.join(subfolder))
             .collect();
-        Some(skipable_dirs)
+        Some(skippable_dirs)
     } else {
         None
     };
@@ -1978,8 +1978,8 @@ where
         // (see also #9455 about marking the src directory readonly) which avoids rebuilds when CI
         // caches $CARGO_HOME/registry/{index, cache} and $CARGO_HOME/git/db across runs, keeping
         // the content the same but changing the mtime.
-        if let Some(ref skipable_dirs) = skipable_dirs {
-            if skipable_dirs.iter().any(|dir| path.starts_with(dir)) {
+        if let Some(ref skippable_dirs) = skippable_dirs {
+            if skippable_dirs.iter().any(|dir| path.starts_with(dir)) {
                 continue;
             }
         }

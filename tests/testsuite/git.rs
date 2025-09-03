@@ -3468,7 +3468,7 @@ fn two_dep_forms() {
         .file("a/src/lib.rs", "")
         .build();
 
-    // This'll download the git repository twice, one with HEAD and once with
+    // This will download the git repository twice, one with HEAD and once with
     // the master branch. Then it'll compile 4 crates, the 2 git deps, then
     // the two local deps.
     project

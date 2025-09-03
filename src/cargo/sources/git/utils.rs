@@ -277,7 +277,7 @@ impl<'a> GitCheckout<'a> {
         &self.database.remote.url()
     }
 
-    /// Clone a repo for a `revision` into a local path from a `datatabase`.
+    /// Clone a repo for a `revision` into a local path from a `database`.
     /// This is a filesystem-to-filesystem clone.
     fn clone_into(
         into: &Path,

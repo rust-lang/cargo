@@ -46,7 +46,7 @@
 
 - cargo-credential-libsecret: give FFI correctly-sized object 
   [#15767](https://github.com/rust-lang/cargo/pull/15767)
-- cargo-publish: includes mainfest paths when verifying
+- cargo-publish: includes manifest paths when verifying
   [#15705](https://github.com/rust-lang/cargo/pull/15705)
 - cargo-tree: Fixed `no-proc-macro` being overridden by subsequent edges.
   [#15764](https://github.com/rust-lang/cargo/pull/15764)
@@ -211,7 +211,7 @@
   [#15682](https://github.com/rust-lang/cargo/pull/15682)
 - Update links in contrib docs
   [#15659](https://github.com/rust-lang/cargo/pull/15659)
-- docs: clarify `--all-features` not available for all commmands
+- docs: clarify `--all-features` not available for all commands
   [#15572](https://github.com/rust-lang/cargo/pull/15572)
 - docs(README): fix the link to the changelog in the Cargo book
   [#15597](https://github.com/rust-lang/cargo/pull/15597)

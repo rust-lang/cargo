@@ -617,12 +617,10 @@ fn build_ar_list(
         .iter()
         .filter(|t| t.is_custom_build())
     {
-        if let Some(custome_build_path) = t.src_path().path() {
-            let abs_custome_build_path =
-                paths::normalize_path(&pkg.root().join(custome_build_path));
-            if !abs_custome_build_path.is_file() || !abs_custome_build_path.starts_with(pkg.root())
-            {
-                error_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t)?;
+        if let Some(custom_build_path) = t.src_path().path() {
+            let abs_custom_build_path = paths::normalize_path(&pkg.root().join(custom_build_path));
+            if !abs_custom_build_path.is_file() || !abs_custom_build_path.starts_with(pkg.root()) {
+                error_custom_build_file_not_in_package(pkg, &abs_custom_build_path, t)?;
             }
         }
     }

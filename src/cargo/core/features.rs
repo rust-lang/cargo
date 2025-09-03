@@ -1207,7 +1207,7 @@ fn parse_gitoxide(
 
 impl CliUnstable {
     /// Parses `-Z` flags from the command line, and returns messages that warn
-    /// if any flag has alreardy been stabilized.
+    /// if any flag has already been stabilized.
     pub fn parse(
         &mut self,
         flags: &[String],

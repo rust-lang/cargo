@@ -453,7 +453,7 @@ fn add_pkg(
                 if !opts.edge_kinds.contains(&EdgeKind::Dep(dep.kind())) {
                     return false;
                 }
-                // Filter out proc-macrcos if requested.
+                // Filter out proc-macros if requested.
                 if opts.no_proc_macro && graph.package_for_id(dep_id).proc_macro() {
                     return false;
                 }

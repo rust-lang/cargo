@@ -1022,7 +1022,7 @@ impl GlobalContext {
     }
 
     /// Internal method for getting an environment variable as a list.
-    /// If the key is a non-mergable list and a value is found in the environment, existing values are cleared.
+    /// If the key is a non-mergeable list and a value is found in the environment, existing values are cleared.
     fn get_env_list(
         &self,
         key: &ConfigKey,

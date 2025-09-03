@@ -213,7 +213,7 @@ pub struct WarningCount {
     /// were duplicates of a previous warning
     pub duplicates: usize,
     /// number of fixable warnings set to `NotAllowed`
-    /// if any errors have been seen ofr the current
+    /// if any errors have been seen for the current
     /// target
     pub fixable: FixableWarnings,
 }
