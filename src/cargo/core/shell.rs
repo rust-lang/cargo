@@ -222,10 +222,7 @@ impl Shell {
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        match self.verbosity {
-            Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), &WARN, false),
-        }
+        self.print(&"warning", Some(&message), &WARN, false)
     }
 
     /// Prints a cyan 'note' message.
