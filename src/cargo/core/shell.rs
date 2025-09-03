@@ -404,7 +404,11 @@ impl Shell {
     }
 
     /// Prints the passed in [`Report`] to stderr
-    pub fn print_report(&mut self, report: Report<'_>) -> CargoResult<()> {
+    pub fn print_report(&mut self, report: Report<'_>, force: bool) -> CargoResult<()> {
+        if !force && matches!(self.verbosity, Verbosity::Quiet) {
+            return Ok(());
+        }
+
         if self.needs_clear {
             self.err_erase_line();
         }

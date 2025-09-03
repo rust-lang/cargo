@@ -171,7 +171,7 @@ fn verify_feature_enabled(
         }
 
         *error_count += 1;
-        gctx.shell().print_report(&report)?;
+        gctx.shell().print_report(&report, true)?;
     }
     Ok(())
 }
@@ -339,6 +339,15 @@ impl LintLevel {
             LintLevel::Forbid => Level::ERROR,
         }
     }
+
+    fn force(self) -> bool {
+        match self {
+            Self::Allow => false,
+            Self::Warn => true,
+            Self::Deny => true,
+            Self::Forbid => true,
+        }
+    }
 }
 
 impl From<TomlLintLevel> for LintLevel {
@@ -459,7 +468,7 @@ pub fn check_im_a_teapot(
             )
             .element(Level::NOTE.message(&emitted_reason))];
 
-        gctx.shell().print_report(report)?;
+        gctx.shell().print_report(report, lint_level.force())?;
     }
     Ok(())
 }
@@ -568,7 +577,7 @@ fn output_unknown_lints(
             );
         }
 
-        gctx.shell().print_report(&report)?;
+        gctx.shell().print_report(&report, lint_level.force())?;
     }
 
     Ok(())

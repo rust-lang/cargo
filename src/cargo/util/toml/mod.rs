@@ -1932,7 +1932,7 @@ fn missing_dep_diagnostic(
         group.element(snippet)
     };
 
-    if let Err(err) = gctx.shell().print_report(&[group]) {
+    if let Err(err) = gctx.shell().print_report(&[group], true) {
         return Err(err.into());
     }
     Err(AlreadyPrintedError::new(anyhow!("").into()).into())
@@ -2800,7 +2800,7 @@ fn emit_diagnostic(
             .annotation(AnnotationKind::Primary.span(span)),
     );
 
-    if let Err(err) = gctx.shell().print_report(&[group]) {
+    if let Err(err) = gctx.shell().print_report(&[group], true) {
         return err.into();
     }
     return AlreadyPrintedError::new(e.into()).into();
