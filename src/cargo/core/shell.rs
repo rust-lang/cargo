@@ -411,6 +411,7 @@ impl Shell {
             .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
         let rendered = Renderer::styled().term_width(term_width).render(report);
         self.err().write_all(rendered.as_bytes())?;
+        self.err().write_all("\n".as_bytes())?;
         Ok(())
     }
 }
