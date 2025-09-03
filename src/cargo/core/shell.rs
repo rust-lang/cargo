@@ -404,16 +404,14 @@ impl Shell {
     }
 
     /// Prints the passed in [`Report`] to stderr
-    pub fn print_report(&mut self, report: Report<'_>) -> std::io::Result<()> {
+    pub fn print_report(&mut self, report: Report<'_>) -> CargoResult<()> {
         let term_width = self
             .err_width()
             .diagnostic_terminal_width()
             .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
-        writeln!(
-            self.err(),
-            "{}",
-            Renderer::styled().term_width(term_width).render(report)
-        )
+        let rendered = Renderer::styled().term_width(term_width).render(report);
+        self.err().write_all(rendered.as_bytes())?;
+        Ok(())
     }
 }
 
