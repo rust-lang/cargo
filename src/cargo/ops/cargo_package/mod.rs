@@ -160,7 +160,7 @@ fn create_package(
     }
 
     let filename = pkg.package_id().tarball_name();
-    let dir = ws.target_dir().join("package");
+    let dir = ws.build_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
         dir.open_rw_exclusive_create(&tmp, gctx, "package scratch space")?
@@ -217,10 +217,27 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     // So we need filter
     pkgs.retain(|(pkg, _feats)| specs.iter().any(|spec| spec.matches(pkg.package_id())));
 
-    Ok(do_package(ws, opts, pkgs)?
-        .into_iter()
-        .map(|x| x.2)
-        .collect())
+    let packaged = do_package(ws, opts, pkgs)?;
+
+    let mut result = Vec::new();
+    let target_dir = ws.target_dir();
+    let build_dir = ws.build_dir();
+    if target_dir == build_dir {
+        result.extend(packaged.into_iter().map(|(_, _, src)| src));
+    } else {
+        // Uplifting artifacts
+        let artifact_dir = target_dir.join("package");
+        for (pkg, _, src) in packaged {
+            let filename = pkg.package_id().tarball_name();
+            let dst =
+                artifact_dir.open_rw_exclusive_create(filename, ws.gctx(), "uplifted package")?;
+            src.file().seek(SeekFrom::Start(0))?;
+            std::io::copy(&mut src.file(), &mut dst.file())?;
+            result.push(dst);
+        }
+    }
+
+    Ok(result)
 }
 
 /// Packages an entire workspace.

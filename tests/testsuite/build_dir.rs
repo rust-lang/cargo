@@ -12,6 +12,7 @@
 use std::path::PathBuf;
 
 use crate::prelude::*;
+use cargo_test_support::registry::RegistryBuilder;
 use cargo_test_support::{Project, prelude::*};
 use cargo_test_support::{paths, project, str};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
@@ -352,6 +353,38 @@ fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
     assert_exists(&package_artifact_dir);
     assert_exists(&package_artifact_dir.join("foo-0.0.1.crate"));
     assert!(package_artifact_dir.join("foo-0.0.1.crate").is_file());
+
+    let package_build_dir = p.root().join("build-dir/package");
+    assert_exists(&package_build_dir);
+    assert_exists(&package_build_dir.join("foo-0.0.1"));
+    assert!(package_build_dir.join("foo-0.0.1").is_dir());
+}
+
+#[cargo_test]
+fn cargo_publish_should_only_touch_build_dir() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .enable_mac_dsym()
+        .run();
+
+    assert_build_dir_layout(p.root().join("build-dir"), "debug");
+
+    let package_artifact_dir = p.root().join("target-dir/package");
+    assert!(!package_artifact_dir.exists());
 
     let package_build_dir = p.root().join("build-dir/package");
     assert_exists(&package_build_dir);

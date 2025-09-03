@@ -62,7 +62,7 @@ the `target` directory:
 Directory | Description
 ----------|------------
 <code style="white-space: nowrap">target/doc/</code> | Contains rustdoc documentation ([`cargo doc`]).
-<code style="white-space: nowrap">target/package/</code> | Contains the output of the [`cargo package`] and [`cargo publish`] commands.
+<code style="white-space: nowrap">target/package/</code> | Contains the output of the [`cargo package`].
 
 Cargo also creates several other directories and files in the build-dir needed for the build
 process. The build-dir layout is considered internal to Cargo, and is subject to
