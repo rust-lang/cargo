@@ -103,7 +103,7 @@ fn credential_provider_auth_failure() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] token rejected for `alternative`
-You may need to log in using this registry's credential provider
+       You may need to log in using this registry's credential provider
 
 Caused by:
   failed to get successful HTTP response from [..]

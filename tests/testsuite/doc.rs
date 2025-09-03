@@ -250,9 +250,9 @@ fn doc_multiple_targets_same_name_lib() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -348,9 +348,9 @@ fn doc_multiple_targets_same_name_bin() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -2924,7 +2924,7 @@ fn rustdoc_depinfo_gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 
 "#]])
         .run();

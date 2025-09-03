@@ -215,13 +215,13 @@ fn dependency_activates_missing_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
@@ -275,14 +275,14 @@ fn dependency_activates_typoed_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
- package `bar` does have feature `baz`
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+        package `bar` does have feature `baz`
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
@@ -447,8 +447,8 @@ fn cli_activates_required_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
+       
+       [HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
 
 "#]])
         .with_status(101)
@@ -494,14 +494,14 @@ fn dependency_activates_required_dependency() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
- A required dependency with that name exists, but only optional dependencies can be used as features.
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
+        A required dependency with that name exists, but only optional dependencies can be used as features.
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .with_status(101)

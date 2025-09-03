@@ -296,7 +296,7 @@ fn old_token_location() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .run();
@@ -480,7 +480,7 @@ fn unpublishable_crate() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -518,10 +518,10 @@ fn dont_publish_dirty() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-bar
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       bar
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -826,7 +826,7 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -855,7 +855,7 @@ fn publish_empty_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -1079,7 +1079,7 @@ fn block_publish_no_registry() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -1112,7 +1112,7 @@ fn publish_with_crates_io_explicit() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -1419,7 +1419,7 @@ fn publish_checks_for_token_before_verify() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
@@ -1464,7 +1464,7 @@ fn publish_with_bad_source() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with non-remote-registry source registry `[ROOT]/foo/registry`;
-include `--registry crates-io` to use crates.io
+       include `--registry crates-io` to use crates.io
 
 "#]])
         .run();
@@ -1484,7 +1484,7 @@ include `--registry crates-io` to use crates.io
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with non-remote-registry source dir [ROOT]/foo/vendor;
-include `--registry crates-io` to use crates.io
+       include `--registry crates-io` to use crates.io
 
 "#]])
         .run();
@@ -2215,7 +2215,7 @@ fn cratesio_source_replacement() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with remote registry dummy-registry;
-include `--registry dummy-registry` or `--registry crates-io`
+       include `--registry dummy-registry` or `--registry crates-io`
 
 "#]])
         .run();
@@ -2786,8 +2786,8 @@ fn in_package_workspace_not_found() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `li` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -2899,8 +2899,8 @@ fn publish_path_dependency_without_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -3641,7 +3641,7 @@ fn versionless_package() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -4490,10 +4490,10 @@ fn workspace_publish_rate_limit_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
 [ERROR] failed to publish package_a v0.1.0 to registry at http://127.0.0.1:[..]/
-
-[NOTE] the following crates have not been published yet:
-  package_b v0.1.0 ([ROOT]/foo/package_b)
-  package_c v0.1.0 ([ROOT]/foo/package_c)
+       
+       [NOTE] the following crates have not been published yet:
+         package_b v0.1.0 ([ROOT]/foo/package_b)
+         package_c v0.1.0 ([ROOT]/foo/package_c)
 
 Caused by:
   failed to get a 200 OK response, got 429

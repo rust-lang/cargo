@@ -25,9 +25,9 @@ fn must_have_unstable_options() {
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--lockfile-path")
         .arg(lockfile_path)
-        .with_stderr_data(str![[
-            r#"[ERROR] the `--lockfile-path` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/14421 for more information about the `--lockfile-path` flag.
+        .with_stderr_data(str![[r#"
+[ERROR] the `--lockfile-path` flag is unstable, pass `-Z unstable-options` to enable it
+       See https://github.com/rust-lang/cargo/issues/14421 for more information about the `--lockfile-path` flag.
 
 "#]])
         .with_status(101)
@@ -43,9 +43,9 @@ fn must_be_nightly() {
         .arg("-Zunstable-options")
         .arg("--lockfile-path")
         .arg(lockfile_path)
-        .with_stderr_data(str![[
-            r#"[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 
 "#]])
         .with_status(101)

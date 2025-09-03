@@ -213,11 +213,10 @@ impl Shell {
 
     /// Prints a red 'error' message.
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        if self.needs_clear {
-            self.err_erase_line();
-        }
-        self.output
-            .message_stderr(&"error", Some(&message), &ERROR, false)
+        let report = &[annotate_snippets::Group::with_title(
+            annotate_snippets::Level::ERROR.secondary_title(message.to_string()),
+        )];
+        self.print_report(report, true)
     }
 
     /// Prints an amber 'warning' message.

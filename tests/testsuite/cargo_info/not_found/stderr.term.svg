@@ -1,9 +1,9 @@
-<svg width="877px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="961px" height="74px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-bright-red { fill: #FF5555 }
     .fg-green { fill: #00AA00 }
-    .fg-red { fill: #AA0000 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> could not find `unknown` in registry `[ROOTURL]/registry`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: could not find `unknown` in registry `[ROOTURL]/registry`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

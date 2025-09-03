@@ -82,7 +82,7 @@ fn custom_build_script_failed_backtraces_message() {
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+       [NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
@@ -97,7 +97,7 @@ Caused by:
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+       [NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
@@ -1031,14 +1031,14 @@ fn links_duplicates() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a-sys` which could resolve this conflict
+           ... required by package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a-sys` which could resolve this conflict
 
 "#]])
         .run();
@@ -1088,13 +1088,13 @@ fn links_duplicates_old_registry() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [ERROR] multiple packages link to native library `a`, but a native library can be linked only once
-
-package `bar v0.1.0`
-    ... which satisfies dependency `bar = "^0.1"` (locked to 0.1.0) of package `foo v0.1.0 ([ROOT]/foo)`
-links to native library `a`
-
-package `foo v0.1.0 ([ROOT]/foo)`
-also links to native library `a`
+       
+       package `bar v0.1.0`
+           ... which satisfies dependency `bar = "^0.1"` (locked to 0.1.0) of package `foo v0.1.0 ([ROOT]/foo)`
+       links to native library `a`
+       
+       package `foo v0.1.0 ([ROOT]/foo)`
+       also links to native library `a`
 
 "#]])
         .run();
@@ -1157,15 +1157,15 @@ fn links_duplicates_deep_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `a v0.5.0 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a-sys` which could resolve this conflict
+           ... required by package `a v0.5.0 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a-sys` which could resolve this conflict
 
 "#]])
         .run();
@@ -4770,14 +4770,14 @@ fn links_duplicates_with_cycle() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a`.
-    ... required by package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a` which could resolve this conflict
+           ... required by package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a` which could resolve this conflict
 
 "#]])
         .run();
@@ -5635,8 +5635,8 @@ fn wrong_output() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::example`
-Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5728,8 +5728,8 @@ fn test_invalid_old_syntax() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
-Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5755,8 +5755,8 @@ fn test_invalid_new_syntax() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
-Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5778,8 +5778,8 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
-Unknown key: `foo`.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Unknown key: `foo`.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5816,8 +5816,8 @@ fn test_new_syntax_with_old_msrv() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5854,8 +5854,8 @@ fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5892,7 +5892,7 @@ fn test_new_syntax_with_old_msrv_and_unknown_prefix() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();

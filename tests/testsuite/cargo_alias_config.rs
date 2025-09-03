@@ -25,7 +25,7 @@ fn alias_incorrect_config_type() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid configuration for key `alias.b-cargo-test`
-expected a list, but found a integer for `alias.b-cargo-test` in [ROOT]/foo/.cargo/config.toml
+       expected a list, but found a integer for `alias.b-cargo-test` in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();
@@ -433,8 +433,8 @@ fn weird_check() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] trailing arguments after built-in command `check` are unsupported: `--invalid_argument -some-other-argument`
-
-To pass the arguments to the subcommand, remove `--`
+       
+       To pass the arguments to the subcommand, remove `--`
 
 "#]])
         .run();

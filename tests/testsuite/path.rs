@@ -1193,8 +1193,8 @@ fn self_dependency_using_base() {
         .with_stderr_data(
             "\
 [ERROR] cyclic package dependency: package `foo v0.1.0 ([ROOT]/foo)` depends on itself. Cycle:
-package `foo v0.1.0 ([ROOT]/foo)`
-    ... which satisfies path dependency `foo` of package `foo v0.1.0 ([ROOT]/foo)`
+       package `foo v0.1.0 ([ROOT]/foo)`
+           ... which satisfies path dependency `foo` of package `foo v0.1.0 ([ROOT]/foo)`
 ",
         )
         .run();
@@ -1671,10 +1671,10 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package found
-searched package name: `bar`
-perhaps you meant:      foo
-location searched: [ROOT]/foo/foo
-required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+       searched package name: `bar`
+       perhaps you meant:      foo
+       location searched: [ROOT]/foo/foo
+       required by package `foo v0.5.0 ([ROOT]/foo/foo)`
 
 "#]])
         .run();
@@ -1755,8 +1755,8 @@ fn deep_path_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `c` as a dependency of package `b v0.1.0 ([ROOT]/foo/b)`
-    ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
+           ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `c`
@@ -1848,7 +1848,7 @@ fn catch_tricky_cycle() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `ledger v0.1.0 ([ROOT]/foo/ledger)` depends on itself. Cycle:
-package `ledger v0.1.0 ([ROOT]/foo/ledger)`
+       package `ledger v0.1.0 ([ROOT]/foo/ledger)`
 ...
 "#]])
         .with_status(101)

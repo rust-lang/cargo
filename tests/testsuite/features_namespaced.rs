@@ -420,10 +420,10 @@ regex
     p.cargo("run --features lazy_static")
         .with_stderr_data(str![[r#"
 [ERROR] package `foo v0.1.0 ([ROOT]/foo)` does not have feature `lazy_static`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `lazy_static` would be enabled by these features:
-	- `regex`
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `lazy_static` would be enabled by these features:
+       	- `regex`
 
 "#]])
         .with_status(101)

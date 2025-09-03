@@ -1101,10 +1101,10 @@ fn do_not_package_if_repository_is_dirty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-Cargo.toml
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       Cargo.toml
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1115,10 +1115,10 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-../Cargo.toml
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       ../Cargo.toml
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1151,10 +1151,10 @@ fn dirty_ignored() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/build/mod.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/build/mod.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1231,11 +1231,11 @@ fn vcs_status_check_for_each_workspace_member() {
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-mordor/src/lib.rs
-mordor/src/main.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       mordor/src/lib.rs
+       mordor/src/main.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1378,14 +1378,14 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 5 files in the working directory contain changes that were not yet committed into git:
-
-Cargo.toml
-LICENSE
-README.md
-lib.rs
-original-dir/file
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       Cargo.toml
+       LICENSE
+       README.md
+       lib.rs
+       original-dir/file
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1476,10 +1476,10 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-isengard/src/file.txt
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       isengard/src/file.txt
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -2521,7 +2521,7 @@ fn empty_readme_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] readme `` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2551,7 +2551,7 @@ fn invalid_readme_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2581,9 +2581,9 @@ fn readme_or_license_file_is_dir() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] license-file `./src` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
-readme `./src` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       readme `./src` does not appear to exist (relative to `[ROOT]/foo`).
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2614,7 +2614,7 @@ fn empty_license_file_path() {
 [WARNING] manifest has no license or license-file.
          See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] license-file `` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2643,7 +2643,7 @@ fn invalid_license_file_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] license-file `does-not-exist` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -4238,8 +4238,8 @@ fn build_script_outside_pkg_root() {
 [WARNING] manifest has no documentation, homepage or repository.
          See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] the source file of build script doesn't appear to exist.
-This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+       This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+       Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
 
 "#]])
         .run();
@@ -4254,9 +4254,9 @@ Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and
 [WARNING] manifest has no documentation, homepage or repository.
          See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] the source file of build script doesn't appear to be a path inside of the package.
-It is at `[ROOT]/t_custom_build/custom_build.rs`, whereas the root the package is `[ROOT]/foo`.
-This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+       It is at `[ROOT]/t_custom_build/custom_build.rs`, whereas the root the package is `[ROOT]/foo`.
+       This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+       Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
 
 "#]])
         .run();
@@ -6758,7 +6758,7 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -6925,7 +6925,7 @@ fn registry_not_inferred_because_of_conflict() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `dep` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();

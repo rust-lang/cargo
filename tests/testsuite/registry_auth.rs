@@ -435,12 +435,12 @@ fn anonymous_alt_registry() {
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [ERROR] no token found for `sparse+http://127.0.0.1:[..]/index/`
-consider setting up an alternate registry in Cargo's configuration
-as described by https://doc.rust-lang.org/cargo/reference/registries.html
-
-[registries]
-my-registry = { index = "sparse+http://127.0.0.1:[..]/index/" }
-
+       consider setting up an alternate registry in Cargo's configuration
+       as described by https://doc.rust-lang.org/cargo/reference/registries.html
+       
+       [registries]
+       my-registry = { index = "sparse+http://127.0.0.1:[..]/index/" }
+       
 
 "#]])
         .run();

@@ -1917,7 +1917,7 @@ fn workspace_default_features2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/workspace_only`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
+       referenced by workspace at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   failed to parse manifest at `[ROOT]/foo/workspace_only/Cargo.toml`
@@ -3009,7 +3009,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] source `foo` defines source registry `crates-io`, but that source is already defined by `crates-io`
-[NOTE] Sources are not allowed to be defined multiple times.
+       [NOTE] Sources are not allowed to be defined multiple times.
 
 "#]])
         .run();
@@ -3030,7 +3030,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] source `[..]` defines source dir [ROOT]/foo/index, but that source is already defined by `[..]`
-[NOTE] Sources are not allowed to be defined multiple times.
+       [NOTE] Sources are not allowed to be defined multiple times.
 
 "#]])
         .run();

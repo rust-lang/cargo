@@ -271,8 +271,8 @@ fn prefixed_v_in_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the version provided, `v0.0.1` is not a valid SemVer version
-
-[HELP] try changing the version to `0.0.1`
+       
+       [HELP] try changing the version to `0.0.1`
 
 Caused by:
   unexpected character 'v' while parsing major version number

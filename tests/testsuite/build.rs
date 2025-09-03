@@ -1278,8 +1278,8 @@ fn cargo_compile_with_dep_name_mismatch() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `notquitebar` found
-location searched: [ROOT]/foo/bar
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: [ROOT]/foo/bar
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1335,8 +1335,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-[HELP] available bin targets:
-    a
+       [HELP] available bin targets:
+           a
 
 "#]])
         .run();
@@ -1345,8 +1345,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -1355,8 +1355,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-[HELP] available example targets:
-    a
+       [HELP] available example targets:
+           a
 
 "#]])
         .run();
@@ -1365,8 +1365,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -1408,17 +1408,17 @@ fn incompatible_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `bad`.
-    ... required by package `qux v0.1.0`
-    ... which satisfies dependency `qux = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `bad v1.0.0`
-    ... which satisfies dependency `bad = "=1.0.0"` of package `baz v0.1.0`
-    ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-failed to select a version for `bad` which could resolve this conflict
+           ... required by package `qux v0.1.0`
+           ... which satisfies dependency `qux = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `bad v1.0.0`
+           ... which satisfies dependency `bad = "=1.0.0"` of package `baz v0.1.0`
+           ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+       failed to select a version for `bad` which could resolve this conflict
 
 "#]])
         .run();
@@ -1456,20 +1456,20 @@ fn incompatible_dependencies_with_multi_semver() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `bad`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `bad v2.0.1`
-    ... which satisfies dependency `bad = ">=2.0.1"` of package `baz v0.1.0`
-    ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-  previously selected package `bad v1.0.0`
-    ... which satisfies dependency `bad = "=1.0.0"` of package `bar v0.1.0`
-    ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-failed to select a version for `bad` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `bad v2.0.1`
+           ... which satisfies dependency `bad = ">=2.0.1"` of package `baz v0.1.0`
+           ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+         previously selected package `bad v1.0.0`
+           ... which satisfies dependency `bad = "=1.0.0"` of package `bar v0.1.0`
+           ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+       failed to select a version for `bad` which could resolve this conflict
 
 "#]])
         .run();
@@ -2093,8 +2093,8 @@ fn self_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `test v0.0.0 ([ROOT]/foo)` depends on itself. Cycle:
-package `test v0.0.0 ([ROOT]/foo)`
-    ... which satisfies path dependency `test` of package `test v0.0.0 ([ROOT]/foo)`
+       package `test v0.0.0 ([ROOT]/foo)`
+           ... which satisfies path dependency `test` of package `test v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3099,9 +3099,9 @@ fn cyclic_deps_rejected() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `a v0.0.1 ([ROOT]/foo/a)` depends on itself. Cycle:
-package `a v0.0.1 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.0.1 ([ROOT]/foo)`
-    ... which satisfies path dependency `foo` of package `a v0.0.1 ([ROOT]/foo/a)`
+       package `a v0.0.1 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.0.1 ([ROOT]/foo)`
+           ... which satisfies path dependency `foo` of package `a v0.0.1 ([ROOT]/foo/a)`
 
 "#]])
         .run();
@@ -5369,8 +5369,8 @@ fn avoid_dev_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `baz` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.1.0 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -5491,8 +5491,8 @@ fn target_filters_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `ex` in default-run packages
-
-[HELP] a target with a similar name exists: `ex1`
+       
+       [HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();
@@ -5501,8 +5501,8 @@ fn target_filters_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target matches pattern `ex??` in default-run packages
-
-[HELP] a target with a similar name exists: `ex1`
+       
+       [HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();

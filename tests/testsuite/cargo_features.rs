@@ -639,7 +639,7 @@ fn z_flags_rejected() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See [..]
+       See [..]
 
 "#]])
         .run();
@@ -649,9 +649,9 @@ See [..]
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] unknown `-Z` flag specified: arg
-
-For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
-If you intended to use an unstable rustc feature, try setting `RUSTFLAGS="-Zarg"`
+       
+       For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
+       If you intended to use an unstable rustc feature, try setting `RUSTFLAGS="-Zarg"`
 
 "#]])
         .run();
@@ -765,8 +765,8 @@ fn z_stabilized() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] flag `-Z offline` has been stabilized in the 1.36 release
-  Offline mode is now available via the --offline CLI option
-
+         Offline mode is now available via the --offline CLI option
+       
 
 "#]])
         .run();

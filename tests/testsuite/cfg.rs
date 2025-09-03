@@ -400,8 +400,8 @@ fn bad_cfg_discovery() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `rustc -vV` didn't have a line for `host:`, got:
-foo
-
+       foo
+       
 
 "#]])
         .run();
@@ -412,8 +412,8 @@ foo
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] malformed output when learning about crate-type bin information
-command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
-(no output received)
+       command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
+       (no output received)
 
 "#]])
         .run();
@@ -424,16 +424,16 @@ command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] output of --print=sysroot missing when learning about target-specific information from rustc
-command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
-
---- stdout
-___[EXE]
-lib___.rlib
+       command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
+       
+       --- stdout
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
-
+       
 
 "#]])
         .run();
@@ -444,17 +444,17 @@ lib___.rlib
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] output of --print=split-debuginfo missing when learning about target-specific information from rustc
-command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
-
---- stdout
-___[EXE]
-lib___.rlib
+       command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
+       
+       --- stdout
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]
-
+       
 
 "#]])
         .run();
@@ -465,17 +465,17 @@ lib___.rlib
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse the cfg from `rustc --print=cfg`, got:
-___[EXE]
-lib___.rlib
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]
 [..],[..]
-___
-123
-
+       ___
+       123
+       
 
 Caused by:
   failed to parse `123` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string

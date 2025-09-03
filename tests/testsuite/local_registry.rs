@@ -101,8 +101,8 @@ fn not_found() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `baz` found
-location searched: `[ROOT]/registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `[ROOT]/registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -480,15 +480,15 @@ fn different_directory_replacing_the_registry_is_bad() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] checksum for `bar v0.0.1` changed between lock files
-
-this could be indicative of a few possible errors:
-
-    * the lock file is corrupt
-    * a replacement source in use (e.g., a mirror) returned a different checksum
-    * the source itself may be corrupt in one way or another
-
-unable to verify that `bar v0.0.1` is the same as when the lockfile was generated
-
+       
+       this could be indicative of a few possible errors:
+       
+           * the lock file is corrupt
+           * a replacement source in use (e.g., a mirror) returned a different checksum
+           * the source itself may be corrupt in one way or another
+       
+       unable to verify that `bar v0.0.1` is the same as when the lockfile was generated
+       
 
 "#]])
         .run();

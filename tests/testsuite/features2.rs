@@ -912,7 +912,7 @@ fn required_features_host_dep() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] target `x` in package `foo` requires the features: `bdep/f1`
-Consider enabling them by passing, e.g., `--features="bdep/f1"`
+       Consider enabling them by passing, e.g., `--features="bdep/f1"`
 
 "#]])
         .run();
