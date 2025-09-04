@@ -586,6 +586,7 @@ impl<'gctx> Timings<'gctx> {
             rmeta_time: Option<f64>,
             unlocked_units: Vec<usize>,
             unlocked_rmeta_units: Vec<usize>,
+            sections: Option<Vec<(String, SectionData)>>,
         }
         let round = |x: f64| (x * 100.0).round() / 100.0;
         let unit_data: Vec<UnitData> = self
@@ -599,7 +600,6 @@ impl<'gctx> Timings<'gctx> {
                     "todo"
                 }
                 .to_string();
-
                 // These filter on the unlocked units because not all unlocked
                 // units are actually "built". For example, Doctest mode units
                 // don't actually generate artifacts.
@@ -613,6 +613,13 @@ impl<'gctx> Timings<'gctx> {
                     .iter()
                     .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
+                let aggregated = ut.aggregate_sections();
+                let sections = match aggregated {
+                    AggregatedSections::Sections(sections) => Some(sections),
+                    AggregatedSections::OnlyMetadataTime { .. }
+                    | AggregatedSections::OnlyTotalDuration => None,
+                };
+
                 UnitData {
                     i,
                     name: ut.unit.pkg.name().to_string(),
@@ -624,6 +631,7 @@ impl<'gctx> Timings<'gctx> {
                     rmeta_time: ut.rmeta_time.map(round),
                     unlocked_units,
                     unlocked_rmeta_units,
+                    sections,
                 }
             })
             .collect();
@@ -871,6 +879,7 @@ static HTML_TMPL: &str = r#"
   --canvas-axes: #303030;
   --canvas-grid: #e6e6e6;
   --canvas-codegen: #aa95e8;
+  --canvas-link: #95e8aa;
   --canvas-custom-build: #f0b165;
   --canvas-not-custom-build: #95cce8;
   --canvas-dep-line: #ddd;
