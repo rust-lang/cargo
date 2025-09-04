@@ -374,9 +374,8 @@ fn features_not_working() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `default` includes `p1` which is neither a dependency nor another feature
+  |
+  = caused by: feature `default` includes `p1` which is neither a dependency nor another feature
 
 "#]])
         .run();

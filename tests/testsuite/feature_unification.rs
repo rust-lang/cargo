@@ -525,7 +525,7 @@ fn package_feature_unification_cli_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] none of the selected packages contains this feature: c
-selected packages: a, b
+       selected packages: a, b
 
 "#]])
         .run();
@@ -535,7 +535,7 @@ selected packages: a, b
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the package 'a' does not contain this feature: b
-[HELP] packages with the missing feature: common, b
+       [HELP] packages with the missing feature: common, b
 
 "#]])
         .run();

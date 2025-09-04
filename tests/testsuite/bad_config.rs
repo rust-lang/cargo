@@ -42,15 +42,10 @@ fn unsupported_float() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `http.proxy`
-
-Caused by:
-  unsupported TOML configuration type `float`
+  |
+  = caused by: failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+  = caused by: failed to parse config at `http.proxy`
+  = caused by: unsupported TOML configuration type `float`
 
 "#]])
         .run();
@@ -72,15 +67,10 @@ fn unsupported_datetime() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `http.proxy`
-
-Caused by:
-  unsupported TOML configuration type `datetime`
+  |
+  = caused by: failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+  = caused by: failed to parse config at `http.proxy`
+  = caused by: unsupported TOML configuration type `datetime`
 
 "#]])
         .run();
@@ -102,15 +92,10 @@ fn unsupported_float_array() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `alias.floats[0]`
-
-Caused by:
-  unsupported TOML configuration type `float`
+  |
+  = caused by: failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+  = caused by: failed to parse config at `alias.floats[0]`
+  = caused by: unsupported TOML configuration type `float`
 
 "#]])
         .run();
@@ -132,15 +117,10 @@ fn unsupported_datetime_array() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `alias.datetimes[0]`
-
-Caused by:
-  unsupported TOML configuration type `datetime`
+  |
+  = caused by: failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+  = caused by: failed to parse config at `alias.datetimes[0]`
+  = caused by: unsupported TOML configuration type `datetime`
 
 "#]])
         .run();
@@ -166,9 +146,8 @@ fn bad3() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to update registry `crates-io`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `http.proxy` expected a string, but found a boolean
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `http.proxy` expected a string, but found a boolean
 
 "#]])
         .run();
@@ -190,9 +169,8 @@ fn bad4() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo` package
 [ERROR] Failed to create package `foo` at `[ROOT]/foo/foo`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `cargo-new.vcs` expected a string, but found a boolean
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `cargo-new.vcs` expected a string, but found a boolean
 
 "#]])
         .run();
@@ -218,9 +196,8 @@ fn bad6() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to update registry `crates-io`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `http.user-agent` expected a string, but found a boolean
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `http.user-agent` expected a string, but found a boolean
 
 "#]])
         .run();
@@ -250,19 +227,15 @@ fn invalid_global_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  could not load Cargo configuration
-
-Caused by:
-  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  TOML parse error at line 1, column 2
-    |
-  1 | 4
-    |  ^
-  key with no value, expected `=`
+  |
+  = caused by: could not load Cargo configuration
+  = caused by: could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
+  = caused by: TOML parse error at line 1, column 2
+                 |
+               1 | 4
+                 |  ^
+               key with no value, expected `=`
+               
 
 "#]])
         .run();
@@ -279,13 +252,13 @@ fn bad_cargo_lock() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  TOML parse error at line 1, column 1
-    |
-  1 | [[package]]
-    | ^^^^^^^^^^^
-  missing field `name`
+  |
+  = caused by: TOML parse error at line 1, column 1
+                 |
+               1 | [[package]]
+                 | ^^^^^^^^^^^
+               missing field `name`
+               
 
 "#]])
         .run();
@@ -337,9 +310,8 @@ fn duplicate_packages_in_cargo_lock() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  package `bar` is specified twice in the lockfile
+  |
+  = caused by: package `bar` is specified twice in the lockfile
 
 "#]])
         .run();
@@ -386,13 +358,13 @@ fn bad_source_in_cargo_lock() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  TOML parse error at line 12, column 26
-     |
-  12 |                 source = "You shall not parse"
-     |                          ^^^^^^^^^^^^^^^^^^^^^
-  invalid source `You shall not parse`
+  |
+  = caused by: TOML parse error at line 12, column 26
+                  |
+               12 |                 source = "You shall not parse"
+                  |                          ^^^^^^^^^^^^^^^^^^^^^
+               invalid source `You shall not parse`
+               
 
 "#]])
         .run();
@@ -471,18 +443,11 @@ Caused by:
             .with_stderr_data(str![[r#"
 [UPDATING] git repository `file:///`
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  Unable to update file:///
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
-
-Caused by:
-  'file:///' is not a valid local file URI; class=Config (7)
+  |
+  = caused by: failed to load source for dependency `foo`
+  = caused by: Unable to update file:///
+  = caused by: failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
+  = caused by: 'file:///' is not a valid local file URI; class=Config (7)
 
 "#]])
             .run();
@@ -571,9 +536,8 @@ fn cargo_toml_missing_package_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  missing field `package.name`
+  |
+  = caused by: missing field `package.name`
 
 "#]])
         .run();
@@ -608,9 +572,8 @@ fn duplicate_binary_names() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  found duplicate binary name e, but all binary targets must have a unique name
+  |
+  = caused by: found duplicate binary name e, but all binary targets must have a unique name
 
 "#]])
         .run();
@@ -645,9 +608,8 @@ fn duplicate_example_names() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  found duplicate example name ex, but all example targets must have a unique name
+  |
+  = caused by: found duplicate example name ex, but all example targets must have a unique name
 
 "#]])
         .run();
@@ -682,9 +644,8 @@ fn duplicate_bench_names() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  found duplicate bench name ex, but all bench targets must have a unique name
+  |
+  = caused by: found duplicate bench name ex, but all bench targets must have a unique name
 
 "#]])
         .run();
@@ -720,9 +681,8 @@ fn duplicate_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  Dependency 'bar' has different source paths depending on the build target. Each dependency must have a single canonical source path irrespective of build target.
+  |
+  = caused by: Dependency 'bar' has different source paths depending on the build target. Each dependency must have a single canonical source path irrespective of build target.
 
 "#]])
         .run();
@@ -758,9 +718,8 @@ fn duplicate_deps_diff_sources() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  Dependency 'bar' has different source paths depending on the build target. Each dependency must have a single canonical source path irrespective of build target.
+  |
+  = caused by: Dependency 'bar' has different source paths depending on the build target. Each dependency must have a single canonical source path irrespective of build target.
 
 "#]])
         .run();
@@ -895,9 +854,8 @@ fn empty_dependencies() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
+  |
+  = caused by: dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
 
 "#]])
         .run();
@@ -971,10 +929,9 @@ fn dev_dependencies2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `dev_dependencies` is unsupported as of the 2024 edition; instead use `dev-dependencies`
-  (in the `foo` package)
+  |
+  = caused by: `dev_dependencies` is unsupported as of the 2024 edition; instead use `dev-dependencies`
+               (in the `foo` package)
 
 "#]])
         .run();
@@ -1086,10 +1043,9 @@ fn build_dependencies2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `build_dependencies` is unsupported as of the 2024 edition; instead use `build-dependencies`
-  (in the `foo` package)
+  |
+  = caused by: `build_dependencies` is unsupported as of the 2024 edition; instead use `build-dependencies`
+               (in the `foo` package)
 
 "#]])
         .run();
@@ -1186,10 +1142,9 @@ fn lib_crate_type2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
-  (in the `foo` library target)
+  |
+  = caused by: `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
+               (in the `foo` library target)
 
 "#]])
         .run();
@@ -1278,10 +1233,9 @@ fn bin_crate_type2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
-  (in the `foo` binary target)
+  |
+  = caused by: `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
+               (in the `foo` binary target)
 
 "#]])
         .run();
@@ -1405,10 +1359,9 @@ fn examples_crate_type2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
-  (in the `ex` example target)
+  |
+  = caused by: `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
+               (in the `ex` example target)
 
 "#]])
         .run();
@@ -1539,10 +1492,9 @@ fn cargo_platform_build_dependencies2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `build_dependencies` is unsupported as of the 2024 edition; instead use `build-dependencies`
-  (in the `[HOST_TARGET]` platform target)
+  |
+  = caused by: `build_dependencies` is unsupported as of the 2024 edition; instead use `build-dependencies`
+               (in the `[HOST_TARGET]` platform target)
 
 "#]])
         .run();
@@ -1667,10 +1619,9 @@ fn cargo_platform_dev_dependencies2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `dev_dependencies` is unsupported as of the 2024 edition; instead use `dev-dependencies`
-  (in the `[HOST_TARGET]` platform target)
+  |
+  = caused by: `dev_dependencies` is unsupported as of the 2024 edition; instead use `dev-dependencies`
+               (in the `[HOST_TARGET]` platform target)
 
 "#]])
         .run();
@@ -1801,10 +1752,9 @@ fn default_features2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `default_features` is unsupported as of the 2024 edition; instead use `default-features`
-  (in the `a` dependency)
+  |
+  = caused by: `default_features` is unsupported as of the 2024 edition; instead use `default-features`
+               (in the `a` dependency)
 
 "#]])
         .run();
@@ -2007,14 +1957,11 @@ fn workspace_default_features2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/workspace_only`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse manifest at `[ROOT]/foo/workspace_only/Cargo.toml`
-
-Caused by:
-  `default_features` is unsupported as of the 2024 edition; instead use `default-features`
-  (in the `dep_workspace_only` dependency)
+       referenced by workspace at `[ROOT]/foo/Cargo.toml`
+  |
+  = caused by: failed to parse manifest at `[ROOT]/foo/workspace_only/Cargo.toml`
+  = caused by: `default_features` is unsupported as of the 2024 edition; instead use `default-features`
+               (in the `dep_workspace_only` dependency)
 
 "#]])
         .run();
@@ -2069,10 +2016,9 @@ fn lib_proc_macro2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
-  (in the `foo` library target)
+  |
+  = caused by: `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
+               (in the `foo` library target)
 
 "#]])
         .run();
@@ -2161,10 +2107,9 @@ fn bin_proc_macro2_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
-  (in the `foo` binary target)
+  |
+  = caused by: `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
+               (in the `foo` binary target)
 
 "#]])
         .run();
@@ -2211,16 +2156,14 @@ fn invalid_toml_historically_allowed_fails() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  TOML parse error at line 1, column 7
-    |
-  1 | [bar] baz = 2
-    |       ^
-  unexpected key or value, expected newline, `#`
+  |
+  = caused by: could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
+  = caused by: TOML parse error at line 1, column 7
+                 |
+               1 | [bar] baz = 2
+                 |       ^
+               unexpected key or value, expected newline, `#`
+               
 
 "#]])
         .run();
@@ -2251,9 +2194,8 @@ fn ambiguous_git_reference() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `branch`, `tag` or `rev` is allowed.
+  |
+  = caused by: dependency (bar) specification is ambiguous. Only one of `branch`, `tag` or `rev` is allowed.
 
 "#]])
         .run();
@@ -2288,16 +2230,11 @@ fn fragment_in_git_url() {
 [UPDATING] git repository `http://127.0.0.1/#foo`
 ...
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update http://127.0.0.1/#foo
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
-...
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update http://127.0.0.1/#foo
+  = caused by: failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
+  = caused by: failed to connect to 127.0.0.1: Connection refused; class=Os (2)
 
 "#]])
         .run();
@@ -2350,15 +2287,10 @@ fn bad_source_config2() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update registry `crates-io`
-
-Caused by:
-  could not find a configured source with the name `bar` when attempting to lookup `crates-io` (configuration in `[ROOT]/foo/.cargo/config.toml`)
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update registry `crates-io`
+  = caused by: could not find a configured source with the name `bar` when attempting to lookup `crates-io` (configuration in `[ROOT]/foo/.cargo/config.toml`)
 
 "#]])
         .run();
@@ -2395,15 +2327,10 @@ fn bad_source_config3() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update registry `crates-io`
-
-Caused by:
-  detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update registry `crates-io`
+  = caused by: detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)
 
 "#]])
         .run();
@@ -2443,15 +2370,10 @@ fn bad_source_config4() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update registry `crates-io`
-
-Caused by:
-  detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update registry `crates-io`
+  = caused by: detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)
 
 "#]])
         .run();
@@ -2491,9 +2413,8 @@ fn bad_source_config5() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] configuration key `source.bar.registry` specified an invalid URL (in [ROOT]/foo/.cargo/config.toml)
-
-Caused by:
-  invalid url `not a url`: relative URL without a base
+  |
+  = caused by: invalid url `not a url`: relative URL without a base
 
 "#]])
         .run();
@@ -2523,9 +2444,8 @@ fn both_git_and_path_specified() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `git` or `path` is allowed.
+  |
+  = caused by: dependency (bar) specification is ambiguous. Only one of `git` or `path` is allowed.
 
 "#]])
         .run();
@@ -2562,9 +2482,8 @@ fn bad_source_config6() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `source.crates-io.replace-with`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `source.crates-io.replace-with` expected a string, but found a array
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `source.crates-io.replace-with` expected a string, but found a array
 
 "#]])
         .run();
@@ -2594,9 +2513,8 @@ fn ignored_git_revision() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  key `branch` is ignored for dependency (bar).
+  |
+  = caused by: key `branch` is ignored for dependency (bar).
 
 "#]])
         .run();
@@ -2618,9 +2536,8 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  key `branch` is ignored for dependency (bar).
+  |
+  = caused by: key `branch` is ignored for dependency (bar).
 
 "#]])
         .run();
@@ -2908,9 +2825,8 @@ fn bad_http_ssl_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `http.ssl-version`
-
-Caused by:
-  invalid type: sequence, expected a string or map
+  |
+  = caused by: invalid type: sequence, expected a string or map
 
 "#]])
         .run();
@@ -2934,9 +2850,8 @@ fn bad_http_ssl_version_range() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `http.ssl-version`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `http.ssl-version.min` expected a string, but found a boolean
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `http.ssl-version.min` expected a string, but found a boolean
 
 "#]])
         .run();
@@ -2960,9 +2875,8 @@ fn bad_build_jobs() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `build.jobs`
-
-Caused by:
-  invalid type: map, expected an integer or string
+  |
+  = caused by: invalid type: map, expected an integer or string
 
 "#]])
         .run();
@@ -2986,12 +2900,9 @@ fn bad_build_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `build.target`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: could not load config key `build.target`
-
-Caused by:
-  invalid type: map, expected a string or array
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: could not load config key `build.target`
+  = caused by: invalid type: map, expected a string or array
 
 "#]])
         .run();
@@ -3021,13 +2932,10 @@ fn bad_target_cfg() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `target.'cfg(not(target_os = "none"))'.runner`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: could not load config key `target.'cfg(not(target_os = "none"))'.runner`
-
-Caused by:
-  invalid configuration for key `target.'cfg(not(target_os = "none"))'.runner`
-  expected a string or array of strings, but found a boolean for `target.'cfg(not(target_os = "none"))'.runner` in [ROOT]/foo/.cargo/config.toml
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: could not load config key `target.'cfg(not(target_os = "none"))'.runner`
+  = caused by: invalid configuration for key `target.'cfg(not(target_os = "none"))'.runner`
+               expected a string or array of strings, but found a boolean for `target.'cfg(not(target_os = "none"))'.runner` in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();
@@ -3099,7 +3007,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] source `foo` defines source registry `crates-io`, but that source is already defined by `crates-io`
-[NOTE] Sources are not allowed to be defined multiple times.
+       [NOTE] Sources are not allowed to be defined multiple times.
 
 "#]])
         .run();
@@ -3120,7 +3028,7 @@ fn redefined_sources() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] source `[..]` defines source dir [ROOT]/foo/index, but that source is already defined by `[..]`
-[NOTE] Sources are not allowed to be defined multiple times.
+       [NOTE] Sources are not allowed to be defined multiple times.
 
 "#]])
         .run();
@@ -3185,11 +3093,10 @@ fn bad_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `bin.rs` bin at `src/bin/bin.rs.rs` or `src/bin/bin.rs/main.rs`. Please specify bin.path if you want to use a non-default path.
-
-  [HELP] a bin with a similar name exists: `bin`
+  |
+  = caused by: can't find `bin.rs` bin at `src/bin/bin.rs.rs` or `src/bin/bin.rs/main.rs`. Please specify bin.path if you want to use a non-default path.
+               
+               [HELP] a bin with a similar name exists: `bin`
 
 "#]])
         .run();
@@ -3202,11 +3109,10 @@ fn bad_example_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
-
-  [HELP] a example with a similar name exists: `example`
+  |
+  = caused by: can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
+               
+               [HELP] a example with a similar name exists: `example`
 
 "#]])
         .run();
@@ -3219,11 +3125,10 @@ fn bad_test_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
-
-  [HELP] a test with a similar name exists: `test`
+  |
+  = caused by: can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
+               
+               [HELP] a test with a similar name exists: `test`
 
 "#]])
         .run();
@@ -3236,11 +3141,10 @@ fn bad_bench_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
-
-  [HELP] a bench with a similar name exists: `bench`
+  |
+  = caused by: can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
+               
+               [HELP] a bench with a similar name exists: `bench`
 
 "#]])
         .run();
@@ -3272,9 +3176,8 @@ fn non_existing_test() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. Please specify test.path if you want to use a non-default path.
+  |
+  = caused by: can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. Please specify test.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3306,9 +3209,8 @@ fn non_existing_example() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. Please specify example.path if you want to use a non-default path.
+  |
+  = caused by: can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. Please specify example.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3340,9 +3242,8 @@ fn non_existing_benchmark() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. Please specify bench.path if you want to use a non-default path.
+  |
+  = caused by: can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. Please specify bench.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3360,11 +3261,10 @@ fn non_existing_binary() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
-
-  [HELP] a bin with a similar name exists: `ehlo`
+  |
+  = caused by: can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
+               
+               [HELP] a bin with a similar name exists: `ehlo`
 
 "#]])
         .run();
@@ -3397,10 +3297,9 @@ fn commonly_wrong_path_of_test() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` test at default paths, but found a file at `test/foo.rs`.
-  Perhaps rename the file to `tests/foo.rs` for target auto-discovery, or specify test.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` test at default paths, but found a file at `test/foo.rs`.
+               Perhaps rename the file to `tests/foo.rs` for target auto-discovery, or specify test.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3433,10 +3332,9 @@ fn commonly_wrong_path_of_example() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` example at default paths, but found a file at `example/foo.rs`.
-  Perhaps rename the file to `examples/foo.rs` for target auto-discovery, or specify example.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` example at default paths, but found a file at `example/foo.rs`.
+               Perhaps rename the file to `examples/foo.rs` for target auto-discovery, or specify example.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3469,10 +3367,9 @@ fn commonly_wrong_path_of_benchmark() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
-  Perhaps rename the file to `benches/foo.rs` for target auto-discovery, or specify bench.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
+               Perhaps rename the file to `benches/foo.rs` for target auto-discovery, or specify bench.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3490,10 +3387,9 @@ fn commonly_wrong_path_binary() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bin at default paths, but found a file at `src/bins/foo.rs`.
-  Perhaps rename the file to `src/bin/foo.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` bin at default paths, but found a file at `src/bins/foo.rs`.
+               Perhaps rename the file to `src/bin/foo.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3511,10 +3407,9 @@ fn commonly_wrong_path_subdir_binary() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bin at default paths, but found a file at `src/bins/foo/main.rs`.
-  Perhaps rename the file to `src/bin/foo/main.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` bin at default paths, but found a file at `src/bins/foo/main.rs`.
+               Perhaps rename the file to `src/bin/foo/main.rs` for target auto-discovery, or specify bin.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -3534,10 +3429,9 @@ fn found_multiple_target_files() {
         // Don't assert the inferred paths since the order is non-deterministic.
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  cannot infer path for `foo` bin
-  Cargo doesn't know which to use because multiple target files found at `src/bin/foo[..]rs` and `src/bin/foo[..].rs`.
+  |
+  = caused by: cannot infer path for `foo` bin
+               Cargo doesn't know which to use because multiple target files found at `src/bin/foo.rs` and `src/bin/foo/main.rs`.
 
 "#]])
         .run();

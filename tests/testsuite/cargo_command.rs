@@ -186,11 +186,11 @@ fn find_closest_capital_c_to_c() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `C`
-
-[HELP] a command with a similar name exists: `c`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `C` with `cargo search cargo-C`
+       
+       [HELP] a command with a similar name exists: `c`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `C` with `cargo search cargo-C`
 
 "#]])
         .run();
@@ -202,11 +202,11 @@ fn find_closest_capital_b_to_b() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `B`
-
-[HELP] a command with a similar name exists: `b`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `B` with `cargo search cargo-B`
+       
+       [HELP] a command with a similar name exists: `b`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `B` with `cargo search cargo-B`
 
 "#]])
         .run();
@@ -218,11 +218,11 @@ fn find_closest_biuld_to_build() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `biuld`
-
-[HELP] a command with a similar name exists: `build`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `biuld` with `cargo search cargo-biuld`
+       
+       [HELP] a command with a similar name exists: `build`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `biuld` with `cargo search cargo-biuld`
 
 "#]])
         .run();
@@ -276,11 +276,11 @@ fn find_closest_alias() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `myalais`
-
-[HELP] a command with a similar name exists: `myalias`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `myalais` with `cargo search cargo-myalais`
+       
+       [HELP] a command with a similar name exists: `myalias`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `myalais` with `cargo search cargo-myalais`
 
 "#]])
         .run();
@@ -290,9 +290,9 @@ fn find_closest_alias() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `myalais`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `myalais` with `cargo search cargo-myalais`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `myalais` with `cargo search cargo-myalais`
 
 "#]])
         .run();
@@ -306,9 +306,9 @@ fn find_closest_dont_correct_nonsense() {
 		.with_status(101)
 		.with_stderr_data(str![[r#"
 [ERROR] no such command: `there-is-no-way-that-there-is-a-command-close-to-this`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `there-is-no-way-that-there-is-a-command-close-to-this` with `cargo search cargo-there-is-no-way-that-there-is-a-command-close-to-this`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `there-is-no-way-that-there-is-a-command-close-to-this` with `cargo search cargo-there-is-no-way-that-there-is-a-command-close-to-this`
 
 "#]])
         .run();
@@ -320,9 +320,9 @@ fn displays_subcommand_on_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `invalid-command`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `invalid-command` with `cargo search cargo-invalid-command`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `invalid-command` with `cargo search cargo-invalid-command`
 
 "#]])
         .run();
@@ -550,8 +550,8 @@ fn subcommand_leading_plus_output_contains() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `+nightly`
-
-[HELP] invoke `cargo` through `rustup` to handle `+toolchain` directives
+       
+       [HELP] invoke `cargo` through `rustup` to handle `+toolchain` directives
 
 "#]])
         .run();
@@ -563,11 +563,11 @@ fn full_did_you_mean() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `bluid`
-
-[HELP] a command with a similar name exists: `build`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `bluid` with `cargo search cargo-bluid`
+       
+       [HELP] a command with a similar name exists: `build`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `bluid` with `cargo search cargo-bluid`
 
 "#]])
         .run();

@@ -29,13 +29,13 @@ fn metabuild_gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `metabuild` is required
-
-  The package requires the Cargo feature called `metabuild`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider adding `cargo-features = ["metabuild"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild for more information about the status of this feature.
+  |
+  = caused by: feature `metabuild` is required
+               
+               The package requires the Cargo feature called `metabuild`, but that feature is not stabilized in this version of Cargo (1.92.0 (3e9b30d52 2025-10-08)).
+               Consider adding `cargo-features = ["metabuild"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+               See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild for more information about the status of this feature.
+               
 
 "#]])
         .run();
@@ -124,9 +124,8 @@ fn metabuild_error_both() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  cannot specify both `metabuild` and `build`
+  |
+  = caused by: cannot specify both `metabuild` and `build`
 
 "#]])
         .run();
@@ -154,9 +153,8 @@ fn metabuild_missing_dep() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  metabuild package `mb` must be specified in `build-dependencies`
+  |
+  = caused by: metabuild package `mb` must be specified in `build-dependencies`
 
 "#]])
         .run();

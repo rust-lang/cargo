@@ -96,9 +96,8 @@ fn deny_optional_dependencies() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dep1 is optional, but workspace dependencies cannot be optional
+  |
+  = caused by: dep1 is optional, but workspace dependencies cannot be optional
 
 "#]])
         .run();
@@ -613,12 +612,9 @@ fn inherit_from_own_undefined_field() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  error inheriting `description` from workspace root manifest's `workspace.package.description`
-
-Caused by:
-  `workspace.package.description` was not defined
+  |
+  = caused by: error inheriting `description` from workspace root manifest's `workspace.package.description`
+  = caused by: `workspace.package.description` was not defined
 
 "#]])
         .run();
@@ -1368,9 +1364,8 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (dep) specified without providing a local path, Git repository, version, or workspace dependency to use
+  |
+  = caused by: dependency (dep) specified without providing a local path, Git repository, version, or workspace dependency to use
 
 "#]])
         .run();
@@ -1447,12 +1442,9 @@ fn error_no_root_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/bar/Cargo.toml`
-
-Caused by:
-  error inheriting `description` from workspace root manifest's `workspace.package.description`
-
-Caused by:
-  root of a workspace inferred but wasn't a root: [ROOT]/foo/Cargo.toml
+  |
+  = caused by: error inheriting `description` from workspace root manifest's `workspace.package.description`
+  = caused by: root of a workspace inferred but wasn't a root: [ROOT]/foo/Cargo.toml
 
 "#]])
         .run();
@@ -1492,12 +1484,9 @@ fn error_inherit_unspecified_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/bar/Cargo.toml`
-
-Caused by:
-  error inheriting `foo` from workspace root manifest's `workspace.dependencies.foo`
-
-Caused by:
-  `workspace.dependencies` was not defined
+  |
+  = caused by: error inheriting `foo` from workspace root manifest's `workspace.dependencies.foo`
+  = caused by: `workspace.dependencies` was not defined
 
 "#]])
         .run();
@@ -1584,12 +1573,9 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
+  |
+  = caused by: error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+  = caused by: `default-features = false` cannot override workspace's `default-features`
 
 "#]])
         .run();
@@ -1676,12 +1662,9 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
+  |
+  = caused by: error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+  = caused by: `default-features = false` cannot override workspace's `default-features`
 
 "#]])
         .run();
@@ -1768,9 +1751,8 @@ fn cannot_inherit_in_patch() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
+  |
+  = caused by: dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
 
 "#]])
         .run();

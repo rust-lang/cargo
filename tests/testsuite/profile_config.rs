@@ -33,9 +33,9 @@ fn rustflags_works_with_zflag() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] config profile `dev` is not valid (defined in `[ROOT]/foo/.cargo/config.toml`)
-
-Caused by:
-  feature `profile-rustflags` is required
+  |
+  = caused by: feature `profile-rustflags` is required
+               
 ...
 "#]])
         .run();
@@ -133,9 +133,8 @@ fn profile_config_error_paths() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `profile.dev`
-
-Caused by:
-  error in [ROOT]/home/.cargo/config.toml: `profile.dev.rpath` expected true/false, but found a string
+  |
+  = caused by: error in [ROOT]/home/.cargo/config.toml: `profile.dev.rpath` expected true/false, but found a string
 
 "#]])
         .run();
@@ -159,9 +158,8 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] config profile `dev` is not valid (defined in `[ROOT]/foo/.cargo/config.toml`)
-
-Caused by:
-  `panic` may not be specified in a `package` profile
+  |
+  = caused by: `panic` may not be specified in a `package` profile
 
 "#]])
         .run();
@@ -185,9 +183,8 @@ fn profile_config_syntax_errors() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `profile.dev`
-
-Caused by:
-  error in [ROOT]/foo/.cargo/config.toml: `profile.dev.codegen-units` expected an integer, but found a string
+  |
+  = caused by: error in [ROOT]/foo/.cargo/config.toml: `profile.dev.codegen-units` expected an integer, but found a string
 
 "#]])
         .run();
@@ -230,7 +227,7 @@ fn profile_config_override_spec_multiple() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([ROOT]/foo/bar)`
-found package specs: bar, bar@0.5.0
+       found package specs: bar, bar@0.5.0
 
 "#]])
         .run();

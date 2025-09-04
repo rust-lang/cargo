@@ -252,9 +252,8 @@ fn registry_incompatible_with_git() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
+  |
+  = caused by: dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
 
 "#]])
         .run();
@@ -289,11 +288,10 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  crates cannot be published to crates.io with dependencies sourced from other
-  registries. `bar` needs to be published to crates.io before publishing this crate.
-  (crate `bar` is pulled from registry `alternative`)
+  |
+  = caused by: crates cannot be published to crates.io with dependencies sourced from other
+               registries. `bar` needs to be published to crates.io before publishing this crate.
+               (crate `bar` is pulled from registry `alternative`)
 
 "#]])
         .run();
@@ -309,11 +307,10 @@ Caused by:
 [WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  crates cannot be published to crates.io with dependencies sourced from other
-  registries. `bar` needs to be published to crates.io before publishing this crate.
-  (crate `bar` is pulled from registry `alternative`)
+  |
+  = caused by: crates cannot be published to crates.io with dependencies sourced from other
+               registries. `bar` needs to be published to crates.io before publishing this crate.
+               (crate `bar` is pulled from registry `alternative`)
 
 "#]])
         .run();
@@ -471,7 +468,7 @@ fn block_publish_due_to_no_token() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+       or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .run();
@@ -498,7 +495,7 @@ fn cargo_registries_crates_io_protocol() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+       or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .run();
@@ -678,9 +675,8 @@ fn passwords_in_registries_index_url_forbidden() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid index URL for registry `alternative` defined in [ROOT]/home/.cargo/config.toml
-
-Caused by:
-  registry URLs may not contain passwords
+  |
+  = caused by: registry URLs may not contain passwords
 
 "#]])
         .run();
@@ -1715,12 +1711,9 @@ fn registries_index_relative_path_not_allowed() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  invalid index URL for registry `relative` defined in [ROOT]/.cargo/config.toml
-
-Caused by:
-  invalid url `alternative-registry`: relative URL without a base
+  |
+  = caused by: invalid index URL for registry `relative` defined in [ROOT]/.cargo/config.toml
+  = caused by: invalid url `alternative-registry`: relative URL without a base
 
 "#]])
         .with_status(101)
@@ -1889,7 +1882,7 @@ fn warn_for_unused_fields() {
 [UPDATING] `alternative` index
 [WARNING] unused config key `registries.alternative.unexpected-field` in `[ROOT]/foo/.cargo/config.toml`
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+       or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .run();
@@ -1904,7 +1897,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 [UPDATING] crates.io index
 [WARNING] unused config key `registry.unexpected-field` in `[ROOT]/foo/.cargo/config.toml`
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .run();

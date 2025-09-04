@@ -1,7 +1,7 @@
 <svg width="911px" height="92px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,9 +21,9 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: no version of crate `rust-version-user` can maintain cargo-list-test-fixture's rust-version of 1.56</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: no version of crate `rust-version-user` can maintain cargo-list-test-fixture's rust-version of 1.56</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>help: pass `--ignore-rust-version` to select rust-version-user@0.2.1 which requires rustc 1.72</tspan>
+    <tspan x="10px" y="64px"><tspan>       </tspan><tspan class="bold">help: pass `--ignore-rust-version` to select rust-version-user@0.2.1 which requires rustc 1.72</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

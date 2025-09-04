@@ -44,9 +44,8 @@ fn explicit_version() {
 [UPDATING] crates.io index
       Unyank foo@0.0.1
 [ERROR] failed to undo a yank from the registry at [ROOTURL]/api
-
-Caused by:
-  EOF while parsing a value at line 1 column 0
+  |
+  = caused by: EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();
@@ -121,9 +120,8 @@ fn inline_version() {
 [UPDATING] crates.io index
       Unyank foo@0.0.1
 [ERROR] failed to undo a yank from the registry at [ROOTURL]/api
-
-Caused by:
-  EOF while parsing a value at line 1 column 0
+  |
+  = caused by: EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();
@@ -238,9 +236,8 @@ fn bad_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid version `bar`
-
-Caused by:
-  unexpected character 'b' while parsing major version number
+  |
+  = caused by: unexpected character 'b' while parsing major version number
 
 "#]])
         .run();
@@ -271,11 +268,10 @@ fn prefixed_v_in_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the version provided, `v0.0.1` is not a valid SemVer version
-
-[HELP] try changing the version to `0.0.1`
-
-Caused by:
-  unexpected character 'v' while parsing major version number
+       
+       [HELP] try changing the version to `0.0.1`
+  |
+  = caused by: unexpected character 'v' while parsing major version number
 
 "#]])
         .run();

@@ -509,7 +509,7 @@ fn bad_ids() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not find report with ID 7
-Available IDs are: 1
+       Available IDs are: 1
 
 "#]])
         .run();

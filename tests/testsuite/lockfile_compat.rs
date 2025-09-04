@@ -238,15 +238,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] checksum for `bar v0.1.0` changed between lock files
-
-this could be indicative of a few possible errors:
-
-    * the lock file is corrupt
-    * a replacement source in use (e.g., a mirror) returned a different checksum
-    * the source itself may be corrupt in one way or another
-
-unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
-
+       
+       this could be indicative of a few possible errors:
+       
+           * the lock file is corrupt
+           * a replacement source in use (e.g., a mirror) returned a different checksum
+           * the source itself may be corrupt in one way or another
+       
+       unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
+       
 
 "#]])
         .run();
@@ -298,15 +298,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     p.cargo("fetch").with_status(101).with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] checksum for `bar v0.1.0` was not previously calculated, but a checksum could now be calculated
-
-this could be indicative of a few possible situations:
-
-    * the source `registry `crates-io`` did not previously support checksums,
-      but was replaced with one that does
-    * newer Cargo implementations know how to checksum this source, but this
-      older implementation does not
-    * the lock file is corrupt
-
+       
+       this could be indicative of a few possible situations:
+       
+           * the source `registry `crates-io`` did not previously support checksums,
+             but was replaced with one that does
+           * newer Cargo implementations know how to checksum this source, but this
+             older implementation does not
+           * the lock file is corrupt
+       
 
 "#]]).run();
 }
@@ -366,15 +366,15 @@ source = "git+{0}"
     p.cargo("fetch").with_status(101).with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
 [ERROR] checksum for `bar v0.1.0 ([ROOTURL]/bar)` could not be calculated, but a checksum is listed in the existing lock file
-
-this could be indicative of a few possible situations:
-
-    * the source `[ROOTURL]/bar` supports checksums,
-      but was replaced with one that doesn't
-    * the lock file is corrupt
-
-unable to verify that `bar v0.1.0 ([ROOTURL]/bar)` is the same as when the lockfile was generated
-
+       
+       this could be indicative of a few possible situations:
+       
+           * the source `[ROOTURL]/bar` supports checksums,
+             but was replaced with one that doesn't
+           * the lock file is corrupt
+       
+       unable to verify that `bar v0.1.0 ([ROOTURL]/bar)` is the same as when the lockfile was generated
+       
 
 "#]]).run();
 }
@@ -518,7 +518,7 @@ fn locked_correct_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be updated but --locked was passed to prevent this
-If you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+       If you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
 
 "#]])
         .run();
@@ -719,9 +719,8 @@ fn lock_from_the_future() {
 
     p.cargo("fetch").with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  lock file version `10000000` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
+  |
+  = caused by: lock file version `10000000` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
 
 "#]]).with_status(101).run();
 }
@@ -888,10 +887,10 @@ dependencies = [
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "*"` (locked to 0.1.0)
-candidate versions found which didn't match: 0.0.1
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `test v0.0.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.0.1
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `test v0.0.0 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();
@@ -917,9 +916,8 @@ fn next_version_is_always_unstable() {
 
     p.cargo("fetch").with_status(101).with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  lock file version `5` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
+  |
+  = caused by: lock file version `5` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
 
 "#]]).run();
 
@@ -929,9 +927,8 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  lock file version `5` requires `-Znext-lockfile-bump`
+  |
+  = caused by: lock file version `5` requires `-Znext-lockfile-bump`
 
 "#]])
         .run();

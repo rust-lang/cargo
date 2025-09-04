@@ -110,7 +110,7 @@ fn ambiguous_registry() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with remote registry alternative;
-include `--registry alternative` or `--registry crates-io`
+       include `--registry alternative` or `--registry crates-io`
 
 "#]])
         .run();
@@ -333,8 +333,8 @@ fn source_replacement_with_no_package_in_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `bar` found
-location searched: directory source `[ROOT]/vendor` (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: directory source `[ROOT]/vendor` (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();

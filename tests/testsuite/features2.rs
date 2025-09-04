@@ -912,7 +912,7 @@ fn required_features_host_dep() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] target `x` in package `foo` requires the features: `bdep/f1`
-Consider enabling them by passing, e.g., `--features="bdep/f1"`
+       Consider enabling them by passing, e.g., `--features="bdep/f1"`
 
 "#]])
         .run();
@@ -1393,9 +1393,8 @@ fn resolver_bad_setting() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `resolver` setting `foo` is not valid, valid options are "1", "2" or "3"
+  |
+  = caused by: `resolver` setting `foo` is not valid, valid options are "1", "2" or "3"
 
 "#]])
         .run();
@@ -1485,9 +1484,8 @@ fn resolver_not_both() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  cannot specify `resolver` field in both `[workspace]` and `[package]`
+  |
+  = caused by: cannot specify `resolver` field in both `[workspace]` and `[package]`
 
 "#]])
         .run();

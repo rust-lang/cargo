@@ -142,7 +142,7 @@ fn link_arg_missing_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid instruction `cargo::rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
-The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
+       The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
 
 "#]])
         .run();
@@ -157,7 +157,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid instruction `cargo::rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
-The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `abc`.
+       The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `abc`.
 
 "#]])
         .run();
@@ -172,7 +172,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid instruction `cargo::rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
-The instruction should have the form cargo::rustc-link-arg-bin=BIN=ARG
+       The instruction should have the form cargo::rustc-link-arg-bin=BIN=ARG
 
 "#]])
         .run();

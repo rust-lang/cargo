@@ -351,7 +351,7 @@ fn too_many_bins() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: a, b
+       available binaries: a, b
 
 "#]])
         .run();
@@ -470,11 +470,10 @@ fn bogus_default_run() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  default-run target `b` not found
-
-  [HELP] a target with a similar name exists: `a`
+  |
+  = caused by: default-run target `b` not found
+               
+               [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -624,8 +623,8 @@ automatically infer them to be a target, such as in subfolders.
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [ERROR] no example target named `a` in default-run packages
-[HELP] available example targets:
-    do_magic
+       [HELP] available example targets:
+           do_magic
 
 "#]])
         .run();
@@ -655,8 +654,8 @@ fn run_example_autodiscover_2015_with_autoexamples_disabled() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a` in default-run packages
-[HELP] available example targets:
-    do_magic
+       [HELP] available example targets:
+           do_magic
 
 "#]])
         .run();
@@ -742,8 +741,8 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-[HELP] available bin targets:
-    a
+       [HELP] available bin targets:
+           a
 
 "#]])
         .run();
@@ -752,8 +751,8 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -762,8 +761,8 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-[HELP] available example targets:
-    a
+       [HELP] available example targets:
+           a
 
 "#]])
         .run();
@@ -772,8 +771,8 @@ fn run_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -836,11 +835,11 @@ fn ambiguous_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` can run at most one executable, but multiple were specified
-[HELP] available targets:
-    bin `ambiguous` in package `crate1`
-    bin `ambiguous` in package `crate2`
-    bin `ambiguous` in package `crate3`
-    bin `ambiguous` in package `crate4`
+       [HELP] available targets:
+           bin `ambiguous` in package `crate1`
+           bin `ambiguous` in package `crate2`
+           bin `ambiguous` in package `crate3`
+           bin `ambiguous` in package `crate4`
 
 "#]])
         .run();
@@ -849,11 +848,11 @@ fn ambiguous_bin_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate1/ambiguous` in default-run packages
-[HELP] available bin targets:
-    ambiguous in package crate1
-    ambiguous in package crate2
-    ambiguous in package crate3
-    ambiguous in package crate4
+       [HELP] available bin targets:
+           ambiguous in package crate1
+           ambiguous in package crate2
+           ambiguous in package crate3
+           ambiguous in package crate4
 
 "#]])
         .run();
@@ -929,9 +928,9 @@ fn print_available_targets_within_virtual_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    crate1
-
+       Available binaries:
+           crate1
+       
 
 "#]])
         .run();
@@ -940,10 +939,10 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2` in `crate1` package
-
-[HELP] a target with a similar name exists: `crate1`
-[HELP] available bin in `crate2` package:
-    crate2
+       
+       [HELP] a target with a similar name exists: `crate1`
+       [HELP] available bin in `crate2` package:
+           crate2
 
 "#]])
         .run();
@@ -952,10 +951,10 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2` in `crate1`, ... packages
-
-[HELP] a target with a similar name exists: `crate1`
-[HELP] available bin in `crate2` package:
-    crate2
+       
+       [HELP] a target with a similar name exists: `crate1`
+       [HELP] available bin in `crate2` package:
+           crate2
 
 "#]])
         .run();
@@ -964,10 +963,10 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2` in default-run packages
-
-[HELP] a target with a similar name exists: `crate1`
-[HELP] available bin in `crate2` package:
-    crate2
+       
+       [HELP] a target with a similar name exists: `crate1`
+       [HELP] available bin in `crate2` package:
+           crate2
 
 "#]])
         .run();
@@ -976,10 +975,10 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target matches pattern `pattern*` in default-run packages
-[HELP] available bin in `pattern1` package:
-    pattern1
-[HELP] available bin in `pattern2` package:
-    pattern2
+       [HELP] available bin in `pattern1` package:
+           pattern1
+       [HELP] available bin in `pattern2` package:
+           pattern2
 
 "#]])
         .run();
@@ -1001,8 +1000,8 @@ Available binaries:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `crate2` in default-run packages
-[HELP] available bin in `crate2` package:
-    crate2
+       [HELP] available bin in `crate2` package:
+           crate2
 
 "#]])
         .run();
@@ -1019,9 +1018,9 @@ fn either_name_or_example() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` can run at most one executable, but multiple were specified
-[HELP] available targets:
-    bin `a` in package `foo`
-    example `b` in package `foo`
+       [HELP] available targets:
+           bin `a` in package `foo`
+           example `b` in package `foo`
 
 "#]])
         .run();
@@ -1364,7 +1363,7 @@ fn run_with_bin_dep_in_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: bar1, bar2, foo1, foo2
+       available binaries: bar1, bar2, foo1, foo2
 
 "#]])
         .run();
@@ -1764,7 +1763,7 @@ fn run_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: a, b
+       available binaries: a, b
 
 "#]])
         .run();

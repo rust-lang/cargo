@@ -1,7 +1,7 @@
 <svg width="740px" height="200px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,21 +21,21 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> foo (workspace) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate foo: not_recognized</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: unrecognized feature for crate foo: not_recognized</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan>       </tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>disabled features:</tspan>
+    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="bold">disabled features:</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>    merge, merge-base, unrelated</tspan>
+    <tspan x="10px" y="100px"><tspan>       </tspan><tspan class="bold">    merge, merge-base, unrelated</tspan>
 </tspan>
-    <tspan x="10px" y="118px">
+    <tspan x="10px" y="118px"><tspan>       </tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>enabled features:</tspan>
+    <tspan x="10px" y="136px"><tspan>       </tspan><tspan class="bold">enabled features:</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>    default-base, default-merge-base, default-test-base</tspan>
+    <tspan x="10px" y="154px"><tspan>       </tspan><tspan class="bold">    default-base, default-merge-base, default-test-base</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>    long-feature-name-because-of-formatting-reasons, test, test-base</tspan>
+    <tspan x="10px" y="172px"><tspan>       </tspan><tspan class="bold">    long-feature-name-because-of-formatting-reasons, test, test-base</tspan>
 </tspan>
     <tspan x="10px" y="190px">
 </tspan>
