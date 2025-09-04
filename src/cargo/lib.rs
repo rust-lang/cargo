@@ -140,6 +140,7 @@
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
 
 use crate::core::Shell;
+use crate::core::shell::Verbosity;
 use crate::core::shell::Verbosity::Verbose;
 use anyhow::Error;
 use tracing::debug;
@@ -206,18 +207,21 @@ pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell)
     _display_error(err, shell, false);
 }
 
-fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
-    for (i, err) in err.chain().enumerate() {
-        // If we're not in verbose mode then only print cause chain until one
-        // marked as `VerboseError` appears.
-        //
-        // Generally the top error shouldn't be verbose, but check it anyways.
-        if shell.verbosity() != Verbose && err.is::<VerboseError>() {
-            return true;
-        }
-        if err.is::<AlreadyPrintedError>() {
-            break;
-        }
+fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn std::fmt::Display> {
+    err.chain()
+        .take_while(move |err| {
+            // If we're not in verbose mode then only print cause chain until one
+            // marked as `VerboseError` appears.
+            //
+            // Generally the top error shouldn't be verbose, but check it anyways.
+            verbosity == Verbose || !err.is::<VerboseError>()
+        })
+        .take_while(|err| !err.is::<AlreadyPrintedError>())
+        .map(|err| err as &dyn std::fmt::Display)
+}
+
+fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) {
+    for (i, err) in error_chain(err, shell.verbosity()).enumerate() {
         if i == 0 {
             if as_err {
                 drop(shell.error(&err));
@@ -229,5 +233,4 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
             drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
         }
     }
-    false
 }
