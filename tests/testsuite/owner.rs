@@ -84,9 +84,8 @@ fn simple_add() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to invite owners to crate `foo` on registry at [ROOTURL]/api
-
-Caused by:
-  EOF while parsing a value at line 1 column 0
+  |
+  = caused by: EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();
@@ -152,9 +151,8 @@ fn simple_remove() {
 [UPDATING] crates.io index
 [OWNER] removing ["username"] from crate foo
 [ERROR] failed to remove owners from crate `foo` on registry at [ROOTURL]/api
-
-Caused by:
-  EOF while parsing a value at line 1 column 0
+  |
+  = caused by: EOF while parsing a value at line 1 column 0
 
 "#]])
         .run();

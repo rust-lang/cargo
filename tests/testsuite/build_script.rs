@@ -44,9 +44,8 @@ fn custom_build_script_failed() {
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
 
 "#]])
         .run();
@@ -82,10 +81,9 @@ fn custom_build_script_failed_backtraces_message() {
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+       [NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
 
 "#]])
         .run();
@@ -97,10 +95,9 @@ Caused by:
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+       [NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
 
 "#]])
         .run();
@@ -136,9 +133,8 @@ fn custom_build_script_failed_backtraces_message_with_debuginfo() {
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
 
 "#]])
         .run();
@@ -982,9 +978,8 @@ fn links_no_build_cmd() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  package specifies that it links to `a` but does not have a custom build script
+  |
+  = caused by: package specifies that it links to `a` but does not have a custom build script
 
 "#]])
         .run();
@@ -1031,14 +1026,14 @@ fn links_duplicates() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a-sys` which could resolve this conflict
+           ... required by package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a-sys` which could resolve this conflict
 
 "#]])
         .run();
@@ -1088,13 +1083,13 @@ fn links_duplicates_old_registry() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [ERROR] multiple packages link to native library `a`, but a native library can be linked only once
-
-package `bar v0.1.0`
-    ... which satisfies dependency `bar = "^0.1"` (locked to 0.1.0) of package `foo v0.1.0 ([ROOT]/foo)`
-links to native library `a`
-
-package `foo v0.1.0 ([ROOT]/foo)`
-also links to native library `a`
+       
+       package `bar v0.1.0`
+           ... which satisfies dependency `bar = "^0.1"` (locked to 0.1.0) of package `foo v0.1.0 ([ROOT]/foo)`
+       links to native library `a`
+       
+       package `foo v0.1.0 ([ROOT]/foo)`
+       also links to native library `a`
 
 "#]])
         .run();
@@ -1157,15 +1152,15 @@ fn links_duplicates_deep_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `a v0.5.0 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a-sys` which could resolve this conflict
+           ... required by package `a v0.5.0 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a-sys` which could resolve this conflict
 
 "#]])
         .run();
@@ -1765,8 +1760,6 @@ fn build_deps_not_for_normal() {
 error[E0463]: can't find crate for `aaaaa`
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
-Caused by:
-  process didn't exit successfully: `rustc --crate-name foo[..]` ([EXIT_STATUS]: 1)
 
 "#]]
             .unordered(),
@@ -2106,10 +2099,9 @@ fn build_script_only() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  |
+  = caused by: no targets specified in the manifest
+               either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
 
 "#]])
         .run();
@@ -4030,14 +4022,14 @@ fn warnings_emitted_when_build_script_panics() {
 [WARNING] foo@0.5.0: foo
 [WARNING] foo@0.5.0: bar
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
-  --- stdout
-  cargo::warning=foo
-  cargo::warning=bar
-
-  --- stderr
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+               --- stdout
+               cargo::warning=foo
+               cargo::warning=bar
+               
+               --- stderr
+               
 ...
 [..]our crate panicked[..]
 ...
@@ -4100,14 +4092,14 @@ fn warnings_emitted_when_dependency_panics() {
 [WARNING] published@0.1.0: foo
 [WARNING] published@0.1.0: bar
 [ERROR] failed to run custom build command for `published v0.1.0`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/published-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
-  --- stdout
-  cargo::warning=foo
-  cargo::warning=bar
-
-  --- stderr
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/published-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+               --- stdout
+               cargo::warning=foo
+               cargo::warning=bar
+               
+               --- stderr
+               
 ...
 [..]dependency panicked[..]
 ...
@@ -4770,14 +4762,14 @@ fn links_duplicates_with_cycle() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a`.
-    ... required by package `foo v0.5.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.5.0
-
-package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
-
-failed to select a version for `a` which could resolve this conflict
+           ... required by package `foo v0.5.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.5.0
+       
+       package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+       package `foo v0.5.0 ([ROOT]/foo)`
+       Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+       
+       failed to select a version for `a` which could resolve this conflict
 
 "#]])
         .run();
@@ -5196,9 +5188,31 @@ fn links_interrupted_can_restart() {
     p.cargo("build")
         .env("SOMEVAR", "1")
         .with_stderr_data(str![[r#"
-...
-  Crash!
-...
+[COMPILING] bar v0.5.0 ([ROOT]/bar)
+[WARNING] unused import: `std::env`
+ --> build.rs:2:17
+  |
+2 |             use std::env;
+  |                 ^^^^^^^^
+  |
+  = [NOTE] `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[WARNING] `foo` (build script) generated 1 warning
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+               --- stdout
+               cargo::metadata=rebuild-if-changed=build.rs
+               
+               --- stderr
+               
+               thread 'main' (2513597) panicked at build.rs:6:21:
+               Crash!
+               [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+               
+[WARNING] build failed, waiting for other jobs to finish...
+
 "#]])
         .with_status(101)
         .run();
@@ -5635,8 +5649,8 @@ fn wrong_output() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::example`
-Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5728,8 +5742,8 @@ fn test_invalid_old_syntax() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
-Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5755,8 +5769,8 @@ fn test_invalid_new_syntax() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
-Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5778,8 +5792,8 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
-Unknown key: `foo`.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Unknown key: `foo`.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5816,8 +5830,8 @@ fn test_new_syntax_with_old_msrv() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5854,8 +5868,8 @@ fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();
@@ -5892,7 +5906,7 @@ fn test_new_syntax_with_old_msrv_and_unknown_prefix() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+       See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
 
 "#]])
         .run();

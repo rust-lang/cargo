@@ -153,9 +153,8 @@ fn dir_name_disabled() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dir-name="lto" in profile `release-lto` is not currently allowed, directory names are tied to the profile name for custom profiles
+  |
+  = caused by: dir-name="lto" in profile `release-lto` is not currently allowed, directory names are tied to the profile name for custom profiles
 
 "#]])
         .run();
