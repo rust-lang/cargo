@@ -9,7 +9,7 @@ pub fn cli() -> Command {
             "\
 DEPRECATED: Print a JSON representation of a Cargo.toml manifest.
 
-Use `<cyan,bold>cargo metadata --no-deps</>` instead.\
+Use `<bright-cyan,bold>cargo metadata --no-deps</>` instead.\
 "
         ))
         .arg_silent_suggestion()

@@ -163,7 +163,7 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
     ]);
     drop_println!(
         gctx,
-        color_print::cstr!("<green,bold>Installed Commands:</>")
+        color_print::cstr!("<bright-green,bold>Installed Commands:</>")
     );
     for (name, command) in list_commands(gctx) {
         let known_external_desc = known_external_command_descriptions.get(name.as_str());
@@ -557,11 +557,11 @@ pub fn cli(gctx: &GlobalContext) -> Command {
 
     let usage = if is_rustup() {
         color_print::cstr!(
-            "<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+            "<bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <bright-cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
         )
     } else {
         color_print::cstr!(
-            "<cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+            "<bright-cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[OPTIONS]</> <bright-cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
         )
     };
 
@@ -592,31 +592,31 @@ pub fn cli(gctx: &GlobalContext) -> Command {
             "\
 Rust's package manager
 
-<green,bold>Usage:</> {usage}
+<bright-green,bold>Usage:</> {usage}
 
-<green,bold>Options:</>
+<bright-green,bold>Options:</>
 {options}
 
-<green,bold>Commands:</>
-    <cyan,bold>build</>, <cyan,bold>b</>    Compile the current package
-    <cyan,bold>check</>, <cyan,bold>c</>    Analyze the current package and report errors, but don't build object files
-    <cyan,bold>clean</>       Remove the target directory
-    <cyan,bold>doc</>, <cyan,bold>d</>      Build this package's and its dependencies' documentation
-    <cyan,bold>new</>         Create a new cargo package
-    <cyan,bold>init</>        Create a new cargo package in an existing directory
-    <cyan,bold>add</>         Add dependencies to a manifest file
-    <cyan,bold>remove</>      Remove dependencies from a manifest file
-    <cyan,bold>run</>, <cyan,bold>r</>      Run a binary or example of the local package
-    <cyan,bold>test</>, <cyan,bold>t</>     Run the tests
-    <cyan,bold>bench</>       Run the benchmarks
-    <cyan,bold>update</>      Update dependencies listed in Cargo.lock
-    <cyan,bold>search</>      Search registry for crates
-    <cyan,bold>publish</>     Package and upload this package to the registry
-    <cyan,bold>install</>     Install a Rust binary
-    <cyan,bold>uninstall</>   Uninstall a Rust binary
-    <cyan>...</>         See all commands with <cyan,bold>--list</>
+<bright-green,bold>Commands:</>
+    <bright-cyan,bold>build</>, <bright-cyan,bold>b</>    Compile the current package
+    <bright-cyan,bold>check</>, <bright-cyan,bold>c</>    Analyze the current package and report errors, but don't build object files
+    <bright-cyan,bold>clean</>       Remove the target directory
+    <bright-cyan,bold>doc</>, <bright-cyan,bold>d</>      Build this package's and its dependencies' documentation
+    <bright-cyan,bold>new</>         Create a new cargo package
+    <bright-cyan,bold>init</>        Create a new cargo package in an existing directory
+    <bright-cyan,bold>add</>         Add dependencies to a manifest file
+    <bright-cyan,bold>remove</>      Remove dependencies from a manifest file
+    <bright-cyan,bold>run</>, <bright-cyan,bold>r</>      Run a binary or example of the local package
+    <bright-cyan,bold>test</>, <bright-cyan,bold>t</>     Run the tests
+    <bright-cyan,bold>bench</>       Run the benchmarks
+    <bright-cyan,bold>update</>      Update dependencies listed in Cargo.lock
+    <bright-cyan,bold>search</>      Search registry for crates
+    <bright-cyan,bold>publish</>     Package and upload this package to the registry
+    <bright-cyan,bold>install</>     Install a Rust binary
+    <bright-cyan,bold>uninstall</>   Uninstall a Rust binary
+    <cyan>...</>         See all commands with <bright-cyan,bold>--list</>
 
-See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a specific command.\n",
+See '<bright-cyan,bold>cargo help</> <cyan><<command>></>' for more information on a specific command.\n",
         ))
         .arg(flag("version", "Print version info and exit").short('V'))
         .arg(flag("list", "List installed commands"))

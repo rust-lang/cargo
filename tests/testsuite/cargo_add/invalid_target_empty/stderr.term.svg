@@ -2,8 +2,8 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-cyan { fill: #00AAAA }
-    .fg-red { fill: #AA0000 }
+    .fg-bright-cyan { fill: #55FFFF }
+    .fg-bright-red { fill: #FF5555 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -20,11 +20,11 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-red bold">error:</tspan><tspan> a value is required for '</tspan><tspan class="fg-yellow bold">--target &lt;TARGET&gt;</tspan><tspan>' but none was supplied</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error:</tspan><tspan> a value is required for '</tspan><tspan class="fg-yellow bold">--target &lt;TARGET&gt;</tspan><tspan>' but none was supplied</tspan>
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan>For more information, try '</tspan><tspan class="fg-cyan bold">--help</tspan><tspan>'.</tspan>
+    <tspan x="10px" y="64px"><tspan>For more information, try '</tspan><tspan class="fg-bright-cyan bold">--help</tspan><tspan>'.</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

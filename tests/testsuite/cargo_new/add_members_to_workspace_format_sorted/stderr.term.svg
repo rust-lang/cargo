@@ -2,8 +2,7 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-cyan { fill: #00AAAA }
-    .fg-green { fill: #00AA00 }
+    .fg-bright-green { fill: #55FF55 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -19,11 +18,11 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Creating</tspan><tspan> binary (application) `foo` package</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Creating</tspan><tspan> binary (application) `foo` package</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> `foo` as member of workspace at `[ROOT]/case`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> `foo` as member of workspace at `[ROOT]/case`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">note</tspan><tspan class="bold">:</tspan><tspan> see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

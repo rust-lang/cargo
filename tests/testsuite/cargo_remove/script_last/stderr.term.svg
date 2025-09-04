@@ -2,7 +2,7 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-green { fill: #00AA00 }
+    .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> `package.edition` is unspecified, defaulting to `[..]`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">    Removing</tspan><tspan> docopt from dependencies</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> docopt from dependencies</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> `package.edition` is unspecified, defaulting to `[..]`</tspan>
 </tspan>

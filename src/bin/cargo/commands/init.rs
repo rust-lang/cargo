@@ -15,7 +15,7 @@ pub fn cli() -> Command {
         .arg_registry("Registry to use")
         .arg_silent_suggestion()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help init</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help init</>` for more detailed information.\n"
         ))
 }
 

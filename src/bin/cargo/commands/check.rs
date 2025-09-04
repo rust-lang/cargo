@@ -40,7 +40,7 @@ pub fn cli() -> Command {
         .arg_lockfile_path()
         .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help check</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help check</>` for more detailed information.\n"
         ))
 }
 

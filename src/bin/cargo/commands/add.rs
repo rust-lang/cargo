@@ -18,11 +18,11 @@ pub fn cli() -> Command {
         .about("Add dependencies to a Cargo.toml manifest file")
         .override_usage(
             color_print::cstr!("\
-       <cyan,bold>cargo add</> <cyan>[OPTIONS] <<DEP>>[@<<VERSION>>] ...</>
-       <cyan,bold>cargo add</> <cyan>[OPTIONS]</> <cyan,bold>--path</> <cyan><<PATH>> ...</>
-       <cyan,bold>cargo add</> <cyan>[OPTIONS]</> <cyan,bold>--git</> <cyan><<URL>> ...</>"
+       <bright-cyan,bold>cargo add</> <cyan>[OPTIONS] <<DEP>>[@<<VERSION>>] ...</>
+       <bright-cyan,bold>cargo add</> <cyan>[OPTIONS]</> <bright-cyan,bold>--path</> <cyan><<PATH>> ...</>
+       <bright-cyan,bold>cargo add</> <cyan>[OPTIONS]</> <bright-cyan,bold>--git</> <cyan><<URL>> ...</>"
         ))
-        .after_help(color_print::cstr!("Run `<cyan,bold>cargo help add</>` for more detailed information.\n"))
+        .after_help(color_print::cstr!("Run `<bright-cyan,bold>cargo help add</>` for more detailed information.\n"))
         .group(clap::ArgGroup::new("selected").multiple(true).required(true))
         .args([
             clap::Arg::new("crates")
