@@ -182,7 +182,17 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
     debug!("display_error; err={:?}", err);
-    _display_error(err, shell, true);
+
+    let mut errs = error_chain(err, shell.verbosity());
+    let Some(first) = errs.next() else {
+        return;
+    };
+    drop(shell.error(&first));
+    for err in errs {
+        drop(writeln!(shell.err(), "\nCaused by:"));
+        drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
+    }
+
     if err
         .chain()
         .any(|e| e.downcast_ref::<InternalError>().is_some())
@@ -204,7 +214,16 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
 pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
     drop(shell.warn(warning));
     drop(writeln!(shell.err()));
-    _display_error(err, shell, false);
+
+    let mut errs = error_chain(err, shell.verbosity());
+    let Some(first) = errs.next() else {
+        return;
+    };
+    drop(writeln!(shell.err(), "{first}"));
+    for err in errs {
+        drop(writeln!(shell.err(), "\nCaused by:"));
+        drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
+    }
 }
 
 fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn std::fmt::Display> {
@@ -218,19 +237,4 @@ fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn s
         })
         .take_while(|err| !err.is::<AlreadyPrintedError>())
         .map(|err| err as &dyn std::fmt::Display)
-}
-
-fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) {
-    for (i, err) in error_chain(err, shell.verbosity()).enumerate() {
-        if i == 0 {
-            if as_err {
-                drop(shell.error(&err));
-            } else {
-                drop(writeln!(shell.err(), "{}", err));
-            }
-        } else {
-            drop(writeln!(shell.err(), "\nCaused by:"));
-            drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
-        }
-    }
 }
