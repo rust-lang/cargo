@@ -7,7 +7,7 @@ Compilation of Rust crates can sometimes be rather slow, due to various reasons 
 
 This guide focuses on the first approach.
 
-Below, you can find several methods that can be used to optimize build performance. It is important to nore that their effect varies a lot based on the compiled crate, and in some cases they can actually make compilation slower. You should always measure build performance on your crate(s) to determine if a given method described here is effective for your crate.
+Below, you can find several methods that can be used to optimize build performance. It is important to note that their effect varies a lot based on the compiled crate, and in some cases they can actually make compilation slower. You should always measure build performance on your crate(s) to determine if a given method described here is effective for your crate.
 
 Note that some of these approaches currently require using the nightly toolchain.
 
