@@ -46,6 +46,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation}
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::features::DetectAntivirus;
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
@@ -560,7 +561,7 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         }
     }
 
-    if build_config.detect_antivirus {
+    if build_config.detect_antivirus != DetectAntivirus::Never {
         // Count the number of test binaries and build scripts we'll need to
         // run. This doesn't take into account the binary that will be run
         // if `cargo run` was specified, and doesn't handle pre-2024 `rustdoc`
@@ -584,7 +585,9 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         // We also don't want to do this check when installing, since there
         // might be `cargo install` users who are not necessarily developers
         // (and so the note will be irrelevant to them).
-        if 10 < num_binaries && build_config.intent != UserIntent::Install {
+        if (10 < num_binaries && build_config.intent != UserIntent::Install)
+            || build_config.detect_antivirus == DetectAntivirus::Always
+        {
             if let Err(err) = detect_antivirus::detect_and_report(gctx) {
                 // Errors in this detection are not fatal.
                 tracing::error!("failed detecting whether binaries may be slow to run: {err}");
