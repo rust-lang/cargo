@@ -163,6 +163,8 @@ function render_pipeline_graph() {
     unitCount.set(unit.name, count + 1);
   }
 
+  const presentSections = new Set();
+
   // Draw the blocks.
   for (i=0; i<units.length; i++) {
     let unit = units[i];
@@ -180,6 +182,7 @@ function render_pipeline_graph() {
         ctx.fillStyle = get_section_color(section.name);
         roundedRect(ctx, section.start, y, section.width, BOX_HEIGHT, RADIUS);
         ctx.fill();
+        presentSections.add(section.name);
     }
     ctx.fillStyle = TEXT_COLOR;
     ctx.textAlign = 'start';
@@ -195,6 +198,32 @@ function render_pipeline_graph() {
     draw_dep_lines(ctx, unit.i, false);
   }
   ctx.restore();
+
+  // Draw a legend.
+  ctx.save();
+  ctx.translate(canvas_width - 200, MARGIN);
+
+  const legend_entries = [{
+    name: "Frontend/rest",
+    color: NOT_CUSTOM_BUILD_COLOR,
+    line: false
+  }];
+  if (presentSections.has("codegen")) {
+    legend_entries.push({
+      name: "Codegen",
+      color: CODEGEN_COLOR,
+      line: false
+    });
+  }
+  if (presentSections.has("link")) {
+    legend_entries.push({
+      name: "Linking",
+      color: LINK_COLOR,
+      line: false
+    });
+  }
+  draw_legend(ctx, 160, legend_entries);
+  ctx.restore();
 }
 
 // Draw a legend at the current position of the ctx.
@@ -206,7 +235,9 @@ function render_pipeline_graph() {
 // }
 function draw_legend(ctx, width, entries) {
   const entry_height = 20;
-  const height = entries.length * entry_height + 2; // Add a bit of margin to the bottom
+
+  // Add a bit of margin to the bottom and top
+  const height = entries.length * entry_height + 4;
 
   // Draw background
   ctx.fillStyle = BG_COLOR;
@@ -231,7 +262,7 @@ function draw_legend(ctx, width, entries) {
   const mark_width = 45;
 
   // Draw legend entries
-  let y = 10;
+  let y = 12;
   for (const entry of entries) {
     ctx.beginPath();
 
