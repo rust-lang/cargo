@@ -297,7 +297,7 @@ impl CompileMode {
 ///
 /// For example, when a user runs `cargo test`, the intent is [`UserIntent::Test`],
 /// but this might result in multiple [`CompileMode`]s for different units.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum UserIntent {
     /// Build benchmark binaries, e.g., `cargo bench`
     Bench,

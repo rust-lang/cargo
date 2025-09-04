@@ -564,14 +564,16 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         // TODO(madsmtm): Maybe only do this when we have above a certain
         // number of build scripts or test binaries to run?
 
-        // TODO(madsmtm): We probably don't want to do this check when doing
-        // `cargo install`?
-
         // TODO(madsmtm): Consider only warning once every X days.
 
-        if let Err(err) = detect_antivirus::detect_and_report(gctx) {
-            // Errors in this detection are not fatal.
-            tracing::error!("failed detecting whether binaries may be slow to run: {err}");
+        // We don't want to do this check when installing, since there might
+        // be `cargo install` users who are not necessarily developers (and so
+        // the note will be irrelevant to them).
+        if build_config.intent != UserIntent::Install {
+            if let Err(err) = detect_antivirus::detect_and_report(gctx) {
+                // Errors in this detection are not fatal.
+                tracing::error!("failed detecting whether binaries may be slow to run: {err}");
+            }
         }
     }
 
