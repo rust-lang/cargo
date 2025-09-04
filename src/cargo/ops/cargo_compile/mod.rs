@@ -228,7 +228,11 @@ pub fn create_bcx<'a, 'gctx>(
 
     // Perform some pre-flight validation.
     match build_config.intent {
-        UserIntent::Test | UserIntent::Build | UserIntent::Check { .. } | UserIntent::Bench => {
+        UserIntent::Test
+        | UserIntent::Build
+        | UserIntent::Install
+        | UserIntent::Check { .. }
+        | UserIntent::Bench => {
             if ws.gctx().get_env("RUST_FLAGS").is_ok() {
                 gctx.shell().warn(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
