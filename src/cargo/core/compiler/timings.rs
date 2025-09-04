@@ -870,7 +870,7 @@ static HTML_TMPL: &str = r#"
   --canvas-background: #f7f7f7;
   --canvas-axes: #303030;
   --canvas-grid: #e6e6e6;
-  --canvas-block: #aa95e8;
+  --canvas-codegen: #aa95e8;
   --canvas-custom-build: #f0b165;
   --canvas-not-custom-build: #95cce8;
   --canvas-dep-line: #ddd;
