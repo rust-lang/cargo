@@ -191,7 +191,6 @@ impl SectionData {
 }
 
 /// Contains post-processed data of individual compilation sections.
-#[derive(serde::Serialize)]
 enum AggregatedSections {
     /// We know the names and durations of individual compilation sections
     Sections(Vec<(String, SectionData)>),
