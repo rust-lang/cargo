@@ -363,8 +363,8 @@ fn same_names_in_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] two packages named `foo` in this workspace:
-- [ROOT]/foo/bar/Cargo.toml
-- [ROOT]/foo/Cargo.toml
+       - [ROOT]/foo/bar/Cargo.toml
+       - [ROOT]/foo/Cargo.toml
 
 "#]])
         .run();
@@ -395,11 +395,11 @@ fn parent_doesnt_point_to_child() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] current package believes it's in a workspace when it's not:
-current:   [ROOT]/foo/bar/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
-
-this may be fixable by ensuring that this crate is depended on by the workspace root: [ROOT]/foo/Cargo.toml
-Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
+       current:   [ROOT]/foo/bar/Cargo.toml
+       workspace: [ROOT]/foo/Cargo.toml
+       
+       this may be fixable by ensuring that this crate is depended on by the workspace root: [ROOT]/foo/Cargo.toml
+       Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
 
 "#]])
         .run();
@@ -426,9 +426,8 @@ fn invalid_parent_pointer() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to read `[ROOT]/foo/foo/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -457,13 +456,10 @@ fn invalid_members() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/foo`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to read `[ROOT]/foo/foo/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+       referenced by workspace at `[ROOT]/foo/Cargo.toml`
+  |
+  = caused by: failed to read `[ROOT]/foo/foo/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -527,8 +523,8 @@ fn two_roots() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] multiple workspace roots found in the same workspace:
-  [ROOT]/foo/bar
-  [ROOT]/foo
+         [ROOT]/foo/bar
+         [ROOT]/foo
 
 "#]])
         .run();
@@ -609,8 +605,8 @@ fn dangling_member() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `[ROOT]/foo/bar/Cargo.toml` is a member of the wrong workspace
-expected: [ROOT]/foo/Cargo.toml
-actual:   [ROOT]/foo/baz/Cargo.toml
+       expected: [ROOT]/foo/Cargo.toml
+       actual:   [ROOT]/foo/baz/Cargo.toml
 
 "#]])
         .run();
@@ -883,11 +879,11 @@ fn virtual_misconfigure() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] current package believes it's in a workspace when it's not:
-current:   [ROOT]/foo/bar/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
-
-this may be fixable by adding `bar` to the `workspace.members` array of the manifest located at: [ROOT]/foo/Cargo.toml
-Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
+       current:   [ROOT]/foo/bar/Cargo.toml
+       workspace: [ROOT]/foo/Cargo.toml
+       
+       this may be fixable by adding `bar` to the `workspace.members` array of the manifest located at: [ROOT]/foo/Cargo.toml
+       Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
 
 "#]])
         .run();
@@ -948,7 +944,7 @@ fn virtual_default_member_is_not_a_member() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `[ROOT]/foo/something-else` is listed in default-members but is not a member
-for workspace at `[ROOT]/foo/Cargo.toml`.
+       for workspace at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -1025,8 +1021,8 @@ fn include_virtual() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] multiple workspace roots found in the same workspace:
-  [ROOT]/foo/bar
-  [ROOT]/foo
+         [ROOT]/foo/bar
+         [ROOT]/foo
 
 "#]])
         .run();
@@ -1728,7 +1724,7 @@ fn excluded_default_members_still_must_be_members() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `[ROOT]/foo/bar` is listed in default-members but is not a member
-for workspace at `[ROOT]/foo/Cargo.toml`.
+       for workspace at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -1965,13 +1961,10 @@ fn glob_syntax_invalid_members() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/crates/bar`
-referenced via `crates/*` by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+       referenced via `crates/*` by workspace at `[ROOT]/foo/Cargo.toml`
+  |
+  = caused by: failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -2427,18 +2420,11 @@ fn invalid_missing() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `x` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `x`
-
-Caused by:
-  Unable to update [ROOT]/foo/x
-
-Caused by:
-  failed to read `[ROOT]/foo/x/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: failed to load source for dependency `x`
+  = caused by: Unable to update [ROOT]/foo/x
+  = caused by: failed to read `[ROOT]/foo/x/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -2480,16 +2466,11 @@ fn member_dep_missing() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/bar`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to load manifest for dependency `baz`
-
-Caused by:
-  failed to read `[ROOT]/foo/bar/baz/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+       referenced by workspace at `[ROOT]/foo/Cargo.toml`
+  |
+  = caused by: failed to load manifest for dependency `baz`
+  = caused by: failed to read `[ROOT]/foo/bar/baz/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();

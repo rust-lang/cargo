@@ -137,12 +137,12 @@ fn path_required() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `echo`
-
-[HELP] a command with a similar name exists: `bench`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `echo` with `cargo search cargo-echo`
-[HELP] To run the file `echo`, provide a relative path like `./echo`
+       
+       [HELP] a command with a similar name exists: `bench`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `echo` with `cargo search cargo-echo`
+       [HELP] To run the file `echo`, provide a relative path like `./echo`
 
 "#]])
         .run();
@@ -451,9 +451,8 @@ rustc = "non-existent-rustc"
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not execute process `non-existent-rustc -vV` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -729,9 +728,8 @@ fn test () {}
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] failed to parse manifest at `[ROOT]/foo/deps.rs`
-
-Caused by:
-  the binary target name `deps` is forbidden, it conflicts with cargo's build directory names
+  |
+  = caused by: the binary target name `deps` is forbidden, it conflicts with cargo's build directory names
 
 "#]])
         .run();
@@ -794,7 +792,7 @@ fn did_you_mean_file() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
-[HELP] there is a script with a similar name: `./food.rs`
+       [HELP] there is a script with a similar name: `./food.rs`
 
 "#]])
         .run();
@@ -812,7 +810,7 @@ fn did_you_mean_file_stable() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `foo.rs`
-[HELP] there is a script with a similar name: `./food.rs` (requires `-Zscript`)
+       [HELP] there is a script with a similar name: `./food.rs` (requires `-Zscript`)
 
 "#]])
         .run();
@@ -828,7 +826,7 @@ fn did_you_mean_command() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
-[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
+       [HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
 
 "#]])
         .run();
@@ -844,7 +842,7 @@ fn did_you_mean_command_stable() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
-[HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
+       [HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
 
 "#]])
         .run();
@@ -1029,9 +1027,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `workspace` is not allowed in embedded manifests
+  |
+  = caused by: `workspace` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1061,9 +1058,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `lib` is not allowed in embedded manifests
+  |
+  = caused by: `lib` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1093,9 +1089,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `bin` is not allowed in embedded manifests
+  |
+  = caused by: `bin` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1125,9 +1120,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `example` is not allowed in embedded manifests
+  |
+  = caused by: `example` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1157,9 +1151,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `test` is not allowed in embedded manifests
+  |
+  = caused by: `test` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1189,9 +1182,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `bench` is not allowed in embedded manifests
+  |
+  = caused by: `bench` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1219,9 +1211,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.build` is not allowed in embedded manifests
+  |
+  = caused by: `package.build` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1249,9 +1240,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.links` is not allowed in embedded manifests
+  |
+  = caused by: `package.links` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1279,9 +1269,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.autolib` is not allowed in embedded manifests
+  |
+  = caused by: `package.autolib` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1309,9 +1298,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.autobins` is not allowed in embedded manifests
+  |
+  = caused by: `package.autobins` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1339,9 +1327,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.autoexamples` is not allowed in embedded manifests
+  |
+  = caused by: `package.autoexamples` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1369,9 +1356,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.autotests` is not allowed in embedded manifests
+  |
+  = caused by: `package.autotests` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1399,9 +1385,8 @@ fn main() {}
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
-
-Caused by:
-  `package.autobenches` is not allowed in embedded manifests
+  |
+  = caused by: `package.autobenches` is not allowed in embedded manifests
 
 "#]])
         .run();
@@ -1962,15 +1947,10 @@ script.path = "script.rs"
         .with_stderr_data(str![[r#"
 [WARNING] no edition set: defaulting to the 2015 edition while the latest is 2024
 [ERROR] failed to get `script` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `script`
-
-Caused by:
-  Unable to update [ROOT]/foo/script.rs
-
-Caused by:
-  Single file packages cannot be used as dependencies
+  |
+  = caused by: failed to load source for dependency `script`
+  = caused by: Unable to update [ROOT]/foo/script.rs
+  = caused by: Single file packages cannot be used as dependencies
 
 "#]])
         .run();

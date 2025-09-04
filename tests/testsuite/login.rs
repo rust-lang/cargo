@@ -120,9 +120,8 @@ fn empty_login_token() {
 [UPDATING] crates.io index
 please paste the token found on [ROOTURL]/api/me below
 [ERROR] credential provider `cargo:token` failed action `login`
-
-Caused by:
-  please provide a non-empty token
+  |
+  = caused by: please provide a non-empty token
 
 "#]])
         .with_status(101)
@@ -134,9 +133,8 @@ Caused by:
         .with_stderr_data(str![[r#"
 please paste the token found on [ROOTURL]/api/me below
 [ERROR] credential provider `cargo:token` failed action `login`
-
-Caused by:
-  please provide a non-empty token
+  |
+  = caused by: please provide a non-empty token
 
 "#]])
         .with_status(101)
@@ -149,9 +147,8 @@ Caused by:
         .with_stderr_data(str![[r#"
 [WARNING] `cargo login <token>` is deprecated in favor of reading `<token>` from stdin
 [ERROR] credential provider `cargo:token` failed action `login`
-
-Caused by:
-  please provide a non-empty token
+  |
+  = caused by: please provide a non-empty token
 
 "#]])
         .with_status(101)
@@ -233,11 +230,11 @@ fn bad_asymmetric_token_args() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] credential provider `cargo:paseto --key-subject` failed action `login`
-
-Caused by:
-  [ERROR] a value is required for '--key-subject <SUBJECT>' but none was supplied
-
-  For more information, try '--help'.
+  |
+  = caused by: [ERROR] a value is required for '--key-subject <SUBJECT>' but none was supplied
+               
+               For more information, try '--help'.
+               
 
 "#]])
         .with_status(101)

@@ -80,9 +80,8 @@ fn rust_version_older_than_edition() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  rust-version 1.1 is imcompatible with the version (1.31.0) required by the specified edition (2018)
+  |
+  = caused by: rust-version 1.1 is imcompatible with the version (1.31.0) required by the specified edition (2018)
 
 "#]])
         .run();
@@ -111,8 +110,8 @@ fn lint_self_incompatible_with_rust_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] rustc [..] is not supported by the following package:
-  foo@0.0.1 requires rustc 1.9876.0
-
+         foo@0.0.1 requires rustc 1.9876.0
+       
 
 "#]])
         .run();
@@ -170,12 +169,12 @@ fn lint_dep_incompatible_with_rust_version() {
 [DOWNLOADED] too_new_child v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] rustc_compatible v0.0.1 (registry `dummy-registry`)
 [ERROR] rustc [..] is not supported by the following packages:
-  too_new_child@0.0.1 requires rustc 1.2345.0
-  too_new_parent@0.0.1 requires rustc 1.2345.0
-Either upgrade rustc or select compatible dependency versions with
-`cargo update <name>@<current-ver> --precise <compatible-ver>`
-where `<compatible-ver>` is the latest version supporting rustc [..]
-
+         too_new_child@0.0.1 requires rustc 1.2345.0
+         too_new_parent@0.0.1 requires rustc 1.2345.0
+       Either upgrade rustc or select compatible dependency versions with
+       `cargo update <name>@<current-ver> --precise <compatible-ver>`
+       where `<compatible-ver>` is the latest version supporting rustc 1.92.0-nightly
+       
 
 "#]])
         .run();
