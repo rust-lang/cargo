@@ -71,11 +71,10 @@ fn namespaced_invalid_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `baz` which is neither a dependency nor another feature
-
-  [HELP] a feature with a similar name exists: `bar`
+  |
+  = caused by: feature `bar` includes `baz` which is neither a dependency nor another feature
+               
+               [HELP] a feature with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -104,9 +103,8 @@ fn namespaced_invalid_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `dep:baz`, but `baz` is not listed as a dependency
+  |
+  = caused by: feature `bar` includes `dep:baz`, but `baz` is not listed as a dependency
 
 "#]])
         .run();
@@ -138,10 +136,9 @@ fn namespaced_non_optional_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `dep:baz`, but `baz` is not an optional dependency
-  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
+  |
+  = caused by: feature `bar` includes `dep:baz`, but `baz` is not an optional dependency
+               A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
 
 "#]])
         .run();
@@ -219,10 +216,9 @@ fn namespaced_shadowed_dep() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  optional dependency `baz` is not included in any feature
-  Make sure that `dep:baz` is included in one of features in the [features] table.
+  |
+  = caused by: optional dependency `baz` is not included in any feature
+               Make sure that `dep:baz` is included in one of features in the [features] table.
 
 "#]])
         .run();
@@ -280,10 +276,9 @@ fn namespaced_implicit_non_optional() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `baz`, but `baz` is not an optional dependency
-  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
+  |
+  = caused by: feature `bar` includes `baz`, but `baz` is not an optional dependency
+               A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
 
 "#]])
         .run();
@@ -420,10 +415,10 @@ regex
     p.cargo("run --features lazy_static")
         .with_stderr_data(str![[r#"
 [ERROR] package `foo v0.1.0 ([ROOT]/foo)` does not have feature `lazy_static`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `lazy_static` would be enabled by these features:
-	- `regex`
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `lazy_static` would be enabled by these features:
+           - `regex`
 
 "#]])
         .with_status(101)
@@ -493,10 +488,9 @@ fn crate_syntax_in_dep() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `dep:baz` in dependency `bar` is not allowed to use explicit `dep:` syntax
-  If you want to enable an optional dependency, specify the name of the optional dependency without the `dep:` prefix, or specify a feature from the dependency's `[features]` table that enables the optional dependency.
+  |
+  = caused by: feature `dep:baz` in dependency `bar` is not allowed to use explicit `dep:` syntax
+               If you want to enable an optional dependency, specify the name of the optional dependency without the `dep:` prefix, or specify a feature from the dependency's `[features]` table that enables the optional dependency.
 
 "#]])
         .run();
@@ -738,10 +732,9 @@ fn optional_explicit_without_crate() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `feat2` includes `bar`, but `bar` is an optional dependency without an implicit feature
-  Use `dep:bar` to enable the dependency.
+  |
+  = caused by: feature `feat2` includes `bar`, but `bar` is an optional dependency without an implicit feature
+               Use `dep:bar` to enable the dependency.
 
 "#]])
         .run();
@@ -1197,10 +1190,9 @@ fn namespaced_feature_together() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
-  To fix this, remove the `dep:` prefix.
+  |
+  = caused by: feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+               To fix this, remove the `dep:` prefix.
 
 "#]])
         .run();
@@ -1225,10 +1217,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `f1` includes `dep:bar?/bar-feat` with both `dep:` and `/`
-  To fix this, remove the `dep:` prefix.
+  |
+  = caused by: feature `f1` includes `dep:bar?/bar-feat` with both `dep:` and `/`
+               To fix this, remove the `dep:` prefix.
 
 "#]])
         .run();
@@ -1253,10 +1244,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
-  To fix this, remove the `dep:` prefix.
+  |
+  = caused by: feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+               To fix this, remove the `dep:` prefix.
 
 "#]])
         .run();
@@ -1281,12 +1271,11 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
-  To fix this, remove the `dep:` prefix.
-  If the intent is to avoid creating an implicit feature `bar` for an optional dependency, then consider replacing this with two values:
-      "dep:bar", "bar/bar-feat"
+  |
+  = caused by: feature `f1` includes `dep:bar/bar-feat` with both `dep:` and `/`
+               To fix this, remove the `dep:` prefix.
+               If the intent is to avoid creating an implicit feature `bar` for an optional dependency, then consider replacing this with two values:
+                   "dep:bar", "bar/bar-feat"
 
 "#]])
         .run();

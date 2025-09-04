@@ -181,32 +181,35 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
+    use annotate_snippets::*;
+
     debug!("display_error; err={:?}", err);
 
     let mut errs = error_chain(err, shell.verbosity());
     let Some(first) = errs.next() else {
         return;
     };
-    drop(shell.error(&first));
+    let mut group = Group::with_title(Level::ERROR.primary_title(first.to_string()));
     for err in errs {
-        drop(writeln!(shell.err(), "\nCaused by:"));
-        drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
+        group = group.element(Level::ERROR.with_name("caused by").message(err.to_string()));
     }
 
     if err
         .chain()
         .any(|e| e.downcast_ref::<InternalError>().is_some())
     {
-        drop(shell.note("this is an unexpected cargo internal error"));
-        drop(
-            shell.note(
+        group = group.elements([
+            Level::NOTE.message("this is an unexpected cargo internal error"),
+            Level::NOTE.message(
                 "we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/",
             ),
-        );
-        drop(shell.note(format!("cargo {}", version())));
+            Level::NOTE.message(format!("cargo {}", version())),
+        ]);
         // Once backtraces are stabilized, this should print out a backtrace
         // if it is available.
     }
+
+    drop(shell.print_report(&[group], true));
 }
 
 /// Displays a warning, with an error object providing detailed information

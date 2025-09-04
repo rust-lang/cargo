@@ -30,13 +30,13 @@ fn build_without_feature_enabled_aborts_with_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `multiple-build-scripts` is required
-
-  The package requires the Cargo feature called `multiple-build-scripts`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider adding `cargo-features = ["multiple-build-scripts"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#multiple-build-scripts for more information about the status of this feature.
+  |
+  = caused by: feature `multiple-build-scripts` is required
+               
+               The package requires the Cargo feature called `multiple-build-scripts`, but that feature is not stabilized in this version of Cargo (1.91.0 (3eafc35f1 2025-09-03)).
+               Consider adding `cargo-features = ["multiple-build-scripts"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+               See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#multiple-build-scripts for more information about the status of this feature.
+               
 
 "#]])
         .run();
@@ -439,10 +439,9 @@ fn custom_build_script_first_index_script_failed() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 ...
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1` ([EXIT_STATUS]: 101)
 
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1` ([EXIT_STATUS]: 101)
-...
 "#]])
         .run();
 }
@@ -477,9 +476,9 @@ fn custom_build_script_second_index_script_failed() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 ...
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build2` ([EXIT_STATUS]: 101)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build2` ([EXIT_STATUS]: 101)
+[WARNING] build failed, waiting for other jobs to finish...
 ...
 "#]])
         .run();

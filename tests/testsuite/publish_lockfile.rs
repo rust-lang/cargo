@@ -55,12 +55,12 @@ fn removed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the cargo feature `publish-lockfile` has been removed in the 1.37 release
-
-  Remove the feature from Cargo.toml to remove this error.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#publish-lockfile for more information about using this feature.
+  |
+  = caused by: the cargo feature `publish-lockfile` has been removed in the 1.37 release
+               
+               Remove the feature from Cargo.toml to remove this error.
+               See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#publish-lockfile for more information about using this feature.
+               
 
 "#]])
         .run();

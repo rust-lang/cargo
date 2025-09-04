@@ -194,8 +194,8 @@ fn artifact_dir_is_a_file() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to create directory `[ROOT]/foo/out`
-
-Caused by:
+  |
+  = caused by: File exists (os error 17)
 ...
 
 "#]])

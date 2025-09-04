@@ -296,7 +296,7 @@ fn old_token_location() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .run();
@@ -399,12 +399,11 @@ fn git_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  all dependencies must have a version requirement specified when publishing.
-  dependency `foo` does not specify a version
-  Note: The published dependency will use the version from crates.io,
-  the `git` specification will be removed from the dependency declaration.
+  |
+  = caused by: all dependencies must have a version requirement specified when publishing.
+               dependency `foo` does not specify a version
+               Note: The published dependency will use the version from crates.io,
+               the `git` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -442,12 +441,11 @@ fn path_dependency_no_version() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  all dependencies must have a version requirement specified when publishing.
-  dependency `bar` does not specify a version
-  Note: The published dependency will use the version from crates.io,
-  the `path` specification will be removed from the dependency declaration.
+  |
+  = caused by: all dependencies must have a version requirement specified when publishing.
+               dependency `bar` does not specify a version
+               Note: The published dependency will use the version from crates.io,
+               the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -480,7 +478,7 @@ fn unpublishable_crate() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -518,10 +516,10 @@ fn dont_publish_dirty() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-bar
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       bar
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -826,7 +824,7 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -855,7 +853,7 @@ fn publish_empty_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -1079,7 +1077,7 @@ fn block_publish_no_registry() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -1112,7 +1110,7 @@ fn publish_with_crates_io_explicit() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -1419,7 +1417,7 @@ fn publish_checks_for_token_before_verify() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .with_stderr_does_not_contain("[VERIFYING] foo v0.0.1 ([CWD])")
@@ -1464,7 +1462,7 @@ fn publish_with_bad_source() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with non-remote-registry source registry `[ROOT]/foo/registry`;
-include `--registry crates-io` to use crates.io
+       include `--registry crates-io` to use crates.io
 
 "#]])
         .run();
@@ -1484,7 +1482,7 @@ include `--registry crates-io` to use crates.io
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with non-remote-registry source dir [ROOT]/foo/vendor;
-include `--registry crates-io` to use crates.io
+       include `--registry crates-io` to use crates.io
 
 "#]])
         .run();
@@ -2126,8 +2124,23 @@ fn credentials_ambiguous_filename() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-...
-  Unauthorized message from server.
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:33277/
+  |
+  = caused by: failed to get a 200 OK response, got 401
+               headers:
+               	HTTP/1.1 401
+               	Content-Length: 33
+               	Connection: close
+               	WWW-Authenticate: Cargo login_url="https://test-registry-login/me"
+               	
+               body:
+               Unauthorized message from server.
 
 "#]])
         .run();
@@ -2215,7 +2228,7 @@ fn cratesio_source_replacement() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with remote registry dummy-registry;
-include `--registry dummy-registry` or `--registry crates-io`
+       include `--registry dummy-registry` or `--registry crates-io`
 
 "#]])
         .run();
@@ -2261,9 +2274,8 @@ fn api_error_json() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  the remote server responded with an error (status 403 Forbidden): you must be logged in
+  |
+  = caused by: the remote server responded with an error (status 403 Forbidden): you must be logged in
 
 "#]])
         .run();
@@ -2309,9 +2321,8 @@ fn api_error_200() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  the remote server responded with an [ERROR] max upload size is 123
+  |
+  = caused by: the remote server responded with an [ERROR] max upload size is 123
 
 "#]])
         .run();
@@ -2357,16 +2368,15 @@ fn api_error_code() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  failed to get a 200 OK response, got 400
-  headers:
-  	HTTP/1.1 400
-  	Content-Length: 7
-  	Connection: close
-  	
-  body:
-  go away
+  |
+  = caused by: failed to get a 200 OK response, got 400
+               headers:
+               	HTTP/1.1 400
+               	Content-Length: 7
+               	Connection: close
+               	
+               body:
+               go away
 
 "#]])
         .run();
@@ -2414,9 +2424,8 @@ fn api_curl_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  [52] Server returned nothing (no headers, no data) (Empty reply from server)
+  |
+  = caused by: [52] Server returned nothing (no headers, no data) (Empty reply from server)
 
 "#]])
         .run();
@@ -2462,12 +2471,9 @@ fn api_other_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  invalid response body from server
-
-Caused by:
-  invalid utf-8 sequence of 1 bytes from index 0
+  |
+  = caused by: invalid response body from server
+  = caused by: invalid utf-8 sequence of 1 bytes from index 0
 
 "#]])
         .run();
@@ -2786,8 +2792,8 @@ fn in_package_workspace_not_found() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `li` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -2899,8 +2905,8 @@ fn publish_path_dependency_without_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -3609,10 +3615,9 @@ fn invalid_token() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
-
-Caused by:
-  token contains invalid characters.
-  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+  |
+  = caused by: token contains invalid characters.
+               Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
 
 "#]])
         .with_status(101)
@@ -3641,7 +3646,7 @@ fn versionless_package() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be published.
-`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
+       `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();
@@ -3924,11 +3929,10 @@ fn workspace_missing_dependency() {
 [PACKAGING] b v0.0.1 ([ROOT]/foo/b)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `a` found
-  location searched: crates.io index
-  required by package `b v0.0.1 ([ROOT]/foo/b)`
+  |
+  = caused by: no matching package named `a` found
+               location searched: crates.io index
+               required by package `b v0.0.1 ([ROOT]/foo/b)`
 
 "#]])
         .run();
@@ -4232,11 +4236,10 @@ fn unpublishable_package_as_versioned_dev_dep() {
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dep` found
-  location searched: crates.io index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+  |
+  = caused by: no matching package named `dep` found
+               location searched: crates.io index
+               required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4249,11 +4252,10 @@ Caused by:
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dep` found
-  location searched: crates.io index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+  |
+  = caused by: no matching package named `dep` found
+               location searched: crates.io index
+               required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4266,11 +4268,10 @@ Caused by:
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dep` found
-  location searched: crates.io index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+  |
+  = caused by: no matching package named `dep` found
+               location searched: crates.io index
+               required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -4490,21 +4491,20 @@ fn workspace_publish_rate_limit_error() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] package_a v0.1.0 ([ROOT]/foo/package_a)
 [ERROR] failed to publish package_a v0.1.0 to registry at http://127.0.0.1:[..]/
-
-[NOTE] the following crates have not been published yet:
-  package_b v0.1.0 ([ROOT]/foo/package_b)
-  package_c v0.1.0 ([ROOT]/foo/package_c)
-
-Caused by:
-  failed to get a 200 OK response, got 429
-  headers:
-  	HTTP/1.1 429
-  	Content-Length: 172
-  	Connection: close
-  	Retry-After: 3600
-  	
-  body:
-  You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased.
+       
+       [NOTE] the following crates have not been published yet:
+         package_b v0.1.0 ([ROOT]/foo/package_b)
+         package_c v0.1.0 ([ROOT]/foo/package_c)
+  |
+  = caused by: failed to get a 200 OK response, got 429
+               headers:
+               	HTTP/1.1 429
+               	Content-Length: 172
+               	Connection: close
+               	Retry-After: 3600
+               	
+               body:
+               You have published too many new crates in a short period of time. Please try again after Fri, 18 Jul 2025 20:00:34 GMT or email help@crates.io to have your limit increased.
 
 "#]])
         .run();

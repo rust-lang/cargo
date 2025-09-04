@@ -1180,9 +1180,8 @@ fn bin_without_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  binary target bin.name is required
+  |
+  = caused by: binary target bin.name is required
 
 "#]])
         .run();
@@ -1237,9 +1236,8 @@ fn bench_without_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  benchmark target bench.name is required
+  |
+  = caused by: benchmark target bench.name is required
 
 "#]])
         .run();
@@ -1298,9 +1296,8 @@ fn test_without_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  test target test.name is required
+  |
+  = caused by: test target test.name is required
 
 "#]])
         .run();
@@ -1354,9 +1351,8 @@ fn example_without_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  example target example.name is required
+  |
+  = caused by: example target example.name is required
 
 "#]])
         .run();
@@ -2835,7 +2831,7 @@ fn no_fail_fast() {
 [RUNNING] tests/test_sub_one.rs (target/debug/deps/test_sub_one-[HASH][EXE])
 [DOCTEST] foo
 [ERROR] 1 target failed:
-    `--test test_add_one`
+           `--test test_add_one`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -4010,13 +4006,13 @@ fn cyclical_dep_with_missing_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `foo`.
-    ... required by package `foo v0.1.0 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.1.0
-
-package `foo` depends on `foo` with feature `missing` but `foo` does not have that feature.
-
-
-failed to select a version for `foo` which could resolve this conflict
+           ... required by package `foo v0.1.0 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.1.0
+       
+       package `foo` depends on `foo` with feature `missing` but `foo` does not have that feature.
+       
+       
+       failed to select a version for `foo` which could resolve this conflict
 
 "#]])
         .run();
@@ -4280,10 +4276,10 @@ fn test_hint_workspace_virtual() {
 [DOCTEST] c
 [ERROR] doctest failed, to rerun pass `-p c --doc`
 [ERROR] 4 targets failed:
-    `-p b --lib`
-    `-p c --bin c`
-    `-p c --test t1`
-    `-p c --doc`
+           `-p b --lib`
+           `-p c --bin c`
+           `-p c --test t1`
+           `-p c --doc`
 
 "#]])
         .with_status(101)
@@ -4301,9 +4297,9 @@ fn test_hint_workspace_virtual() {
 [RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --example ex1`
 [ERROR] 3 targets failed:
-    `-p c --bin c`
-    `-p c --bench b1`
-    `-p c --example ex1`
+           `-p c --bin c`
+           `-p c --bench b1`
+           `-p c --example ex1`
 
 "#]])
         .with_status(101)
@@ -5341,12 +5337,9 @@ fn execution_error() {
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test t1`
-
-Caused by:
-  could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1-[HASH][EXE]` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1-[HASH]` (never executed)
+  = caused by: [NOT_FOUND]
 
 "#]])
         .with_status(101)
@@ -5395,9 +5388,8 @@ this is a normal error
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test t2`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH]` ([EXIT_STATUS]: 4)
 [NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
 
 "#]])
@@ -5409,9 +5401,8 @@ Caused by:
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test t2`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH] --nocapture` ([EXIT_STATUS]: 4)
 
 "#]])
         .with_status(4)
@@ -5425,13 +5416,12 @@ Caused by:
 [ERROR] test failed, to rerun pass `--test t1`
 [RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test t2`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+  |
+  = caused by: process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH]` ([EXIT_STATUS]: 4)
 [NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
 [ERROR] 2 targets failed:
-    `--test t1`
-    `--test t2`
+           `--test t1`
+           `--test t2`
 
 "#]])
         .with_status(101)
@@ -5441,13 +5431,14 @@ Caused by:
         .with_stderr_does_not_contain(
             "test exited abnormally; to see the full output pass --nocapture to the harness.",
         )
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [..]thread [..]panicked [..] tests/t1.rs[..]
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
 ...
-"#]].unordered())
+"#]]
+            .unordered(),
+        )
         .with_status(101)
         .run();
 }

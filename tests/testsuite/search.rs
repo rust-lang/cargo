@@ -209,7 +209,7 @@ fn auth_required_failure() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .run();
