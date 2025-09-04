@@ -206,14 +206,14 @@ pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell)
     _display_error(err, shell, false);
 }
 
-fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
+fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) {
     for (i, err) in err.chain().enumerate() {
         // If we're not in verbose mode then only print cause chain until one
         // marked as `VerboseError` appears.
         //
         // Generally the top error shouldn't be verbose, but check it anyways.
         if shell.verbosity() != Verbose && err.is::<VerboseError>() {
-            return true;
+            break;
         }
         if err.is::<AlreadyPrintedError>() {
             break;
@@ -229,5 +229,4 @@ fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) -> bool {
             drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
         }
     }
-    false
 }
