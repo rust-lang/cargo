@@ -212,18 +212,16 @@ pub fn display_error(err: &Error, shell: &mut Shell) {
 /// Displays a warning, with an error object providing detailed information
 /// and context.
 pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
-    drop(shell.warn(warning));
-    drop(writeln!(shell.err()));
+    use annotate_snippets::*;
 
-    let mut errs = error_chain(err, shell.verbosity());
-    let Some(first) = errs.next() else {
-        return;
-    };
-    drop(writeln!(shell.err(), "{first}"));
+    let mut group = Group::with_title(Level::WARNING.primary_title(warning));
+
+    let errs = error_chain(err, shell.verbosity());
     for err in errs {
-        drop(writeln!(shell.err(), "\nCaused by:"));
-        drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
+        group = group.element(Level::ERROR.with_name("caused by").message(err.to_string()));
     }
+
+    drop(shell.print_report(&[group], true));
 }
 
 fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn std::fmt::Display> {
