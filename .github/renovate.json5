@@ -8,6 +8,8 @@
   ignorePaths: [
     '**/tests/**',
   ],
+  // For why we ignore, see https://github.com/bytecodealliance/rustix/issues/1496
+  ignoreDeps: ['libc'],
   customManagers: [
     {
       customType: 'regex',
