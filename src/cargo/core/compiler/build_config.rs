@@ -301,8 +301,10 @@ impl CompileMode {
 pub enum UserIntent {
     /// Build benchmark binaries, e.g., `cargo bench`
     Bench,
-    /// Build binaries and libraries, e.g., `cargo run`, `cargo install`, `cargo build`.
+    /// Build binaries and libraries, e.g., `cargo run`, `cargo build`, `cargo rustc`.
     Build,
+    /// Build binaries and libraries for installing, e.g. `cargo install`.
+    Install,
     /// Perform type-check, e.g., `cargo check`.
     Check { test: bool },
     /// Document packages.

@@ -182,7 +182,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 .iter()
                 .filter(|t| t.tested() || t.is_example())
                 .collect(),
-            UserIntent::Build | UserIntent::Check { .. } => targets
+            UserIntent::Build | UserIntent::Install | UserIntent::Check { .. } => targets
                 .iter()
                 .filter(|t| t.is_bin() || t.is_lib())
                 .collect(),
@@ -453,7 +453,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     FilterRule::Just(_) => Target::is_test,
                 };
                 let test_mode = match self.intent {
-                    UserIntent::Build => CompileMode::Test,
+                    UserIntent::Build | UserIntent::Install => CompileMode::Test,
                     UserIntent::Check { .. } => CompileMode::Check { test: true },
                     _ => default_mode,
                 };
@@ -775,7 +775,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
 fn to_compile_mode(intent: UserIntent) -> CompileMode {
     match intent {
         UserIntent::Test | UserIntent::Bench => CompileMode::Test,
-        UserIntent::Build => CompileMode::Build,
+        UserIntent::Build | UserIntent::Install => CompileMode::Build,
         UserIntent::Check { test } => CompileMode::Check { test },
         UserIntent::Doc { .. } => CompileMode::Doc,
         UserIntent::Doctest => CompileMode::Doctest,
