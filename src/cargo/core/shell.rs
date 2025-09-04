@@ -222,10 +222,7 @@ impl Shell {
 
     /// Prints an amber 'warning' message.
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        match self.verbosity {
-            Verbosity::Quiet => Ok(()),
-            _ => self.print(&"warning", Some(&message), &WARN, false),
-        }
+        self.print(&"warning", Some(&message), &WARN, false)
     }
 
     /// Prints a cyan 'note' message.
@@ -407,16 +404,22 @@ impl Shell {
     }
 
     /// Prints the passed in [`Report`] to stderr
-    pub fn print_report(&mut self, report: Report<'_>) -> std::io::Result<()> {
+    pub fn print_report(&mut self, report: Report<'_>, force: bool) -> CargoResult<()> {
+        if !force && matches!(self.verbosity, Verbosity::Quiet) {
+            return Ok(());
+        }
+
+        if self.needs_clear {
+            self.err_erase_line();
+        }
         let term_width = self
             .err_width()
             .diagnostic_terminal_width()
             .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
-        writeln!(
-            self.err(),
-            "{}",
-            Renderer::styled().term_width(term_width).render(report)
-        )
+        let rendered = Renderer::styled().term_width(term_width).render(report);
+        self.err().write_all(rendered.as_bytes())?;
+        self.err().write_all("\n".as_bytes())?;
+        Ok(())
     }
 }
 
