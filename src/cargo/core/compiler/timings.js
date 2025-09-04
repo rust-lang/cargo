@@ -197,6 +197,61 @@ function render_pipeline_graph() {
   ctx.restore();
 }
 
+// Draw a legend at the current position of the ctx.
+// entries should be an array of objects with the following scheme:
+// {
+//   "name": <name of the legend entry> [string],
+//   "color": <color of the legend entry> [string],
+//   "line": <should the entry be a thin line or a rectangle> [bool]
+// }
+function draw_legend(ctx, width, entries) {
+  const entry_height = 20;
+  const height = entries.length * entry_height + 2; // Add a bit of margin to the bottom
+
+  // Draw background
+  ctx.fillStyle = BG_COLOR;
+  ctx.strokeStyle = TEXT_COLOR;
+  ctx.lineWidth = 1;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'start';
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.stroke();
+  ctx.fill();
+
+  ctx.lineWidth = 2;
+
+  // Dimension of a block
+  const block_height = 15;
+  const block_width = 30;
+
+  // Margin from the left edge
+  const x_start = 5;
+  // Width of the "mark" section (line/block)
+  const mark_width = 45;
+
+  // Draw legend entries
+  let y = 10;
+  for (const entry of entries) {
+    ctx.beginPath();
+
+    if (entry.line) {
+      ctx.strokeStyle = entry.color;
+      ctx.moveTo(x_start, y);
+      ctx.lineTo(x_start + mark_width, y);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = entry.color;
+      ctx.fillRect(x_start + (mark_width - block_width) / 2, y - (block_height / 2), block_width, block_height);
+    }
+
+    ctx.fillStyle = TEXT_COLOR;
+    ctx.fillText(entry.name, x_start + mark_width + 4, y + 1);
+
+    y += entry_height;
+  }
+}
+
 // Determine the color of a section block based on the section name.
 function get_section_color(name) {
     if (name === "codegen") {
@@ -325,47 +380,23 @@ function render_timing_graph() {
   ctx.restore();
   ctx.save();
   ctx.translate(canvas_width-200, MARGIN);
-  // background
-  ctx.fillStyle = BG_COLOR;
-  ctx.strokeStyle = TEXT_COLOR;
-  ctx.lineWidth = 1;
-  ctx.textBaseline = 'middle'
-  ctx.textAlign = 'start';
-  ctx.beginPath();
-  ctx.rect(0, 0, 150, 82);
-  ctx.stroke();
-  ctx.fill();
-
-  ctx.fillStyle = TEXT_COLOR;
-  ctx.beginPath();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'red';
-  ctx.moveTo(5, 10);
-  ctx.lineTo(50, 10);
-  ctx.stroke();
-  ctx.fillText('Waiting', 54, 11);
-
-  ctx.beginPath();
-  ctx.strokeStyle = 'blue';
-  ctx.moveTo(5, 30);
-  ctx.lineTo(50, 30);
-  ctx.stroke();
-  ctx.fillText('Inactive', 54, 31);
-
-  ctx.beginPath();
-  ctx.strokeStyle = 'green';
-  ctx.moveTo(5, 50);
-  ctx.lineTo(50, 50);
-  ctx.stroke();
-  ctx.fillText('Active', 54, 51);
-
-  ctx.beginPath();
-  ctx.fillStyle = cpuFillStyle
-  ctx.fillRect(15, 60, 30, 15);
-  ctx.fill();
-  ctx.fillStyle = TEXT_COLOR;
-  ctx.fillText('CPU Usage', 54, 71);
-
+  draw_legend(ctx, 150, [{
+    name: "Waiting",
+    color: "red",
+    line: true
+  }, {
+    name: "Inactive",
+    color: "blue",
+    line: true
+  }, {
+    name: "Active",
+    color: "green",
+    line: true
+  }, {
+    name: "CPU Usage",
+    color: cpuFillStyle,
+    line: false
+  }]);
   ctx.restore();
 }
 
