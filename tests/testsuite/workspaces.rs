@@ -1120,7 +1120,6 @@ fn new_warning_with_corrupt_ws() {
 1 | asdf
   |     ^
 [WARNING] compiling this new package may not work due to invalid workspace configuration
-
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
