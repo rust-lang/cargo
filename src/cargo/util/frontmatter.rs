@@ -6,8 +6,10 @@ type Span = std::ops::Range<usize>;
 pub struct ScriptSource<'s> {
     raw: &'s str,
     shebang: Option<Span>,
+    open: Option<Span>,
     info: Option<Span>,
     frontmatter: Option<Span>,
+    close: Option<Span>,
     content: Span,
 }
 
@@ -22,8 +24,10 @@ impl<'s> ScriptSource<'s> {
         let mut source = Self {
             raw,
             shebang: None,
+            open: None,
             info: None,
             frontmatter: None,
+            close: None,
             content: 0..content_end,
         };
 
@@ -61,7 +65,10 @@ impl<'s> ScriptSource<'s> {
             }
             _ => {}
         }
+        let open_start = input.current_token_start();
         let fence_pattern = input.next_slice(fence_length);
+        let open_end = input.current_token_start();
+        source.open = Some(open_start..open_end);
         let Some(info_nl) = input.find_slice("\n") else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
@@ -82,7 +89,10 @@ impl<'s> ScriptSource<'s> {
         let _ = input.next_slice(frontmatter_nl.start + 1);
         let frontmatter_end = input.current_token_start();
         source.frontmatter = Some(frontmatter_start..frontmatter_end);
+        let close_start = input.current_token_start();
         let _ = input.next_slice(fence_length);
+        let close_end = input.current_token_start();
+        source.close = Some(close_start..close_end);
 
         let nl = input.find_slice("\n");
         let after_closing_fence = input.next_slice(
@@ -114,6 +124,10 @@ impl<'s> ScriptSource<'s> {
         self.shebang.clone()
     }
 
+    pub fn open_span(&self) -> Option<Span> {
+        self.open.clone()
+    }
+
     pub fn info(&self) -> Option<&'s str> {
         self.info.clone().map(|span| &self.raw[span])
     }
@@ -128,6 +142,10 @@ impl<'s> ScriptSource<'s> {
 
     pub fn frontmatter_span(&self) -> Option<Span> {
         self.frontmatter.clone()
+    }
+
+    pub fn close_span(&self) -> Option<Span> {
+        self.close.clone()
     }
 
     pub fn content(&self) -> &'s str {

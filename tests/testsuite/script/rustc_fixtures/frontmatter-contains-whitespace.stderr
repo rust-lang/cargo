@@ -1,5 +1,5 @@
 [ERROR] invalid multi-line basic string, expected `/`, characters
- --> script:8:2
-  |
-8 | 4␌+
-  |  ^
+  --> script:10:2
+   |
+10 | 4␌+
+   |  ^

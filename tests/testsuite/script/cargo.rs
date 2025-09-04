@@ -209,9 +209,9 @@ fn main() {
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [ERROR] invalid type: integer `3`, expected a version string like "0.9.8" or a detailed dependency like { version = "0.9.8" }
- --> script.rs:2:7
+ --> script.rs:9:7
   |
-2 | bar = 3
+9 | bar = 3
   |       ^
 
 "#]])
