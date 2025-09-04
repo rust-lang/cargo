@@ -1952,7 +1952,9 @@ This layout change unblocks work towards caching and locking improvements.
 
 * Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/0)
 
-The `-Zdetect-antivirus` flag enables detection of antivirus software that might make launching a binary for the first time slower (which in turn makes Cargo's build scripts and tests slower), and outputs a notice to the user if this is the case.
+The `-Zdetect-antivirus=auto` flag enables detection of antivirus software that might make launching a binary for the first time slower (which in turn makes Cargo's build scripts and tests slower), and outputs a notice to the user if this is the case.
+
+This feature uses a small heuristic to avoid doing the detection when deemed unnecessary. `-Zdetect-antivirus=always` may be used to disable this heuristic.
 
 This feature will be enabled by default in the future (the flag acts as-if this future is now).
 

@@ -1,4 +1,5 @@
 use crate::core::compiler::CompileKind;
+use crate::core::features::DetectAntivirus;
 use crate::util::context::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, RustfixDiagnosticServer};
@@ -54,7 +55,7 @@ pub struct BuildConfig {
     pub compile_time_deps_only: bool,
     /// Whether we should try to detect and notify the user when antivirus
     /// software might make newly created binaries slow to launch.
-    pub detect_antivirus: bool,
+    pub detect_antivirus: DetectAntivirus,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -131,16 +132,16 @@ impl BuildConfig {
         };
 
         let detect_antivirus = match (cfg.detect_antivirus, gctx.cli_unstable().detect_antivirus) {
-            // Enabled by default (for now only when the flag is set).
-            (None, unstable_flag) => unstable_flag,
-            // But allow overriding with configuration option.
-            (Some(cfg_option), true) => cfg_option,
-            (Some(_), false) => {
+            // Warn while the config is still unstable.
+            (Some(_), DetectAntivirus::Never) => {
                 gctx.shell().warn(
                     "ignoring 'build.detect-antivirus' config, pass `-Zdetect-antivirus` to enable it",
                 )?;
-                false
+                DetectAntivirus::Never
             }
+            // Allow overriding with config.
+            (Some(false), _) => DetectAntivirus::Never,
+            (_, flag) => flag,
         };
 
         Ok(BuildConfig {
