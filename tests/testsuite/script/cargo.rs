@@ -183,6 +183,42 @@ fn requires_z_flag() {
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn manifest_parse_error() {
+    // Exagerate the newlines to make it more obvious if the error's line number is off
+    let script = r#"#!/usr/bin/env cargo
+
+
+
+
+
+---
+[dependencies]
+bar = 3
+---
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[ERROR] invalid type: integer `3`, expected a version string like "0.9.8" or a detailed dependency like { version = "0.9.8" }
+ --> script.rs:2:7
+  |
+2 | bar = 3
+  |       ^
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
