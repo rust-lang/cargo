@@ -10,7 +10,8 @@ use super::dependency::Dependency;
 use crate::core::dependency::DepKind;
 use crate::core::{FeatureValue, Features, Workspace};
 use crate::util::closest;
-use crate::util::toml::{ScriptSource, is_embedded};
+use crate::util::frontmatter::ScriptSource;
+use crate::util::toml::is_embedded;
 use crate::{CargoResult, GlobalContext};
 
 /// Dependency table to add deps to.
