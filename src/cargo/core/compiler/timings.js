@@ -66,7 +66,7 @@ const BG_COLOR = getCssColor('--background');
 const CANVAS_BG = getCssColor('--canvas-background');
 const AXES_COLOR = getCssColor('--canvas-axes');
 const GRID_COLOR = getCssColor('--canvas-grid');
-const BLOCK_COLOR = getCssColor('--canvas-block');
+const CODEGEN_COLOR = getCssColor('--canvas-codegen');
 const CUSTOM_BUILD_COLOR = getCssColor('--canvas-custom-build');
 const NOT_CUSTOM_BUILD_COLOR = getCssColor('--canvas-not-custom-build');
 const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
@@ -134,12 +134,17 @@ function render_pipeline_graph() {
     let unit = units[i];
     let y = i * Y_TICK_DIST + 1;
     let x = px_per_sec * unit.start;
-    let rmeta_x = null;
+
+    const sections = [];
     if (unit.rmeta_time != null) {
-      rmeta_x = x + px_per_sec * unit.rmeta_time;
+        sections.push({
+            name: "codegen",
+            start: x + px_per_sec * unit.rmeta_time,
+            width: (unit.duration - unit.rmeta_time) * px_per_sec
+        });
     }
     let width = Math.max(px_per_sec * unit.duration, 1.0);
-    UNIT_COORDS[unit.i] = {x, y, width, rmeta_x};
+    UNIT_COORDS[unit.i] = {x, y, width, sections};
 
     const count = unitCount.get(unit.name) || 0;
     unitCount.set(unit.name, count + 1);
@@ -148,7 +153,7 @@ function render_pipeline_graph() {
   // Draw the blocks.
   for (i=0; i<units.length; i++) {
     let unit = units[i];
-    let {x, y, width, rmeta_x} = UNIT_COORDS[unit.i];
+    let {x, y, width, sections} = UNIT_COORDS[unit.i];
 
     HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
 
@@ -157,12 +162,11 @@ function render_pipeline_graph() {
     roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
     ctx.fill();
 
-    if (unit.rmeta_time != null) {
-      ctx.beginPath();
-      ctx.fillStyle = BLOCK_COLOR;
-      let ctime = unit.duration - unit.rmeta_time;
-      roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
-      ctx.fill();
+    for (const section of sections) {
+        ctx.beginPath();
+        ctx.fillStyle = get_section_color(section.name);
+        roundedRect(ctx, section.start, y, section.width, BOX_HEIGHT, RADIUS);
+        ctx.fill();
     }
     ctx.fillStyle = TEXT_COLOR;
     ctx.textAlign = 'start';
@@ -178,6 +182,16 @@ function render_pipeline_graph() {
     draw_dep_lines(ctx, unit.i, false);
   }
   ctx.restore();
+}
+
+// Determine the color of a section block based on the section name.
+function get_section_color(name) {
+    if (name === "codegen") {
+        return CODEGEN_COLOR;
+    } else {
+        // We do not know what section this is, so just use the default color
+        return NOT_CUSTOM_BUILD_COLOR;
+    }
 }
 
 // Draws lines from the given unit to the units it unlocks.
