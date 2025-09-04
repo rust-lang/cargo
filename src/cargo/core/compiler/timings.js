@@ -67,6 +67,7 @@ const CANVAS_BG = getCssColor('--canvas-background');
 const AXES_COLOR = getCssColor('--canvas-axes');
 const GRID_COLOR = getCssColor('--canvas-grid');
 const CODEGEN_COLOR = getCssColor('--canvas-codegen');
+const LINK_COLOR = getCssColor('--canvas-link');
 const CUSTOM_BUILD_COLOR = getCssColor('--canvas-custom-build');
 const NOT_CUSTOM_BUILD_COLOR = getCssColor('--canvas-not-custom-build');
 const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
@@ -136,7 +137,19 @@ function render_pipeline_graph() {
     let x = px_per_sec * unit.start;
 
     const sections = [];
-    if (unit.rmeta_time != null) {
+    if (unit.sections !== null) {
+        // We have access to compilation sections
+        for (const section of unit.sections) {
+            const [name, {start, end}] = section;
+            sections.push({
+                name,
+                start: x + px_per_sec * start,
+                width: (end - start) * px_per_sec
+            });
+        }
+    }
+    else if (unit.rmeta_time != null) {
+        // We only know the rmeta time
         sections.push({
             name: "codegen",
             start: x + px_per_sec * unit.rmeta_time,
@@ -188,6 +201,8 @@ function render_pipeline_graph() {
 function get_section_color(name) {
     if (name === "codegen") {
         return CODEGEN_COLOR;
+    } else if (name === "link") {
+        return LINK_COLOR;
     } else {
         // We do not know what section this is, so just use the default color
         return NOT_CUSTOM_BUILD_COLOR;
