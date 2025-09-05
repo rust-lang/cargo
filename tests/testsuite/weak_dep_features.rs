@@ -577,7 +577,7 @@ fn publish() {
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
