@@ -19,9 +19,8 @@ let HIT_BOXES = [];
 let LAST_HOVER = null;
 // Key is unit index, value is {x, y, width, rmeta_x} of the box.
 let UNIT_COORDS = {};
-// Map of unit index to the index it was unlocked by.
-let REVERSE_UNIT_DEPS = {};
-let REVERSE_UNIT_RMETA_DEPS = {};
+// Cache of measured text widths for SVG
+let MEASURE_TEXT_CACHE = {};
 
 const MIN_GRAPH_WIDTH = 200;
 const MAX_GRAPH_WIDTH = 4096;
@@ -73,58 +72,16 @@ const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
 const DEP_LINE_HIGHLIGHTED_COLOR = getCssColor('--canvas-dep-line-highlighted');
 const CPU_COLOR = getCssColor('--canvas-cpu');
 
-for (let n=0; n<UNIT_DATA.length; n++) {
-  let unit = UNIT_DATA[n];
-  for (let unlocked of unit.unlocked_units) {
-    REVERSE_UNIT_DEPS[unlocked] = n;
-  }
-  for (let unlocked of unit.unlocked_rmeta_units) {
-    REVERSE_UNIT_RMETA_DEPS[unlocked] = n;
-  }
-}
-
 function render_pipeline_graph() {
   if (UNIT_DATA.length == 0) {
     return;
   }
-  let g = document.getElementById('pipeline-graph');
-  HIT_BOXES.length = 0;
-  g.onmousemove = pipeline_mousemove;
   const min_time = document.getElementById('min-unit-time').valueAsNumber;
 
   const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
 
   const graph_height = Y_TICK_DIST * units.length;
-  const {ctx, graph_width, canvas_width, canvas_height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
-  const container = document.getElementById('pipeline-container');
-  container.style.width = canvas_width;
-  container.style.height = canvas_height;
-
-  // Canvas for hover highlights. This is a separate layer to improve performance.
-  const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
-  linectx.clearRect(0, 0, canvas_width, canvas_height);
-  ctx.strokeStyle = AXES_COLOR;
-  // Draw Y tick marks.
-  for (let n=1; n<units.length; n++) {
-    const y = MARGIN + Y_TICK_DIST * n;
-    ctx.beginPath();
-    ctx.moveTo(X_LINE, y);
-    ctx.lineTo(X_LINE-5, y);
-    ctx.stroke();
-  }
-
-  // Draw Y labels.
-  ctx.textAlign = 'end';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = AXES_COLOR;
-  for (let n=0; n<units.length; n++) {
-    let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
-    ctx.fillText(n+1, X_LINE-4, y);
-  }
-
-  // Draw the graph.
-  ctx.save();
-  ctx.translate(X_LINE, MARGIN);
+  let { canvas_width, canvas_height, graph_width, px_per_sec } = resize_graph(graph_height);
 
   // Compute x,y coordinate of each block.
   // We also populate a map with the count of each unit name to disambiguate if necessary
@@ -145,67 +102,111 @@ function render_pipeline_graph() {
     unitCount.set(unit.name, count + 1);
   }
 
-  // Draw the blocks.
-  for (i=0; i<units.length; i++) {
-    let unit = units[i];
-    let {x, y, width, rmeta_x} = UNIT_COORDS[unit.i];
+  const axis_bottom = create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec });
+  const axis_left = create_axis_left(graph_height, units.length);
+  const dep_lines = create_dep_lines(units);
+  const boxes = create_boxes(units, unitCount, canvas_width, px_per_sec);
+  const dep_lines_hl_container = `<g id="hl-pipeline" transform="translate(${X_LINE}, ${MARGIN})"></g>`;
+  const svg = document.getElementById(`pipeline-graph`);
+  if (svg) {
+    svg.style.width = canvas_width;
+    svg.style.height = canvas_height;
+    svg.innerHTML = (
+      `${axis_bottom}${axis_left}${dep_lines}${boxes}${dep_lines_hl_container}`
+    );
+    let g = document.getElementById('boxes');
+    g.onmousemove = pipeline_mousemove;
+  }
+}
 
-    HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
-
-    ctx.beginPath();
-    ctx.fillStyle = unit.mode == 'run-custom-build' ? CUSTOM_BUILD_COLOR : NOT_CUSTOM_BUILD_COLOR;
-    roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
-    ctx.fill();
-
-    if (unit.rmeta_time != null) {
-      ctx.beginPath();
-      ctx.fillStyle = BLOCK_COLOR;
-      let ctime = unit.duration - unit.rmeta_time;
-      roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
-      ctx.fill();
-    }
-    ctx.fillStyle = TEXT_COLOR;
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'middle';
-    ctx.font = '14px sans-serif';
-
-    const labelName = (unitCount.get(unit.name) || 0) > 1 ? `${unit.name} (v${unit.version})${unit.target}` : `${unit.name}${unit.target}`;
+function create_boxes(units, unitCount, canvas_width, px_per_sec) {
+  let boxes = units.map(unit => {
+    const { x, y, width, rmeta_x } = UNIT_COORDS[unit.i]
+    const labelName =
+      (unitCount.get(unit.name) || 0) > 1
+        ? `${unit.name} (v${unit.version})${unit.target}`
+        : `${unit.name}${unit.target}`;
     const label = `${labelName}: ${unit.duration}s`;
-
-    const text_info = ctx.measureText(label);
-    const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
-    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
-    draw_dep_lines(ctx, unit.i, false);
-  }
-  ctx.restore();
+    const textinfo_width = measure_text_width(label);
+    const label_x = Math.min(x + 5.0, canvas_width - textinfo_width - X_LINE);
+    const rmeta_rect = unit.rmeta_time ?
+      `<rect
+        class="rmeta"
+        x="${rmeta_x}"
+        y="${y}"
+        rx="${RADIUS}"
+        width="${px_per_sec * (unit.duration - unit.rmeta_time)}"
+        height="${BOX_HEIGHT}"
+      ></rect>`
+      : "";
+    return (
+      `<g class="box ${unit.mode}" data-i="${unit.i}">
+        <rect x="${x}" y="${y}" rx="${RADIUS}" width="${width}" height="${BOX_HEIGHT}"></rect>${rmeta_rect}
+        <text x="${label_x}" y="${y + BOX_HEIGHT / 2}">${label}</text>
+      </g>`
+    )
+  }).join("");
+  return `<g id="boxes" transform="translate(${X_LINE}, ${MARGIN})">${boxes}</g>`
 }
 
-// Draws lines from the given unit to the units it unlocks.
-function draw_dep_lines(ctx, unit_idx, highlighted) {
-  const unit = UNIT_DATA[unit_idx];
-  const {x, y, rmeta_x} = UNIT_COORDS[unit_idx];
-  ctx.save();
-  for (const unlocked of unit.unlocked_units) {
-    draw_one_dep_line(ctx, x, y, unlocked, highlighted);
+function measure_text_width(text) {
+  if (text in MEASURE_TEXT_CACHE) {
+    return MEASURE_TEXT_CACHE[text];
   }
-  for (const unlocked of unit.unlocked_rmeta_units) {
-    draw_one_dep_line(ctx, rmeta_x, y, unlocked, highlighted);
-  }
-  ctx.restore();
+
+  let div = document.createElement('DIV');
+  div.innerHTML = text;
+  Object.assign(div.style, {
+    position: 'absolute',
+    top: '-100px',
+    left: '-100px',
+    fontFamily: 'sans-serif',
+    fontSize: '14px'
+  });
+  document.body.appendChild(div);
+  let width = div.offsetWidth;
+  document.body.removeChild(div);
+
+  MEASURE_TEXT_CACHE[text] = width;
+  return width;
 }
 
-function draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
-  if (to_unit in UNIT_COORDS) {
-    let {x: u_x, y: u_y} = UNIT_COORDS[to_unit];
-    ctx.strokeStyle = highlighted ? DEP_LINE_HIGHLIGHTED_COLOR: DEP_LINE_COLOR;
-    ctx.setLineDash([2]);
-    ctx.beginPath();
-    ctx.moveTo(from_x, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, u_y+BOX_HEIGHT/2);
-    ctx.lineTo(u_x, u_y+BOX_HEIGHT/2);
-    ctx.stroke();
-  }
+// Create lines from the given unit to the units it unlocks.
+function create_dep_lines(units) {
+  const lines = units
+    .filter(unit => unit.i in UNIT_COORDS)
+    .map(unit => {
+      const { i, unlocked_units, unlocked_rmeta_units } = unit;
+      const { x: from_x, y: from_y, rmeta_x } = UNIT_COORDS[i]
+      let dep_lines = unlocked_units
+        .filter(unlocked => unlocked in UNIT_COORDS)
+        .map(unlocked => create_one_dep_line(from_x, from_y, i, unlocked, "dep"))
+        .join("");
+      let rmeta_dep_lines = unlocked_rmeta_units
+        .filter(unlocked => unlocked in UNIT_COORDS)
+        .map(unlocked => create_one_dep_line(rmeta_x, from_y, i, unlocked, "rmeta"))
+        .join("");
+      return [dep_lines, rmeta_dep_lines];
+    }).flat().join("");
+  return `<g class="dep-lines" transform="translate(${X_LINE}, ${MARGIN})">${lines}</g>`
+}
+
+function create_one_dep_line(from_x, from_y, from_unit, to_unit, dep_type) {
+  const { x: u_x, y: u_y } = UNIT_COORDS[to_unit];
+  const prefix = dep_type == "rmeta" ? "rdep" : "dep";
+  return (
+    `<polyline
+      id="${prefix}-${to_unit}"
+      class="dep-line"
+      data-i="${from_unit}"
+      points="
+        ${from_x} ${from_y + BOX_HEIGHT / 2},
+        ${from_x - 5} ${from_y + BOX_HEIGHT / 2},
+        ${from_x - 5} ${u_y + BOX_HEIGHT / 2},
+        ${u_x}, ${u_y + BOX_HEIGHT / 2}
+      ">
+      </polyline>`
+  )
 }
 
 function render_timing_graph() {
@@ -352,12 +353,17 @@ function setup_canvas(id, width, height) {
   return ctx;
 }
 
-function draw_graph_axes(id, graph_height) {
+function resize_graph(graph_height) {
   const scale = document.getElementById('scale').valueAsNumber;
   const graph_width = scale_to_graph_width(scale);
   const px_per_sec = graph_width / DURATION;
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;
+  return { canvas_width, canvas_height, graph_width, graph_height, px_per_sec };
+}
+
+function draw_graph_axes(id, graph_height) {
+  let { canvas_width, canvas_height, graph_width, px_per_sec } = resize_graph(graph_height);
   let ctx = setup_canvas(id, canvas_width, canvas_height);
   ctx.fillStyle = CANVAS_BG;
   ctx.fillRect(0, 0, canvas_width, canvas_height);
@@ -399,7 +405,54 @@ function draw_graph_axes(id, graph_height) {
   }
   ctx.strokeStyle = TEXT_COLOR;
   ctx.setLineDash([]);
-  return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
+  return { canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec };
+}
+
+function create_axis_bottom({ canvas_height, graph_width, graph_height, px_per_sec }) {
+  const { step, tick_dist, num_ticks } = split_ticks(DURATION, px_per_sec, graph_width);
+  const grid_height = canvas_height - Y_LINE - MARGIN;
+  const ticks = Array(num_ticks).fill(0).map((_, idx) => {
+    const i = idx + 1;
+    const time = i * step;
+    return (
+      `<g class="tick" transform="translate(${i * tick_dist}, ${grid_height})">
+         <line y2="5"></line>
+         <line class="grid" y1="-1" y2="-${grid_height}"></line>
+         <text y="1em">${time}s</text>
+       </g>`
+    )
+  }).join("");
+
+  const height = graph_height;
+  const width = graph_width + 20;
+  return (
+    `<g class="axis" transform="translate(${X_LINE}, ${MARGIN})" text-anchor="middle">
+       <line class="domain" x2="${width}" y1="${height}" y2="${height}"></line>
+       ${ticks}
+     </g>`
+  );
+}
+
+function create_axis_left(graph_height, ticks_num) {
+  const text_offset = -Y_TICK_DIST / 2;
+  const ticks = Array(ticks_num).fill(0).map((_, idx) => {
+    const i = idx + 1;
+    let mark = (i == ticks_num) ? "" :
+      `<line stroke="currentColor" stroke-width="2" x2="-5"></line>`;
+    return (
+      `<g class="tick" transform="translate(0, ${i * Y_TICK_DIST})">
+        ${mark}<text x="-5" y="${text_offset}">${i}</text>
+      </g>`
+    )
+  }).join("");
+
+  const height = graph_height + 1;
+  return (
+    `<g class="axis" transform="translate(${X_LINE}, ${MARGIN})" text-anchor="end">
+      <line class="domain" y2="${height}"></line>
+      ${ticks}
+    </g>`
+  )
 }
 
 // Determine the spacing and number of ticks along an axis.
@@ -461,44 +514,33 @@ function roundedRect(ctx, x, y, width, height, r) {
 }
 
 function pipeline_mouse_hit(event) {
-  // This brute-force method can be optimized if needed.
-  for (let box of HIT_BOXES) {
-    if (event.offsetX >= box.x && event.offsetX <= box.x2 &&
-        event.offsetY >= box.y && event.offsetY <= box.y2) {
-      return box;
-    }
+  const target = event.target;
+  if (target.tagName == 'rect') {
+    return target.parentNode.dataset.i;
   }
 }
 
 function pipeline_mousemove(event) {
   // Highlight dependency lines on mouse hover.
-  let box = pipeline_mouse_hit(event);
-  if (box) {
-    if (box.i != LAST_HOVER) {
-      LAST_HOVER = box.i;
-      let g = document.getElementById('pipeline-graph-lines');
-      let ctx = g.getContext('2d');
-      ctx.clearRect(0, 0, g.width, g.height);
-      ctx.save();
-      ctx.translate(X_LINE, MARGIN);
-      ctx.lineWidth = 2;
-      draw_dep_lines(ctx, box.i, true);
+  let i = pipeline_mouse_hit(event);
+  if (i && i != LAST_HOVER) {
+		let deps =
+    document.querySelectorAll(`.dep-line[data-i="${LAST_HOVER}"],#dep-${LAST_HOVER},#rdep-${LAST_HOVER}`);
+    for (let el of deps) {
+      el.classList.remove('hl');
+    }
 
-      if (box.i in REVERSE_UNIT_DEPS) {
-        const dep_unit = REVERSE_UNIT_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, x, y, box.i, true);
-        }
-      }
-      if (box.i in REVERSE_UNIT_RMETA_DEPS) {
-        const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, rmeta_x, y, box.i, true);
-        }
-      }
-      ctx.restore();
+    LAST_HOVER = i;
+    deps = document.querySelectorAll(`.dep-line[data-i="${LAST_HOVER}"],#dep-${LAST_HOVER},#rdep-${LAST_HOVER}`);
+    let ids = [];
+    for (let el of deps) {
+      el.classList.add('hl');
+      ids.push(el.id);
+    }
+
+    let hl = document.getElementById('hl-pipeline');
+    if (hl) {
+      hl.innerHTML = ids.map(id => `<use xlink:href="#${id}"/>`).join('');
     }
   }
 }
