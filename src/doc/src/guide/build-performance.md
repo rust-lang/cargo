@@ -9,11 +9,11 @@ Example workflows to consider include:
 - Test feedback as you develop (`cargo test` after making a code change)
 - CI builds
 
-Note that some approaches described below currently require using the nightly toolchain.
+All approaches described below require you to modify [Cargo configuration](#where-to-apply-configuration-changes). Note that some of them currently require using the nightly toolchain.
 
 ## Reduce amount of generated debug information
 
-Recommendation: Add to your `Cargo.toml` (for maintainers) or `$CARGO_HOME/.cargo/config.toml` (for contributors):
+Recommendation: Add to your `Cargo.toml` or `.cargo/config.toml`:
 
 ```toml
 [profile.dev]
@@ -60,3 +60,12 @@ codegen-backend = "cranelift"
 Since this is currently an unstable option, you will also need to either pass `-Z codegen-backend` to Cargo, or enable this unstable option in the `.cargo/config.toml` file. You can find more information about the unstable `codegen-backend` profile option [here](../reference/unstable.md#codegen-backend).
 
 Note that the Cranelift backend might not support all features used by your crate. It is also available only for a limited set of targets.
+
+
+## Where to apply configuration changes
+
+You can apply the configuration changes described above in several places:
+
+- If you apply them to the `Cargo.toml` manifest, they will affect all developers who work on the given crate/project. 
+- If you apply them to the `<workspace>/.cargo/config.toml` file, they will affect only you (unless this file is checked into version control).
+- If you apply them to the `$CARGO_HOME/.cargo/config.toml` file, they will be applied globally to all Rust projects that you work on.
