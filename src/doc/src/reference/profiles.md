@@ -119,7 +119,9 @@ strip = "debuginfo"
 ```
 
 Possible string values of `strip` are `"none"`, `"debuginfo"`, and `"symbols"`.
-The default is `"none"`.
+The default is `"none"` by default, and `"debuginfo"` in release profile.
+Be aware that stripping `"symbols"` may make backtraces incomprehensible,
+depending on the platform.
 
 You can also configure this option with the boolean values `true` or `false`.
 `strip = true` is equivalent to `strip = "symbols"`. `strip = false` is
@@ -295,7 +297,7 @@ The default settings for the `release` profile are:
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
-strip = "none"
+strip = "debuginfo"
 debug-assertions = false
 overflow-checks = false
 lto = false
