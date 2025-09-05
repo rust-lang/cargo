@@ -216,7 +216,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let mut compile_opts = args.compile_options(
         gctx,
-        UserIntent::Build,
+        UserIntent::Install,
         workspace.as_ref(),
         ProfileChecking::Custom,
     )?;
