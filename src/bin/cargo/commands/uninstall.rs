@@ -21,7 +21,7 @@ pub fn cli() -> Command {
                 .help_heading(heading::TARGET_SELECTION),
         )
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help uninstall</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help uninstall</>` for more detailed information.\n"
         ))
 }
 

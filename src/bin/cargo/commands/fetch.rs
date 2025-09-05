@@ -11,7 +11,7 @@ pub fn cli() -> Command {
         .arg_manifest_path()
         .arg_lockfile_path()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help fetch</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help fetch</>` for more detailed information.\n"
         ))
 }
 

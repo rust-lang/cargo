@@ -2,7 +2,7 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-green { fill: #00AA00 }
+    .fg-bright-green { fill: #55FF55 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -18,9 +18,9 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> your-face v99999.0.0 to dependencies</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> your-face v99999.0.0 to dependencies</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan>             Features:</tspan>
 </tspan>
@@ -28,7 +28,7 @@
 </tspan>
     <tspan x="10px" y="100px"><tspan>             100 deactivated features</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
+    <tspan x="10px" y="118px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
 </tspan>
     <tspan x="10px" y="136px">
 </tspan>

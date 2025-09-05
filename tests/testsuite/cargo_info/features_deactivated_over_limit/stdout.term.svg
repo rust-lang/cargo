@@ -2,9 +2,9 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-cyan { fill: #00AAAA }
-    .fg-green { fill: #00AA00 }
-    .fg-red { fill: #AA0000 }
+    .fg-bright-blue { fill: #5555FF }
+    .fg-bright-green { fill: #55FF55 }
+    .fg-bright-red { fill: #FF5555 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -22,17 +22,17 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-green bold">your-face</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">your-face</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">version:</tspan><tspan> 99999.0.0+my-package </tspan><tspan class="fg-cyan bold">(from registry `dummy-registry`)</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">version:</tspan><tspan> 99999.0.0+my-package </tspan><tspan class="fg-bright-blue bold">(from registry `dummy-registry`)</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-green bold">license:</tspan><tspan> </tspan><tspan class="fg-red bold">unknown</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">license:</tspan><tspan> </tspan><tspan class="fg-bright-red bold">unknown</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-green bold">rust-version:</tspan><tspan> </tspan><tspan class="fg-yellow bold">unknown</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">rust-version:</tspan><tspan> </tspan><tspan class="fg-yellow bold">unknown</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-green bold">features:</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">features:</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan> </tspan><tspan class="fg-green bold">+</tspan><tspan>default = [eyes000, eyes001, eyes002, eyes003, eyes004, eyes005, eyes006, eyes007, eyes008, eyes009, eyes010, eyes011, eyes012, eyes013, eyes014, eyes015, eyes016, eyes017, eyes018, eyes019]</tspan>
+    <tspan x="10px" y="118px"><tspan> </tspan><tspan class="fg-bright-green bold">+</tspan><tspan>default = [eyes000, eyes001, eyes002, eyes003, eyes004, eyes005, eyes006, eyes007, eyes008, eyes009, eyes010, eyes011, eyes012, eyes013, eyes014, eyes015, eyes016, eyes017, eyes018, eyes019]</tspan>
 </tspan>
     <tspan x="10px" y="136px"><tspan>  eyes000 = []</tspan>
 </tspan>

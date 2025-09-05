@@ -3,7 +3,7 @@
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
     .fg-bright-blue { fill: #5555FF }
-    .fg-green { fill: #00AA00 }
+    .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -34,9 +34,9 @@
 </tspan>
     <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">note</tspan><tspan>: `cargo::im_a_teapot` is set to `warn` in `[lints]`</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan class="fg-green bold">    Checking</tspan><tspan> foo v0.0.1 ([ROOT]/foo)</tspan>
+    <tspan x="10px" y="154px"><tspan class="fg-bright-green bold">    Checking</tspan><tspan> foo v0.0.1 ([ROOT]/foo)</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan class="fg-green bold">    Finished</tspan><tspan> </tspan><tspan><a href="https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles">`dev` profile [unoptimized + debuginfo]</a></tspan><tspan> target(s) in [ELAPSED]s</tspan>
+    <tspan x="10px" y="172px"><tspan class="fg-bright-green bold">    Finished</tspan><tspan> </tspan><tspan><a href="https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles">`dev` profile [unoptimized + debuginfo]</a></tspan><tspan> target(s) in [ELAPSED]s</tspan>
 </tspan>
     <tspan x="10px" y="190px">
 </tspan>

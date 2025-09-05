@@ -3,6 +3,8 @@
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
     .fg-blue { fill: #0000AA }
+    .fg-bright-blue { fill: #5555FF }
+    .fg-bright-cyan { fill: #55FFFF }
     .fg-cyan { fill: #00AAAA }
     .fg-magenta { fill: #AA00AA }
     .container {
@@ -35,7 +37,7 @@
 </tspan>
     <tspan x="10px" y="136px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> normal_c v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">[build-dependencies]</tspan>
+    <tspan x="10px" y="154px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-bright-blue bold">[build-dependencies]</tspan>
 </tspan>
     <tspan x="10px" y="172px"><tspan class="bold dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">└──</tspan><tspan> normal_b_build_a feature "default"</tspan>
 </tspan>
@@ -49,7 +51,7 @@
 </tspan>
     <tspan x="10px" y="262px"><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> normal_d v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan class="fg-blue bold">[build-dependencies]</tspan>
+    <tspan x="10px" y="280px"><tspan class="fg-bright-blue bold">[build-dependencies]</tspan>
 </tspan>
     <tspan x="10px" y="298px"><tspan class="fg-blue bold">├──</tspan><tspan> build_a feature "default"</tspan>
 </tspan>
@@ -63,7 +65,7 @@
 </tspan>
     <tspan x="10px" y="388px"><tspan class="fg-blue bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> build_c v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan class="fg-blue bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">[build-dependencies]</tspan>
+    <tspan x="10px" y="406px"><tspan class="fg-blue bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-bright-blue bold">[build-dependencies]</tspan>
 </tspan>
     <tspan x="10px" y="424px"><tspan class="fg-blue bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">└──</tspan><tspan> build_b_build_a feature "default"</tspan>
 </tspan>
@@ -77,7 +79,7 @@
 </tspan>
     <tspan x="10px" y="514px"><tspan class="fg-blue bold"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> build_d v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan class="fg-cyan bold">[dev-dependencies]</tspan>
+    <tspan x="10px" y="532px"><tspan class="fg-bright-cyan bold">[dev-dependencies]</tspan>
 </tspan>
     <tspan x="10px" y="550px"><tspan class="fg-cyan bold">├──</tspan><tspan> dev_a feature "default"</tspan>
 </tspan>
@@ -91,7 +93,7 @@
 </tspan>
     <tspan x="10px" y="640px"><tspan class="fg-cyan bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> dev_c v1.0.0</tspan>
 </tspan>
-    <tspan x="10px" y="658px"><tspan class="fg-cyan bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">[build-dependencies]</tspan>
+    <tspan x="10px" y="658px"><tspan class="fg-cyan bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-bright-blue bold">[build-dependencies]</tspan>
 </tspan>
     <tspan x="10px" y="676px"><tspan class="fg-cyan bold">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">└──</tspan><tspan> dev_b_build_a feature "default"</tspan>
 </tspan>

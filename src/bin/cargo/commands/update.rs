@@ -55,7 +55,7 @@ pub fn cli() -> Command {
         .arg_lockfile_path()
         .arg_ignore_rust_version_with_help("Ignore `rust-version` specification in packages")
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help update</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help update</>` for more detailed information.\n"
         ))
 }
 

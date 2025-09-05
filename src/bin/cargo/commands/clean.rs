@@ -122,7 +122,7 @@ pub fn cli() -> Command {
                 ),
         )
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help clean</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help clean</>` for more detailed information.\n"
         ))
 }
 
