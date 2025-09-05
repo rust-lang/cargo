@@ -427,11 +427,11 @@ fn report_test_error(
     crate::display_error(&err, &mut ws.gctx().shell());
 
     let harness: bool = unit_err.unit.target.harness();
-    let nocapture: bool = test_args.contains(&"--nocapture");
+    let nocapture: bool = test_args.contains(&"--nocapture") || test_args.contains(&"--no-capture");
 
     if !is_simple && executed && harness && !nocapture {
         drop(ws.gctx().shell().note(
-            "test exited abnormally; to see the full output pass --nocapture to the harness.",
+            "test exited abnormally; to see the full output pass --no-capture to the harness.",
         ));
     }
 }
