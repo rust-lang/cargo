@@ -150,9 +150,9 @@ target options.
 
 By default the Rust test harness hides output from test execution to keep
 results readable. Test output can be recovered (e.g., for debugging) by passing
-`--nocapture` to the test binaries:
+`--no-capture` to the test binaries:
 
-    cargo test -- --nocapture
+    cargo test -- --no-capture
 
 {{#options}}
 

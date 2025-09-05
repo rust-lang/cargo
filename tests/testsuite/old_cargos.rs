@@ -7,7 +7,7 @@
 //! tested 1.0 to 1.51. Run this with:
 //!
 //! ```console
-//! cargo test --test testsuite -- old_cargos --nocapture --ignored
+//! cargo test --test testsuite -- old_cargos --no-capture --ignored
 //! ```
 
 use std::fs;

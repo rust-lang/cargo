@@ -2001,7 +2001,7 @@ fn test_no_harness() {
         .file("foo.rs", "fn main() {}")
         .build();
 
-    p.cargo("test -- --nocapture")
+    p.cargo("test -- --no-capture")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3901,7 +3901,7 @@ fn cargo_test_env() {
             .unwrap()
             .replace(rustc_host, "[HOST_TARGET]")
     );
-    p.cargo("test --lib -- --nocapture")
+    p.cargo("test --lib -- --no-capture")
         .with_stderr_contains(cargo)
         .with_stdout_data(str![[r#"
 ...
@@ -3923,7 +3923,7 @@ test env_test ... ok
             .replace(p.root().parent().unwrap().to_str().unwrap(), "[ROOT]")
     );
     p.process(other_cargo_path)
-        .args(&["test", "--lib", "--", "--nocapture"])
+        .args(&["test", "--lib", "--", "--no-capture"])
         .with_stderr_contains(stderr_other_cargo)
         .with_stdout_data(str![[r#"
 ...
@@ -5398,20 +5398,20 @@ this is a normal error
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
-[NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
+[NOTE] test exited abnormally; to see the full output pass --no-capture to the harness.
 
 "#]])
         .with_status(4)
         .run();
 
-    p.cargo("test --test t2 -- --nocapture")
+    p.cargo("test --test t2 -- --no-capture")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --no-capture` ([EXIT_STATUS]: 4)
 
 "#]])
         .with_status(4)
@@ -5428,7 +5428,7 @@ Caused by:
 
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
-[NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
+[NOTE] test exited abnormally; to see the full output pass --no-capture to the harness.
 [ERROR] 2 targets failed:
     `--test t1`
     `--test t2`
@@ -5437,15 +5437,15 @@ Caused by:
         .with_status(101)
         .run();
 
-    p.cargo("test --no-fail-fast -- --nocapture")
+    p.cargo("test --no-fail-fast -- --no-capture")
         .with_stderr_does_not_contain(
-            "test exited abnormally; to see the full output pass --nocapture to the harness.",
+            "test exited abnormally; to see the full output pass --no-capture to the harness.",
         )
         .with_stderr_data(str![[r#"
 [..]thread [..]panicked [..] tests/t1.rs[..]
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --no-capture` ([EXIT_STATUS]: 4)
 ...
 "#]].unordered())
         .with_status(101)
@@ -5513,6 +5513,6 @@ fn cargo_test_set_out_dir_env_var() {
         .build();
 
     p.cargo("test").run();
-    p.cargo("test --package foo --test case -- tests::test_add --exact --nocapture")
+    p.cargo("test --package foo --test case -- tests::test_add --exact --no-capture")
         .run();
 }

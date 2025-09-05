@@ -283,9 +283,9 @@ OPTIONS
    Display Options
        By default the Rust test harness hides output from benchmark execution
        to keep results readable. Benchmark output can be recovered (e.g., for
-       debugging) by passing --nocapture to the benchmark binaries:
+       debugging) by passing --no-capture to the benchmark binaries:
 
-           cargo bench -- --nocapture
+           cargo bench -- --no-capture
 
        -v, --verbose
            Use verbose output. May be specified twice for “very verbose”

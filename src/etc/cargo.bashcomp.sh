@@ -91,7 +91,7 @@ _cargo()
 	local opt__vendor="$opt_common $opt_mani $opt_lock $opt_sync --no-delete --respect-source-config --versioned-dirs"
 	local opt__version="$opt_common $opt_lock"
 	local opt__yank="$opt_common $opt_lock --version --undo --index --token --registry"
-	local opt__libtest="--help --include-ignored --ignored --test --bench --list --logfile --nocapture --test-threads --skip -q --quiet --exact --color --format"
+	local opt__libtest="--help --include-ignored --ignored --test --bench --list --logfile --no-capture --test-threads --skip -q --quiet --exact --color --format"
 
 	if [[ $cword -gt $dd_i ]]; then
 		# Completion after -- separator.
