@@ -615,7 +615,27 @@ impl<'gctx> Timings<'gctx> {
                     .collect();
                 let aggregated = ut.aggregate_sections();
                 let sections = match aggregated {
-                    AggregatedSections::Sections(sections) => Some(sections),
+                    AggregatedSections::Sections(mut sections) => {
+                        // We draw the sections in the pipeline graph in a way where the frontend
+                        // section has the "default" build color, and then additional sections
+                        // (codegen, link) are overlayed on top with a different color.
+                        // However, there might be some time after the final (usually link) section,
+                        // which definitely shouldn't be classified as "Frontend". We thus try to
+                        // detect this situation and add a final "Other" section.
+                        if let Some((_, section)) = sections.last()
+                            && section.end < ut.duration
+                        {
+                            sections.push((
+                                "other".to_string(),
+                                SectionData {
+                                    start: section.end,
+                                    end: ut.duration,
+                                },
+                            ));
+                        }
+
+                        Some(sections)
+                    }
                     AggregatedSections::OnlyMetadataTime { .. }
                     | AggregatedSections::OnlyTotalDuration => None,
                 };
@@ -880,6 +900,7 @@ static HTML_TMPL: &str = r#"
   --canvas-grid: #e6e6e6;
   --canvas-codegen: #aa95e8;
   --canvas-link: #95e8aa;
+  --canvas-other: #e895aa;
   --canvas-custom-build: #f0b165;
   --canvas-not-custom-build: #95cce8;
   --canvas-dep-line: #ddd;

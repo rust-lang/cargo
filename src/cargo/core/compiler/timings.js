@@ -68,6 +68,8 @@ const AXES_COLOR = getCssColor('--canvas-axes');
 const GRID_COLOR = getCssColor('--canvas-grid');
 const CODEGEN_COLOR = getCssColor('--canvas-codegen');
 const LINK_COLOR = getCssColor('--canvas-link');
+// Final leftover section after link
+const OTHER_COLOR = getCssColor('--canvas-other');
 const CUSTOM_BUILD_COLOR = getCssColor('--canvas-custom-build');
 const NOT_CUSTOM_BUILD_COLOR = getCssColor('--canvas-not-custom-build');
 const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
@@ -222,6 +224,13 @@ function render_pipeline_graph() {
       line: false
     });
   }
+  if (presentSections.has("other")) {
+    legend_entries.push({
+      name: "Other",
+      color: OTHER_COLOR,
+      line: false
+    });
+  }
   draw_legend(ctx, 160, legend_entries);
   ctx.restore();
 }
@@ -289,6 +298,8 @@ function get_section_color(name) {
         return CODEGEN_COLOR;
     } else if (name === "link") {
         return LINK_COLOR;
+    } else if (name === "other") {
+        return OTHER_COLOR;
     } else {
         // We do not know what section this is, so just use the default color
         return NOT_CUSTOM_BUILD_COLOR;
