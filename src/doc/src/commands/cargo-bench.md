@@ -310,9 +310,9 @@ Defaults to <code>target</code> in the root of the workspace.</dd>
 
 By default the Rust test harness hides output from benchmark execution to keep
 results readable. Benchmark output can be recovered (e.g., for debugging) by
-passing `--nocapture` to the benchmark binaries:
+passing `--no-capture` to the benchmark binaries:
 
-    cargo bench -- --nocapture
+    cargo bench -- --no-capture
 
 <dl>
 
