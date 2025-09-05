@@ -151,10 +151,9 @@ fn not_optional_dep() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `feat` includes `dep?/feat` with a `?`, but `dep` is not an optional dependency
-  A non-optional dependency of the same name is defined; consider removing the `?` or changing the dependency to be optional
+  |
+  = caused by: feature `feat` includes `dep?/feat` with a `?`, but `dep` is not an optional dependency
+               A non-optional dependency of the same name is defined; consider removing the `?` or changing the dependency to be optional
 
 "#]])
         .run();

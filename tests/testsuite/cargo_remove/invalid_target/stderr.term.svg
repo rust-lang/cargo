@@ -1,9 +1,9 @@
-<svg width="1390px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1373px" height="74px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-bright-red { fill: #FF5555 }
     .fg-green { fill: #00AA00 }
-    .fg-red { fill: #AA0000 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Removing</tspan><tspan> dbus from dependencies for target `powerpc-unknown-linux-gnu`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the dependency `dbus` could not be found in `target.powerpc-unknown-linux-gnu.dependencies`; it is present in `target.wasm32-unknown-unknown.dependencies`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: the dependency `dbus` could not be found in `target.powerpc-unknown-linux-gnu.dependencies`; it is present in `target.wasm32-unknown-unknown.dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

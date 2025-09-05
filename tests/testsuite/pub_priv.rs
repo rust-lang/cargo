@@ -106,11 +106,10 @@ pub fn requires_nightly_cargo() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the cargo feature `public-dependency` requires a nightly version of Cargo, but this is the `stable` channel
-  See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#public-dependency for more information about using this feature.
+  |
+  = caused by: the cargo feature `public-dependency` requires a nightly version of Cargo, but this is the `stable` channel
+               See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+               See https://doc.rust-lang.org/cargo/reference/unstable.html#public-dependency for more information about using this feature.
 
 "#]])
         .run();
@@ -189,9 +188,8 @@ fn pub_dev_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  'public' specifier can only be used on regular dependencies, not dev-dependencies
+  |
+  = caused by: 'public' specifier can only be used on regular dependencies, not dev-dependencies
 
 "#]])
         .run();
@@ -286,9 +284,8 @@ fn workspace_pub_disallowed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  foo2 is public, but workspace dependencies cannot be public
+  |
+  = caused by: foo2 is public, but workspace dependencies cannot be public
 
 "#]])
         .run();

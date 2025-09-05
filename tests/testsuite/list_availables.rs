@@ -172,68 +172,68 @@ fn build_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -247,68 +247,68 @@ fn check_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -322,29 +322,29 @@ fn doc_list_availables() {
         SnapshotsBuilder::new()
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -358,68 +358,68 @@ fn fix_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -433,42 +433,42 @@ fn run_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -482,68 +482,68 @@ fn test_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -557,68 +557,68 @@ fn bench_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -633,38 +633,38 @@ fn install_list_availables() {
             .with_example(
                 str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]],
                 str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]],
             )
             .with_bin(
                 str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]],
                 str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]],
             )
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -678,68 +678,68 @@ fn rustdoc_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -753,68 +753,68 @@ fn rustc_list_availables() {
         SnapshotsBuilder::new()
             .with_example(str![[r#"
 [ERROR] "--example" takes one argument.
-Available examples:
-    a
-    b
-
+       Available examples:
+           a
+           b
+       
 
 "#]], str![[r#"
 [ERROR] "--example" takes one argument.
-No examples available.
-
+       No examples available.
+       
 
 "#]])
             .with_bin(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]], str![[r#"
 [ERROR] "--bin" takes one argument.
-No binaries available.
-
+       No binaries available.
+       
 
 "#]])
             .with_test(str![[r#"
 [ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
+       Available test targets:
+           test1
+           test2
+       
 
 "#]], str![[r#"
 [ERROR] "--test" takes one argument.
-No test targets available.
-
+       No test targets available.
+       
 
 "#]])
             .with_bench(str![[r#"
 [ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
+       Available bench targets:
+           bench1
+           bench2
+       
 
 "#]], str![[r#"
 [ERROR] "--bench" takes one argument.
-No bench targets available.
-
+       No bench targets available.
+       
 
 "#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -828,11 +828,11 @@ fn pkgid_list_availables() {
         SnapshotsBuilder::new()
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .build(),
@@ -846,17 +846,17 @@ fn tree_list_availables() {
         SnapshotsBuilder::new()
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -870,17 +870,17 @@ fn clean_list_availables() {
         SnapshotsBuilder::new()
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .with_target(str![[r#"
 [ERROR] "--target" takes a target architecture as an argument.
-
-Run `[..]` to see possible targets.
+       
+       Run `rustup target list` to see possible targets.
 
 "#]])
             .build(),
@@ -894,11 +894,11 @@ fn update_list_availables() {
         SnapshotsBuilder::new()
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
-Run `cargo help pkgid` for more information about SPEC format.
-
-Possible packages/workspace members:
-    foo
-
+       Run `cargo help pkgid` for more information about SPEC format.
+       
+       Possible packages/workspace members:
+           foo
+       
 
 "#]])
             .build(),

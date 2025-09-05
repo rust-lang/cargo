@@ -825,7 +825,7 @@ fn no_track() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] binary `foo[EXE]` already exists in destination `[ROOT]/home/.cargo/bin/foo[EXE]`
-Add --force to overwrite
+       Add --force to overwrite
 
 "#]])
         .with_status(101)
