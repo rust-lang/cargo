@@ -287,11 +287,18 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 let source_description = source.source_id().to_string();
                 let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
                 if plan.is_empty() {
-                    opts.gctx.shell().note(format!(
-                    "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
-                    You may press ctrl-c to skip waiting; the {crate} should be available shortly.",
-                    crate = if to_confirm.len() == 1 { "crate" } else {"crates"}
-                ))?;
+                    let report = &[
+                        annotate_snippets::Group::with_title(
+                        annotate_snippets::Level::NOTE
+                            .secondary_title(format!(
+                                "waiting for {short_pkg_descriptions} to be available at {source_description}"
+                            ))),
+                            annotate_snippets::Group::with_title(annotate_snippets::Level::HELP.secondary_title(format!(
+                                "you may press ctrl-c to skip waiting; the {crate} should be available shortly",
+                                crate = if to_confirm.len() == 1 { "crate" } else {"crates"}
+                            ))),
+                    ];
+                    opts.gctx.shell().print_report(report, false)?;
                 } else {
                     opts.gctx.shell().note(format!(
                     "waiting for {short_pkg_descriptions} to be available at {source_description}.\n\
