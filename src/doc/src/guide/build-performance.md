@@ -1,37 +1,43 @@
 # Optimizing Build Performance
 
-Compilation of Rust crates can sometimes be rather slow, due to various reasons (such as the used compilation model and the design of the Rust language and its compiler). There are various approaches that can be used to optimize build performance, which mostly fall under two categories:
+Cargo uses configuration defaults that try to balance various aspects, including debuggability, runtime performance, build performance, binary size and others. Because of that, build performance is sometimes traded off for other benefits which may not be as important for your circumstances. This guide will step you through changes you can make to improve build performance.
 
-- Modify compiler or Cargo flags
-- Modify the source code of your crate(s)
+Same as when optimizing runtime performance, be sure to measure these changes against the workflows you actually care about, as we provide general guidelines and your circumstances may be different.
 
-This guide focuses on the first approach.
+Example workflows to consider include:
+- Compiler feedback as you develop (`cargo check` after making a code change)
+- Test feedback as you develop (`cargo test` after making a code change)
+- CI builds
 
-Below, you can find several methods that can be used to optimize build performance. It is important to note that their effect varies a lot based on the compiled crate, and in some cases they can actually make compilation slower. You should always measure build performance on your crate(s) to determine if a given method described here is effective for your crate.
-
-Note that some of these approaches currently require using the nightly toolchain.
+Note that some approaches described below currently require using the nightly toolchain.
 
 ## Reduce amount of generated debug information
 
-By default, the `dev` [profile](../reference/profiles.md) enables generation of full debug information (debuginfo) both for local crates and also for all dependencies. This is useful if you want to debug your code with a debugger or profile it with a profiler, but it can also have a significant compilation and linking time cost.
-
-You can reduce that cost by reducing the amount of debuginfo that is generated. The fastest option is `debug = false`, which completely turns off debuginfo generation, but a reasonable trade-off could also be setting `debug = "line-tables-only"`, which only generates enough debuginfo to support proper source code links in backtraces, which are generated e.g. when a panic happens.
-
-Here is an example of configuring debuginfo generation in `Cargo.toml`:
-```toml
-[profile.dev]
-debug = false # or "line-tables-only"
-```
-
-If you want to keep debuginfo for your crate only, but you do not need it for your dependencies, you can set `debug = false` as the default value for a given profile, and then enable debuginfo only for your crate:
+Recommendation: Add to your `Cargo.toml` (for maintainers) or `$CARGO_HOME/.cargo/config.toml` (for contributors):
 
 ```toml
 [profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
 debug = false
 
-[profile.dev.package]
-<your-crate-name>.debug = true
+[profile.debugging]
+inherits = "dev"
+debug = true
 ```
+
+This will:
+- Change the [`dev` profile](../reference/profiles.md#dev) (default for development commands) to:
+    - Limit [debug information](../reference/profiles.md#debug) for workspace members to what is needed for useful panic backtraces
+    - Avoid generating any debug information for dependencies
+- Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
+
+Trade-offs:
+- ✅ Faster per-crate build times
+- ✅ Faster link times
+- ✅ Smaller disk usage of the `target` directory 
+- ❌ Requires a full rebuild to have a high-quality debugger experience
 
 ## Use an alternative codegen backend
 
