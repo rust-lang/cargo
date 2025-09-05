@@ -191,7 +191,6 @@ impl SectionData {
 }
 
 /// Contains post-processed data of individual compilation sections.
-#[derive(serde::Serialize)]
 enum AggregatedSections {
     /// We know the names and durations of individual compilation sections
     Sections(Vec<(String, SectionData)>),
@@ -587,6 +586,7 @@ impl<'gctx> Timings<'gctx> {
             rmeta_time: Option<f64>,
             unlocked_units: Vec<usize>,
             unlocked_rmeta_units: Vec<usize>,
+            sections: Option<Vec<(String, SectionData)>>,
         }
         let round = |x: f64| (x * 100.0).round() / 100.0;
         let unit_data: Vec<UnitData> = self
@@ -600,7 +600,6 @@ impl<'gctx> Timings<'gctx> {
                     "todo"
                 }
                 .to_string();
-
                 // These filter on the unlocked units because not all unlocked
                 // units are actually "built". For example, Doctest mode units
                 // don't actually generate artifacts.
@@ -614,6 +613,33 @@ impl<'gctx> Timings<'gctx> {
                     .iter()
                     .filter_map(|unit| unit_map.get(unit).copied())
                     .collect();
+                let aggregated = ut.aggregate_sections();
+                let sections = match aggregated {
+                    AggregatedSections::Sections(mut sections) => {
+                        // We draw the sections in the pipeline graph in a way where the frontend
+                        // section has the "default" build color, and then additional sections
+                        // (codegen, link) are overlayed on top with a different color.
+                        // However, there might be some time after the final (usually link) section,
+                        // which definitely shouldn't be classified as "Frontend". We thus try to
+                        // detect this situation and add a final "Other" section.
+                        if let Some((_, section)) = sections.last()
+                            && section.end < ut.duration
+                        {
+                            sections.push((
+                                "other".to_string(),
+                                SectionData {
+                                    start: section.end,
+                                    end: ut.duration,
+                                },
+                            ));
+                        }
+
+                        Some(sections)
+                    }
+                    AggregatedSections::OnlyMetadataTime { .. }
+                    | AggregatedSections::OnlyTotalDuration => None,
+                };
+
                 UnitData {
                     i,
                     name: ut.unit.pkg.name().to_string(),
@@ -625,6 +651,7 @@ impl<'gctx> Timings<'gctx> {
                     rmeta_time: ut.rmeta_time.map(round),
                     unlocked_units,
                     unlocked_rmeta_units,
+                    sections,
                 }
             })
             .collect();
@@ -871,7 +898,9 @@ static HTML_TMPL: &str = r#"
   --canvas-background: #f7f7f7;
   --canvas-axes: #303030;
   --canvas-grid: #e6e6e6;
-  --canvas-block: #aa95e8;
+  --canvas-codegen: #aa95e8;
+  --canvas-link: #95e8aa;
+  --canvas-other: #e895aa;
   --canvas-custom-build: #f0b165;
   --canvas-not-custom-build: #95cce8;
   --canvas-dep-line: #ddd;

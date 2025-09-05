@@ -66,7 +66,10 @@ const BG_COLOR = getCssColor('--background');
 const CANVAS_BG = getCssColor('--canvas-background');
 const AXES_COLOR = getCssColor('--canvas-axes');
 const GRID_COLOR = getCssColor('--canvas-grid');
-const BLOCK_COLOR = getCssColor('--canvas-block');
+const CODEGEN_COLOR = getCssColor('--canvas-codegen');
+const LINK_COLOR = getCssColor('--canvas-link');
+// Final leftover section after link
+const OTHER_COLOR = getCssColor('--canvas-other');
 const CUSTOM_BUILD_COLOR = getCssColor('--canvas-custom-build');
 const NOT_CUSTOM_BUILD_COLOR = getCssColor('--canvas-not-custom-build');
 const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
@@ -134,21 +137,40 @@ function render_pipeline_graph() {
     let unit = units[i];
     let y = i * Y_TICK_DIST + 1;
     let x = px_per_sec * unit.start;
-    let rmeta_x = null;
-    if (unit.rmeta_time != null) {
-      rmeta_x = x + px_per_sec * unit.rmeta_time;
+
+    const sections = [];
+    if (unit.sections !== null) {
+        // We have access to compilation sections
+        for (const section of unit.sections) {
+            const [name, {start, end}] = section;
+            sections.push({
+                name,
+                start: x + px_per_sec * start,
+                width: (end - start) * px_per_sec
+            });
+        }
+    }
+    else if (unit.rmeta_time != null) {
+        // We only know the rmeta time
+        sections.push({
+            name: "codegen",
+            start: x + px_per_sec * unit.rmeta_time,
+            width: (unit.duration - unit.rmeta_time) * px_per_sec
+        });
     }
     let width = Math.max(px_per_sec * unit.duration, 1.0);
-    UNIT_COORDS[unit.i] = {x, y, width, rmeta_x};
+    UNIT_COORDS[unit.i] = {x, y, width, sections};
 
     const count = unitCount.get(unit.name) || 0;
     unitCount.set(unit.name, count + 1);
   }
 
+  const presentSections = new Set();
+
   // Draw the blocks.
   for (i=0; i<units.length; i++) {
     let unit = units[i];
-    let {x, y, width, rmeta_x} = UNIT_COORDS[unit.i];
+    let {x, y, width, sections} = UNIT_COORDS[unit.i];
 
     HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
 
@@ -157,12 +179,12 @@ function render_pipeline_graph() {
     roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
     ctx.fill();
 
-    if (unit.rmeta_time != null) {
-      ctx.beginPath();
-      ctx.fillStyle = BLOCK_COLOR;
-      let ctime = unit.duration - unit.rmeta_time;
-      roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
-      ctx.fill();
+    for (const section of sections) {
+        ctx.beginPath();
+        ctx.fillStyle = get_section_color(section.name);
+        roundedRect(ctx, section.start, y, section.width, BOX_HEIGHT, RADIUS);
+        ctx.fill();
+        presentSections.add(section.name);
     }
     ctx.fillStyle = TEXT_COLOR;
     ctx.textAlign = 'start';
@@ -178,6 +200,110 @@ function render_pipeline_graph() {
     draw_dep_lines(ctx, unit.i, false);
   }
   ctx.restore();
+
+  // Draw a legend.
+  ctx.save();
+  ctx.translate(canvas_width - 200, MARGIN);
+
+  const legend_entries = [{
+    name: "Frontend/rest",
+    color: NOT_CUSTOM_BUILD_COLOR,
+    line: false
+  }];
+  if (presentSections.has("codegen")) {
+    legend_entries.push({
+      name: "Codegen",
+      color: CODEGEN_COLOR,
+      line: false
+    });
+  }
+  if (presentSections.has("link")) {
+    legend_entries.push({
+      name: "Linking",
+      color: LINK_COLOR,
+      line: false
+    });
+  }
+  if (presentSections.has("other")) {
+    legend_entries.push({
+      name: "Other",
+      color: OTHER_COLOR,
+      line: false
+    });
+  }
+  draw_legend(ctx, 160, legend_entries);
+  ctx.restore();
+}
+
+// Draw a legend at the current position of the ctx.
+// entries should be an array of objects with the following scheme:
+// {
+//   "name": <name of the legend entry> [string],
+//   "color": <color of the legend entry> [string],
+//   "line": <should the entry be a thin line or a rectangle> [bool]
+// }
+function draw_legend(ctx, width, entries) {
+  const entry_height = 20;
+
+  // Add a bit of margin to the bottom and top
+  const height = entries.length * entry_height + 4;
+
+  // Draw background
+  ctx.fillStyle = BG_COLOR;
+  ctx.strokeStyle = TEXT_COLOR;
+  ctx.lineWidth = 1;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'start';
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.stroke();
+  ctx.fill();
+
+  ctx.lineWidth = 2;
+
+  // Dimension of a block
+  const block_height = 15;
+  const block_width = 30;
+
+  // Margin from the left edge
+  const x_start = 5;
+  // Width of the "mark" section (line/block)
+  const mark_width = 45;
+
+  // Draw legend entries
+  let y = 12;
+  for (const entry of entries) {
+    ctx.beginPath();
+
+    if (entry.line) {
+      ctx.strokeStyle = entry.color;
+      ctx.moveTo(x_start, y);
+      ctx.lineTo(x_start + mark_width, y);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = entry.color;
+      ctx.fillRect(x_start + (mark_width - block_width) / 2, y - (block_height / 2), block_width, block_height);
+    }
+
+    ctx.fillStyle = TEXT_COLOR;
+    ctx.fillText(entry.name, x_start + mark_width + 4, y + 1);
+
+    y += entry_height;
+  }
+}
+
+// Determine the color of a section block based on the section name.
+function get_section_color(name) {
+    if (name === "codegen") {
+        return CODEGEN_COLOR;
+    } else if (name === "link") {
+        return LINK_COLOR;
+    } else if (name === "other") {
+        return OTHER_COLOR;
+    } else {
+        // We do not know what section this is, so just use the default color
+        return NOT_CUSTOM_BUILD_COLOR;
+    }
 }
 
 // Draws lines from the given unit to the units it unlocks.
@@ -296,47 +422,23 @@ function render_timing_graph() {
   ctx.restore();
   ctx.save();
   ctx.translate(canvas_width-200, MARGIN);
-  // background
-  ctx.fillStyle = BG_COLOR;
-  ctx.strokeStyle = TEXT_COLOR;
-  ctx.lineWidth = 1;
-  ctx.textBaseline = 'middle'
-  ctx.textAlign = 'start';
-  ctx.beginPath();
-  ctx.rect(0, 0, 150, 82);
-  ctx.stroke();
-  ctx.fill();
-
-  ctx.fillStyle = TEXT_COLOR;
-  ctx.beginPath();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'red';
-  ctx.moveTo(5, 10);
-  ctx.lineTo(50, 10);
-  ctx.stroke();
-  ctx.fillText('Waiting', 54, 11);
-
-  ctx.beginPath();
-  ctx.strokeStyle = 'blue';
-  ctx.moveTo(5, 30);
-  ctx.lineTo(50, 30);
-  ctx.stroke();
-  ctx.fillText('Inactive', 54, 31);
-
-  ctx.beginPath();
-  ctx.strokeStyle = 'green';
-  ctx.moveTo(5, 50);
-  ctx.lineTo(50, 50);
-  ctx.stroke();
-  ctx.fillText('Active', 54, 51);
-
-  ctx.beginPath();
-  ctx.fillStyle = cpuFillStyle
-  ctx.fillRect(15, 60, 30, 15);
-  ctx.fill();
-  ctx.fillStyle = TEXT_COLOR;
-  ctx.fillText('CPU Usage', 54, 71);
-
+  draw_legend(ctx, 150, [{
+    name: "Waiting",
+    color: "red",
+    line: true
+  }, {
+    name: "Inactive",
+    color: "blue",
+    line: true
+  }, {
+    name: "Active",
+    color: "green",
+    line: true
+  }, {
+    name: "CPU Usage",
+    color: cpuFillStyle,
+    line: false
+  }]);
   ctx.restore();
 }
 
