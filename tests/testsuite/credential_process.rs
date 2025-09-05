@@ -555,7 +555,8 @@ fn token_caching() {
         .file("src/lib.rs", "")
         .build();
 
-    let output = r#"[UPDATING] `alternative` index
+    let output = str![[r#"
+[UPDATING] `alternative` index
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read"}
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -565,7 +566,8 @@ fn token_caching() {
 [NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 at registry `alternative`
-"#;
+
+"#]];
 
     // The output should contain two JSON messages from the provider in both cases:
     // The first because the credential is expired, the second because the provider
@@ -574,7 +576,8 @@ You may press ctrl-c [..]
         .with_stderr_data(output)
         .run();
 
-    let output_non_independent = r#"[UPDATING] `alternative` index
+    let output_non_independent = str![[r#"
+[UPDATING] `alternative` index
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read"}
 [PACKAGING] foo v0.1.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -584,7 +587,8 @@ You may press ctrl-c [..]
 [NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.1 at registry `alternative`
-"#;
+
+"#]];
 
     p.change_file(
         "Cargo.toml",
