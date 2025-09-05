@@ -44,7 +44,7 @@
 </tspan>
     <tspan x="10px" y="226px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan><tspan> </tspan><tspan class="fg-bright-blue bold">----------------</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> encountered 1 errors(s) while verifying lints</tspan>
+    <tspan x="10px" y="244px"><tspan class="fg-bright-red bold">error</tspan><tspan>: encountered 1 errors(s) while verifying lints</tspan>
 </tspan>
     <tspan x="10px" y="262px">
 </tspan>

@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> semver from dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> aborting remove due to dry run</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan>: aborting remove due to dry run</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

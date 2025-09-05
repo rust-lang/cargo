@@ -1,4 +1,4 @@
-<svg width="894px" height="146px" xmlns="http://www.w3.org/2000/svg">
+<svg width="902px" height="146px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> versioned-package (git) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> failed to parse manifest at `[ROOT]/case/Cargo.toml`</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: failed to parse manifest at `[ROOT]/case/Cargo.toml`</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

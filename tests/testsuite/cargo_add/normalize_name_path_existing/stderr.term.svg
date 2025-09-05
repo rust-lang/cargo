@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the crate `fuzzy-name` could not be found in registry index.</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the crate `fuzzy-name` could not be found in registry index.</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

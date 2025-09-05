@@ -25,7 +25,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> my-package v0.1.1+my-package (registry `dummy-registry`)</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">note</tspan><tspan class="bold">:</tspan><tspan> to see how you depend on my-package, run `</tspan><tspan class="fg-bright-cyan bold">cargo tree --invert --package my-package@0.1.1+my-package</tspan><tspan>`</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">note</tspan><tspan>: to see how you depend on my-package, run `</tspan><tspan class="fg-bright-cyan bold">cargo tree --invert --package my-package@0.1.1+my-package</tspan><tspan>`</tspan>
 </tspan>
     <tspan x="10px" y="100px">
 </tspan>

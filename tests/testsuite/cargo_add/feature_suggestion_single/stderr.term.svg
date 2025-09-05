@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v0.1.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> unrecognized feature for crate my-package: baz</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate my-package: baz</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

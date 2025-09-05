@@ -22,7 +22,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> `foo` as member of workspace at `[ROOT]/case`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">note</tspan><tspan class="bold">:</tspan><tspan> see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">note</tspan><tspan>: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

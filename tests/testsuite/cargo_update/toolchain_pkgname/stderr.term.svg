@@ -18,7 +18,7 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> invalid character `+` in package name: `+stable`</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan>: invalid character `+` in package name: `+stable`</tspan>
 </tspan>
     <tspan x="10px" y="46px"><tspan>    Use `cargo +stable update` if you meant to use the `stable` toolchain.</tspan>
 </tspan>

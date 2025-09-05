@@ -1,4 +1,4 @@
-<svg width="1280px" height="92px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1289px" height="92px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the manifest file [ROOT]/case/Cargo.toml needs to be updated but --locked was passed to prevent this</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the manifest file [ROOT]/case/Cargo.toml needs to be updated but --locked was passed to prevent this</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

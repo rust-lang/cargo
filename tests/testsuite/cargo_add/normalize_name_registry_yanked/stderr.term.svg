@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> translating `linked_hash_map` to `linked-hash-map`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan>: translating `linked_hash_map` to `linked-hash-map`</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> linked-hash-map v0.5.4 to dependencies</tspan>
 </tspan>
