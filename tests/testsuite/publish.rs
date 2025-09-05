@@ -3428,7 +3428,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] dep v0.0.1 ([ROOT]/foo/dep)
 [UPLOADED] dep v0.0.1 to registry `crates-io`
 [NOTE] waiting for dep v0.0.1 to be available at registry `crates-io`.
-2 remaining crates to be published
+      2 remaining crates to be published
 [WARNING] timed out waiting for dep v0.0.1 to be available in registry `crates-io`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 [ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for published dependencies to be available.
@@ -3751,12 +3751,12 @@ fn workspace_with_local_deps() {
 [UPLOADING] level3 v0.0.1 ([ROOT]/foo/level3)
 [UPLOADED] level3 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level3 v0.0.1 to be available at registry `crates-io`.
-2 remaining crates to be published
+      2 remaining crates to be published
 [PUBLISHED] level3 v0.0.1 at registry `crates-io`
 [UPLOADING] level2 v0.0.1 ([ROOT]/foo/level2)
 [UPLOADED] level2 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level2 v0.0.1 to be available at registry `crates-io`.
-1 remaining crate to be published
+      1 remaining crate to be published
 [PUBLISHED] level2 v0.0.1 at registry `crates-io`
 [UPLOADING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPLOADED] level1 v0.0.1 to registry `crates-io`
@@ -3855,7 +3855,7 @@ fn workspace_parallel() {
 [UPLOADED] b v0.0.1 to registry `crates-io`
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 or b v0.0.1 to be available at registry `crates-io`.
-1 remaining crate to be published
+      1 remaining crate to be published
 [PUBLISHED] a v0.0.1 and b v0.0.1 at registry `crates-io`
 [UPLOADING] c v0.0.1 ([ROOT]/foo/c)
 [UPLOADED] c v0.0.1 to registry `crates-io`
