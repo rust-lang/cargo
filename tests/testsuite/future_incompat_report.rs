@@ -147,22 +147,22 @@ fn incompat_in_dependency() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [NOTE] 
-To solve this problem, you can try the following approaches:
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - bar@1.0.0
-  - Repository: https://example.com/
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-
+      To solve this problem, you can try the following approaches:
+      
+      - If the issue is not solved by updating the dependencies, a fix has to be
+      implemented by those dependencies. You can help with that by notifying the
+      maintainers of this problem (e.g. by creating a bug report) or by proposing a
+      fix to the maintainers (e.g. by creating a pull request):
+      
+        - bar@1.0.0
+        - Repository: https://example.com/
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+      
+      - If waiting for an upstream fix is not an option, you can use the `[patch]`
+      section in `Cargo.toml` to use your own version of the dependency. For more
+      information, see:
+      https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+      
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -372,9 +372,9 @@ fn test_multi_crate() {
 ...
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2
 ...
-  - first-dep@0.0.1
+        - first-dep@0.0.1
 ...
-  - second-dep@0.0.2
+        - second-dep@0.0.2
 ...
 ")
             .run();
@@ -523,7 +523,7 @@ fn bad_ids() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not find report with ID 7
-Available IDs are: 1
+       Available IDs are: 1
 
 "#]])
         .run();
@@ -601,38 +601,38 @@ fn suggestions_for_updates() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: big_update v1.0.0, with_updates v1.0.0, without_updates v1.0.0
 [NOTE] 
-To solve this problem, you can try the following approaches:
-
-
-- Some affected dependencies have newer versions available.
-You may want to consider updating them to a newer version to see if the issue has been fixed.
-
-big_update v1.0.0 has the following newer versions available: 2.0.0
-with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
-
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - big_update@1.0.0
-  - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
-
-  - with_updates@1.0.0
-  - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
-
-  - without_updates@1.0.0
-  - Repository: <not found>
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+      To solve this problem, you can try the following approaches:
+      
+      
+      - Some affected dependencies have newer versions available.
+      You may want to consider updating them to a newer version to see if the issue has been fixed.
+      
+      big_update v1.0.0 has the following newer versions available: 2.0.0
+      with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+      
+      - If the issue is not solved by updating the dependencies, a fix has to be
+      implemented by those dependencies. You can help with that by notifying the
+      maintainers of this problem (e.g. by creating a bug report) or by proposing a
+      fix to the maintainers (e.g. by creating a pull request):
+      
+        - big_update@1.0.0
+        - Repository: <not found>
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
+      
+        - with_updates@1.0.0
+        - Repository: <not found>
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
+      
+        - without_updates@1.0.0
+        - Repository: <not found>
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
+      
+      - If waiting for an upstream fix is not an option, you can use the `[patch]`
+      section in `Cargo.toml` to use your own version of the dependency. For more
+      information, see:
+      https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+      
 
 "#]].unordered())
         .run();
@@ -718,22 +718,22 @@ fn correct_report_id_when_cached() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [NOTE] 
-To solve this problem, you can try the following approaches:
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - bar@1.0.0
-  - Repository: https://example.com/
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-
+      To solve this problem, you can try the following approaches:
+      
+      - If the issue is not solved by updating the dependencies, a fix has to be
+      implemented by those dependencies. You can help with that by notifying the
+      maintainers of this problem (e.g. by creating a bug report) or by proposing a
+      fix to the maintainers (e.g. by creating a pull request):
+      
+        - bar@1.0.0
+        - Repository: https://example.com/
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+      
+      - If waiting for an upstream fix is not an option, you can use the `[patch]`
+      section in `Cargo.toml` to use your own version of the dependency. For more
+      information, see:
+      https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+      
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])
@@ -745,22 +745,22 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [NOTE] 
-To solve this problem, you can try the following approaches:
-
-- If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
-
-  - bar@1.0.0
-  - Repository: https://example.com/
-  - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
-
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-
+      To solve this problem, you can try the following approaches:
+      
+      - If the issue is not solved by updating the dependencies, a fix has to be
+      implemented by those dependencies. You can help with that by notifying the
+      maintainers of this problem (e.g. by creating a bug report) or by proposing a
+      fix to the maintainers (e.g. by creating a pull request):
+      
+        - bar@1.0.0
+        - Repository: https://example.com/
+        - Detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+      
+      - If waiting for an upstream fix is not an option, you can use the `[patch]`
+      section in `Cargo.toml` to use your own version of the dependency. For more
+      information, see:
+      https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+      
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
 "#]])

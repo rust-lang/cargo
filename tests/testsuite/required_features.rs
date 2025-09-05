@@ -56,7 +56,7 @@ fn build_bin_default_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -166,7 +166,7 @@ fn build_example_default_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -234,7 +234,7 @@ fn build_example_multiple_required_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing, e.g., `--features="b c"`
+       Consider enabling them by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -253,7 +253,7 @@ Consider enabling them by passing, e.g., `--features="b c"`
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing, e.g., `--features="b c"`
+       Consider enabling them by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -261,7 +261,7 @@ Consider enabling them by passing, e.g., `--features="b c"`
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo_2` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -338,7 +338,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -550,7 +550,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -749,9 +749,9 @@ fn install_default_features() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo" requires the features: `a`
-  example "foo" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="a"`
+           bin "foo" requires the features: `a`
+           example "foo" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -766,7 +766,7 @@ Consider enabling some of the needed features by passing, e.g., `--features="a"`
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
@@ -785,7 +785,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
@@ -903,11 +903,11 @@ fn install_multiple_required_features() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -917,11 +917,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filter `bins` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -931,11 +931,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filter `examples` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -945,11 +945,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filters `bins`, `examples` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -1165,7 +1165,7 @@ fn dep_feature_in_cmd_line() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing, e.g., `--features="bar/a"`
+       Consider enabling them by passing, e.g., `--features="bar/a"`
 
 "#]])
         .run();
@@ -1178,7 +1178,7 @@ Consider enabling them by passing, e.g., `--features="bar/a"`
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing, e.g., `--features="bar/a"`
+       Consider enabling them by passing, e.g., `--features="bar/a"`
 
 "#]])
         .run();
@@ -1254,9 +1254,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
 [LOCKING] 1 package to latest compatible version
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo" requires the features: `bar/a`
-  example "foo" requires the features: `bar/a`
-Consider enabling some of the needed features by passing, e.g., `--features="bar/a"`
+           bin "foo" requires the features: `bar/a`
+           example "foo" requires the features: `bar/a`
+         Consider enabling some of the needed features by passing, e.g., `--features="bar/a"`
 
 "#]])
         .run();
@@ -1377,7 +1377,7 @@ fn run_default() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features="a"`
+       Consider enabling them by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -1428,7 +1428,7 @@ fn run_default_multiple_required_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
-available binaries: foo1, foo2, foo3
+       available binaries: foo1, foo2, foo3
 
 "#]])
         .run();
@@ -1513,7 +1513,7 @@ fn renamed_required_features() {
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [ERROR] target `x` in package `foo` requires the features: `a1/f1`
-Consider enabling them by passing, e.g., `--features="a1/f1"`
+       Consider enabling them by passing, e.g., `--features="a1/f1"`
 
 "#]])
         .run();
@@ -1616,15 +1616,15 @@ fn truncated_install_warning_message() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo1" requires the features: `feature1`, `feature2`, `feature3`
-  bin "foo10" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin "foo2" requires the features: `feature2`
-  bin "foo3" requires the features: `feature3`
-  bin "foo4" requires the features: `feature4`, `feature1`
-  bin "foo5" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin "foo6" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-4 more targets also requires features not enabled. See them in the Cargo.toml file.
-Consider enabling some of the needed features by passing, e.g., `--features="feature1 feature2 feature3"`
+           bin "foo1" requires the features: `feature1`, `feature2`, `feature3`
+           bin "foo10" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+           bin "foo2" requires the features: `feature2`
+           bin "foo3" requires the features: `feature3`
+           bin "foo4" requires the features: `feature4`, `feature1`
+           bin "foo5" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+           bin "foo6" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+         4 more targets also requires features not enabled. See them in the Cargo.toml file.
+         Consider enabling some of the needed features by passing, e.g., `--features="feature1 feature2 feature3"`
 
 "#]]).run();
 }

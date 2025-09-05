@@ -87,7 +87,7 @@ fn toolchain() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid character `+` in package name: `+nightly`
-    Use `cargo +nightly install` if you meant to use the `nightly` toolchain.
+           Use `cargo +nightly install` if you meant to use the `nightly` toolchain.
 
 "#]])
         .run();
@@ -100,7 +100,7 @@ fn url() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid package name: `https://github.com/bar/foo`
-    Use `cargo install --git https://github.com/bar/foo` if you meant to install from a git repository.
+           Use `cargo install --git https://github.com/bar/foo` if you meant to install from a git repository.
 
 "#]])
         .run();
@@ -377,7 +377,7 @@ fn missing_current_working_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] To install the binaries for the package in current working directory use `cargo install --path .`. 
-Use `cargo build` if you want to simply build the package.
+       Use `cargo build` if you want to simply build the package.
 
 "#]])
         .run();
@@ -403,8 +403,8 @@ fn missing_at_symbol_before_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid character `=` in package name: `foo=0.2.0`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
-
-[HELP] if this is meant to be a package name followed by a version, insert an `@` like `foo@=0.2.0`
+       
+       [HELP] if this is meant to be a package name followed by a version, insert an `@` like `foo@=0.2.0`
 
 "#]])
         .run();
@@ -614,9 +614,9 @@ fn install_relative_path_outside_current_ws() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] "--bin" takes one argument.
-Available binaries:
-    foo
-
+       Available binaries:
+           foo
+       
 
 "#]])
         .run();
@@ -637,7 +637,7 @@ fn multiple_packages_containing_binaries() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/foo`
 [ERROR] multiple packages with binaries found: bar, foo. When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
-Please specify a package, e.g. `cargo install --git [ROOTURL]/foo bar`.
+       Please specify a package, e.g. `cargo install --git [ROOTURL]/foo bar`.
 
 "#]])
         .run();
@@ -660,7 +660,7 @@ fn multiple_packages_matching_example() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/foo`
 [ERROR] multiple packages with examples found: bar, foo. When installing a git repository, cargo will always search the entire repo for any Cargo.toml.
-Please specify a package, e.g. `cargo install --git [ROOTURL]/foo bar`.
+       Please specify a package, e.g. `cargo install --git [ROOTURL]/foo bar`.
 
 "#]])
         .run();
@@ -871,8 +871,8 @@ fn no_binaries() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] there is nothing to install in `foo v0.0.1 ([ROOT]/foo)`, because it has no binaries
-`cargo install` is only for installing programs, and can't be used with libraries.
-To use a library crate, add it as a dependency to a Cargo project with `cargo add`.
+       `cargo install` is only for installing programs, and can't be used with libraries.
+       To use a library crate, add it as a dependency to a Cargo project with `cargo add`.
 
 "#]])
         .run();
@@ -1019,7 +1019,7 @@ fn compile_failure() {
 ...
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 ...
 "#]])
         .run();
@@ -1754,7 +1754,7 @@ fn uninstall_with_empty_package_option() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value.
-Run `cargo help pkgid` for more information about SPEC format.
+       Run `cargo help pkgid` for more information about SPEC format.
 
 "#]])
         .run();
@@ -2260,8 +2260,8 @@ fn install_cargo_package_in_a_patched_workspace() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] patch for the non root package will be ignored, specify patch at the workspace root:
-package:   [ROOT]/foo/baz/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
+         package:   [ROOT]/foo/baz/Cargo.toml
+         workspace: [ROOT]/foo/Cargo.toml
 ...
 "#]])
         .run();
@@ -2420,7 +2420,7 @@ fn failed_install_retains_temp_directory() {
 
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 "#]]);
 
@@ -2615,7 +2615,7 @@ fn install_incompat_msrv() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] cannot install package `foo 0.2.0`, it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
-`foo 0.1.0` supports rustc 1.30
+       `foo 0.1.0` supports rustc 1.30
 
 "#]])
         .with_status(101)
@@ -2820,7 +2820,7 @@ fn dry_run_incompatible_package_dependency() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   rustc [..] is not supported by the following package:

@@ -1184,9 +1184,9 @@ fn ambiguous_published_deps() {
     p.cargo("run")
         .with_stderr_data(str![[r#"
 [WARNING] skipping duplicate package `duplicate v0.5.0 ([ROOTURL]/dep#[..])`:
-  [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate2/Cargo.toml
-in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.toml
-
+           [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate2/Cargo.toml
+         in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.toml
+         
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -2108,9 +2108,9 @@ fn update_ambiguous() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
-  bar@0.5.0
-  bar@0.6.0
+       Please re-run this command with one of the following specifications:
+         bar@0.5.0
+         bar@0.6.0
 
 "#]])
         .run();
@@ -3159,13 +3159,13 @@ fn dirty_submodule() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-.gitmodules
-src/lib.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       .gitmodules
+       src/lib.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3180,12 +3180,12 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/lib.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/lib.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3206,13 +3206,13 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-src/.gitmodules
-src/bar/mod.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/.gitmodules
+       src/bar/mod.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3229,12 +3229,12 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/bar/new_file.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/bar/new_file.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();

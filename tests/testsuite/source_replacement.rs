@@ -110,7 +110,7 @@ fn ambiguous_registry() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crates-io is replaced with remote registry alternative;
-include `--registry alternative` or `--registry crates-io`
+       include `--registry alternative` or `--registry crates-io`
 
 "#]])
         .run();
@@ -210,7 +210,7 @@ fn publish_with_replacement() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -223,7 +223,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -332,8 +332,8 @@ fn source_replacement_with_no_package_in_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `bar` found
-location searched: directory source `[ROOT]/vendor` (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: directory source `[ROOT]/vendor` (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();

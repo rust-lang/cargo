@@ -558,8 +558,8 @@ fn reserved_profile_names() {
             .with_stderr_data(&format!(
                 "\
 [ERROR] profile name `{}` is reserved
-Please choose a different name.
-See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+       Please choose a different name.
+       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
 ",
                 name
             ))

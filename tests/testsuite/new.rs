@@ -154,8 +154,8 @@ fn existing() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo` package
 [ERROR] destination `[ROOT]/foo` already exists
-
-Use `cargo init` to initialize the directory
+       
+       Use `cargo init` to initialize the directory
 
 "#]])
         .run();
@@ -168,13 +168,13 @@ fn invalid_characters() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo.rs` package
 [ERROR] invalid character `.` in package name: `foo.rs`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "foo.rs", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.rs.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "foo.rs"
-    path = "src/main.rs"
-
+       If you need a package name to not match the directory name, consider using --name flag.
+       If you need a binary with the name "foo.rs", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.rs.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "foo.rs"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -187,13 +187,13 @@ fn reserved_name() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `test` package
 [ERROR] the name `test` cannot be used as a package name, it conflicts with Rust's built-in test library
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "test", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/test.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "test"
-    path = "src/main.rs"
-
+       If you need a package name to not match the directory name, consider using --name flag.
+       If you need a binary with the name "test", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/test.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "test"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -206,7 +206,7 @@ fn reserved_binary_name() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `incremental` package
 [ERROR] the name `incremental` cannot be used as a package name, it conflicts with cargo's build directory names
-If you need a package name to not match the directory name, consider using --name flag.
+       If you need a package name to not match the directory name, consider using --name flag.
 
 "#]])
         .run();
@@ -228,13 +228,13 @@ fn keyword_name() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `pub` package
 [ERROR] the name `pub` cannot be used as a package name, it is a Rust keyword
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "pub", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/pub.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "pub"
-    path = "src/main.rs"
-
+       If you need a package name to not match the directory name, consider using --name flag.
+       If you need a binary with the name "pub", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/pub.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "pub"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -245,14 +245,14 @@ fn std_name() {
     cargo_process("new core").with_stderr_data(str![[r#"
 [CREATING] binary (application) `core` package
 [WARNING] the name `core` is part of Rust's standard library
-It is recommended to use a different name to avoid problems.
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "core", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/core.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "core"
-    path = "src/main.rs"
-
+         It is recommended to use a different name to avoid problems.
+         If you need a package name to not match the directory name, consider using --name flag.
+         If you need a binary with the name "core", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/core.rs` or change the name in Cargo.toml with:
+         
+             [[bin]]
+             name = "core"
+             path = "src/main.rs"
+         
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -369,12 +369,12 @@ fn explicit_invalid_name_not_suggested() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `10-invalid` package
 [ERROR] invalid character `1` in package name: `10-invalid`, the name cannot start with a digit
-If you need a binary with the name "10-invalid", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/10-invalid.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "10-invalid"
-    path = "src/main.rs"
-
+       If you need a binary with the name "10-invalid", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/10-invalid.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "10-invalid"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -450,7 +450,7 @@ If you need a package name to not match the directory name, consider using --nam
         cargo_process("new nul").with_stderr_data(str![[r#"
 [CREATING] binary (application) `nul` package
 [WARNING] the name `nul` is a reserved Windows filename
-This package will not work on Windows platforms.
+         This package will not work on Windows platforms.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -462,7 +462,7 @@ fn non_ascii_name() {
     cargo_process("new Привет").with_stderr_data(str![[r#"
 [CREATING] binary (application) `Привет` package
 [WARNING] the name `Привет` contains non-ASCII characters
-Non-ASCII crate names are not supported by Rust.
+         Non-ASCII crate names are not supported by Rust.
 [WARNING] the name `Привет` is not snake_case or kebab-case which is recommended for package names, consider `привет`
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -477,13 +477,13 @@ fn non_ascii_name_invalid() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `ⒶⒷⒸ` package
 [ERROR] invalid character `Ⓐ` in package name: `ⒶⒷⒸ`, the first character must be a Unicode XID start character (most letters or `_`)
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "ⒶⒷⒸ", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "ⒶⒷⒸ"
-    path = "src/main.rs"
-
+       If you need a package name to not match the directory name, consider using --name flag.
+       If you need a binary with the name "ⒶⒷⒸ", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "ⒶⒷⒸ"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -493,13 +493,13 @@ If you need a binary with the name "ⒶⒷⒸ", use a valid package name, and se
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `a¼` package
 [ERROR] invalid character `¼` in package name: `a¼`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "a¼", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/a¼.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "a¼"
-    path = "src/main.rs"
-
+       If you need a package name to not match the directory name, consider using --name flag.
+       If you need a binary with the name "a¼", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/a¼.rs` or change the name in Cargo.toml with:
+       
+           [[bin]]
+           name = "a¼"
+           path = "src/main.rs"
+       
 
 "#]])
         .run();
@@ -579,7 +579,7 @@ fn path_with_invalid_character() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `testing` package
 [WARNING] the path `[ROOT]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `"`)
-It is recommended to use a different name to avoid problems.
+         It is recommended to use a different name to avoid problems.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]])

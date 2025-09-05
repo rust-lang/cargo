@@ -1739,9 +1739,9 @@ foo v0.1.0 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1.0"` (locked to 1.0.1)
-  version 1.0.1 requires a Cargo version that supports index version 3
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+         version 1.0.1 requires a Cargo version that supports index version 3
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -2262,7 +2262,7 @@ fn publish_artifact_dep() {
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+      You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
@@ -3305,7 +3305,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [ERROR] failed to determine target information for target `custom-target`.
-  Artifact dependency `baz` in package `bar v0.0.0 ([ROOT]/foo/bar)` requires building for `custom-target`
+         Artifact dependency `baz` in package `bar v0.0.0 ([ROOT]/foo/bar)` requires building for `custom-target`
 
 Caused by:
   failed to run `rustc` to learn about target-specific information

@@ -858,9 +858,9 @@ fn test_override_dep() {
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
-  registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
-  git+[ROOTURL]/override#bar@0.1.0
+       Please re-run this command with one of the following specifications:
+         registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
+         git+[ROOTURL]/override#bar@0.1.0
 
 "#]])
         .run();
@@ -1346,9 +1346,9 @@ fn override_plus_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] cyclic package dependency: package `bar v0.1.0 ([ROOT]/foo/bar)` depends on itself. Cycle:
-package `bar v0.1.0 ([ROOT]/foo/bar)`
-    ... which satisfies dependency `bar = "^0.1"` of package `foo v0.0.1 ([ROOT]/foo)`
-    ... which satisfies path dependency `foo` of package `bar v0.1.0 ([ROOT]/foo/bar)`
+       package `bar v0.1.0 ([ROOT]/foo/bar)`
+           ... which satisfies dependency `bar = "^0.1"` of package `foo v0.0.1 ([ROOT]/foo)`
+           ... which satisfies path dependency `foo` of package `bar v0.1.0 ([ROOT]/foo/bar)`
 
 "#]])
         .run();

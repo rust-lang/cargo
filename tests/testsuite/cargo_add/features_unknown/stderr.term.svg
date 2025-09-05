@@ -2,8 +2,8 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-bright-red { fill: #FF5555 }
     .fg-green { fill: #00AA00 }
-    .fg-red { fill: #AA0000 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -23,11 +23,11 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> your-face v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> unrecognized feature for crate your-face: noze</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate your-face: noze</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan>       </tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>help: a feature with a similar name exists: `nose`</tspan>
+    <tspan x="10px" y="100px"><tspan>       help: a feature with a similar name exists: `nose`</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>

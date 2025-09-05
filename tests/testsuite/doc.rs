@@ -250,9 +250,9 @@ fn doc_multiple_targets_same_name_lib() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -298,15 +298,15 @@ fn doc_multiple_targets_same_name() {
     p.cargo("doc --workspace")
         .with_stderr_data(str![[r#"
 [WARNING] output filename collision.
-The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same output filename as the lib target `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
-The targets should have unique names.
-This is a known bug where multiple crates with the same name use
-the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo_lib/index.html and 1 other file
+         The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same output filename as the lib target `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+         Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
+         The targets should have unique names.
+         This is a known bug where multiple crates with the same name use
+         the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 
 "#]].unordered())
         .run();
@@ -348,9 +348,9 @@ fn doc_multiple_targets_same_name_bin() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -514,15 +514,15 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
         // concurrently.
         .with_stderr_data(str![[r#"
 [WARNING] output filename collision.
-The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
-The targets should have unique names.
-This is a known bug where multiple crates with the same name use
-the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
+         The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+         Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+         The targets should have unique names.
+         This is a known bug where multiple crates with the same name use
+         the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 
 "#]].unordered())
         .run();
@@ -558,11 +558,11 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
         // concurrently.
         .with_stderr_data(str![[r#"
 [WARNING] output filename collision.
-The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
-The targets should have unique names.
-This is a known bug where multiple crates with the same name use
-the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+         The bin target `foo` in package `foo v0.0.1 ([ROOT]/foo)` has the same output filename as the lib target `foo` in package `foo v0.0.1 ([ROOT]/foo)`.
+         Colliding filename is: [ROOT]/foo/target/doc/foo/index.html
+         The targets should have unique names.
+         This is a known bug where multiple crates with the same name use
+         the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1409,16 +1409,16 @@ fn doc_all_member_dependency_same_name() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [WARNING] output filename collision.
-The lib target `bar` in package `bar v0.1.0` has the same output filename as the lib target `bar` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Colliding filename is: [ROOT]/foo/target/doc/bar/index.html
-The targets should have unique names.
-This is a known bug where multiple crates with the same name use
-the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] bar v0.1.0
 [CHECKING] bar v0.1.0
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
+         The lib target `bar` in package `bar v0.1.0` has the same output filename as the lib target `bar` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+         Colliding filename is: [ROOT]/foo/target/doc/bar/index.html
+         The targets should have unique names.
+         This is a known bug where multiple crates with the same name use
+         the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 
 "#]].unordered())
         .run();
@@ -2924,7 +2924,7 @@ fn rustdoc_depinfo_gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 
 "#]])
         .run();

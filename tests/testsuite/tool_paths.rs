@@ -109,8 +109,8 @@ fn custom_linker_cfg_collision() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] several matching instances of `target.'cfg(..)'.linker` in configurations
-first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
-second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
+       first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
+       second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();
@@ -326,8 +326,8 @@ fn custom_runner_cfg_collision() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in configurations
-first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
-second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
+       first match `cfg(not(target_arch = "avr"))` located in [ROOT]/foo/.cargo/config.toml
+       second match `cfg(not(target_os = "none"))` located in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();

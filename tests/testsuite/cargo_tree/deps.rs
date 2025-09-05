@@ -517,8 +517,8 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree -i targetdep")
         .with_stderr_data(str![[r#"
 [WARNING] nothing to print.
-
-To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+        
+        To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
 
 "#]])
         .run();
@@ -1632,9 +1632,9 @@ fn ambiguous_name() {
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [ERROR] There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
-Please re-run this command with one of the following specifications:
-  dep@1.0.0
-  dep@2.0.0
+       Please re-run this command with one of the following specifications:
+         dep@1.0.0
+         dep@2.0.0
 
 "#]])
         .with_status(101)
@@ -2099,8 +2099,8 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree --prune no-dep")
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `no-dep` did not match any packages
-
-[HELP] a package with a similar name exists: `bdep`
+       
+       [HELP] a package with a similar name exists: `bdep`
 
 "#]])
         .with_status(101)
