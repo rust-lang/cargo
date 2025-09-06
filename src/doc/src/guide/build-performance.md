@@ -1,17 +1,23 @@
 # Optimizing Build Performance
 
-Cargo uses configuration defaults that try to balance various aspects, including debuggability, runtime performance, build performance, binary size and others. Because of that, build performance is sometimes traded off for other benefits which may not be as important for your circumstances. This guide will step you through changes you can make to improve build performance.
+This guide will step you through Cargo configuration options and source code organization patterns that can help improve build performance, by prioritizing it over other aspects which may not be as important for your circumstances.
 
-Same as when optimizing runtime performance, be sure to measure these changes against the workflows you actually care about, as we provide general guidelines and your circumstances may be different.
+Same as when optimizing runtime performance, be sure to measure these changes against the workflows you actually care about, as we provide general guidelines and your circumstances may be different, it is possible that some of these approaches might actually make build performance worse for your use-case.
 
 Example workflows to consider include:
 - Compiler feedback as you develop (`cargo check` after making a code change)
 - Test feedback as you develop (`cargo test` after making a code change)
 - CI builds
 
-All approaches described below require you to modify [Cargo configuration](#where-to-apply-configuration-changes). Note that some of them currently require using the nightly toolchain.
+## Cargo and Compiler Configuration
 
-## Reduce amount of generated debug information
+> Note that some approaches described in this section currently require using the nightly toolchain.
+
+Cargo uses configuration defaults that try to balance several aspects, including debuggability, runtime performance, build performance, binary size and others. This section describes several approaches for changing these defaults that should be designed to maximize build performance.
+
+You can set the described options either in the [`Cargo.toml` manifest](../reference/profiles.md), which will make them available for all developers who work on the given crate/project, or in the [`config.toml` configuration file](../reference/config.md), where you can apply them only for you or even globally for all your local projects.
+
+### Reduce amount of generated debug information
 
 Recommendation: Add to your `Cargo.toml` or `.cargo/config.toml`:
 
@@ -29,43 +35,42 @@ debug = true
 
 This will:
 - Change the [`dev` profile](../reference/profiles.md#dev) (default for development commands) to:
-    - Limit [debug information](../reference/profiles.md#debug) for workspace members to what is needed for useful panic backtraces
-    - Avoid generating any debug information for dependencies
+  - Limit [debug information](../reference/profiles.md#debug) for workspace members to what is needed for useful panic backtraces
+  - Avoid generating any debug information for dependencies
 - Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
 
 Trade-offs:
-- ✅ Faster per-crate build times
+- ✅ Faster build times
 - ✅ Faster link times
-- ✅ Smaller disk usage of the `target` directory 
+- ✅ Smaller disk usage of the `target` directory
 - ❌ Requires a full rebuild to have a high-quality debugger experience
 
-## Use an alternative codegen backend
+### Use an alternative codegen backend
 
 > **This requires nightly/unstable features**
 
-The component of the Rust compiler that generates executable code is called a "codegen backend". The default backend is LLVM, which produces very optimized code, at the cost of relatively slow compilation time. You can try to use a different codegen backend in order to speed up the compilation of your crate.
+Recommendation:
 
-You can use the [Cranelift](https://github.com/rust-lang/rustc_codegen_cranelift) backend, which is designed for fast(er) compilation time. You can install this backend using rustup:
+- Install the Cranelift codegen backend rustup component
+    ```console
+    $ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+    ```
+- Add to your `Cargo.toml` or `.cargo/config.toml`:
+    ```toml
+    [profile.dev]
+    codegen-backend = "cranelift"
+    ```
+- Run Cargo with `-Z codegen-backend` or enable the [`codegen-backend`](../reference/unstable.md#codegen-backend) feature in `.cargo/config.toml`.
+  - This is required because this is currently an unstable feature.
 
-```console
-$ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
-```
+This will change the [`dev` profile](../reference/profiles.md#dev) to use the [Cranelift codegen backend](https://github.com/rust-lang/rustc_codegen_cranelift) for generating machine code, instead of the default LLVM backend. The Cranelift backend should generate code faster than LLVM, which should result in improved build performance.
 
-and then enable it for a given Cargo profile using the `codegen-backend` option in `Cargo.toml`:
-```toml
-[profile.dev]
-codegen-backend = "cranelift"
-```
+Trade-offs:
+- ✅ Faster build times
+- ❌ Worse runtime performance of the generated code
+- ❌ Requires using nightly Rust and an unstable feature
+- ❌ Only available for [certain targets](https://github.com/rust-lang/rustc_codegen_cranelift?tab=readme-ov-file#platform-support)
+- ❌ Might not support all Rust features (e.g. unwinding)
 
-Since this is currently an unstable option, you will also need to either pass `-Z codegen-backend` to Cargo, or enable this unstable option in the `.cargo/config.toml` file. You can find more information about the unstable `codegen-backend` profile option [here](../reference/unstable.md#codegen-backend).
-
-Note that the Cranelift backend might not support all features used by your crate. It is also available only for a limited set of targets.
-
-
-## Where to apply configuration changes
-
-You can apply the configuration changes described above in several places:
-
-- If you apply them to the `Cargo.toml` manifest, they will affect all developers who work on the given crate/project. 
-- If you apply them to the `<workspace>/.cargo/config.toml` file, they will affect only you (unless this file is checked into version control).
-- If you apply them to the `$CARGO_HOME/.cargo/config.toml` file, they will be applied globally to all Rust projects that you work on.
+## Source code organization
+TODO
