@@ -17,6 +17,7 @@
     * [Continuous Integration](guide/continuous-integration.md)
     * [Publishing on crates.io](reference/publishing.md)
     * [Cargo Home](guide/cargo-home.md)
+    * [Optimizing Build Performance](guide/build-performance.md)
 
 * [Cargo Reference](reference/index.md)
     * [The Manifest Format](reference/manifest.md)

@@ -13,3 +13,4 @@ develop Rust packages.
 * [Continuous Integration](continuous-integration.md)
 * [Publishing on crates.io](../reference/publishing.md)
 * [Cargo Home](cargo-home.md)
+* [Optimizing Build Performance](build-performance.md)
