@@ -1704,15 +1704,34 @@ fn build_deps_args(
 
     let mut unstable_opts = false;
 
-    for dep in deps {
-        if dep.unit.mode.is_run_custom_build() {
-            cmd.env(
-                "OUT_DIR",
-                &build_runner.files().build_script_out_dir(&dep.unit),
-            );
-        }
+    // Add `OUT_DIR` environment variables for build scripts
+    let first_custom_build_dep = deps.iter().find(|dep| dep.unit.mode.is_run_custom_build());
+    if let Some(dep) = first_custom_build_dep {
+        let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+        cmd.env("OUT_DIR", &out_dir);
     }
 
+    // Adding output directory for each build script
+    let is_multiple_build_scripts_enabled = unit
+        .pkg
+        .manifest()
+        .unstable_features()
+        .require(Feature::multiple_build_scripts())
+        .is_ok();
+
+    if is_multiple_build_scripts_enabled {
+        for dep in deps {
+            if dep.unit.mode.is_run_custom_build() {
+                let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+                let target_name = dep.unit.target.name();
+                let out_dir_prefix = target_name
+                    .strip_prefix("build-script-")
+                    .unwrap_or(target_name);
+                let out_dir_name = format!("{out_dir_prefix}_OUT_DIR");
+                cmd.env(&out_dir_name, &out_dir);
+            }
+        }
+    }
     for arg in extern_args(build_runner, unit, &mut unstable_opts)? {
         cmd.arg(arg);
     }

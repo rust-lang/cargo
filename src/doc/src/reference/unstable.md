@@ -324,6 +324,10 @@ version = "0.0.1"
 build = ["foo.rs", "bar.rs"]
 ```
 
+**Accessing Output Directories**:  Output directory of each build script can be accessed by using `<script-name>_OUT_DIR` 
+  where the `<script-name>` is the file-stem of the build script, exactly as-is.
+  For example, `bar_OUT_DIR` for script at `foo/bar.rs`. (Only set during compilation, can be accessed via `env!` macro)
+
 ## public-dependency
 * Tracking Issue: [#44663](https://github.com/rust-lang/rust/issues/44663)
 

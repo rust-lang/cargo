@@ -549,86 +549,7 @@ fn build_script_with_conflicting_out_dirs() {
                 build = ["build1.rs", "build2.rs"]
             "#,
         )
-        // OUT_DIR is set to the lexicographically largest build script's OUT_DIR by default
-        .file(
-            "src/main.rs",
-            r#"
-                include!(concat!(env!("OUT_DIR"), "/foo.rs"));
-                fn main() {
-                    println!("{}", message());
-                }
-            "#,
-        )
-        .file(
-            "build1.rs",
-            r#"
-            use std::env;
-            use std::fs;
-            use std::path::Path;
-
-            fn main() {
-                let out_dir = env::var_os("OUT_DIR").unwrap();
-                let dest_path = Path::new(&out_dir).join("foo.rs");
-                fs::write(
-                    &dest_path,
-                    "pub fn message() -> &'static str {
-                        \"Hello, from Build Script 1!\"
-                    }
-                    "
-                ).unwrap();
-             }"#,
-        )
-        .file(
-            "build2.rs",
-            r#"
-            use std::env;
-            use std::fs;
-            use std::path::Path;
-
-            fn main() {
-                let out_dir = env::var_os("OUT_DIR").unwrap();
-                let dest_path = Path::new(&out_dir).join("foo.rs");
-                fs::write(
-                    &dest_path,
-                    "pub fn message() -> &'static str {
-                        \"Hello, from Build Script 2!\"
-                    }
-                    "
-                ).unwrap();
-             }"#,
-        )
-        .build();
-
-    p.cargo("run -v")
-        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
-        .with_status(0)
-        .with_stdout_data(str![[r#"
-Hello, from Build Script 2!
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn build_script_with_conflicts_reverse_sorted() {
-    // In this, multiple scripts create file with same name in their respective OUT_DIR.
-    // It is different from above because `package.build` is not sorted in this.
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["multiple-build-scripts"]
-
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2024"
-
-                build = ["build2.rs", "build1.rs"]
-            "#,
-        )
-        // OUT_DIR is set to the lexicographically largest build script's OUT_DIR by default
+        // By default, OUT_DIR is set to that of the first build script in the array
         .file(
             "src/main.rs",
             r#"
@@ -683,6 +604,85 @@ fn build_script_with_conflicts_reverse_sorted() {
         .with_status(0)
         .with_stdout_data(str![[r#"
 Hello, from Build Script 1!
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn build_script_with_conflicts_reverse_sorted() {
+    // In this, multiple scripts create file with same name in their respective OUT_DIR.
+    // It is different from above because `package.build` is not sorted in this.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["multiple-build-scripts"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                build = ["build2.rs", "build1.rs"]
+            "#,
+        )
+        // By default, OUT_DIR is set to that of the first build script in the array
+        .file(
+            "src/main.rs",
+            r#"
+                include!(concat!(env!("OUT_DIR"), "/foo.rs"));
+                fn main() {
+                    println!("{}", message());
+                }
+            "#,
+        )
+        .file(
+            "build1.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 1!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .file(
+            "build2.rs",
+            r#"
+            use std::env;
+            use std::fs;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let dest_path = Path::new(&out_dir).join("foo.rs");
+                fs::write(
+                    &dest_path,
+                    "pub fn message() -> &'static str {
+                        \"Hello, from Build Script 2!\"
+                    }
+                    "
+                ).unwrap();
+             }"#,
+        )
+        .build();
+
+    p.cargo("run -v")
+        .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
+        .with_status(0)
+        .with_stdout_data(str![[r#"
+Hello, from Build Script 2!
 
 "#]])
         .run();
@@ -785,9 +785,11 @@ fn multiple_out_dirs() {
         .file(
             "src/main.rs",
             r#"
-                include!(concat!(env!("OUT_DIR"), "/foo.rs"));
+                include!(concat!(env!("build1_OUT_DIR"), "/foo.rs"));
+                include!(concat!(env!("build2_OUT_DIR"), "/foo.rs"));
                 fn main() {
-                    println!("{}", message());
+                    println!("{}", message1());
+                    println!("{}", message2());
                 }
             "#,
         )
@@ -803,7 +805,7 @@ fn multiple_out_dirs() {
                 let dest_path = Path::new(&out_dir).join("foo.rs");
                 fs::write(
                     &dest_path,
-                    "pub fn message() -> &'static str {
+                    "pub fn message1() -> &'static str {
                         \"Hello, from Build Script 1!\"
                     }
                     "
@@ -822,7 +824,7 @@ fn multiple_out_dirs() {
                 let dest_path = Path::new(&out_dir).join("foo.rs");
                 fs::write(
                     &dest_path,
-                    "pub fn message() -> &'static str {
+                    "pub fn message2() -> &'static str {
                         \"Hello, from Build Script 2!\"
                     }
                     "
@@ -835,6 +837,7 @@ fn multiple_out_dirs() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(0)
         .with_stdout_data(str![[r#"
+Hello, from Build Script 1!
 Hello, from Build Script 2!
 
 "#]])
