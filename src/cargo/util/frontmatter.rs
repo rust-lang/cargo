@@ -120,8 +120,15 @@ impl<'s> ScriptSource<'s> {
 
         source.content = content_start..content_end;
 
-        let repeat = Self::parse(source.content())?;
-        if repeat.frontmatter.is_some() {
+        if let Some(nl_end) = strip_ws_lines(input.as_ref()) {
+            let _ = input.next_slice(nl_end);
+        }
+        let fence_length = input
+            .as_ref()
+            .char_indices()
+            .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
+            .unwrap_or_else(|| input.eof_offset());
+        if 0 < fence_length {
             return Err(FrontmatterError::new(format!(
                 "only one frontmatter is supported"
             )));
