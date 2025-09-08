@@ -59,6 +59,9 @@ impl<'s> ScriptSource<'s> {
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
             .unwrap_or_else(|| input.eof_offset());
+        let open_start = input.current_token_start();
+        let fence_pattern = input.next_slice(fence_length);
+        let open_end = input.current_token_start();
         match fence_length {
             0 => {
                 return Ok(source);
@@ -71,9 +74,6 @@ impl<'s> ScriptSource<'s> {
             }
             _ => {}
         }
-        let open_start = input.current_token_start();
-        let fence_pattern = input.next_slice(fence_length);
-        let open_end = input.current_token_start();
         source.open = Some(open_start..open_end);
         let Some(info_nl) = input.find_slice("\n") else {
             return Err(FrontmatterError::new(format!(
