@@ -67,8 +67,7 @@ pub fn read_manifest(
     let mut errors = Default::default();
 
     let is_embedded = is_embedded(path);
-    let contents = read_toml_string(path, is_embedded, gctx)
-        .map_err(|err| ManifestError::new(err, path.into()))?;
+    let contents = read_toml_string(path, is_embedded, gctx)?;
     let document = parse_document(&contents)
         .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
     let original_toml = deserialize_toml(&document)
@@ -152,12 +151,13 @@ pub fn read_manifest(
 
 #[tracing::instrument(skip_all)]
 fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> CargoResult<String> {
-    let mut contents = paths::read(path)?;
+    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
     if is_embedded {
         if !gctx.cli_unstable().script {
             anyhow::bail!("parsing `{}` requires `-Zscript`", path.display());
         }
-        contents = embedded::expand_manifest(&contents)?;
+        contents = embedded::expand_manifest(&contents)
+            .map_err(|e| emit_frontmatter_diagnostic(e, &contents, path, gctx))?;
     }
     Ok(contents)
 }
@@ -2775,6 +2775,31 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
     }
 
     Ok(rustflags)
+}
+
+fn emit_frontmatter_diagnostic(
+    e: crate::util::frontmatter::FrontmatterError,
+    contents: &str,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
+) -> anyhow::Error {
+    let span = e.span();
+
+    // Get the path to the manifest, relative to the cwd
+    let manifest_path = diff_paths(manifest_file, gctx.cwd())
+        .unwrap_or_else(|| manifest_file.to_path_buf())
+        .display()
+        .to_string();
+    let group = Group::with_title(Level::ERROR.primary_title(e.message())).element(
+        Snippet::source(contents)
+            .path(manifest_path)
+            .annotation(AnnotationKind::Primary.span(span)),
+    );
+
+    if let Err(err) = gctx.shell().print_report(&[group], true) {
+        return err.into();
+    }
+    return AlreadyPrintedError::new(e.into()).into();
 }
 
 fn emit_toml_diagnostic(

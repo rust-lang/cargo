@@ -1,1 +1,5 @@
 [ERROR] no closing `----` found for frontmatter
+ --> script:1:1
+  |
+1 | ----cargo
+  | ^^^^
