@@ -146,8 +146,7 @@ fn incompat_in_dependency() {
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
-[NOTE] 
-To solve this problem, you can try the following approaches:
+[NOTE] To solve this problem, you can try the following approaches:
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
@@ -179,7 +178,6 @@ to be in wide use.
 
 Each warning should contain a link for more information on what the warning
 means and how to resolve it.
-
 
 To solve this problem, you can try the following approaches:
 
@@ -603,8 +601,7 @@ fn suggestions_for_updates() {
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: big_update v1.0.0, with_updates v1.0.0, without_updates v1.0.0
-[NOTE] 
-To solve this problem, you can try the following approaches:
+[NOTE] To solve this problem, you can try the following approaches:
 
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
@@ -650,7 +647,6 @@ to be in wide use.
 
 Each warning should contain a link for more information on what the warning
 means and how to resolve it.
-
 
 To solve this problem, you can try the following approaches:
 
@@ -718,8 +714,7 @@ fn correct_report_id_when_cached() {
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
-[NOTE] 
-To solve this problem, you can try the following approaches:
+[NOTE] To solve this problem, you can try the following approaches:
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
@@ -745,8 +740,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
-[NOTE] 
-To solve this problem, you can try the following approaches:
+[NOTE] To solve this problem, you can try the following approaches:
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the

@@ -496,12 +496,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         String::new()
     } else {
         let mut suggestion_message = String::new();
-        writeln!(
-            &mut suggestion_message,
-            "
-{suggestion_header}"
-        )
-        .unwrap();
+        writeln!(&mut suggestion_message, "{suggestion_header}").unwrap();
         for suggestion in &suggestions {
             writeln!(
                 &mut suggestion_message,
