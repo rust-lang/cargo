@@ -191,8 +191,8 @@ fn alias_shadowing_external_subcommand() {
         .env("PATH", &path)
         .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
+         This was previously accepted but is being phased out; it will become a hard error in a future release.
+         For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -226,8 +226,8 @@ fn default_args_alias() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
+         This was previously accepted but is being phased out; it will become a hard error in a future release.
+         For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 [ERROR] alias echo has unresolvable recursive definition: echo -> echo
 
 "#]])
@@ -238,8 +238,8 @@ For more information, see issue #10049 <https://github.com/rust-lang/cargo/issue
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
+         This was previously accepted but is being phased out; it will become a hard error in a future release.
+         For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 [ERROR] alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
 
 "#]])
