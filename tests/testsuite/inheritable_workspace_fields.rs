@@ -324,7 +324,7 @@ fn inherit_own_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] bar v0.2.0 ([ROOT]/foo)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -491,7 +491,7 @@ fn inherit_own_detailed_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] bar v0.2.0 ([ROOT]/foo)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -755,9 +755,9 @@ fn inherit_workspace_fields() {
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v1.2.3 ([ROOT]/foo/bar)
 [WARNING] only one of `license` or `license-file` is necessary
-`license` should be used if the package license can be expressed with a standard SPDX expression.
-`license-file` should be used if the package uses a non-standard license.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+         `license` should be used if the package license can be expressed with a standard SPDX expression.
+         `license-file` should be used if the package uses a non-standard license.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
 [COMPILING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)
@@ -926,7 +926,7 @@ fn inherit_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] bar v0.2.0 ([ROOT]/foo/bar)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
