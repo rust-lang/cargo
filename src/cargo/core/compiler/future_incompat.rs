@@ -428,14 +428,6 @@ pub fn save_and_display_report(
         .collect();
     let package_vers: Vec<_> = package_ids.iter().map(|pid| pid.to_string()).collect();
 
-    if should_display_message || bcx.build_config.future_incompat_report {
-        drop(bcx.gctx.shell().warn(&format!(
-            "the following packages contain code that will be rejected by a future \
-             version of Rust: {}",
-            package_vers.join(", ")
-        )));
-    }
-
     let updated_versions = get_updates(bcx.ws, &package_ids).unwrap_or(String::new());
 
     let update_message = if !updated_versions.is_empty() {
@@ -503,6 +495,13 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
     let saved_report_id =
         current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
+    if should_display_message || bcx.build_config.future_incompat_report {
+        drop(bcx.gctx.shell().warn(&format!(
+            "the following packages contain code that will be rejected by a future \
+             version of Rust: {}",
+            package_vers.join(", ")
+        )));
+    }
     if bcx.build_config.future_incompat_report {
         if !suggestion_message.is_empty() {
             drop(bcx.gctx.shell().note(&suggestion_message));
