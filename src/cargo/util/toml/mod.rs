@@ -69,10 +69,10 @@ pub fn read_manifest(
     let is_embedded = is_embedded(path);
     let contents = read_toml_string(path, is_embedded, gctx)
         .map_err(|err| ManifestError::new(err, path.into()))?;
-    let document =
-        parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
+    let document = parse_document(&contents)
+        .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
     let original_toml = deserialize_toml(&document)
-        .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
+        .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
 
     let mut manifest = (|| {
         let empty = Vec::new();
@@ -2777,7 +2777,7 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
     Ok(rustflags)
 }
 
-fn emit_diagnostic(
+fn emit_toml_diagnostic(
     e: toml::de::Error,
     contents: &str,
     manifest_file: &Path,
