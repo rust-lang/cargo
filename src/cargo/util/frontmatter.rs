@@ -1,41 +1,66 @@
 use crate::CargoResult;
 
+type Span = std::ops::Range<usize>;
+
 #[derive(Debug)]
 pub struct ScriptSource<'s> {
-    shebang: Option<&'s str>,
-    info: Option<&'s str>,
-    frontmatter: Option<&'s str>,
-    content: &'s str,
+    /// The full file
+    raw: &'s str,
+    /// The `#!/usr/bin/env cargo` line, if present
+    shebang: Option<Span>,
+    /// The code fence opener (`---`)
+    open: Option<Span>,
+    /// Trailing text after `ScriptSource::open` that identifies the meaning of
+    /// `ScriptSource::frontmatter`
+    info: Option<Span>,
+    /// The lines between `ScriptSource::open` and `ScriptSource::close`
+    frontmatter: Option<Span>,
+    /// The code fence closer (`---`)
+    close: Option<Span>,
+    /// All content after the frontmatter and shebang
+    content: Span,
 }
 
 impl<'s> ScriptSource<'s> {
-    pub fn parse(input: &'s str) -> CargoResult<Self> {
+    pub fn parse(raw: &'s str) -> CargoResult<Self> {
+        use winnow::stream::FindSlice as _;
+        use winnow::stream::Location as _;
+        use winnow::stream::Offset as _;
+        use winnow::stream::Stream as _;
+
+        let content_end = raw.len();
         let mut source = Self {
+            raw,
             shebang: None,
+            open: None,
             info: None,
             frontmatter: None,
-            content: input,
+            close: None,
+            content: 0..content_end,
         };
 
-        if let Some(shebang_end) = strip_shebang(source.content) {
-            let (shebang, content) = source.content.split_at(shebang_end);
-            source.shebang = Some(shebang);
-            source.content = content;
+        let mut input = winnow::stream::LocatingSlice::new(raw);
+
+        if let Some(shebang_end) = strip_shebang(input.as_ref()) {
+            let shebang_start = input.current_token_start();
+            let _ = input.next_slice(shebang_end);
+            let shebang_end = input.current_token_start();
+            source.shebang = Some(shebang_start..shebang_end);
+            source.content = shebang_end..content_end;
         }
 
-        let mut rest = source.content;
-
         // Whitespace may precede a frontmatter but must end with a newline
-        if let Some(nl_end) = strip_ws_lines(rest) {
-            rest = &rest[nl_end..];
+        if let Some(nl_end) = strip_ws_lines(input.as_ref()) {
+            let _ = input.next_slice(nl_end);
         }
 
         // Opens with a line that starts with 3 or more `-` followed by an optional identifier
         const FENCE_CHAR: char = '-';
-        let fence_length = rest
+        let fence_length = input
+            .as_ref()
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
-            .unwrap_or(rest.len());
+            .unwrap_or_else(|| input.eof_offset());
         match fence_length {
             0 => {
                 return Ok(source);
@@ -48,39 +73,50 @@ impl<'s> ScriptSource<'s> {
             }
             _ => {}
         }
-        let (fence_pattern, rest) = rest.split_at(fence_length);
-        let Some(info_end_index) = rest.find('\n') else {
+        let open_start = input.current_token_start();
+        let fence_pattern = input.next_slice(fence_length);
+        let open_end = input.current_token_start();
+        source.open = Some(open_start..open_end);
+        let Some(info_nl) = input.find_slice("\n") else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let (info, rest) = rest.split_at(info_end_index);
+        let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
         if !info.is_empty() {
-            source.info = Some(info);
+            let info_start = info.offset_from(&raw);
+            let info_end = info_start + info.len();
+            source.info = Some(info_start..info_end);
         }
 
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
-        let Some(frontmatter_nl) = rest.find(&nl_fence_pattern) else {
+        let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
             anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
         };
-        let frontmatter = &rest[..frontmatter_nl + 1];
-        let frontmatter = frontmatter
-            .strip_prefix('\n')
-            .expect("earlier `found` + `split_at` left us here");
-        source.frontmatter = Some(frontmatter);
-        let rest = &rest[frontmatter_nl + nl_fence_pattern.len()..];
+        let frontmatter_start = input.current_token_start() + 1; // skip nl from infostring
+        let _ = input.next_slice(frontmatter_nl.start + 1);
+        let frontmatter_end = input.current_token_start();
+        source.frontmatter = Some(frontmatter_start..frontmatter_end);
+        let close_start = input.current_token_start();
+        let _ = input.next_slice(fence_length);
+        let close_end = input.current_token_start();
+        source.close = Some(close_start..close_end);
 
-        let (after_closing_fence, rest) = rest.split_once("\n").unwrap_or((rest, ""));
+        let nl = input.find_slice("\n");
+        let after_closing_fence = input.next_slice(
+            nl.map(|span| span.end)
+                .unwrap_or_else(|| input.eof_offset()),
+        );
+        let content_start = input.current_token_start();
         let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
             anyhow::bail!("trailing characters found after frontmatter close");
         }
 
-        let frontmatter_len = input.len() - rest.len();
-        source.content = &input[frontmatter_len..];
+        source.content = content_start..content_end;
 
-        let repeat = Self::parse(source.content)?;
+        let repeat = Self::parse(source.content())?;
         if repeat.frontmatter.is_some() {
             anyhow::bail!("only one frontmatter is supported");
         }
@@ -89,19 +125,43 @@ impl<'s> ScriptSource<'s> {
     }
 
     pub fn shebang(&self) -> Option<&'s str> {
-        self.shebang
+        self.shebang.clone().map(|span| &self.raw[span])
+    }
+
+    pub fn shebang_span(&self) -> Option<Span> {
+        self.shebang.clone()
+    }
+
+    pub fn open_span(&self) -> Option<Span> {
+        self.open.clone()
     }
 
     pub fn info(&self) -> Option<&'s str> {
-        self.info
+        self.info.clone().map(|span| &self.raw[span])
+    }
+
+    pub fn info_span(&self) -> Option<Span> {
+        self.info.clone()
     }
 
     pub fn frontmatter(&self) -> Option<&'s str> {
-        self.frontmatter
+        self.frontmatter.clone().map(|span| &self.raw[span])
+    }
+
+    pub fn frontmatter_span(&self) -> Option<Span> {
+        self.frontmatter.clone()
+    }
+
+    pub fn close_span(&self) -> Option<Span> {
+        self.close.clone()
     }
 
     pub fn content(&self) -> &'s str {
-        self.content
+        &self.raw[self.content.clone()]
+    }
+
+    pub fn content_span(&self) -> Span {
+        self.content.clone()
     }
 }
 
