@@ -757,9 +757,9 @@ fn inherit_workspace_fields() {
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v1.2.3 ([ROOT]/foo/bar)
 [WARNING] only one of `license` or `license-file` is necessary
-`license` should be used if the package license can be expressed with a standard SPDX expression.
-`license-file` should be used if the package uses a non-standard license.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+         `license` should be used if the package license can be expressed with a standard SPDX expression.
+         `license-file` should be used if the package uses a non-standard license.
+         See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
 [COMPILING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)

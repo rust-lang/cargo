@@ -328,7 +328,7 @@ fn fix_overlapping_max() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] error applying suggestions to `src/lib.rs`
-
+         
 The full error message was:
 
 > cannot replace slice of data that was already replaced

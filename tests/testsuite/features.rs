@@ -1854,7 +1854,7 @@ fn warn_if_default_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `[features]` defines a feature named `default-features`
-[NOTE] only a feature named `default` will be enabled by default
+         [NOTE] only a feature named `default` will be enabled by default
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

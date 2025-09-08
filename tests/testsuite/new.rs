@@ -245,14 +245,14 @@ fn std_name() {
     cargo_process("new core").with_stderr_data(str![[r#"
 [CREATING] binary (application) `core` package
 [WARNING] the name `core` is part of Rust's standard library
-It is recommended to use a different name to avoid problems.
-If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name "core", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/core.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "core"
-    path = "src/main.rs"
-
+         It is recommended to use a different name to avoid problems.
+         If you need a package name to not match the directory name, consider using --name flag.
+         If you need a binary with the name "core", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/core.rs` or change the name in Cargo.toml with:
+         
+             [[bin]]
+             name = "core"
+             path = "src/main.rs"
+         
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -450,7 +450,7 @@ If you need a package name to not match the directory name, consider using --nam
         cargo_process("new nul").with_stderr_data(str![[r#"
 [CREATING] binary (application) `nul` package
 [WARNING] the name `nul` is a reserved Windows filename
-This package will not work on Windows platforms.
+         This package will not work on Windows platforms.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -462,7 +462,7 @@ fn non_ascii_name() {
     cargo_process("new Привет").with_stderr_data(str![[r#"
 [CREATING] binary (application) `Привет` package
 [WARNING] the name `Привет` contains non-ASCII characters
-Non-ASCII crate names are not supported by Rust.
+         Non-ASCII crate names are not supported by Rust.
 [WARNING] the name `Привет` is not snake_case or kebab-case which is recommended for package names, consider `привет`
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -579,7 +579,7 @@ fn path_with_invalid_character() {
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `testing` package
 [WARNING] the path `[ROOT]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `"`)
-It is recommended to use a different name to avoid problems.
+         It is recommended to use a different name to avoid problems.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]])

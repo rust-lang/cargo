@@ -749,9 +749,9 @@ fn install_default_features() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo" requires the features: `a`
-  example "foo" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="a"`
+           bin "foo" requires the features: `a`
+           example "foo" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="a"`
 
 "#]])
         .run();
@@ -903,11 +903,11 @@ fn install_multiple_required_features() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -917,11 +917,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filter `bins` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -931,11 +931,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filter `examples` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -945,11 +945,11 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 [WARNING] target filters `bins`, `examples` specified, but no targets matched; this is a no-op
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo_1" requires the features: `b`, `c`
-  bin "foo_2" requires the features: `a`
-  example "foo_3" requires the features: `b`, `c`
-  example "foo_4" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+           bin "foo_1" requires the features: `b`, `c`
+           bin "foo_2" requires the features: `a`
+           example "foo_3" requires the features: `b`, `c`
+           example "foo_4" requires the features: `a`
+         Consider enabling some of the needed features by passing, e.g., `--features="b c"`
 
 "#]])
         .run();
@@ -1254,9 +1254,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
 [LOCKING] 1 package to latest compatible version
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo" requires the features: `bar/a`
-  example "foo" requires the features: `bar/a`
-Consider enabling some of the needed features by passing, e.g., `--features="bar/a"`
+           bin "foo" requires the features: `bar/a`
+           example "foo" requires the features: `bar/a`
+         Consider enabling some of the needed features by passing, e.g., `--features="bar/a"`
 
 "#]])
         .run();
@@ -1616,15 +1616,15 @@ fn truncated_install_warning_message() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin "foo1" requires the features: `feature1`, `feature2`, `feature3`
-  bin "foo10" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin "foo2" requires the features: `feature2`
-  bin "foo3" requires the features: `feature3`
-  bin "foo4" requires the features: `feature4`, `feature1`
-  bin "foo5" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin "foo6" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-4 more targets also requires features not enabled. See them in the Cargo.toml file.
-Consider enabling some of the needed features by passing, e.g., `--features="feature1 feature2 feature3"`
+           bin "foo1" requires the features: `feature1`, `feature2`, `feature3`
+           bin "foo10" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+           bin "foo2" requires the features: `feature2`
+           bin "foo3" requires the features: `feature3`
+           bin "foo4" requires the features: `feature4`, `feature1`
+           bin "foo5" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+           bin "foo6" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+         4 more targets also requires features not enabled. See them in the Cargo.toml file.
+         Consider enabling some of the needed features by passing, e.g., `--features="feature1 feature2 feature3"`
 
 "#]]).run();
 }

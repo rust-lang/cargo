@@ -471,8 +471,8 @@ fn cargo_compile_duplicate_build_targets() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [WARNING] file `[ROOT]/foo/src/main.rs` found to be present in multiple build targets:
-  * `lib` target `main`
-  * `bin` target `foo`
+           * `lib` target `main`
+           * `bin` target `foo`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1992,7 +1992,7 @@ fn many_crate_types_old_style_lib_location() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [WARNING] path `src/foo.rs` was erroneously implicitly accepted for library `foo`,
-please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
+         please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
