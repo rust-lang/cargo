@@ -406,12 +406,12 @@ fn print_dependencies<'a>(
 
     let name = match kind {
         EdgeKind::Dep(DepKind::Normal) => None,
-        EdgeKind::Dep(DepKind::Build) => {
-            Some(color_print::cstr!("<blue,bold>[build-dependencies]</>"))
-        }
-        EdgeKind::Dep(DepKind::Development) => {
-            Some(color_print::cstr!("<cyan,bold>[dev-dependencies]</>"))
-        }
+        EdgeKind::Dep(DepKind::Build) => Some(color_print::cstr!(
+            "<bright-blue,bold>[build-dependencies]</>"
+        )),
+        EdgeKind::Dep(DepKind::Development) => Some(color_print::cstr!(
+            "<bright-cyan,bold>[dev-dependencies]</>"
+        )),
         EdgeKind::Feature => None,
     };
 

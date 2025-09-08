@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use crate::core::Shell;
-use crate::util::style::{ERROR, HEADER, LITERAL, NOP, NOTE, WARN};
+use crate::util::style::{ERROR, HEADER, LITERAL, NOP, WARN};
 use crate::{
     CargoResult, GlobalContext,
     core::{
@@ -26,7 +26,7 @@ pub(super) fn pretty_view(
     let header = HEADER;
     let error = ERROR;
     let warn = WARN;
-    let note = NOTE;
+    let context = annotate_snippets::renderer::DEFAULT_CONTEXT_STYLE;
 
     let mut shell = gctx.shell();
     let verbosity = shell.verbosity();
@@ -45,7 +45,7 @@ pub(super) fn pretty_view(
         } else {
             format!("#{}", metadata.keywords.join(" #"))
         };
-        write!(shell.out(), " {note}{message}{note:#}")?;
+        write!(shell.out(), " {context}{message}{context:#}")?;
     }
 
     let stdout = shell.out();
@@ -68,7 +68,7 @@ pub(super) fn pretty_view(
         (Some(latest), false) if latest.as_summary().version() != package_id.version() => {
             write!(
                 stdout,
-                " {warn}(latest {} {warn:#}{note}from {}{note:#}{warn}){warn:#}",
+                " {warn}(latest {} {warn:#}{context}from {}{context:#}{warn}){warn:#}",
                 latest.as_summary().version(),
                 pretty_source(summary.source_id(), gctx)
             )?;
@@ -83,7 +83,7 @@ pub(super) fn pretty_view(
         (_, false) => {
             write!(
                 stdout,
-                " {note}(from {}){note:#}",
+                " {context}(from {}){context:#}",
                 pretty_source(summary.source_id(), gctx)
             )?;
         }

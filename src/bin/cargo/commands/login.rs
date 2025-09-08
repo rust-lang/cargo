@@ -21,7 +21,7 @@ pub fn cli() -> Command {
         )
         .arg_silent_suggestion()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help login</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help login</>` for more detailed information.\n"
         ))
 }
 

@@ -105,7 +105,7 @@ pub fn cli() -> Command {
         .arg_timings()
         .arg_lockfile_path()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help install</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help install</>` for more detailed information.\n"
         ))
 }
 

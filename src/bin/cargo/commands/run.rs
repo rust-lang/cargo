@@ -43,7 +43,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help run</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help run</>` for more detailed information.\n"
         ))
 }
 

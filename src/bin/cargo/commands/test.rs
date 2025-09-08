@@ -63,8 +63,8 @@ pub fn cli() -> Command {
         .arg_lockfile_path()
         .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help test</>` for more detailed information.\n\
-             Run `<cyan,bold>cargo test -- --help</>` for test binary options.\n",
+            "Run `<bright-cyan,bold>cargo help test</>` for more detailed information.\n\
+             Run `<bright-cyan,bold>cargo test -- --help</>` for test binary options.\n",
         ))
 }
 
