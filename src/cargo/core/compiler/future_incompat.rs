@@ -501,22 +501,22 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
              version of Rust: {}",
             package_vers.join(", ")
         )));
-    }
-    if bcx.build_config.future_incompat_report {
-        if !suggestion_message.is_empty() {
-            drop(bcx.gctx.shell().note(&suggestion_message));
-        }
-        drop(bcx.gctx.shell().note(&format!(
-            "this report can be shown with `cargo report \
+        if bcx.build_config.future_incompat_report {
+            if !suggestion_message.is_empty() {
+                drop(bcx.gctx.shell().note(&suggestion_message));
+            }
+            drop(bcx.gctx.shell().note(&format!(
+                "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
-            saved_report_id
-        )));
-    } else if should_display_message {
-        drop(bcx.gctx.shell().note(&format!(
-            "to see what the problems were, use the option \
+                saved_report_id
+            )));
+        } else if should_display_message {
+            drop(bcx.gctx.shell().note(&format!(
+                "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
              future-incompatibilities --id {}`",
-            saved_report_id
-        )));
+                saved_report_id
+            )));
+        }
     }
 }
