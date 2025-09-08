@@ -4,12 +4,20 @@ type Span = std::ops::Range<usize>;
 
 #[derive(Debug)]
 pub struct ScriptSource<'s> {
+    /// The full file
     raw: &'s str,
+    /// The `#!/usr/bin/env cargo` line, if present
     shebang: Option<Span>,
+    /// The code fence opener (`---`)
     open: Option<Span>,
+    /// Trailing text after `ScriptSource::open` that identifies the meaning of
+    /// `ScriptSource::frontmatter`
     info: Option<Span>,
+    /// The lines between `ScriptSource::open` and `ScriptSource::close`
     frontmatter: Option<Span>,
+    /// The code fence closer (`---`)
     close: Option<Span>,
+    /// All content after the frontmatter and shebang
     content: Span,
 }
 
