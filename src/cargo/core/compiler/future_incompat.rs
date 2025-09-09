@@ -502,10 +502,6 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
 {suggestion_header}"
         )
         .unwrap();
-        if suggestions.len() == 3 {
-            // HACK: there is an inconsistent leading line in this case
-            writeln!(&mut suggestion_message).unwrap();
-        }
         for suggestion in &suggestions {
             writeln!(
                 &mut suggestion_message,

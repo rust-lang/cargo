@@ -606,7 +606,6 @@ fn suggestions_for_updates() {
 [NOTE] 
 To solve this problem, you can try the following approaches:
 
-
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
@@ -654,7 +653,6 @@ means and how to resolve it.
 
 
 To solve this problem, you can try the following approaches:
-
 
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
