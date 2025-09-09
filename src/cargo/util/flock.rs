@@ -435,13 +435,15 @@ fn error_unsupported(err: &std::io::Error) -> bool {
         #[allow(unreachable_patterns)]
         Some(libc::ENOTSUP | libc::EOPNOTSUPP) => true,
         Some(libc::ENOSYS) => true,
-        _ => false,
+        _ => err.kind() == std::io::ErrorKind::Unsupported,
     }
 }
 
 #[cfg(windows)]
 fn error_unsupported(err: &std::io::Error) -> bool {
     use windows_sys::Win32::Foundation::ERROR_INVALID_FUNCTION;
-    err.raw_os_error()
-        .map_or(false, |x| x == ERROR_INVALID_FUNCTION as i32)
+    match err.raw_os_error() {
+        Some(code) if code == ERROR_INVALID_FUNCTION as i32 => true,
+        _ => err.kind() == std::io::ErrorKind::Unsupported,
+    }
 }
