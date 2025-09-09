@@ -539,9 +539,11 @@ fn suggestions_for_updates() {
         .publish();
     Package::new("big_update", "1.0.0")
         .file("src/lib.rs", FUTURE_EXAMPLE)
+        .dep("with_updates", "1.0.0")
         .publish();
     Package::new("without_updates", "1.0.0")
         .file("src/lib.rs", FUTURE_EXAMPLE)
+        .dep("big_update", "1.0.0")
         .publish();
 
     let p = project()
@@ -575,6 +577,7 @@ fn suggestions_for_updates() {
         .publish();
     Package::new("big_update", "2.0.0")
         .file("src/lib.rs", "")
+        .dep("with_updates", "1.0.0")
         .publish();
 
     // This is a hack to force cargo to update the index. Cargo can't do this
@@ -610,7 +613,6 @@ You may want to consider updating them to a newer version to see if the issue ha
 big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 
-
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a
@@ -632,9 +634,10 @@ fix to the maintainers (e.g. by creating a pull request):
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
-"#]].unordered())
+"#]])
         .run();
 
     p.cargo("report future-incompatibilities")
