@@ -505,27 +505,29 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
     if should_display_message || bcx.build_config.future_incompat_report {
-        drop(bcx.gctx.shell().warn(&format!(
+        use annotate_snippets::*;
+        let mut report = vec![Group::with_title(Level::WARNING.secondary_title(format!(
             "the following packages contain code that will be rejected by a future \
              version of Rust: {}",
             package_vers.join(", ")
-        )));
+        )))];
         if bcx.build_config.future_incompat_report {
-            if !suggestion_message.is_empty() {
-                drop(bcx.gctx.shell().note(&suggestion_message));
+            for suggestion in &suggestions {
+                report.push(Group::with_title(Level::HELP.secondary_title(suggestion)));
             }
-            drop(bcx.gctx.shell().note(&format!(
+            report.push(Group::with_title(Level::NOTE.secondary_title(format!(
                 "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
                 saved_report_id
-            )));
+            ))));
         } else if should_display_message {
-            drop(bcx.gctx.shell().note(&format!(
+            report.push(Group::with_title(Level::NOTE.secondary_title(format!(
                 "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
              future-incompatibilities --id {}`",
                 saved_report_id
-            )));
+            ))));
         }
+        drop(bcx.gctx.shell().print_report(&report, false))
     }
 }
