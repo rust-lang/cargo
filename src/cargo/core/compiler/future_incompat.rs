@@ -359,9 +359,10 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
 
         if !updated_versions.is_empty() {
             let updated_versions = itertools::join(updated_versions, ", ");
-            writeln!(
+            write!(
                 updates,
-                "{} has the following newer versions available: {}",
+                "
+{} has the following newer versions available: {}",
                 pkg_id, updated_versions
             )
             .unwrap();
@@ -432,11 +433,10 @@ pub fn save_and_display_report(
 
     let update_message = if !updated_versions.is_empty() {
         format!(
-            "
-- Some affected dependencies have newer versions available.
+            "\
+Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
-
-{updated_versions}\n",
+{updated_versions}",
             updated_versions = updated_versions
         )
     } else {
@@ -448,8 +448,7 @@ You may want to consider updating them to a newer version to see if the issue ha
         .map(|package_id| {
             let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
             format!(
-                "
-  - {package_spec}
+                "  - {package_spec}
   - Repository: {url}
   - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
                 package_spec = format!("{}@{}", package_id.name(), package_id.version()),
@@ -462,36 +461,61 @@ You may want to consider updating them to a newer version to see if the issue ha
             )
         })
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n\n");
 
     let all_is_local = per_package_future_incompat_reports
         .iter()
         .all(|report| report.is_local);
 
-    let suggestion_message = if all_is_local {
-        String::new()
-    } else {
-        format!(
-            "
-To solve this problem, you can try the following approaches:
-
-{update_message}\
-- If the issue is not solved by updating the dependencies, a fix has to be
+    let suggestion_header = "To solve this problem, you can try the following approaches:";
+    let mut suggestions = Vec::new();
+    if !all_is_local {
+        if !update_message.is_empty() {
+            suggestions.push(update_message);
+        }
+        suggestions.push(format!(
+            "\
+If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
 maintainers of this problem (e.g. by creating a bug report) or by proposing a
 fix to the maintainers (e.g. by creating a pull request):
-{upstream_info}
 
-- If waiting for an upstream fix is not an option, you can use the `[patch]`
+{upstream_info}"
+        ));
+        suggestions.push(
+            "\
+If waiting for an upstream fix is not an option, you can use the `[patch]`
 section in `Cargo.toml` to use your own version of the dependency. For more
 information, see:
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-",
-            upstream_info = upstream_info,
-            update_message = update_message,
-        )
-    };
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section"
+                .to_owned(),
+        );
+    }
 
+    let suggestion_message = if suggestions.is_empty() {
+        String::new()
+    } else {
+        let mut suggestion_message = String::new();
+        writeln!(
+            &mut suggestion_message,
+            "
+{suggestion_header}"
+        )
+        .unwrap();
+        if suggestions.len() == 3 {
+            // HACK: there is an inconsistent leading line in this case
+            writeln!(&mut suggestion_message).unwrap();
+        }
+        for suggestion in &suggestions {
+            writeln!(
+                &mut suggestion_message,
+                "
+- {suggestion}"
+            )
+            .unwrap();
+        }
+        suggestion_message
+    };
     let saved_report_id =
         current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
