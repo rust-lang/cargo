@@ -434,8 +434,7 @@ pub fn save_and_display_report(
     let update_message = if !updated_versions.is_empty() {
         format!(
             "\
-Some affected dependencies have newer versions available.
-You may want to consider updating them to a newer version to see if the issue has been fixed.
+Update to a newer version to see if the issue has been fixed:
 {updated_versions}",
             updated_versions = updated_versions
         )
@@ -475,18 +474,15 @@ You may want to consider updating them to a newer version to see if the issue ha
         }
         suggestions.push(format!(
             "\
-If the issue is not solved by updating the dependencies, a fix has to be
-implemented by those dependencies. You can help with that by notifying the
-maintainers of this problem (e.g. by creating a bug report) or by proposing a
-fix to the maintainers (e.g. by creating a pull request):
+Ensure the maintainers know of this problem (e.g. creating a bug report if needed)
+or even helping with a fix (e.g. by creating a pull request):
 
 {upstream_info}"
         ));
         suggestions.push(
             "\
-If waiting for an upstream fix is not an option, you can use the `[patch]`
-section in `Cargo.toml` to use your own version of the dependency. For more
-information, see:
+Use your own version of the dependency with the `[patch]` section in `Cargo.toml`.
+For more information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section"
                 .to_owned(),
         );
