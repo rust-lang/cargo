@@ -434,7 +434,7 @@ pub fn save_and_display_report(
     let update_message = if !updated_versions.is_empty() {
         format!(
             "\
-Update to a newer version to see if the issue has been fixed:
+update to a newer version to see if the issue has been fixed
 {updated_versions}",
             updated_versions = updated_versions
         )
@@ -448,8 +448,8 @@ Update to a newer version to see if the issue has been fixed:
             let manifest = bcx.packages.get_one(*package_id).unwrap().manifest();
             format!(
                 "  - {package_spec}
-  - Repository: {url}
-  - Detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
+  - repository: {url}
+  - detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
                 package_spec = format!("{}@{}", package_id.name(), package_id.version()),
                 url = manifest
                     .metadata()
@@ -466,7 +466,7 @@ Update to a newer version to see if the issue has been fixed:
         .iter()
         .all(|report| report.is_local);
 
-    let suggestion_header = "To solve this problem, you can try the following approaches:";
+    let suggestion_header = "to solve this problem, you can try the following approaches:";
     let mut suggestions = Vec::new();
     if !all_is_local {
         if !update_message.is_empty() {
@@ -474,14 +474,14 @@ Update to a newer version to see if the issue has been fixed:
         }
         suggestions.push(format!(
             "\
-Ensure the maintainers know of this problem (e.g. creating a bug report if needed)
-or even helping with a fix (e.g. by creating a pull request):
+ensure the maintainers know of this problem (e.g. creating a bug report if needed)
+or even helping with a fix (e.g. by creating a pull request)
 
 {upstream_info}"
         ));
         suggestions.push(
             "\
-Use your own version of the dependency with the `[patch]` section in `Cargo.toml`.
+use your own version of the dependency with the `[patch]` section in `Cargo.toml`
 For more information, see:
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section"
                 .to_owned(),
