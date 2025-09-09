@@ -606,8 +606,8 @@ fn suggestions_for_updates() {
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
-big_update v1.0.0 has the following newer versions available: 2.0.0
-with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+  - big_update v1.0.0 has the following newer versions available: 2.0.0
+  - with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the
@@ -653,8 +653,8 @@ To solve this problem, you can try the following approaches:
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
-big_update v1.0.0 has the following newer versions available: 2.0.0
-with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+  - big_update v1.0.0 has the following newer versions available: 2.0.0
+  - with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 
 - If the issue is not solved by updating the dependencies, a fix has to be
 implemented by those dependencies. You can help with that by notifying the

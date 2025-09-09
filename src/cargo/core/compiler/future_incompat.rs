@@ -362,7 +362,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
             write!(
                 updates,
                 "
-{} has the following newer versions available: {}",
+  - {} has the following newer versions available: {}",
                 pkg_id, updated_versions
             )
             .unwrap();
