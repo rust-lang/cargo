@@ -1,6 +1,6 @@
 # Optimizing Build Performance
 
-This guide will step you through Cargo configuration options and source code organization patterns that can help improve build performance, by prioritizing it over other aspects which may not be as important for your circumstances.
+Cargo configuration options and source code organization patterns can help improve build performance, by prioritizing it over other aspects which may not be as important for your circumstances.
 
 Same as when optimizing runtime performance, be sure to measure these changes against the workflows you actually care about, as we provide general guidelines and your circumstances may be different, it is possible that some of these approaches might actually make build performance worse for your use-case.
 
@@ -10,8 +10,6 @@ Example workflows to consider include:
 - CI builds
 
 ## Cargo and Compiler Configuration
-
-> Note that some approaches described in this section currently require using the nightly toolchain.
 
 Cargo uses configuration defaults that try to balance several aspects, including debuggability, runtime performance, build performance, binary size and others. This section describes several approaches for changing these defaults that should be designed to maximize build performance.
 
@@ -47,8 +45,6 @@ Trade-offs:
 
 ### Use an alternative codegen backend
 
-> **This requires nightly/unstable features**
-
 Recommendation:
 
 - Install the Cranelift codegen backend rustup component
@@ -66,11 +62,9 @@ Recommendation:
 This will change the [`dev` profile](../reference/profiles.md#dev) to use the [Cranelift codegen backend](https://github.com/rust-lang/rustc_codegen_cranelift) for generating machine code, instead of the default LLVM backend. The Cranelift backend should generate code faster than LLVM, which should result in improved build performance.
 
 Trade-offs:
-- ✅ Faster build times
+- ✅ Faster code generation (`cargo build`)
+- ❌ **Requires using nightly Rust and an unstable Cargo feature**
 - ❌ Worse runtime performance of the generated code
-- ❌ Requires using nightly Rust and an unstable feature
+  - Speeds up build part of `cargo test`, but might increase its test execution part
 - ❌ Only available for [certain targets](https://github.com/rust-lang/rustc_codegen_cranelift?tab=readme-ov-file#platform-support)
 - ❌ Might not support all Rust features (e.g. unwinding)
-
-## Source code organization
-TODO
