@@ -46,7 +46,7 @@
 
 - cargo-credential-libsecret: give FFI correctly-sized object 
   [#15767](https://github.com/rust-lang/cargo/pull/15767)
-- cargo-publish: includes manifest paths when verifying
+- cargo-publish: includes manifest paths in errors when verifying
   [#15705](https://github.com/rust-lang/cargo/pull/15705)
 - cargo-tree: Fixed `no-proc-macro` being overridden by subsequent edges.
   [#15764](https://github.com/rust-lang/cargo/pull/15764)
