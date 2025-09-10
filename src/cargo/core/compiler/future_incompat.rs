@@ -434,8 +434,7 @@ pub fn save_and_display_report(
     let update_message = if !updated_versions.is_empty() {
         format!(
             "\
-update to a newer version to see if the issue has been fixed
-{updated_versions}",
+update to a newer version to see if the issue has been fixed{updated_versions}",
             updated_versions = updated_versions
         )
     } else {
@@ -476,7 +475,6 @@ update to a newer version to see if the issue has been fixed
             "\
 ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
 {upstream_info}"
         ));
         suggestions.push(

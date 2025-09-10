@@ -150,7 +150,6 @@ fn incompat_in_dependency() {
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - bar@1.0.0
   - repository: https://example.com/
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
@@ -180,7 +179,6 @@ to solve this problem, you can try the following approaches:
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - bar@1.0.0
   - repository: https://example.com/
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
@@ -598,13 +596,11 @@ fn suggestions_for_updates() {
 [NOTE] to solve this problem, you can try the following approaches:
 
 - update to a newer version to see if the issue has been fixed
-
   - big_update v1.0.0 has the following newer versions available: 2.0.0
   - with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - big_update@1.0.0
   - repository: <not found>
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
@@ -641,13 +637,11 @@ means and how to resolve it.
 to solve this problem, you can try the following approaches:
 
 - update to a newer version to see if the issue has been fixed
-
   - big_update v1.0.0 has the following newer versions available: 2.0.0
   - with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - big_update@1.0.0
   - repository: <not found>
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
@@ -704,7 +698,6 @@ fn correct_report_id_when_cached() {
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - bar@1.0.0
   - repository: https://example.com/
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
@@ -727,7 +720,6 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
 
 - ensure the maintainers know of this problem (e.g. creating a bug report if needed)
 or even helping with a fix (e.g. by creating a pull request)
-
   - bar@1.0.0
   - repository: https://example.com/
   - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
