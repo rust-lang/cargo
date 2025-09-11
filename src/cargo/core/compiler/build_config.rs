@@ -130,8 +130,18 @@ impl BuildConfig {
             _ => Vec::new(),
         };
 
-        // Enabled by default (for now only when the unstable flag is set).
-        let detect_antivirus = gctx.cli_unstable().detect_antivirus;
+        let detect_antivirus = match (cfg.detect_antivirus, gctx.cli_unstable().detect_antivirus) {
+            // Enabled by default (for now only when the flag is set).
+            (None, unstable_flag) => unstable_flag,
+            // But allow overriding with configuration option.
+            (Some(cfg_option), true) => cfg_option,
+            (Some(_), false) => {
+                gctx.shell().warn(
+                    "ignoring 'build.detect-antivirus' config, pass `-Zdetect-antivirus` to enable it",
+                )?;
+                false
+            }
+        };
 
         Ok(BuildConfig {
             requested_kinds,

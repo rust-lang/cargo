@@ -2,6 +2,8 @@
 
 Many operating systems include antivirus software programs that scan the system for malware. These sometimes interfere with development workflows, see below.
 
+<!-- TODO: Talk about Cargo's `build.detect-antivirus = false` once stable -->
+
 ## XProtect
 
 macOS has a layered system for protecting against malware, see [Apple's documentation](https://support.apple.com/en-gb/guide/security/sec469d47bd8/web) for details. One of the components here is XProtect, which intercepts all binary launches and scans new binaries for malware before executing them.
