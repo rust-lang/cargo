@@ -1,5 +1,3 @@
-use crate::CargoResult;
-
 type Span = std::ops::Range<usize>;
 
 #[derive(Debug)]
@@ -22,7 +20,7 @@ pub struct ScriptSource<'s> {
 }
 
 impl<'s> ScriptSource<'s> {
-    pub fn parse(raw: &'s str) -> CargoResult<Self> {
+    pub fn parse(raw: &'s str) -> Result<Self, FrontmatterError> {
         use winnow::stream::FindSlice as _;
         use winnow::stream::Location as _;
         use winnow::stream::Offset as _;
@@ -61,24 +59,30 @@ impl<'s> ScriptSource<'s> {
             .char_indices()
             .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
             .unwrap_or_else(|| input.eof_offset());
+        let open_start = input.current_token_start();
+        let fence_pattern = input.next_slice(fence_length);
+        let open_end = input.current_token_start();
         match fence_length {
             0 => {
                 return Ok(source);
             }
             1 | 2 => {
                 // either not a frontmatter or invalid frontmatter opening
-                anyhow::bail!(
-                    "found {fence_length} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
-                )
+                return Err(FrontmatterError::new(
+                    format!(
+                        "found {fence_length} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
+                    ),
+                    open_start..open_end,
+                ));
             }
             _ => {}
         }
-        let open_start = input.current_token_start();
-        let fence_pattern = input.next_slice(fence_length);
-        let open_end = input.current_token_start();
         source.open = Some(open_start..open_end);
         let Some(info_nl) = input.find_slice("\n") else {
-            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+            return Err(FrontmatterError::new(
+                format!("no closing `{fence_pattern}` found for frontmatter"),
+                open_start..open_end,
+            ));
         };
         let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
@@ -91,7 +95,10 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
-            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+            return Err(FrontmatterError::new(
+                format!("no closing `{fence_pattern}` found for frontmatter"),
+                open_start..open_end,
+            ));
         };
         let frontmatter_start = input.current_token_start() + 1; // skip nl from infostring
         let _ = input.next_slice(frontmatter_nl.start + 1);
@@ -111,14 +118,29 @@ impl<'s> ScriptSource<'s> {
         let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
-            anyhow::bail!("trailing characters found after frontmatter close");
+            return Err(FrontmatterError::new(
+                format!("trailing characters found after frontmatter close"),
+                close_end..content_start,
+            ));
         }
 
         source.content = content_start..content_end;
 
-        let repeat = Self::parse(source.content())?;
-        if repeat.frontmatter.is_some() {
-            anyhow::bail!("only one frontmatter is supported");
+        if let Some(nl_end) = strip_ws_lines(input.as_ref()) {
+            let _ = input.next_slice(nl_end);
+        }
+        let fence_length = input
+            .as_ref()
+            .char_indices()
+            .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
+            .unwrap_or_else(|| input.eof_offset());
+        if 0 < fence_length {
+            let fence_start = input.current_token_start();
+            let fence_end = fence_start + fence_length;
+            return Err(FrontmatterError::new(
+                format!("only one frontmatter is supported"),
+                fence_start..fence_end,
+            ));
         }
 
         Ok(source)
@@ -231,6 +253,37 @@ fn is_whitespace(c: char) -> bool {
         | '\u{2029}' // PARAGRAPH SEPARATOR
     )
 }
+
+#[derive(Debug)]
+pub struct FrontmatterError {
+    message: String,
+    span: Span,
+}
+
+impl FrontmatterError {
+    pub fn new(message: impl Into<String>, span: Span) -> Self {
+        Self {
+            message: message.into(),
+            span,
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        self.message.as_str()
+    }
+
+    pub fn span(&self) -> Span {
+        self.span.clone()
+    }
+}
+
+impl std::fmt::Display for FrontmatterError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.message.fmt(fmt)
+    }
+}
+
+impl std::error::Error for FrontmatterError {}
 
 #[cfg(test)]
 mod test {

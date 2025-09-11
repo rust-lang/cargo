@@ -1,1 +1,5 @@
 [ERROR] frontmatter infostring `.toml` is unsupported by cargo; specify `cargo` for embedding a manifest
+ --> script:1:4
+  |
+1 | ---.toml
+  |    ^^^^^

@@ -1,1 +1,7 @@
 [ERROR] trailing characters found after frontmatter close
+ --> script:3:4
+  |
+3 |   ----
+  |  ____^
+4 | |
+  | |_^
