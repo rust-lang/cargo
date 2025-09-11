@@ -1956,6 +1956,8 @@ The `-Zdetect-antivirus` flag enables detection of antivirus software that might
 
 This feature will be enabled by default in the future (the flag acts as-if this future is now).
 
+Currently only implemented for macOS' XProtect/Gatekeeper, but could be expanded to Windows Defender in the future.
+
 ```toml
 # Example ~/.cargo/config.toml
 
