@@ -1275,10 +1275,8 @@ fn get_targets_from_metadata() -> CargoResult<Vec<(InternedString, Target)>> {
     let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
     let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
 
-    let packages = ws.members().collect::<Vec<_>>();
-
-    let targets = packages
-        .into_iter()
+    let targets = ws
+        .members()
         .flat_map(|pkg| pkg.targets().into_iter().cloned().map(|t| (pkg.name(), t)))
         .collect::<Vec<_>>();
 
