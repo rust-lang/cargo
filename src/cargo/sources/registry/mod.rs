@@ -846,8 +846,8 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 // Attempt to handle misspellings by searching for a chain of related
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll
-                // along the way produce helpful "did you mean?" suggestions.
-                // For now we only try the canonical lysing `-` to `_` and vice versa.
+                // have enough information to offer "a similar crate exists" suggestions.
+                // For now we only try canonicalizing `-` to `_` and vice versa.
                 // More advanced fuzzy searching become in the future.
                 for name_permutation in [
                     dep.package_name().replace('-', "_"),
