@@ -703,7 +703,9 @@ See '<bright-cyan,bold>cargo help</> <cyan><<command>></>' for more information 
                 .into_iter()
                 .map(|t| clap_complete::CompletionCandidate::new(t))
                 .collect::<Vec<_>>();
-            candidates.extend(get_alias_candidates());
+            if let Ok(gctx) = new_gctx_for_completions() {
+                candidates.extend(get_alias_candidates(&gctx));
+            }
             candidates
         }))
         .subcommands(commands::builtin())
@@ -726,33 +728,30 @@ fn get_toolchains_from_rustup() -> Vec<String> {
     stdout.lines().map(|line| format!("+{}", line)).collect()
 }
 
-fn get_alias_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    if let Ok(gctx) = new_gctx_for_completions() {
-        let alias_map = user_defined_aliases(&gctx);
-        return alias_map
-            .iter()
-            .map(|(alias, cmd_info)| {
-                let help_text = match cmd_info {
-                    CommandInfo::Alias { target } => {
-                        let cmd_str = target
-                            .iter()
-                            .map(String::as_str)
-                            .collect::<Vec<_>>()
-                            .join(" ");
-                        format!("alias for {}", cmd_str)
-                    }
-                    CommandInfo::BuiltIn { .. } => {
-                        unreachable!("BuiltIn command shouldn't appear in alias map")
-                    }
-                    CommandInfo::External { .. } => {
-                        unreachable!("External command shouldn't appear in alias map")
-                    }
-                };
-                clap_complete::CompletionCandidate::new(alias.clone()).help(Some(help_text.into()))
-            })
-            .collect();
-    }
-    Vec::new()
+fn get_alias_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCandidate> {
+    let alias_map = user_defined_aliases(gctx);
+    alias_map
+        .iter()
+        .map(|(alias, cmd_info)| {
+            let help_text = match cmd_info {
+                CommandInfo::Alias { target } => {
+                    let cmd_str = target
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    format!("alias for {}", cmd_str)
+                }
+                CommandInfo::BuiltIn { .. } => {
+                    unreachable!("BuiltIn command shouldn't appear in alias map")
+                }
+                CommandInfo::External { .. } => {
+                    unreachable!("External command shouldn't appear in alias map")
+                }
+            };
+            clap_complete::CompletionCandidate::new(alias.clone()).help(Some(help_text.into()))
+        })
+        .collect()
 }
 
 #[test]
