@@ -3,11 +3,12 @@
 One of Cargo's primary tasks is to determine the versions of dependencies to
 use based on the version requirements specified in each package. This process
 is called "dependency resolution" and is performed by the "resolver". The
-result of the resolution is stored in the `Cargo.lock` file which "locks" the
+result of the resolution is stored in the [`Cargo.lock` file] which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 The [`cargo tree`] command can be used to visualize the result of the
 resolver.
 
+[`Cargo.lock` file]: ../guide/cargo-toml-vs-cargo-lock.md
 [dependency specifications]: specifying-dependencies.md
 [dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
