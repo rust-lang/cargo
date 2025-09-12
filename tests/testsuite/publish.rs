@@ -120,8 +120,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -214,8 +214,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
-[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 
 "#]])
@@ -257,8 +257,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `dummy-registry`
-[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `dummy-registry`
 
 "#]])
@@ -313,8 +313,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -358,8 +358,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `[ROOT]/registry`
-[NOTE] waiting for foo v0.0.1 to be available at registry `[ROOT]/registry`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `[ROOT]/registry`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `[ROOT]/registry`
 
 "#]])
@@ -564,8 +564,8 @@ fn publish_clean() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -613,8 +613,8 @@ fn publish_in_sub_repo() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -662,8 +662,8 @@ fn publish_when_ignored() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -710,8 +710,8 @@ fn ignore_when_crate_ignored() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -901,8 +901,8 @@ fn publish_allowed_registry() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
-[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `alternative`
 
 "#]])
@@ -962,8 +962,8 @@ fn publish_implicitly_to_only_allowed_registry() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
-[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `alternative`
 
 "#]])
@@ -1130,8 +1130,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1181,8 +1181,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1232,8 +1232,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1345,8 +1345,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -1552,8 +1552,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
-[NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
@@ -1808,8 +1808,8 @@ fn publish_dev_dep_stripping() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
-[NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.1.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.1.0 at registry `crates-io`
 
 "#]])
@@ -2147,8 +2147,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2515,8 +2515,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
-[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2586,8 +2586,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADED] bar v0.0.1 to registry `crates-io`
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
-[NOTE] waiting for bar v0.0.1 or li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crates should be available shortly.
+[NOTE] waiting for bar v0.0.1 or li v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crates should be available shortly
 [PUBLISHED] bar v0.0.1 and li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2636,8 +2636,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
-[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2683,8 +2683,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2741,8 +2741,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] li v0.0.1 ([ROOT]/foo/li)
 [UPLOADED] li v0.0.1 to registry `crates-io`
-[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for li v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] li v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2854,8 +2854,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [UPLOADED] li v0.0.1 to registry `crates-io`
 [UPLOADING] lii v0.0.1 ([ROOT]/foo/lii)
 [UPLOADED] lii v0.0.1 to registry `crates-io`
-[NOTE] waiting for li v0.0.1 or lii v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crates should be available shortly.
+[NOTE] waiting for li v0.0.1 or lii v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crates should be available shortly
 [PUBLISHED] li v0.0.1 and lii v0.0.1 at registry `crates-io`
 
 "#]])
@@ -2939,8 +2939,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3017,8 +3017,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
-[NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] delay v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3110,8 +3110,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay_with_underscore v0.0.1 to registry `crates-io`
-[NOTE] waiting for delay_with_underscore v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for delay_with_underscore v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] delay_with_underscore v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3210,8 +3210,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
-[NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 
 "#]])
@@ -3328,8 +3328,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
-[NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [WARNING] timed out waiting for delay v0.0.1 to be available in registry `crates-io`
 [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 
@@ -3552,8 +3552,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
-[NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for delay v0.0.2 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] delay v0.0.2 at registry `crates-io`
 
 "#]])
@@ -3760,8 +3760,8 @@ fn workspace_with_local_deps() {
 [PUBLISHED] level2 v0.0.1 at registry `crates-io`
 [UPLOADING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPLOADED] level1 v0.0.1 to registry `crates-io`
-[NOTE] waiting for level1 v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for level1 v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] level1 v0.0.1 at registry `crates-io`
 
 "#]])
@@ -3859,12 +3859,12 @@ fn workspace_parallel() {
 [PUBLISHED] a v0.0.1 and b v0.0.1 at registry `crates-io`
 [UPLOADING] c v0.0.1 ([ROOT]/foo/c)
 [UPLOADED] c v0.0.1 to registry `crates-io`
-[NOTE] waiting for c v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for c v0.0.1 to be available at registry `crates-io`
 [PUBLISHED] c v0.0.1 at registry `crates-io`
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADING] b v0.0.1 ([ROOT]/foo/b)
 [UPDATING] crates.io index
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 
 "#]]
             .unordered(),
@@ -3944,8 +3944,8 @@ Caused by:
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADED] a v0.0.1 to registry `crates-io`
-[NOTE] waiting for a v0.0.1 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for a v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] a v0.0.1 at registry `crates-io`
 
 "#]])
@@ -4020,8 +4020,8 @@ fn one_unpublishable_package() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] dep v0.1.0 ([ROOT]/foo/dep)
 [UPLOADED] dep v0.1.0 to registry `crates-io`
-[NOTE] waiting for dep v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for dep v0.1.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] dep v0.1.0 at registry `crates-io`
 
 "#]])
@@ -4099,8 +4099,8 @@ fn virtual_ws_with_multiple_unpublishable_package() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] publishable v0.1.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.1.0 to registry `crates-io`
-[NOTE] waiting for publishable v0.1.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for publishable v0.1.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] publishable v0.1.0 at registry `crates-io`
 
 "#]])
@@ -4170,8 +4170,8 @@ fn workspace_flag_with_unpublishable_packages() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] publishable v0.0.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.0.0 to registry `crates-io`
-[NOTE] waiting for publishable v0.0.0 to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
+[NOTE] waiting for publishable v0.0.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [PUBLISHED] publishable v0.0.0 at registry `crates-io`
 
 "#]])
