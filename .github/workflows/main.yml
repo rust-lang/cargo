@@ -91,6 +91,7 @@ jobs:
 
   check-version-bump:
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'rust-lang'
     env:
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha  }}
