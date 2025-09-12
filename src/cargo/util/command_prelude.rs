@@ -4,7 +4,7 @@ use crate::core::compiler::{
     BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
 };
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::core::{Edition, Package, Target, TargetKind, Workspace, profiles::Profiles, shell};
+use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles, shell};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -169,13 +169,17 @@ pub trait CommandExt: Sized {
             ._arg(
                 optional_multi_opt("test", "NAME", test)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_test_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        get_crate_candidates(TargetKind::Test).unwrap_or_default()
+                    })),
             )
             ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
             ._arg(
                 optional_multi_opt("bench", "NAME", bench)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_bench_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        get_crate_candidates(TargetKind::Bench).unwrap_or_default()
+                    })),
             )
             ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
@@ -193,15 +197,17 @@ pub trait CommandExt: Sized {
             ._arg(
                 optional_multi_opt("bin", "NAME", bin)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        get_crate_candidates(TargetKind::Bin).unwrap_or_default()
+                    })),
             )
             ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
             ._arg(
                 optional_multi_opt("example", "NAME", example)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(
-                        get_example_candidates,
-                    )),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        get_crate_candidates(TargetKind::ExampleBin).unwrap_or_default()
+                    })),
             )
     }
 
@@ -215,15 +221,17 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("bin", "NAME", bin)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    get_crate_candidates(TargetKind::Bin).unwrap_or_default()
+                })),
         )
         ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
         ._arg(
             optional_multi_opt("example", "NAME", example)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(
-                    get_example_candidates,
-                )),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    get_crate_candidates(TargetKind::ExampleBin).unwrap_or_default()
+                })),
         )
         ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
@@ -232,14 +240,16 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("bin", "NAME", bin)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    get_crate_candidates(TargetKind::Bin).unwrap_or_default()
+                })),
         )
         ._arg(
             optional_multi_opt("example", "NAME", example)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(
-                    get_example_candidates,
-                )),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    get_crate_candidates(TargetKind::ExampleBin).unwrap_or_default()
+                })),
         )
     }
 
@@ -253,8 +263,7 @@ pub trait CommandExt: Sized {
             .short('F')
             .help_heading(heading::FEATURE_SELECTION)
             .add(clap_complete::ArgValueCandidates::new(|| {
-                let candidates = get_feature_candidates();
-                candidates.unwrap_or_default()
+                get_feature_candidates().unwrap_or_default()
             })),
         )
         ._arg(
@@ -414,10 +423,7 @@ pub trait CommandExt: Sized {
             .value_name("VCS")
             .value_parser(["git", "hg", "pijul", "fossil", "none"]),
         )
-        ._arg(
-            flag("bin", "Use a binary (application) template [default]")
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
-        )
+        ._arg(flag("bin", "Use a binary (application) template [default]"))
         ._arg(flag("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
@@ -1194,8 +1200,8 @@ fn default_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
 
 fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
-    let manifest_path = find_root_manifest_for_wd(gctx.cwd())?;
-    let ws = Workspace::new(&manifest_path, &gctx)?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
     let mut feature_candidates = Vec::new();
 
     // Process all packages in the workspace
@@ -1204,8 +1210,14 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
 
         // Add direct features with package info
         for feature_name in package.summary().features().keys() {
+            let order = if ws.current_opt().map(|p| p.name()) == Some(package_name) {
+                0
+            } else {
+                1
+            };
             feature_candidates.push(
                 clap_complete::CompletionCandidate::new(feature_name)
+                    .display_order(Some(order))
                     .help(Some(format!("(from {})", package_name).into())),
             );
         }
@@ -1214,60 +1226,25 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
     Ok(feature_candidates)
 }
 
-fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::ExampleBin => Some(clap_complete::CompletionCandidate::new(target.name())),
-            _ => None,
+fn get_crate_candidates(kind: TargetKind) -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+
+    let targets = ws
+        .members()
+        .flat_map(|pkg| pkg.targets().into_iter().cloned().map(|t| (pkg.name(), t)))
+        .filter(|(_, target)| *target.kind() == kind)
+        .map(|(pkg_name, target)| {
+            let order = if ws.current_opt().map(|p| p.name()) == Some(pkg_name) {
+                0
+            } else {
+                1
+            };
+            clap_complete::CompletionCandidate::new(target.name())
+                .display_order(Some(order))
+                .help(Some(format!("(from {})", pkg_name).into()))
         })
-        .collect::<Vec<_>>()
-}
-
-fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Bench => Some(clap_complete::CompletionCandidate::new(target.name())),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Test => Some(clap_complete::CompletionCandidate::new(target.name())),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Bin => Some(clap_complete::CompletionCandidate::new(target.name())),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-}
-
-fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
-
-    let packages = ws.members().collect::<Vec<_>>();
-
-    let targets = packages
-        .into_iter()
-        .flat_map(|pkg| pkg.targets().into_iter().cloned())
         .collect::<Vec<_>>();
 
     Ok(targets)
@@ -1319,9 +1296,9 @@ fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::Completion
 }
 
 fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx);
 
     let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
 
