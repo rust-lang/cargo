@@ -1194,8 +1194,8 @@ fn default_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
 
 fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
-    let manifest_path = find_root_manifest_for_wd(gctx.cwd())?;
-    let ws = Workspace::new(&manifest_path, &gctx)?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
     let mut feature_candidates = Vec::new();
 
     // Process all packages in the workspace
@@ -1271,9 +1271,9 @@ fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
 }
 
 fn get_targets_from_metadata() -> CargoResult<Vec<(InternedString, Target)>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
 
     let targets = ws
         .members()
@@ -1329,9 +1329,9 @@ fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::Completion
 }
 
 fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx);
 
     let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
 
