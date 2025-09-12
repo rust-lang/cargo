@@ -800,11 +800,9 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
 
     #[tracing::instrument(skip_all)]
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        if cfg!(debug_assertions) {
-            // Force borrow to catch invalid borrows, regardless of which source is used and how it
-            // happens to behave this time
-            self.gctx.shell().verbosity();
-        }
+        // Ensure `shell` is not already in use,
+        // regardless of which source is used and how it happens to behave this time
+        self.gctx.debug_assert_shell_not_borrowed();
         for (source_id, source) in self.sources.sources_mut() {
             source
                 .block_until_ready()

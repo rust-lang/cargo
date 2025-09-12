@@ -412,6 +412,17 @@ impl GlobalContext {
         self.shell.borrow_mut()
     }
 
+    /// Assert [`Self::shell`] is not in use
+    ///
+    /// Testing might not identify bugs with two accesses to `shell` at once
+    /// due to conditional logic,
+    /// so place this outside of the conditions to catch these bugs in more situations.
+    pub fn debug_assert_shell_not_borrowed(&self) {
+        if cfg!(debug_assertions) {
+            self.shell().verbosity();
+        }
+    }
+
     /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
