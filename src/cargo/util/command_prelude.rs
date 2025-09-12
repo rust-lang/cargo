@@ -1218,8 +1218,11 @@ fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata()
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::ExampleBin => Some(clap_complete::CompletionCandidate::new(target.name())),
+        .filter_map(|(pkg_name, target)| match target.kind() {
+            TargetKind::ExampleBin => Some(
+                clap_complete::CompletionCandidate::new(target.name())
+                    .help(Some(format!("(from {})", pkg_name).into())),
+            ),
             _ => None,
         })
         .collect::<Vec<_>>()
@@ -1229,8 +1232,11 @@ fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata()
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Bench => Some(clap_complete::CompletionCandidate::new(target.name())),
+        .filter_map(|(pkg_name, target)| match target.kind() {
+            TargetKind::Bench => Some(
+                clap_complete::CompletionCandidate::new(target.name())
+                    .help(Some(format!("(from {})", pkg_name).into())),
+            ),
             _ => None,
         })
         .collect::<Vec<_>>()
@@ -1240,8 +1246,11 @@ fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata()
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Test => Some(clap_complete::CompletionCandidate::new(target.name())),
+        .filter_map(|(pkg_name, target)| match target.kind() {
+            TargetKind::Test => Some(
+                clap_complete::CompletionCandidate::new(target.name())
+                    .help(Some(format!("(from {})", pkg_name).into())),
+            ),
             _ => None,
         })
         .collect::<Vec<_>>()
@@ -1251,14 +1260,17 @@ fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata()
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|target| match target.kind() {
-            TargetKind::Bin => Some(clap_complete::CompletionCandidate::new(target.name())),
+        .filter_map(|(pkg_name, target)| match target.kind() {
+            TargetKind::Bin => Some(
+                clap_complete::CompletionCandidate::new(target.name())
+                    .help(Some(format!("(from {})", pkg_name).into())),
+            ),
             _ => None,
         })
         .collect::<Vec<_>>()
 }
 
-fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
+fn get_targets_from_metadata() -> CargoResult<Vec<(InternedString, Target)>> {
     let cwd = std::env::current_dir()?;
     let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
     let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
@@ -1267,7 +1279,7 @@ fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
 
     let targets = packages
         .into_iter()
-        .flat_map(|pkg| pkg.targets().into_iter().cloned())
+        .flat_map(|pkg| pkg.targets().into_iter().cloned().map(|t| (pkg.name(), t)))
         .collect::<Vec<_>>();
 
     Ok(targets)
