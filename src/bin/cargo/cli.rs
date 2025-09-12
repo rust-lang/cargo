@@ -704,7 +704,7 @@ See '<bright-cyan,bold>cargo help</> <cyan><<command>></>' for more information 
                 .map(|t| clap_complete::CompletionCandidate::new(t))
                 .collect::<Vec<_>>();
             if let Ok(gctx) = new_gctx_for_completions() {
-                candidates.extend(get_alias_candidates(&gctx));
+                candidates.extend(get_command_candidates(&gctx));
             }
             candidates
         }))
@@ -728,11 +728,11 @@ fn get_toolchains_from_rustup() -> Vec<String> {
     stdout.lines().map(|line| format!("+{}", line)).collect()
 }
 
-fn get_alias_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCandidate> {
-    let alias_map = user_defined_aliases(gctx);
-    alias_map
+fn get_command_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCandidate> {
+    let commands = user_defined_aliases(gctx);
+    commands
         .iter()
-        .map(|(alias, cmd_info)| {
+        .map(|(name, cmd_info)| {
             let help_text = match cmd_info {
                 CommandInfo::Alias { target } => {
                     let cmd_str = target
@@ -749,7 +749,7 @@ fn get_alias_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCa
                     unreachable!("External command shouldn't appear in alias map")
                 }
             };
-            clap_complete::CompletionCandidate::new(alias.clone()).help(Some(help_text.into()))
+            clap_complete::CompletionCandidate::new(name.clone()).help(Some(help_text.into()))
         })
         .collect()
 }
