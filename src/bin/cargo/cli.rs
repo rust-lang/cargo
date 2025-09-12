@@ -11,6 +11,7 @@ use std::fmt::Write;
 
 use super::commands;
 use super::list_commands;
+use super::third_party_subcommands;
 use super::user_defined_aliases;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
@@ -729,7 +730,8 @@ fn get_toolchains_from_rustup() -> Vec<String> {
 }
 
 fn get_command_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCandidate> {
-    let commands = user_defined_aliases(gctx);
+    let mut commands = user_defined_aliases(gctx);
+    commands.extend(third_party_subcommands(gctx));
     commands
         .iter()
         .map(|(name, cmd_info)| {
@@ -745,8 +747,8 @@ fn get_command_candidates(gctx: &GlobalContext) -> Vec<clap_complete::Completion
                 CommandInfo::BuiltIn { .. } => {
                     unreachable!("BuiltIn command shouldn't appear in alias map")
                 }
-                CommandInfo::External { .. } => {
-                    unreachable!("External command shouldn't appear in alias map")
+                CommandInfo::External { path } => {
+                    format!("from {}", path.display())
                 }
             };
             clap_complete::CompletionCandidate::new(name.clone()).help(Some(help_text.into()))
