@@ -413,6 +413,16 @@ impl GlobalContext {
         self.shell.lock().unwrap()
     }
 
+    /// If debug assertions are enabled, checks that `shell` is not borrowed
+    pub fn debug_assert_shell_not_borrowed(&self) {
+        if cfg!(debug_assertions) {
+            match self.shell.try_lock() {
+                Ok(_) | Err(std::sync::TryLockError::Poisoned(_)) => (),
+                Err(std::sync::TryLockError::WouldBlock) => panic!("shell is borrowed!"),
+            }
+        }
+    }
+
     /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
