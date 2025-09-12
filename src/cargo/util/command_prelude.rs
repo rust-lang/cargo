@@ -1210,8 +1210,14 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
 
         // Add direct features with package info
         for feature_name in package.summary().features().keys() {
+            let order = if ws.current_opt().map(|p| p.name()) == Some(package_name) {
+                0
+            } else {
+                1
+            };
             feature_candidates.push(
                 clap_complete::CompletionCandidate::new(feature_name)
+                    .display_order(Some(order))
                     .help(Some(format!("(from {})", package_name).into())),
             );
         }
@@ -1230,7 +1236,13 @@ fn get_crate_candidates(kind: TargetKind) -> CargoResult<Vec<clap_complete::Comp
         .flat_map(|pkg| pkg.targets().into_iter().cloned().map(|t| (pkg.name(), t)))
         .filter(|(_, target)| *target.kind() == kind)
         .map(|(pkg_name, target)| {
+            let order = if ws.current_opt().map(|p| p.name()) == Some(pkg_name) {
+                0
+            } else {
+                1
+            };
             clap_complete::CompletionCandidate::new(target.name())
+                .display_order(Some(order))
                 .help(Some(format!("(from {})", pkg_name).into()))
         })
         .collect::<Vec<_>>();
