@@ -251,7 +251,11 @@ pub trait CommandExt: Sized {
                 "Space or comma separated list of features to activate",
             )
             .short('F')
-            .help_heading(heading::FEATURE_SELECTION),
+            .help_heading(heading::FEATURE_SELECTION)
+            .add(clap_complete::ArgValueCandidates::new(|| {
+                let candidates = get_feature_candidates();
+                candidates.unwrap_or_default()
+            })),
         )
         ._arg(
             flag("all-features", "Activate all available features")
@@ -1186,6 +1190,28 @@ fn default_profile_candidates() -> Vec<clap_complete::CompletionCandidate> {
             .help(Some("unoptimized + debuginfo".into())),
         clap_complete::CompletionCandidate::new("bench").help(Some("optimized".into())),
     ]
+}
+
+fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+    let manifest_path = find_root_manifest_for_wd(gctx.cwd())?;
+    let ws = Workspace::new(&manifest_path, &gctx)?;
+    let mut feature_candidates = Vec::new();
+
+    // Process all packages in the workspace
+    for package in ws.members() {
+        let package_name = package.name();
+
+        // Add direct features with package info
+        for feature_name in package.summary().features().keys() {
+            feature_candidates.push(
+                clap_complete::CompletionCandidate::new(feature_name)
+                    .help(Some(format!("(from {})", package_name).into())),
+            );
+        }
+    }
+
+    Ok(feature_candidates)
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
