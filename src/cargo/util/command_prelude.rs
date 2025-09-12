@@ -253,8 +253,7 @@ pub trait CommandExt: Sized {
             .short('F')
             .help_heading(heading::FEATURE_SELECTION)
             .add(clap_complete::ArgValueCandidates::new(|| {
-                let candidates = get_feature_candidates();
-                candidates.unwrap_or_default()
+                get_feature_candidates().unwrap_or_default()
             })),
         )
         ._arg(
