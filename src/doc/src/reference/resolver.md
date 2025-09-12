@@ -3,11 +3,12 @@
 One of Cargo's primary tasks is to determine the versions of dependencies to
 use based on the version requirements specified in each package. This process
 is called "dependency resolution" and is performed by the "resolver". The
-result of the resolution is stored in the `Cargo.lock` file which "locks" the
+result of the resolution is stored in the [`Cargo.lock` file] which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 The [`cargo tree`] command can be used to visualize the result of the
 resolver.
 
+[`Cargo.lock` file]: ../guide/cargo-toml-vs-cargo-lock.md
 [dependency specifications]: specifying-dependencies.md
 [dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
@@ -202,6 +203,30 @@ ecosystem if you publish a SemVer-incompatible version of a popular library.
 
 [semver trick]: https://github.com/dtolnay/semver-trick
 [`downcast_ref`]: ../../std/any/trait.Any.html#method.downcast_ref
+
+### Lock file
+
+Cargo gives the highest priority to versions contained in the [`Cargo.lock` file], when used.
+This is intended to balance reproducible builds with adjusting to changes in the manifest.
+
+For example, if you had a package in the resolve graph with:
+```toml
+[dependencies]
+bitflags = "*"
+```
+If at the time your `Cargo.lock` file is generated, the greatest version of
+`bitflags` is `1.2.1`, then the package will use `1.2.1` and recorded in the `Cargo.lock` file.
+
+By the time Cargo next runs, `bitflags` `1.3.5` is out.
+When resolving dependencies,
+`1.2.1` will still be used because it is present in your `Cargo.lock` file.
+
+The package is then edited to:
+```toml
+[dependencies]
+bitflags = "1.3.0"
+```
+`bitflags` `1.2.1` does not match this version requirement and so that entry in your `Cargo.lock` file is ignored and version `1.3.5` will now be used and recorded in your `Cargo.lock` file.
 
 ### Rust version
 
