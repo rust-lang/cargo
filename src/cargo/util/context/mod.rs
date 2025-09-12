@@ -418,7 +418,10 @@ impl GlobalContext {
     /// so place this outside of the conditions to catch these bugs in more situations.
     pub fn debug_assert_shell_not_borrowed(&self) {
         if cfg!(debug_assertions) {
-            self.shell().verbosity();
+            match self.shell.try_lock() {
+                Ok(_) | Err(std::sync::TryLockError::Poisoned(_)) => (),
+                Err(std::sync::TryLockError::WouldBlock) => panic!("shell is borrowed!"),
+            }
         }
     }
 
