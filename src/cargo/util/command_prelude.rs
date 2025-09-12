@@ -413,10 +413,7 @@ pub trait CommandExt: Sized {
             .value_name("VCS")
             .value_parser(["git", "hg", "pijul", "fossil", "none"]),
         )
-        ._arg(
-            flag("bin", "Use a binary (application) template [default]")
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
-        )
+        ._arg(flag("bin", "Use a binary (application) template [default]"))
         ._arg(flag("lib", "Use a library template"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
