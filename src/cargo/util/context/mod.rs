@@ -210,12 +210,12 @@ pub struct GlobalContext {
     /// Environment variable snapshot.
     env: Env,
     /// Tracks which sources have been updated to avoid multiple updates.
-    updated_sources: OnceLock<Mutex<HashSet<SourceId>>>,
+    updated_sources: Mutex<HashSet<SourceId>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: OnceLock<Mutex<HashMap<CanonicalUrl, CredentialCacheValue>>>,
+    credential_cache: Mutex<HashMap<CanonicalUrl, CredentialCacheValue>>,
     /// Cache of registry config from the `[registries]` table.
-    registry_config: OnceLock<Mutex<HashMap<SourceId, Option<RegistryConfig>>>>,
+    registry_config: Mutex<HashMap<SourceId, Option<RegistryConfig>>>,
     /// Locks on the package and index caches.
     package_cache_lock: CacheLocker,
     /// Cached configuration parsed by Cargo
@@ -524,28 +524,19 @@ impl GlobalContext {
 
     /// Which package sources have been updated, used to ensure it is only done once.
     pub fn updated_sources(&self) -> MutexGuard<'_, HashSet<SourceId>> {
-        self.updated_sources
-            .get_or_init(|| Default::default())
-            .lock()
-            .unwrap()
+        self.updated_sources.lock().unwrap()
     }
 
     /// Cached credentials from credential providers or configuration.
     pub fn credential_cache(&self) -> MutexGuard<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
-        self.credential_cache
-            .get_or_init(|| Default::default())
-            .lock()
-            .unwrap()
+        self.credential_cache.lock().unwrap()
     }
 
     /// Cache of already parsed registries from the `[registries]` table.
     pub(crate) fn registry_config(
         &self,
     ) -> MutexGuard<'_, HashMap<SourceId, Option<RegistryConfig>>> {
-        self.registry_config
-            .get_or_init(|| Default::default())
-            .lock()
-            .unwrap()
+        self.registry_config.lock().unwrap()
     }
 
     /// Gets all config values from disk.
