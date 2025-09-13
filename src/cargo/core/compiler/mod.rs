@@ -1706,10 +1706,15 @@ fn build_deps_args(
 
     for dep in deps {
         if dep.unit.mode.is_run_custom_build() {
-            cmd.env(
-                "OUT_DIR",
-                &build_runner.files().build_script_out_dir(&dep.unit),
-            );
+            let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+            let mut out_dir_name = dep.unit.target.name().to_owned();
+            out_dir_name = out_dir_name
+                .strip_prefix("build-script-")
+                .unwrap_or(&out_dir_name)
+                .to_string();
+            out_dir_name.push_str("_OUT_DIR");
+            cmd.env("OUT_DIR", &out_dir);
+            cmd.env(&out_dir_name, &out_dir);
         }
     }
 
