@@ -1,5 +1,5 @@
-[ERROR] no closing `----` found for frontmatter
- --> script:1:1
+[ERROR] closing code fence has too few `-`
+ --> script:3:1
   |
-1 | ----cargo
-  | ^^^^
+3 | ---cargo
+  | ^^^

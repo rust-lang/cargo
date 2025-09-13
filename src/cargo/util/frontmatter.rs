@@ -95,6 +95,19 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
+            for len in (2..(nl_fence_pattern.len() - 1)).rev() {
+                let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[0..len]) else {
+                    continue;
+                };
+                let _ = input.next_slice(frontmatter_nl.start + 1);
+                let close_start = input.current_token_start();
+                let _ = input.next_slice(len);
+                let close_end = input.current_token_start();
+                return Err(FrontmatterError::new(
+                    format!("closing code fence has too few `-`"),
+                    close_start..close_end,
+                ));
+            }
             return Err(FrontmatterError::new(
                 format!("no closing `{fence_pattern}` found for frontmatter"),
                 open_start..open_end,
