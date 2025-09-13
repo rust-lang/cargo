@@ -89,16 +89,19 @@ fn override_with_features() {
         )
         .build();
 
-    p.cargo("check").with_stderr_data(str![[r#"
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
+[WARNING] unused field in replacement for `bar`: `features`
+[NOTE] configure `features` in the `dependencies` entry
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -136,16 +139,19 @@ fn override_with_setting_default_features() {
         )
         .build();
 
-    p.cargo("check").with_stderr_data(str![[r#"
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
+[WARNING] unused field in replacement for `bar`: `features`, `default-features`
+[NOTE] configure `features`, `default-features` in the `dependencies` entry
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
