@@ -379,11 +379,23 @@ impl<'gctx> PackageRegistry<'gctx> {
                     dep.package_name()
                 );
 
-                if dep.features().len() != 0 || !dep.uses_default_features() {
-                    self.source_config.gctx().shell().warn(format!(
-                        "patch for `{}` uses the features mechanism. \
-                        default-features and features will not take effect because the patch dependency does not support this mechanism",
-                        dep.package_name()
+                let mut unused_fields = Vec::new();
+                if dep.features().len() != 0 {
+                    unused_fields.push("`features`");
+                }
+                if !dep.uses_default_features() {
+                    unused_fields.push("`default-features`")
+                }
+                if !unused_fields.is_empty() {
+                    let mut shell = self.source_config.gctx().shell();
+                    shell.warn(format!(
+                        "unused field in patch for `{}`: {}",
+                        dep.package_name(),
+                        unused_fields.join(", ")
+                    ))?;
+                    shell.note(format!(
+                        "configure {} in the `dependencies` entry",
+                        unused_fields.join(", ")
                     ))?;
                 }
 
