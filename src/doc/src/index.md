@@ -32,6 +32,7 @@ The commands will let you interact with Cargo using its command-line interface.
 **Appendices:**
 * [Glossary](appendix/glossary.md)
 * [Git Authentication](appendix/git-authentication.md)
+* [Antivirus Software](appendix/antivirus.md)
 
 **Other Documentation:**
 * [Changelog](CHANGELOG.md)
