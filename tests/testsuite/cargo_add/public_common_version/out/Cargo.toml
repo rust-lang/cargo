@@ -8,4 +8,4 @@ edition = "2015"
 
 [dependencies]
 my-package = "0.1.0"
-my-package-dep = "0.2.0"
+my-package-dep = "^0.1.0"
