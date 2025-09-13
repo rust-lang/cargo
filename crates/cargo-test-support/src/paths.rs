@@ -12,6 +12,9 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::compare;
+use crate::layout::LayoutTree;
+
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
@@ -152,6 +155,8 @@ pub trait CargoPathExt {
     fn move_in_time<F>(&self, travel_amount: F)
     where
         F: Fn(i64, u32) -> (i64, u32);
+
+    fn verify_file_layout(&self, expected: impl AsRef<str>);
 }
 
 impl CargoPathExt for Path {
@@ -236,6 +241,20 @@ impl CargoPathExt for Path {
             });
         }
     }
+
+    #[track_caller]
+    fn verify_file_layout(&self, expected: impl AsRef<str>) {
+        let actual_layout = LayoutTree::from_path(&self).unwrap();
+
+        let expected_layout = LayoutTree::parse(expected.as_ref());
+
+        if !actual_layout.matches_snapshot(&expected_layout) {
+            let actual_snapshot = actual_layout.to_string();
+            let expected_snapshot = expected_layout.to_string();
+
+            compare::assert_e2e().eq(actual_snapshot, expected_snapshot);
+        }
+    }
 }
 
 impl CargoPathExt for PathBuf {
@@ -259,6 +278,11 @@ impl CargoPathExt for PathBuf {
         F: Fn(i64, u32) -> (i64, u32),
     {
         self.as_path().move_in_time(travel_amount)
+    }
+
+    #[track_caller]
+    fn verify_file_layout(&self, expected: impl AsRef<str>) {
+        self.as_path().verify_file_layout(expected);
     }
 }
 

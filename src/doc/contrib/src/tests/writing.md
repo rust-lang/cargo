@@ -64,6 +64,21 @@ test.
   - See [`support::compare`] for an explanation of the string pattern matching.
     Patterns are used to make it easier to match against the expected output.
 
+#### Filesystem layout testing
+
+Tests often to need to verify Cargo created/removed files.
+The `CargoPathExt` trait (implmented by `Path` and `PathBuf`) provides a `verify_file_layout()` to verify a file system tree against a snapshot. The snapshot format is very similar to the unix `tree` command output.
+
+Files vary across operating systems, for example `.pdb` files on Windows. 
+The file name in the snapshot may be suffixed by `[target_platform=<platform1>,<platform2>,...]` to include the file only on targetted platforms.
+
+The currently supported options are:
+* `windows-msvc`
+* `windows-gnu`
+* `windows` (includes both `windows-msvc` and `windows-gnu`)
+* `linux`
+* `macos`
+
 #### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
