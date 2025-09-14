@@ -415,13 +415,16 @@ impl<'a> UnitGenerator<'a, '_> {
                     for proposal in self.filter_targets(Target::is_lib, false, compile_mode) {
                         let Proposal { target, pkg, .. } = proposal;
                         if matches!(self.intent, UserIntent::Doctest) && !target.doctestable() {
-                            let types = target.rustc_crate_types();
-                            let types_str: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
-                            self.ws.gctx().shell().warn(format!(
-                      "doc tests are not supported for crate type(s) `{}` in package `{}`",
-                      types_str.join(", "),
-                      pkg.name()
-                  ))?;
+                            if target.doctested() {
+                                let types = target.rustc_crate_types();
+                                let types_str: Vec<&str> =
+                                    types.iter().map(|t| t.as_str()).collect();
+                                self.ws.gctx().shell().warn(format!(
+                                    "doc tests are not supported for crate type(s) `{}` in package `{}`",
+                                    types_str.join(", "),
+                                    pkg.name()
+                                ))?;
+                            }
                         } else {
                             libs.push(proposal)
                         }
