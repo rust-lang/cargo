@@ -535,15 +535,13 @@ pub struct EncodableDependency {
 /// The serialization for `SourceId` doesn't do URL encode for parameters.
 /// In contrast, this type is aware of that whenever [`ResolveVersion`] allows
 /// us to do so (v4 or later).
-#[derive(Deserialize, Debug, PartialOrd, Ord, Clone)]
-#[serde(transparent)]
+#[derive(Debug, PartialOrd, Ord, Clone)]
 pub struct EncodableSourceId {
     inner: SourceId,
     /// We don't care about the deserialization of this, as the `url` crate
     /// will always decode as the URL was encoded. Only when a [`Resolve`]
     /// turns into a [`EncodableResolve`] will it set the value accordingly
     /// via [`encodable_source_id`].
-    #[serde(skip)]
     encoded: bool,
 }
 
@@ -589,6 +587,20 @@ impl ser::Serialize for EncodableSourceId {
         S: ser::Serializer,
     {
         s.collect_str(&self.as_url())
+    }
+}
+
+impl<'de> de::Deserialize<'de> for EncodableSourceId {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s = String::deserialize(d)?;
+        let sid = SourceId::from_url(&s).map_err(de::Error::custom)?;
+        Ok(EncodableSourceId {
+            inner: sid,
+            encoded: false,
+        })
     }
 }
 
