@@ -4572,6 +4572,50 @@ fn doctest_skip_staticlib() {
 }
 
 #[cargo_test]
+fn no_doctest_warning_when_explicitly_disabled() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["staticlib"]
+                doctest = false
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! assert_eq!(1,2);
+            //! ```
+            "#,
+        )
+        .build();
+
+    p.cargo("test --doc")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no library targets found in package `foo`
+
+"#]])
+        .run();
+
+    p.cargo("test")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn can_not_mix_doc_tests_and_regular_tests() {
     let p = project()
         .file(
