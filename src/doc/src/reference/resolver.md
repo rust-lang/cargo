@@ -24,7 +24,7 @@ This pseudo-code approximates what Cargo's resolver does:
 pub fn resolve(workspace: &[Package], policy: Policy) -> Option<ResolveGraph> {
     let dep_queue = Queue::new(workspace);
     let resolved = ResolveGraph::new();
-    resolve_next(pkq_queue, resolved, policy)
+    resolve_next(dep_queue, resolved, policy)
 }
 
 fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Option<ResolveGraph> {
