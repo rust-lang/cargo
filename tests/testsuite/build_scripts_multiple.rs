@@ -870,32 +870,12 @@ fn duplicate_build_script_stems() {
         .masquerade_as_nightly_cargo(&["multiple-build-scripts"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] output filename collision.
-The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build_script_build1-[HASH]
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-[WARNING] output filename collision.
-The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-[WARNING] output filename collision.
-The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build_script_build1-[HASH].dwp
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-[WARNING] output filename collision.
-The build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)` has the same output filename as the build-script target `build-script-build1` in package `foo v0.1.0 ([ROOT]/foo)`.
-Colliding filename is: [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1.dwp
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-[COMPILING] foo v0.1.0 ([ROOT]/foo)
-...
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  found build scripts with duplicate file stems, but all build scripts must have a unique file stem
+    for stem `build1`: build1.rs, foo/build1.rs
+
 "#]])
         .run();
 }
