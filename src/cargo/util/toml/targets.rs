@@ -104,6 +104,7 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
+        validate_unique_build_scripts(custom_build)?;
         for script in custom_build {
             let script_path = Path::new(script);
             let name = format!(
@@ -895,6 +896,22 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
                  but all {target_kind} targets must have a unique name",
                 target_kind = target_kind,
                 name = name
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Will check a list of build scripts, and make sure script file stems are unique within a vector.
+fn validate_unique_build_scripts(scripts: &[String]) -> CargoResult<()> {
+    let mut seen = HashSet::new();
+    for script in scripts {
+        let stem = Path::new(script).file_stem().unwrap().to_str().unwrap();
+        if !seen.insert(stem) {
+            anyhow::bail!(
+                "found duplicate build script file stem {}, \
+                but all build scripts must have a unique file stem",
+                stem
             );
         }
     }
