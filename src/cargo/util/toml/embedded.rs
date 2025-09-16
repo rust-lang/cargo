@@ -12,15 +12,13 @@ pub(super) fn expand_manifest(content: &str) -> Result<String, FrontmatterError>
             Some(other) => {
                 if let Some(remainder) = other.strip_prefix("cargo,") {
                     return Err(FrontmatterError::new(
-                        format!(
-                            "cargo does not support frontmatter infostring attributes like `{remainder}` at this time"
-                        ),
+                        format!("unsupported frontmatter infostring attributes: `{remainder}`"),
                         source.info_span().unwrap(),
                     ));
                 } else {
                     return Err(FrontmatterError::new(
                         format!(
-                            "frontmatter infostring `{other}` is unsupported by cargo; specify `cargo` for embedding a manifest"
+                            "unsupported frontmatter infostring `{other}`; specify `cargo` for embedding a manifest"
                         ),
                         source.info_span().unwrap(),
                     ));
