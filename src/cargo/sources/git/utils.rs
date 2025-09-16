@@ -1528,7 +1528,7 @@ fn github_fast_path(
         "https://api.github.com/repos/{}/{}/commits/{}",
         username, repository, github_branch_name,
     );
-    let mut handle = gctx.http()?.borrow_mut();
+    let mut handle = gctx.http()?.lock().unwrap();
     debug!("attempting GitHub fast path for {}", url);
     handle.get(true)?;
     handle.url(&url)?;

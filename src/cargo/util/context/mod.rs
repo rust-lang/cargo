@@ -51,8 +51,6 @@
 
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
-use std::cell::OnceCell;
-use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -64,7 +62,7 @@ use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, Once};
+use std::sync::{Arc, Mutex, MutexGuard, Once, OnceLock};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
@@ -167,11 +165,11 @@ pub struct GlobalContext {
     /// The location of the user's Cargo home directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
-    shell: RefCell<Shell>,
+    shell: Mutex<Shell>,
     /// A collection of configuration options
-    values: OnceCell<HashMap<String, ConfigValue>>,
+    values: OnceLock<HashMap<String, ConfigValue>>,
     /// A collection of configuration options from the credentials file
-    credential_values: OnceCell<HashMap<String, ConfigValue>>,
+    credential_values: OnceLock<HashMap<String, ConfigValue>>,
     /// CLI config values, passed in via `configure`.
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
@@ -179,9 +177,9 @@ pub struct GlobalContext {
     /// Directory where config file searching should stop (inclusive).
     search_stop_path: Option<PathBuf>,
     /// The location of the cargo executable (path to current process)
-    cargo_exe: OnceCell<PathBuf>,
+    cargo_exe: OnceLock<PathBuf>,
     /// The location of the rustdoc executable
-    rustdoc: OnceCell<PathBuf>,
+    rustdoc: OnceLock<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
     /// `frozen` is the same as `locked`, but additionally will not access the
@@ -200,9 +198,9 @@ pub struct GlobalContext {
     /// Cli flags of the form "-Z something"
     unstable_flags_cli: Option<Vec<String>>,
     /// A handle on curl easy mode for http calls
-    easy: OnceCell<RefCell<Easy>>,
+    easy: OnceLock<Mutex<Easy>>,
     /// Cache of the `SourceId` for crates.io
-    crates_io_source_id: OnceCell<SourceId>,
+    crates_io_source_id: OnceLock<SourceId>,
     /// If false, don't cache `rustc --version --verbose` invocations
     cache_rustc_info: bool,
     /// Creation time of this config, used to output the total build time
@@ -212,23 +210,23 @@ pub struct GlobalContext {
     /// Environment variable snapshot.
     env: Env,
     /// Tracks which sources have been updated to avoid multiple updates.
-    updated_sources: OnceCell<RefCell<HashSet<SourceId>>>,
+    updated_sources: OnceLock<Mutex<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: OnceCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
+    credential_cache: OnceLock<Mutex<HashMap<CanonicalUrl, CredentialCacheValue>>>,
     /// Cache of registry config from the `[registries]` table.
-    registry_config: OnceCell<RefCell<HashMap<SourceId, Option<RegistryConfig>>>>,
+    registry_config: OnceLock<Mutex<HashMap<SourceId, Option<RegistryConfig>>>>,
     /// Locks on the package and index caches.
     package_cache_lock: CacheLocker,
     /// Cached configuration parsed by Cargo
-    http_config: OnceCell<CargoHttpConfig>,
-    future_incompat_config: OnceCell<CargoFutureIncompatConfig>,
-    net_config: OnceCell<CargoNetConfig>,
-    build_config: OnceCell<CargoBuildConfig>,
-    target_cfgs: OnceCell<Vec<(String, TargetCfgConfig)>>,
-    doc_extern_map: OnceCell<RustdocExternMap>,
+    http_config: OnceLock<CargoHttpConfig>,
+    future_incompat_config: OnceLock<CargoFutureIncompatConfig>,
+    net_config: OnceLock<CargoNetConfig>,
+    build_config: OnceLock<CargoBuildConfig>,
+    target_cfgs: OnceLock<Vec<(String, TargetCfgConfig)>>,
+    doc_extern_map: OnceLock<RustdocExternMap>,
     progress_config: ProgressConfig,
-    env_config: OnceCell<Arc<HashMap<String, OsString>>>,
+    env_config: OnceLock<Arc<HashMap<String, OsString>>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -246,12 +244,12 @@ pub struct GlobalContext {
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
     /// `WorkspaceRootConfigs` that have been found
-    pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
+    ws_roots: Mutex<HashMap<PathBuf, WorkspaceRootConfig>>,
     /// The global cache tracker is a database used to track disk cache usage.
-    global_cache_tracker: OnceCell<RefCell<GlobalCacheTracker>>,
+    global_cache_tracker: OnceLock<Mutex<GlobalCacheTracker>>,
     /// A cache of modifications to make to [`GlobalContext::global_cache_tracker`],
     /// saved to disk in a batch to improve performance.
-    deferred_global_last_use: OnceCell<RefCell<DeferredGlobalLastUse>>,
+    deferred_global_last_use: OnceLock<Mutex<DeferredGlobalLastUse>>,
 }
 
 impl GlobalContext {
@@ -284,14 +282,14 @@ impl GlobalContext {
 
         GlobalContext {
             home_path: Filesystem::new(homedir),
-            shell: RefCell::new(shell),
+            shell: Mutex::new(shell),
             cwd,
             search_stop_path: None,
-            values: OnceCell::new(),
-            credential_values: OnceCell::new(),
+            values: Default::default(),
+            credential_values: Default::default(),
             cli_config: None,
-            cargo_exe: OnceCell::new(),
-            rustdoc: OnceCell::new(),
+            cargo_exe: Default::default(),
+            rustdoc: Default::default(),
             extra_verbose: false,
             frozen: false,
             locked: false,
@@ -305,28 +303,28 @@ impl GlobalContext {
             },
             unstable_flags: CliUnstable::default(),
             unstable_flags_cli: None,
-            easy: OnceCell::new(),
-            crates_io_source_id: OnceCell::new(),
+            easy: Default::default(),
+            crates_io_source_id: Default::default(),
             cache_rustc_info,
             creation_time: Instant::now(),
             target_dir: None,
             env,
-            updated_sources: OnceCell::new(),
-            credential_cache: OnceCell::new(),
-            registry_config: OnceCell::new(),
+            updated_sources: Default::default(),
+            credential_cache: Default::default(),
+            registry_config: Default::default(),
             package_cache_lock: CacheLocker::new(),
-            http_config: OnceCell::new(),
-            future_incompat_config: OnceCell::new(),
-            net_config: OnceCell::new(),
-            build_config: OnceCell::new(),
-            target_cfgs: OnceCell::new(),
-            doc_extern_map: OnceCell::new(),
+            http_config: Default::default(),
+            future_incompat_config: Default::default(),
+            net_config: Default::default(),
+            build_config: Default::default(),
+            target_cfgs: Default::default(),
+            doc_extern_map: Default::default(),
             progress_config: ProgressConfig::default(),
-            env_config: OnceCell::new(),
+            env_config: Default::default(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
-            ws_roots: RefCell::new(HashMap::new()),
-            global_cache_tracker: OnceCell::new(),
-            deferred_global_last_use: OnceCell::new(),
+            ws_roots: Default::default(),
+            global_cache_tracker: Default::default(),
+            deferred_global_last_use: Default::default(),
         }
     }
 
@@ -409,8 +407,8 @@ impl GlobalContext {
     }
 
     /// Gets a reference to the shell, e.g., for writing error messages.
-    pub fn shell(&self) -> RefMut<'_, Shell> {
-        self.shell.borrow_mut()
+    pub fn shell(&self) -> MutexGuard<'_, Shell> {
+        self.shell.lock().unwrap()
     }
 
     /// Assert [`Self::shell`] is not in use
@@ -525,24 +523,29 @@ impl GlobalContext {
     }
 
     /// Which package sources have been updated, used to ensure it is only done once.
-    pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
+    pub fn updated_sources(&self) -> MutexGuard<'_, HashSet<SourceId>> {
         self.updated_sources
-            .get_or_init(|| RefCell::new(HashSet::new()))
-            .borrow_mut()
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap()
     }
 
     /// Cached credentials from credential providers or configuration.
-    pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
+    pub fn credential_cache(&self) -> MutexGuard<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
         self.credential_cache
-            .get_or_init(|| RefCell::new(HashMap::new()))
-            .borrow_mut()
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap()
     }
 
     /// Cache of already parsed registries from the `[registries]` table.
-    pub(crate) fn registry_config(&self) -> RefMut<'_, HashMap<SourceId, Option<RegistryConfig>>> {
+    pub(crate) fn registry_config(
+        &self,
+    ) -> MutexGuard<'_, HashMap<SourceId, Option<RegistryConfig>>> {
         self.registry_config
-            .get_or_init(|| RefCell::new(HashMap::new()))
-            .borrow_mut()
+            .get_or_init(|| Default::default())
+            .lock()
+            .unwrap()
     }
 
     /// Gets all config values from disk.
@@ -570,7 +573,7 @@ impl GlobalContext {
         if self.values.get().is_some() {
             bail!("config values already found")
         }
-        match self.values.set(values) {
+        match self.values.set(values.into()) {
             Ok(()) => Ok(()),
             Err(_) => bail!("could not fill values"),
         }
@@ -745,7 +748,7 @@ impl GlobalContext {
                 return Ok(val);
             }
         }
-        self.get_cv_helper(key, self.values()?)
+        self.get_cv_helper(key, &*self.values()?)
     }
 
     fn get_cv_helper(
@@ -1892,12 +1895,12 @@ impl GlobalContext {
         self.jobserver.as_ref()
     }
 
-    pub fn http(&self) -> CargoResult<&RefCell<Easy>> {
+    pub fn http(&self) -> CargoResult<&Mutex<Easy>> {
         let http = self
             .easy
-            .try_borrow_with(|| http_handle(self).map(RefCell::new))?;
+            .try_borrow_with(|| http_handle(self).map(Into::into))?;
         {
-            let mut http = http.borrow_mut();
+            let mut http = http.lock().unwrap();
             http.reset();
             let timeout = configure_http_handle(self, &mut http)?;
             timeout.configure(&mut http)?;
@@ -2108,19 +2111,19 @@ impl GlobalContext {
     ///
     /// The package cache lock must be held to call this function (and to use
     /// it in general).
-    pub fn global_cache_tracker(&self) -> CargoResult<RefMut<'_, GlobalCacheTracker>> {
+    pub fn global_cache_tracker(&self) -> CargoResult<MutexGuard<'_, GlobalCacheTracker>> {
         let tracker = self.global_cache_tracker.try_borrow_with(|| {
-            Ok::<_, anyhow::Error>(RefCell::new(GlobalCacheTracker::new(self)?))
+            Ok::<_, anyhow::Error>(Mutex::new(GlobalCacheTracker::new(self)?))
         })?;
-        Ok(tracker.borrow_mut())
+        Ok(tracker.lock().unwrap())
     }
 
     /// Returns a reference to the shared [`DeferredGlobalLastUse`].
-    pub fn deferred_global_last_use(&self) -> CargoResult<RefMut<'_, DeferredGlobalLastUse>> {
-        let deferred = self.deferred_global_last_use.try_borrow_with(|| {
-            Ok::<_, anyhow::Error>(RefCell::new(DeferredGlobalLastUse::new()))
-        })?;
-        Ok(deferred.borrow_mut())
+    pub fn deferred_global_last_use(&self) -> CargoResult<MutexGuard<'_, DeferredGlobalLastUse>> {
+        let deferred = self
+            .deferred_global_last_use
+            .try_borrow_with(|| Ok::<_, anyhow::Error>(Mutex::new(DeferredGlobalLastUse::new())))?;
+        Ok(deferred.lock().unwrap())
     }
 
     /// Get the global [`WarningHandling`] configuration.
@@ -2132,8 +2135,8 @@ impl GlobalContext {
         }
     }
 
-    pub fn ws_roots(&self) -> RefMut<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
-        self.ws_roots.borrow_mut()
+    pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
+        self.ws_roots.lock().unwrap()
     }
 }
 
@@ -3204,5 +3207,11 @@ mod tests {
             disables_multiplexing_for_bad_curl(curl_v, &mut http, &gctx);
             assert_eq!(http.multiplexing, result);
         }
+    }
+
+    #[test]
+    fn sync_context() {
+        fn assert_sync<S: Sync>() {}
+        assert_sync::<GlobalContext>();
     }
 }
