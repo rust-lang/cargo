@@ -10,17 +10,18 @@ pub(super) fn expand_manifest(content: &str) -> Result<String, FrontmatterError>
         match source.info() {
             Some("cargo") | None => {}
             Some(other) => {
+                let info_span = source.info_span().unwrap();
                 if let Some(remainder) = other.strip_prefix("cargo,") {
                     return Err(FrontmatterError::new(
                         format!("unsupported frontmatter infostring attributes: `{remainder}`"),
-                        source.info_span().unwrap(),
+                        info_span,
                     ));
                 } else {
                     return Err(FrontmatterError::new(
                         format!(
                             "unsupported frontmatter infostring `{other}`; specify `cargo` for embedding a manifest"
                         ),
-                        source.info_span().unwrap(),
+                        info_span,
                     ));
                 }
             }
