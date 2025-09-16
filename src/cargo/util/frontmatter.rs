@@ -132,7 +132,7 @@ impl<'s> ScriptSource<'s> {
         if !after_closing_fence.is_empty() {
             // extra characters beyond the original fence pattern, even if they are extra `-`
             return Err(FrontmatterError::new(
-                format!("trailing characters found after frontmatter close"),
+                format!("unexpected characters after frontmatter close"),
                 close_end..content_start,
             ));
         }
@@ -584,7 +584,7 @@ content: "\nfn main() {}\n"
 fn main() {}
 "#,
             ),
-            str!["trailing characters found after frontmatter close"],
+            str!["unexpected characters after frontmatter close"],
         );
     }
 
@@ -621,7 +621,7 @@ time="0.1.25"
 fn main() {}
 "#,
             ),
-            str!["trailing characters found after frontmatter close"],
+            str!["unexpected characters after frontmatter close"],
         );
     }
 
