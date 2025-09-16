@@ -80,7 +80,7 @@ impl<'s> ScriptSource<'s> {
         source.open = Some(open_start..open_end);
         let Some(info_nl) = input.find_slice("\n") else {
             return Err(FrontmatterError::new(
-                format!("no closing `{fence_pattern}` found for frontmatter"),
+                format!("unclosed frontmatter; expected `{fence_pattern}`"),
                 open_start..open_end,
             ));
         };
@@ -109,7 +109,7 @@ impl<'s> ScriptSource<'s> {
                 ));
             }
             return Err(FrontmatterError::new(
-                format!("no closing `{fence_pattern}` found for frontmatter"),
+                format!("unclosed frontmatter; expected `{fence_pattern}`"),
                 open_start..open_end,
             ));
         };
@@ -636,7 +636,7 @@ time="0.1.25"
 fn main() {}
 "#,
             ),
-            str!["no closing `---` found for frontmatter"],
+            str!["unclosed frontmatter; expected `---`"],
         );
     }
 }
