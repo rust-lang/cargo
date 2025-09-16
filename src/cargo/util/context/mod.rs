@@ -51,6 +51,7 @@
 
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::cell::{RefCell, RefMut};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
@@ -74,6 +75,7 @@ use crate::core::{CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig, 
 use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
+use crate::util::OnceExt as _;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
@@ -85,7 +87,6 @@ use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
 use itertools::Itertools;
-use lazycell::LazyCell;
 use serde::Deserialize;
 use serde::de::IntoDeserializer as _;
 use serde_untagged::UntaggedEnumVisitor;
@@ -168,9 +169,9 @@ pub struct GlobalContext {
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
     /// A collection of configuration options
-    values: LazyCell<HashMap<String, ConfigValue>>,
+    values: OnceCell<HashMap<String, ConfigValue>>,
     /// A collection of configuration options from the credentials file
-    credential_values: LazyCell<HashMap<String, ConfigValue>>,
+    credential_values: OnceCell<HashMap<String, ConfigValue>>,
     /// CLI config values, passed in via `configure`.
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
@@ -178,9 +179,9 @@ pub struct GlobalContext {
     /// Directory where config file searching should stop (inclusive).
     search_stop_path: Option<PathBuf>,
     /// The location of the cargo executable (path to current process)
-    cargo_exe: LazyCell<PathBuf>,
+    cargo_exe: OnceCell<PathBuf>,
     /// The location of the rustdoc executable
-    rustdoc: LazyCell<PathBuf>,
+    rustdoc: OnceCell<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
     /// `frozen` is the same as `locked`, but additionally will not access the
@@ -199,9 +200,9 @@ pub struct GlobalContext {
     /// Cli flags of the form "-Z something"
     unstable_flags_cli: Option<Vec<String>>,
     /// A handle on curl easy mode for http calls
-    easy: LazyCell<RefCell<Easy>>,
+    easy: OnceCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
-    crates_io_source_id: LazyCell<SourceId>,
+    crates_io_source_id: OnceCell<SourceId>,
     /// If false, don't cache `rustc --version --verbose` invocations
     cache_rustc_info: bool,
     /// Creation time of this config, used to output the total build time
@@ -211,23 +212,23 @@ pub struct GlobalContext {
     /// Environment variable snapshot.
     env: Env,
     /// Tracks which sources have been updated to avoid multiple updates.
-    updated_sources: LazyCell<RefCell<HashSet<SourceId>>>,
+    updated_sources: OnceCell<RefCell<HashSet<SourceId>>>,
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
-    credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
+    credential_cache: OnceCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
     /// Cache of registry config from the `[registries]` table.
-    registry_config: LazyCell<RefCell<HashMap<SourceId, Option<RegistryConfig>>>>,
+    registry_config: OnceCell<RefCell<HashMap<SourceId, Option<RegistryConfig>>>>,
     /// Locks on the package and index caches.
     package_cache_lock: CacheLocker,
     /// Cached configuration parsed by Cargo
-    http_config: LazyCell<CargoHttpConfig>,
-    future_incompat_config: LazyCell<CargoFutureIncompatConfig>,
-    net_config: LazyCell<CargoNetConfig>,
-    build_config: LazyCell<CargoBuildConfig>,
-    target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
-    doc_extern_map: LazyCell<RustdocExternMap>,
+    http_config: OnceCell<CargoHttpConfig>,
+    future_incompat_config: OnceCell<CargoFutureIncompatConfig>,
+    net_config: OnceCell<CargoNetConfig>,
+    build_config: OnceCell<CargoBuildConfig>,
+    target_cfgs: OnceCell<Vec<(String, TargetCfgConfig)>>,
+    doc_extern_map: OnceCell<RustdocExternMap>,
     progress_config: ProgressConfig,
-    env_config: LazyCell<Arc<HashMap<String, OsString>>>,
+    env_config: OnceCell<Arc<HashMap<String, OsString>>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -247,10 +248,10 @@ pub struct GlobalContext {
     /// `WorkspaceRootConfigs` that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
     /// The global cache tracker is a database used to track disk cache usage.
-    global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
+    global_cache_tracker: OnceCell<RefCell<GlobalCacheTracker>>,
     /// A cache of modifications to make to [`GlobalContext::global_cache_tracker`],
     /// saved to disk in a batch to improve performance.
-    deferred_global_last_use: LazyCell<RefCell<DeferredGlobalLastUse>>,
+    deferred_global_last_use: OnceCell<RefCell<DeferredGlobalLastUse>>,
 }
 
 impl GlobalContext {
@@ -286,11 +287,11 @@ impl GlobalContext {
             shell: RefCell::new(shell),
             cwd,
             search_stop_path: None,
-            values: LazyCell::new(),
-            credential_values: LazyCell::new(),
+            values: OnceCell::new(),
+            credential_values: OnceCell::new(),
             cli_config: None,
-            cargo_exe: LazyCell::new(),
-            rustdoc: LazyCell::new(),
+            cargo_exe: OnceCell::new(),
+            rustdoc: OnceCell::new(),
             extra_verbose: false,
             frozen: false,
             locked: false,
@@ -304,28 +305,28 @@ impl GlobalContext {
             },
             unstable_flags: CliUnstable::default(),
             unstable_flags_cli: None,
-            easy: LazyCell::new(),
-            crates_io_source_id: LazyCell::new(),
+            easy: OnceCell::new(),
+            crates_io_source_id: OnceCell::new(),
             cache_rustc_info,
             creation_time: Instant::now(),
             target_dir: None,
             env,
-            updated_sources: LazyCell::new(),
-            credential_cache: LazyCell::new(),
-            registry_config: LazyCell::new(),
+            updated_sources: OnceCell::new(),
+            credential_cache: OnceCell::new(),
+            registry_config: OnceCell::new(),
             package_cache_lock: CacheLocker::new(),
-            http_config: LazyCell::new(),
-            future_incompat_config: LazyCell::new(),
-            net_config: LazyCell::new(),
-            build_config: LazyCell::new(),
-            target_cfgs: LazyCell::new(),
-            doc_extern_map: LazyCell::new(),
+            http_config: OnceCell::new(),
+            future_incompat_config: OnceCell::new(),
+            net_config: OnceCell::new(),
+            build_config: OnceCell::new(),
+            target_cfgs: OnceCell::new(),
+            doc_extern_map: OnceCell::new(),
             progress_config: ProgressConfig::default(),
-            env_config: LazyCell::new(),
+            env_config: OnceCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
             ws_roots: RefCell::new(HashMap::new()),
-            global_cache_tracker: LazyCell::new(),
-            deferred_global_last_use: LazyCell::new(),
+            global_cache_tracker: OnceCell::new(),
+            deferred_global_last_use: OnceCell::new(),
         }
     }
 
@@ -526,21 +527,21 @@ impl GlobalContext {
     /// Which package sources have been updated, used to ensure it is only done once.
     pub fn updated_sources(&self) -> RefMut<'_, HashSet<SourceId>> {
         self.updated_sources
-            .borrow_with(|| RefCell::new(HashSet::new()))
+            .get_or_init(|| RefCell::new(HashSet::new()))
             .borrow_mut()
     }
 
     /// Cached credentials from credential providers or configuration.
     pub fn credential_cache(&self) -> RefMut<'_, HashMap<CanonicalUrl, CredentialCacheValue>> {
         self.credential_cache
-            .borrow_with(|| RefCell::new(HashMap::new()))
+            .get_or_init(|| RefCell::new(HashMap::new()))
             .borrow_mut()
     }
 
     /// Cache of already parsed registries from the `[registries]` table.
     pub(crate) fn registry_config(&self) -> RefMut<'_, HashMap<SourceId, Option<RegistryConfig>>> {
         self.registry_config
-            .borrow_with(|| RefCell::new(HashMap::new()))
+            .get_or_init(|| RefCell::new(HashMap::new()))
             .borrow_mut()
     }
 
@@ -561,18 +562,15 @@ impl GlobalContext {
     /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         let _ = self.values()?;
-        Ok(self
-            .values
-            .borrow_mut()
-            .expect("already loaded config values"))
+        Ok(self.values.get_mut().expect("already loaded config values"))
     }
 
     // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
-        if self.values.borrow().is_some() {
+        if self.values.get().is_some() {
             bail!("config values already found")
         }
-        match self.values.fill(values) {
+        match self.values.set(values) {
             Ok(()) => Ok(()),
             Err(_) => bail!("could not fill values"),
         }
@@ -741,7 +739,7 @@ impl GlobalContext {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        if let Some(vals) = self.credential_values.borrow() {
+        if let Some(vals) = self.credential_values.get() {
             let val = self.get_cv_helper(key, vals)?;
             if val.is_some() {
                 return Ok(val);
@@ -1802,7 +1800,7 @@ impl GlobalContext {
             }
         }
         self.credential_values
-            .fill(credential_values)
+            .set(credential_values)
             .expect("was not filled at beginning of the function");
         Ok(())
     }
