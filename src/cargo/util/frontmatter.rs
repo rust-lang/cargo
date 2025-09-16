@@ -150,9 +150,11 @@ impl<'s> ScriptSource<'s> {
             let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
             if !after_closing_fence.is_empty() {
                 // extra characters beyond the original fence pattern
+                let after_start = after_closing_fence.offset_from(&raw);
+                let after_end = after_start + after_closing_fence.len();
                 return Err(FrontmatterError::new(
                     format!("unexpected characters after frontmatter close"),
-                    close_end..content_start,
+                    after_start..after_end,
                 )
                 .push_visible_span(open_start..open_end));
             }
