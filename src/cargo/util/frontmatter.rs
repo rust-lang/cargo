@@ -103,8 +103,11 @@ impl<'s> ScriptSource<'s> {
                 let close_start = input.current_token_start();
                 let _ = input.next_slice(len);
                 let close_end = input.current_token_start();
+                let fewer_dashes = fence_length - len;
                 return Err(FrontmatterError::new(
-                    format!("closing code fence has too few `-`"),
+                    format!(
+                        "closing code fence has {fewer_dashes} less `-` than the opening fence"
+                    ),
                     close_start..close_end,
                 ));
             }
