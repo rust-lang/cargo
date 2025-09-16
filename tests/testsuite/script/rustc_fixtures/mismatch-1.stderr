@@ -1,7 +1,5 @@
-[ERROR] unexpected characters after frontmatter close
+[ERROR] closing code fence has 1 more `-` than the opening fence
  --> script:3:4
   |
-3 |   ----
-  |  ____^
-4 | |
-  | |_^
+3 | ----
+  |    ^

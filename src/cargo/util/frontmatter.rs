@@ -128,13 +128,26 @@ impl<'s> ScriptSource<'s> {
                 .unwrap_or_else(|| input.eof_offset()),
         );
         let content_start = input.current_token_start();
-        let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
-        if !after_closing_fence.is_empty() {
-            // extra characters beyond the original fence pattern, even if they are extra `-`
+        let extra_dashes = after_closing_fence
+            .chars()
+            .take_while(|b| *b == FENCE_CHAR)
+            .count();
+        if 0 < extra_dashes {
+            let extra_start = close_end;
+            let extra_end = extra_start + extra_dashes;
             return Err(FrontmatterError::new(
-                format!("unexpected characters after frontmatter close"),
-                close_end..content_start,
+                format!("closing code fence has {extra_dashes} more `-` than the opening fence"),
+                extra_start..extra_end,
             ));
+        } else {
+            let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
+            if !after_closing_fence.is_empty() {
+                // extra characters beyond the original fence pattern
+                return Err(FrontmatterError::new(
+                    format!("unexpected characters after frontmatter close"),
+                    close_end..content_start,
+                ));
+            }
         }
 
         source.content = content_start..content_end;
@@ -584,7 +597,7 @@ content: "\nfn main() {}\n"
 fn main() {}
 "#,
             ),
-            str!["unexpected characters after frontmatter close"],
+            str!["closing code fence has 2 more `-` than the opening fence"],
         );
     }
 
@@ -621,7 +634,7 @@ time="0.1.25"
 fn main() {}
 "#,
             ),
-            str!["unexpected characters after frontmatter close"],
+            str!["closing code fence has 1 more `-` than the opening fence"],
         );
     }
 
