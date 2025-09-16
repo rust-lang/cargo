@@ -1,5 +1,8 @@
-[ERROR] cargo does not support frontmatter infostring attributes like `clippy` at this time
+[ERROR] unsupported frontmatter infostring attributes: `clippy`
  --> script:1:4
   |
 1 | ---cargo,clippy
   |    ^^^^^^^^^^^^
+2 | //~^ ERROR: invalid infostring for frontmatter
+3 | ---
+  |

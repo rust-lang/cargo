@@ -1,5 +1,7 @@
-[ERROR] no closing `----` found for frontmatter
- --> script:1:1
-  |
-1 | ----cargo
-  | ^^^^
+[ERROR] unclosed frontmatter; expected `----`
+  --> script:10:14
+   |
+ 1 | ----cargo
+...
+10 | fn main() {}
+   |             ^

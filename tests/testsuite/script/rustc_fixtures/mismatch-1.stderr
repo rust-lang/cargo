@@ -1,7 +1,7 @@
-[ERROR] trailing characters found after frontmatter close
+[ERROR] closing code fence has 1 more `-` than the opening fence
  --> script:3:4
   |
-3 |   ----
-  |  ____^
-4 | |
-  | |_^
+1 | ---cargo
+2 | //~^ ERROR: frontmatter close does not match the opening
+3 | ----
+  |    ^
