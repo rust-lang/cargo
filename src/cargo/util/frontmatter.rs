@@ -286,14 +286,14 @@ fn is_whitespace(c: char) -> bool {
 #[derive(Debug)]
 pub struct FrontmatterError {
     message: String,
-    span: Span,
+    primary_span: Span,
 }
 
 impl FrontmatterError {
     pub fn new(message: impl Into<String>, span: Span) -> Self {
         Self {
             message: message.into(),
-            span,
+            primary_span: span,
         }
     }
 
@@ -301,8 +301,8 @@ impl FrontmatterError {
         self.message.as_str()
     }
 
-    pub fn span(&self) -> Span {
-        self.span.clone()
+    pub fn primary_span(&self) -> Span {
+        self.primary_span.clone()
     }
 }
 

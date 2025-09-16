@@ -2783,7 +2783,7 @@ fn emit_frontmatter_diagnostic(
     manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> anyhow::Error {
-    let span = e.span();
+    let primary_span = e.primary_span();
 
     // Get the path to the manifest, relative to the cwd
     let manifest_path = diff_paths(manifest_file, gctx.cwd())
@@ -2793,7 +2793,7 @@ fn emit_frontmatter_diagnostic(
     let group = Group::with_title(Level::ERROR.primary_title(e.message())).element(
         Snippet::source(contents)
             .path(manifest_path)
-            .annotation(AnnotationKind::Primary.span(span)),
+            .annotation(AnnotationKind::Primary.span(primary_span)),
     );
 
     if let Err(err) = gctx.shell().print_report(&[group], true) {
