@@ -3,3 +3,6 @@
   |
 1 | ---cargo,clippy
   |    ^^^^^^^^^^^^
+2 | //~^ ERROR: invalid infostring for frontmatter
+3 | ---
+  |

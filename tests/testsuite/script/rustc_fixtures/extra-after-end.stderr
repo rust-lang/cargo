@@ -1,6 +1,7 @@
 [ERROR] unexpected characters after frontmatter close
  --> script:2:4
   |
+1 |   ---
 2 |   ---cargo
   |  ____^
 3 | | //~^ ERROR: extra characters after frontmatter close are not allowed

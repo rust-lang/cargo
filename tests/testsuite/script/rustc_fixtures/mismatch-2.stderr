@@ -1,5 +1,7 @@
 [ERROR] closing code fence has 1 less `-` than the opening fence
  --> script:3:1
   |
+1 | ----cargo
+2 | //~^ ERROR: frontmatter close does not match the opening
 3 | ---cargo
   | ^^^

@@ -2793,7 +2793,12 @@ fn emit_frontmatter_diagnostic(
     let group = Group::with_title(Level::ERROR.primary_title(e.message())).element(
         Snippet::source(contents)
             .path(manifest_path)
-            .annotation(AnnotationKind::Primary.span(primary_span)),
+            .annotation(AnnotationKind::Primary.span(primary_span))
+            .annotations(
+                e.visible_spans()
+                    .iter()
+                    .map(|s| AnnotationKind::Visible.span(s.clone())),
+            ),
     );
 
     if let Err(err) = gctx.shell().print_report(&[group], true) {

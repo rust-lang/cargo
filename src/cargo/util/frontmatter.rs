@@ -72,8 +72,8 @@ impl<'s> ScriptSource<'s> {
                     format!(
                         "found {fence_length} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
                     ),
-                    open_start..open_end,
-                ));
+                    raw.len()..raw.len(),
+                ).push_visible_span(open_start..open_end));
             }
             _ => {}
         }
@@ -81,8 +81,9 @@ impl<'s> ScriptSource<'s> {
         let Some(info_nl) = input.find_slice("\n") else {
             return Err(FrontmatterError::new(
                 format!("unclosed frontmatter; expected `{fence_pattern}`"),
-                open_start..open_end,
-            ));
+                raw.len()..raw.len(),
+            )
+            .push_visible_span(open_start..open_end));
         };
         let info = input.next_slice(info_nl.start);
         let info = info.trim_matches(is_whitespace);
@@ -109,12 +110,14 @@ impl<'s> ScriptSource<'s> {
                         "closing code fence has {fewer_dashes} less `-` than the opening fence"
                     ),
                     close_start..close_end,
-                ));
+                )
+                .push_visible_span(open_start..open_end));
             }
             return Err(FrontmatterError::new(
                 format!("unclosed frontmatter; expected `{fence_pattern}`"),
-                open_start..open_end,
-            ));
+                raw.len()..raw.len(),
+            )
+            .push_visible_span(open_start..open_end));
         };
         let frontmatter_start = input.current_token_start() + 1; // skip nl from infostring
         let _ = input.next_slice(frontmatter_nl.start + 1);
@@ -141,7 +144,8 @@ impl<'s> ScriptSource<'s> {
             return Err(FrontmatterError::new(
                 format!("closing code fence has {extra_dashes} more `-` than the opening fence"),
                 extra_start..extra_end,
-            ));
+            )
+            .push_visible_span(open_start..open_end));
         } else {
             let after_closing_fence = after_closing_fence.trim_matches(is_whitespace);
             if !after_closing_fence.is_empty() {
@@ -149,7 +153,8 @@ impl<'s> ScriptSource<'s> {
                 return Err(FrontmatterError::new(
                     format!("unexpected characters after frontmatter close"),
                     close_end..content_start,
-                ));
+                )
+                .push_visible_span(open_start..open_end));
             }
         }
 
@@ -169,7 +174,9 @@ impl<'s> ScriptSource<'s> {
             return Err(FrontmatterError::new(
                 format!("only one frontmatter is supported"),
                 fence_start..fence_end,
-            ));
+            )
+            .push_visible_span(open_start..open_end)
+            .push_visible_span(close_start..close_end));
         }
 
         Ok(source)
@@ -287,6 +294,7 @@ fn is_whitespace(c: char) -> bool {
 pub struct FrontmatterError {
     message: String,
     primary_span: Span,
+    visible_spans: Vec<Span>,
 }
 
 impl FrontmatterError {
@@ -294,7 +302,13 @@ impl FrontmatterError {
         Self {
             message: message.into(),
             primary_span: span,
+            visible_spans: Vec::new(),
         }
+    }
+
+    pub fn push_visible_span(mut self, span: Span) -> Self {
+        self.visible_spans.push(span);
+        self
     }
 
     pub fn message(&self) -> &str {
@@ -303,6 +317,10 @@ impl FrontmatterError {
 
     pub fn primary_span(&self) -> Span {
         self.primary_span.clone()
+    }
+
+    pub fn visible_spans(&self) -> &[Span] {
+        &self.visible_spans
     }
 }
 
