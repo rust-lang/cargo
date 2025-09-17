@@ -501,6 +501,17 @@ fn resolve_dependency(
         dependency = dependency.clear_version();
     }
 
+    let query = query_dependency(ws, gctx, &mut dependency)?;
+    let dependency = populate_available_features(dependency, &query, registry)?;
+
+    Ok(dependency)
+}
+
+fn query_dependency(
+    ws: &Workspace<'_>,
+    gctx: &GlobalContext,
+    dependency: &mut Dependency,
+) -> Result<crate::core::Dependency, anyhow::Error> {
     let query = dependency.query(gctx)?;
     let query = match query {
         MaybeWorkspace::Workspace(_workspace) => {
@@ -511,7 +522,7 @@ fn resolve_dependency(
                 ws.unstable_features(),
             )?;
             if let Some(features) = dep.features.clone() {
-                dependency = dependency.set_inherited_features(features);
+                *dependency = dependency.clone().set_inherited_features(features);
             }
             let query = dep.query(gctx)?;
             match query {
@@ -523,10 +534,7 @@ fn resolve_dependency(
         }
         MaybeWorkspace::Other(query) => query,
     };
-
-    let dependency = populate_available_features(dependency, &query, registry)?;
-
-    Ok(dependency)
+    Ok(query)
 }
 
 fn fuzzy_lookup(
