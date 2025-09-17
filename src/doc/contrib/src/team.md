@@ -71,7 +71,7 @@ The team meets on a weekly basis ([ics][meeting-ics]) on a video chat.
 Members of the community are welcome to attend.
 Minutes for all meetings are recorded on [HackMD][meeting-minutes].
 
-For discussing contributions, [Office Hours](../process/index.md#mentorship) would be more appropriate venue.
+For discussing contributions, [Office Hours](process/index.md#mentorship) would be more appropriate venue.
 
 [t-cargo-rfcs]: https://github.com/rust-lang/rfcs/pulls?q=is%3Apr+is%3Aopen+label%3AT-cargo
 [cargo-status-tracker]: https://github.com/orgs/rust-lang/projects/47
