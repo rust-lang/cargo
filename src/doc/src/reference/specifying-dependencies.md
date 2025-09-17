@@ -110,7 +110,9 @@ Here are some examples of comparison requirements:
 ### Multiple version requirements
 
 As shown in the examples above, multiple version requirements can be
-separated with a comma, e.g., `>= 1.2, < 1.5`.
+separated with a comma, e.g., `>= 1.2, < 1.5`. Comma separated requirements
+are treated as an intersection, so you cannot _exclude_ a version with
+non-overlapping requirements like `<1.2,^1.2.2`.
 
 ### Pre-releases
 
