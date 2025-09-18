@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EncodableResolve",
+  "description": "The `Cargo.lock` structure.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "package": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/EncodableDependency"
+      }
+    },
+    "root": {
+      "description": "`root` is optional to allow backward compatibility.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EncodableDependency"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "patch": {
+      "$ref": "#/$defs/Patch"
+    }
+  },
+  "$defs": {
+    "EncodableDependency": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checksum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dependencies": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EncodablePackageId"
+          }
+        },
+        "replace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EncodablePackageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "EncodablePackageId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "Patch": {
+      "type": "object",
+      "properties": {
+        "unused": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EncodableDependency"
+          }
+        }
+      },
+      "required": [
+        "unused"
+      ]
+    }
+  }
+}

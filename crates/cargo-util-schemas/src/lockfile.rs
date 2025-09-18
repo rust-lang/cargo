@@ -9,6 +9,7 @@ use crate::core::{GitReference, SourceKind};
 
 /// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct EncodableResolve {
     pub version: Option<u32>,
     pub package: Option<Vec<EncodableDependency>>,
@@ -20,6 +21,7 @@ pub struct EncodableResolve {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct Patch {
     pub unused: Vec<EncodableDependency>,
 }
@@ -33,6 +35,7 @@ impl Patch {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct EncodableDependency {
     pub name: String,
     pub version: String,
@@ -43,6 +46,11 @@ pub struct EncodableDependency {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "unstable-schema",
+    derive(schemars::JsonSchema),
+    schemars(with = "String")
+)]
 pub struct EncodableSourceId {
     /// Full string of the source
     source_str: String,
@@ -150,6 +158,7 @@ impl Ord for EncodableSourceId {
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct EncodablePackageId {
     pub name: String,
     pub version: Option<String>,
@@ -252,4 +261,12 @@ enum EncodablePackageIdErrorKind {
 
     #[error(transparent)]
     Source(#[from] EncodableSourceIdError),
+}
+
+#[cfg(feature = "unstable-schema")]
+#[test]
+fn dump_lockfile_schema() {
+    let schema = schemars::schema_for!(crate::lockfile::EncodableResolve);
+    let dump = serde_json::to_string_pretty(&schema).unwrap();
+    snapbox::assert_data_eq!(dump, snapbox::file!("../lockfile.schema.json").raw());
 }
