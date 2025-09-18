@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "EncodableResolve",
+  "title": "TomlLockfile",
   "description": "The `Cargo.lock` structure.",
   "type": "object",
   "properties": {
@@ -18,14 +18,14 @@
         "null"
       ],
       "items": {
-        "$ref": "#/$defs/EncodableDependency"
+        "$ref": "#/$defs/TomlLockfileDependency"
       }
     },
     "root": {
       "description": "`root` is optional to allow backward compatibility.",
       "anyOf": [
         {
-          "$ref": "#/$defs/EncodableDependency"
+          "$ref": "#/$defs/TomlLockfileDependency"
         },
         {
           "type": "null"
@@ -42,11 +42,11 @@
       }
     },
     "patch": {
-      "$ref": "#/$defs/Patch"
+      "$ref": "#/$defs/TomlLockfilePatch"
     }
   },
   "$defs": {
-    "EncodableDependency": {
+    "TomlLockfileDependency": {
       "type": "object",
       "properties": {
         "name": {
@@ -73,13 +73,13 @@
             "null"
           ],
           "items": {
-            "$ref": "#/$defs/EncodablePackageId"
+            "$ref": "#/$defs/TomlLockfilePackageId"
           }
         },
         "replace": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EncodablePackageId"
+              "$ref": "#/$defs/TomlLockfilePackageId"
             },
             {
               "type": "null"
@@ -92,7 +92,7 @@
         "version"
       ]
     },
-    "EncodablePackageId": {
+    "TomlLockfilePackageId": {
       "type": "object",
       "properties": {
         "name": {
@@ -115,13 +115,13 @@
         "name"
       ]
     },
-    "Patch": {
+    "TomlLockfilePatch": {
       "type": "object",
       "properties": {
         "unused": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/EncodableDependency"
+            "$ref": "#/$defs/TomlLockfileDependency"
           }
         }
       },

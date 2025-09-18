@@ -118,7 +118,8 @@ use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
 use anyhow::{Context as _, bail};
 use cargo_util_schemas::lockfile::{
-    EncodableDependency, EncodablePackageId, EncodableResolve, EncodableSourceId, Patch,
+    TomlLockfile, TomlLockfileDependency, TomlLockfilePackageId, TomlLockfilePatch,
+    TomlLockfileSourceId,
 };
 use serde::ser;
 use std::collections::{HashMap, HashSet};
@@ -133,7 +134,7 @@ use tracing::debug;
 /// primary uses is to be used with `resolve_with_previous` to guide the
 /// resolver to create a complete Resolve.
 pub fn into_resolve(
-    resolve: EncodableResolve,
+    resolve: TomlLockfile,
     original: &str,
     ws: &Workspace<'_>,
 ) -> CargoResult<Resolve> {
@@ -176,7 +177,7 @@ pub fn into_resolve(
         let mut live_pkgs = HashMap::new();
         let mut all_pkgs = HashSet::new();
         for pkg in packages.iter() {
-            let enc_id = EncodablePackageId {
+            let enc_id = TomlLockfilePackageId {
                 name: pkg.name.clone(),
                 version: Some(pkg.version.clone()),
                 source: pkg.source.clone(),
@@ -228,7 +229,7 @@ pub fn into_resolve(
             .insert(id.source_id(), *id);
     }
 
-    let mut lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
+    let mut lookup_id = |enc_id: &TomlLockfilePackageId| -> Option<PackageId> {
         // The name of this package should always be in the larger list of
         // all packages.
         let by_version = map.get(enc_id.name.as_str())?;
@@ -329,7 +330,7 @@ pub fn into_resolve(
     for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
         to_remove.push(k.to_string());
         let k = k.strip_prefix(prefix).unwrap();
-        let enc_id: EncodablePackageId = k
+        let enc_id: TomlLockfilePackageId = k
             .parse()
             .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
         let Some(id) = lookup_id(&enc_id) else {
@@ -405,7 +406,7 @@ pub fn into_resolve(
 
     fn get_source_id<'a>(
         path_deps: &'a HashMap<String, HashMap<semver::Version, SourceId>>,
-        pkg: &'a EncodableDependency,
+        pkg: &'a TomlLockfileDependency,
     ) -> Option<&'a SourceId> {
         path_deps.iter().find_map(|(name, version_source)| {
             if name != &pkg.name || version_source.len() == 0 {
@@ -535,11 +536,11 @@ impl ser::Serialize for Resolve {
             Some(metadata)
         };
 
-        let patch = Patch {
+        let patch = TomlLockfilePatch {
             unused: self
                 .unused_patches()
                 .iter()
-                .map(|id| EncodableDependency {
+                .map(|id| TomlLockfileDependency {
                     name: id.name().to_string(),
                     version: id.version().to_string(),
                     source: encodable_source_id(id.source_id(), self.version()),
@@ -553,7 +554,7 @@ impl ser::Serialize for Resolve {
                 })
                 .collect(),
         };
-        EncodableResolve {
+        TomlLockfile {
             package: Some(encodable),
             root: None,
             metadata,
@@ -597,7 +598,7 @@ fn encodable_resolve_node(
     id: PackageId,
     resolve: &Resolve,
     state: &EncodeState<'_>,
-) -> EncodableDependency {
+) -> TomlLockfileDependency {
     let (replace, deps) = match resolve.replacement(id) {
         Some(id) => (
             Some(encodable_package_id(id, state, resolve.version())),
@@ -613,7 +614,7 @@ fn encodable_resolve_node(
         }
     };
 
-    EncodableDependency {
+    TomlLockfileDependency {
         name: id.name().to_string(),
         version: id.version().to_string(),
         source: encodable_source_id(id.source_id(), resolve.version()),
@@ -631,7 +632,7 @@ pub fn encodable_package_id(
     id: PackageId,
     state: &EncodeState<'_>,
     resolve_version: ResolveVersion,
-) -> EncodablePackageId {
+) -> TomlLockfilePackageId {
     let mut version = Some(id.version().to_string());
     let mut id_to_encode = id.source_id();
     if resolve_version <= ResolveVersion::V2 {
@@ -652,22 +653,22 @@ pub fn encodable_package_id(
             }
         }
     }
-    EncodablePackageId {
+    TomlLockfilePackageId {
         name: id.name().to_string(),
         version,
         source,
     }
 }
 
-fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<EncodableSourceId> {
+fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<TomlLockfileSourceId> {
     if id.is_path() {
         None
     } else {
         Some(
             if version >= ResolveVersion::V4 {
-                EncodableSourceId::new(id.as_encoded_url().to_string())
+                TomlLockfileSourceId::new(id.as_encoded_url().to_string())
             } else {
-                EncodableSourceId::new(id.as_url().to_string())
+                TomlLockfileSourceId::new(id.as_url().to_string())
             }
             .expect("source ID should have valid URLs"),
         )

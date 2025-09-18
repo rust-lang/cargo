@@ -6,7 +6,7 @@ use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summ
 use crate::util::Graph;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use cargo_util_schemas::lockfile::Metadata;
+use cargo_util_schemas::lockfile::TomlLockfileMetadata;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -34,7 +34,7 @@ pub struct Resolve {
     /// "Unknown" metadata. This is a collection of extra, unrecognized data
     /// found in the `[metadata]` section of `Cargo.lock`, preserved for
     /// forwards compatibility.
-    metadata: Metadata,
+    metadata: TomlLockfileMetadata,
     /// `[patch]` entries that did not match anything, preserved in
     /// `Cargo.lock` as the `[[patch.unused]]` table array. Tracking unused
     /// patches helps prevent Cargo from being forced to re-update the
@@ -156,7 +156,7 @@ impl Resolve {
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, Vec<InternedString>>,
         checksums: HashMap<PackageId, Option<String>>,
-        metadata: Metadata,
+        metadata: TomlLockfileMetadata,
         unused_patches: Vec<PackageId>,
         version: ResolveVersion,
         summaries: HashMap<PackageId, Summary>,
@@ -394,7 +394,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.checksums.insert(pkg_id, Some(checksum));
     }
 
-    pub fn metadata(&self) -> &Metadata {
+    pub fn metadata(&self) -> &TomlLockfileMetadata {
         &self.metadata
     }
 

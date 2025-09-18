@@ -6,7 +6,7 @@ use crate::util::Filesystem;
 use crate::util::errors::CargoResult;
 
 use anyhow::Context as _;
-use cargo_util_schemas::lockfile::EncodableResolve;
+use cargo_util_schemas::lockfile::TomlLockfile;
 
 pub const LOCKFILE_NAME: &str = "Cargo.lock";
 
@@ -24,7 +24,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
         .with_context(|| format!("failed to read file: {}", f.path().display()))?;
 
     let resolve = (|| -> CargoResult<Option<Resolve>> {
-        let v: EncodableResolve = toml::from_str(&s)?;
+        let v: TomlLockfile = toml::from_str(&s)?;
         Ok(Some(into_resolve(v, &s, ws)?))
     })()
     .with_context(|| format!("failed to parse lock file at: {}", f.path().display()))?;
@@ -208,8 +208,8 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     // common case where we can update lock files.
     if !ws.gctx().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
-            let old: EncodableResolve = toml::from_str(orig)?;
-            let new: EncodableResolve = toml::from_str(current)?;
+            let old: TomlLockfile = toml::from_str(orig)?;
+            let new: TomlLockfile = toml::from_str(current)?;
             Ok(into_resolve(old, orig, ws)? == into_resolve(new, current, ws)?)
         })();
         if let Ok(true) = res {

@@ -10,25 +10,25 @@ use crate::core::{GitReference, SourceKind};
 /// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-pub struct EncodableResolve {
+pub struct TomlLockfile {
     pub version: Option<u32>,
-    pub package: Option<Vec<EncodableDependency>>,
+    pub package: Option<Vec<TomlLockfileDependency>>,
     /// `root` is optional to allow backward compatibility.
-    pub root: Option<EncodableDependency>,
-    pub metadata: Option<Metadata>,
-    #[serde(default, skip_serializing_if = "Patch::is_empty")]
-    pub patch: Patch,
+    pub root: Option<TomlLockfileDependency>,
+    pub metadata: Option<TomlLockfileMetadata>,
+    #[serde(default, skip_serializing_if = "TomlLockfilePatch::is_empty")]
+    pub patch: TomlLockfilePatch,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-pub struct Patch {
-    pub unused: Vec<EncodableDependency>,
+pub struct TomlLockfilePatch {
+    pub unused: Vec<TomlLockfileDependency>,
 }
 
-pub type Metadata = BTreeMap<String, String>;
+pub type TomlLockfileMetadata = BTreeMap<String, String>;
 
-impl Patch {
+impl TomlLockfilePatch {
     fn is_empty(&self) -> bool {
         self.unused.is_empty()
     }
@@ -36,13 +36,13 @@ impl Patch {
 
 #[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-pub struct EncodableDependency {
+pub struct TomlLockfileDependency {
     pub name: String,
     pub version: String,
-    pub source: Option<EncodableSourceId>,
+    pub source: Option<TomlLockfileSourceId>,
     pub checksum: Option<String>,
-    pub dependencies: Option<Vec<EncodablePackageId>>,
-    pub replace: Option<EncodablePackageId>,
+    pub dependencies: Option<Vec<TomlLockfilePackageId>>,
+    pub replace: Option<TomlLockfilePackageId>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +51,7 @@ pub struct EncodableDependency {
     derive(schemars::JsonSchema),
     schemars(with = "String")
 )]
-pub struct EncodableSourceId {
+pub struct TomlLockfileSourceId {
     /// Full string of the source
     source_str: String,
     /// Used for sources ordering
@@ -60,7 +60,7 @@ pub struct EncodableSourceId {
     url: Url,
 }
 
-impl EncodableSourceId {
+impl TomlLockfileSourceId {
     pub fn new(source: String) -> Result<Self, EncodableSourceIdError> {
         let source_str = source.clone();
         let (kind, url) = source.split_once('+').ok_or_else(|| {
@@ -109,7 +109,7 @@ impl EncodableSourceId {
     }
 }
 
-impl ser::Serialize for EncodableSourceId {
+impl ser::Serialize for TomlLockfileSourceId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -118,39 +118,39 @@ impl ser::Serialize for EncodableSourceId {
     }
 }
 
-impl<'de> de::Deserialize<'de> for EncodableSourceId {
+impl<'de> de::Deserialize<'de> for TomlLockfileSourceId {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         let s = String::deserialize(d)?;
-        Ok(EncodableSourceId::new(s).map_err(de::Error::custom)?)
+        Ok(TomlLockfileSourceId::new(s).map_err(de::Error::custom)?)
     }
 }
 
-impl std::hash::Hash for EncodableSourceId {
+impl std::hash::Hash for TomlLockfileSourceId {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.kind.hash(state);
         self.url.hash(state);
     }
 }
 
-impl std::cmp::PartialEq for EncodableSourceId {
+impl std::cmp::PartialEq for TomlLockfileSourceId {
     fn eq(&self, other: &Self) -> bool {
         self.kind == other.kind && self.url == other.url
     }
 }
 
-impl std::cmp::Eq for EncodableSourceId {}
+impl std::cmp::Eq for TomlLockfileSourceId {}
 
-impl PartialOrd for EncodableSourceId {
-    fn partial_cmp(&self, other: &EncodableSourceId) -> Option<Ordering> {
+impl PartialOrd for TomlLockfileSourceId {
+    fn partial_cmp(&self, other: &TomlLockfileSourceId) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for EncodableSourceId {
-    fn cmp(&self, other: &EncodableSourceId) -> Ordering {
+impl Ord for TomlLockfileSourceId {
+    fn cmp(&self, other: &TomlLockfileSourceId) -> Ordering {
         self.kind
             .cmp(&other.kind)
             .then_with(|| self.url.cmp(&other.url))
@@ -159,13 +159,13 @@ impl Ord for EncodableSourceId {
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-pub struct EncodablePackageId {
+pub struct TomlLockfilePackageId {
     pub name: String,
     pub version: Option<String>,
-    pub source: Option<EncodableSourceId>,
+    pub source: Option<TomlLockfileSourceId>,
 }
 
-impl fmt::Display for EncodablePackageId {
+impl fmt::Display for TomlLockfilePackageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)?;
         if let Some(s) = &self.version {
@@ -178,17 +178,17 @@ impl fmt::Display for EncodablePackageId {
     }
 }
 
-impl FromStr for EncodablePackageId {
+impl FromStr for TomlLockfilePackageId {
     type Err = EncodablePackageIdError;
 
-    fn from_str(s: &str) -> Result<EncodablePackageId, Self::Err> {
+    fn from_str(s: &str) -> Result<TomlLockfilePackageId, Self::Err> {
         let mut s = s.splitn(3, ' ');
         let name = s.next().unwrap();
         let version = s.next();
         let source_id = match s.next() {
             Some(s) => {
                 if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
-                    Some(EncodableSourceId::new(s.to_string())?)
+                    Some(TomlLockfileSourceId::new(s.to_string())?)
                 } else {
                     return Err(EncodablePackageIdErrorKind::InvalidSerializedPackageId.into());
                 }
@@ -196,7 +196,7 @@ impl FromStr for EncodablePackageId {
             None => None,
         };
 
-        Ok(EncodablePackageId {
+        Ok(TomlLockfilePackageId {
             name: name.to_string(),
             version: version.map(|v| v.to_string()),
             source: source_id,
@@ -204,7 +204,7 @@ impl FromStr for EncodablePackageId {
     }
 }
 
-impl ser::Serialize for EncodablePackageId {
+impl ser::Serialize for TomlLockfilePackageId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -213,14 +213,14 @@ impl ser::Serialize for EncodablePackageId {
     }
 }
 
-impl<'de> de::Deserialize<'de> for EncodablePackageId {
-    fn deserialize<D>(d: D) -> Result<EncodablePackageId, D::Error>
+impl<'de> de::Deserialize<'de> for TomlLockfilePackageId {
+    fn deserialize<D>(d: D) -> Result<TomlLockfilePackageId, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         String::deserialize(d).and_then(|string| {
             string
-                .parse::<EncodablePackageId>()
+                .parse::<TomlLockfilePackageId>()
                 .map_err(de::Error::custom)
         })
     }
@@ -266,7 +266,7 @@ enum EncodablePackageIdErrorKind {
 #[cfg(feature = "unstable-schema")]
 #[test]
 fn dump_lockfile_schema() {
-    let schema = schemars::schema_for!(crate::lockfile::EncodableResolve);
+    let schema = schemars::schema_for!(crate::lockfile::TomlLockfile);
     let dump = serde_json::to_string_pretty(&schema).unwrap();
     snapbox::assert_data_eq!(dump, snapbox::file!("../lockfile.schema.json").raw());
 }
