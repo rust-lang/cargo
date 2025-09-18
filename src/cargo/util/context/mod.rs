@@ -1464,19 +1464,19 @@ impl GlobalContext {
                     .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
                 let doc = toml_dotted_keys(arg)?;
-                let toml_v: toml::Value = toml::Value::deserialize(doc.into_deserializer())
+                let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
                     .with_context(|| {
                         format!("failed to parse value from --config argument `{arg}`")
                     })?;
 
-                if toml_v
+                if doc
                     .get("registry")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.get("token"))
                     .is_some()
                 {
                     bail!("registry.token cannot be set through --config for security reasons");
-                } else if let Some((k, _)) = toml_v
+                } else if let Some((k, _)) = doc
                     .get("registries")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
@@ -1487,7 +1487,7 @@ impl GlobalContext {
                     );
                 }
 
-                if toml_v
+                if doc
                     .get("registry")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.get("secret-key"))
@@ -1496,7 +1496,7 @@ impl GlobalContext {
                     bail!(
                         "registry.secret-key cannot be set through --config for security reasons"
                     );
-                } else if let Some((k, _)) = toml_v
+                } else if let Some((k, _)) = doc
                     .get("registries")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.iter().find(|(_, v)| v.get("secret-key").is_some()))
@@ -1507,7 +1507,7 @@ impl GlobalContext {
                     );
                 }
 
-                CV::from_toml(Definition::Cli(None), toml_v)
+                CV::from_toml(Definition::Cli(None), doc)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let tmp_table = self
