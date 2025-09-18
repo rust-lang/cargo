@@ -1,12 +1,12 @@
 use std::io::prelude::*;
 
-use crate::core::resolver::encode::EncodableResolve;
 use crate::core::resolver::encode::into_resolve;
 use crate::core::{Resolve, ResolveVersion, Workspace};
 use crate::util::Filesystem;
 use crate::util::errors::CargoResult;
 
 use anyhow::Context as _;
+use cargo_util_schemas::lockfile::EncodableResolve;
 
 pub const LOCKFILE_NAME: &str = "Cargo.lock";
 

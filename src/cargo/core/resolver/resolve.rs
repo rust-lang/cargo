@@ -1,12 +1,12 @@
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::RustVersion;
 
-use super::encode::Metadata;
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
 use crate::util::Graph;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use cargo_util_schemas::lockfile::Metadata;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
