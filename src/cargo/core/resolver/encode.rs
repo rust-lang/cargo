@@ -118,6 +118,10 @@ use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
 use anyhow::{Context as _, bail};
 use cargo_util_schemas::core::SourceKind;
+use cargo_util_schemas::lockfile::{
+    EncodablePackageIdError, EncodablePackageIdErrorKind, EncodableSourceIdError,
+    EncodableSourceIdErrorKind,
+};
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -550,14 +554,16 @@ pub struct EncodableSourceId {
 }
 
 impl EncodableSourceId {
-    pub fn new(source: String) -> CargoResult<Self> {
+    pub fn new(source: String) -> Result<Self, EncodableSourceIdError> {
         let source_str = source.clone();
-        let (kind, url) = source
-            .split_once('+')
-            .ok_or_else(|| anyhow::format_err!("invalid source `{}`", source_str))?;
+        let (kind, url) = source.split_once('+').ok_or_else(|| {
+            EncodableSourceIdError(EncodableSourceIdErrorKind::InvalidSource(source.clone()).into())
+        })?;
 
-        let url =
-            Url::parse(url).map_err(|s| anyhow::format_err!("invalid url `{}`: {}", url, s))?;
+        let url = Url::parse(url).map_err(|msg| EncodableSourceIdErrorKind::InvalidUrl {
+            url: url.to_string(),
+            msg: msg.to_string(),
+        })?;
 
         let kind = match kind {
             "git" => {
@@ -567,7 +573,9 @@ impl EncodableSourceId {
             "registry" => SourceKind::Registry,
             "sparse" => SourceKind::SparseRegistry,
             "path" => SourceKind::Path,
-            kind => anyhow::bail!("unsupported source protocol: {}", kind),
+            kind => {
+                return Err(EncodableSourceIdErrorKind::UnsupportedSource(kind.to_string()).into());
+            }
         };
 
         Ok(Self {
@@ -663,9 +671,9 @@ impl fmt::Display for EncodablePackageId {
 }
 
 impl FromStr for EncodablePackageId {
-    type Err = anyhow::Error;
+    type Err = EncodablePackageIdError;
 
-    fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
+    fn from_str(s: &str) -> Result<EncodablePackageId, Self::Err> {
         let mut s = s.splitn(3, ' ');
         let name = s.next().unwrap();
         let version = s.next();
@@ -674,7 +682,7 @@ impl FromStr for EncodablePackageId {
                 if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
                     Some(EncodableSourceId::new(s.to_string())?)
                 } else {
-                    anyhow::bail!("invalid serialized PackageId")
+                    return Err(EncodablePackageIdErrorKind::InvalidSerializedPackageId.into());
                 }
             }
             None => None,

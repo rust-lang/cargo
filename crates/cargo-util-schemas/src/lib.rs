@@ -10,6 +10,7 @@
 
 pub mod core;
 pub mod index;
+pub mod lockfile;
 pub mod manifest;
 pub mod messages;
 #[cfg(feature = "unstable-schema")]
