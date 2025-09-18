@@ -648,8 +648,11 @@ fn get_existing_dependency(
     }
 
     let mut possible: Vec<_> = manifest
-        .get_dependency_versions(dep_key, ws, unstable_features)
-        .map(|(path, dep)| {
+        .get_dependencies(ws, unstable_features)
+        .filter_map(|(key, path, dep)| {
+            if key.as_str() != dep_key {
+                return None;
+            }
             let key = if path == *section {
                 (Key::Existing, true)
             } else if dep.is_err() {
@@ -662,7 +665,7 @@ fn get_existing_dependency(
                 };
                 (key, path.target().is_some())
             };
-            (key, dep)
+            Some((key, dep))
         })
         .collect();
     possible.sort_by_key(|(key, _)| *key);
