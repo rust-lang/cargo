@@ -131,18 +131,18 @@ use url::Url;
 /// The `Cargo.lock` structure.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
-    version: Option<u32>,
-    package: Option<Vec<EncodableDependency>>,
+    pub version: Option<u32>,
+    pub package: Option<Vec<EncodableDependency>>,
     /// `root` is optional to allow backward compatibility.
-    root: Option<EncodableDependency>,
-    metadata: Option<Metadata>,
+    pub root: Option<EncodableDependency>,
+    pub metadata: Option<Metadata>,
     #[serde(default, skip_serializing_if = "Patch::is_empty")]
-    patch: Patch,
+    pub patch: Patch,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Patch {
-    unused: Vec<EncodableDependency>,
+pub struct Patch {
+    pub unused: Vec<EncodableDependency>,
 }
 
 pub type Metadata = BTreeMap<String, String>;
@@ -531,12 +531,12 @@ impl Patch {
 
 #[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
-    name: String,
-    version: String,
-    source: Option<EncodableSourceId>,
-    checksum: Option<String>,
-    dependencies: Option<Vec<EncodablePackageId>>,
-    replace: Option<EncodablePackageId>,
+    pub name: String,
+    pub version: String,
+    pub source: Option<EncodableSourceId>,
+    pub checksum: Option<String>,
+    pub dependencies: Option<Vec<EncodablePackageId>>,
+    pub replace: Option<EncodablePackageId>,
 }
 
 #[derive(Debug, Clone)]
@@ -550,7 +550,7 @@ pub struct EncodableSourceId {
 }
 
 impl EncodableSourceId {
-    fn new(source: String) -> CargoResult<Self> {
+    pub fn new(source: String) -> CargoResult<Self> {
         let source_str = source.clone();
         let (kind, url) = source
             .split_once('+')
@@ -589,7 +589,7 @@ impl EncodableSourceId {
         &self.source_str
     }
 
-    fn as_url(&self) -> impl fmt::Display + '_ {
+    pub fn as_url(&self) -> impl fmt::Display + '_ {
         self.source_str.clone()
     }
 }
@@ -644,9 +644,9 @@ impl Ord for EncodableSourceId {
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 pub struct EncodablePackageId {
-    name: String,
-    version: Option<String>,
-    source: Option<EncodableSourceId>,
+    pub name: String,
+    pub version: Option<String>,
+    pub source: Option<EncodableSourceId>,
 }
 
 impl fmt::Display for EncodablePackageId {
