@@ -63,8 +63,29 @@ This will change the [`dev` profile](../reference/profiles.md#dev) to use the [C
 
 Trade-offs:
 - ✅ Faster code generation (`cargo build`)
-- ❌ **Requires using nightly Rust and an unstable Cargo feature**
+- ❌ **Requires using nightly Rust and an [unstable Cargo feature][codegen-backend-feature]**
 - ❌ Worse runtime performance of the generated code
   - Speeds up build part of `cargo test`, but might increase its test execution part
 - ❌ Only available for [certain targets](https://github.com/rust-lang/rustc_codegen_cranelift?tab=readme-ov-file#platform-support)
 - ❌ Might not support all Rust features (e.g. unwinding)
+
+[codegen-backend-feature]: ../reference/unstable.md#codegen-backend
+
+### Enable the experimental parallel frontend
+
+Recommendation: Add to your `.cargo/config.toml`:
+
+```toml
+[build]
+rustflags = "-Zthreads=8"
+```
+
+This [`rustflags`][build.rustflags] will enable the [parallel frontend][parallel-frontend-blog] of the Rust compiler, and tell it to use `n` threads. The value of `n` should be chosen according to the number of cores available on your system, although there are diminishing returns. We recommend using at most `8` threads.
+
+Trade-offs:
+- ✅ Faster build times
+- ❌ **Requires using nightly Rust and an [unstable Rust feature][parallel-frontend-issue]**
+
+[parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
+[parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
+[build.rustflags]: ../reference/config.md#buildrustflags
