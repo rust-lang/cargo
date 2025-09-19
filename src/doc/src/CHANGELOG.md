@@ -1,5 +1,82 @@
 # Changelog
 
+## Cargo 1.92 (2025-12-11)
+[24bb93c3...HEAD](https://github.com/rust-lang/cargo/compare/24bb93c3...HEAD)
+
+### Added
+
+- Adds ghostty as supported terminal for term integration (OSC 9;4)
+  [#15977](https://github.com/rust-lang/cargo/pull/15977)
+
+### Changed
+
+- Prefer unicode ellipses when truncating progress
+  [#15955](https://github.com/rust-lang/cargo/pull/15955)
+- Eliminate the last three "did you mean" warning phrasings
+  [#15356](https://github.com/rust-lang/cargo/pull/15356)
+- Clarify warning for using `features` or `default-features` in `patch`
+  [#15953](https://github.com/rust-lang/cargo/pull/15953)
+- Report all future-incompat content as a single annotate-snippet Report
+  [#15943](https://github.com/rust-lang/cargo/pull/15943)
+- cargo-info: Suggest a more universal `cargo tree` command
+  [#15954](https://github.com/rust-lang/cargo/pull/15954)
+- cargo-publish: Switch the 'ctrl-c on wait' line to a help message
+  [#15942](https://github.com/rust-lang/cargo/pull/15942)
+
+### Fixed
+
+### Nightly only
+
+- `-Zbuild-std`: test move away from panic_immediate_abort
+  [#16006](https://github.com/rust-lang/cargo/pull/16006)
+- `-Zcargo-lints`: Add lint for global use of `hint-mostly-unused`
+  [#15995](https://github.com/rust-lang/cargo/pull/15995)
+- `-Zscript`: Try alternative len code fences
+  [#15952](https://github.com/rust-lang/cargo/pull/15952)
+- `-Zscript`: Improve error quality
+  [#15972](https://github.com/rust-lang/cargo/pull/15972)
+- `-Zscript`: Show error source to users
+  [#15939](https://github.com/rust-lang/cargo/pull/15939)
+- `-Zscript`: Only allow horizontal whitespace after fences
+  [#15975](https://github.com/rust-lang/cargo/pull/15975)
+- `native-completions`: Added completion for `--features` flag
+  [#15309](https://github.com/rust-lang/cargo/pull/15309)
+- `native-completions`: Show local crates/features over other members
+  [#15956](https://github.com/rust-lang/cargo/pull/15956)
+- `native-completions`:: Allow completions for third-party subcommand names
+  [#15961](https://github.com/rust-lang/cargo/pull/15961)
+
+### Documentation
+
+- 🎉 Add a new "Optimizing Build Performance" chapter
+  [#15924](https://github.com/rust-lang/cargo/pull/15924)
+  [#15970](https://github.com/rust-lang/cargo/pull/15970)
+- Clarify git sources vs git registries in source replacement documentation
+  [#15974](https://github.com/rust-lang/cargo/pull/15974)
+- Clarify what we mean by omitting features in registry index documentation
+  [#15957](https://github.com/rust-lang/cargo/pull/15957)
+- Clarify the role of the lockfile in dependency resolution
+  [#15958](https://github.com/rust-lang/cargo/pull/15958)
+- Clarify multiple version requirement behavior
+  [#15979](https://github.com/rust-lang/cargo/pull/15979)
+- contrib: Move docs building process to contributor guide
+  [#15854](https://github.com/rust-lang/cargo/pull/15854)
+
+### Internal
+
+- Make GlobalContext Sync
+  [#15967](https://github.com/rust-lang/cargo/pull/15967)
+- cargo-util-schemas: Move lockfile schemas in
+  [#15980](https://github.com/rust-lang/cargo/pull/15980)
+  [#15990](https://github.com/rust-lang/cargo/pull/15990)
+- ci: Skip check-version-bump ci job in forks
+  [#15959](https://github.com/rust-lang/cargo/pull/15959)
+- Update dependencies.
+  [#15988](https://github.com/rust-lang/cargo/pull/15988)
+  [#15984](https://github.com/rust-lang/cargo/pull/15984)
+  [#15989](https://github.com/rust-lang/cargo/pull/15989)
+  [#15993](https://github.com/rust-lang/cargo/pull/15993)
+
 ## Cargo 1.91 (2025-10-30)
 [840b83a1...rust-1.91.0](https://github.com/rust-lang/cargo/compare/840b83a1...rust-1.91.0)
 
