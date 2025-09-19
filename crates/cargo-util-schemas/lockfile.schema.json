@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TomlLockfile",
+  "description": "The `Cargo.lock` structure.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "package": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/TomlLockfileDependency"
+      }
+    },
+    "root": {
+      "description": "`root` is optional to allow backward compatibility.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlLockfileDependency"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "patch": {
+      "$ref": "#/$defs/TomlLockfilePatch"
+    }
+  },
+  "$defs": {
+    "TomlLockfileDependency": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checksum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dependencies": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/TomlLockfilePackageId"
+          }
+        },
+        "replace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlLockfilePackageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "TomlLockfilePackageId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "TomlLockfilePatch": {
+      "type": "object",
+      "properties": {
+        "unused": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TomlLockfileDependency"
+          }
+        }
+      },
+      "required": [
+        "unused"
+      ]
+    }
+  }
+}

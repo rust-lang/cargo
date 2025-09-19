@@ -117,324 +117,313 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
 use anyhow::{Context as _, bail};
-use serde::de;
+use cargo_util_schemas::lockfile::{
+    TomlLockfile, TomlLockfileDependency, TomlLockfilePackageId, TomlLockfilePatch,
+    TomlLockfileSourceId,
+};
 use serde::ser;
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt;
-use std::str::FromStr;
+use std::collections::{HashMap, HashSet};
 use tracing::debug;
 
-/// The `Cargo.lock` structure.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EncodableResolve {
-    version: Option<u32>,
-    package: Option<Vec<EncodableDependency>>,
-    /// `root` is optional to allow backward compatibility.
-    root: Option<EncodableDependency>,
-    metadata: Option<Metadata>,
-    #[serde(default, skip_serializing_if = "Patch::is_empty")]
-    patch: Patch,
-}
+/// Convert a `Cargo.lock` to a Resolve.
+///
+/// Note that this `Resolve` is not "complete". For example, the
+/// dependencies do not know the difference between regular/dev/build
+/// dependencies, so they are not filled in. It also does not include
+/// `features`. Care should be taken when using this Resolve. One of the
+/// primary uses is to be used with `resolve_with_previous` to guide the
+/// resolver to create a complete Resolve.
+pub fn into_resolve(
+    resolve: TomlLockfile,
+    original: &str,
+    ws: &Workspace<'_>,
+) -> CargoResult<Resolve> {
+    let path_deps: HashMap<String, HashMap<semver::Version, SourceId>> = build_path_deps(ws)?;
+    let mut checksums = HashMap::new();
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct Patch {
-    unused: Vec<EncodableDependency>,
-}
-
-pub type Metadata = BTreeMap<String, String>;
-
-impl EncodableResolve {
-    /// Convert a `Cargo.lock` to a Resolve.
-    ///
-    /// Note that this `Resolve` is not "complete". For example, the
-    /// dependencies do not know the difference between regular/dev/build
-    /// dependencies, so they are not filled in. It also does not include
-    /// `features`. Care should be taken when using this Resolve. One of the
-    /// primary uses is to be used with `resolve_with_previous` to guide the
-    /// resolver to create a complete Resolve.
-    pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
-        let path_deps: HashMap<String, HashMap<semver::Version, SourceId>> = build_path_deps(ws)?;
-        let mut checksums = HashMap::new();
-
-        let mut version = match self.version {
-            Some(n @ 5) if ws.gctx().nightly_features_allowed => {
-                if ws.gctx().cli_unstable().next_lockfile_bump {
-                    ResolveVersion::V5
-                } else {
-                    anyhow::bail!("lock file version `{n}` requires `-Znext-lockfile-bump`");
-                }
-            }
-            Some(4) => ResolveVersion::V4,
-            Some(3) => ResolveVersion::V3,
-            Some(n) => bail!(
-                "lock file version `{}` was found, but this version of Cargo \
-                 does not understand this lock file, perhaps Cargo needs \
-                 to be updated?",
-                n,
-            ),
-            // Historically Cargo did not have a version indicator in lock
-            // files, so this could either be the V1 or V2 encoding. We assume
-            // an older format is being parsed until we see so otherwise.
-            None => ResolveVersion::V1,
-        };
-
-        let packages = {
-            let mut packages = self.package.unwrap_or_default();
-            if let Some(root) = self.root {
-                packages.insert(0, root);
-            }
-            packages
-        };
-
-        // `PackageId`s in the lock file don't include the `source` part
-        // for workspace members, so we reconstruct proper IDs.
-        let live_pkgs = {
-            let mut live_pkgs = HashMap::new();
-            let mut all_pkgs = HashSet::new();
-            for pkg in packages.iter() {
-                let enc_id = EncodablePackageId {
-                    name: pkg.name.clone(),
-                    version: Some(pkg.version.clone()),
-                    source: pkg.source.clone(),
-                };
-
-                if !all_pkgs.insert(enc_id.clone()) {
-                    anyhow::bail!("package `{}` is specified twice in the lockfile", pkg.name);
-                }
-                let id = match pkg
-                    .source
-                    .as_deref()
-                    .or_else(|| get_source_id(&path_deps, pkg))
-                {
-                    // We failed to find a local package in the workspace.
-                    // It must have been removed and should be ignored.
-                    None => {
-                        debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
-                        continue;
-                    }
-                    Some(&source) => PackageId::try_new(&pkg.name, &pkg.version, source)?,
-                };
-
-                // If a package has a checksum listed directly on it then record
-                // that here, and we also bump our version up to 2 since V1
-                // didn't ever encode this field.
-                if let Some(cksum) = &pkg.checksum {
-                    version = version.max(ResolveVersion::V2);
-                    checksums.insert(id, Some(cksum.clone()));
-                }
-
-                assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
-            }
-            live_pkgs
-        };
-
-        // When decoding a V2 version the edges in `dependencies` aren't
-        // guaranteed to have either version or source information. This `map`
-        // is used to find package ids even if dependencies have missing
-        // information. This map is from name to version to source to actual
-        // package ID. (various levels to drill down step by step)
-        let mut map = HashMap::new();
-        for (id, _) in live_pkgs.values() {
-            map.entry(id.name().as_str())
-                .or_insert_with(HashMap::new)
-                .entry(id.version().to_string())
-                .or_insert_with(HashMap::new)
-                .insert(id.source_id(), *id);
-        }
-
-        let mut lookup_id = |enc_id: &EncodablePackageId| -> Option<PackageId> {
-            // The name of this package should always be in the larger list of
-            // all packages.
-            let by_version = map.get(enc_id.name.as_str())?;
-
-            // If the version is provided, look that up. Otherwise if the
-            // version isn't provided this is a V2 manifest and we should only
-            // have one version for this name. If we have more than one version
-            // for the name then it's ambiguous which one we'd use. That
-            // shouldn't ever actually happen but in theory bad git merges could
-            // produce invalid lock files, so silently ignore these cases.
-            let by_source = match &enc_id.version {
-                Some(version) => by_version.get(version)?,
-                None => {
-                    version = version.max(ResolveVersion::V2);
-                    if by_version.len() == 1 {
-                        by_version.values().next().unwrap()
-                    } else {
-                        return None;
-                    }
-                }
-            };
-
-            // This is basically the same as above. Note though that `source` is
-            // always missing for path dependencies regardless of serialization
-            // format. That means we have to handle the `None` case a bit more
-            // carefully.
-            match &enc_id.source {
-                Some(source) => by_source.get(source).cloned(),
-                None => {
-                    // Look through all possible packages ids for this
-                    // name/version. If there's only one `path` dependency then
-                    // we are hardcoded to use that since `path` dependencies
-                    // can't have a source listed.
-                    let mut path_packages = by_source.values().filter(|p| p.source_id().is_path());
-                    if let Some(path) = path_packages.next() {
-                        if path_packages.next().is_some() {
-                            return None;
-                        }
-                        Some(*path)
-
-                    // ... otherwise if there's only one then we must be
-                    // implicitly using that one due to a V2 serialization of
-                    // the lock file
-                    } else if by_source.len() == 1 {
-                        let id = by_source.values().next().unwrap();
-                        version = version.max(ResolveVersion::V2);
-                        Some(*id)
-
-                    // ... and failing that we probably had a bad git merge of
-                    // `Cargo.lock` or something like that, so just ignore this.
-                    } else {
-                        None
-                    }
-                }
-            }
-        };
-
-        let mut g = Graph::new();
-
-        for (id, _) in live_pkgs.values() {
-            g.add(*id);
-        }
-
-        for &(ref id, pkg) in live_pkgs.values() {
-            let Some(ref deps) = pkg.dependencies else {
-                continue;
-            };
-
-            for edge in deps.iter() {
-                if let Some(to_depend_on) = lookup_id(edge) {
-                    g.link(*id, to_depend_on);
-                }
-            }
-        }
-
-        let replacements = {
-            let mut replacements = HashMap::new();
-            for &(ref id, pkg) in live_pkgs.values() {
-                if let Some(ref replace) = pkg.replace {
-                    assert!(pkg.dependencies.is_none());
-                    if let Some(replace_id) = lookup_id(replace) {
-                        replacements.insert(*id, replace_id);
-                    }
-                }
-            }
-            replacements
-        };
-
-        let mut metadata = self.metadata.unwrap_or_default();
-
-        // In the V1 serialization formats all checksums were listed in the lock
-        // file in the `[metadata]` section, so if we're still V1 then look for
-        // that here.
-        let prefix = "checksum ";
-        let mut to_remove = Vec::new();
-        for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
-            to_remove.push(k.to_string());
-            let k = k.strip_prefix(prefix).unwrap();
-            let enc_id: EncodablePackageId = k
-                .parse()
-                .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
-            let Some(id) = lookup_id(&enc_id) else {
-                continue;
-            };
-
-            let v = if v == "<none>" {
-                None
+    let mut version = match resolve.version {
+        Some(n @ 5) if ws.gctx().nightly_features_allowed => {
+            if ws.gctx().cli_unstable().next_lockfile_bump {
+                ResolveVersion::V5
             } else {
-                Some(v.to_string())
-            };
-            checksums.insert(id, v);
+                anyhow::bail!("lock file version `{n}` requires `-Znext-lockfile-bump`");
+            }
         }
-        // If `checksum` was listed in `[metadata]` but we were previously
-        // listed as `V2` then assume some sort of bad git merge happened, so
-        // discard all checksums and let's regenerate them later.
-        if !to_remove.is_empty() && version >= ResolveVersion::V2 {
-            checksums.drain();
-        }
-        for k in to_remove {
-            metadata.remove(&k);
-        }
+        Some(4) => ResolveVersion::V4,
+        Some(3) => ResolveVersion::V3,
+        Some(n) => bail!(
+            "lock file version `{}` was found, but this version of Cargo \
+             does not understand this lock file, perhaps Cargo needs \
+             to be updated?",
+            n,
+        ),
+        // Historically Cargo did not have a version indicator in lock
+        // files, so this could either be the V1 or V2 encoding. We assume
+        // an older format is being parsed until we see so otherwise.
+        None => ResolveVersion::V1,
+    };
 
-        let mut unused_patches = Vec::new();
-        for pkg in self.patch.unused {
+    let packages = {
+        let mut packages = resolve.package.unwrap_or_default();
+        if let Some(root) = resolve.root {
+            packages.insert(0, root);
+        }
+        packages
+    };
+
+    // `PackageId`s in the lock file don't include the `source` part
+    // for workspace members, so we reconstruct proper IDs.
+    let live_pkgs = {
+        let mut live_pkgs = HashMap::new();
+        let mut all_pkgs = HashSet::new();
+        for pkg in packages.iter() {
+            let enc_id = TomlLockfilePackageId {
+                name: pkg.name.clone(),
+                version: Some(pkg.version.clone()),
+                source: pkg.source.clone(),
+            };
+
+            if !all_pkgs.insert(enc_id.clone()) {
+                anyhow::bail!("package `{}` is specified twice in the lockfile", pkg.name);
+            }
             let id = match pkg
                 .source
-                .as_deref()
-                .or_else(|| get_source_id(&path_deps, &pkg))
+                .as_ref()
+                .map(|source| SourceId::from_url(&source.source_str()))
+                .transpose()?
+                .or_else(|| get_source_id(&path_deps, &pkg).copied())
             {
-                Some(&src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
-                None => continue,
+                // We failed to find a local package in the workspace.
+                // It must have been removed and should be ignored.
+                None => {
+                    debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
+                    continue;
+                }
+                Some(source) => PackageId::try_new(&pkg.name, &pkg.version, source)?,
             };
-            unused_patches.push(id);
+
+            // If a package has a checksum listed directly on it then record
+            // that here, and we also bump our version up to 2 since V1
+            // didn't ever encode this field.
+            if let Some(cksum) = &pkg.checksum {
+                version = version.max(ResolveVersion::V2);
+                checksums.insert(id, Some(cksum.clone()));
+            }
+
+            assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
         }
+        live_pkgs
+    };
 
-        // We have a curious issue where in the "v1 format" we buggily had a
-        // trailing blank line at the end of lock files under some specific
-        // conditions.
-        //
-        // Cargo is trying to write new lockfies in the "v2 format" but if you
-        // have no dependencies, for example, then the lockfile encoded won't
-        // really have any indicator that it's in the new format (no
-        // dependencies or checksums listed). This means that if you type `cargo
-        // new` followed by `cargo build` it will generate a "v2 format" lock
-        // file since none previously existed. When reading this on the next
-        // `cargo build`, however, it generates a new lock file because when
-        // reading in that lockfile we think it's the v1 format.
-        //
-        // To help fix this issue we special case here. If our lockfile only has
-        // one trailing newline, not two, *and* it only has one package, then
-        // this is actually the v2 format.
-        if original.ends_with('\n')
-            && !original.ends_with("\n\n")
-            && version == ResolveVersion::V1
-            && g.iter().count() == 1
-        {
-            version = ResolveVersion::V2;
-        }
+    // When decoding a V2 version the edges in `dependencies` aren't
+    // guaranteed to have either version or source information. This `map`
+    // is used to find package ids even if dependencies have missing
+    // information. This map is from name to version to source to actual
+    // package ID. (various levels to drill down step by step)
+    let mut map = HashMap::new();
+    for (id, _) in live_pkgs.values() {
+        map.entry(id.name().as_str())
+            .or_insert_with(HashMap::new)
+            .entry(id.version().to_string())
+            .or_insert_with(HashMap::new)
+            .insert(id.source_id(), *id);
+    }
 
-        return Ok(Resolve::new(
-            g,
-            replacements,
-            HashMap::new(),
-            checksums,
-            metadata,
-            unused_patches,
-            version,
-            HashMap::new(),
-        ));
+    let mut lookup_id = |enc_id: &TomlLockfilePackageId| -> Option<PackageId> {
+        // The name of this package should always be in the larger list of
+        // all packages.
+        let by_version = map.get(enc_id.name.as_str())?;
 
-        fn get_source_id<'a>(
-            path_deps: &'a HashMap<String, HashMap<semver::Version, SourceId>>,
-            pkg: &'a EncodableDependency,
-        ) -> Option<&'a SourceId> {
-            path_deps.iter().find_map(|(name, version_source)| {
-                if name != &pkg.name || version_source.len() == 0 {
+        // If the version is provided, look that up. Otherwise if the
+        // version isn't provided this is a V2 manifest and we should only
+        // have one version for this name. If we have more than one version
+        // for the name then it's ambiguous which one we'd use. That
+        // shouldn't ever actually happen but in theory bad git merges could
+        // produce invalid lock files, so silently ignore these cases.
+        let by_source = match &enc_id.version {
+            Some(version) => by_version.get(version)?,
+            None => {
+                version = version.max(ResolveVersion::V2);
+                if by_version.len() == 1 {
+                    by_version.values().next().unwrap()
+                } else {
                     return None;
                 }
-                if version_source.len() == 1 {
-                    return Some(version_source.values().next().unwrap());
-                }
-                // If there are multiple candidates for the same name, it needs to be determined by combining versions (See #13405).
-                if let Ok(pkg_version) = pkg.version.parse::<semver::Version>() {
-                    if let Some(source_id) = version_source.get(&pkg_version) {
-                        return Some(source_id);
-                    }
-                }
+            }
+        };
 
-                None
-            })
+        // This is basically the same as above. Note though that `source` is
+        // always missing for path dependencies regardless of serialization
+        // format. That means we have to handle the `None` case a bit more
+        // carefully.
+        match &enc_id.source {
+            Some(source) => by_source
+                .get(&SourceId::from_url(&source.source_str()).unwrap())
+                .cloned(),
+            None => {
+                // Look through all possible packages ids for this
+                // name/version. If there's only one `path` dependency then
+                // we are hardcoded to use that since `path` dependencies
+                // can't have a source listed.
+                let mut path_packages = by_source.values().filter(|p| p.source_id().is_path());
+                if let Some(path) = path_packages.next() {
+                    if path_packages.next().is_some() {
+                        return None;
+                    }
+                    Some(*path)
+
+                // ... otherwise if there's only one then we must be
+                // implicitly using that one due to a V2 serialization of
+                // the lock file
+                } else if by_source.len() == 1 {
+                    let id = by_source.values().next().unwrap();
+                    version = version.max(ResolveVersion::V2);
+                    Some(*id)
+
+                // ... and failing that we probably had a bad git merge of
+                // `Cargo.lock` or something like that, so just ignore this.
+                } else {
+                    None
+                }
+            }
         }
+    };
+
+    let mut g = Graph::new();
+
+    for (id, _) in live_pkgs.values() {
+        g.add(*id);
+    }
+
+    for &(ref id, pkg) in live_pkgs.values() {
+        let Some(ref deps) = pkg.dependencies else {
+            continue;
+        };
+
+        for edge in deps.iter() {
+            if let Some(to_depend_on) = lookup_id(edge) {
+                g.link(*id, to_depend_on);
+            }
+        }
+    }
+
+    let replacements = {
+        let mut replacements = HashMap::new();
+        for &(ref id, pkg) in live_pkgs.values() {
+            if let Some(ref replace) = pkg.replace {
+                assert!(pkg.dependencies.is_none());
+                if let Some(replace_id) = lookup_id(replace) {
+                    replacements.insert(*id, replace_id);
+                }
+            }
+        }
+        replacements
+    };
+
+    let mut metadata = resolve.metadata.unwrap_or_default();
+
+    // In the V1 serialization formats all checksums were listed in the lock
+    // file in the `[metadata]` section, so if we're still V1 then look for
+    // that here.
+    let prefix = "checksum ";
+    let mut to_remove = Vec::new();
+    for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
+        to_remove.push(k.to_string());
+        let k = k.strip_prefix(prefix).unwrap();
+        let enc_id: TomlLockfilePackageId = k
+            .parse()
+            .with_context(|| internal("invalid encoding of checksum in lockfile"))?;
+        let Some(id) = lookup_id(&enc_id) else {
+            continue;
+        };
+
+        let v = if v == "<none>" {
+            None
+        } else {
+            Some(v.to_string())
+        };
+        checksums.insert(id, v);
+    }
+    // If `checksum` was listed in `[metadata]` but we were previously
+    // listed as `V2` then assume some sort of bad git merge happened, so
+    // discard all checksums and let's regenerate them later.
+    if !to_remove.is_empty() && version >= ResolveVersion::V2 {
+        checksums.drain();
+    }
+    for k in to_remove {
+        metadata.remove(&k);
+    }
+
+    let mut unused_patches = Vec::new();
+    for pkg in resolve.patch.unused {
+        let id = match pkg
+            .source
+            .as_ref()
+            .map(|source| SourceId::from_url(&source.source_str()))
+            .transpose()?
+            .or_else(|| get_source_id(&path_deps, &pkg).copied())
+        {
+            Some(src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
+            None => continue,
+        };
+        unused_patches.push(id);
+    }
+
+    // We have a curious issue where in the "v1 format" we buggily had a
+    // trailing blank line at the end of lock files under some specific
+    // conditions.
+    //
+    // Cargo is trying to write new lockfies in the "v2 format" but if you
+    // have no dependencies, for example, then the lockfile encoded won't
+    // really have any indicator that it's in the new format (no
+    // dependencies or checksums listed). This means that if you type `cargo
+    // new` followed by `cargo build` it will generate a "v2 format" lock
+    // file since none previously existed. When reading this on the next
+    // `cargo build`, however, it generates a new lock file because when
+    // reading in that lockfile we think it's the v1 format.
+    //
+    // To help fix this issue we special case here. If our lockfile only has
+    // one trailing newline, not two, *and* it only has one package, then
+    // this is actually the v2 format.
+    if original.ends_with('\n')
+        && !original.ends_with("\n\n")
+        && version == ResolveVersion::V1
+        && g.iter().count() == 1
+    {
+        version = ResolveVersion::V2;
+    }
+
+    return Ok(Resolve::new(
+        g,
+        replacements,
+        HashMap::new(),
+        checksums,
+        metadata,
+        unused_patches,
+        version,
+        HashMap::new(),
+    ));
+
+    fn get_source_id<'a>(
+        path_deps: &'a HashMap<String, HashMap<semver::Version, SourceId>>,
+        pkg: &'a TomlLockfileDependency,
+    ) -> Option<&'a SourceId> {
+        path_deps.iter().find_map(|(name, version_source)| {
+            if name != &pkg.name || version_source.len() == 0 {
+                return None;
+            }
+            if version_source.len() == 1 {
+                return Some(version_source.values().next().unwrap());
+            }
+            // If there are multiple candidates for the same name, it needs to be determined by combining versions (See #13405).
+            if let Ok(pkg_version) = pkg.version.parse::<semver::Version>() {
+                if let Some(source_id) = version_source.get(&pkg_version) {
+                    return Some(source_id);
+                }
+            }
+
+            None
+        })
     }
 }
 
@@ -512,167 +501,6 @@ fn build_path_deps(
     }
 }
 
-impl Patch {
-    fn is_empty(&self) -> bool {
-        self.unused.is_empty()
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub struct EncodableDependency {
-    name: String,
-    version: String,
-    source: Option<EncodableSourceId>,
-    checksum: Option<String>,
-    dependencies: Option<Vec<EncodablePackageId>>,
-    replace: Option<EncodablePackageId>,
-}
-
-/// Pretty much equivalent to [`SourceId`] with a different serialization method.
-///
-/// The serialization for `SourceId` doesn't do URL encode for parameters.
-/// In contrast, this type is aware of that whenever [`ResolveVersion`] allows
-/// us to do so (v4 or later).
-#[derive(Deserialize, Debug, PartialOrd, Ord, Clone)]
-#[serde(transparent)]
-pub struct EncodableSourceId {
-    inner: SourceId,
-    /// We don't care about the deserialization of this, as the `url` crate
-    /// will always decode as the URL was encoded. Only when a [`Resolve`]
-    /// turns into a [`EncodableResolve`] will it set the value accordingly
-    /// via [`encodable_source_id`].
-    #[serde(skip)]
-    encoded: bool,
-}
-
-impl EncodableSourceId {
-    /// Creates a `EncodableSourceId` that always encodes URL params.
-    fn new(inner: SourceId) -> Self {
-        Self {
-            inner,
-            encoded: true,
-        }
-    }
-
-    /// Creates a `EncodableSourceId` that doesn't encode URL params. This is
-    /// for backward compatibility for order lockfile version.
-    fn without_url_encoded(inner: SourceId) -> Self {
-        Self {
-            inner,
-            encoded: false,
-        }
-    }
-
-    /// Encodes the inner [`SourceId`] as a URL.
-    fn as_url(&self) -> impl fmt::Display + '_ {
-        if self.encoded {
-            self.inner.as_encoded_url()
-        } else {
-            self.inner.as_url()
-        }
-    }
-}
-
-impl std::ops::Deref for EncodableSourceId {
-    type Target = SourceId;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl ser::Serialize for EncodableSourceId {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        s.collect_str(&self.as_url())
-    }
-}
-
-impl std::hash::Hash for EncodableSourceId {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.hash(state)
-    }
-}
-
-impl std::cmp::PartialEq for EncodableSourceId {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner == other.inner
-    }
-}
-
-impl std::cmp::Eq for EncodableSourceId {}
-
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
-pub struct EncodablePackageId {
-    name: String,
-    version: Option<String>,
-    source: Option<EncodableSourceId>,
-}
-
-impl fmt::Display for EncodablePackageId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)?;
-        if let Some(s) = &self.version {
-            write!(f, " {}", s)?;
-        }
-        if let Some(s) = &self.source {
-            write!(f, " ({})", s.as_url())?;
-        }
-        Ok(())
-    }
-}
-
-impl FromStr for EncodablePackageId {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
-        let mut s = s.splitn(3, ' ');
-        let name = s.next().unwrap();
-        let version = s.next();
-        let source_id = match s.next() {
-            Some(s) => {
-                if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
-                    Some(SourceId::from_url(s)?)
-                } else {
-                    anyhow::bail!("invalid serialized PackageId")
-                }
-            }
-            None => None,
-        };
-
-        Ok(EncodablePackageId {
-            name: name.to_string(),
-            version: version.map(|v| v.to_string()),
-            // Default to url encoded.
-            source: source_id.map(EncodableSourceId::new),
-        })
-    }
-}
-
-impl ser::Serialize for EncodablePackageId {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        s.collect_str(self)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for EncodablePackageId {
-    fn deserialize<D>(d: D) -> Result<EncodablePackageId, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        String::deserialize(d).and_then(|string| {
-            string
-                .parse::<EncodablePackageId>()
-                .map_err(de::Error::custom)
-        })
-    }
-}
-
 impl ser::Serialize for Resolve {
     #[tracing::instrument(skip_all)]
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
@@ -708,11 +536,11 @@ impl ser::Serialize for Resolve {
             Some(metadata)
         };
 
-        let patch = Patch {
+        let patch = TomlLockfilePatch {
             unused: self
                 .unused_patches()
                 .iter()
-                .map(|id| EncodableDependency {
+                .map(|id| TomlLockfileDependency {
                     name: id.name().to_string(),
                     version: id.version().to_string(),
                     source: encodable_source_id(id.source_id(), self.version()),
@@ -726,7 +554,7 @@ impl ser::Serialize for Resolve {
                 })
                 .collect(),
         };
-        EncodableResolve {
+        TomlLockfile {
             package: Some(encodable),
             root: None,
             metadata,
@@ -770,7 +598,7 @@ fn encodable_resolve_node(
     id: PackageId,
     resolve: &Resolve,
     state: &EncodeState<'_>,
-) -> EncodableDependency {
+) -> TomlLockfileDependency {
     let (replace, deps) = match resolve.replacement(id) {
         Some(id) => (
             Some(encodable_package_id(id, state, resolve.version())),
@@ -786,7 +614,7 @@ fn encodable_resolve_node(
         }
     };
 
-    EncodableDependency {
+    TomlLockfileDependency {
         name: id.name().to_string(),
         version: id.version().to_string(),
         source: encodable_source_id(id.source_id(), resolve.version()),
@@ -804,7 +632,7 @@ pub fn encodable_package_id(
     id: PackageId,
     state: &EncodeState<'_>,
     resolve_version: ResolveVersion,
-) -> EncodablePackageId {
+) -> TomlLockfilePackageId {
     let mut version = Some(id.version().to_string());
     let mut id_to_encode = id.source_id();
     if resolve_version <= ResolveVersion::V2 {
@@ -825,21 +653,24 @@ pub fn encodable_package_id(
             }
         }
     }
-    EncodablePackageId {
+    TomlLockfilePackageId {
         name: id.name().to_string(),
         version,
         source,
     }
 }
 
-fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<EncodableSourceId> {
+fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<TomlLockfileSourceId> {
     if id.is_path() {
         None
     } else {
-        Some(if version >= ResolveVersion::V4 {
-            EncodableSourceId::new(id)
-        } else {
-            EncodableSourceId::without_url_encoded(id)
-        })
+        Some(
+            if version >= ResolveVersion::V4 {
+                TomlLockfileSourceId::new(id.as_encoded_url().to_string())
+            } else {
+                TomlLockfileSourceId::new(id.as_url().to_string())
+            }
+            .expect("source ID should have valid URLs"),
+        )
     }
 }
