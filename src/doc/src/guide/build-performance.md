@@ -63,8 +63,10 @@ This will change the [`dev` profile](../reference/profiles.md#dev) to use the [C
 
 Trade-offs:
 - ✅ Faster code generation (`cargo build`)
-- ❌ **Requires using nightly Rust and an unstable Cargo feature**
+- ❌ **Requires using nightly Rust and an [unstable Cargo feature][codegen-backend-feature]**
 - ❌ Worse runtime performance of the generated code
   - Speeds up build part of `cargo test`, but might increase its test execution part
 - ❌ Only available for [certain targets](https://github.com/rust-lang/rustc_codegen_cranelift?tab=readme-ov-file#platform-support)
 - ❌ Might not support all Rust features (e.g. unwinding)
+
+[codegen-backend-feature]: ../reference/unstable.md#codegen-backend
