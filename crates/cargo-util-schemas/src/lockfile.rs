@@ -20,13 +20,13 @@ pub struct TomlLockfile {
     pub patch: TomlLockfilePatch,
 }
 
+pub type TomlLockfileMetadata = BTreeMap<String, String>;
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLockfilePatch {
     pub unused: Vec<TomlLockfileDependency>,
 }
-
-pub type TomlLockfileMetadata = BTreeMap<String, String>;
 
 impl TomlLockfilePatch {
     fn is_empty(&self) -> bool {
