@@ -109,9 +109,13 @@ impl TomlLockfileSourceId {
             EncodableSourceIdError(EncodableSourceIdErrorKind::InvalidSource(source.clone()).into())
         })?;
 
-        let url = Url::parse(url).map_err(|msg| EncodableSourceIdErrorKind::InvalidUrl {
-            url: url.to_string(),
-            msg: msg.to_string(),
+        // Sparse URLs store the kind prefix (sparse+) in the URL. Therefore, for sparse kinds, we
+        // want to use the raw `source` instead of the splitted `url`.
+        let url = Url::parse(if kind == "sparse" { &source } else { url }).map_err(|msg| {
+            EncodableSourceIdErrorKind::InvalidUrl {
+                url: url.to_string(),
+                msg: msg.to_string(),
+            }
         })?;
 
         let kind = match kind {
