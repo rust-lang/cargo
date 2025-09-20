@@ -61,6 +61,9 @@ review_labels = ["S-waiting-on-review"]
 remove_labels = ["S-waiting-on-author"]
 add_labels = ["S-waiting-on-review"]
 
+[issue-links]
+check-commits = "uncanonicalized"
+
 [autolabel."A-build-execution"]
 trigger_files = [
   "src/cargo/core/compiler/compilation.rs",
