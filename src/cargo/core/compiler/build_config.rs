@@ -1,4 +1,5 @@
 use crate::core::compiler::CompileKind;
+use crate::core::features::DetectAntivirus;
 use crate::util::context::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, RustfixDiagnosticServer};
@@ -52,6 +53,9 @@ pub struct BuildConfig {
     pub sbom: bool,
     /// Build compile time dependencies only, e.g., build scripts and proc macros
     pub compile_time_deps_only: bool,
+    /// Whether we should try to detect and notify the user when antivirus
+    /// software might make newly created binaries slow to launch.
+    pub detect_antivirus: DetectAntivirus,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -127,6 +131,19 @@ impl BuildConfig {
             _ => Vec::new(),
         };
 
+        let detect_antivirus = match (cfg.detect_antivirus, gctx.cli_unstable().detect_antivirus) {
+            // Warn while the config is still unstable.
+            (Some(_), DetectAntivirus::Never) => {
+                gctx.shell().warn(
+                    "ignoring 'build.detect-antivirus' config, pass `-Zdetect-antivirus` to enable it",
+                )?;
+                DetectAntivirus::Never
+            }
+            // Allow overriding with config.
+            (Some(false), _) => DetectAntivirus::Never,
+            (_, flag) => flag,
+        };
+
         Ok(BuildConfig {
             requested_kinds,
             jobs,
@@ -145,6 +162,7 @@ impl BuildConfig {
             timing_outputs,
             sbom,
             compile_time_deps_only: false,
+            detect_antivirus,
         })
     }
 
@@ -280,12 +298,14 @@ impl CompileMode {
 ///
 /// For example, when a user runs `cargo test`, the intent is [`UserIntent::Test`],
 /// but this might result in multiple [`CompileMode`]s for different units.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum UserIntent {
     /// Build benchmark binaries, e.g., `cargo bench`
     Bench,
-    /// Build binaries and libraries, e.g., `cargo run`, `cargo install`, `cargo build`.
+    /// Build binaries and libraries, e.g., `cargo run`, `cargo build`, `cargo rustc`.
     Build,
+    /// Build binaries and libraries for installing, e.g. `cargo install`.
+    Install,
     /// Perform type-check, e.g., `cargo check`.
     Check { test: bool },
     /// Document packages.
