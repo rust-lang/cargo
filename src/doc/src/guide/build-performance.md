@@ -89,3 +89,31 @@ Trade-offs:
 [parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
 [parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
 [build.rustflags]: ../reference/config.md#buildrustflags
+
+### Use an alternative linker
+
+Most targets default to using the system linker, which might not be the most performant option. You can try an alternative linker to see if it improves build performance.
+
+Recommendation:
+
+- Install an alternative linker, for example [LLD](https://lld.llvm.org/), [mold](https://github.com/rui314/mold) or [wild](https://github.com/davidlattimore/wild)
+- Configure the Rust compiler to use a different linker. The configuration depends on the used linker and operating system. For Linux and the LLD or mold linker, you can add to your `.cargo/config.toml`:
+
+```toml
+# LLD
+[target.'cfg(target_os = "linux")']
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# mold, if you have GCC 12+
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# mold, otherwise
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/path/to/mold"]
+```
+
+> Note that since Rust `1.90.0`, the `x86_64-unknown-linux-gnu` target already defaults to the LLD linker.
+
+Trade-offs:
+- ✅ Faster link times
+- ❌ Might not support all use-cases, in particular if you depend on C or C++ dependencies
