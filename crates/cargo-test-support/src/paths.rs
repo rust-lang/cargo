@@ -12,6 +12,9 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::compare;
+use crate::layout::LayoutTree;
+
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
@@ -152,6 +155,10 @@ pub trait CargoPathExt {
     fn move_in_time<F>(&self, travel_amount: F)
     where
         F: Fn(i64, u32) -> (i64, u32);
+
+    fn assert_file_layout(&self, expected: impl AsRef<str>);
+
+    fn assert_file_layout_with_ignored_paths(&self, expected: impl AsRef<str>, ignored: &[PathBuf]);
 }
 
 impl CargoPathExt for Path {
@@ -236,6 +243,29 @@ impl CargoPathExt for Path {
             });
         }
     }
+
+    #[track_caller]
+    fn assert_file_layout(&self, expected: impl AsRef<str>) {
+        self.assert_file_layout_with_ignored_paths(expected, &default_ignored_paths());
+    }
+
+    #[track_caller]
+    fn assert_file_layout_with_ignored_paths(
+        &self,
+        expected: impl AsRef<str>,
+        ignored_paths: &[PathBuf],
+    ) {
+        let actual_layout = LayoutTree::from_path(&self, ignored_paths).unwrap();
+
+        let expected_layout = LayoutTree::parse(expected.as_ref());
+
+        if !actual_layout.matches_snapshot(&expected_layout) {
+            let actual_snapshot = actual_layout.to_string();
+            let expected_snapshot = expected_layout.to_string();
+
+            compare::assert_e2e().eq(actual_snapshot, expected_snapshot);
+        }
+    }
 }
 
 impl CargoPathExt for PathBuf {
@@ -259,6 +289,21 @@ impl CargoPathExt for PathBuf {
         F: Fn(i64, u32) -> (i64, u32),
     {
         self.as_path().move_in_time(travel_amount)
+    }
+
+    #[track_caller]
+    fn assert_file_layout(&self, expected: impl AsRef<str>) {
+        self.as_path().assert_file_layout(expected);
+    }
+
+    #[track_caller]
+    fn assert_file_layout_with_ignored_paths(
+        &self,
+        expected: impl AsRef<str>,
+        ignored_paths: &[PathBuf],
+    ) {
+        self.as_path()
+            .assert_file_layout_with_ignored_paths(expected, ignored_paths);
     }
 }
 
@@ -288,6 +333,20 @@ where
             panic!("failed to {} {}: {}", desc, path.display(), e);
         }
     }
+}
+
+/// The default paths to ignore when [`CargoPathExt::assert_file_layout`] is called
+fn default_ignored_paths() -> Vec<PathBuf> {
+    vec![
+        // Ignore MacOS debug symbols as there are many files/directories that would clutter up
+        // tests few not a lot of benefit.
+        "[..]/foo-[HASH].dSYM",
+        // Ignore Windows debub symbols files (.pdb)
+        "[..].pdb",
+    ]
+    .into_iter()
+    .map(|s| PathBuf::from(s))
+    .collect()
 }
 
 /// Get the filename for a library.
