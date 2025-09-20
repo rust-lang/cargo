@@ -389,10 +389,8 @@ fn acquire(
     lock_try: &dyn Fn() -> Result<(), TryLockError>,
     lock_block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
-    if cfg!(debug_assertions) {
-        // Force borrow to catch invalid borrows outside of contention situations
-        gctx.shell().verbosity();
-    }
+    // Force borrow to catch invalid borrows outside of contention situations
+    gctx.debug_assert_shell_not_borrowed();
     if try_acquire(path, lock_try)? {
         return Ok(());
     }
