@@ -1,3 +1,5 @@
+//! `Cargo.lock` / Lockfile schema definition
+
 use std::collections::BTreeMap;
 use std::fmt;
 use std::{cmp::Ordering, str::FromStr};
@@ -7,26 +9,49 @@ use url::Url;
 
 use crate::core::{GitReference, SourceKind};
 
-/// The `Cargo.lock` structure.
+/// Serialization of `Cargo.lock`
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLockfile {
+    /// The lockfile format version (`version =` field).
+    ///
+    /// This field is optional for backward compatibility. Older lockfiles, i.e. V1 and V2, does
+    /// not have the version field serialized.
     pub version: Option<u32>,
+    /// The list of `[[package]]` entries describing each resolved dependency.
     pub package: Option<Vec<TomlLockfileDependency>>,
-    /// `root` is optional to allow backward compatibility.
+    /// The `[root]` table describing the root package.
+    ///
+    /// This field is optional for backward compatibility. Older lockfiles have the root package
+    /// separated, whereas newer lockfiles have the root package as part of `[[package]]`.
     pub root: Option<TomlLockfileDependency>,
+    /// The `[metadata]` table
+    ///
+    ///
+    /// In older lockfile versions, dependency checksums were stored here instead of alongside each
+    /// package entry.
     pub metadata: Option<TomlLockfileMetadata>,
+    /// The `[patch]` table describing unused patches.
+    ///
+    /// The lockfile stores them as a list of `[[patch.unused]]` entries.
     #[serde(default, skip_serializing_if = "TomlLockfilePatch::is_empty")]
     pub patch: TomlLockfilePatch,
 }
 
+/// Serialization of lockfiles metadata
+///
+/// Older versions of lockfiles have their dependencies' checksums on this `[metadata]` table.
+pub type TomlLockfileMetadata = BTreeMap<String, String>;
+
+/// Serialization of unused patches
+///
+/// Cargo stores patches that were declared but not used during resolution.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLockfilePatch {
+    /// The list of unused dependency patches.
     pub unused: Vec<TomlLockfileDependency>,
 }
-
-pub type TomlLockfileMetadata = BTreeMap<String, String>;
 
 impl TomlLockfilePatch {
     fn is_empty(&self) -> bool {
@@ -34,17 +59,30 @@ impl TomlLockfilePatch {
     }
 }
 
+/// Serialization of lockfiles dependencies
 #[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLockfileDependency {
+    /// The name of the dependency.
     pub name: String,
+    /// The version of the dependency.
     pub version: String,
+    /// The source of the dependency.
+    ///
+    /// Cargo does not serialize path dependencies.
     pub source: Option<TomlLockfileSourceId>,
+    /// The checksum of the dependency.
+    ///
+    /// In older lockfiles, checksums were not stored here and instead on a separate `[metadata]`
+    /// table (see [`TomlLockfileMetadata`]).
     pub checksum: Option<String>,
+    /// The transitive dependencies used by this dependency.
     pub dependencies: Option<Vec<TomlLockfilePackageId>>,
+    /// The replace of the dependency.
     pub replace: Option<TomlLockfilePackageId>,
 }
 
+/// Serialization of dependency's source
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "unstable-schema",
@@ -52,11 +90,15 @@ pub struct TomlLockfileDependency {
     schemars(with = "String")
 )]
 pub struct TomlLockfileSourceId {
-    /// Full string of the source
+    /// The string representation of the source as it appears in the lockfile.
     source_str: String,
-    /// Used for sources ordering
+    /// The parsed source type, e.g. `git`, `registry`.
+    ///
+    /// Used for sources ordering.
     kind: SourceKind,
-    /// Used for sources ordering
+    /// The parsed URL of the source.
+    ///
+    /// Used for sources ordering.
     url: Url,
 }
 
@@ -157,6 +199,11 @@ impl Ord for TomlLockfileSourceId {
     }
 }
 
+/// Serialization of package IDs.
+///
+/// The version and source are only included when necessary to disambiguate between packages:
+/// - If multiple packages share the same name, the version is included.
+/// - If multiple packages share the same name and version, the source is included.
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLockfilePackageId {

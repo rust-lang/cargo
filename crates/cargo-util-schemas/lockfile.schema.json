@@ -1,10 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "TomlLockfile",
-  "description": "The `Cargo.lock` structure.",
+  "description": "Serialization of `Cargo.lock`",
   "type": "object",
   "properties": {
     "version": {
+      "description": "The lockfile format version (`version =` field).\n\nThis field is optional for backward compatibility. Older lockfiles, i.e. V1 and V2, does\nnot have the version field serialized.",
       "type": [
         "integer",
         "null"
@@ -13,6 +14,7 @@
       "minimum": 0
     },
     "package": {
+      "description": "The list of `[[package]]` entries describing each resolved dependency.",
       "type": [
         "array",
         "null"
@@ -22,7 +24,7 @@
       }
     },
     "root": {
-      "description": "`root` is optional to allow backward compatibility.",
+      "description": "The `[root]` table describing the root package.\n\nThis field is optional for backward compatibility. Older lockfiles have the root package\nseparated, whereas newer lockfiles have the root package as part of `[[package]]`.",
       "anyOf": [
         {
           "$ref": "#/$defs/TomlLockfileDependency"
@@ -33,6 +35,7 @@
       ]
     },
     "metadata": {
+      "description": "The `[metadata]` table\n\n\nIn older lockfile versions, dependency checksums were stored here instead of alongside each\npackage entry.",
       "type": [
         "object",
         "null"
@@ -42,32 +45,43 @@
       }
     },
     "patch": {
+      "description": "The `[patch]` table describing unused patches.\n\nThe lockfile stores them as a list of `[[patch.unused]]` entries.",
       "$ref": "#/$defs/TomlLockfilePatch"
     }
   },
   "$defs": {
     "TomlLockfileDependency": {
+      "description": "Serialization of lockfiles dependencies",
       "type": "object",
       "properties": {
         "name": {
+          "description": "The name of the dependency.",
           "type": "string"
         },
         "version": {
+          "description": "The version of the dependency.",
           "type": "string"
         },
         "source": {
-          "type": [
-            "string",
-            "null"
+          "description": "The source of the dependency.\n\nCargo does not serialize path dependencies.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlLockfileSourceId"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "checksum": {
+          "description": "The checksum of the dependency.\n\nIn older lockfiles, checksums were not stored here and instead on a separate `[metadata]`\ntable (see [`TomlLockfileMetadata`]).",
           "type": [
             "string",
             "null"
           ]
         },
         "dependencies": {
+          "description": "The transitive dependencies used by this dependency.",
           "type": [
             "array",
             "null"
@@ -77,6 +91,7 @@
           }
         },
         "replace": {
+          "description": "The replace of the dependency.",
           "anyOf": [
             {
               "$ref": "#/$defs/TomlLockfilePackageId"
@@ -92,7 +107,12 @@
         "version"
       ]
     },
+    "TomlLockfileSourceId": {
+      "description": "Serialization of dependency's source",
+      "type": "string"
+    },
     "TomlLockfilePackageId": {
+      "description": "Serialization of package IDs.\n\nThe version and source are only included when necessary to disambiguate between packages:\n- If multiple packages share the same name, the version is included.\n- If multiple packages share the same name and version, the source is included.",
       "type": "object",
       "properties": {
         "name": {
@@ -105,9 +125,13 @@
           ]
         },
         "source": {
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlLockfileSourceId"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -116,9 +140,11 @@
       ]
     },
     "TomlLockfilePatch": {
+      "description": "Serialization of unused patches\n\nCargo stores patches that were declared but not used during resolution.",
       "type": "object",
       "properties": {
         "unused": {
+          "description": "The list of unused dependency patches.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/TomlLockfileDependency"
