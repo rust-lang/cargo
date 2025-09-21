@@ -180,11 +180,11 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .run();
 }
 
-// Check that the `token` key works at the root instead of under a
-// `[registry]` table.
+/// Check that the `token` key works at the root instead of under a
+/// `[registry]` table.
 #[cargo_test]
 fn simple_publish_with_http() {
-    let _reg = registry::RegistryBuilder::new()
+    let _reg = RegistryBuilder::new()
         .http_api()
         .token(registry::Token::Plaintext("sekrit".to_string()))
         .build();
@@ -206,6 +206,50 @@ fn simple_publish_with_http() {
         .build();
 
     p.cargo("publish --no-verify --token sekrit --registry dummy-registry")
+        .with_stderr_data(str![[r#"
+[WARNING] `cargo publish --token <token>` is deprecated in favor of reading `<token>` from stdin
+[UPDATING] `dummy-registry` index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `dummy-registry`
+[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `dummy-registry`
+
+"#]])
+        .run();
+}
+
+/// Check that the `token` read from stdin works at the root instead of under a
+/// `[registry]` table.
+#[cargo_test]
+fn simple_publish_with_http_2() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .token(registry::Token::Plaintext("sekrit".to_string()))
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify --registry dummy-registry")
+        .with_stdin("sekrit")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, homepage or repository.
@@ -327,7 +371,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 #[cargo_test]
 fn simple_with_index() {
     // `publish` generally requires a remote registry
-    let registry = registry::RegistryBuilder::new().http_api().build();
+    let registry = RegistryBuilder::new().http_api().build();
 
     let p = project()
         .file(
@@ -346,10 +390,9 @@ fn simple_with_index() {
         .build();
 
     p.cargo("publish --no-verify")
-        .arg("--token")
-        .arg(registry.token())
         .arg("--index")
         .arg(registry.index_url().as_str())
+        .with_stdin(registry.token())
         .with_stderr_data(str![[r#"
 [UPDATING] `[ROOT]/registry` index
 [WARNING] manifest has no documentation, homepage or repository.
@@ -1017,7 +1060,7 @@ fn publish_failed_with_index_and_only_allowed_registry() {
         .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] command-line argument --index requires --token to be specified
+[ERROR] command-line argument --index requires token to be provided via stdin
 
 "#]])
         .run();
@@ -2185,9 +2228,40 @@ fn index_requires_token() {
         .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] command-line argument --index requires --token to be specified
+[ERROR] command-line argument --index requires token to be provided via stdin
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn index_requires_token_provided_via_stdin() {
+    // Use local registry for faster test times since no publish will occur
+    let registry = registry::init();
+
+    let credentials = paths::home().join(".cargo/credentials.toml");
+    fs::remove_file(&credentials).unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --index")
+        .arg(registry.index_url().as_str())
+        .with_stdin("TOKEN")
+        .with_status(0)
         .run();
 }
 
@@ -3603,6 +3677,47 @@ fn invalid_token() {
     p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
         .env("CARGO_REGISTRY_TOKEN", "\x16")
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to publish foo v0.0.1 to registry at http://127.0.0.1:[..]/
+
+Caused by:
+  token contains invalid characters.
+  Only printable ISO-8859-1 characters are allowed as it is sent in a HTTPS header.
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn invalid_token_via_stdin() {
+    // Checks publish behavior with an invalid token.
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stdin("\x16")
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)

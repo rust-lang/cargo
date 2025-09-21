@@ -130,7 +130,7 @@ fn registry<'gctx>(
 ) -> CargoResult<(Registry, RegistrySource<'gctx>)> {
     let is_index = reg_or_index.map(|v| v.is_index()).unwrap_or_default();
     if is_index && token_required.is_some() && token_from_cmdline.is_none() {
-        bail!("command-line argument --index requires --token to be specified");
+        bail!("command-line argument --index requires token to be provided via stdin");
     }
     if let Some(token) = token_from_cmdline {
         auth::cache_token_from_commandline(gctx, &source_ids.original, token);

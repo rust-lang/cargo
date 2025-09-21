@@ -300,11 +300,10 @@ Caused by:
 
     p.cargo("publish")
         .replace_crates_io(crates_io.index_url())
-        .arg("--token")
-        .arg(crates_io.token())
         .arg("--index")
         .arg(crates_io.index_url().as_str())
         .with_status(101)
+        .with_stdin(crates_io.token())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
