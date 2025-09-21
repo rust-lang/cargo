@@ -38,7 +38,7 @@ This will:
 - Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
 
 Trade-offs:
-- ✅ Faster build times
+- ✅ Faster code generation (`cargo build`)
 - ✅ Faster link times
 - ✅ Smaller disk usage of the `target` directory
 - ❌ Requires a full rebuild to have a high-quality debugger experience
@@ -83,7 +83,7 @@ rustflags = "-Zthreads=8"
 This [`rustflags`][build.rustflags] will enable the [parallel frontend][parallel-frontend-blog] of the Rust compiler, and tell it to use `n` threads. The value of `n` should be chosen according to the number of cores available on your system, although there are diminishing returns. We recommend using at most `8` threads.
 
 Trade-offs:
-- ✅ Faster build times
+- ✅ Faster build times (both `cargo check` and `cargo build`)
 - ❌ **Requires using nightly Rust and an [unstable Rust feature][parallel-frontend-issue]**
 
 ## Reducing built code
