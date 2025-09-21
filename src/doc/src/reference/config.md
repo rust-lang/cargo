@@ -1089,7 +1089,7 @@ Specifies the authentication token for the given registry. This value should
 only appear in the [credentials](#credentials) file. This is used for registry
 commands like [`cargo publish`] that require authentication.
 
-Can be overridden with the `--token` command-line option.
+Can be overridden with the token value provided to stdin.
 
 #### `registries.<name>.credential-provider`
 * Type: string or array of path and arguments
@@ -1165,7 +1165,7 @@ Specifies the authentication token for [crates.io]. This value should only
 appear in the [credentials](#credentials) file. This is used for registry
 commands like [`cargo publish`] that require authentication.
 
-Can be overridden with the `--token` command-line option.
+Can be overridden with the token value provided to stdin.
 
 #### `registry.global-credential-providers`
 * Type: array

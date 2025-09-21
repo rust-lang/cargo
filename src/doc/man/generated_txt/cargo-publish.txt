@@ -25,8 +25,8 @@ DESCRIPTION
           and may timeout. In that case, you will need to check for completion
           manually. This timeout does not affect the upload.
 
-       This command requires you to be authenticated with either the --token
-       option or using cargo-login(1).
+       This command requires you to be authenticated using cargo-login(1) or by
+       writing TOKEN value into stdin.
 
        See the reference
        <https://doc.rust-lang.org/cargo/reference/publishing.html> for more
@@ -36,18 +36,6 @@ OPTIONS
    Publish Options
        --dry-run
            Perform all checks without uploading.
-
-       --token token
-           API token to use when authenticating. This overrides the token
-           stored in the credentials file (which is created by cargo-login(1)).
-
-           Cargo config <https://doc.rust-lang.org/cargo/reference/config.html>
-           environment variables can be used to override the tokens stored in
-           the credentials file. The token for crates.io may be specified with
-           the CARGO_REGISTRY_TOKEN environment variable. Tokens for other
-           registries may be specified with environment variables of the form
-           CARGO_REGISTRIES_NAME_TOKEN where NAME is the name of the registry
-           in all capital letters.
 
        --no-verify
            Don’t verify the contents by building them.

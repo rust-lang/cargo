@@ -24,8 +24,8 @@ following steps:
    and may timeout. In that case, you will need to check for completion
    manually. This timeout does not affect the upload.
 
-This command requires you to be authenticated with either the `--token` option
-or using [cargo-login(1)](cargo-login.html).
+This command requires you to be authenticated using 
+[cargo-login(1)](cargo-login.html) or by writing TOKEN value into stdin.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
@@ -38,17 +38,6 @@ packaging and publishing.
 
 <dt class="option-term" id="option-cargo-publish---dry-run"><a class="option-anchor" href="#option-cargo-publish---dry-run"></a><code>--dry-run</code></dt>
 <dd class="option-desc">Perform all checks without uploading.</dd>
-
-
-<dt class="option-term" id="option-cargo-publish---token"><a class="option-anchor" href="#option-cargo-publish---token"></a><code>--token</code> <em>token</em></dt>
-<dd class="option-desc">API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by <a href="cargo-login.html">cargo-login(1)</a>).</p>
-<p><a href="../reference/config.html">Cargo config</a> environment variables can be
-used to override the tokens stored in the credentials file. The token for
-crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
-variable. Tokens for other registries may be specified with environment
-variables of the form <code>CARGO_REGISTRIES_NAME_TOKEN</code> where <code>NAME</code> is the name
-of the registry in all capital letters.</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---no-verify"><a class="option-anchor" href="#option-cargo-publish---no-verify"></a><code>--no-verify</code></dt>
