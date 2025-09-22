@@ -2133,6 +2133,10 @@ impl GlobalContext {
             Ok(WarningHandling::default())
         }
     }
+
+    pub fn ws_roots(&self) -> RefMut<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
+        self.ws_roots.borrow_mut()
+    }
 }
 
 /// Internal error for serde errors.
