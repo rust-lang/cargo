@@ -1201,20 +1201,16 @@ impl<'gctx> Workspace<'gctx> {
     pub fn emit_warnings(&self) -> CargoResult<()> {
         let mut first_emitted_error = None;
 
-        if self.gctx.cli_unstable().cargo_lints {
-            if let Err(e) = self.emit_ws_lints() {
-                first_emitted_error = Some(e);
-            }
+        if let Err(e) = self.emit_ws_lints() {
+            first_emitted_error = Some(e);
         }
 
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
-                if self.gctx.cli_unstable().cargo_lints {
-                    if let Err(e) = self.emit_pkg_lints(pkg, &path)
-                        && first_emitted_error.is_none()
-                    {
-                        first_emitted_error = Some(e);
-                    }
+                if let Err(e) = self.emit_pkg_lints(pkg, &path)
+                    && first_emitted_error.is_none()
+                {
+                    first_emitted_error = Some(e);
                 }
             }
             let warnings = match maybe_pkg {
@@ -1267,16 +1263,18 @@ impl<'gctx> Workspace<'gctx> {
 
         let ws_document = self.root_maybe().document();
 
-        analyze_cargo_lints_table(
-            pkg,
-            &path,
-            &cargo_lints,
-            ws_contents,
-            ws_document,
-            self.root_manifest(),
-            self.gctx,
-        )?;
-        check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+        if self.gctx.cli_unstable().cargo_lints {
+            analyze_cargo_lints_table(
+                pkg,
+                &path,
+                &cargo_lints,
+                ws_contents,
+                ws_document,
+                self.root_manifest(),
+                self.gctx,
+            )?;
+            check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+        }
 
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
@@ -1311,6 +1309,10 @@ impl<'gctx> Workspace<'gctx> {
         .and_then(|t| t.get("cargo"))
         .cloned()
         .unwrap_or(manifest::TomlToolLints::default());
+
+        if self.gctx.cli_unstable().cargo_lints {
+            // Calls to lint functions go in here
+        }
 
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
