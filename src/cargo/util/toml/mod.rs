@@ -81,8 +81,7 @@ pub fn read_manifest(
             to_workspace_config(&original_toml, path, is_embedded, gctx, &mut warnings)?;
         if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
             let package_root = path.parent().unwrap();
-            gctx.ws_roots
-                .borrow_mut()
+            gctx.ws_roots()
                 .insert(package_root.to_owned(), ws_root_config.clone());
         }
         let normalized_toml = normalize_toml(
@@ -996,7 +995,7 @@ fn inheritable_from_path(
 
     // Let the borrow exit scope so that it can be picked up if there is a need to
     // read a manifest
-    if let Some(ws_root) = gctx.ws_roots.borrow().get(workspace_path_root) {
+    if let Some(ws_root) = gctx.ws_roots().get(workspace_path_root) {
         return Ok(ws_root.inheritable().clone());
     };
 
@@ -1004,9 +1003,7 @@ fn inheritable_from_path(
     let man = read_manifest(&workspace_path, source_id, gctx)?;
     match man.workspace_config() {
         WorkspaceConfig::Root(root) => {
-            gctx.ws_roots
-                .borrow_mut()
-                .insert(workspace_path, root.clone());
+            gctx.ws_roots().insert(workspace_path, root.clone());
             Ok(root.inheritable().clone())
         }
         _ => bail!(

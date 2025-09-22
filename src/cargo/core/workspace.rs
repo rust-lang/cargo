@@ -2037,7 +2037,7 @@ fn find_workspace_root_with_loader(
 ) -> CargoResult<Option<PathBuf>> {
     // Check if there are any workspace roots that have already been found that would work
     {
-        let roots = gctx.ws_roots.borrow();
+        let roots = gctx.ws_roots();
         // Iterate through the manifests parent directories until we find a workspace
         // root. Note we skip the first item since that is just the path itself
         for current in manifest_path.ancestors().skip(1) {
