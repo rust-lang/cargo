@@ -317,3 +317,83 @@ fn dump_lockfile_schema() {
     let dump = serde_json::to_string_pretty(&schema).unwrap();
     snapbox::assert_data_eq!(dump, snapbox::file!("../lockfile.schema.json").raw());
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{GitReference, SourceKind};
+    use crate::lockfile::{EncodableSourceIdErrorKind, TomlLockfileSourceId};
+
+    #[track_caller]
+    fn ok(source_str: &str, source_kind: SourceKind, url: &str) {
+        let source_str = source_str.to_owned();
+        let source_id = TomlLockfileSourceId::new(source_str).unwrap();
+        assert_eq!(source_id.kind, source_kind);
+        assert_eq!(source_id.url().to_string(), url);
+    }
+
+    macro_rules! err {
+        ($src:expr, $expected:pat) => {
+            let kind = TomlLockfileSourceId::new($src.to_owned()).unwrap_err().0;
+            assert!(
+                matches!(kind, $expected),
+                "`{}` parse error mismatch, got {kind:?}",
+                $src,
+            );
+        };
+    }
+
+    #[test]
+    fn good_sources() {
+        ok(
+            "sparse+https://my-crates.io",
+            SourceKind::SparseRegistry,
+            "https://my-crates.io/",
+        );
+        ok(
+            "registry+https://github.com/rust-lang/crates.io-index",
+            SourceKind::Registry,
+            "https://github.com/rust-lang/crates.io-index",
+        );
+        ok(
+            "git+https://github.com/rust-lang/cargo",
+            SourceKind::Git(GitReference::DefaultBranch),
+            "https://github.com/rust-lang/cargo",
+        );
+        ok(
+            "git+https://github.com/rust-lang/cargo?branch=dev",
+            SourceKind::Git(GitReference::Branch("dev".to_owned())),
+            "https://github.com/rust-lang/cargo?branch=dev",
+        );
+        ok(
+            "git+https://github.com/rust-lang/cargo?tag=v1.0",
+            SourceKind::Git(GitReference::Tag("v1.0".to_owned())),
+            "https://github.com/rust-lang/cargo?tag=v1.0",
+        );
+        ok(
+            "git+https://github.com/rust-lang/cargo?rev=refs/pull/493/head",
+            SourceKind::Git(GitReference::Rev("refs/pull/493/head".to_owned())),
+            "https://github.com/rust-lang/cargo?rev=refs/pull/493/head",
+        );
+        ok(
+            "path+file:///path/to/root",
+            SourceKind::Path,
+            "file:///path/to/root",
+        );
+    }
+
+    #[test]
+    fn bad_sources() {
+        err!(
+            "unknown+https://my-crates.io",
+            EncodableSourceIdErrorKind::UnsupportedSource(..)
+        );
+        err!(
+            "registry+https//github.com/rust-lang/crates.io-index",
+            EncodableSourceIdErrorKind::InvalidUrl { .. }
+        );
+        err!(
+            "https//github.com/rust-lang/crates.io-index",
+            EncodableSourceIdErrorKind::InvalidSource(..)
+        );
+    }
+}
