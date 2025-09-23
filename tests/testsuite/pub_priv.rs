@@ -1,9 +1,9 @@
 //! Tests for public/private dependencies.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
+use cargo_test_support::{project, registry};
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
@@ -676,6 +676,126 @@ fn verify_z_public_dependency() {
 ...
 src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
 src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn renamed_dependency() {
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromDep;")
+        .publish();
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "0.1.0", package = "dep" }
+                renamed_dep = {version = "0.1.0", package = "priv_dep" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate dep;
+            extern crate renamed_dep;
+            pub fn use_dep(_: dep::FromDep) {}
+            pub fn use_priv(_: renamed_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+...
+[WARNING] type `FromDep` from private dependency 'dep' in public interface
+ --> src/lib.rs:4:13
+  |
+4 |             pub fn use_dep(_: dep::FromDep) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+
+  |
+[WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+ --> src/lib.rs:5:13
+5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+// We don't point to the toml locations if the crate is ambiguous.
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn duplicate_renamed_dependency() {
+    registry::alt_init();
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromDep;")
+        .publish();
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .alternative(true)
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "0.1.0", package = "dep" }
+                renamed_dep = {version = "0.1.0", package = "dep", registry = "alternative" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate dep;
+            extern crate renamed_dep;
+            pub fn use_dep(_: dep::FromDep) {}
+            pub fn use_priv(_: renamed_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+...
+[WARNING] type `FromDep` from private dependency 'dep' in public interface
+ --> src/lib.rs:4:13
+  |
+4 |             pub fn use_dep(_: dep::FromDep) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+
+[WARNING] type `FromPriv` from private dependency 'dep' in public interface
+ --> src/lib.rs:5:13
+  |
+5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
 "#]]
             .unordered(),
