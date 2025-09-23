@@ -4509,3 +4509,38 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn publish_reads_token_from_stdin() {
+    let registry = RegistryBuilder::new()
+        .alternative_named("i-need-token")
+        .http_api()
+        .token(registry::Token::Plaintext("TOKEN".to_string()))
+        .auth_required()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2024"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify")
+        .with_stdin("TOKEN")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r##"
+[UPDATING] crates.io index
+[ERROR] no token found, please run `cargo login`
+or use environment variable CARGO_REGISTRY_TOKEN
+
+"##]])
+        .run();
+}
