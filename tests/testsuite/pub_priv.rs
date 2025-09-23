@@ -40,6 +40,11 @@ fn exported_priv_warning() {
         .with_stderr_data(str![[r#"
 ...
 src/lib.rs:3:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+  --> Cargo.toml:10:17
+   |
+10 |                 priv_dep = "0.1.0"
+   |                 --------
 ...
 "#]])
         .run();
@@ -624,7 +629,17 @@ fn verify_mix_cargo_feature_z() {
         .with_stderr_data(str![[r#"
 ...
 src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:9:17
+  |
+9 |                 dep = "0.1.0"
+  |                 ---
 src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+  --> Cargo.toml:10:17
+   |
+10 |                 priv_dep = {version = "0.1.0", public = false}
+   |                 --------
 ...
 "#]])
         .run();
@@ -675,7 +690,17 @@ fn verify_z_public_dependency() {
             str![[r#"
 ...
 src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:17
+  |
+8 |                 dep = "0.1.0"
+  |                 ---
 src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:17
+  |
+9 |                 priv_dep = {version = "0.1.0", public = false}
+  |                 --------
 ...
 "#]]
             .unordered(),
@@ -729,12 +754,22 @@ fn renamed_dependency() {
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
 
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:54
   |
+8 |                 dep = { version = "0.1.0", package = "dep" }
+  |                                                      -----
 [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
  --> src/lib.rs:5:13
+  |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:61
+  |
+9 |                 renamed_dep = {version = "0.1.0", package = "priv_dep" }
+  |                                                             ----------
 ...
 "#]]
             .unordered(),

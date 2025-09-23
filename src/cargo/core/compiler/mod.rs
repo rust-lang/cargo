@@ -62,11 +62,14 @@ use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::{BufRead, BufWriter, Write};
+use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
+use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anyhow::{Context as _, Error};
 use lazycell::LazyCell;
+use regex::Regex;
 use tracing::{debug, instrument, trace};
 
 pub use self::build_config::UserIntent;
@@ -98,6 +101,7 @@ use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::context::WarningHandling;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
+use crate::util::lints::get_key_value;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal};
 use cargo_util::{ProcessBuilder, ProcessError, paths};
@@ -215,9 +219,10 @@ fn compile<'gctx>(
                 // since it might contain future-incompat-report messages
                 let show_diagnostics = unit.show_warnings(bcx.gctx)
                     && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
+                let manifest = ManifestErrorContext::new(unit, bcx.gctx.cwd().to_owned());
                 let work = replay_output_cache(
                     unit.pkg.package_id(),
-                    PathBuf::from(unit.pkg.manifest_path()),
+                    manifest,
                     &unit.target,
                     build_runner.files().message_cache_path(unit),
                     build_runner.bcx.build_config.message_format,
@@ -283,7 +288,7 @@ fn rustc(
     // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let current_id = unit.pkg.package_id();
-    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
+    let manifest = ManifestErrorContext::new(unit, build_runner.bcx.gctx.cwd().to_owned());
     let build_scripts = build_runner.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
@@ -424,7 +429,7 @@ fn rustc(
                             state,
                             line,
                             package_id,
-                            &manifest_path,
+                            &manifest,
                             &target,
                             &mut output_options,
                         )
@@ -905,8 +910,8 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let name = unit.pkg.name();
     let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let package_id = unit.pkg.package_id();
-    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let target = Target::clone(&unit.target);
+    let manifest = ManifestErrorContext::new(unit, build_runner.bcx.gctx.cwd().to_owned());
 
     let rustdoc_dep_info_loc = rustdoc_dep_info_loc(build_runner, unit);
     let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
@@ -996,7 +1001,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
                         state,
                         line,
                         package_id,
-                        &manifest_path,
+                        &manifest,
                         &target,
                         &mut output_options,
                     )
@@ -1891,6 +1896,33 @@ impl OutputOptions {
     }
 }
 
+/// Cloned and sendable context about the manifest file.
+///
+/// Sometimes we enrich rustc's errors with some locations in the manifest file; this
+/// contains a `Send`-able copy of the manifest information that we need for the
+/// enriched errors.
+struct ManifestErrorContext {
+    /// The path to the manifest.
+    path: PathBuf,
+    /// The locations of various spans within the manifest.
+    spans: toml::Spanned<toml::de::DeTable<'static>>,
+    /// The raw manifest contents.
+    contents: String,
+    /// Cargo's working directory (for printing out a more friendly manifest path).
+    cwd: PathBuf,
+}
+
+impl ManifestErrorContext {
+    fn new(unit: &Unit, cwd: PathBuf) -> ManifestErrorContext {
+        ManifestErrorContext {
+            path: unit.pkg.manifest_path().to_owned(),
+            spans: unit.pkg.manifest().document().clone(),
+            contents: unit.pkg.manifest().contents().to_owned(),
+            cwd,
+        }
+    }
+}
+
 fn on_stdout_line(
     state: &JobState<'_, '_>,
     line: &str,
@@ -1905,11 +1937,11 @@ fn on_stderr_line(
     state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
-    manifest_path: &std::path::Path,
+    manifest: &ManifestErrorContext,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<()> {
-    if on_stderr_line_inner(state, line, package_id, manifest_path, target, options)? {
+    if on_stderr_line_inner(state, line, package_id, manifest, target, options)? {
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
@@ -1927,7 +1959,7 @@ fn on_stderr_line_inner(
     state: &JobState<'_, '_>,
     line: &str,
     package_id: PackageId,
-    manifest_path: &std::path::Path,
+    manifest: &ManifestErrorContext,
     target: &Target,
     options: &mut OutputOptions,
 ) -> CargoResult<bool> {
@@ -1975,6 +2007,37 @@ fn on_stderr_line_inner(
         state.on_section_timing_emitted(timing_record);
         return Ok(false);
     }
+
+    // Returns `true` if the diagnostic was modified.
+    let extra_diag_message = |diag: &mut String| -> bool {
+        static PRIV_DEP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new("from private dependency '([A-Za-z0-9-_]+)' in public interface").unwrap()
+        });
+        if let Some(crate_name) = PRIV_DEP_REGEX.captures(diag).and_then(|m| m.get(1)) {
+            let crate_name = crate_name.as_str();
+            if let Some(span) = find_crate_span(crate_name, &manifest.spans) {
+                let rel_path = pathdiff::diff_paths(&manifest.path, &manifest.cwd)
+                    .unwrap_or_else(|| manifest.path.clone())
+                    .display()
+                    .to_string();
+                let report = [Group::with_title(
+                    Level::NOTE
+                        .secondary_title(format!("dependency `{crate_name}` declared here",)),
+                )
+                .element(
+                    Snippet::source(&manifest.contents)
+                        .path(rel_path)
+                        .annotation(AnnotationKind::Context.span(span)),
+                )];
+
+                let rendered = Renderer::styled().render(&report);
+                diag.push('\n');
+                diag.push_str(&rendered);
+                return true;
+            }
+        }
+        false
+    };
 
     // Depending on what we're emitting from Cargo itself, we figure out what to
     // do with this JSON message.
@@ -2034,7 +2097,7 @@ fn on_stderr_line_inner(
                 if msg.rendered.ends_with('\n') {
                     msg.rendered.pop();
                 }
-                let rendered = msg.rendered;
+                let mut rendered = msg.rendered;
                 if options.show_diagnostics {
                     let machine_applicable: bool = msg
                         .children
@@ -2048,16 +2111,14 @@ fn on_stderr_line_inner(
                         })
                         .any(|b| b);
                     count_diagnostic(&msg.level, options);
+                    extra_diag_message(&mut rendered);
                     state.emit_diag(&msg.level, rendered, machine_applicable)?;
                 }
                 return Ok(true);
             }
         }
 
-        // Remove color information from the rendered string if color is not
-        // enabled. Cargo always asks for ANSI colors from rustc. This allows
-        // cached replay to enable/disable colors without re-invoking rustc.
-        MessageFormat::Json { ansi: false, .. } => {
+        MessageFormat::Json { ansi, .. } => {
             #[derive(serde::Deserialize, serde::Serialize)]
             struct CompilerMessage<'a> {
                 rendered: String,
@@ -2067,15 +2128,20 @@ fn on_stderr_line_inner(
             if let Ok(mut error) =
                 serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get())
             {
-                error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
-                let new_line = serde_json::to_string(&error)?;
-                compiler_message = serde_json::value::RawValue::from_string(new_line)?;
+                let modified_diag = extra_diag_message(&mut error.rendered);
+
+                // Remove color information from the rendered string if color is not
+                // enabled. Cargo always asks for ANSI colors from rustc. This allows
+                // cached replay to enable/disable colors without re-invoking rustc.
+                if !ansi {
+                    error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
+                }
+                if !ansi || modified_diag {
+                    let new_line = serde_json::to_string(&error)?;
+                    compiler_message = serde_json::value::RawValue::from_string(new_line)?;
+                }
             }
         }
-
-        // If ansi colors are desired then we should be good to go! We can just
-        // pass through this message as-is.
-        MessageFormat::Json { ansi: true, .. } => {}
     }
 
     // We always tell rustc to emit messages about artifacts being produced.
@@ -2128,7 +2194,7 @@ fn on_stderr_line_inner(
 
     let msg = machine_message::FromCompiler {
         package_id: package_id.to_spec(),
-        manifest_path,
+        manifest_path: &manifest.path,
         target,
         message: compiler_message,
     }
@@ -2141,12 +2207,62 @@ fn on_stderr_line_inner(
     Ok(true)
 }
 
+/// Find a span for the dependency that specifies this unrenamed crate, if it's unique.
+///
+/// rustc diagnostics (at least for public-in-private) mention the un-renamed
+/// crate: if you have `foo = { package = "bar" }`, the rustc diagnostic will
+/// say "bar".
+///
+/// This function does its best to find a span for "bar", but it could fail if
+/// there are multiple candidates:
+///
+/// ```toml
+/// foo = { package = "bar" }
+/// baz = { path = "../bar", package = "bar" }
+/// ```
+fn find_crate_span<'doc>(
+    unrenamed: &str,
+    manifest_spans: &'doc toml::Spanned<toml::de::DeTable<'static>>,
+) -> Option<Range<usize>> {
+    // Easy case: there's a dependency whose key matches the name, and it didn't get renamed.
+    if let Some((k, v)) = get_key_value(manifest_spans, &["dependencies", unrenamed]) {
+        let Some(table) = v.get_ref().as_table() else {
+            return Some(k.span());
+        };
+        if !table.contains_key("package") {
+            return Some(k.span());
+        }
+    }
+
+    let Some(deps) =
+        get_key_value(manifest_spans, &["dependencies"]).and_then(|(_k, v)| v.get_ref().as_table())
+    else {
+        return None;
+    };
+
+    let mut unique_crate = None;
+    for v in deps.values() {
+        if let Some(package) = v.as_ref().as_table().and_then(|t| t.get("package")) {
+            if package.get_ref().as_str() == Some(unrenamed) {
+                if unique_crate.is_some() {
+                    // There were two dependencies with the same un-renamed name.
+                    return None;
+                } else {
+                    unique_crate = Some(package.span());
+                }
+            }
+        }
+    }
+
+    unique_crate
+}
+
 /// Creates a unit of work that replays the cached compiler message.
 ///
 /// Usually used when a job is fresh and doesn't need to recompile.
 fn replay_output_cache(
     package_id: PackageId,
-    manifest_path: PathBuf,
+    manifest: ManifestErrorContext,
     target: &Target,
     path: PathBuf,
     format: MessageFormat,
@@ -2177,14 +2293,7 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(
-                state,
-                trimmed,
-                package_id,
-                &manifest_path,
-                &target,
-                &mut options,
-            )?;
+            on_stderr_line(state, trimmed, package_id, &manifest, &target, &mut options)?;
             line.clear();
         }
         Ok(())
