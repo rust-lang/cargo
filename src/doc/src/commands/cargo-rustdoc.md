@@ -171,7 +171,7 @@ be specified multiple times, which enables all specified features.</dd>
 <p>Possible values:</p>
 <ul>
 <li>Any supported target in <code>rustc --print target-list</code>.</li>
-<li><code>"host"</code>, which will internally be substituted by the host’s target. This can be particularly useful if you’re cross-compiling some crates, and don’t want to specify your host’s machine as a target (for instance, an <code>xtask</code> in a shared project that may be worked on by many hosts).</li>
+<li><code>"host-tuple"</code>, which will internally be substituted by the host’s target. This can be particularly useful if you’re cross-compiling some crates, and don’t want to specify your host’s machine as a target (for instance, an <code>xtask</code> in a shared project that may be worked on by many hosts).</li>
 <li>A path to a custom target specification. See <a href="../../rustc/targets/custom.html#custom-target-lookup-path">Custom Target Lookup Path</a> for more information.</li>
 </ul>
 <p>This may also be specified with the <code>build.target</code> <a href="../reference/config.html">config value</a>.</p>
