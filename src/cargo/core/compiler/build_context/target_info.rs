@@ -1105,6 +1105,10 @@ impl<'gctx> RustcTargetData<'gctx> {
         }
         unsupported
     }
+
+    pub fn requested_kinds(&self) -> &[CompileKind] {
+        &self.requested_kinds
+    }
 }
 
 /// Structure used to deal with Rustdoc fingerprinting

@@ -728,12 +728,22 @@ fn manifest_location() {
   |                     ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:17
   |
+9 |                 priv_dep = "0.1.0"
+  |                 --------
 
 [WARNING] type `FromDep` from private dependency 'dep' in public interface
  --> src/lib.rs:4:13
+  |
 4 |             pub fn use_dep(_: dep::FromDep) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:17
+  |
+8 |                 dep = "0.1.0"
+  |                 ---
 ...
 "#]]
             .unordered(),
@@ -786,13 +796,22 @@ fn renamed_dependency() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
-
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:54
   |
+8 |                 dep = { version = "0.1.0", package = "dep" }
+  |                                                      -----
+
 [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
  --> src/lib.rs:5:13
+  |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:61
+  |
+9 |                 renamed_dep = {version = "0.1.0", package = "priv_dep" }
+  |                                                             ----------
 ...
 "#]]
             .unordered(),
@@ -922,12 +941,22 @@ fn dependency_location_in_target_table() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:17
   |
+8 |                 dep = { version = "0.1.0" }
+  |                 ---
 
 [WARNING] type `FromPriv` from private dependency 'native_priv_dep' in public interface
  --> src/lib.rs:5:13
+  |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[NOTE] dependency `native_priv_dep` declared here
+ --> Cargo.toml:9:62
+  |
+9 |                 renamed_dep = { version = "0.1.0", package = "native_priv_dep" }
+  |                                                              -----------------
 ...
 "#]]
             .unordered(),
@@ -946,12 +975,22 @@ fn dependency_location_in_target_table() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `dep` declared here
+  --> Cargo.toml:12:17
+   |
+12 |                 dep = { version = "0.1.0" }
+   |                 ---
 
 [WARNING] type `FromPriv` from private dependency 'alt_priv_dep' in public interface
  --> src/lib.rs:5:13
   |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[NOTE] dependency `alt_priv_dep` declared here
+  --> Cargo.toml:13:62
+   |
+13 |                 renamed_dep = { version = "0.1.0", package = "alt_priv_dep" }
+   |                                                              --------------
 ...
 "#]]
             .unordered(),
@@ -1020,12 +1059,22 @@ fn dependency_location_in_target_table_with_cfg() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:17
   |
+8 |                 dep = { version = "0.1.0" }
+  |                 ---
 
 [WARNING] type `FromPriv` from private dependency 'native_priv_dep' in public interface
  --> src/lib.rs:5:13
+  |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[NOTE] dependency `native_priv_dep` declared here
+ --> Cargo.toml:9:62
+  |
+9 |                 renamed_dep = { version = "0.1.0", package = "native_priv_dep" }
+  |                                                              -----------------
 ...
 "#]]
             .unordered(),
@@ -1044,12 +1093,22 @@ fn dependency_location_in_target_table_with_cfg() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `dep` declared here
+  --> Cargo.toml:12:17
+   |
+12 |                 dep = { version = "0.1.0" }
+   |                 ---
 
 [WARNING] type `FromPriv` from private dependency 'alt_priv_dep' in public interface
  --> src/lib.rs:5:13
   |
 5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[NOTE] dependency `alt_priv_dep` declared here
+  --> Cargo.toml:13:62
+   |
+13 |                 renamed_dep = { version = "0.1.0", package = "alt_priv_dep" }
+   |                                                              --------------
 ...
 "#]]
             .unordered(),
@@ -1153,6 +1212,12 @@ fn relative_display_path() {
 3 |             pub use priv_dep::FromPriv;
   |                     ^^^^^^^^^^^^^^^^^^
   |
+  = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+[NOTE] dependency `priv_dep` declared here
+ --> foo/Cargo.toml:8:17
+  |
+8 |                 priv_dep = "0.1.0"
+  |                 --------
 ...
 "#]])
         .run();
