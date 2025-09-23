@@ -1,6 +1,9 @@
 use crate::command_prelude::*;
+use std::io::IsTerminal;
+use std::ops::Not;
 
 use cargo::ops::{self, PublishOpts};
+use cargo_credential::Secret;
 
 pub fn cli() -> Command {
     subcommand("publish")
@@ -45,13 +48,26 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         .into());
     }
 
+    let token = args
+        .get_one::<String>("token")
+        .cloned()
+        .or_else(|| {
+            if std::io::stdin().is_terminal().not()
+                && let token_from_stdin = cargo_credential::read_line().unwrap_or_default()
+                && token_from_stdin.is_empty().not()
+            {
+                Some(token_from_stdin)
+            } else {
+                None
+            }
+        })
+        .map(Secret::from);
+
     ops::publish(
         &ws,
         &PublishOpts {
             gctx,
-            token: args
-                .get_one::<String>("token")
-                .map(|s| s.to_string().into()),
+            token,
             reg_or_index,
             verify: !args.flag("no-verify"),
             allow_dirty: args.flag("allow-dirty"),

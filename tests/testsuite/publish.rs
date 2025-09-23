@@ -4535,11 +4535,18 @@ fn publish_reads_token_from_stdin() {
     p.cargo("publish --no-verify")
         .with_stdin("TOKEN")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
+        .with_status(0)
         .with_stderr_data(str![[r##"
 [UPDATING] crates.io index
-[ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `crates-io`
+[NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `crates-io`
 
 "##]])
         .run();
