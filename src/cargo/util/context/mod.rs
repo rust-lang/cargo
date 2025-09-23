@@ -1469,98 +1469,20 @@ impl GlobalContext {
                 self._load_file(&self.cwd().join(&str_path), &mut seen, true, WhyLoad::Cli)
                     .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
-                // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
-                // expressions followed by a value that's not an "inline table"
-                // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
-                // parse the value as a toml_edit::DocumentMut, and check that the (single)
-                // inner-most table is set via dotted keys.
-                let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
-                    format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
-                })?;
-                fn non_empty(d: Option<&toml_edit::RawString>) -> bool {
-                    d.map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
-                }
-                fn non_empty_decor(d: &toml_edit::Decor) -> bool {
-                    non_empty(d.prefix()) || non_empty(d.suffix())
-                }
-                fn non_empty_key_decor(k: &toml_edit::Key) -> bool {
-                    non_empty_decor(k.leaf_decor()) || non_empty_decor(k.dotted_decor())
-                }
-                let ok = {
-                    let mut got_to_value = false;
-                    let mut table = doc.as_table();
-                    let mut is_root = true;
-                    while table.is_dotted() || is_root {
-                        is_root = false;
-                        if table.len() != 1 {
-                            break;
-                        }
-                        let (k, n) = table.iter().next().expect("len() == 1 above");
-                        match n {
-                            Item::Table(nt) => {
-                                if table.key(k).map_or(false, non_empty_key_decor)
-                                    || non_empty_decor(nt.decor())
-                                {
-                                    bail!(
-                                        "--config argument `{arg}` \
-                                            includes non-whitespace decoration"
-                                    )
-                                }
-                                table = nt;
-                            }
-                            Item::Value(v) if v.is_inline_table() => {
-                                bail!(
-                                    "--config argument `{arg}` \
-                                    sets a value to an inline table, which is not accepted"
-                                );
-                            }
-                            Item::Value(v) => {
-                                if table
-                                    .key(k)
-                                    .map_or(false, |k| non_empty(k.leaf_decor().prefix()))
-                                    || non_empty_decor(v.decor())
-                                {
-                                    bail!(
-                                        "--config argument `{arg}` \
-                                            includes non-whitespace decoration"
-                                    )
-                                }
-                                got_to_value = true;
-                                break;
-                            }
-                            Item::ArrayOfTables(_) => {
-                                bail!(
-                                    "--config argument `{arg}` \
-                                    sets a value to an array of tables, which is not accepted"
-                                );
-                            }
-
-                            Item::None => {
-                                bail!("--config argument `{arg}` doesn't provide a value")
-                            }
-                        }
-                    }
-                    got_to_value
-                };
-                if !ok {
-                    bail!(
-                        "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
-                    );
-                }
-
-                let toml_v: toml::Value = toml::Value::deserialize(doc.into_deserializer())
+                let doc = toml_dotted_keys(arg)?;
+                let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
                     .with_context(|| {
                         format!("failed to parse value from --config argument `{arg}`")
                     })?;
 
-                if toml_v
+                if doc
                     .get("registry")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.get("token"))
                     .is_some()
                 {
                     bail!("registry.token cannot be set through --config for security reasons");
-                } else if let Some((k, _)) = toml_v
+                } else if let Some((k, _)) = doc
                     .get("registries")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
@@ -1571,7 +1493,7 @@ impl GlobalContext {
                     );
                 }
 
-                if toml_v
+                if doc
                     .get("registry")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.get("secret-key"))
@@ -1580,7 +1502,7 @@ impl GlobalContext {
                     bail!(
                         "registry.secret-key cannot be set through --config for security reasons"
                     );
-                } else if let Some((k, _)) = toml_v
+                } else if let Some((k, _)) = doc
                     .get("registries")
                     .and_then(|v| v.as_table())
                     .and_then(|t| t.iter().find(|(_, v)| v.get("secret-key").is_some()))
@@ -1591,7 +1513,7 @@ impl GlobalContext {
                     );
                 }
 
-                CV::from_toml(Definition::Cli(None), toml_v)
+                CV::from_toml(Definition::Cli(None), doc)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let tmp_table = self
@@ -3054,6 +2976,88 @@ pub type EnvConfig = HashMap<String, EnvConfigValue>;
 fn parse_document(toml: &str, _file: &Path, _gctx: &GlobalContext) -> CargoResult<toml::Table> {
     // At the moment, no compatibility checks are needed.
     toml.parse().map_err(Into::into)
+}
+
+fn toml_dotted_keys(arg: &str) -> CargoResult<toml_edit::DocumentMut> {
+    // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
+    // expressions followed by a value that's not an "inline table"
+    // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
+    // parse the value as a toml_edit::DocumentMut, and check that the (single)
+    // inner-most table is set via dotted keys.
+    let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
+        format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
+    })?;
+    fn non_empty(d: Option<&toml_edit::RawString>) -> bool {
+        d.map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
+    }
+    fn non_empty_decor(d: &toml_edit::Decor) -> bool {
+        non_empty(d.prefix()) || non_empty(d.suffix())
+    }
+    fn non_empty_key_decor(k: &toml_edit::Key) -> bool {
+        non_empty_decor(k.leaf_decor()) || non_empty_decor(k.dotted_decor())
+    }
+    let ok = {
+        let mut got_to_value = false;
+        let mut table = doc.as_table();
+        let mut is_root = true;
+        while table.is_dotted() || is_root {
+            is_root = false;
+            if table.len() != 1 {
+                break;
+            }
+            let (k, n) = table.iter().next().expect("len() == 1 above");
+            match n {
+                Item::Table(nt) => {
+                    if table.key(k).map_or(false, non_empty_key_decor)
+                        || non_empty_decor(nt.decor())
+                    {
+                        bail!(
+                            "--config argument `{arg}` \
+                                includes non-whitespace decoration"
+                        )
+                    }
+                    table = nt;
+                }
+                Item::Value(v) if v.is_inline_table() => {
+                    bail!(
+                        "--config argument `{arg}` \
+                        sets a value to an inline table, which is not accepted"
+                    );
+                }
+                Item::Value(v) => {
+                    if table
+                        .key(k)
+                        .map_or(false, |k| non_empty(k.leaf_decor().prefix()))
+                        || non_empty_decor(v.decor())
+                    {
+                        bail!(
+                            "--config argument `{arg}` \
+                                includes non-whitespace decoration"
+                        )
+                    }
+                    got_to_value = true;
+                    break;
+                }
+                Item::ArrayOfTables(_) => {
+                    bail!(
+                        "--config argument `{arg}` \
+                        sets a value to an array of tables, which is not accepted"
+                    );
+                }
+
+                Item::None => {
+                    bail!("--config argument `{arg}` doesn't provide a value")
+                }
+            }
+        }
+        got_to_value
+    };
+    if !ok {
+        bail!(
+            "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
+        );
+    }
+    Ok(doc)
 }
 
 /// A type to deserialize a list of strings from a toml file.
