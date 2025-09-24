@@ -1,6 +1,7 @@
 FROM alpine:3.22
 
 RUN apk add --no-cache openssh git
+RUN apk upgrade --no-cache libcrypto3
 RUN ssh-keygen -A
 
 RUN addgroup -S testuser && adduser -S testuser -G testuser -s /bin/ash
