@@ -1366,7 +1366,7 @@ Caused by:
   failed to parse config at `foo[0]`
 
 Caused by:
-  expected string but found integer in list
+  expected string but found integer at index 0
 "#]],
     );
 }

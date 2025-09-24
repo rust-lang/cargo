@@ -2236,7 +2236,7 @@ impl ConfigValue {
                         toml::Value::String(val) => Ok((val, def.clone())),
                         v => {
                             path.push(KeyOrIdx::Idx(i));
-                            bail!("expected string but found {} in list", v.type_str())
+                            bail!("expected string but found {} at index {i}", v.type_str())
                         }
                     })
                     .collect::<CargoResult<_>>()?,

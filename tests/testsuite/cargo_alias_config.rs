@@ -90,7 +90,7 @@ Caused by:
   failed to parse config at `alias.b-cargo-test[0]`
 
 Caused by:
-  expected string but found integer in list
+  expected string but found integer at index 0
 
 "#]])
         .run();
