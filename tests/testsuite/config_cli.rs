@@ -527,7 +527,7 @@ fn bad_cv_convert() {
 failed to convert --config argument `a=2019-12-01`
 
 Caused by:
-  failed to parse key `a`
+  failed to parse config at `a`
 
 Caused by:
   found TOML configuration value of unknown type `datetime`

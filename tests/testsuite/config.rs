@@ -1363,7 +1363,7 @@ Caused by:
   failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to parse key `foo`
+  failed to parse config at `foo[0]`
 
 Caused by:
   expected string but found integer in list

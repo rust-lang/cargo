@@ -2155,6 +2155,12 @@ impl From<anyhow::Error> for ConfigError {
     }
 }
 
+#[derive(Debug)]
+enum KeyOrIdx {
+    Key(String),
+    Idx(usize),
+}
+
 #[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
     Integer(i64, Definition),
@@ -2197,26 +2203,56 @@ impl ConfigValue {
     }
 
     fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
+        let mut error_path = Vec::new();
+        Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
+            let mut it = error_path.iter().rev().peekable();
+            let mut key_path = String::with_capacity(error_path.len() * 3);
+            while let Some(k) = it.next() {
+                match k {
+                    KeyOrIdx::Key(s) => key_path.push_str(&key::escape_key_part(&s)),
+                    KeyOrIdx::Idx(i) => key_path.push_str(&format!("[{i}]")),
+                }
+                if matches!(it.peek(), Some(KeyOrIdx::Key(_))) {
+                    key_path.push('.');
+                }
+            }
+            format!("failed to parse config at `{key_path}`")
+        })
+    }
+
+    fn from_toml_inner(
+        def: Definition,
+        toml: toml::Value,
+        path: &mut Vec<KeyOrIdx>,
+    ) -> CargoResult<ConfigValue> {
         match toml {
             toml::Value::String(val) => Ok(CV::String(val, def)),
             toml::Value::Boolean(b) => Ok(CV::Boolean(b, def)),
             toml::Value::Integer(i) => Ok(CV::Integer(i, def)),
             toml::Value::Array(val) => Ok(CV::List(
                 val.into_iter()
-                    .map(|toml| match toml {
+                    .enumerate()
+                    .map(|(i, toml)| match toml {
                         toml::Value::String(val) => Ok((val, def.clone())),
-                        v => bail!("expected string but found {} in list", v.type_str()),
+                        v => {
+                            path.push(KeyOrIdx::Idx(i));
+                            bail!("expected string but found {} in list", v.type_str())
+                        }
                     })
                     .collect::<CargoResult<_>>()?,
                 def,
             )),
             toml::Value::Table(val) => Ok(CV::Table(
                 val.into_iter()
-                    .map(|(key, value)| {
-                        let value = CV::from_toml(def.clone(), value)
-                            .with_context(|| format!("failed to parse key `{}`", key))?;
-                        Ok((key, value))
-                    })
+                    .map(
+                        |(key, value)| match CV::from_toml_inner(def.clone(), value, path) {
+                            Ok(value) => Ok((key, value)),
+                            Err(e) => {
+                                path.push(KeyOrIdx::Key(key));
+                                Err(e)
+                            }
+                        },
+                    )
                     .collect::<CargoResult<_>>()?,
                 def,
             )),
