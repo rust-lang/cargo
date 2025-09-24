@@ -87,13 +87,10 @@ Caused by:
   failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
 
 Caused by:
-  failed to parse key `alias`
+  failed to parse config at `alias.b-cargo-test[0]`
 
 Caused by:
-  failed to parse key `b-cargo-test`
-
-Caused by:
-  expected string but found integer in list
+  expected string but found integer at index 0
 
 "#]])
         .run();

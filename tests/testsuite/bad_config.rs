@@ -47,10 +47,7 @@ Caused by:
   failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
 
 Caused by:
-  failed to parse key `http`
-
-Caused by:
-  failed to parse key `proxy`
+  failed to parse config at `http.proxy`
 
 Caused by:
   found TOML configuration value of unknown type `float`
