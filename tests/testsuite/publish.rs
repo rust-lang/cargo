@@ -4192,7 +4192,7 @@ fn virtual_ws_with_multiple_unpublishable_package() {
 }
 
 #[cargo_test]
-fn workspace_flag_with_unpublishable_packages() {
+fn workspace_flag_with_nonpublishable_packages() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
