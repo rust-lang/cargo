@@ -4414,6 +4414,101 @@ fn all_unpublishable_packages() {
 }
 
 #[cargo_test]
+fn all_published_packages() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // First, publish all members
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] bar v0.0.0 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.0 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] bar v0.0.0 ([ROOT]/foo/bar)
+[UPLOADED] bar v0.0.0 to registry `crates-io`
+[UPLOADING] foo v0.0.0 ([ROOT]/foo/foo)
+[UPLOADED] foo v0.0.0 to registry `crates-io`
+[NOTE] waiting for bar v0.0.0 or foo v0.0.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crates should be available shortly
+[PUBLISHED] bar v0.0.0 and foo v0.0.0 at registry `crates-io`
+
+"#]])
+        .run();
+
+    // Publishing all members again works
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.0 already exists on crates.io index
+
+"#]])
+        .run();
+
+    // Without `--workspace` works as it is a virtual workspace
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.0 already exists on crates.io index
+
+"#]])
+        .run();
+
+    // Change a file. It should fail due to checksum verification failure.
+    p.change_file("bar/src/lib.rs", "//! foo");
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.0 already exists on crates.io index
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn checksum_changed() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
