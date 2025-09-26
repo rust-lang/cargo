@@ -227,7 +227,10 @@ impl Shell {
 
     /// Prints a cyan 'note' message.
     pub fn note<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.print(&"note", Some(&message), &NOTE, false)
+        let report = &[annotate_snippets::Group::with_title(
+            annotate_snippets::Level::NOTE.secondary_title(message.to_string()),
+        )];
+        self.print_report(report, false)
     }
 
     /// Updates the verbosity of the shell.
