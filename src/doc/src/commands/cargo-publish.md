@@ -26,6 +26,7 @@ following steps:
 
 This command requires you to be authenticated with either the `--token` option
 or using [cargo-login(1)](cargo-login.html).
+Instead of `--token` option, _token_ value might also be provided via stdin.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.

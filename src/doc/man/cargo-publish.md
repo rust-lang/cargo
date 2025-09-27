@@ -30,6 +30,7 @@ following steps:
 
 This command requires you to be authenticated with either the `--token` option
 or using {{man "cargo-login" 1}}.
+Instead of `--token` option, _token_ value might also be provided via stdin.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
