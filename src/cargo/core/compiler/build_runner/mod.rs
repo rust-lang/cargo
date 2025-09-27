@@ -6,10 +6,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::core::PackageId;
 use crate::core::compiler::compilation::{self, UnitOutput};
-use crate::core::compiler::{self, Unit, artifact};
+use crate::core::compiler::{self, CompileTarget, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use anyhow::{Context as _, bail};
+use cargo_util::paths;
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
@@ -358,11 +359,18 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     #[tracing::instrument(skip_all)]
     pub fn prepare_units(&mut self) -> CargoResult<()> {
         let dest = self.bcx.profiles.get_dir_name();
-        let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
+        let host = &self.compilation.host;
+        let host_target = CompileTarget::new(&host)?;
+        let host_layout = if self.bcx.gctx.cli_unstable().build_dir_new_layout {
+            Layout::new(self.bcx.ws, Some(host_target), &dest, true)?
+        } else {
+            Layout::new(self.bcx.ws, None, &dest, true)?
+        };
         let mut targets = HashMap::new();
         for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
-                let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
+                let is_host = target == host_target;
+                let layout = Layout::new(self.bcx.ws, Some(target), &dest, is_host)?;
                 targets.insert(target, layout);
             }
         }
@@ -401,9 +409,17 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             self.compilation
                 .root_output
                 .insert(kind, layout.dest().to_path_buf());
-            self.compilation
-                .deps_output
-                .insert(kind, layout.deps().to_path_buf());
+            if self.bcx.gctx.cli_unstable().build_dir_new_layout {
+                for (unit, _) in self.bcx.unit_graph.iter() {
+                    let dep_dir = self.files().deps_dir(unit);
+                    paths::create_dir_all(&dep_dir)?;
+                    self.compilation.deps_output.insert(kind, dep_dir);
+                }
+            } else {
+                self.compilation
+                    .deps_output
+                    .insert(kind, layout.legacy_deps().to_path_buf());
+            }
         }
         Ok(())
     }
