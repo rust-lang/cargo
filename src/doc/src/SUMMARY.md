@@ -101,3 +101,4 @@
 * [Changelog](CHANGELOG.md)
 * [Appendix: Glossary](appendix/glossary.md)
 * [Appendix: Git Authentication](appendix/git-authentication.md)
+* [Appendix: Antivirus Software](appendix/antivirus.md)
