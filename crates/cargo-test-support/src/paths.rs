@@ -1,6 +1,8 @@
 //! Access common paths and manipulate the filesystem
 
 use filetime::FileTime;
+use itertools::Itertools;
+use walkdir::WalkDir;
 
 use std::cell::RefCell;
 use std::env;
@@ -11,6 +13,9 @@ use std::process::Command;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+use crate::compare::assert_e2e;
+use crate::compare::match_contains;
 
 static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
@@ -152,6 +157,14 @@ pub trait CargoPathExt {
     fn move_in_time<F>(&self, travel_amount: F)
     where
         F: Fn(i64, u32) -> (i64, u32);
+
+    fn assert_file_layout(&self, expected: impl snapbox::IntoData);
+
+    fn assert_file_layout_with_ignored_paths(
+        &self,
+        expected: impl snapbox::IntoData,
+        ignored: &[PathBuf],
+    );
 }
 
 impl CargoPathExt for Path {
@@ -236,6 +249,37 @@ impl CargoPathExt for Path {
             });
         }
     }
+
+    #[track_caller]
+    fn assert_file_layout(&self, expected: impl snapbox::IntoData) {
+        self.assert_file_layout_with_ignored_paths(expected, &default_ignored_paths());
+    }
+
+    #[track_caller]
+    fn assert_file_layout_with_ignored_paths(
+        &self,
+        expected: impl snapbox::IntoData,
+        ignored_paths: &[PathBuf],
+    ) {
+        let assert = assert_e2e();
+        let actual = WalkDir::new(self)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .map(|e| e.path().to_string_lossy().into_owned())
+            .filter(|file| {
+                for ignored in ignored_paths {
+                    let ignored = ignored.to_str().unwrap();
+                    if match_contains(&ignored, file, &assert.redactions()).is_ok() {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .join("\n");
+
+        assert.eq(format!("{actual}\n"), expected.unordered());
+    }
 }
 
 impl CargoPathExt for PathBuf {
@@ -259,6 +303,21 @@ impl CargoPathExt for PathBuf {
         F: Fn(i64, u32) -> (i64, u32),
     {
         self.as_path().move_in_time(travel_amount)
+    }
+
+    #[track_caller]
+    fn assert_file_layout(&self, expected: impl snapbox::IntoData) {
+        self.as_path().assert_file_layout(expected);
+    }
+
+    #[track_caller]
+    fn assert_file_layout_with_ignored_paths(
+        &self,
+        expected: impl snapbox::IntoData,
+        ignored_paths: &[PathBuf],
+    ) {
+        self.as_path()
+            .assert_file_layout_with_ignored_paths(expected, ignored_paths);
     }
 }
 
@@ -288,6 +347,20 @@ where
             panic!("failed to {} {}: {}", desc, path.display(), e);
         }
     }
+}
+
+/// The default paths to ignore when [`CargoPathExt::assert_file_layout`] is called
+fn default_ignored_paths() -> Vec<PathBuf> {
+    vec![
+        // Ignore MacOS debug symbols as there are many files/directories that would clutter up
+        // tests few not a lot of benefit.
+        "[..].dSYM/[..]",
+        // Ignore Windows debub symbols files (.pdb)
+        "[..].pdb",
+    ]
+    .into_iter()
+    .map(|s| PathBuf::from(s))
+    .collect()
 }
 
 /// Get the filename for a library.
