@@ -376,7 +376,7 @@ impl Registry {
 
     fn get(&mut self, path: &str) -> Result<String> {
         self.handle.get(true)?;
-        self.req(path, None, Auth::Authorized)
+        self.req(path, None, Auth::Unauthorized)
     }
 
     fn delete(&mut self, path: &str, b: Option<&[u8]>) -> Result<String> {
