@@ -157,8 +157,10 @@ type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>;
 pub struct RegistryBuilder {
     /// If set, configures an alternate registry with the given name.
     alternative: Option<String>,
-    /// The authorization token for the registry.
+    /// The client-supplied authorization token for the registry.
     token: Option<Token>,
+    /// The actual server authorization token for the registry.
+    server_token: Option<Token>,
     /// If set, the registry requires authorization for all operations.
     auth_required: bool,
     /// If set, serves the index over http.
@@ -241,6 +243,7 @@ impl RegistryBuilder {
         RegistryBuilder {
             alternative: None,
             token: None,
+            server_token: None,
             auth_required: false,
             http_api: false,
             http_index: false,
@@ -309,10 +312,17 @@ impl RegistryBuilder {
         self
     }
 
-    /// Sets the token value
+    /// Sets the client-supplied token value
     #[must_use]
     pub fn token(mut self, token: Token) -> Self {
         self.token = Some(token);
+        self
+    }
+
+    /// Sets the server token value
+    #[must_use]
+    pub fn server_token(mut self, token: Token) -> Self {
+        self.server_token = Some(token);
         self
     }
 
@@ -372,6 +382,9 @@ impl RegistryBuilder {
             .token
             .unwrap_or_else(|| Token::Plaintext(format!("{prefix}sekrit")));
 
+        // Uses the client token unless otherwise set.
+        let server_token = self.server_token.unwrap_or_else(|| token.clone());
+
         let (server, index_url, api_url, dl_url) = if !self.http_index && !self.http_api {
             // No need to start the HTTP server.
             (None, index_url, api_url, dl_url)
@@ -380,7 +393,7 @@ impl RegistryBuilder {
                 registry_path.clone(),
                 dl_path,
                 api_path.clone(),
-                token.clone(),
+                server_token.clone(),
                 self.auth_required,
                 self.custom_responders,
                 self.not_found_handler,

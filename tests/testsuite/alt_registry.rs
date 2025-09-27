@@ -8,6 +8,7 @@ use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, paths, project};
+use rand::Rng;
 
 #[cargo_test]
 fn depend_on_alt_registry() {
@@ -1984,4 +1985,198 @@ fn empty_dependency_registry() {
 
 "#]])
         .run();
+}
+
+enum TokenStatus {
+    Valid,
+    Missing,
+    InvalidHasScheme,
+    InvalidNoScheme,
+}
+
+struct TokenTest {
+    crates_io_token: TokenStatus,
+    alternative_token: TokenStatus,
+    expected_message: &'static str,
+}
+
+fn token_test(token_test: TokenTest) {
+    let server_token = rand::rng()
+        .sample_iter(&rand::distr::Alphanumeric)
+        .take(8)
+        .map(char::from)
+        .collect::<String>();
+
+    let crates_io_builder = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .credential_provider(&[&"cargo:token"])
+        .auth_required();
+
+    let alternative_builder = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .credential_provider(&[&"cargo:token"])
+        .alternative()
+        .auth_required();
+
+    let crates_io_mock = match token_test.crates_io_token {
+        TokenStatus::Valid => crates_io_builder.build(),
+        TokenStatus::Missing => crates_io_builder.no_configure_token().build(),
+        TokenStatus::InvalidHasScheme => crates_io_builder
+            .token(cargo_test_support::registry::Token::Plaintext(
+                "Bearer <TOKEN>".to_string(),
+            ))
+            .server_token(cargo_test_support::registry::Token::Plaintext(
+                server_token.clone(),
+            ))
+            .build(),
+        TokenStatus::InvalidNoScheme => crates_io_builder
+            .token(cargo_test_support::registry::Token::Plaintext(
+                "<TOKEN>".to_string(),
+            ))
+            .server_token(cargo_test_support::registry::Token::Plaintext(
+                server_token.clone(),
+            ))
+            .build(),
+    };
+    let _alternative_mock = match token_test.alternative_token {
+        TokenStatus::Valid => alternative_builder.build(),
+        TokenStatus::Missing => alternative_builder.no_configure_token().build(),
+        TokenStatus::InvalidHasScheme => alternative_builder
+            .token(cargo_test_support::registry::Token::Plaintext(
+                "Bearer <TOKEN>".to_string(),
+            ))
+            .server_token(cargo_test_support::registry::Token::Plaintext(
+                server_token.clone(),
+            ))
+            .build(),
+        TokenStatus::InvalidNoScheme => alternative_builder
+            .token(cargo_test_support::registry::Token::Plaintext(
+                "<TOKEN>".to_string(),
+            ))
+            .server_token(cargo_test_support::registry::Token::Plaintext(
+                server_token.clone(),
+            ))
+            .build(),
+    };
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [dependencies.bar_alt]
+                version = "0.0.1"
+                registry = "alternative"
+
+                [dependencies.bar_crates]
+                version = "0.0.1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar_alt", "0.0.1").alternative(true).publish();
+    Package::new("bar_crates", "0.0.1").publish();
+    p.cargo("build")
+        .replace_crates_io(crates_io_mock.index_url())
+        .with_status(101)
+        .with_stderr_contains(token_test.expected_message)
+        .run();
+}
+
+macro_rules! token_error_messages {
+    ($($name:ident: $value:expr)*) => {
+    $(
+        #[cargo_test]
+        fn $name() {
+            token_test($value);
+        }
+    )*
+    }
+}
+
+token_error_messages! {
+    // Skips crates_valid_alt_valid because it would not error.
+    crates_valid_alt_missing: TokenTest {
+        crates_io_token: TokenStatus::Valid,
+        alternative_token: TokenStatus::Missing,
+        expected_message: "  no token found for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_valid_alt_invalid_has_scheme: TokenTest {
+        crates_io_token: TokenStatus::Valid,
+        alternative_token: TokenStatus::InvalidHasScheme,
+        expected_message: "  token rejected for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_valid_alt_invalid_no_scheme: TokenTest {
+        crates_io_token: TokenStatus::Valid,
+        alternative_token: TokenStatus::InvalidNoScheme,
+        expected_message: "  token rejected for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_missing_alt_valid: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Valid,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_missing_alt_missing: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Missing,
+        expected_message: "  no token found for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_missing_alt_invalid_has_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidHasScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_missing_alt_invalid_no_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidNoScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_has_scheme_alt_valid: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Valid,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_has_scheme_alt_missing: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Missing,
+        expected_message: "  no token found for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_invalid_has_scheme_alt_invalid_has_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidHasScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_has_scheme_alt_invalid_no_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidNoScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_no_scheme_alt_valid: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Valid,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_no_scheme_alt_missing: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::Missing,
+        expected_message: "  no token found for `alternative`, please run `cargo login --registry alternative`\n  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
+    }
+    crates_invalid_no_scheme_alt_invalid_has_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidHasScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
+    crates_invalid_no_scheme_alt_invalid_no_scheme: TokenTest {
+        crates_io_token: TokenStatus::Missing,
+        alternative_token: TokenStatus::InvalidNoScheme,
+        expected_message: "  no token found, please run `cargo login`\n  or use environment variable CARGO_REGISTRY_TOKEN",
+    }
 }
