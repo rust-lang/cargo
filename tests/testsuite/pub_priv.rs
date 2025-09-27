@@ -1,9 +1,9 @@
 //! Tests for public/private dependencies.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
+use cargo_test_support::{project, registry};
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
@@ -40,6 +40,11 @@ fn exported_priv_warning() {
         .with_stderr_data(str![[r#"
 ...
 src/lib.rs:3:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+  --> Cargo.toml:10:17
+   |
+10 |                 priv_dep = "0.1.0"
+   |                 --------
 ...
 "#]])
         .run();
@@ -624,7 +629,17 @@ fn verify_mix_cargo_feature_z() {
         .with_stderr_data(str![[r#"
 ...
 src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:9:17
+  |
+9 |                 dep = "0.1.0"
+  |                 ---
 src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+  --> Cargo.toml:10:17
+   |
+10 |                 priv_dep = {version = "0.1.0", public = false}
+   |                 --------
 ...
 "#]])
         .run();
@@ -675,7 +690,147 @@ fn verify_z_public_dependency() {
             str![[r#"
 ...
 src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:17
+  |
+8 |                 dep = "0.1.0"
+  |                 ---
 src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:17
+  |
+9 |                 priv_dep = {version = "0.1.0", public = false}
+  |                 --------
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn renamed_dependency() {
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromDep;")
+        .publish();
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "0.1.0", package = "dep" }
+                renamed_dep = {version = "0.1.0", package = "priv_dep" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate dep;
+            extern crate renamed_dep;
+            pub fn use_dep(_: dep::FromDep) {}
+            pub fn use_priv(_: renamed_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+...
+[WARNING] type `FromDep` from private dependency 'dep' in public interface
+ --> src/lib.rs:4:13
+  |
+4 |             pub fn use_dep(_: dep::FromDep) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+
+[NOTE] dependency `dep` declared here
+ --> Cargo.toml:8:54
+  |
+8 |                 dep = { version = "0.1.0", package = "dep" }
+  |                                                      -----
+[WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+ --> src/lib.rs:5:13
+  |
+5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[NOTE] dependency `priv_dep` declared here
+ --> Cargo.toml:9:61
+  |
+9 |                 renamed_dep = {version = "0.1.0", package = "priv_dep" }
+  |                                                             ----------
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+// We don't point to the toml locations if the crate is ambiguous.
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn duplicate_renamed_dependency() {
+    registry::alt_init();
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromDep;")
+        .publish();
+    Package::new("dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .alternative(true)
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "0.1.0", package = "dep" }
+                renamed_dep = {version = "0.1.0", package = "dep", registry = "alternative" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate dep;
+            extern crate renamed_dep;
+            pub fn use_dep(_: dep::FromDep) {}
+            pub fn use_priv(_: renamed_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+...
+[WARNING] type `FromDep` from private dependency 'dep' in public interface
+ --> src/lib.rs:4:13
+  |
+4 |             pub fn use_dep(_: dep::FromDep) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `#[warn(exported_private_dependencies)]` on by default
+
+[WARNING] type `FromPriv` from private dependency 'dep' in public interface
+ --> src/lib.rs:5:13
+  |
+5 |             pub fn use_priv(_: renamed_dep::FromPriv) {}
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
 "#]]
             .unordered(),

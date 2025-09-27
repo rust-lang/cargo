@@ -3,6 +3,7 @@ use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{AnnotationKind, Group, Level, Patch, Snippet};
 use cargo_util_schemas::manifest::{ProfilePackageSpec, TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
@@ -182,20 +183,20 @@ pub struct TomlSpan {
     pub value: Range<usize>,
 }
 
-pub fn get_key_value_span(
-    document: &toml::Spanned<toml::de::DeTable<'static>>,
+pub fn get_key_value<'doc>(
+    document: &'doc toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
-) -> Option<TomlSpan> {
+) -> Option<(
+    &'doc toml::Spanned<Cow<'doc, str>>,
+    &'doc toml::Spanned<toml::de::DeValue<'static>>,
+)> {
     let mut table = document.get_ref();
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
         let key_s: &str = key.as_ref();
         let (key, item) = table.get_key_value(key_s)?;
         if iter.peek().is_none() {
-            return Some(TomlSpan {
-                key: key.span(),
-                value: item.span(),
-            });
+            return Some((key, item));
         }
         if let Some(next_table) = item.get_ref().as_table() {
             table = next_table;
@@ -204,16 +205,23 @@ pub fn get_key_value_span(
             if let Some(array) = item.get_ref().as_array() {
                 let next = iter.next().unwrap();
                 return array.iter().find_map(|item| match item.get_ref() {
-                    toml::de::DeValue::String(s) if s == next => Some(TomlSpan {
-                        key: key.span(),
-                        value: item.span(),
-                    }),
+                    toml::de::DeValue::String(s) if s == next => Some((key, item)),
                     _ => None,
                 });
             }
         }
     }
     None
+}
+
+pub fn get_key_value_span(
+    document: &toml::Spanned<toml::de::DeTable<'static>>,
+    path: &[&str],
+) -> Option<TomlSpan> {
+    get_key_value(document, path).map(|(k, v)| TomlSpan {
+        key: k.span(),
+        value: v.span(),
+    })
 }
 
 /// Gets the relative path to a manifest from the current working directory, or
