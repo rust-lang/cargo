@@ -6,7 +6,7 @@ use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
 use crate::util::HumanBytes;
-use crate::util::errors::CargoResult;
+use crate::util::errors::{CargoResult, GitCliError};
 use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
 use anyhow::{Context as _, anyhow};
 use cargo_util::{ProcessBuilder, paths};
@@ -1110,7 +1110,11 @@ fn fetch_with_cli(
         .cwd(repo.path());
     gctx.shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
-    cmd.exec()?;
+    network::retry::with_retry(gctx, || {
+        cmd.exec()
+            .map_err(|error| GitCliError::new(error, true).into())
+    })?;
+
     Ok(())
 }
 
