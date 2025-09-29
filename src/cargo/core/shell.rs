@@ -172,7 +172,7 @@ impl Shell {
     where
         T: fmt::Display,
     {
-        self.print(&status, None, &NOTE, true)
+        self.print(&status, None, &TRANSIENT, true)
     }
 
     /// Shortcut to right-align a status message.
