@@ -140,22 +140,22 @@ impl Platform {
     }
 }
 
-impl serde::Serialize for Platform {
+impl serde_core::Serialize for Platform {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: serde_core::Serializer,
     {
         self.to_string().serialize(s)
     }
 }
 
-impl<'de> serde::Deserialize<'de> for Platform {
+impl<'de> serde_core::Deserialize<'de> for Platform {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: serde_core::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+        FromStr::from_str(&s).map_err(serde_core::de::Error::custom)
     }
 }
 
