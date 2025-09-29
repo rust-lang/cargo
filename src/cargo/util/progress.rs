@@ -428,7 +428,7 @@ impl<'gctx> State<'gctx> {
         if self.gctx.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
             let mut shell = self.gctx.shell();
             shell.set_needs_clear(false);
-            shell.status_header(&self.name)?;
+            shell.transient_status(&self.name)?;
             if let Some(tb) = report {
                 write!(shell.err(), "{line}{tb}\r")?;
             } else {

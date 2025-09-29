@@ -168,7 +168,7 @@ impl Shell {
         self.print(&status, Some(&message), &HEADER, true)
     }
 
-    pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
+    pub fn transient_status<T>(&mut self, status: T) -> CargoResult<()>
     where
         T: fmt::Display,
     {
