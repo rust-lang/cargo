@@ -168,11 +168,11 @@ impl Shell {
         self.print(&status, Some(&message), &HEADER, true)
     }
 
-    pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
+    pub fn transient_status<T>(&mut self, status: T) -> CargoResult<()>
     where
         T: fmt::Display,
     {
-        self.print(&status, None, &NOTE, true)
+        self.print(&status, None, &TRANSIENT, true)
     }
 
     /// Shortcut to right-align a status message.
