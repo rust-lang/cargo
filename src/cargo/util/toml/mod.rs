@@ -447,7 +447,7 @@ fn normalize_toml(
             edition,
             &features,
             original_toml.dependencies.as_ref(),
-            None,
+            DepKind::Normal,
             &inherit,
             &workspace_root,
             package_root,
@@ -467,7 +467,7 @@ fn normalize_toml(
             edition,
             &features,
             original_toml.dev_dependencies(),
-            Some(DepKind::Development),
+            DepKind::Development,
             &inherit,
             &workspace_root,
             package_root,
@@ -487,7 +487,7 @@ fn normalize_toml(
             edition,
             &features,
             original_toml.build_dependencies(),
-            Some(DepKind::Build),
+            DepKind::Build,
             &inherit,
             &workspace_root,
             package_root,
@@ -500,7 +500,7 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.dependencies.as_ref(),
-                None,
+                DepKind::Normal,
                 &inherit,
                 &workspace_root,
                 package_root,
@@ -520,7 +520,7 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.dev_dependencies(),
-                Some(DepKind::Development),
+                DepKind::Development,
                 &inherit,
                 &workspace_root,
                 package_root,
@@ -540,7 +540,7 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.build_dependencies(),
-                Some(DepKind::Build),
+                DepKind::Build,
                 &inherit,
                 &workspace_root,
                 package_root,
@@ -873,7 +873,7 @@ fn normalize_dependencies<'a>(
     edition: Edition,
     features: &Features,
     orig_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
-    kind: Option<DepKind>,
+    kind: DepKind,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     workspace_root: &dyn Fn() -> CargoResult<&'a Path>,
     package_root: &Path,
@@ -906,27 +906,27 @@ fn normalize_dependencies<'a>(
             if d.public.is_some() {
                 let with_public_feature = features.require(Feature::public_dependency()).is_ok();
                 let with_z_public = gctx.cli_unstable().public_dependency;
-                if matches!(kind, None) {
-                    if !with_public_feature && !with_z_public {
-                        d.public = None;
-                        warnings.push(format!(
-                            "ignoring `public` on dependency {name_in_toml}, pass `-Zpublic-dependency` to enable support for it"
-                        ))
+                match kind {
+                    DepKind::Normal => {
+                        if !with_public_feature && !with_z_public {
+                            d.public = None;
+                            warnings.push(format!(
+                                "ignoring `public` on dependency {name_in_toml}, pass `-Zpublic-dependency` to enable support for it"
+                            ));
+                        }
                     }
-                } else {
-                    let kind_name = match kind {
-                        Some(k) => k.kind_table(),
-                        None => "dependencies",
-                    };
-                    let hint = format!(
-                        "'public' specifier can only be used on regular dependencies, not {kind_name}",
-                    );
-                    if with_public_feature || with_z_public {
-                        bail!(hint)
-                    } else {
-                        // If public feature isn't enabled in nightly, we instead warn that.
-                        warnings.push(hint);
-                        d.public = None;
+                    DepKind::Development | DepKind::Build => {
+                        let kind_name = kind.kind_table();
+                        let hint = format!(
+                            "'public' specifier can only be used on regular dependencies, not {kind_name}",
+                        );
+                        if with_public_feature || with_z_public {
+                            bail!(hint)
+                        } else {
+                            // If public feature isn't enabled in nightly, we instead warn that.
+                            warnings.push(hint);
+                            d.public = None;
+                        }
                     }
                 }
             }
