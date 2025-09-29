@@ -82,7 +82,7 @@ fn rust_version_older_than_edition() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  rust-version 1.1 is older than first version (1.31.0) required by the specified edition (2018)
+  rust-version 1.1 is imcompatible with the version (1.31.0) required by the specified edition (2018)
 
 "#]])
         .run();

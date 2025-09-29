@@ -1311,7 +1311,7 @@ pub fn to_real_manifest(
                 let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
                 if !edition_msrv.is_compatible_with(pkg_msrv.as_partial()) {
                     bail!(
-                        "rust-version {} is older than first version ({}) required by \
+                        "rust-version {} is imcompatible with the version ({}) required by \
                             the specified edition ({})",
                         pkg_msrv,
                         edition_msrv,
