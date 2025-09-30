@@ -62,7 +62,7 @@ fn arg0() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/foo/echo.rs
 args: []
 
 "#]])
