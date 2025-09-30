@@ -1214,9 +1214,12 @@ fn build_base_args(
             cmd.arg("--emit=dep-info,link");
         }
     }
+    let prefer_dynamic =
+        (unit.target.for_host() && !unit.target.is_custom_build())
+        || (contains_dy_lib
+            && !build_runner.is_primary_package(unit)
+            && !unit.mode.is_any_test());
 
-    let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (contains_dy_lib && !build_runner.is_primary_package(unit));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
