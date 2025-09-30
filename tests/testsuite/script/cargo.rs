@@ -37,6 +37,56 @@ fn basic_rs() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cfg(unix)]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn arg0() {
+    let p = cargo_test_support::project()
+        .file("echo.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript -v echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cfg(windows)]
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn arg0() {
+    let p = cargo_test_support::project()
+        .file("echo.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript -v echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
 
@@ -61,7 +111,7 @@ fn basic_path() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -116,7 +166,7 @@ fn manifest_precedence_over_plugins() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -367,7 +417,7 @@ rustc = "non-existent-rustc"
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -378,7 +428,7 @@ args: ["-NotAnArg"]
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -420,7 +470,7 @@ fn default_programmatic_verbosity() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -439,7 +489,7 @@ fn quiet() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -486,7 +536,7 @@ fn test_escaped_hyphen_arg() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -511,7 +561,7 @@ fn test_unescaped_hyphen_arg() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
@@ -536,7 +586,7 @@ fn test_same_flags() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: ["--help"]
 
 "#]])
@@ -561,7 +611,7 @@ fn test_name_has_weird_chars() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -586,7 +636,7 @@ fn test_name_has_leading_number() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -609,7 +659,7 @@ fn test_name_is_number() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -1304,7 +1354,7 @@ fn implicit_target_dir() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -1332,7 +1382,7 @@ fn no_local_lockfile() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -1679,7 +1729,7 @@ fn cmd_run_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [..]
 args: []
 
 "#]])
@@ -1980,7 +2030,7 @@ members = [
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [..]
 args: []
 
 "#]])
