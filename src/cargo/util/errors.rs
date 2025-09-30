@@ -339,6 +339,46 @@ impl From<std::io::Error> for CliError {
 }
 
 // =============================================================================
+// Git CLI errors
+
+pub type GitCliResult = Result<(), GitCliError>;
+
+/// An error that occurred while invoking the `git` command-line tool.
+///
+/// This is used for errors from Git operations performed via CLI.
+/// It wraps a lower-level error and indicates whether the failure
+/// should be considered *spurious*.
+///
+/// Spurious failures might involve retry mechanism.
+#[derive(Debug)]
+pub struct GitCliError {
+    inner: Error,
+    is_spurious: bool,
+}
+
+impl GitCliError {
+    pub fn new(inner: Error, is_spurious: bool) -> GitCliError {
+        GitCliError { inner, is_spurious }
+    }
+
+    pub fn is_spurious(&self) -> bool {
+        self.is_spurious
+    }
+}
+
+impl std::error::Error for GitCliError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source()
+    }
+}
+
+impl fmt::Display for GitCliError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+// =============================================================================
 // Construction helpers
 
 pub fn internal<S: fmt::Display>(error: S) -> anyhow::Error {

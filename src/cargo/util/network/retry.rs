@@ -41,7 +41,7 @@
 //! - <https://en.wikipedia.org/wiki/Exponential_backoff>
 //! - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After>
 
-use crate::util::errors::HttpNotSuccessful;
+use crate::util::errors::{GitCliError, HttpNotSuccessful};
 use crate::{CargoResult, GlobalContext};
 use anyhow::Error;
 use rand::Rng;
@@ -218,6 +218,12 @@ fn maybe_spurious(err: &Error) -> bool {
     use gix::protocol::transport::IsSpuriousError;
 
     if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
+        if err.is_spurious() {
+            return true;
+        }
+    }
+
+    if let Some(err) = err.downcast_ref::<GitCliError>() {
         if err.is_spurious() {
             return true;
         }
@@ -401,4 +407,13 @@ fn retry_after_parsing() {
         RetryResult::Retry(sleep) => assert_eq!(sleep, 7_000),
         _ => panic!("unexpected non-retry"),
     }
+}
+
+#[test]
+fn git_cli_error_spurious() {
+    let error = GitCliError::new(Error::msg("test-git-cli-error"), false);
+    assert!(!maybe_spurious(&error.into()));
+
+    let error = GitCliError::new(Error::msg("test-git-cli-error"), true);
+    assert!(maybe_spurious(&error.into()));
 }
