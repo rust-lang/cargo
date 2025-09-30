@@ -1434,7 +1434,7 @@ pub fn to_real_manifest(
                 autoexamples,
                 autotests,
                 autobenches,
-                default_run: _,
+                default_run,
                 description: _,
                 homepage: _,
                 documentation: _,
@@ -1458,6 +1458,7 @@ pub fn to_real_manifest(
                 ("`package.autoexamples`", autoexamples.is_some()),
                 ("`package.autotests`", autotests.is_some()),
                 ("`package.autobenches`", autobenches.is_some()),
+                ("`package.default-run`", default_run.is_some()),
             ]);
         }
         let invalid_fields = invalid_fields
