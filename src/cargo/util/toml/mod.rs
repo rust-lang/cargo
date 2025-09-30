@@ -1377,70 +1377,26 @@ pub fn to_real_manifest(
     }
 
     if is_embedded {
-        let invalid_fields = [
+        let mut invalid_fields = vec![
             ("`workspace`", original_toml.workspace.is_some()),
             ("`lib`", original_toml.lib.is_some()),
             ("`bin`", original_toml.bin.is_some()),
             ("`example`", original_toml.example.is_some()),
             ("`test`", original_toml.test.is_some()),
             ("`bench`", original_toml.bench.is_some()),
-            (
-                "`package.workspace`",
-                original_toml
-                    .package()
-                    .map(|p| p.workspace.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.build`",
-                original_toml
-                    .package()
-                    .map(|p| p.build.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.links`",
-                original_toml
-                    .package()
-                    .map(|p| p.links.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.autolib`",
-                original_toml
-                    .package()
-                    .map(|p| p.autolib.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.autobins`",
-                original_toml
-                    .package()
-                    .map(|p| p.autobins.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.autoexamples`",
-                original_toml
-                    .package()
-                    .map(|p| p.autoexamples.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.autotests`",
-                original_toml
-                    .package()
-                    .map(|p| p.autotests.is_some())
-                    .unwrap_or(false),
-            ),
-            (
-                "`package.autobenches`",
-                original_toml
-                    .package()
-                    .map(|p| p.autobenches.is_some())
-                    .unwrap_or(false),
-            ),
         ];
+        if let Some(package) = original_toml.package() {
+            invalid_fields.extend([
+                ("`package.workspace`", package.workspace.is_some()),
+                ("`package.build`", package.build.is_some()),
+                ("`package.links`", package.links.is_some()),
+                ("`package.autolib`", package.autolib.is_some()),
+                ("`package.autobins`", package.autobins.is_some()),
+                ("`package.autoexamples`", package.autoexamples.is_some()),
+                ("`package.autotests`", package.autotests.is_some()),
+                ("`package.autobenches`", package.autobenches.is_some()),
+            ]);
+        }
         let invalid_fields = invalid_fields
             .into_iter()
             .filter_map(|(name, invalid)| invalid.then_some(name))
