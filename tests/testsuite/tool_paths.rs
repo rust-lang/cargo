@@ -342,9 +342,6 @@ fn custom_runner_env() {
     p.cargo("run")
         .env(&key, "nonexistent-runner --foo")
         .with_status(101)
-        // FIXME: Update "Caused by" error message once rust/pull/87704 is merged.
-        // On Windows, changing to a custom executable resolver has changed the
-        // error messages.
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
