@@ -1,9 +1,6 @@
 ---
 edition = "2015"
 
-[build-dependencies]
-semver = "0.1.0"
-
 [dependencies]
 docopt = "0.6"
 rustc-serialize = "0.4"

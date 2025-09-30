@@ -1391,8 +1391,8 @@ pub fn to_real_manifest(
             dependencies: _,
             dev_dependencies: _,
             dev_dependencies2: _,
-            build_dependencies: _,
-            build_dependencies2: _,
+            build_dependencies,
+            build_dependencies2,
             target: _,
             lints: _,
             hints: _,
@@ -1409,6 +1409,8 @@ pub fn to_real_manifest(
             ("`example`", example.is_some()),
             ("`test`", test.is_some()),
             ("`bench`", bench.is_some()),
+            ("`build-dependencies`", build_dependencies.is_some()),
+            ("`build_dependencies`", build_dependencies2.is_some()),
         ];
         if let Some(package) = original_toml.package() {
             let manifest::TomlPackage {
@@ -1418,7 +1420,7 @@ pub fn to_real_manifest(
                 version: _,
                 authors: _,
                 build,
-                metabuild: _,
+                metabuild,
                 default_target: _,
                 forced_target: _,
                 links,
@@ -1449,6 +1451,7 @@ pub fn to_real_manifest(
             invalid_fields.extend([
                 ("`package.workspace`", workspace.is_some()),
                 ("`package.build`", build.is_some()),
+                ("`package.metabuild`", metabuild.is_some()),
                 ("`package.links`", links.is_some()),
                 ("`package.autolib`", autolib.is_some()),
                 ("`package.autobins`", autobins.is_some()),

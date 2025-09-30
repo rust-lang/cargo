@@ -1,9 +1,6 @@
 ---
 edition = "2015"
 
-[build-dependencies]
-semver = "0.1.0"
-
 [dependencies]
 rustc-serialize = "0.4"
 semver = "0.1"
