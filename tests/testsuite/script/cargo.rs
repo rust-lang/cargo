@@ -9,10 +9,12 @@ use cargo_test_support::str;
 const ECHO_SCRIPT: &str = r#"#!/usr/bin/env cargo
 
 fn main() {
+    let current_exe = std::env::current_exe().unwrap().to_str().unwrap().to_owned();
     let mut args = std::env::args_os();
-    let bin = args.next().unwrap().to_str().unwrap().to_owned();
+    let arg0 = args.next().unwrap().to_str().unwrap().to_owned();
     let args = args.collect::<Vec<_>>();
-    println!("bin: {bin}");
+    println!("current_exe: {current_exe}");
+    println!("arg0: {arg0}");
     println!("args: {args:?}");
 }
 
@@ -34,7 +36,8 @@ fn basic_rs() {
     p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
 
 "#]])
@@ -57,7 +60,8 @@ fn basic_path() {
     p.cargo("-Zscript -v ./echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
 
 "#]])
@@ -111,7 +115,8 @@ fn manifest_precedence_over_plugins() {
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
 
 "#]])
@@ -361,7 +366,8 @@ rustc = "non-existent-rustc"
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -371,7 +377,8 @@ args: ["-NotAnArg"]
     p.cargo("-Zscript ../script/script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -412,7 +419,8 @@ fn default_programmatic_verbosity() {
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -430,7 +438,8 @@ fn quiet() {
     p.cargo("-Zscript -q script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -476,7 +485,8 @@ fn test_escaped_hyphen_arg() {
     p.cargo("-Zscript -v -- script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -500,7 +510,8 @@ fn test_unescaped_hyphen_arg() {
     p.cargo("-Zscript -v script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
 
 "#]])
@@ -524,7 +535,8 @@ fn test_same_flags() {
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["--help"]
 
 "#]])
@@ -548,7 +560,8 @@ fn test_name_has_weird_chars() {
     p.cargo("-Zscript -v s-h.w§c!.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
 args: []
 
 "#]])
@@ -572,7 +585,8 @@ fn test_name_has_leading_number() {
     p.cargo("-Zscript -v 42answer.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
 args: []
 
 "#]])
@@ -594,7 +608,8 @@ fn test_name_is_number() {
     p.cargo("-Zscript -v 42.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
 args: []
 
 "#]])
@@ -1288,7 +1303,8 @@ fn implicit_target_dir() {
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
 
 "#]])
@@ -1315,7 +1331,8 @@ fn no_local_lockfile() {
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
 
 "#]])
@@ -1661,7 +1678,8 @@ fn cmd_run_with_embedded() {
     p.cargo("-Zscript run --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
 
 "#]])
@@ -1961,7 +1979,8 @@ members = [
     p.cargo("-Zscript -v script/echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
 
 "#]])
