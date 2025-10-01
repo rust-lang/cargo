@@ -20,8 +20,8 @@ repository = "https://github.com/rust-lang/cargo"
 [workspace.dependencies]
 annotate-snippets = { version = "0.12.4", features = ["simd"] }
 anstream = "0.6.20"
-anstyle = "1.0.11"
-anyhow = "1.0.98"
+anstyle = "1.0.13"
+anyhow = "1.0.100"
 base64 = "0.22.1"
 blake3 = "1.8.2"
 build-rs = { version = "0.3.1", path = "crates/build-rs" }
@@ -35,16 +35,16 @@ cargo-test-macro = { version = "0.4.7", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.9.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.25", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.10.1", path = "crates/cargo-util-schemas" }
-cargo_metadata = "0.21.0"
-clap = "4.5.43"
-clap_complete = { version = "4.5.56", features = ["unstable-dynamic"] }
+cargo_metadata = "0.23.0"
+clap = "4.5.48"
+clap_complete = { version = "4.5.58", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.15", path = "crates/crates-io" }
 criterion = { version = "0.7.0", features = ["html_reports"] }
-curl = "0.4.48"
-curl-sys = "0.4.82"
-filetime = "0.2.25"
+curl = "0.4.49"
+curl-sys = "0.4.83"
+filetime = "0.2.26"
 flate2 = { version = "1.1.2", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.2"
 git2-curl = "0.21.0"
@@ -59,42 +59,42 @@ home = "0.5.11"
 http-auth = { version = "0.1.10", default-features = false }
 ignore = "0.4.23"
 im-rc = "15.1.0"
-indexmap = "2.10.0"
+indexmap = "2.11.4"
 itertools = "0.14.0"
 jiff = { version = "0.2.15", default-features = false, features = [ "std" ] }
-jobserver = "0.1.33"
+jobserver = "0.1.34"
 lazycell = "1.3.0"
 libc = "0.2.174" # Please ensure in lockfile it stays as 0.2.174 until bytecodealliance/rustix#1496 resolved
 libgit2-sys = "0.18.2"
-libloading = "0.8.8"
-memchr = "2.7.5"
-miow = "0.6.0"
-opener = "0.8.2"
+libloading = "0.8.9"
+memchr = "2.7.6"
+miow = "0.6.1"
+opener = "0.8.3"
 openssl = "0.10.73"
 openssl-sys = "0.9.109"
 os_info = { version = "3.12.0", default-features = false }
 pasetors = { version = "0.7.7", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
-percent-encoding = "2.3.1"
+percent-encoding = "2.3.2"
 pkg-config = "0.3.32"
-proptest = "1.7.0"
+proptest = "1.8.0"
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
 rand = "0.9.2"
-regex = "1.11.1"
+regex = "1.11.3"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
 rustfix = { version = "0.9.2", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.0.4"
-security-framework = "3.3.0"
-semver = { version = "1.0.26", features = ["serde"] }
-serde = "1.0.220"
-serde_core = "1.0.220"
-serde-untagged = "0.1.7"
+security-framework = "3.5.1"
+semver = { version = "1.0.27", features = ["serde"] }
+serde = "1.0.228"
+serde_core = "1.0.228"
+serde-untagged = "0.1.9"
 serde-value = "0.7.0"
-serde_ignored = "0.1.12"
-serde_json = "1.0.142"
+serde_ignored = "0.1.14"
+serde_json = "1.0.145"
 sha1 = "0.10.6"
 sha2 = "0.10.9"
 shell-escape = "0.1.5"
@@ -103,22 +103,22 @@ supports-hyperlinks = "3.1.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "0.6.21", features = ["diff", "dir", "term-svg", "regex", "json"] }
 tar = { version = "0.4.44", default-features = false }
-tempfile = "3.20.0"
-thiserror = "2.0.12"
-time = { version = "0.3.41", features = ["parsing", "formatting", "serde"] }
-toml = { version = "0.9.5", default-features = false }
-toml_edit = { version = "0.23.3", features = ["serde"] }
+tempfile = "3.23.0"
+thiserror = "2.0.17"
+time = { version = "0.3.44", features = ["parsing", "formatting", "serde"] }
+toml = { version = "0.9.7", default-features = false }
+toml_edit = { version = "0.23.6", features = ["serde"] }
 tracing = { version = "0.1.41", default-features = false, features = ["std"] } # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.2"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 unicase = "2.8.1"
-unicode-ident = "1.0.18"
+unicode-ident = "1.0.19"
 unicode-width = "0.2.1"
 unicode-xid = "0.2.6"
-url = "2.5.4"
+url = "2.5.7"
 varisat = "0.2.2"
 walkdir = "2.5.0"
-windows-sys = "0.60"
+windows-sys = "0.61"
 winnow = "0.7.13"
 
 [workspace.lints.rust]
