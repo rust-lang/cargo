@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow, bail};
 use glob::glob;
 use itertools::Itertools;
@@ -1138,18 +1139,18 @@ impl<'gctx> Workspace<'gctx> {
                         .max()
                     {
                         let resolver = edition.default_resolve_behavior().to_manifest();
-                        self.gctx.shell().warn(format_args!(
-                            "virtual workspace defaulting to `resolver = \"1\"` despite one or more workspace members being on edition {edition} which implies `resolver = \"{resolver}\"`"
-                        ))?;
-                        self.gctx.shell().note(
-                            "to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest",
-                        )?;
-                        self.gctx.shell().note(format_args!(
-                            "to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"
-                        ))?;
-                        self.gctx.shell().note(
-                            "for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions",
-                        )?;
+                        let report = &[Level::WARNING
+                            .primary_title(format!(
+                                "virtual workspace defaulting to `resolver = \"1\"` despite one or more workspace members being on edition {edition} which implies `resolver = \"{resolver}\"`"
+                            ))
+                            .elements([
+                                Level::NOTE.message("to keep the current resolver, specify `workspace.resolver = \"1\"` in the workspace root's manifest"),
+                                Level::NOTE.message(
+                                    format!("to use the edition {edition} resolver, specify `workspace.resolver = \"{resolver}\"` in the workspace root's manifest"),
+                                ),
+                                Level::NOTE.message("for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions"),
+                            ])];
+                        self.gctx.shell().print_report(report, false)?;
                     }
                 }
             }
