@@ -87,10 +87,10 @@ impl CompileKind {
             let deduplicated_targets = targets
                 .iter()
                 .map(|value| {
-                    // This neatly substitutes the manually-specified `host` target directive
+                    // This neatly substitutes the manually-specified `host-tuple` target directive
                     // with the compiling machine's target triple.
 
-                    if value.as_str() == "host" {
+                    if value.as_str() == "host-tuple" {
                         let host_triple = env!("RUST_HOST_TARGET");
                         Ok(CompileKind::Target(CompileTarget::new(host_triple)?))
                     } else {

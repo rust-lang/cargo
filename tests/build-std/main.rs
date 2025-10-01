@@ -396,7 +396,9 @@ fn test_proc_macro() {
 }
 
 #[cargo_test(build_std_real)]
-fn test_panic_abort() {
+fn default_features_still_included_with_extra_build_std_features() {
+    // This is a regression test to ensure when adding extra `build-std-features`,
+    // the default feature set is still respected and included.
     // See rust-lang/cargo#14935
     let p = project()
         .file(
@@ -413,7 +415,7 @@ fn test_panic_abort() {
     p.cargo("check")
         .build_std_arg("std,panic_abort")
         .env("RUSTFLAGS", "-C panic=abort")
-        .arg("-Zbuild-std-features=panic_immediate_abort")
+        .arg("-Zbuild-std-features=optimize_for_size")
         .run();
 }
 
