@@ -118,7 +118,7 @@ unicode-xid = "0.2.6"
 url = "2.5.4"
 varisat = "0.2.2"
 walkdir = "2.5.0"
-windows-sys = "0.60"
+windows-sys = "0.61"
 winnow = "0.7.13"
 
 [workspace.lints.rust]
