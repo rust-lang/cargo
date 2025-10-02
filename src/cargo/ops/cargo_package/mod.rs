@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -177,10 +177,8 @@ fn create_package(
         .context("failed to prepare local package for uploading")?;
 
     dst.seek(SeekFrom::Start(0))?;
-    let src_path = dst.path();
     let dst_path = dst.parent().join(&filename);
-    fs::rename(&src_path, &dst_path)
-        .context("failed to move temporary tarball into final location")?;
+    dst.rename(&dst_path)?;
 
     let dst_metadata = dst
         .file()

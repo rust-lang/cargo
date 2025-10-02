@@ -76,6 +76,29 @@ impl FileLock {
         }
         Ok(())
     }
+
+    /// Renames the file and updates the internal path.
+    ///
+    /// This method performs a filesystem rename operation using [`std::fs::rename`]
+    /// while keeping the FileLock's internal path synchronized with the actual
+    /// file location.
+    ///
+    /// ## Difference from `std::fs::rename`
+    ///
+    /// - `std::fs::rename(old, new)` only moves the file on the filesystem
+    /// - `FileLock::rename(new)` moves the file AND updates `self.path` to point to the new location
+    pub fn rename<P: AsRef<Path>>(&mut self, new_path: P) -> CargoResult<()> {
+        let new_path = new_path.as_ref();
+        std::fs::rename(&self.path, new_path).with_context(|| {
+            format!(
+                "failed to rename {} to {}",
+                self.path.display(),
+                new_path.display()
+            )
+        })?;
+        self.path = new_path.to_path_buf();
+        Ok(())
+    }
 }
 
 impl Read for FileLock {
