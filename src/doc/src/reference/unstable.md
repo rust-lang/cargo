@@ -130,6 +130,7 @@ Each new feature described below should explain how to use it.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
     * [`fix-edition`](#fix-edition) --- A permanently unstable edition migration helper.
     * [Plumbing subcommands](https://github.com/crate-ci/cargo-plumbing) --- Low, level commands that act as APIs for Cargo, like `cargo metadata`
+    * [Detect antivirus](#detect-antivirus) --- Detect whether newly created binaries may be slow to launch due to antivirus.
 
 ## allow-features
 
@@ -1949,6 +1950,35 @@ enabled = true
 
 Enables the new build-dir filesystem layout.
 This layout change unblocks work towards caching and locking improvements.
+
+## Detect Antivirus
+
+* Tracking Issue: [#0](https://github.com/rust-lang/cargo/issues/0)
+
+The `-Zdetect-antivirus=auto` flag enables detection of antivirus software that might make launching a binary for the first time slower (which in turn makes Cargo's build scripts and tests slower), and outputs a notice to the user if this is the case.
+
+This feature uses a small heuristic to avoid doing the detection when deemed unnecessary. `-Zdetect-antivirus=always` may be used to disable this heuristic.
+
+This feature will be enabled by default in the future (the flag acts as-if this future is now).
+
+Currently only implemented for macOS' XProtect/Gatekeeper, but could be expanded to Windows Defender in the future.
+
+```toml
+# Example ~/.cargo/config.toml
+
+# Disable warning, e.g. if using a workplace-issued Mac that
+# doesn't allow granting Developer Tool permissions.
+[build]
+detect-antivirus = false
+```
+
+### `build.detect-antivirus`
+
+* Type: boolean
+* Default: true (when `-Zdetect-antivirus` is enabled)
+* Environment: CARGO_BUILD_DETECT_ANTIVIRUS
+
+Allow opting out of antivirus detection.
 
 
 # Stabilized and removed features

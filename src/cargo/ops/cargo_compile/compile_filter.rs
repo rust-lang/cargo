@@ -219,17 +219,18 @@ impl CompileFilter {
         match intent {
             UserIntent::Test | UserIntent::Doctest | UserIntent::Bench => true,
             UserIntent::Check { test: true } => true,
-            UserIntent::Build | UserIntent::Doc { .. } | UserIntent::Check { test: false } => {
-                match *self {
-                    CompileFilter::Default { .. } => false,
-                    CompileFilter::Only {
-                        ref examples,
-                        ref tests,
-                        ref benches,
-                        ..
-                    } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
-                }
-            }
+            UserIntent::Build
+            | UserIntent::Install
+            | UserIntent::Doc { .. }
+            | UserIntent::Check { test: false } => match *self {
+                CompileFilter::Default { .. } => false,
+                CompileFilter::Only {
+                    ref examples,
+                    ref tests,
+                    ref benches,
+                    ..
+                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+            },
         }
     }
 

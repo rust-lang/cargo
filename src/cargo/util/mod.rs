@@ -38,6 +38,7 @@ mod counter;
 pub mod cpu;
 pub mod credential;
 mod dependency_queue;
+pub mod detect_antivirus;
 pub mod diagnostic_server;
 pub mod edit_distance;
 pub mod errors;

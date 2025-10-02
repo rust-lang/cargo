@@ -2738,6 +2738,8 @@ pub struct CargoBuildConfig {
     pub sbom: Option<bool>,
     /// Unstable feature `-Zbuild-analysis`.
     pub analysis: Option<CargoBuildAnalysis>,
+    /// Unstable feature `-Zdetect-antivirus`.
+    pub detect_antivirus: Option<bool>,
 }
 
 /// Metrics collection for build analysis.

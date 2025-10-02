@@ -400,6 +400,38 @@ impl FromStr for FixEdition {
     }
 }
 
+/// The value for `-Zdetect-antivirus`.
+#[derive(Debug, Deserialize, Default, PartialEq, Eq, Hash, Copy, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum DetectAntivirus {
+    /// Always detect antivirus.
+    ///
+    /// This is useful when testing the feature, but isn't expected to be
+    /// useful to the general user.
+    Always,
+    /// Detect antivirus, but only when deemed reasonable.
+    ///
+    /// This is intended to be the default in the future.
+    Auto,
+    /// Never attempt to detect antivirus.
+    #[default]
+    Never,
+}
+
+impl FromStr for DetectAntivirus {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        Ok(match s {
+            "always" => Self::Always,
+            "auto" => Self::Auto,
+            "never" => Self::Never,
+            _ => bail!(
+                "invalid `-Zdetect-antivirus`, expected `always`, `auto` or `never`, got `{s}`"
+            ),
+        })
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum Status {
     Stable,
@@ -854,6 +886,7 @@ unstable_cli_options!(
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
+    detect_antivirus: DetectAntivirus = ("Enable the experimental antivirus detection and the config option to disable it"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
@@ -1373,6 +1406,7 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
+            "detect-antivirus" => self.detect_antivirus = v.unwrap_or("auto").parse()?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "fix-edition" => {

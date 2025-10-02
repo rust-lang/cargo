@@ -24,6 +24,7 @@ anstyle = "1.0.11"
 anyhow = "1.0.98"
 base64 = "0.22.1"
 blake3 = "1.8.2"
+block2 = "0.6.1"
 build-rs = { version = "0.3.1", path = "crates/build-rs" }
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
@@ -69,6 +70,7 @@ libgit2-sys = "0.18.2"
 libloading = "0.8.8"
 memchr = "2.7.5"
 miow = "0.6.0"
+objc2 = "0.6.2"
 opener = "0.8.2"
 openssl = "0.10.73"
 openssl-sys = "0.9.109"
@@ -253,6 +255,11 @@ features = [
   "Win32_System_JobObjects",
   "Win32_System_Threading",
 ]
+
+# For ExecutionPolicy framework interaction.
+[target.'cfg(target_vendor = "apple")'.dependencies]
+block2.workspace = true
+objc2.workspace = true
 
 [dev-dependencies]
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
