@@ -105,11 +105,9 @@ pub struct TomlLockfileSourceId {
 impl TomlLockfileSourceId {
     pub fn new(source: String) -> Result<Self, TomlLockfileSourceIdError> {
         let source_str = source.clone();
-        let (kind, url) = source.split_once('+').ok_or_else(|| {
-            TomlLockfileSourceIdError(
-                TomlLockfileSourceIdErrorKind::InvalidSource(source.clone()).into(),
-            )
-        })?;
+        let (kind, url) = source
+            .split_once('+')
+            .ok_or_else(|| TomlLockfileSourceIdErrorKind::InvalidSource(source.clone()))?;
 
         // Sparse URLs store the kind prefix (sparse+) in the URL. Therefore, for sparse kinds, we
         // want to use the raw `source` instead of the splitted `url`.
