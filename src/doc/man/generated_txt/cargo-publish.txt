@@ -26,8 +26,8 @@ DESCRIPTION
           manually. This timeout does not affect the upload.
 
        This command requires you to be authenticated with either the --token
-       option or using cargo-login(1). Instead of --token option, token value
-       might also be provided via stdin.
+       option or using cargo-login(1). Alternatively, you can set --token-stdin
+       flag and pipe the token value to stdin.
 
        See the reference
        <https://doc.rust-lang.org/cargo/reference/publishing.html> for more
@@ -49,6 +49,9 @@ OPTIONS
            registries may be specified with environment variables of the form
            CARGO_REGISTRIES_NAME_TOKEN where NAME is the name of the registry
            in all capital letters.
+
+       --token-stdin
+           Read token from stdin (unstable).
 
        --no-verify
            Don’t verify the contents by building them.

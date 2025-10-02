@@ -30,7 +30,7 @@ following steps:
 
 This command requires you to be authenticated with either the `--token` option
 or using {{man "cargo-login" 1}}.
-Instead of `--token` option, _token_ value might also be provided via stdin.
+Alternatively, you can set `--token-stdin` flag and pipe the _token_ value to stdin.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
@@ -46,6 +46,10 @@ Perform all checks without uploading.
 {{/option}}
 
 {{> options-token }}
+
+{{#option "`--token-stdin`" }}
+Read token from stdin (unstable).
+{{/option}}
 
 {{#option "`--no-verify`" }}
 Don't verify the contents by building them.

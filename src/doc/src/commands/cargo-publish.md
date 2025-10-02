@@ -26,7 +26,7 @@ following steps:
 
 This command requires you to be authenticated with either the `--token` option
 or using [cargo-login(1)](cargo-login.html).
-Instead of `--token` option, _token_ value might also be provided via stdin.
+Alternatively, you can set `--token-stdin` flag and pipe the _token_ value to stdin.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
@@ -50,6 +50,10 @@ crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environmen
 variable. Tokens for other registries may be specified with environment
 variables of the form <code>CARGO_REGISTRIES_NAME_TOKEN</code> where <code>NAME</code> is the name
 of the registry in all capital letters.</dd>
+
+
+<dt class="option-term" id="option-cargo-publish---token-stdin"><a class="option-anchor" href="#option-cargo-publish---token-stdin"></a><code>--token-stdin</code></dt>
+<dd class="option-desc">Read token from stdin (unstable).</dd>
 
 
 <dt class="option-term" id="option-cargo-publish---no-verify"><a class="option-anchor" href="#option-cargo-publish---no-verify"></a><code>--no-verify</code></dt>
