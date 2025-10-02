@@ -103,16 +103,18 @@ pub struct TomlLockfileSourceId {
 }
 
 impl TomlLockfileSourceId {
-    pub fn new(source: String) -> Result<Self, EncodableSourceIdError> {
+    pub fn new(source: String) -> Result<Self, TomlLockfileSourceIdError> {
         let source_str = source.clone();
         let (kind, url) = source.split_once('+').ok_or_else(|| {
-            EncodableSourceIdError(EncodableSourceIdErrorKind::InvalidSource(source.clone()).into())
+            TomlLockfileSourceIdError(
+                TomlLockfileSourceIdErrorKind::InvalidSource(source.clone()).into(),
+            )
         })?;
 
         // Sparse URLs store the kind prefix (sparse+) in the URL. Therefore, for sparse kinds, we
         // want to use the raw `source` instead of the splitted `url`.
         let url = Url::parse(if kind == "sparse" { &source } else { url }).map_err(|msg| {
-            EncodableSourceIdErrorKind::InvalidUrl {
+            TomlLockfileSourceIdErrorKind::InvalidUrl {
                 url: url.to_string(),
                 msg: msg.to_string(),
             }
@@ -127,7 +129,9 @@ impl TomlLockfileSourceId {
             "sparse" => SourceKind::SparseRegistry,
             "path" => SourceKind::Path,
             kind => {
-                return Err(EncodableSourceIdErrorKind::UnsupportedSource(kind.to_string()).into());
+                return Err(
+                    TomlLockfileSourceIdErrorKind::UnsupportedSource(kind.to_string()).into(),
+                );
             }
         };
 
@@ -230,7 +234,7 @@ impl fmt::Display for TomlLockfilePackageId {
 }
 
 impl FromStr for TomlLockfilePackageId {
-    type Err = EncodablePackageIdError;
+    type Err = TomlLockfilePackageIdError;
 
     fn from_str(s: &str) -> Result<TomlLockfilePackageId, Self::Err> {
         let mut s = s.splitn(3, ' ');
@@ -241,7 +245,7 @@ impl FromStr for TomlLockfilePackageId {
                 if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
                     Some(TomlLockfileSourceId::new(s.to_string())?)
                 } else {
-                    return Err(EncodablePackageIdErrorKind::InvalidSerializedPackageId.into());
+                    return Err(TomlLockfilePackageIdErrorKind::InvalidSerializedPackageId.into());
                 }
             }
             None => None,
@@ -279,11 +283,11 @@ impl<'de> de::Deserialize<'de> for TomlLockfilePackageId {
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
-pub struct EncodableSourceIdError(#[from] EncodableSourceIdErrorKind);
+pub struct TomlLockfileSourceIdError(#[from] TomlLockfileSourceIdErrorKind);
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-enum EncodableSourceIdErrorKind {
+enum TomlLockfileSourceIdErrorKind {
     #[error("invalid source `{0}`")]
     InvalidSource(String),
 
@@ -296,22 +300,22 @@ enum EncodableSourceIdErrorKind {
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
-pub struct EncodablePackageIdError(#[from] EncodablePackageIdErrorKind);
+pub struct TomlLockfilePackageIdError(#[from] TomlLockfilePackageIdErrorKind);
 
-impl From<EncodableSourceIdError> for EncodablePackageIdError {
-    fn from(value: EncodableSourceIdError) -> Self {
-        EncodablePackageIdErrorKind::Source(value).into()
+impl From<TomlLockfileSourceIdError> for TomlLockfilePackageIdError {
+    fn from(value: TomlLockfileSourceIdError) -> Self {
+        TomlLockfilePackageIdErrorKind::Source(value).into()
     }
 }
 
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-enum EncodablePackageIdErrorKind {
+enum TomlLockfilePackageIdErrorKind {
     #[error("invalid serialied PackageId")]
     InvalidSerializedPackageId,
 
     #[error(transparent)]
-    Source(#[from] EncodableSourceIdError),
+    Source(#[from] TomlLockfileSourceIdError),
 }
 
 #[cfg(feature = "unstable-schema")]
@@ -325,7 +329,7 @@ fn dump_lockfile_schema() {
 #[cfg(test)]
 mod tests {
     use crate::core::{GitReference, SourceKind};
-    use crate::lockfile::{EncodableSourceIdErrorKind, TomlLockfileSourceId};
+    use crate::lockfile::{TomlLockfileSourceId, TomlLockfileSourceIdErrorKind};
 
     #[track_caller]
     fn ok(source_str: &str, source_kind: SourceKind, url: &str) {
@@ -389,15 +393,15 @@ mod tests {
     fn bad_sources() {
         err!(
             "unknown+https://my-crates.io",
-            EncodableSourceIdErrorKind::UnsupportedSource(..)
+            TomlLockfileSourceIdErrorKind::UnsupportedSource(..)
         );
         err!(
             "registry+https//github.com/rust-lang/crates.io-index",
-            EncodableSourceIdErrorKind::InvalidUrl { .. }
+            TomlLockfileSourceIdErrorKind::InvalidUrl { .. }
         );
         err!(
             "https//github.com/rust-lang/crates.io-index",
-            EncodableSourceIdErrorKind::InvalidSource(..)
+            TomlLockfileSourceIdErrorKind::InvalidSource(..)
         );
     }
 }
