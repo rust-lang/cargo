@@ -1,5 +1,4 @@
 use crate::command_prelude::*;
-use std::io::IsTerminal;
 use std::ops::Not;
 
 use cargo::ops::{self, PublishOpts};
@@ -12,6 +11,7 @@ pub fn cli() -> Command {
         .arg_index("Registry index URL to upload the package to")
         .arg_registry("Registry to upload the package to")
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
+        .arg(flag("token-stdin", "Read token from stdin (unstable)").conflicts_with("token"))
         .arg(flag(
             "no-verify",
             "Don't verify the contents by building them",
@@ -48,11 +48,15 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         .into());
     }
 
-    let token = args
-        .get_one::<String>("token")
+    let token_from_cmd = args.get_one::<String>("token");
+    let should_read_token_stdin = args.flag("token-stdin");
+    if should_read_token_stdin {
+        gctx.cli_unstable().fail_if_stable_opt("--token-stdin", 0)?;
+    }
+    let token = token_from_cmd
         .cloned()
         .or_else(|| {
-            if std::io::stdin().is_terminal().not()
+            if should_read_token_stdin
                 && let token_from_stdin = cargo_credential::read_line().unwrap_or_default()
                 && token_from_stdin.is_empty().not()
             {
