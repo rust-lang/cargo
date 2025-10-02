@@ -20,6 +20,8 @@ use std::process::{Command, ExitStatus, Output, Stdio};
 pub struct ProcessBuilder {
     /// The program to execute.
     program: OsString,
+    /// Best-effort replacement for arg0
+    arg0: Option<OsString>,
     /// A list of arguments to pass to the program.
     args: Vec<OsString>,
     /// Any environment variables that should be set for the program.
@@ -75,6 +77,7 @@ impl ProcessBuilder {
     pub fn new<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         ProcessBuilder {
             program: cmd.as_ref().to_os_string(),
+            arg0: None,
             args: Vec::new(),
             cwd: None,
             env: BTreeMap::new(),
@@ -89,6 +92,12 @@ impl ProcessBuilder {
     /// (chainable) Sets the executable for the process.
     pub fn program<T: AsRef<OsStr>>(&mut self, program: T) -> &mut ProcessBuilder {
         self.program = program.as_ref().to_os_string();
+        self
+    }
+
+    /// (chainable) Overrides `arg0` for this program.
+    pub fn arg0<T: AsRef<OsStr>>(&mut self, arg: T) -> &mut ProcessBuilder {
+        self.arg0 = Some(arg.as_ref().to_os_string());
         self
     }
 
@@ -140,6 +149,11 @@ impl ProcessBuilder {
     /// Gets the executable name.
     pub fn get_program(&self) -> &OsString {
         self.wrappers.last().unwrap_or(&self.program)
+    }
+
+    /// Gets the program arg0.
+    pub fn get_arg0(&self) -> Option<&OsStr> {
+        self.arg0.as_deref()
     }
 
     /// Gets the program arguments.
@@ -483,6 +497,11 @@ impl ProcessBuilder {
             cmd.args(iter);
             cmd
         };
+        #[cfg(unix)]
+        if let Some(arg0) = self.get_arg0() {
+            use std::os::unix::process::CommandExt as _;
+            command.arg0(arg0);
+        }
         if let Some(cwd) = self.get_cwd() {
             command.current_dir(cwd);
         }
