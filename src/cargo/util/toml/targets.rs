@@ -10,7 +10,8 @@
 //! It is a bit tricky because we need match explicit information from `Cargo.toml`
 //! with implicit info in directory layout.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
@@ -104,6 +105,7 @@ pub(super) fn to_targets(
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
+        validate_unique_build_scripts(custom_build)?;
         for script in custom_build {
             let script_path = Path::new(script);
             let name = format!(
@@ -897,6 +899,31 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
                 name = name
             );
         }
+    }
+    Ok(())
+}
+
+/// Will check a list of build scripts, and make sure script file stems are unique within a vector.
+fn validate_unique_build_scripts(scripts: &[String]) -> CargoResult<()> {
+    let mut seen = HashMap::new();
+    for script in scripts {
+        let stem = Path::new(script).file_stem().unwrap().to_str().unwrap();
+        seen.entry(stem)
+            .or_insert_with(Vec::new)
+            .push(script.as_str());
+    }
+    let mut conflict_file_stem = false;
+    let mut err_msg = String::from(
+        "found build scripts with duplicate file stems, but all build scripts must have a unique file stem",
+    );
+    for (stem, paths) in seen {
+        if paths.len() > 1 {
+            conflict_file_stem = true;
+            write!(&mut err_msg, "\n  for stem `{stem}`: {}", paths.join(", "))?;
+        }
+    }
+    if conflict_file_stem {
+        anyhow::bail!(err_msg);
     }
     Ok(())
 }
