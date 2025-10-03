@@ -95,6 +95,7 @@ Each new feature described below should explain how to use it.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
     * [gc](#gc) --- Global cache garbage collection.
     * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
+    * [panic-immediate-abort](#panic-immediate-abort) --- Passes `-Cpanic=immediate-abort` to the compiler.
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -1668,6 +1669,24 @@ cargo-features = ["open-namespaces"]
 
 [package]
 # ...
+```
+
+## panic-immediate-abort
+
+* Tracking Issue: [#16042](https://github.com/rust-lang/cargo/issues/16042)
+* Upstream Tracking Issue: [rust-lang/rust#147286](https://github.com/rust-lang/rust/issues/147286)
+
+Allow use of [`-Cpanic=immediate-abort`](../../rustc/codegen-options/index.html#panic) through a Cargo profile
+
+This can be enabled like so:
+```toml
+cargo-features = ["immediate-abort"]
+
+[package]
+# ...
+
+[profile.release]
+panic = "immediate-abort"
 ```
 
 ## `[lints.cargo]`

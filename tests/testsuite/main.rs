@@ -150,6 +150,7 @@ mod proc_macro;
 mod profile_config;
 mod profile_custom;
 mod profile_overrides;
+mod profile_panic_immediate_abort;
 mod profile_targets;
 mod profile_trim_paths;
 mod profiles;
