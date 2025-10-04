@@ -579,6 +579,9 @@ features! {
 
     /// Allows use of multiple build scripts.
     (unstable, multiple_build_scripts, "", "reference/unstable.html#multiple-build-scripts"),
+
+    /// Allows use of panic="immediate-abort".
+    (unstable, panic_immediate_abort, "", "reference/unstable.html#panic-immediate-abort"),
 }
 
 /// Status and metadata for a single unstable feature.
@@ -872,6 +875,7 @@ unstable_cli_options!(
     no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
+    panic_immediate_abort: bool = ("Enable setting `panic = \"immediate-abort\"` in profiles"),
     profile_hint_mostly_unused: bool = ("Enable the `hint-mostly-unused` setting in profiles to mark a crate as mostly unused."),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     public_dependency: bool = ("Respect a dependency's `public` field in Cargo.toml to control public/private dependencies"),
@@ -1417,6 +1421,7 @@ impl CliUnstable {
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
             "script" => self.script = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
+            "panic-immediate-abort" => self.panic_immediate_abort = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             "warnings" => self.warnings = parse_empty(k, v)?,
             _ => bail!(

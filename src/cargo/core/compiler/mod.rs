@@ -1234,6 +1234,9 @@ fn build_base_args(
     if *panic != PanicStrategy::Unwind {
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
+    if *panic == PanicStrategy::ImmediateAbort {
+        cmd.arg("-Z").arg("unstable-options");
+    }
 
     cmd.args(&lto_args(build_runner, unit));
 
@@ -1305,7 +1308,7 @@ fn build_base_args(
         // flag to pass to rustc, so register that here. Eventually this flag
         // will simply not be needed when the behavior is stabilized in the Rust
         // compiler itself.
-        if *panic == PanicStrategy::Abort {
+        if *panic == PanicStrategy::Abort || *panic == PanicStrategy::ImmediateAbort {
             cmd.arg("-Z").arg("panic-abort-tests");
         }
     } else if test {

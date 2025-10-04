@@ -2570,10 +2570,10 @@ pub fn validate_profile(
     }
 
     if let Some(panic) = &root.panic {
-        if panic != "unwind" && panic != "abort" {
+        if panic != "unwind" && panic != "abort" && panic != "immediate-abort" {
             bail!(
                 "`panic` setting of `{}` is not a valid setting, \
-                     must be `unwind` or `abort`",
+                     must be `unwind`, `abort`, or `immediate-abort`.",
                 panic
             );
         }
@@ -2622,6 +2622,15 @@ fn validate_profile_layer(
         match (
             features.require(Feature::trim_paths()),
             cli_unstable.trim_paths,
+        ) {
+            (Err(e), false) => return Err(e),
+            _ => {}
+        }
+    }
+    if profile.panic.as_deref() == Some("immediate-abort") {
+        match (
+            features.require(Feature::panic_immediate_abort()),
+            cli_unstable.panic_immediate_abort,
         ) {
             (Err(e), false) => return Err(e),
             _ => {}
