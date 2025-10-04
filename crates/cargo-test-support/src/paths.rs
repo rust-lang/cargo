@@ -451,7 +451,7 @@ pub fn windows_reserved_names_are_allowed() -> bool {
     use std::ptr;
     use windows_sys::Win32::Storage::FileSystem::GetFullPathNameW;
 
-    let test_file_name: Vec<_> = OsStr::new("aux.rs").encode_wide().collect();
+    let test_file_name: Vec<_> = OsStr::new("aux.rs").encode_wide().chain([0]).collect();
 
     let buffer_length =
         unsafe { GetFullPathNameW(test_file_name.as_ptr(), 0, ptr::null_mut(), ptr::null_mut()) };

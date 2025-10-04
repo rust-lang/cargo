@@ -2935,7 +2935,8 @@ src/lib.rs
 }
 
 #[cargo_test(
-    ignore_windows = "temporarily disabling due to flakiness: https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/reserved_windows_name.20test.20failing/with/543085230"
+    nightly,
+    reason = "temporarily due to flakiness: https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/reserved_windows_name.20test.20failing/with/543085230"
 )]
 #[cfg(windows)]
 fn reserved_windows_name() {
