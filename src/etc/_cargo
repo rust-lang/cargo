@@ -251,7 +251,6 @@ _cargo() {
                         '--index=[specify registry index]:index' \
                         '--allow-dirty[allow dirty working directories to be packaged]' \
                         "--no-verify[don't verify the contents by building them]" \
-                        '--token=[specify token to use when uploading]:token' \
                         '--dry-run[perform all checks without uploading]'
                         ;;
 
