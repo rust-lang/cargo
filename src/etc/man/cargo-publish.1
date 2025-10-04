@@ -37,8 +37,9 @@ and may timeout. In that case, you will need to check for completion
 manually. This timeout does not affect the upload.
 .RE
 .sp
-This command requires you to be authenticated with either the \fB\-\-token\fR option
-or using \fBcargo\-login\fR(1).
+This command requires you to be authenticated using \fBcargo\-login\fR(1)
+or environment variables of the \fI\f(BIregistry.token\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registrytoken>
+and \fI\f(BIregistries.<name>.token\fI\fR <https://doc.rust\-lang.org/cargo/reference/config.html#registriesnametoken> config fields.
 .sp
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/publishing.html> for more details about
 packaging and publishing.
@@ -48,19 +49,6 @@ packaging and publishing.
 \fB\-\-dry\-run\fR
 .RS 4
 Perform all checks without uploading.
-.RE
-.sp
-\fB\-\-token\fR \fItoken\fR
-.RS 4
-API token to use when authenticating. This overrides the token stored in
-the credentials file (which is created by \fBcargo\-login\fR(1)).
-.sp
-\fICargo config\fR <https://doc.rust\-lang.org/cargo/reference/config.html> environment variables can be
-used to override the tokens stored in the credentials file. The token for
-crates.io may be specified with the \fBCARGO_REGISTRY_TOKEN\fR environment
-variable. Tokens for other registries may be specified with environment
-variables of the form \fBCARGO_REGISTRIES_NAME_TOKEN\fR where \fBNAME\fR is the name
-of the registry in all capital letters.
 .RE
 .sp
 \fB\-\-no\-verify\fR

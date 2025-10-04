@@ -306,6 +306,7 @@ Caused by:
         .arg(crates_io.index_url().as_str())
         .with_status(101)
         .with_stderr_data(str![[r#"
+[WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] crates.io index
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
 

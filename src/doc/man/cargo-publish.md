@@ -28,8 +28,9 @@ following steps:
    and may timeout. In that case, you will need to check for completion
    manually. This timeout does not affect the upload.
 
-This command requires you to be authenticated with either the `--token` option
-or using {{man "cargo-login" 1}}.
+This command requires you to be authenticated using {{man "cargo-login" 1}}
+or environment variables of the [`registry.token`](../reference/config.html#registrytoken)
+and [`registries.<name>.token`](../reference/config.html#registriesnametoken) config fields.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.
@@ -43,8 +44,6 @@ packaging and publishing.
 {{#option "`--dry-run`" }}
 Perform all checks without uploading.
 {{/option}}
-
-{{> options-token }}
 
 {{#option "`--no-verify`" }}
 Don't verify the contents by building them.

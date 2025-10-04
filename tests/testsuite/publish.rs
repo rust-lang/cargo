@@ -207,6 +207,7 @@ fn simple_publish_with_http() {
 
     p.cargo("publish --no-verify --token sekrit --registry dummy-registry")
         .with_stderr_data(str![[r#"
+[WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] `dummy-registry` index
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
@@ -351,6 +352,7 @@ fn simple_with_index() {
         .arg("--index")
         .arg(registry.index_url().as_str())
         .with_stderr_data(str![[r#"
+[WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] `[ROOT]/registry` index
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
