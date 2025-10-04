@@ -24,8 +24,9 @@ following steps:
    and may timeout. In that case, you will need to check for completion
    manually. This timeout does not affect the upload.
 
-This command requires you to be authenticated using [cargo-login(1)](cargo-login.html) 
-or [environment variables](../reference/environment-variables.html).
+This command requires you to be authenticated using [cargo-login(1)](cargo-login.html)
+or environment variables of the [`registry.token`](../reference/config.html#registrytoken)
+and [`registries.<name>.token`](../reference/config.html#registriesnametoken) config fields.
 
 See [the reference](../reference/publishing.html) for more details about
 packaging and publishing.

@@ -26,8 +26,11 @@ DESCRIPTION
           manually. This timeout does not affect the upload.
 
        This command requires you to be authenticated using cargo-login(1) or
-       environment variables
-       <https://doc.rust-lang.org/cargo/reference/environment-variables.html>.
+       environment variables of the registry.token
+       <https://doc.rust-lang.org/cargo/reference/config.html#registrytoken>
+       and registries.<name>.token
+       <https://doc.rust-lang.org/cargo/reference/config.html#registriesnametoken>
+       config fields.
 
        See the reference
        <https://doc.rust-lang.org/cargo/reference/publishing.html> for more
