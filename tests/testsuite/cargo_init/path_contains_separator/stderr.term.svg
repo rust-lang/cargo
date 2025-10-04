@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan>: the path `[ROOT]/case/test:ing/.` contains invalid PATH characters (usually `:`, `;`, or `"`)</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>It is recommended to use a different name to avoid problems.</tspan>
+    <tspan x="10px" y="64px"><tspan>         It is recommended to use a different name to avoid problems.</tspan>
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">note</tspan><tspan>: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
 </tspan>
