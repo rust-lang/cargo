@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
+use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use crate::ops;
@@ -116,15 +116,22 @@ fn clean_specs(
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let (pkg_set, resolve) = ops::resolve_ws(ws, dry_run)?;
     let prof_dir_name = profiles.get_dir_name();
-    let host_layout = Layout::new(ws, None, &prof_dir_name)?;
+    let host_target = CompileTarget::new(target_data.short_name(&CompileKind::Host))?;
+    let host_layout = if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+        Layout::new(ws, Some(host_target), &prof_dir_name, true)?
+    } else {
+        Layout::new(ws, None, &prof_dir_name, true)?
+    };
     // Convert requested kinds to a Vec of layouts.
     let target_layouts: Vec<(CompileKind, Layout)> = requested_kinds
         .into_iter()
         .filter_map(|kind| match kind {
-            CompileKind::Target(target) => match Layout::new(ws, Some(target), &prof_dir_name) {
-                Ok(layout) => Some(Ok((kind, layout))),
-                Err(e) => Some(Err(e)),
-            },
+            CompileKind::Target(target) => {
+                match Layout::new(ws, Some(target), &prof_dir_name, false) {
+                    Ok(layout) => Some(Ok((kind, layout))),
+                    Err(e) => Some(Err(e)),
+                }
+            }
             CompileKind::Host => None,
         })
         .collect::<CargoResult<_>>()?;
@@ -200,7 +207,7 @@ fn clean_specs(
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
-            let dir = escape_glob_path(layout.fingerprint())?;
+            let dir = escape_glob_path(layout.legacy_fingerprint())?;
             clean_ctx
                 .rm_rf_package_glob_containing_hash(&pkg.name(), &Path::new(&dir).join(&pkg_dir))?;
         }
@@ -228,6 +235,10 @@ fn clean_specs(
                 for (compile_kind, layout) in &layouts {
                     let triple = target_data.short_name(compile_kind);
 
+                    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+                        let dir = layout.build_unit(&pkg_dir);
+                        clean_ctx.rm_rf_glob(&dir)?;
+                    }
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
                         .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
@@ -236,8 +247,8 @@ fn clean_specs(
                             (layout.build_examples(), Some(layout.examples()))
                         }
                         // Tests/benchmarks are never uplifted.
-                        TargetKind::Test | TargetKind::Bench => (layout.deps(), None),
-                        _ => (layout.deps(), Some(layout.dest())),
+                        TargetKind::Test | TargetKind::Bench => (layout.legacy_deps(), None),
+                        _ => (layout.legacy_deps(), Some(layout.dest())),
                     };
                     let mut dir_glob_str = escape_glob_path(dir)?;
                     let dir_glob = Path::new(&dir_glob_str);

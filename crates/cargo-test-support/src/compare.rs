@@ -235,6 +235,9 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     // Match file name hashes like `foo-06b451d0d6f88b1d`
     subs.insert("[HASH]", regex!(r"[a-z0-9]+-(?<redacted>[a-f0-9]{16})"))
         .unwrap();
+    // Match path hashes like `../06b451d0d6f88b1d/..` used in directory paths
+    subs.insert("[HASH]", regex!(r"\/(?<redacted>[0-9a-f]{16})\/"))
+        .unwrap();
     subs.insert(
         "[AVG_ELAPSED]",
         regex!(r"(?<redacted>[0-9]+(\.[0-9]+)?) ns/iter"),
