@@ -91,6 +91,12 @@
   ([build cache doc](https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html))
   [#15833](https://github.com/rust-lang/cargo/pull/15833)
   [#15840](https://github.com/rust-lang/cargo/pull/15840)
+- The `--target` flag and the `build.target` configuration can now take literal
+  `"host-tuple"` string, which will internally be substituted by the host
+  machine's target triple.
+  [#15838](https://github.com/rust-lang/cargo/pull/15838)
+  [#16003](https://github.com/rust-lang/cargo/pull/16003)
+  [#16032](https://github.com/rust-lang/cargo/pull/16032)
 
 ### Changed
 
