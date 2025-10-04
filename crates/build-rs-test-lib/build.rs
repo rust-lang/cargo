@@ -51,6 +51,8 @@ fn smoke_test_inputs() {
     dbg!(cargo_manifest_links());
     dbg!(cargo_pkg_authors());
     dbg!(cargo_pkg_description());
+    // FIXME: enable once released?
+    // dbg!(cargo_pkg_edition());
     dbg!(cargo_pkg_homepage());
     dbg!(cargo_pkg_license());
     dbg!(cargo_pkg_license_file());
