@@ -11,7 +11,7 @@
 use std::path::PathBuf;
 
 use crate::prelude::*;
-use cargo_test_support::registry::RegistryBuilder;
+use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{paths, prelude::*, project, str};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 
@@ -578,6 +578,76 @@ fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
 
     assert_not_exists(&p.root().join("build-dir"));
     assert_not_exists(&p.root().join("target-dir"));
+}
+
+#[cargo_test]
+fn cargo_clean_should_remove_correct_files() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                exclude = ["*.txt"]
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!"); }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build").enable_mac_dsym().run();
+
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-lock
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo.json
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/dep-bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/deps/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/deps/foo[..].d
+[ROOT]/foo/build-dir/debug/.fingerprint/bar-[HASH]/lib-bar
+[ROOT]/foo/build-dir/debug/.fingerprint/bar-[HASH]/lib-bar.json
+[ROOT]/foo/build-dir/debug/.fingerprint/bar-[HASH]/dep-lib-bar
+[ROOT]/foo/build-dir/debug/.fingerprint/bar-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/deps/bar[..].d
+[ROOT]/foo/build-dir/debug/deps/libbar[..].rlib
+[ROOT]/foo/build-dir/debug/deps/libbar[..].rmeta
+
+"#]]);
+
+    p.cargo("clean -p bar").enable_mac_dsym().run();
+
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-lock
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo.json
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/dep-bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/deps/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/deps/foo[..].d
+
+"#]]);
 }
 
 #[cargo_test]
