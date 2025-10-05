@@ -1684,7 +1684,7 @@ Allow use of [`-Cpanic=immediate-abort`](../../rustc/codegen-options/index.html#
 
 This can be enabled like so:
 ```toml
-cargo-features = ["immediate-abort"]
+cargo-features = ["panic-immediate-abort"]
 
 [package]
 # ...
