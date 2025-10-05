@@ -276,6 +276,7 @@ jobs:
     - run: rustup update nightly && rustup default nightly
     - run: rustup update stable
     - run: rustup component add rust-docs
+    - run: rustup component add rustfmt --toolchain stable
     - run: ci/validate-man.sh
     # This requires rustfmt, use stable.
     - name: Run semver-check
