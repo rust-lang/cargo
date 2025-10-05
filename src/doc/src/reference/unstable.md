@@ -1680,14 +1680,30 @@ cargo-features = ["open-namespaces"]
 * Tracking Issue: [#16042](https://github.com/rust-lang/cargo/issues/16042)
 * Upstream Tracking Issue: [rust-lang/rust#147286](https://github.com/rust-lang/rust/issues/147286)
 
-Allow use of [`-Cpanic=immediate-abort`](../../rustc/codegen-options/index.html#panic) through a Cargo profile
-
+Extends the `panic` profile setting to support the
+[`immediate-abort`](../../rustc/codegen-options/index.html#panic) panic strategy.
 This can be enabled like so:
+
 ```toml
+# Cargo.toml
 cargo-features = ["panic-immediate-abort"]
 
 [package]
 # ...
+
+[profile.release]
+panic = "immediate-abort"
+```
+
+To set this in a profile in Cargo configuration,
+you need to use either `-Z panic-immediate-abort` CLI flag
+or the `[unstable]` table to enable it.
+For example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+panic-immediate-abort = true
 
 [profile.release]
 panic = "immediate-abort"
