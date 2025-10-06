@@ -87,7 +87,7 @@ mod imp {
         // use job objects, so we instead just ignore errors and assume that
         // we're otherwise part of someone else's job object in this case.
 
-        let job = CreateJobObjectW(ptr::null_mut(), ptr::null());
+        let job = unsafe { CreateJobObjectW(ptr::null_mut(), ptr::null()) };
         if job == INVALID_HANDLE_VALUE {
             return None;
         }
@@ -98,22 +98,24 @@ mod imp {
         // entire process tree by default because we've added ourselves and
         // our children will reside in the job once we spawn a process.
         let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
-        info = mem::zeroed();
+        info = unsafe { mem::zeroed() };
         info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-        let r = SetInformationJobObject(
-            job.inner,
-            JobObjectExtendedLimitInformation,
-            addr_of!(info) as *const _,
-            mem::size_of_val(&info) as u32,
-        );
+        let r = unsafe {
+            SetInformationJobObject(
+                job.inner,
+                JobObjectExtendedLimitInformation,
+                addr_of!(info) as *const _,
+                mem::size_of_val(&info) as u32,
+            )
+        };
         if r == 0 {
             return None;
         }
 
         // Assign our process to this job object, meaning that our children will
         // now live or die based on our existence.
-        let me = GetCurrentProcess();
-        let r = AssignProcessToJobObject(job.inner, me);
+        let me = unsafe { GetCurrentProcess() };
+        let r = unsafe { AssignProcessToJobObject(job.inner, me) };
         if r == 0 {
             return None;
         }
