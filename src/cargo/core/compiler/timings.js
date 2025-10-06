@@ -17,7 +17,7 @@ const Y_TICK_DIST = BOX_HEIGHT + 2;
 let HIT_BOXES = [];
 // Index into UNIT_DATA of the last unit hovered over by mouse.
 let LAST_HOVER = null;
-// Key is unit index, value is {x, y, width, rmeta_x} of the box.
+// Key is unit index, value is {x, y, width, sections} of the box.
 let UNIT_COORDS = {};
 // Map of unit index to the index it was unlocked by.
 let REVERSE_UNIT_DEPS = {};
@@ -306,16 +306,29 @@ function get_section_color(name) {
     }
 }
 
+// Gets the x-coordinate of the codegen section of a unit.
+//
+// This is for drawing rmeta dependency lines.
+function get_codegen_section_x(sections) {
+    const codegen_section = sections.find(s => s.name === "codegen")
+    if (!codegen_section) {
+        // This happens only when type-checking (e.g., `cargo check`)
+        return null;
+    }
+    return codegen_section.start;
+}
+
 // Draws lines from the given unit to the units it unlocks.
 function draw_dep_lines(ctx, unit_idx, highlighted) {
   const unit = UNIT_DATA[unit_idx];
-  const {x, y, rmeta_x} = UNIT_COORDS[unit_idx];
+  const {x, y, sections} = UNIT_COORDS[unit_idx];
   ctx.save();
   for (const unlocked of unit.unlocked_units) {
     draw_one_dep_line(ctx, x, y, unlocked, highlighted);
   }
   for (const unlocked of unit.unlocked_rmeta_units) {
-    draw_one_dep_line(ctx, rmeta_x, y, unlocked, highlighted);
+    const codegen_x = get_codegen_section_x(sections);
+    draw_one_dep_line(ctx, codegen_x, y, unlocked, highlighted);
   }
   ctx.restore();
 }
@@ -589,15 +602,16 @@ function pipeline_mousemove(event) {
       if (box.i in REVERSE_UNIT_DEPS) {
         const dep_unit = REVERSE_UNIT_DEPS[box.i];
         if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
+          const {x, y} = UNIT_COORDS[dep_unit];
           draw_one_dep_line(ctx, x, y, box.i, true);
         }
       }
       if (box.i in REVERSE_UNIT_RMETA_DEPS) {
         const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
         if (dep_unit in UNIT_COORDS) {
-          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, rmeta_x, y, box.i, true);
+          const {y, sections} = UNIT_COORDS[dep_unit];
+          const codegen_x = get_codegen_section_x(sections);
+          draw_one_dep_line(ctx, codegen_x, y, box.i, true);
         }
       }
       ctx.restore();
