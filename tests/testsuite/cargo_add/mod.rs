@@ -134,6 +134,7 @@ mod preserve_features_unsorted;
 mod preserve_sorted;
 mod preserve_unsorted;
 mod public;
+mod public_common_version;
 mod quiet;
 mod registry;
 mod rename;
