@@ -379,10 +379,7 @@ fn normalize_toml(
             warnings,
         )?;
         let original_toml_bin = if is_embedded {
-            let manifest_file_stem = manifest_file
-                .file_stem()
-                .expect("file name enforced previously");
-            let name = embedded::sanitize_name(manifest_file_stem.to_string_lossy().as_ref());
+            let name = package_name.as_ref().to_owned();
             let manifest_file_name = manifest_file
                 .file_name()
                 .expect("file name enforced previously");
