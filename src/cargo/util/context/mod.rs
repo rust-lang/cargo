@@ -654,7 +654,7 @@ impl GlobalContext {
     /// The directory to use for intermediate build artifacts.
     ///
     /// Callers should prefer [`Workspace::build_dir`] instead.
-    pub fn build_dir(&self, workspace_manifest_path: &PathBuf) -> CargoResult<Option<Filesystem>> {
+    pub fn build_dir(&self, workspace_manifest_path: &Path) -> CargoResult<Option<Filesystem>> {
         let Some(val) = &self.build_config()?.build_dir else {
             return Ok(None);
         };
@@ -668,7 +668,7 @@ impl GlobalContext {
     pub fn custom_build_dir(
         &self,
         val: &ConfigRelativePath,
-        workspace_manifest_path: &PathBuf,
+        workspace_manifest_path: &Path,
     ) -> CargoResult<Filesystem> {
         let replacements = vec![
             (
