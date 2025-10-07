@@ -255,20 +255,25 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     }
 
     /// Returns the host `deps` directory path.
-    pub fn host_deps(&self) -> &Path {
+    pub fn host_deps(&self) -> PathBuf {
         self.host.deps()
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit) -> &Path {
+    pub fn deps_dir(&self, unit: &Unit) -> PathBuf {
         self.layout(unit.kind).deps()
     }
 
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).fingerprint().join(dir)
+        self.layout(unit.kind).fingerprint(&dir)
+    }
+
+    /// Directory where incremental output for the given unit should go.
+    pub fn incremental_dir(&self, unit: &Unit) -> &Path {
+        self.layout(unit.kind).incremental()
     }
 
     /// Returns the path for a file in the fingerprint directory.
@@ -303,7 +308,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(!unit.mode.is_run_custom_build());
         assert!(self.metas.contains_key(unit));
         let dir = self.pkg_dir(unit);
-        self.layout(CompileKind::Host).build().join(dir)
+        self.layout(CompileKind::Host).build_script(&dir)
     }
 
     /// Returns the directory for compiled artifacts files.

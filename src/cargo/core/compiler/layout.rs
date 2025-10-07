@@ -232,7 +232,11 @@ impl Layout {
         &self.dest
     }
     /// Fetch the deps path.
-    pub fn deps(&self) -> &Path {
+    pub fn deps(&self) -> PathBuf {
+        self.legacy_deps().to_path_buf()
+    }
+    /// Fetch the deps path. (old layout)
+    pub fn legacy_deps(&self) -> &Path {
         &self.deps
     }
     /// Fetch the examples path.
@@ -256,12 +260,24 @@ impl Layout {
         &self.incremental
     }
     /// Fetch the fingerprint path.
-    pub fn fingerprint(&self) -> &Path {
+    pub fn fingerprint(&self, pkg_dir: &str) -> PathBuf {
+        self.legacy_fingerprint().to_path_buf().join(pkg_dir)
+    }
+    /// Fetch the fingerprint path. (old layout)
+    pub fn legacy_fingerprint(&self) -> &Path {
         &self.fingerprint
     }
-    /// Fetch the build script path.
+    /// Fetch the build path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// Fetch the build script path.
+    pub fn build_script(&self, pkg_dir: &str) -> PathBuf {
+        self.build().join(pkg_dir)
+    }
+    /// Fetch the build script execution path.
+    pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
+        self.build().join(pkg_dir)
     }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {

@@ -1353,12 +1353,8 @@ fn build_base_args(
             .map(|s| s.as_ref()),
     );
     if incremental {
-        let dir = build_runner
-            .files()
-            .layout(unit.kind)
-            .incremental()
-            .as_os_str();
-        opt(cmd, "-C", "incremental=", Some(dir));
+        let dir = build_runner.files().incremental_dir(&unit);
+        opt(cmd, "-C", "incremental=", Some(dir.as_os_str()));
     }
 
     let pkg_hint_mostly_unused = match hints.mostly_unused {
