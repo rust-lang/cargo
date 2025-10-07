@@ -658,6 +658,18 @@ impl GlobalContext {
         let Some(val) = &self.build_config()?.build_dir else {
             return Ok(None);
         };
+        self.custom_build_dir(val, workspace_manifest_path)
+            .map(Some)
+    }
+
+    /// The directory to use for intermediate build artifacts.
+    ///
+    /// Callers should prefer [`Workspace::build_dir`] instead.
+    pub fn custom_build_dir(
+        &self,
+        val: &ConfigRelativePath,
+        workspace_manifest_path: &PathBuf,
+    ) -> CargoResult<Filesystem> {
         let replacements = vec![
             (
                 "{workspace-root}",
@@ -724,7 +736,7 @@ impl GlobalContext {
             )
         }
 
-        Ok(Some(Filesystem::new(path)))
+        Ok(Filesystem::new(path))
     }
 
     /// Get a configuration value by key.
