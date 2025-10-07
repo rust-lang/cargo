@@ -215,7 +215,6 @@ impl<'gctx> Workspace<'gctx> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), gctx);
-        ws.target_dir = gctx.target_dir()?;
 
         if manifest_path.is_relative() {
             bail!(
@@ -226,6 +225,7 @@ impl<'gctx> Workspace<'gctx> {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
+        ws.target_dir = gctx.target_dir()?;
         ws.build_dir = gctx.build_dir(
             ws.root_manifest
                 .as_ref()
