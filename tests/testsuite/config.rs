@@ -294,7 +294,8 @@ f1 = 1
     let output = read_output(gctx);
     let expected = str![[r#"
 [WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
-[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+  |
+  = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
 
 "#]];
     assert_e2e().eq(&output, expected);
@@ -314,7 +315,8 @@ f1 = 1
     p.cargo("-vV")
         .with_stderr_data(str![[r#"
 [WARNING] `[ROOT]/home/.cargo/config` is deprecated in favor of `config.toml`
-[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+  |
+  = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
 
 "#]])
         .run();

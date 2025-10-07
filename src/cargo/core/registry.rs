@@ -22,6 +22,7 @@ use crate::sources::source::SourceMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
+use annotate_snippets::Level;
 use anyhow::{Context as _, bail};
 use tracing::{debug, trace};
 use url::Url;
@@ -387,16 +388,19 @@ impl<'gctx> PackageRegistry<'gctx> {
                     unused_fields.push("`default-features`")
                 }
                 if !unused_fields.is_empty() {
-                    let mut shell = self.source_config.gctx().shell();
-                    shell.warn(format!(
-                        "unused field in patch for `{}`: {}",
-                        dep.package_name(),
-                        unused_fields.join(", ")
-                    ))?;
-                    shell.note(format!(
-                        "configure {} in the `dependencies` entry",
-                        unused_fields.join(", ")
-                    ))?;
+                    self.source_config.gctx().shell().print_report(
+                        &[Level::WARNING
+                            .secondary_title(format!(
+                                "unused field in patch for `{}`: {}",
+                                dep.package_name(),
+                                unused_fields.join(", ")
+                            ))
+                            .element(Level::HELP.message(format!(
+                                "configure {} in the `dependencies` entry",
+                                unused_fields.join(", ")
+                            )))],
+                        false,
+                    )?;
                 }
 
                 // Go straight to the source for resolving `dep`. Load it as we
