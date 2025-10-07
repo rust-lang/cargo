@@ -444,13 +444,14 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_target_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            let hash = crate::util::hex::short_hash(&self.root_manifest().to_string_lossy());
-            let mut rel_path = PathBuf::new();
-            rel_path.push("target");
-            rel_path.push(&hash[0..2]);
-            rel_path.push(&hash[2..]);
-
-            self.gctx().home().join(rel_path)
+            let default = ConfigRelativePath::new(
+                "{cargo-cache-home}/target/{workspace-path-hash}"
+                    .to_owned()
+                    .into(),
+            );
+            self.gctx()
+                .custom_build_dir(&default, self.root_manifest())
+                .expect("template is correct")
         } else {
             Filesystem::new(self.root().join("target"))
         }

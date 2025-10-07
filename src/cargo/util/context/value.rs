@@ -55,6 +55,7 @@ pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 /// Location where a config value is defined.
 #[derive(Clone, Debug, Eq)]
 pub enum Definition {
+    BuiltIn,
     /// Defined in a `.cargo/config`, includes the path to the file.
     Path(PathBuf),
     /// Defined in an environment variable, includes the environment key.
@@ -90,7 +91,7 @@ impl Definition {
     pub fn root<'a>(&'a self, gctx: &'a GlobalContext) -> &'a Path {
         match self {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) => gctx.cwd(),
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
         }
     }
 
@@ -102,7 +103,10 @@ impl Definition {
             (self, other),
             (Definition::Cli(_), Definition::Environment(_))
                 | (Definition::Cli(_), Definition::Path(_))
+                | (Definition::Cli(_), Definition::BuiltIn)
                 | (Definition::Environment(_), Definition::Path(_))
+                | (Definition::Environment(_), Definition::BuiltIn)
+                | (Definition::Path(_), Definition::BuiltIn)
         )
     }
 }
@@ -123,6 +127,16 @@ impl fmt::Display for Definition {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.display().fmt(f),
             Definition::Environment(key) => write!(f, "environment variable `{}`", key),
             Definition::Cli(None) => write!(f, "--config cli option"),
+            Definition::BuiltIn => write!(f, "default"),
+        }
+    }
+}
+
+impl<T> From<T> for Value<T> {
+    fn from(val: T) -> Self {
+        Self {
+            val,
+            definition: Definition::BuiltIn,
         }
     }
 }
@@ -236,9 +250,10 @@ impl<'de> de::Deserialize<'de> for Definition {
     {
         let (discr, value) = <(u32, String)>::deserialize(deserializer)?;
         match discr {
-            0 => Ok(Definition::Path(value.into())),
-            1 => Ok(Definition::Environment(value)),
-            2 => {
+            0 => Ok(Definition::BuiltIn),
+            1 => Ok(Definition::Path(value.into())),
+            2 => Ok(Definition::Environment(value)),
+            3 => {
                 let path = (value.len() > 0).then_some(value.into());
                 Ok(Definition::Cli(path))
             }

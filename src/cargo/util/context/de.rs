@@ -564,18 +564,19 @@ impl<'de, 'gctx> de::MapAccess<'de> for ValueDeserializer<'gctx> {
         // ... otherwise we're deserializing the `definition` field, so we need
         // to figure out where the field we just deserialized was defined at.
         match self.definition() {
+            Definition::BuiltIn => seed.deserialize(0.into_deserializer()),
             Definition::Path(path) => {
-                seed.deserialize(Tuple2Deserializer(0i32, path.to_string_lossy()))
+                seed.deserialize(Tuple2Deserializer(1i32, path.to_string_lossy()))
             }
             Definition::Environment(env) => {
-                seed.deserialize(Tuple2Deserializer(1i32, env.as_str()))
+                seed.deserialize(Tuple2Deserializer(2i32, env.as_str()))
             }
             Definition::Cli(path) => {
                 let s = path
                     .as_ref()
                     .map(|p| p.to_string_lossy())
                     .unwrap_or_default();
-                seed.deserialize(Tuple2Deserializer(2i32, s))
+                seed.deserialize(Tuple2Deserializer(3i32, s))
             }
         }
     }

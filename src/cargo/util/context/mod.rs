@@ -1371,7 +1371,9 @@ impl GlobalContext {
         let abs = |path: &str, def: &Definition| -> (String, PathBuf, Definition) {
             let abs_path = match def {
                 Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().join(&path),
-                Definition::Environment(_) | Definition::Cli(None) => self.cwd().join(&path),
+                Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => {
+                    self.cwd().join(&path)
+                }
             };
             (path.to_string(), abs_path, def.clone())
         };
