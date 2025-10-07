@@ -1,11 +1,13 @@
-<svg width="860px" height="110px" xmlns="http://www.w3.org/2000/svg">
+<svg width="793px" height="56px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
+    .fg-bright-red { fill: #FF5555 }
     .container {
       padding: 0 10px;
       line-height: 18px;
     }
+    .bold { font-weight: bold; }
     tspan {
       font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       white-space: pre;
@@ -16,15 +18,9 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px">
+    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan>: dependency (foo) specified without providing a local path, Git repository, or version</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan>thread 'main' ([..]) panicked at src/cargo/ops/cargo_add/mod.rs:519:21:</tspan>
-</tspan>
-    <tspan x="10px" y="64px"><tspan>internal error: entered unreachable code: This should have been caught when parsing a workspace root</tspan>
-</tspan>
-    <tspan x="10px" y="82px"><tspan>note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</tspan>
-</tspan>
-    <tspan x="10px" y="100px">
+    <tspan x="10px" y="46px">
 </tspan>
   </text>
 

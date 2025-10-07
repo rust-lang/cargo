@@ -516,7 +516,11 @@ fn resolve_dependency(
             let query = dep.query(gctx)?;
             match query {
                 MaybeWorkspace::Workspace(_) => {
-                    unreachable!("This should have been caught when parsing a workspace root")
+                    anyhow::bail!(
+                        "dependency ({}) specified without \
+                        providing a local path, Git repository, or version",
+                        dependency.toml_key()
+                    );
                 }
                 MaybeWorkspace::Other(query) => query,
             }
