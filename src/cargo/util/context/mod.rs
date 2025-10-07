@@ -79,7 +79,7 @@ use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
-use annotate_snippets::Level;
+use annotate_snippets::{Group, Level};
 use anyhow::{Context as _, anyhow, bail, format_err};
 use cargo_credential::Secret;
 use cargo_util::paths;
@@ -1584,13 +1584,15 @@ impl GlobalContext {
                     }
                 } else {
                     self.shell().print_report(&[
-                        Level::WARNING.primary_title(
-                        format!(
-                        "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
-                        possible.display(),
-                    )).element(Level::NOTE.message(
-                        format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")))
-
+                        Group::with_title(
+                            Level::WARNING.secondary_title(format!(
+                                "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                                possible.display(),
+                            )
+                        )),
+                        Group::with_title(Level::NOTE.secondary_title(
+                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")
+                        ))
                     ], false)?;
                 }
             }

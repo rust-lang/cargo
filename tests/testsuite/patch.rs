@@ -931,8 +931,7 @@ fn add_patch_with_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`
-  |
-  = [NOTE] configure `features` in the `dependencies` entry
+[NOTE] configure `features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -944,8 +943,7 @@ fn add_patch_with_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`
-  |
-  = [NOTE] configure `features` in the `dependencies` entry
+[NOTE] configure `features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -981,8 +979,7 @@ fn add_patch_with_setting_default_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`, `default-features`
-  |
-  = [NOTE] configure `features`, `default-features` in the `dependencies` entry
+[NOTE] configure `features`, `default-features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -994,8 +991,7 @@ fn add_patch_with_setting_default_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`, `default-features`
-  |
-  = [NOTE] configure `features`, `default-features` in the `dependencies` entry
+[NOTE] configure `features`, `default-features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

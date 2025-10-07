@@ -4,7 +4,7 @@ use crate::core::{Package, Workspace};
 use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
 use crate::{CargoResult, GlobalContext};
-use annotate_snippets::Level;
+use annotate_snippets::{Group, Level};
 use anyhow::Context;
 use cargo_util::paths;
 use gix::bstr::ByteSlice;
@@ -164,22 +164,21 @@ fn warn_symlink_checked_out_as_plain_text_file(
             repo.workdir().unwrap().display()
         );
         let mut notes = vec![
-            Level::NOTE.message(
+            Group::with_title(Level::WARNING.secondary_title(msg)),
+            Group::with_title(Level::NOTE.secondary_title(
                 "this might cause the `.crate` file to include incorrect or incomplete files",
+            )),
+            Group::with_title(
+                Level::HELP
+                    .secondary_title("to avoid this, set the Git config `core.symlinks` to `true`"),
             ),
-            Level::HELP.message("to avoid this, set the Git config `core.symlinks` to `true`"),
         ];
         if cfg!(windows) {
-            notes.push(
-                Level::HELP.message("on Windows, enable the Developer Mode to support symlinks"),
-            );
+            notes.push(Group::with_title(Level::HELP.secondary_title(
+                "on Windows, enable the Developer Mode to support symlinks",
+            )));
         };
-        gctx.shell().print_report(
-            &[Level::WARNING
-                .secondary_title(msg)
-                .elements(notes.into_iter())],
-            false,
-        )?;
+        gctx.shell().print_report(&notes, false)?;
     }
 
     Ok(())
