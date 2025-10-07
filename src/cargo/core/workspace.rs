@@ -226,11 +226,7 @@ impl<'gctx> Workspace<'gctx> {
         }
 
         ws.target_dir = gctx.target_dir()?;
-        ws.build_dir = gctx.build_dir(
-            ws.root_manifest
-                .as_ref()
-                .unwrap_or(&manifest_path.to_path_buf()),
-        )?;
+        ws.build_dir = gctx.build_dir(ws.root_manifest())?;
 
         ws.custom_metadata = ws
             .load_workspace_config()?
