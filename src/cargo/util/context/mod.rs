@@ -995,13 +995,9 @@ impl GlobalContext {
     /// if you want that.
     pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
         let key = ConfigKey::from_str(key);
-        self._get_list(&key)
-    }
-
-    fn _get_list(&self, key: &ConfigKey) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
-        match self.get_cv(key)? {
+        match self.get_cv(&key)? {
             Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => self.expected("list", key, &val),
+            Some(val) => self.expected("list", &key, &val),
             None => Ok(None),
         }
     }

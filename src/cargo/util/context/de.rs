@@ -402,8 +402,15 @@ struct ConfigSeqAccess {
 impl ConfigSeqAccess {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
-        if let Some(v) = de.gctx._get_list(&de.key)? {
-            res.extend(v.val);
+
+        match de.gctx.get_cv(&de.key)? {
+            Some(CV::List(val, _definition)) => {
+                res.extend(val);
+            }
+            Some(val) => {
+                de.gctx.expected("list", &de.key, &val)?;
+            }
+            None => {}
         }
 
         de.gctx.get_env_list(&de.key, &mut res)?;
