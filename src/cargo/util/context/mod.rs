@@ -1006,27 +1006,6 @@ impl GlobalContext {
         }
     }
 
-    /// Helper for `StringList` type to get something that is a string or list.
-    fn get_list_or_string(&self, key: &ConfigKey) -> CargoResult<Vec<(String, Definition)>> {
-        let mut res = Vec::new();
-
-        match self.get_cv(key)? {
-            Some(CV::List(val, _def)) => res.extend(val),
-            Some(CV::String(val, def)) => {
-                let split_vs = val.split_whitespace().map(|s| (s.to_string(), def.clone()));
-                res.extend(split_vs);
-            }
-            Some(val) => {
-                return self.expected("string or array of strings", key, &val);
-            }
-            None => {}
-        }
-
-        self.get_env_list(key, &mut res)?;
-
-        Ok(res)
-    }
-
     /// Internal method for getting an environment variable as a list.
     /// If the key is a non-mergeable list and a value is found in the environment, existing values are cleared.
     fn get_env_list(
