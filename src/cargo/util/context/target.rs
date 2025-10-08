@@ -238,11 +238,11 @@ fn parse_links_overrides(
     Ok(links_overrides)
 }
 
-fn extra_link_args<'a>(
+fn extra_link_args(
     link_type: LinkArgTarget,
     key: &str,
-    value: &'a CV,
-) -> CargoResult<impl Iterator<Item = (LinkArgTarget, String)> + 'a> {
+    value: &CV,
+) -> CargoResult<Vec<(LinkArgTarget, String)>> {
     let args = value.list(key)?;
-    Ok(args.iter().map(move |v| (link_type.clone(), v.0.clone())))
+    Ok(args.into_iter().map(|v| (link_type.clone(), v.0)).collect())
 }

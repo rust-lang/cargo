@@ -989,11 +989,7 @@ impl GlobalContext {
 
     /// Internal method for getting an environment variable as a list.
     /// If the key is a non-mergeable list and a value is found in the environment, existing values are cleared.
-    fn get_env_list(
-        &self,
-        key: &ConfigKey,
-        output: &mut Vec<(String, Definition)>,
-    ) -> CargoResult<()> {
+    fn get_env_list(&self, key: &ConfigKey, output: &mut Vec<ConfigValue>) -> CargoResult<()> {
         let Some(env_val) = self.env.get_str(key.as_env_key()) else {
             self.check_environment_key_case_mismatch(key);
             return Ok(());
@@ -1018,16 +1014,16 @@ impl GlobalContext {
                         def.clone(),
                     )
                 })?;
-                output.push((s.to_string(), def.clone()));
+                output.push(CV::String(s.to_string(), def.clone()))
             }
         } else {
             output.extend(
                 env_val
                     .split_whitespace()
-                    .map(|s| (s.to_string(), def.clone())),
+                    .map(|s| CV::String(s.to_string(), def.clone())),
             );
         }
-        output.sort_by(|a, b| a.1.cmp(&b.1));
+        output.sort_by(|a, b| a.definition().cmp(b.definition()));
         Ok(())
     }
 
@@ -1386,7 +1382,16 @@ impl GlobalContext {
             Some(CV::String(s, def)) => {
                 vec![abs(s, def)]
             }
-            Some(CV::List(list, _def)) => list.iter().map(|(s, def)| abs(s, def)).collect(),
+            Some(CV::List(list, _def)) => list
+                .iter()
+                .map(|cv| match cv {
+                    CV::String(s, def) => Ok(abs(s, def)),
+                    other => bail!(
+                        "`include` expected a string or list of strings, but found {} in list",
+                        other.desc()
+                    ),
+                })
+                .collect::<CargoResult<Vec<_>>>()?,
             Some(other) => bail!(
                 "`include` expected a string or list, but found {} in `{}`",
                 other.desc(),
@@ -1774,7 +1779,16 @@ impl GlobalContext {
         let key = ConfigKey::from_str("paths");
         // paths overrides cannot be set via env config, so use get_cv here.
         match self.get_cv(&key)? {
-            Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
+            Some(CV::List(val, definition)) => {
+                let val = val
+                    .into_iter()
+                    .map(|cv| match cv {
+                        CV::String(s, def) => Ok((s, def)),
+                        other => self.expected("string", &key, &other),
+                    })
+                    .collect::<CargoResult<Vec<_>>>()?;
+                Ok(Some(Value { val, definition }))
+            }
             Some(val) => self.expected("list", &key, &val),
             None => Ok(None),
         }
@@ -2138,7 +2152,7 @@ enum KeyOrIdx {
 pub enum ConfigValue {
     Integer(i64, Definition),
     String(String, Definition),
-    List(Vec<(String, Definition)>, Definition),
+    List(Vec<ConfigValue>, Definition),
     Table(HashMap<String, ConfigValue>, Definition),
     Boolean(bool, Definition),
 }
@@ -2151,11 +2165,11 @@ impl fmt::Debug for ConfigValue {
             CV::String(s, def) => write!(f, "{} (from {})", s, def),
             CV::List(list, def) => {
                 write!(f, "[")?;
-                for (i, (s, def)) in list.iter().enumerate() {
+                for (i, item) in list.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{} (from {})", s, def)?;
+                    write!(f, "{item:?}")?;
                 }
                 write!(f, "] (from {})", def)
             }
@@ -2196,7 +2210,7 @@ impl ConfigValue {
                 val.into_iter()
                     .enumerate()
                     .map(|(i, toml)| match toml {
-                        toml::Value::String(val) => Ok((val, def.clone())),
+                        toml::Value::String(val) => Ok(CV::String(val, def.clone())),
                         v => {
                             path.push(KeyOrIdx::Idx(i));
                             bail!("expected string but found {} at index {i}", v.type_str())
@@ -2231,9 +2245,7 @@ impl ConfigValue {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
             CV::Integer(i, _) => toml::Value::Integer(i),
-            CV::List(l, _) => {
-                toml::Value::Array(l.into_iter().map(|(s, _)| toml::Value::String(s)).collect())
-            }
+            CV::List(l, _) => toml::Value::Array(l.into_iter().map(|cv| cv.into_toml()).collect()),
             CV::Table(l, _) => {
                 toml::Value::Table(l.into_iter().map(|(k, v)| (k, v.into_toml())).collect())
             }
@@ -2275,7 +2287,7 @@ impl ConfigValue {
                         mem::swap(new, old);
                     }
                 }
-                old.sort_by(|a, b| a.1.cmp(&b.1));
+                old.sort_by(|a, b| a.definition().cmp(b.definition()));
             }
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 for (key, value) in mem::take(new) {
@@ -2344,9 +2356,15 @@ impl ConfigValue {
         }
     }
 
-    pub fn list(&self, key: &str) -> CargoResult<&[(String, Definition)]> {
+    pub fn list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
         match self {
-            CV::List(list, _) => Ok(list),
+            CV::List(list, _) => list
+                .iter()
+                .map(|cv| match cv {
+                    CV::String(s, def) => Ok((s.clone(), def.clone())),
+                    _ => self.expected("string", key),
+                })
+                .collect::<CargoResult<_>>(),
             _ => self.expected("list", key),
         }
     }

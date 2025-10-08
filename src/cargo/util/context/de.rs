@@ -160,7 +160,9 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
             match self.gctx.get_cv(&self.key)? {
                 Some(CV::List(val, _def)) => res.extend(val),
                 Some(CV::String(val, def)) => {
-                    let split_vs = val.split_whitespace().map(|s| (s.to_string(), def.clone()));
+                    let split_vs = val
+                        .split_whitespace()
+                        .map(|s| CV::String(s.to_string(), def.clone()));
                     res.extend(split_vs);
                 }
                 Some(val) => {
@@ -172,7 +174,13 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
 
             self.gctx.get_env_list(&self.key, &mut res)?;
 
-            let vals: Vec<String> = res.into_iter().map(|vd| vd.0).collect();
+            let vals: Vec<String> = res
+                .into_iter()
+                .map(|val| match val {
+                    CV::String(s, _defintion) => Ok(s),
+                    other => Err(ConfigError::expected(&self.key, "string", &other)),
+                })
+                .collect::<Result<_, _>>()?;
             visitor.visit_newtype_struct(vals.into_deserializer())
         } else {
             visitor.visit_newtype_struct(self)
@@ -396,7 +404,9 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
 }
 
 struct ConfigSeqAccess {
-    list_iter: vec::IntoIter<(String, Definition)>,
+    /// The config key to the sequence.
+    key: ConfigKey,
+    list_iter: vec::IntoIter<CV>,
 }
 
 impl ConfigSeqAccess {
@@ -416,6 +426,7 @@ impl ConfigSeqAccess {
         de.gctx.get_env_list(&de.key, &mut res)?;
 
         Ok(ConfigSeqAccess {
+            key: de.key,
             list_iter: res.into_iter(),
         })
     }
@@ -430,12 +441,13 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
     {
         match self.list_iter.next() {
             // TODO: add `def` to error?
-            Some((value, def)) => {
+            Some(CV::String(value, def)) => {
                 // This might be a String or a Value<String>.
                 // ValueDeserializer will handle figuring out which one it is.
                 let maybe_value_de = ValueDeserializer::new_with_string(value, def);
                 seed.deserialize(maybe_value_de).map(Some)
             }
+            Some(val) => Err(ConfigError::expected(&self.key, "list of string", &val)),
             None => Ok(None),
         }
     }
