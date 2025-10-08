@@ -527,7 +527,7 @@ pub fn add_overrides<'a>(
     ws: &Workspace<'a>,
 ) -> CargoResult<()> {
     let gctx = ws.gctx();
-    let Some(paths) = gctx.get_list("paths")? else {
+    let Some(paths) = gctx.paths_overrides()? else {
         return Ok(());
     };
 

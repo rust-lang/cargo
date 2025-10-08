@@ -3,7 +3,6 @@
 use std::{collections::HashMap, fs};
 
 use crate::prelude::*;
-use cargo::util::context::Definition;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::str;
@@ -262,33 +261,6 @@ fn merges_table() {
     assert_eq!(gctx.get::<i32>("foo.key3").unwrap(), 5);
     assert_eq!(gctx.get::<i32>("foo.key4").unwrap(), 6);
     assert_eq!(gctx.get::<i32>("foo.key5").unwrap(), 9);
-}
-
-#[cargo_test]
-fn merge_array_mixed_def_paths() {
-    // Merging of arrays with different def sites.
-    write_config_toml(
-        "
-        paths = ['file']
-        ",
-    );
-    // Create a directory for CWD to differentiate the paths.
-    let somedir = paths::root().join("somedir");
-    fs::create_dir(&somedir).unwrap();
-    let gctx = GlobalContextBuilder::new()
-        .cwd(&somedir)
-        .config_arg("paths=['cli']")
-        // env is currently ignored for get_list()
-        .env("CARGO_PATHS", "env")
-        .build();
-    let paths = gctx.get_list("paths").unwrap().unwrap();
-    // The definition for the root value is somewhat arbitrary, but currently starts with the file because that is what is loaded first.
-    assert_eq!(paths.definition, Definition::Path(paths::root()));
-    assert_eq!(paths.val.len(), 2);
-    assert_eq!(paths.val[0].0, "file");
-    assert_eq!(paths.val[0].1.root(&gctx), paths::root());
-    assert_eq!(paths.val[1].0, "cli");
-    assert_eq!(paths.val[1].1.root(&gctx), somedir);
 }
 
 #[cargo_test]

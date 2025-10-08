@@ -155,8 +155,24 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         V: de::Visitor<'de>,
     {
         if name == "StringList" {
-            let vals = self.gctx.get_list_or_string(&self.key)?;
-            let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
+            let mut res = Vec::new();
+
+            match self.gctx.get_cv(&self.key)? {
+                Some(CV::List(val, _def)) => res.extend(val),
+                Some(CV::String(val, def)) => {
+                    let split_vs = val.split_whitespace().map(|s| (s.to_string(), def.clone()));
+                    res.extend(split_vs);
+                }
+                Some(val) => {
+                    self.gctx
+                        .expected("string or array of strings", &self.key, &val)?;
+                }
+                None => {}
+            }
+
+            self.gctx.get_env_list(&self.key, &mut res)?;
+
+            let vals: Vec<String> = res.into_iter().map(|vd| vd.0).collect();
             visitor.visit_newtype_struct(vals.into_deserializer())
         } else {
             visitor.visit_newtype_struct(self)
@@ -386,8 +402,15 @@ struct ConfigSeqAccess {
 impl ConfigSeqAccess {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
-        if let Some(v) = de.gctx._get_list(&de.key)? {
-            res.extend(v.val);
+
+        match de.gctx.get_cv(&de.key)? {
+            Some(CV::List(val, _definition)) => {
+                res.extend(val);
+            }
+            Some(val) => {
+                de.gctx.expected("list", &de.key, &val)?;
+            }
+            None => {}
         }
 
         de.gctx.get_env_list(&de.key, &mut res)?;
