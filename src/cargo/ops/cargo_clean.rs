@@ -226,8 +226,13 @@ fn clean_specs(
                 CompileMode::Check { test: false },
             ] {
                 for (compile_kind, layout) in &layouts {
-                    let triple = target_data.short_name(compile_kind);
+                    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+                        let dir = layout.build_unit(&pkg.name());
+                        clean_ctx.rm_rf_glob(&dir)?;
+                        continue;
+                    }
 
+                    let triple = target_data.short_name(compile_kind);
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
                         .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
