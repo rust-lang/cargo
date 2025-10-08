@@ -2311,57 +2311,30 @@ fn array_of_any_types() {
     let gctx = new_gctx();
 
     // Test integer array
-    assert_error(
-        gctx.get::<Vec<i32>>("ints").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
+    let ints: Vec<i32> = gctx.get("ints").unwrap();
+    assert_eq!(ints, vec![1, 2, 3]);
 
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `ints[0]`
-
-Caused by:
-  expected string but found integer at index 0
-"#]],
-    );
-
-    assert_error(
-        gctx.get::<Vec<bool>>("bools").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `ints[0]`
-
-Caused by:
-  expected string but found integer at index 0
-"#]],
-    );
+    let bools: Vec<bool> = gctx.get("bools").unwrap();
+    assert_eq!(bools, vec![true, false, true]);
 
     #[derive(Deserialize, Debug, PartialEq)]
     struct T {
         name: String,
         value: i32,
     }
-    assert_error(
-        gctx.get::<Vec<T>>("tables").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `ints[0]`
-
-Caused by:
-  expected string but found integer at index 0
-"#]],
+    let tables: Vec<T> = gctx.get("tables").unwrap();
+    assert_eq!(
+        tables,
+        vec![
+            T {
+                name: "first".into(),
+                value: 1,
+            },
+            T {
+                name: "second".into(),
+                value: 2,
+            },
+        ]
     );
 }
 
@@ -2415,72 +2388,67 @@ fn nested_array() {
         "#,
     );
 
-    let gctx = GlobalContextBuilder::new().build();
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("nested_ints = [[5]]")
+        .build();
 
-    assert_error(
-        gctx.get::<Vec<Vec<i32>>>("nested_ints").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `nested_ints[0]`
-
-Caused by:
-  expected string but found array at index 0
-"#]],
-    );
+    let nested = gctx.get::<Vec<Vec<i32>>>("nested_ints").unwrap();
+    assert_eq!(nested, vec![vec![1, 2], vec![3, 4], vec![5]]);
 
     // exercising Value and Definition
-    assert_error(
-        gctx.get::<Vec<Value<Vec<Value<i32>>>>>("nested_ints")
-            .unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `nested_ints[0]`
-
-Caused by:
-  expected string but found array at index 0
-"#]],
+    let nested = gctx
+        .get::<Vec<Value<Vec<Value<i32>>>>>("nested_ints")
+        .unwrap();
+    let def = Definition::Path(root_path);
+    assert_eq!(
+        nested,
+        vec![
+            Value {
+                val: vec![
+                    Value {
+                        val: 1,
+                        definition: def.clone(),
+                    },
+                    Value {
+                        val: 2,
+                        definition: def.clone(),
+                    },
+                ],
+                definition: def.clone()
+            },
+            Value {
+                val: vec![
+                    Value {
+                        val: 3,
+                        definition: def.clone(),
+                    },
+                    Value {
+                        val: 4,
+                        definition: def.clone(),
+                    },
+                ],
+                definition: def.clone(),
+            },
+            Value {
+                val: vec![Value {
+                    val: 5,
+                    definition: Definition::Cli(None),
+                },],
+                definition: Definition::Cli(None),
+            },
+        ]
     );
 
-    assert_error(
-        gctx.get::<Vec<Vec<bool>>>("nested_bools").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
+    let nested = gctx.get::<Vec<Vec<bool>>>("nested_bools").unwrap();
+    assert_eq!(nested, vec![vec![true], vec![false, true]]);
 
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `nested_ints[0]`
-
-Caused by:
-  expected string but found array at index 0
-"#]],
-    );
-
-    assert_error(
-        gctx.get::<Vec<Vec<String>>>("nested_strings").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `nested_ints[0]`
-
-Caused by:
-  expected string but found array at index 0
-"#]],
+    let nested = gctx.get::<Vec<Vec<String>>>("nested_strings").unwrap();
+    assert_eq!(
+        nested,
+        vec![
+            vec!["a".to_string(), "b".to_string()],
+            vec!["3".to_string(), "4".to_string()]
+        ]
     );
 
     #[derive(Deserialize, Debug, PartialEq)]
@@ -2488,19 +2456,81 @@ Caused by:
         x: Vec<Vec<Vec<S>>>,
         y: i32,
     }
-    assert_error(
-        gctx.get::<Vec<Vec<S>>>("deeply_nested").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
+    let nested = gctx.get::<Vec<Vec<S>>>("deeply_nested").unwrap();
+    assert_eq!(
+        nested,
+        vec![vec![S {
+            x: vec![vec![vec![S { x: vec![], y: 2 }]]],
+            y: 1,
+        }]],
+    );
+}
 
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+#[cargo_test]
+fn mixed_type_array() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(&root_path, r#"a = [{ x = 1 }]"#);
 
-Caused by:
-  failed to parse config at `nested_ints[0]`
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(&foo_path, r#"a = [true, [false]]"#);
 
-Caused by:
-  expected string but found array at index 0
-"#]],
+    let gctx = GlobalContextBuilder::new()
+        .cwd("foo")
+        .env("CARGO_A", "hello")
+        .config_arg("a = [123]")
+        .build();
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    #[serde(untagged)]
+    enum Item {
+        B(bool),
+        I(i32),
+        S(String),
+        T { x: i32 },
+        L(Vec<bool>),
+    }
+
+    use Item::*;
+
+    // Simple vector works
+    assert_eq!(
+        gctx.get::<Vec<Item>>("a").unwrap(),
+        vec![
+            T { x: 1 },
+            B(true),
+            L(vec![false]),
+            S("hello".into()),
+            I(123)
+        ],
+    );
+
+    // Value and Definition works
+    assert_eq!(
+        gctx.get::<Value<Vec<Value<Item>>>>("a").unwrap(),
+        Value {
+            val: vec![
+                Value {
+                    val: T { x: 1 },
+                    definition: Definition::Path(root_path.clone()),
+                },
+                Value {
+                    val: B(true),
+                    definition: Definition::Path(foo_path.clone()),
+                },
+                Value {
+                    val: L(vec![false]),
+                    definition: Definition::Path(foo_path.clone()),
+                },
+                Value {
+                    val: S("hello".into()),
+                    definition: Definition::Environment("CARGO_A".into()),
+                },
+                Value {
+                    val: I(123),
+                    definition: Definition::Cli(None),
+                },
+            ],
+            definition: Definition::Environment("CARGO_A".into()),
+        }
     );
 }

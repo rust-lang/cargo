@@ -115,6 +115,21 @@ fn print_toml(gctx: &GlobalContext, opts: &GetOptions<'_>, key: &ConfigKey, cv: 
         }
         format!(" # {}", def)
     };
+
+    fn cv_to_toml(cv: &CV) -> toml_edit::Value {
+        match cv {
+            CV::String(s, _) => toml_edit::Value::from(s.as_str()),
+            CV::Integer(i, _) => toml_edit::Value::from(*i),
+            CV::Boolean(b, _) => toml_edit::Value::from(*b),
+            CV::List(l, _) => toml_edit::Value::from_iter(l.iter().map(cv_to_toml)),
+            CV::Table(t, _) => toml_edit::Value::from_iter({
+                let mut t: Vec<_> = t.iter().collect();
+                t.sort_by_key(|t| t.0);
+                t.into_iter().map(|(k, v)| (k, cv_to_toml(v)))
+            }),
+        }
+    }
+
     match cv {
         CV::Boolean(val, def) => drop_println!(gctx, "{} = {}{}", key, val, origin(def)),
         CV::Integer(val, def) => drop_println!(gctx, "{} = {}{}", key, val, origin(def)),
@@ -129,31 +144,13 @@ fn print_toml(gctx: &GlobalContext, opts: &GetOptions<'_>, key: &ConfigKey, cv: 
             if opts.show_origin {
                 drop_println!(gctx, "{} = [", key);
                 for cv in vals {
-                    let (val, def) = match cv {
-                        CV::String(s, def) => (s.as_str(), def),
-                        // This is actually unreachable until we start supporting list of different types.
-                        // It should be validated already during the deserialization.
-                        v => todo!("support {} type ", v.desc()),
-                    };
-                    drop_println!(
-                        gctx,
-                        "    {}, # {}",
-                        serde::Serialize::serialize(val, toml_edit::ser::ValueSerializer::new())
-                            .unwrap(),
-                        def
-                    );
+                    let val = cv_to_toml(cv);
+                    let def = cv.definition();
+                    drop_println!(gctx, "    {val}, # {def}");
                 }
                 drop_println!(gctx, "]");
             } else {
-                let vals: toml_edit::Array = vals
-                    .iter()
-                    .map(|cv| match cv {
-                        CV::String(s, _) => toml_edit::Value::from(s.as_str()),
-                        // This is actually unreachable until we start supporting list of different types.
-                        // It should be validated already during the deserialization.
-                        v => todo!("support {} type ", v.desc()),
-                    })
-                    .collect();
+                let vals: toml_edit::Array = vals.iter().map(cv_to_toml).collect();
                 drop_println!(gctx, "{} = {}", key, vals);
             }
         }
