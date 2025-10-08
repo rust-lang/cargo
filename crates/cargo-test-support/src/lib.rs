@@ -1603,6 +1603,7 @@ pub fn no_such_file_err_msg() -> String {
 /// Helper to retry a function `n` times.
 ///
 /// The function should return `Some` when it is ready.
+#[track_caller]
 pub fn retry<F, R>(n: u32, mut f: F) -> R
 where
     F: FnMut() -> Option<R>,
@@ -1631,6 +1632,7 @@ fn retry_fails() {
 }
 
 /// Helper that waits for a thread to finish, up to `n` tenths of a second.
+#[track_caller]
 pub fn thread_wait_timeout<T>(n: u32, thread: JoinHandle<T>) -> T {
     retry(n, || thread.is_finished().then_some(()));
     thread.join().unwrap()
@@ -1638,6 +1640,7 @@ pub fn thread_wait_timeout<T>(n: u32, thread: JoinHandle<T>) -> T {
 
 /// Helper that runs some function, and waits up to `n` tenths of a second for
 /// it to finish.
+#[track_caller]
 pub fn threaded_timeout<F, R>(n: u32, f: F) -> R
 where
     F: FnOnce() -> R + Send + 'static,
@@ -1714,6 +1717,7 @@ pub fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path,
     }
 }
 
+#[track_caller]
 pub fn assert_deps_contains(project: &Project, fingerprint: &str, expected: &[(u8, &str)]) {
     assert_deps(project, fingerprint, |info_path, entries| {
         for (e_kind, e_path) in expected {
