@@ -50,6 +50,7 @@ mod help;
 mod infer_prerelease;
 mod invalid_arg;
 mod invalid_git_name;
+mod invalid_inherited_dependency;
 mod invalid_key_inherit_dependency;
 mod invalid_key_overwrite_inherit_dependency;
 mod invalid_key_rename_inherit_dependency;
