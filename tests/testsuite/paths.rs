@@ -250,3 +250,56 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn env_paths_overrides_not_supported() {
+    Package::new("file", "0.1.0").publish();
+    Package::new("cli", "0.1.0").publish();
+    Package::new("env", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies]
+                file = "0.1.0"
+                cli = "0.1.0"
+                env = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("file/Cargo.toml", &basic_manifest("file", "0.2.0"))
+        .file("file/src/lib.rs", "")
+        .file("cli/Cargo.toml", &basic_manifest("cli", "0.2.0"))
+        .file("cli/src/lib.rs", "")
+        .file("env/Cargo.toml", &basic_manifest("env", "0.2.0"))
+        .file("env/src/lib.rs", "")
+        .file(".cargo/config.toml", r#"paths = ["file"]"#)
+        .build();
+
+    p.cargo("check")
+        .arg("--config")
+        .arg("paths=['cli']")
+        // paths overrides ignore env
+        .env("CARGO_PATHS", "env")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] env v0.1.0 (registry `dummy-registry`)
+[CHECKING] file v0.2.0 ([ROOT]/foo/file)
+[CHECKING] cli v0.2.0 ([ROOT]/foo/cli)
+[CHECKING] env v0.1.0
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
