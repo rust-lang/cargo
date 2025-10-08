@@ -281,7 +281,7 @@ fn merge_array_mixed_def_paths() {
         // env is currently ignored for get_list()
         .env("CARGO_PATHS", "env")
         .build();
-    let paths = gctx.get_list("paths").unwrap().unwrap();
+    let paths = gctx.paths_overrides().unwrap().unwrap();
     // The definition for the root value is somewhat arbitrary, but currently starts with the file because that is what is loaded first.
     assert_eq!(paths.definition, Definition::Path(paths::root()));
     assert_eq!(paths.val.len(), 2);

@@ -986,15 +986,10 @@ impl GlobalContext {
         }
     }
 
-    /// Get a list of strings.
-    ///
-    /// DO NOT USE outside of the config module. `pub` will be removed in the
-    /// future.
-    ///
-    /// NOTE: this does **not** support environment variables. Use `get` instead
-    /// if you want that.
-    pub fn get_list(&self, key: &str) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
-        let key = ConfigKey::from_str(key);
+    /// Get the `paths` overrides config value.
+    pub fn paths_overrides(&self) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
+        let key = ConfigKey::from_str("paths");
+        // paths overrides cannot be set via env config, so use get_cv here.
         match self.get_cv(&key)? {
             Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("list", &key, &val),
