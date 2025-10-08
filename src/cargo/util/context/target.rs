@@ -173,13 +173,13 @@ fn parse_links_overrides(
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
-                    let list = value.list(key)?;
+                    let list = value.string_list(key)?;
                     output
                         .library_links
                         .extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
-                    let list = value.list(key)?;
+                    let list = value.string_list(key)?;
                     output.library_paths.extend(
                         list.iter()
                             .map(|v| PathBuf::from(&v.0))
@@ -211,11 +211,11 @@ fn parse_links_overrides(
                     output.linker_args.extend(args);
                 }
                 "rustc-cfg" => {
-                    let list = value.list(key)?;
+                    let list = value.string_list(key)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-check-cfg" => {
-                    let list = value.list(key)?;
+                    let list = value.string_list(key)?;
                     output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-env" => {
@@ -243,6 +243,6 @@ fn extra_link_args(
     key: &str,
     value: &CV,
 ) -> CargoResult<Vec<(LinkArgTarget, String)>> {
-    let args = value.list(key)?;
+    let args = value.string_list(key)?;
     Ok(args.into_iter().map(|v| (link_type.clone(), v.0)).collect())
 }

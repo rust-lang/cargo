@@ -2356,7 +2356,7 @@ impl ConfigValue {
         }
     }
 
-    pub fn list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
+    pub fn string_list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
         match self {
             CV::List(list, _) => list
                 .iter()
