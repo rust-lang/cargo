@@ -81,16 +81,7 @@ fn alias_malformed_config_list() {
     p.cargo("b-cargo-test -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `alias.b-cargo-test[0]`
-
-Caused by:
-  expected string but found integer at index 0
+[ERROR] invalid type: integer `1`, expected a string
 
 "#]])
         .run();
