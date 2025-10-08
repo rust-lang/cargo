@@ -191,6 +191,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::task::{Poll, ready};
 
+use annotate_snippets::Level;
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
@@ -832,10 +833,17 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     .expect("--precise <yanked-version> in use");
                 if self.selected_precise_yanked.insert((name, version.clone())) {
                     let mut shell = self.gctx.shell();
-                    shell.warn(format_args!(
-                        "selected package `{name}@{version}` was yanked by the author"
-                    ))?;
-                    shell.note("if possible, try a compatible non-yanked version")?;
+                    shell.print_report(
+                        &[Level::WARNING
+                            .secondary_title(format!(
+                                "selected package `{name}@{version}` was yanked by the author"
+                            ))
+                            .element(
+                                Level::HELP
+                                    .message("if possible, try a compatible non-yanked version"),
+                            )],
+                        false,
+                    )?;
                 }
             }
             if called {

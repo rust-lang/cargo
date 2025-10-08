@@ -4,6 +4,7 @@ use crate::core::{Package, Workspace};
 use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
 use crate::{CargoResult, GlobalContext};
+use annotate_snippets::Level;
 use anyhow::Context;
 use cargo_util::paths;
 use gix::bstr::ByteSlice;
@@ -158,20 +159,27 @@ fn warn_symlink_checked_out_as_plain_text_file(
     }
 
     if src_files.iter().any(|f| f.maybe_plain_text_symlink()) {
-        let mut shell = gctx.shell();
-        shell.warn(format_args!(
-            "found symbolic links that may be checked out as regular files for git repo at `{}/`\n\
-        This might cause the `.crate` file to include incorrect or incomplete files",
-            repo.workdir().unwrap().display(),
-        ))?;
-        let extra_note = if cfg!(windows) {
-            "\nAnd on Windows, enable the Developer Mode to support symlinks"
-        } else {
-            ""
+        let msg = format!(
+            "found symbolic links that may be checked out as regular files for git repo at `{}/`",
+            repo.workdir().unwrap().display()
+        );
+        let mut notes = vec![
+            Level::NOTE.message(
+                "this might cause the `.crate` file to include incorrect or incomplete files",
+            ),
+            Level::HELP.message("to avoid this, set the Git config `core.symlinks` to `true`"),
+        ];
+        if cfg!(windows) {
+            notes.push(
+                Level::HELP.message("on Windows, enable the Developer Mode to support symlinks"),
+            );
         };
-        shell.note(format_args!(
-            "to avoid this, set the Git config `core.symlinks` to `true`{extra_note}",
-        ))?;
+        gctx.shell().print_report(
+            &[Level::WARNING
+                .secondary_title(msg)
+                .elements(notes.into_iter())],
+            false,
+        )?;
     }
 
     Ok(())
