@@ -986,17 +986,6 @@ impl GlobalContext {
         }
     }
 
-    /// Get the `paths` overrides config value.
-    pub fn paths_overrides(&self) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
-        let key = ConfigKey::from_str("paths");
-        // paths overrides cannot be set via env config, so use get_cv here.
-        match self.get_cv(&key)? {
-            Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => self.expected("list", &key, &val),
-            None => Ok(None),
-        }
-    }
-
     /// Internal method for getting an environment variable as a list.
     /// If the key is a non-mergeable list and a value is found in the environment, existing values are cleared.
     fn get_env_list(
@@ -1775,6 +1764,17 @@ impl GlobalContext {
                 toolchain_exe.exists().then_some(toolchain_exe)
             })
             .unwrap_or_else(|| PathBuf::from(tool_str))
+    }
+
+    /// Get the `paths` overrides config value.
+    pub fn paths_overrides(&self) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
+        let key = ConfigKey::from_str("paths");
+        // paths overrides cannot be set via env config, so use get_cv here.
+        match self.get_cv(&key)? {
+            Some(CV::List(val, definition)) => Ok(Some(Value { val, definition })),
+            Some(val) => self.expected("list", &key, &val),
+            None => Ok(None),
+        }
     }
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
