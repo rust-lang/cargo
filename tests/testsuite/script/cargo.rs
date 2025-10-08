@@ -674,6 +674,70 @@ args: []
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_deps_dir_implicit() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("deps.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v deps.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/deps-[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] deps- v0.0.0 ([ROOT]/foo/deps.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/deps-[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_deps_dir_explicit() {
+    let script = r#"#!/usr/bin/env cargo
+---
+package.name = "deps"
+---
+
+fn main() {
+    let current_exe = std::env::current_exe().unwrap().to_str().unwrap().to_owned();
+    let mut args = std::env::args_os();
+    let arg0 = args.next().unwrap().to_str().unwrap().to_owned();
+    let args = args.collect::<Vec<_>>();
+    println!("current_exe: {current_exe}");
+    println!("arg0: {arg0}");
+    println!("args: {args:?}");
+}
+
+#[test]
+fn test () {}
+"#;
+    let p = cargo_test_support::project()
+        .file("deps.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v deps.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[ERROR] failed to parse manifest at `[ROOT]/foo/deps.rs`
+
+Caused by:
+  the binary target name `deps` is forbidden, it conflicts with cargo's build directory names
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn script_like_dir() {
     let p = cargo_test_support::project()
         .file("foo.rs/foo", "something")
