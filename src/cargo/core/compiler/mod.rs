@@ -2168,12 +2168,14 @@ fn on_stderr_line_inner(
                 rendered: String,
                 #[serde(flatten, borrow)]
                 other: std::collections::BTreeMap<Cow<'a, str>, serde_json::Value>,
-                code: Option<DiagnosticCode>,
+                code: Option<DiagnosticCode<'a>>,
             }
 
             #[derive(serde::Deserialize, serde::Serialize)]
-            struct DiagnosticCode {
+            struct DiagnosticCode<'a> {
                 code: String,
+                #[serde(flatten, borrow)]
+                other: std::collections::BTreeMap<Cow<'a, str>, serde_json::Value>,
             }
 
             if let Ok(mut error) =
