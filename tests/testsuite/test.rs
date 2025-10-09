@@ -4456,6 +4456,46 @@ fn json_artifact_includes_executable_for_library_tests() {
 }
 
 #[cargo_test]
+fn json_diagnostic_includes_explanation() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            "fn main() { const OH_NO: &'static mut usize = &mut 1; }",
+        )
+        .build();
+
+    p.cargo("check --message-format=json")
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "message": {
+      "$message_type": "diagnostic",
+      "children": "{...}",
+      "code": {
+        "code": "E0764"
+      },
+      "level": "error",
+      "message": "{...}",
+      "rendered": "{...}",
+      "spans": "{...}"
+    },
+    "package_id": "{...}",
+    "reason": "compiler-message",
+    "target": "{...}"
+  },
+  "{...}"
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn json_artifact_includes_executable_for_integration_tests() {
     let p = project()
         .file(
