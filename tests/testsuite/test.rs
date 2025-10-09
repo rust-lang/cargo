@@ -4474,7 +4474,8 @@ fn json_diagnostic_includes_explanation() {
       "$message_type": "diagnostic",
       "children": "{...}",
       "code": {
-        "code": "E0764"
+        "code": "E0764",
+        "explanation": "{...}"
       },
       "level": "error",
       "message": "{...}",
