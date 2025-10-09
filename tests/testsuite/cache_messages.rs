@@ -507,7 +507,7 @@ fn wacky_hashless_fingerprint() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `unused`
 ...
-[WARNING] `foo` (bin "a") generated 1 warning
+[WARNING] `foo` (bin "a") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

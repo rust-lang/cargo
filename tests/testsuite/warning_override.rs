@@ -50,7 +50,7 @@ fn rustc_caching_allow_first() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -77,7 +77,7 @@ fn rustc_caching_deny_first() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -114,7 +114,7 @@ fn config() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -138,7 +138,7 @@ fn config() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -162,7 +162,7 @@ fn requires_nightly() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
