@@ -50,6 +50,8 @@ pub struct TreeOptions {
     pub display_depth: DisplayDepth,
     /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
+    /// Include only public dependencies.
+    pub public: bool,
 }
 
 #[derive(PartialEq)]

@@ -457,6 +457,10 @@ fn add_pkg(
                 if opts.no_proc_macro && graph.package_for_id(dep_id).proc_macro() {
                     return false;
                 }
+                // Filter out private dependencies if requested.
+                if opts.public && !dep.is_public() {
+                    return false;
+                }
                 if dep.is_optional() {
                     // If the new feature resolver does not enable this
                     // optional dep, then don't use it.
