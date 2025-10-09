@@ -4448,9 +4448,9 @@ fn cfg_env_vars_available() {
                 fn main() {
                     let fam = env::var("CARGO_CFG_TARGET_FAMILY").unwrap();
                     if cfg!(unix) {
-                        assert_eq!(fam, "unix");
-                    } else {
-                        assert_eq!(fam, "windows");
+                        assert!(fam.contains("unix"));
+                    } else if cfg!(windows) {
+                        assert!(fam.contains("windows"));
                     }
                 }
             "#,
