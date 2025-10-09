@@ -33,7 +33,7 @@ If that isn't the latest version, `cargo add` will inform users so they can make
 The [resolver](resolver.md#rust-version) may take Rust version into account when picking dependencies.
 
 Other tools may also take advantage of it, like `cargo clippy`'s
-[`incompatible_msrv` lint](https://rust-lang.github.io/rust-clippy/stable/index.html#/incompatible_msrv).
+[`incompatible_msrv` lint](https://rust-lang.github.io/rust-clippy/stable/index.html#incompatible_msrv).
 
 > **Note:** The `rust-version` may be ignored using the `--ignore-rust-version` option.
 
