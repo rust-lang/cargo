@@ -86,6 +86,24 @@ Trade-offs:
 - ✅ Faster build times
 - ❌ **Requires using nightly Rust and an [unstable Rust feature][parallel-frontend-issue]**
 
+## Reducing built code
+
+### Removing unused dependencies
+
+Recommendation: Periodically review unused dependencies for removal using third-party tools like
+[cargo-machete](https://crates.io/crates/cargo-machete),
+[cargo-udeps](https://crates.io/crates/cargo-udeps),
+[cargo-shear](https://crates.io/crates/cargo-shear).
+
+When changing code,
+it can be easy to miss that a dependency is no longer used and can be removed.
+
+> *Note:* native support for this in Cargo is being tracked in [#15813](https://github.com/rust-lang/cargo/issues/15813).
+
+Trade-offs:
+- ✅ Faster full build and link times
+- ❌ May incorrectly flag dependencies as unused or miss some
+
 [parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
 [parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
 [build.rustflags]: ../reference/config.md#buildrustflags
