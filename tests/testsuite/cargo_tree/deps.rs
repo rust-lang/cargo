@@ -1903,7 +1903,7 @@ c v0.1.0 ([ROOT]/foo/c) (*)
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn depth_public() {
+fn edge_public() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1964,18 +1964,18 @@ fn depth_public() {
         .file("dep/src/lib.rs", "")
         .build();
 
-    p.cargo("tree --depth public")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+    p.cargo("tree --edges public")
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `--depth public` requires `-Zunstable-options`
+[ERROR] `--edges public` requires `-Zunstable-options`
 
 "#]])
         .run();
 
-    p.cargo("tree --depth public -p left-pub")
+    p.cargo("tree --edges public -p left-pub")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 left-pub v0.1.0 ([ROOT]/foo/left-pub)
 └── dep v0.1.0 ([ROOT]/foo/dep)
@@ -1983,18 +1983,18 @@ left-pub v0.1.0 ([ROOT]/foo/left-pub)
 "#]])
         .run();
 
-    p.cargo("tree --depth public -p right-priv")
+    p.cargo("tree --edges public -p right-priv")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 right-priv v0.1.0 ([ROOT]/foo/right-priv)
 
 "#]])
         .run();
 
-    p.cargo("tree --depth public -p diamond")
+    p.cargo("tree --edges public -p diamond")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 diamond v0.1.0 ([ROOT]/foo/diamond)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
@@ -2004,9 +2004,9 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
 "#]])
         .run();
 
-    p.cargo("tree --depth public")
+    p.cargo("tree --edges public")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
 
@@ -2017,14 +2017,14 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
 
 left-pub v0.1.0 ([ROOT]/foo/left-pub) (*)
 
-right-priv v0.1.0 ([ROOT]/foo/right-priv) (*)
+right-priv v0.1.0 ([ROOT]/foo/right-priv)
 
 "#]])
         .run();
 
-    p.cargo("tree --depth public --invert dep")
+    p.cargo("tree --edges public --invert dep")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
 └── left-pub v0.1.0 ([ROOT]/foo/left-pub)

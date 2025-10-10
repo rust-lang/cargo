@@ -352,7 +352,7 @@ foo v0.1.0 ([ROOT]/foo)
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn depth_public_no_features() {
+fn edge_public_no_features() {
     Package::new("pub-defaultdep", "1.0.0").publish();
     Package::new("priv-defaultdep", "1.0.0").publish();
 
@@ -374,9 +374,9 @@ fn depth_public_no_features() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features --depth public")
+    p.cargo("tree -e features --edges public")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 └── pub-defaultdep feature "default"
@@ -387,7 +387,7 @@ foo v0.1.0 ([ROOT]/foo)
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn depth_public_transitive_features() {
+fn edge_public_transitive_features() {
     Package::new("pub-defaultdep", "1.0.0")
         .feature("default", &["f1"])
         .feature("f1", &["f2"])
@@ -423,19 +423,19 @@ fn depth_public_transitive_features() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features --depth public")
+    p.cargo("tree -e features --edges public")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 ├── priv-defaultdep feature "default"
 │   ├── priv-defaultdep v1.0.0
 │   └── priv-defaultdep feature "f1"
-│       ├── priv-defaultdep v1.0.0 (*)
+│       ├── priv-defaultdep v1.0.0
 │       └── priv-defaultdep feature "f2"
-│           ├── priv-defaultdep v1.0.0 (*)
+│           ├── priv-defaultdep v1.0.0
 │           └── priv-defaultdep feature "optdep"
-│               └── priv-defaultdep v1.0.0 (*)
+│               └── priv-defaultdep v1.0.0
 └── pub-defaultdep feature "default"
     ├── pub-defaultdep v1.0.0
     │   └── optdep feature "default"
@@ -454,7 +454,7 @@ foo v0.1.0 ([ROOT]/foo)
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn depth_public_cli() {
+fn edge_public_cli() {
     Package::new("priv", "1.0.0").feature("f", &[]).publish();
     Package::new("pub", "1.0.0").feature("f", &[]).publish();
 
@@ -482,18 +482,18 @@ fn depth_public_cli() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("tree -e features --depth public")
+    p.cargo("tree -e features --edges public")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 
 "#]])
         .run();
 
-    p.cargo("tree -e features --depth public --features pub-indirect")
+    p.cargo("tree -e features --edges public --features pub-indirect")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 └── pub feature "default"
@@ -502,9 +502,9 @@ foo v0.1.0 ([ROOT]/foo)
 "#]])
         .run();
 
-    p.cargo("tree -e features --depth public --features priv-indirect")
+    p.cargo("tree -e features --edges public --features priv-indirect")
         .arg("-Zunstable-options")
-        .masquerade_as_nightly_cargo(&["public-dependency", "depth-public"])
+        .masquerade_as_nightly_cargo(&["public-dependency", "edge-public"])
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
 

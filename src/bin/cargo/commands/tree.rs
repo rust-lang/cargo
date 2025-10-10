@@ -157,7 +157,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     };
     let target = tree::Target::from_cli(targets);
 
-    let (edge_kinds, no_proc_macro) = parse_edge_kinds(gctx, args)?;
+    let (edge_kinds, no_proc_macro, public) = parse_edge_kinds(gctx, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
 
     let pkgs_to_prune = args._values_of("prune");
@@ -230,6 +230,7 @@ subtree of the package given to -p.\n\
         graph_features,
         display_depth,
         no_proc_macro,
+        public,
     };
 
     if opts.graph_features && opts.duplicates {
@@ -246,9 +247,10 @@ subtree of the package given to -p.\n\
 fn parse_edge_kinds(
     gctx: &GlobalContext,
     args: &ArgMatches,
-) -> CargoResult<(HashSet<EdgeKind>, bool)> {
-    let (kinds, no_proc_macro) = {
+) -> CargoResult<(HashSet<EdgeKind>, bool, bool)> {
+    let (kinds, no_proc_macro, public) = {
         let mut no_proc_macro = false;
+        let mut public = false;
         let mut kinds = args.get_many::<String>("edges").map_or_else(
             || Vec::new(),
             |es| {
@@ -256,6 +258,9 @@ fn parse_edge_kinds(
                     .filter(|e| {
                         if *e == "no-proc-macro" {
                             no_proc_macro = true;
+                            false
+                        } else if *e == "public" {
+                            public = true;
                             false
                         } else {
                             true
@@ -275,7 +280,11 @@ fn parse_edge_kinds(
             kinds.extend(&["normal", "build", "dev"]);
         }
 
-        (kinds, no_proc_macro)
+        if public && !gctx.cli_unstable().unstable_options {
+            anyhow::bail!("`--edges public` requires `-Zunstable-options`");
+        }
+
+        (kinds, no_proc_macro, public)
     };
 
     let mut result = HashSet::new();
@@ -312,7 +321,7 @@ fn parse_edge_kinds(
                 k => return unknown(k),
             };
         }
-        return Ok((result, no_proc_macro));
+        return Ok((result, no_proc_macro, public));
     }
     for kind in &kinds {
         match *kind {
@@ -338,5 +347,5 @@ fn parse_edge_kinds(
     if kinds.len() == 1 && kinds[0] == "features" {
         insert_defaults(&mut result);
     }
-    Ok((result, no_proc_macro))
+    Ok((result, no_proc_macro, public))
 }

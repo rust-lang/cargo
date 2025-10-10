@@ -50,6 +50,8 @@ pub struct TreeOptions {
     pub display_depth: DisplayDepth,
     /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
+    /// Include only public dependencies.
+    pub public: bool,
 }
 
 #[derive(PartialEq)]
@@ -92,7 +94,6 @@ impl FromStr for Prefix {
 #[derive(Clone, Copy)]
 pub enum DisplayDepth {
     MaxDisplayDepth(u32),
-    Public,
     Workspace,
 }
 
@@ -102,7 +103,6 @@ impl FromStr for DisplayDepth {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "workspace" => Ok(Self::Workspace),
-            "public" => Ok(Self::Public),
             s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -426,15 +426,9 @@ fn print_dependencies<'a>(
         }
     }
 
-    let (max_display_depth, filter_non_workspace_member, filter_private) = match display_depth {
-        DisplayDepth::MaxDisplayDepth(max) => (max, false, false),
-        DisplayDepth::Workspace => (u32::MAX, true, false),
-        DisplayDepth::Public => {
-            if !ws.gctx().cli_unstable().unstable_options {
-                anyhow::bail!("`--depth public` requires `-Zunstable-options`")
-            }
-            (u32::MAX, false, true)
-        }
+    let (max_display_depth, filter_non_workspace_member) = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => (max, false),
+        DisplayDepth::Workspace => (u32::MAX, true),
     };
 
     // Current level exceeds maximum display depth. Skip.
@@ -451,17 +445,9 @@ fn print_dependencies<'a>(
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
                     }
-                    if filter_private && !dep.public() {
-                        return false;
-                    }
                     !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
-                Node::Feature { .. } => {
-                    if filter_private && !dep.public() {
-                        return false;
-                    }
-                    true
-                }
+                Node::Feature { .. } => true,
             }
         })
         .peekable();
