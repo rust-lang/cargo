@@ -1649,7 +1649,19 @@ target-dir = ''
 
 #[cargo_test]
 fn cargo_target_empty_env() {
-    let project = project().build();
+    let project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                authors = []
+                version = "0.0.0"
+                build = "build.rs"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
 
     project.cargo("check")
         .env("CARGO_TARGET_DIR", "")

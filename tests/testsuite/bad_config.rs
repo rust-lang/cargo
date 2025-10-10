@@ -159,7 +159,10 @@ fn invalid_global_config() {
     p.cargo("check -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] could not load Cargo configuration
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  could not load Cargo configuration
 
 Caused by:
   could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`

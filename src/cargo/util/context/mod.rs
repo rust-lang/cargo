@@ -653,42 +653,54 @@ impl GlobalContext {
 
     /// The directory to use for intermediate build artifacts.
     ///
-    /// Falls back to the target directory if not specified.
+    /// Callers should prefer [`Workspace::build_dir`] instead.
+    pub fn build_dir(&self, workspace_manifest_path: &Path) -> CargoResult<Option<Filesystem>> {
+        let Some(val) = &self.build_config()?.build_dir else {
+            return Ok(None);
+        };
+        self.custom_build_dir(val, workspace_manifest_path)
+            .map(Some)
+    }
+
+    /// The directory to use for intermediate build artifacts.
     ///
     /// Callers should prefer [`Workspace::build_dir`] instead.
-    pub fn build_dir(&self, workspace_manifest_path: &PathBuf) -> CargoResult<Option<Filesystem>> {
-        if let Some(val) = &self.build_config()?.build_dir {
-            let replacements = vec![
-                (
-                    "{workspace-root}",
-                    workspace_manifest_path
-                        .parent()
-                        .unwrap()
-                        .to_str()
-                        .context("workspace root was not valid utf-8")?
-                        .to_string(),
-                ),
-                (
-                    "{cargo-cache-home}",
-                    self.home()
-                        .as_path_unlocked()
-                        .to_str()
-                        .context("cargo home was not valid utf-8")?
-                        .to_string(),
-                ),
-                ("{workspace-path-hash}", {
-                    let real_path = std::fs::canonicalize(workspace_manifest_path)?;
-                    let hash = crate::util::hex::short_hash(&real_path);
-                    format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
-                }),
-            ];
+    pub fn custom_build_dir(
+        &self,
+        val: &ConfigRelativePath,
+        workspace_manifest_path: &Path,
+    ) -> CargoResult<Filesystem> {
+        let replacements = [
+            (
+                "{workspace-root}",
+                workspace_manifest_path
+                    .parent()
+                    .unwrap()
+                    .to_str()
+                    .context("workspace root was not valid utf-8")?
+                    .to_string(),
+            ),
+            (
+                "{cargo-cache-home}",
+                self.home()
+                    .as_path_unlocked()
+                    .to_str()
+                    .context("cargo home was not valid utf-8")?
+                    .to_string(),
+            ),
+            ("{workspace-path-hash}", {
+                let real_path = std::fs::canonicalize(workspace_manifest_path)?;
+                let hash = crate::util::hex::short_hash(&real_path);
+                format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
+            }),
+        ];
 
-            let template_variables = replacements
-                .iter()
-                .map(|(key, _)| key[1..key.len() - 1].to_string())
-                .collect_vec();
+        let template_variables = replacements
+            .iter()
+            .map(|(key, _)| key[1..key.len() - 1].to_string())
+            .collect_vec();
 
-            let path = val
+        let path = val
                 .resolve_templated_path(self, replacements)
                 .map_err(|e| match e {
                     path::ResolveTemplateError::UnexpectedVariable {
@@ -716,20 +728,15 @@ impl GlobalContext {
                     }
                 })?;
 
-            // Check if the target directory is set to an empty string in the config.toml file.
-            if val.raw_value().is_empty() {
-                bail!(
-                    "the build directory is set to an empty string in {}",
-                    val.value().definition
-                )
-            }
-
-            Ok(Some(Filesystem::new(path)))
-        } else {
-            // For now, fallback to the previous implementation.
-            // This will change in the future.
-            return self.target_dir();
+        // Check if the target directory is set to an empty string in the config.toml file.
+        if val.raw_value().is_empty() {
+            bail!(
+                "the build directory is set to an empty string in {}",
+                val.value().definition
+            )
         }
+
+        Ok(Filesystem::new(path))
     }
 
     /// Get a configuration value by key.
@@ -1364,7 +1371,9 @@ impl GlobalContext {
         let abs = |path: &str, def: &Definition| -> (String, PathBuf, Definition) {
             let abs_path = match def {
                 Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().join(&path),
-                Definition::Environment(_) | Definition::Cli(None) => self.cwd().join(&path),
+                Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => {
+                    self.cwd().join(&path)
+                }
             };
             (path.to_string(), abs_path, def.clone())
         };

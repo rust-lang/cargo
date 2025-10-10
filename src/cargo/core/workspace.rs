@@ -215,7 +215,6 @@ impl<'gctx> Workspace<'gctx> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, gctx: &'gctx GlobalContext) -> CargoResult<Workspace<'gctx>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), gctx);
-        ws.target_dir = gctx.target_dir()?;
 
         if manifest_path.is_relative() {
             bail!(
@@ -226,11 +225,8 @@ impl<'gctx> Workspace<'gctx> {
             ws.root_manifest = ws.find_root(manifest_path)?;
         }
 
-        ws.build_dir = gctx.build_dir(
-            ws.root_manifest
-                .as_ref()
-                .unwrap_or(&manifest_path.to_path_buf()),
-        )?;
+        ws.target_dir = gctx.target_dir()?;
+        ws.build_dir = gctx.build_dir(ws.root_manifest())?;
 
         ws.custom_metadata = ws
             .load_workspace_config()?
@@ -448,13 +444,14 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_target_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            let hash = crate::util::hex::short_hash(&self.root_manifest().to_string_lossy());
-            let mut rel_path = PathBuf::new();
-            rel_path.push("target");
-            rel_path.push(&hash[0..2]);
-            rel_path.push(&hash[2..]);
-
-            self.gctx().home().join(rel_path)
+            let default = ConfigRelativePath::new(
+                "{cargo-cache-home}/target/{workspace-path-hash}"
+                    .to_owned()
+                    .into(),
+            );
+            self.gctx()
+                .custom_build_dir(&default, self.root_manifest())
+                .expect("template is correct")
         } else {
             Filesystem::new(self.root().join("target"))
         }
