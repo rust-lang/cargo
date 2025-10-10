@@ -445,7 +445,7 @@ impl<'gctx> Workspace<'gctx> {
     fn default_target_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
             let default = ConfigRelativePath::new(
-                "{cargo-cache-home}/target/{workspace-path-hash}"
+                "{cargo-cache-home}/build/{workspace-path-hash}"
                     .to_owned()
                     .into(),
             );
