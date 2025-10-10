@@ -32,6 +32,7 @@ use crate::util::errors::ManifestError;
 use crate::util::restricted_names;
 use crate::util::toml::prepare_for_publish;
 use crate::{drop_println, ops};
+use annotate_snippets::Level;
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::index::{IndexPackage, RegistryDependency};
@@ -836,11 +837,12 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
         }
         things.push_str(missing.last().unwrap());
 
-        gctx.shell().warn(&format!(
-            "manifest has no {things}.\n\
-             See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
-            things = things
-        ))?
+        gctx.shell().print_report(&[
+            Level::WARNING.secondary_title(format!("manifest has no {things}"))
+                .element(Level::NOTE.message("see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info"))
+         ],
+             false
+        )?
     }
 
     Ok(())
