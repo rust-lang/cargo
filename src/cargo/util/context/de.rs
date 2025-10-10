@@ -387,7 +387,7 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
                         .gctx
                         .get_cv_with_env(&self.de.key)
                         .ok()
-                        .and_then(|cv| cv.map(|cv| cv.get_definition().clone())),
+                        .and_then(|cv| cv.map(|cv| cv.definition().clone())),
                 )
             });
         self.de.key.pop();

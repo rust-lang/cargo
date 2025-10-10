@@ -2165,16 +2165,6 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
-    fn get_definition(&self) -> &Definition {
-        match self {
-            CV::Boolean(_, def)
-            | CV::Integer(_, def)
-            | CV::String(_, def)
-            | CV::List(_, def)
-            | CV::Table(_, def) => def,
-        }
-    }
-
     fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         let mut error_path = Vec::new();
         Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
