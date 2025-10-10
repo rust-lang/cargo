@@ -439,7 +439,10 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn build_dir(&self) -> Filesystem {
-        self.build_dir.clone().unwrap_or_else(|| self.target_dir())
+        self.build_dir
+            .clone()
+            .or_else(|| self.target_dir.clone())
+            .unwrap_or_else(|| self.default_target_dir())
     }
 
     fn default_target_dir(&self) -> Filesystem {
