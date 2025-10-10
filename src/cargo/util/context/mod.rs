@@ -670,7 +670,7 @@ impl GlobalContext {
         val: &ConfigRelativePath,
         workspace_manifest_path: &Path,
     ) -> CargoResult<Filesystem> {
-        let replacements = vec![
+        let replacements = [
             (
                 "{workspace-root}",
                 workspace_manifest_path
