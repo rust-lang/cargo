@@ -157,7 +157,7 @@ fn target_host_arg() {
         .file("src/lib.rs", r#""#)
         .build();
 
-    p.cargo("build -v --target host")
+    p.cargo("build -v --target host-tuple")
         .with_stderr_contains("[RUNNING] `rustc [..] --target [HOST_TARGET] [..]`")
         .run();
 }
@@ -174,7 +174,7 @@ fn target_host_config() {
             &format!(
                 r#"
                     [build]
-                    target = "host"
+                    target = "host-tuple"
                 "#,
             ),
         )
