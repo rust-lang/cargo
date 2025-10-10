@@ -38,7 +38,7 @@ This will:
 - Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
 
 Trade-offs:
-- ✅ Faster build times
+- ✅ Faster code generation (`cargo build`)
 - ✅ Faster link times
 - ✅ Smaller disk usage of the `target` directory
 - ❌ Requires a full rebuild to have a high-quality debugger experience
@@ -83,8 +83,12 @@ rustflags = "-Zthreads=8"
 This [`rustflags`][build.rustflags] will enable the [parallel frontend][parallel-frontend-blog] of the Rust compiler, and tell it to use `n` threads. The value of `n` should be chosen according to the number of cores available on your system, although there are diminishing returns. We recommend using at most `8` threads.
 
 Trade-offs:
-- ✅ Faster build times
+- ✅ Faster build times (both `cargo check` and `cargo build`)
 - ❌ **Requires using nightly Rust and an [unstable Rust feature][parallel-frontend-issue]**
+
+[parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
+[parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
+[build.rustflags]: ../reference/config.md#buildrustflags
 
 ## Reducing built code
 
@@ -98,12 +102,27 @@ Recommendation: Periodically review unused dependencies for removal using third-
 When changing code,
 it can be easy to miss that a dependency is no longer used and can be removed.
 
-> *Note:* native support for this in Cargo is being tracked in [#15813](https://github.com/rust-lang/cargo/issues/15813).
+> **Note:** native support for this in Cargo is being tracked in [#15813](https://github.com/rust-lang/cargo/issues/15813).
 
 Trade-offs:
 - ✅ Faster full build and link times
 - ❌ May incorrectly flag dependencies as unused or miss some
 
-[parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
-[parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
-[build.rustflags]: ../reference/config.md#buildrustflags
+### Removing unused features
+
+Recommendation: Periodically review unused features for removal using third-party tools like
+[cargo-features-manager](https://crates.io/crates/cargo-features-manager),
+[cargo-unused-features](https://crates.io/crates/cargo-unused-features).
+
+When changing code,
+it can be easy to miss that a feature is no longer used and can be removed.
+This can the number of transitive dependencies being built or
+reduce the amount of code within a crate being built.
+When removing features, extra caution is needed because features
+may also be used for desired behavior or performance changes
+which may not always be obvious from compiling or testing.
+This can be especially tricky because features are
+
+Trade-offs:
+- ✅ Faster full build and link times
+- ❌ May incorrectly flag features as unused
