@@ -541,7 +541,7 @@ pub fn check_token(token: &str) -> Result<()> {
         Ok(())
     } else {
         Err(Error::InvalidToken(
-            "token contains invalid characters.\nOnly printable ISO-8859-1 characters \
+            "token contains invalid characters.\nOnly printable ASCII characters \
              are allowed as it is sent in a HTTPS header.",
         ))
     }
