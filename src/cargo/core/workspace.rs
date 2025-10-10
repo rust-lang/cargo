@@ -668,7 +668,7 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_lock_root(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            self.target_dir()
+            self.build_dir()
         } else {
             Filesystem::new(self.root().to_owned())
         }
