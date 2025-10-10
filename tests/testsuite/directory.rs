@@ -193,14 +193,13 @@ fn simple_install_fail() {
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
-
-Caused by:
-  no matching package found
-  searched package name: `baz`
-  perhaps you meant:      bar or foo
-  location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
-  required by package `bar v0.1.0`
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+  |
+  = caused by: no matching package found
+               searched package name: `baz`
+               perhaps you meant:      bar or foo
+               location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
+               required by package `bar v0.1.0`
 
 "#]])
         .run();
@@ -283,8 +282,8 @@ fn not_there() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `bar` found
-location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -428,15 +427,15 @@ fn crates_io_then_bad_checksum() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] checksum for `bar v0.1.0` changed between lock files
-
-this could be indicative of a few possible errors:
-
-    * the lock file is corrupt
-    * a replacement source in use (e.g., a mirror) returned a different checksum
-    * the source itself may be corrupt in one way or another
-
-unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
-
+       
+       this could be indicative of a few possible errors:
+       
+           * the lock file is corrupt
+           * a replacement source in use (e.g., a mirror) returned a different checksum
+           * the source itself may be corrupt in one way or another
+       
+       unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
+       
 
 "#]])
         .run();
@@ -478,10 +477,10 @@ fn bad_file_checksum() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] the listed checksum of `[ROOT]/index/bar/src/lib.rs` has changed:
-expected: [..]
-actual:   [..]
-
-directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
+       expected: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+       actual:   3f041d79fe52aa76900bfd164c4957092e095cfc3437db8d64ac47970bf5d8a7
+       
+       directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
 
 "#]])
         .run();
@@ -664,19 +663,15 @@ fn git_override_requires_lockfile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `git` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `git`
-
-Caused by:
-  Unable to update [..]
-
-Caused by:
-  the source my-git-repo requires a lock file to be present first before it can be
-  used against vendored source code
-
-  remove the source replacement configuration, generate a lock file, and then
-  restore the source replacement configuration to continue the build
+  |
+  = caused by: failed to load source for dependency `git`
+  = caused by: Unable to update https://example.com/
+  = caused by: the source my-git-repo requires a lock file to be present first before it can be
+               used against vendored source code
+               
+               remove the source replacement configuration, generate a lock file, and then
+               restore the source replacement configuration to continue the build
+               
 
 "#]])
         .run();
@@ -771,14 +766,13 @@ fn version_missing() {
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [ERROR] failed to compile [..], intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
-
-Caused by:
-  failed to select a version for the requirement `foo = "^2"`
-  candidate versions found which didn't match: 0.0.1
-  location searched: directory source `[..] (which is replacing registry `[..]`)
-  required by package `bar v0.1.0`
-  perhaps a crate was updated and forgotten to be re-vendored?
+       To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+  |
+  = caused by: failed to select a version for the requirement `foo = "^2"`
+               candidate versions found which didn't match: 0.0.1
+               location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
+               required by package `bar v0.1.0`
+               perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .with_status(101)

@@ -1443,8 +1443,8 @@ fn test_bench_no_fail_fast() {
 [RUNNING] benches/b1.rs (target/release/deps/b1-[HASH][EXE])
 [ERROR] bench failed, to rerun pass `--bench b1`
 [ERROR] 2 targets failed:
-    `--bin foo`
-    `--bench b1`
+           `--bin foo`
+           `--bench b1`
 
 "#]])
         .with_stdout_data(

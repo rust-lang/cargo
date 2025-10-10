@@ -3114,10 +3114,10 @@ fn verify_source_before_recompile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the listed checksum of `[ROOT]/foo/vendor/bar/src/lib.rs` has changed:
-expected: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-actual:   66e843918c1d4ea8231af814f9f958958808249d4407de01114acb730ecd9bdf
-
-directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
+       expected: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+       actual:   66e843918c1d4ea8231af814f9f958958808249d4407de01114acb730ecd9bdf
+       
+       directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
 
 "#]])
         .run();
