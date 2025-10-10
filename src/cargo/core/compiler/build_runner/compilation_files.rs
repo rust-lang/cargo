@@ -230,17 +230,21 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.export_dir.clone()
     }
 
-    /// Directory name to use for a package in the form `NAME-HASH`.
+    /// Directory name to use for a package in the form `{NAME}/{HASH}`.
     ///
     /// Note that some units may share the same directory, so care should be
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
+        let seperator = match self.ws.gctx().cli_unstable().build_dir_new_layout {
+            true => "/",
+            false => "-",
+        };
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
         if let Some(c_extra_filename) = meta.c_extra_filename() {
-            format!("{}-{}", name, c_extra_filename)
+            format!("{}{}{}", name, seperator, c_extra_filename)
         } else {
-            format!("{}-{}", name, self.target_short_hash(unit))
+            format!("{}{}{}", name, seperator, self.target_short_hash(unit))
         }
     }
 
@@ -255,20 +259,27 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     }
 
     /// Returns the host `deps` directory path.
-    pub fn host_deps(&self) -> &Path {
-        self.host.deps()
+    pub fn host_deps(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.host.deps(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit) -> &Path {
-        self.layout(unit.kind).deps()
+    pub fn deps_dir(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).deps(&dir)
     }
 
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).fingerprint().join(dir)
+        self.layout(unit.kind).fingerprint(&dir)
+    }
+
+    /// Directory where incremental output for the given unit should go.
+    pub fn incremental_dir(&self, unit: &Unit) -> &Path {
+        self.layout(unit.kind).incremental()
     }
 
     /// Returns the path for a file in the fingerprint directory.
@@ -303,7 +314,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(!unit.mode.is_run_custom_build());
         assert!(self.metas.contains_key(unit));
         let dir = self.pkg_dir(unit);
-        self.layout(CompileKind::Host).build().join(dir)
+        self.layout(CompileKind::Host).build_script(&dir)
     }
 
     /// Returns the directory for compiled artifacts files.
@@ -337,7 +348,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build().join(dir)
+        self.layout(unit.kind).build_script_execution(&dir)
     }
 
     /// Returns the "`OUT_DIR`" directory for running a build script.

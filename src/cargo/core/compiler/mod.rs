@@ -56,7 +56,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
@@ -69,6 +69,7 @@ use std::sync::{Arc, LazyLock};
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anyhow::{Context as _, Error};
 use cargo_platform::{Cfg, Platform};
+use itertools::Itertools;
 use lazycell::LazyCell;
 use regex::Regex;
 use tracing::{debug, instrument, trace};
@@ -1356,12 +1357,8 @@ fn build_base_args(
             .map(|s| s.as_ref()),
     );
     if incremental {
-        let dir = build_runner
-            .files()
-            .layout(unit.kind)
-            .incremental()
-            .as_os_str();
-        opt(cmd, "-C", "incremental=", Some(dir));
+        let dir = build_runner.files().incremental_dir(&unit);
+        opt(cmd, "-C", "incremental=", Some(dir.as_os_str()));
     }
 
     let pkg_hint_mostly_unused = match hints.mostly_unused {
@@ -1671,18 +1668,35 @@ fn build_deps_args(
     unit: &Unit,
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
-    cmd.arg("-L").arg(&{
-        let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().deps_dir(unit));
-        deps
-    });
+    if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+        let mut map = BTreeMap::new();
+
+        // Recursively add all depenendency args to rustc process
+        add_dep_arg(&mut map, build_runner, unit);
+
+        let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
+
+        for path in paths {
+            cmd.arg("-L").arg(&{
+                let mut deps = OsString::from("dependency=");
+                deps.push(path);
+                deps
+            });
+        }
+    } else {
+        cmd.arg("-L").arg(&{
+            let mut deps = OsString::from("dependency=");
+            deps.push(build_runner.files().deps_dir(unit));
+            deps
+        });
+    }
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
     if !unit.kind.is_host() {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
-            deps.push(build_runner.files().host_deps());
+            deps.push(build_runner.files().host_deps(unit));
             deps
         });
     }
@@ -1756,6 +1770,21 @@ fn build_deps_args(
     }
 
     Ok(())
+}
+
+fn add_dep_arg<'a, 'b: 'a>(
+    map: &mut BTreeMap<&'a Unit, PathBuf>,
+    build_runner: &'b BuildRunner<'b, '_>,
+    unit: &'a Unit,
+) {
+    if map.contains_key(&unit) {
+        return;
+    }
+    map.insert(&unit, build_runner.files().deps_dir(&unit));
+
+    for dep in build_runner.unit_deps(unit) {
+        add_dep_arg(map, build_runner, &dep.unit);
+    }
 }
 
 /// Adds extra rustc flags and environment variables collected from the output

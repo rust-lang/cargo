@@ -142,6 +142,7 @@ pub struct Layout {
     /// Will be `None` when the build-dir and target-dir are the same path as we cannot
     /// lock the same path twice.
     _build_lock: Option<FileLock>,
+    is_new_layout: bool,
 }
 
 impl Layout {
@@ -156,6 +157,7 @@ impl Layout {
         target: Option<CompileTarget>,
         dest: &str,
     ) -> CargoResult<Layout> {
+        let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
         let mut root = ws.target_dir();
         let mut build_root = ws.build_dir();
         if let Some(target) = target {
@@ -212,14 +214,17 @@ impl Layout {
             dest,
             _lock: lock,
             _build_lock: build_lock,
+            is_new_layout,
         })
     }
 
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> CargoResult<()> {
-        paths::create_dir_all(&self.deps)?;
+        if !self.is_new_layout {
+            paths::create_dir_all(&self.deps)?;
+            paths::create_dir_all(&self.fingerprint)?;
+        }
         paths::create_dir_all(&self.incremental)?;
-        paths::create_dir_all(&self.fingerprint)?;
         paths::create_dir_all(&self.examples)?;
         paths::create_dir_all(&self.build_examples)?;
         paths::create_dir_all(&self.build)?;
@@ -232,7 +237,15 @@ impl Layout {
         &self.dest
     }
     /// Fetch the deps path.
-    pub fn deps(&self) -> &Path {
+    pub fn deps(&self, pkg_dir: &str) -> PathBuf {
+        if self.is_new_layout {
+            self.build_unit(pkg_dir).join("deps")
+        } else {
+            self.legacy_deps().to_path_buf()
+        }
+    }
+    /// Fetch the deps path. (old layout)
+    pub fn legacy_deps(&self) -> &Path {
         &self.deps
     }
     /// Fetch the examples path.
@@ -256,16 +269,44 @@ impl Layout {
         &self.incremental
     }
     /// Fetch the fingerprint path.
-    pub fn fingerprint(&self) -> &Path {
+    pub fn fingerprint(&self, pkg_dir: &str) -> PathBuf {
+        if self.is_new_layout {
+            self.build_unit(pkg_dir).join("fingerprint")
+        } else {
+            self.legacy_fingerprint().to_path_buf().join(pkg_dir)
+        }
+    }
+    /// Fetch the fingerprint path. (old layout)
+    pub fn legacy_fingerprint(&self) -> &Path {
         &self.fingerprint
     }
-    /// Fetch the build script path.
+    /// Fetch the build path.
     pub fn build(&self) -> &Path {
         &self.build
+    }
+    /// Fetch the build script path.
+    pub fn build_script(&self, pkg_dir: &str) -> PathBuf {
+        if self.is_new_layout {
+            self.build_unit(pkg_dir).join("build-script")
+        } else {
+            self.build().join(pkg_dir)
+        }
+    }
+    /// Fetch the build script execution path.
+    pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
+        if self.is_new_layout {
+            self.build_unit(pkg_dir).join("build-script-execution")
+        } else {
+            self.build().join(pkg_dir)
+        }
     }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {
         &self.artifact
+    }
+    /// Fetch the build unit path
+    pub fn build_unit(&self, pkg_dir: &str) -> PathBuf {
+        self.build().join(pkg_dir)
     }
     /// Create and return the tmp path.
     pub fn prepare_tmp(&self) -> CargoResult<&Path> {

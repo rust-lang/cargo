@@ -200,7 +200,7 @@ fn clean_specs(
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
-            let dir = escape_glob_path(layout.fingerprint())?;
+            let dir = escape_glob_path(layout.legacy_fingerprint())?;
             clean_ctx
                 .rm_rf_package_glob_containing_hash(&pkg.name(), &Path::new(&dir).join(&pkg_dir))?;
         }
@@ -226,8 +226,13 @@ fn clean_specs(
                 CompileMode::Check { test: false },
             ] {
                 for (compile_kind, layout) in &layouts {
-                    let triple = target_data.short_name(compile_kind);
+                    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+                        let dir = layout.build_unit(&pkg.name());
+                        clean_ctx.rm_rf_glob(&dir)?;
+                        continue;
+                    }
 
+                    let triple = target_data.short_name(compile_kind);
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
                         .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
@@ -236,8 +241,8 @@ fn clean_specs(
                             (layout.build_examples(), Some(layout.examples()))
                         }
                         // Tests/benchmarks are never uplifted.
-                        TargetKind::Test | TargetKind::Bench => (layout.deps(), None),
-                        _ => (layout.deps(), Some(layout.dest())),
+                        TargetKind::Test | TargetKind::Bench => (layout.legacy_deps(), None),
+                        _ => (layout.legacy_deps(), Some(layout.dest())),
                     };
                     let mut dir_glob_str = escape_glob_path(dir)?;
                     let dir_glob = Path::new(&dir_glob_str);

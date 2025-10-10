@@ -10,6 +10,7 @@ use crate::core::compiler::{self, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use anyhow::{Context as _, bail};
+use cargo_util::paths;
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
@@ -401,9 +402,17 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             self.compilation
                 .root_output
                 .insert(kind, layout.dest().to_path_buf());
-            self.compilation
-                .deps_output
-                .insert(kind, layout.deps().to_path_buf());
+            if self.bcx.gctx.cli_unstable().build_dir_new_layout {
+                for (unit, _) in self.bcx.unit_graph.iter() {
+                    let dep_dir = self.files().deps_dir(unit);
+                    paths::create_dir_all(&dep_dir)?;
+                    self.compilation.deps_output.insert(kind, dep_dir);
+                }
+            } else {
+                self.compilation
+                    .deps_output
+                    .insert(kind, layout.legacy_deps().to_path_buf());
+            }
         }
         Ok(())
     }
