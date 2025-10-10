@@ -447,7 +447,7 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_target_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            self.default_build_dir()
+            self.build_dir().join("target")
         } else {
             Filesystem::new(self.root().join("target"))
         }
