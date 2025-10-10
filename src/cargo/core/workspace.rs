@@ -439,13 +439,24 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn build_dir(&self) -> Filesystem {
-        self.build_dir.clone().unwrap_or_else(|| self.target_dir())
+        self.build_dir
+            .clone()
+            .or_else(|| self.target_dir.clone())
+            .unwrap_or_else(|| self.default_build_dir())
     }
 
     fn default_target_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
+            self.build_dir().join("target")
+        } else {
+            Filesystem::new(self.root().join("target"))
+        }
+    }
+
+    fn default_build_dir(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
             let default = ConfigRelativePath::new(
-                "{cargo-cache-home}/target/{workspace-path-hash}"
+                "{cargo-cache-home}/build/{workspace-path-hash}"
                     .to_owned()
                     .into(),
             );
@@ -453,7 +464,7 @@ impl<'gctx> Workspace<'gctx> {
                 .custom_build_dir(&default, self.root_manifest())
                 .expect("template is correct")
         } else {
-            Filesystem::new(self.root().join("target"))
+            self.default_target_dir()
         }
     }
 
