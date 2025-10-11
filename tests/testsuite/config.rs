@@ -12,6 +12,7 @@ use cargo::CargoResult;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::auth::RegistryConfig;
+use cargo::util::context::Value;
 use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
 };
@@ -1352,28 +1353,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn non_string_in_array() {
-    // Currently only strings are supported.
-    write_config_toml("foo = [1, 2, 3]");
-    let gctx = new_gctx();
-    assert_error(
-        gctx.get::<Vec<i32>>("foo").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `foo[0]`
-
-Caused by:
-  expected string but found integer at index 0
-"#]],
-    );
-}
-
-#[cargo_test]
 fn struct_with_opt_inner_struct() {
     // Struct with a key that is Option of another struct.
     // Check that can be defined with environment variable.
@@ -2307,5 +2286,221 @@ fn build_std() {
             "panic-unwind".to_string(),
             "windows_raw_dylib".to_string(),
         ]
+    );
+}
+
+#[cargo_test]
+fn array_of_any_types() {
+    write_config_toml(
+        r#"
+        ints = [1, 2, 3]
+
+        bools = [true, false, true]
+
+        strings = ["hello", "world", "test"]
+
+        [[tables]]
+        name = "first"
+        value = 1
+        [[tables]]
+        name = "second"
+        value = 2
+        "#,
+    );
+
+    let gctx = new_gctx();
+
+    // Test integer array
+    assert_error(
+        gctx.get::<Vec<i32>>("ints").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+"#]],
+    );
+
+    assert_error(
+        gctx.get::<Vec<bool>>("bools").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+"#]],
+    );
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct T {
+        name: String,
+        value: i32,
+    }
+    assert_error(
+        gctx.get::<Vec<T>>("tables").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+"#]],
+    );
+}
+
+#[cargo_test]
+fn array_env() {
+    // for environment, only strings are supported.
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_INTS", "3 4 5")
+        .env("CARGO_BOOLS", "false true false")
+        .env("CARGO_STRINGS", "env1 env2 env3")
+        .build();
+
+    assert_error(
+        gctx.get::<Vec<i32>>("ints").unwrap_err(),
+        str![[r#"invalid type: string "3", expected i32"#]],
+    );
+
+    assert_error(
+        gctx.get::<Vec<bool>>("bools").unwrap_err(),
+        str![[r#"invalid type: string "false", expected a boolean"#]],
+    );
+
+    assert_eq!(
+        gctx.get::<Vec<String>>("strings").unwrap(),
+        vec!["env1".to_string(), "env2".to_string(), "env3".to_string()],
+    );
+}
+
+#[cargo_test]
+fn nested_array() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        r#"
+        nested_ints = [[1, 2], [3, 4]]
+        nested_bools = [[true], [false, true]]
+        nested_strings = [["a", "b"], ["3", "4"]]
+        nested_tables = [
+            [
+                { x = "a" },
+                { x = "b" },
+            ],
+            [
+                { x = "c" },
+                { x = "d" },
+            ],
+        ]
+        deeply_nested = [[
+            { x = [[[ { x = [], y = 2  } ]]], y = 1 },
+        ]]
+        "#,
+    );
+
+    let gctx = GlobalContextBuilder::new().build();
+
+    assert_error(
+        gctx.get::<Vec<Vec<i32>>>("nested_ints").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `nested_ints[0]`
+
+Caused by:
+  expected string but found array at index 0
+"#]],
+    );
+
+    // exercising Value and Definition
+    assert_error(
+        gctx.get::<Vec<Value<Vec<Value<i32>>>>>("nested_ints")
+            .unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `nested_ints[0]`
+
+Caused by:
+  expected string but found array at index 0
+"#]],
+    );
+
+    assert_error(
+        gctx.get::<Vec<Vec<bool>>>("nested_bools").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `nested_ints[0]`
+
+Caused by:
+  expected string but found array at index 0
+"#]],
+    );
+
+    assert_error(
+        gctx.get::<Vec<Vec<String>>>("nested_strings").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `nested_ints[0]`
+
+Caused by:
+  expected string but found array at index 0
+"#]],
+    );
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct S {
+        x: Vec<Vec<Vec<S>>>,
+        y: i32,
+    }
+    assert_error(
+        gctx.get::<Vec<Vec<S>>>("deeply_nested").unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `nested_ints[0]`
+
+Caused by:
+  expected string but found array at index 0
+"#]],
     );
 }
