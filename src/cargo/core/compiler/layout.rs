@@ -136,7 +136,7 @@ pub struct Layout {
     tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
-    _lock: FileLock,
+    _lock: Option<FileLock>,
     /// Same as `_lock` but for the build directory.
     ///
     /// Will be `None` when the build-dir and target-dir are the same path as we cannot
@@ -182,9 +182,13 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let lock = dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?;
+        let lock = if !is_new_layout {
+            Some(dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?)
+        } else {
+            None
+        };
 
-        let build_lock = if root != build_root {
+        let build_lock = if root != build_root && !is_new_layout {
             Some(build_dest.open_rw_exclusive_create(
                 ".cargo-lock",
                 ws.gctx(),
@@ -299,6 +303,9 @@ impl Layout {
         } else {
             self.build().join(pkg_dir)
         }
+    }
+    pub fn build_unit_lock(&self, pkg_dir: &str) -> PathBuf {
+        self.build_unit(pkg_dir).join("lock")
     }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {
