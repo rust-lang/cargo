@@ -81,7 +81,10 @@ fn alias_malformed_config_list() {
     p.cargo("b-cargo-test -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: integer `1`, expected a string
+[ERROR] error in [ROOT]/foo/.cargo/config.toml: failed to parse config at `alias.b-cargo-test[0]`
+
+Caused by:
+  invalid type: integer `1`, expected a string
 
 "#]])
         .run();
