@@ -68,6 +68,48 @@ fn common_setup() -> PathBuf {
     sub_folder
 }
 
+fn array_setup() -> PathBuf {
+    let home = paths::home();
+    write_config_at(
+        home.join(".cargo/config.toml"),
+        r#"
+        ints = [1, 2, 3]
+
+        bools = [true, false, true]
+
+        strings = ["hello", "world", "test"]
+
+        nested_ints = [[1, 2], [3, 4]]
+        nested_bools = [[true], [false, true]]
+        nested_strings = [["a", "b"], ["3", "4"]]
+        nested_tables = [
+            [
+                { x = "a" },
+                { x = "b" },
+            ],
+            [
+                { x = "c" },
+                { x = "d" },
+            ],
+        ]
+        deeply_nested = [[
+            { x = [[[ { x = [], y = 2  } ]]], y = 1 },
+        ]]
+
+        mixed = [{ x = 1 }, true, [false], "hello", 123]
+
+        [[tables]]
+        name = "first"
+        value = 1
+        [[tables]]
+        name = "second"
+        value = 2
+
+        "#,
+    );
+    home
+}
+
 #[cargo_test]
 fn get_toml() {
     // Notes:
@@ -166,6 +208,51 @@ profile.dev.opt-level = 3
         .with_stdout_data(str![[r#""#]])
         .with_stderr_data(str![[r#"
 [ERROR] config value `not.set` is not set
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn get_toml_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]])
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
 
 "#]])
         .run();
@@ -301,6 +388,54 @@ CARGO_HOME=[ROOT]/home/.cargo
 }
 
 #[cargo_test]
+fn get_json_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get --format=json -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""].is_json())
+        .with_stderr_data(
+            str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]]
+            .is_json(),
+        )
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables --format=json -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""].is_json())
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn show_origin_toml() {
     let sub_folder = common_setup();
     cargo_process("config get --show-origin -Zunstable-options")
@@ -342,6 +477,51 @@ build.rustflags = [
 
 "#]])
         .with_stderr_data(str![[r#""#]])
+        .run();
+}
+
+#[cargo_test]
+fn show_origin_toml_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get --show-origin -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]])
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables --show-origin -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/home/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]])
         .run();
 }
 
