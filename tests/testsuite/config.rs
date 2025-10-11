@@ -2349,12 +2349,22 @@ fn array_env() {
 
     assert_error(
         gctx.get::<Vec<i32>>("ints").unwrap_err(),
-        str![[r#"invalid type: string "3", expected i32"#]],
+        str![[r#"
+error in environment variable `CARGO_INTS`: failed to parse config at `ints[0]`
+
+Caused by:
+  invalid type: string "3", expected i32
+"#]],
     );
 
     assert_error(
         gctx.get::<Vec<bool>>("bools").unwrap_err(),
-        str![[r#"invalid type: string "false", expected a boolean"#]],
+        str![[r#"
+error in environment variable `CARGO_BOOLS`: failed to parse config at `bools[0]`
+
+Caused by:
+  invalid type: string "false", expected a boolean
+"#]],
     );
 
     assert_eq!(
