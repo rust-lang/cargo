@@ -112,6 +112,12 @@ impl fmt::Display for ConfigKey {
     }
 }
 
+#[derive(Debug)]
+pub enum KeyOrIdx {
+    Key(String),
+    Idx(usize),
+}
+
 pub(super) fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
     let ok = part.chars().all(|c| {
         matches!(c,

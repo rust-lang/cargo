@@ -112,6 +112,7 @@ pub use value::{Definition, OptValue, Value};
 
 mod key;
 pub use key::ConfigKey;
+use key::KeyOrIdx;
 
 mod path;
 pub use path::{ConfigRelativePath, PathAndArgs};
@@ -2062,12 +2063,6 @@ impl GlobalContext {
     pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
         self.ws_roots.lock().unwrap()
     }
-}
-
-#[derive(Debug)]
-enum KeyOrIdx {
-    Key(String),
-    Idx(usize),
 }
 
 /// Similar to [`toml::Value`] but includes the source location where it is defined.
