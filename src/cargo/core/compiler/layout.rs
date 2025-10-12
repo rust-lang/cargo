@@ -132,6 +132,8 @@ pub struct Layout {
     build_examples: PathBuf,
     /// The directory for rustdoc output: `$root/doc`
     doc: PathBuf,
+    /// The directory for --timings output
+    timings: PathBuf,
     /// The directory for temporary data of integration tests and benches: `$dest/tmp`
     tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
@@ -209,6 +211,7 @@ impl Layout {
             examples: dest.join("examples"),
             build_examples: build_dest.join("examples"),
             doc: root.join("doc"),
+            timings: root.join("cargo-timings"),
             tmp: build_root.join("tmp"),
             root,
             dest,
@@ -267,6 +270,10 @@ impl Layout {
     /// Fetch the incremental path.
     pub fn incremental(&self) -> &Path {
         &self.incremental
+    }
+    /// Fetch the timings path.
+    pub fn timings(&self) -> &Path {
+        &self.timings
     }
     /// Fetch the fingerprint path.
     pub fn fingerprint(&self, pkg_dir: &str) -> PathBuf {

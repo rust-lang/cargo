@@ -441,7 +441,7 @@ impl<'gctx> Timings<'gctx> {
     ) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let timings_path = build_runner.files().host_root().join("cargo-timings");
+        let timings_path = build_runner.files().timings_dir();
         paths::create_dir_all(&timings_path)?;
         let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
