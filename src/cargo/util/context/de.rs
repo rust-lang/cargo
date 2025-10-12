@@ -1,4 +1,25 @@
-//! Support for deserializing configuration via `serde`
+//! Deserialization for converting [`ConfigValue`] instances to target types.
+//!
+//! The [`Deserializer`] type is the main driver of deserialization.
+//! The workflow is roughly:
+//!
+//! 1. [`GlobalContext::get<T>()`] creates [`Deserializer`] and calls `T::deserialize()`
+//! 2. Then call type-specific deserialize methods as in normal serde deserialization.
+//!     - For primitives, `deserialize_*` methods look up [`ConfigValue`] instances
+//!       in [`GlobalContext`] and convert.
+//!     - Structs and maps are handled by [`ConfigMapAccess`].
+//!     - Sequences are handled by [`ConfigSeqAccess`],
+//!       which later uses [`ArrayItemDeserializer`] for each array item.
+//!     - [`Value<T>`] is delegated to [`ValueDeserializer`] in `deserialize_struct`.
+//!
+//! The purpose of this workflow is to:
+//!
+//! - Retrieve the correct config value based on source location precedence
+//! - Provide richer error context showing where a config is defined
+//! - Provide a richer internal API to map to concrete config types
+//!   without touching underlying [`ConfigValue`] directly
+//!
+//! [`ConfigValue`]: CV
 
 use crate::util::context::value;
 use crate::util::context::{ConfigError, ConfigKey, GlobalContext};
