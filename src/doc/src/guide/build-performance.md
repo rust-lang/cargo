@@ -86,6 +86,9 @@ Trade-offs:
 - ✅ Faster build times (both `cargo check` and `cargo build`)
 - ❌ **Requires using nightly Rust and an [unstable Rust feature][parallel-frontend-issue]**
 
+[parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
+[parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
+[build.rustflags]: ../reference/config.md#buildrustflags
 ## Reducing built code
 
 ### Removing unused dependencies
@@ -103,7 +106,3 @@ it can be easy to miss that a dependency is no longer used and can be removed.
 Trade-offs:
 - ✅ Faster full build and link times
 - ❌ May incorrectly flag dependencies as unused or miss some
-
-[parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
-[parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
-[build.rustflags]: ../reference/config.md#buildrustflags
