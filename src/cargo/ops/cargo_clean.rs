@@ -200,7 +200,7 @@ fn clean_specs(
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
-            let dir = escape_glob_path(layout.legacy_fingerprint())?;
+            let dir = escape_glob_path(layout.build_dir().legacy_fingerprint())?;
             clean_ctx
                 .rm_rf_package_glob_containing_hash(&pkg.name(), &Path::new(&dir).join(&pkg_dir))?;
         }
@@ -209,7 +209,7 @@ fn clean_specs(
             if target.is_custom_build() {
                 // Get both the build_script_build and the output directory.
                 for (_, layout) in &layouts_with_host {
-                    let dir = escape_glob_path(layout.build())?;
+                    let dir = escape_glob_path(layout.build_dir().build())?;
                     clean_ctx.rm_rf_package_glob_containing_hash(
                         &pkg.name(),
                         &Path::new(&dir).join(&pkg_dir),
@@ -227,7 +227,7 @@ fn clean_specs(
             ] {
                 for (compile_kind, layout) in &layouts {
                     if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
-                        let dir = layout.build_unit(&pkg.name());
+                        let dir = layout.build_dir().build_unit(&pkg.name());
                         clean_ctx.rm_rf_glob(&dir)?;
                         continue;
                     }
@@ -237,12 +237,18 @@ fn clean_specs(
                         .info(*compile_kind)
                         .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
                     let (dir, uplift_dir) = match target.kind() {
-                        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
-                            (layout.build_examples(), Some(layout.examples()))
-                        }
+                        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => (
+                            layout.build_dir().examples(),
+                            Some(layout.artifact_dir().examples()),
+                        ),
                         // Tests/benchmarks are never uplifted.
-                        TargetKind::Test | TargetKind::Bench => (layout.legacy_deps(), None),
-                        _ => (layout.legacy_deps(), Some(layout.dest())),
+                        TargetKind::Test | TargetKind::Bench => {
+                            (layout.build_dir().legacy_deps(), None)
+                        }
+                        _ => (
+                            layout.build_dir().legacy_deps(),
+                            Some(layout.artifact_dir().dest()),
+                        ),
                     };
                     let mut dir_glob_str = escape_glob_path(dir)?;
                     let dir_glob = Path::new(&dir_glob_str);
@@ -289,7 +295,7 @@ fn clean_specs(
                     }
 
                     // TODO: what to do about build_script_build?
-                    let dir = escape_glob_path(layout.incremental())?;
+                    let dir = escape_glob_path(layout.build_dir().incremental())?;
                     let incremental = Path::new(&dir).join(format!("{}-*", crate_name));
                     clean_ctx.rm_rf_glob(&incremental)?;
                 }

@@ -58,7 +58,7 @@ fn add_deps_for_unit(
         let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
         if let Some(paths) = fingerprint::parse_dep_info(
             unit.pkg.root(),
-            build_runner.files().host_root(),
+            build_runner.files().host_build_root(),
             &dep_info_loc,
         )? {
             for path in paths.files.into_keys() {

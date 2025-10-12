@@ -237,25 +237,62 @@ impl Layout {
 
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> CargoResult<()> {
-        if !self.build_dir.is_new_layout {
-            paths::create_dir_all(&self.build_dir.deps)?;
-            paths::create_dir_all(&self.build_dir.fingerprint)?;
-        }
-        paths::create_dir_all(&self.build_dir.incremental)?;
-        paths::create_dir_all(&self.artifact_dir.examples)?;
-        paths::create_dir_all(&self.build_dir.examples)?;
-        paths::create_dir_all(&self.build_dir.build)?;
+        self.artifact_dir.prepare()?;
+        self.build_dir.prepare()?;
 
         Ok(())
     }
 
+    pub fn artifact_dir(&self) -> &ArtifactDirLayout {
+        &self.artifact_dir
+    }
+
+    pub fn build_dir(&self) -> &BuildDirLayout {
+        &self.build_dir
+    }
+}
+
+impl ArtifactDirLayout {
+    /// Makes sure all directories stored in the Layout exist on the filesystem.
+    pub fn prepare(&mut self) -> CargoResult<()> {
+        paths::create_dir_all(&self.examples)?;
+
+        Ok(())
+    }
     /// Fetch the destination path for final artifacts  (`/…/target/debug`).
     pub fn dest(&self) -> &Path {
-        &self.artifact_dir.dest
+        &self.dest
+    }
+    /// Fetch the examples path.
+    pub fn examples(&self) -> &Path {
+        &self.examples
+    }
+    /// Fetch the doc path.
+    pub fn doc(&self) -> &Path {
+        &self.doc
+    }
+    /// Fetch the cargo-timings path.
+    pub fn timings(&self) -> &Path {
+        &self.timings
+    }
+}
+
+impl BuildDirLayout {
+    /// Makes sure all directories stored in the Layout exist on the filesystem.
+    pub fn prepare(&mut self) -> CargoResult<()> {
+        if !self.is_new_layout {
+            paths::create_dir_all(&self.deps)?;
+            paths::create_dir_all(&self.fingerprint)?;
+        }
+        paths::create_dir_all(&self.incremental)?;
+        paths::create_dir_all(&self.examples)?;
+        paths::create_dir_all(&self.build)?;
+
+        Ok(())
     }
     /// Fetch the deps path.
     pub fn deps(&self, pkg_dir: &str) -> PathBuf {
-        if self.build_dir.is_new_layout {
+        if self.is_new_layout {
             self.build_unit(pkg_dir).join("deps")
         } else {
             self.legacy_deps().to_path_buf()
@@ -263,35 +300,22 @@ impl Layout {
     }
     /// Fetch the deps path. (old layout)
     pub fn legacy_deps(&self) -> &Path {
-        &self.build_dir.deps
+        &self.deps
     }
-    /// Fetch the examples path.
-    pub fn examples(&self) -> &Path {
-        &self.artifact_dir.examples
+    pub fn root(&self) -> &Path {
+        &self.root
     }
     /// Fetch the build examples path.
-    pub fn build_examples(&self) -> &Path {
-        &self.build_dir.examples
-    }
-    /// Fetch the doc path.
-    pub fn doc(&self) -> &Path {
-        &self.artifact_dir.doc
-    }
-    /// Fetch the root path (`/…/target`).
-    pub fn root(&self) -> &Path {
-        &self.build_dir.root
+    pub fn examples(&self) -> &Path {
+        &self.examples
     }
     /// Fetch the incremental path.
     pub fn incremental(&self) -> &Path {
-        &self.build_dir.incremental
-    }
-    /// Fetch the timings path.
-    pub fn timings(&self) -> &Path {
-        &self.artifact_dir.timings
+        &self.incremental
     }
     /// Fetch the fingerprint path.
     pub fn fingerprint(&self, pkg_dir: &str) -> PathBuf {
-        if self.build_dir.is_new_layout {
+        if self.is_new_layout {
             self.build_unit(pkg_dir).join("fingerprint")
         } else {
             self.legacy_fingerprint().to_path_buf().join(pkg_dir)
@@ -299,15 +323,15 @@ impl Layout {
     }
     /// Fetch the fingerprint path. (old layout)
     pub fn legacy_fingerprint(&self) -> &Path {
-        &self.build_dir.fingerprint
+        &self.fingerprint
     }
     /// Fetch the build path.
     pub fn build(&self) -> &Path {
-        &self.build_dir.build
+        &self.build
     }
     /// Fetch the build script path.
     pub fn build_script(&self, pkg_dir: &str) -> PathBuf {
-        if self.build_dir.is_new_layout {
+        if self.is_new_layout {
             self.build_unit(pkg_dir).join("build-script")
         } else {
             self.build().join(pkg_dir)
@@ -315,7 +339,7 @@ impl Layout {
     }
     /// Fetch the build script execution path.
     pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
-        if self.build_dir.is_new_layout {
+        if self.is_new_layout {
             self.build_unit(pkg_dir).join("build-script-execution")
         } else {
             self.build().join(pkg_dir)
@@ -323,7 +347,7 @@ impl Layout {
     }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {
-        &self.build_dir.artifact
+        &self.artifact
     }
     /// Fetch the build unit path
     pub fn build_unit(&self, pkg_dir: &str) -> PathBuf {
@@ -331,7 +355,7 @@ impl Layout {
     }
     /// Create and return the tmp path.
     pub fn prepare_tmp(&self) -> CargoResult<&Path> {
-        paths::create_dir_all(&self.build_dir.tmp)?;
-        Ok(&self.build_dir.tmp)
+        paths::create_dir_all(&self.tmp)?;
+        Ok(&self.tmp)
     }
 }

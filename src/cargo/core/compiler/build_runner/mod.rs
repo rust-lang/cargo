@@ -401,7 +401,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             let layout = files.layout(kind);
             self.compilation
                 .root_output
-                .insert(kind, layout.dest().to_path_buf());
+                .insert(kind, layout.artifact_dir().dest().to_path_buf());
             if self.bcx.gctx.cli_unstable().build_dir_new_layout {
                 for (unit, _) in self.bcx.unit_graph.iter() {
                     let dep_dir = self.files().deps_dir(unit);
@@ -411,7 +411,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             } else {
                 self.compilation
                     .deps_output
-                    .insert(kind, layout.legacy_deps().to_path_buf());
+                    .insert(kind, layout.build_dir().legacy_deps().to_path_buf());
             }
         }
         Ok(())
