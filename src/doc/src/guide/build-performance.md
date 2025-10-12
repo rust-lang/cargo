@@ -89,6 +89,27 @@ Trade-offs:
 [parallel-frontend-blog]: https://blog.rust-lang.org/2023/11/09/parallel-rustc/
 [parallel-frontend-issue]: https://github.com/rust-lang/rust/issues/113349
 [build.rustflags]: ../reference/config.md#buildrustflags
+
+### Use an alternative linker
+
+Consider: installing and configuring an alternative linker, like [LLD](https://lld.llvm.org/), [mold](https://github.com/rui314/mold) or [wild](https://github.com/davidlattimore/wild). For example, to configure mold on Linux, you can add to your `.cargo/config.toml`:
+
+```toml
+[target.'cfg(target_os = "linux")']
+# mold, if you have GCC 12+
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# mold, otherwise
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/path/to/mold"]
+```
+
+While dependencies may be built in parallel, linking all of your dependencies happens at once at the end of your build, which can make linking dominate your build times, especially for incremental rebuilds. Often, the linker Rust uses is already fairly fast and the gains from switching may not be worth it, but it is not always the case. For example, Linux targets besides `x86_64-unknown-linux-gnu` still use the Linux system linker which is quite slow (see [rust#39915](https://github.com/rust-lang/rust/issues/39915) for more details).
+
+Trade-offs:
+- ✅ Faster link times
+- ❌ Might not support all use-cases, in particular if you depend on C or C++ dependencies
+
 ## Reducing built code
 
 ### Removing unused dependencies
