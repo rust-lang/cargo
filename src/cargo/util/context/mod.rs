@@ -11,13 +11,13 @@
 //!
 //! There are a variety of helper types for deserializing some common formats:
 //!
-//! - `value::Value`: This type provides access to the location where the
+//! - [`value::Value`]: This type provides access to the location where the
 //!   config value was defined.
-//! - `ConfigRelativePath`: For a path that is relative to where it is
+//! - [`ConfigRelativePath`]: For a path that is relative to where it is
 //!   defined.
-//! - `PathAndArgs`: Similar to `ConfigRelativePath`, but also supports a list
-//!   of arguments, useful for programs to execute.
-//! - `StringList`: Get a value that is either a list or a whitespace split
+//! - [`PathAndArgs`]: Similar to [`ConfigRelativePath`],
+//!   but also supports a list of arguments, useful for programs to execute.
+//! - [`StringList`]: Get a value that is either a list or a whitespace split
 //!   string.
 //!
 //! ## Map key recommendations
@@ -43,10 +43,10 @@
 //!
 //! ## Internal API
 //!
-//! Internally config values are stored with the `ConfigValue` type after they
+//! Internally config values are stored with the [`ConfigValue`] type after they
 //! have been loaded from disk. This is similar to the `toml::Value` type, but
 //! includes the definition location. The `get()` method uses serde to
-//! translate from `ConfigValue` and environment variables to the caller's
+//! translate from [`ConfigValue`] and environment variables to the caller's
 //! desired type.
 
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
