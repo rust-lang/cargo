@@ -27,7 +27,7 @@ fn bad1() {
 }
 
 #[cargo_test]
-fn bad2() {
+fn unsupported_float() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -51,6 +51,126 @@ Caused by:
 
 Caused by:
   found TOML configuration value of unknown type `float`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_datetime() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [http]
+                proxy = 1979-05-27T07:32:00Z
+            "#,
+        )
+        .build();
+    p.cargo("publish -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `http.proxy`
+
+Caused by:
+  found TOML configuration value of unknown type `datetime`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_int_array() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [alias]
+                ints = [1, 2]
+            "#,
+        )
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `alias.ints[0]`
+
+Caused by:
+  expected string but found integer at index 0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_float_array() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [alias]
+                floats = [2.71828, 3.14159]
+            "#,
+        )
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `alias.floats[0]`
+
+Caused by:
+  expected string but found float at index 0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unsupported_datetime_array() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [alias]
+                datetimes = [07:32:00, 1979-05-27T07:32:00Z]
+            "#,
+        )
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] could not load Cargo configuration
+
+Caused by:
+  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
+
+Caused by:
+  failed to parse config at `alias.datetimes[0]`
+
+Caused by:
+  expected string but found datetime at index 0
 
 "#]])
         .run();
