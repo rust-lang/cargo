@@ -74,7 +74,7 @@ fn incompat_in_local_crate() {
 [WARNING] unused variable: `x`
 ...
 
-[WARNING] `foo` (lib) generated 1 warning
+[WARNING] `foo` (lib) generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 [NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
@@ -88,7 +88,7 @@ fn incompat_in_local_crate() {
 [WARNING] unused variable: `x`
 ...
 
-[WARNING] `foo` (lib) generated 1 warning
+[WARNING] `foo` (lib) generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`

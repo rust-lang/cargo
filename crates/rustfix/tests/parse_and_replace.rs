@@ -177,10 +177,11 @@ macro_rules! run_test {
     };
 }
 
-run_test! {
-    closure_immutable_outer_variable,
-    "closure-immutable-outer-variable.rs"
-}
+// NOTE: Temporarily disabled due to failures on nightly. Fix tracked in #16097
+// run_test! {
+//     closure_immutable_outer_variable,
+//     "closure-immutable-outer-variable.rs"
+// }
 run_test! {dedup_suggestions, "dedup-suggestions.rs"}
 run_test! {E0178, "E0178.rs"}
 run_test! {handle_insert_only, "handle-insert-only.rs"}
