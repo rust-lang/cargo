@@ -781,7 +781,11 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     }
 
     if unit.target.is_test() || unit.target.is_bench() {
-        let tmp = build_runner.files().layout(unit.kind).prepare_tmp()?;
+        let tmp = build_runner
+            .files()
+            .layout(unit.kind)
+            .build_dir()
+            .prepare_tmp()?;
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 

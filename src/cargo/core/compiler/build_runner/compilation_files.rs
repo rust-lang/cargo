@@ -211,13 +211,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
         // will be put into doc/ and not into deps/ where the *.examples files are stored.
         if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-            self.layout(unit.kind).doc().to_path_buf()
+            self.layout(unit.kind).artifact_dir().doc().to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
         } else if unit.target.is_example() {
-            self.layout(unit.kind).build_examples().to_path_buf()
+            self.layout(unit.kind).build_dir().examples().to_path_buf()
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
         } else {
@@ -250,36 +250,41 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
     /// Returns the final artifact path for the host (`/…/target/debug`)
     pub fn host_dest(&self) -> &Path {
-        self.host.dest()
+        self.host.artifact_dir().dest()
     }
 
-    /// Returns the root of the build output tree for the host (`/…/target`)
-    pub fn host_root(&self) -> &Path {
-        self.host.root()
+    /// Returns the root of the build output tree for the host (`/…/build-dir`)
+    pub fn host_build_root(&self) -> &Path {
+        self.host.build_dir().root()
     }
 
     /// Returns the host `deps` directory path.
     pub fn host_deps(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.host.deps(&dir)
+        self.host.build_dir().deps(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
     pub fn deps_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).deps(&dir)
+        self.layout(unit.kind).build_dir().deps(&dir)
     }
 
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).fingerprint(&dir)
+        self.layout(unit.kind).build_dir().fingerprint(&dir)
     }
 
     /// Directory where incremental output for the given unit should go.
     pub fn incremental_dir(&self, unit: &Unit) -> &Path {
-        self.layout(unit.kind).incremental()
+        self.layout(unit.kind).build_dir().incremental()
+    }
+
+    /// Directory where timing output should go.
+    pub fn timings_dir(&self) -> &Path {
+        self.host.artifact_dir().timings()
     }
 
     /// Returns the path for a file in the fingerprint directory.
@@ -314,7 +319,9 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(!unit.mode.is_run_custom_build());
         assert!(self.metas.contains_key(unit));
         let dir = self.pkg_dir(unit);
-        self.layout(CompileKind::Host).build_script(&dir)
+        self.layout(CompileKind::Host)
+            .build_dir()
+            .build_script(&dir)
     }
 
     /// Returns the directory for compiled artifacts files.
@@ -338,7 +345,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 invalid
             ),
         };
-        self.layout(unit.kind).artifact().join(dir).join(kind)
+        self.layout(unit.kind)
+            .build_dir()
+            .artifact()
+            .join(dir)
+            .join(kind)
     }
 
     /// Returns the directory where information about running a build script
@@ -348,7 +359,9 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_script_execution(&dir)
+        self.layout(unit.kind)
+            .build_dir()
+            .build_script_execution(&dir)
     }
 
     /// Returns the "`OUT_DIR`" directory for running a build script.
@@ -367,7 +380,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         bcx: &BuildContext<'_, '_>,
     ) -> CargoResult<PathBuf> {
         assert!(target.is_bin());
-        let dest = self.layout(kind).dest();
+        let dest = self.layout(kind).artifact_dir().dest();
         let info = bcx.target_data.info(kind);
         let (file_types, _) = info
             .rustc_outputs(
@@ -435,11 +448,14 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let filename = file_type.uplift_filename(&unit.target);
         let uplift_path = if unit.target.is_example() {
             // Examples live in their own little world.
-            self.layout(unit.kind).examples().join(filename)
+            self.layout(unit.kind)
+                .artifact_dir()
+                .examples()
+                .join(filename)
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit).join(filename)
         } else {
-            self.layout(unit.kind).dest().join(filename)
+            self.layout(unit.kind).artifact_dir().dest().join(filename)
         };
         if from_path == uplift_path {
             // This can happen with things like examples that reside in the

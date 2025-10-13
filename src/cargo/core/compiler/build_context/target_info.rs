@@ -1141,7 +1141,7 @@ impl RustDocFingerprint {
 
         let fingerprint_path = build_runner
             .files()
-            .host_root()
+            .host_build_root()
             .join(".rustdoc_fingerprint.json");
         let write_fingerprint = || -> CargoResult<()> {
             paths::write(
@@ -1181,7 +1181,7 @@ impl RustDocFingerprint {
             .bcx
             .all_kinds
             .iter()
-            .map(|kind| build_runner.files().layout(*kind).doc())
+            .map(|kind| build_runner.files().layout(*kind).artifact_dir().doc())
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;
