@@ -115,47 +115,6 @@ pub struct Layout {
     build_dir: BuildDirLayout,
 }
 
-pub struct ArtifactDirLayout {
-    /// The final artifact destination: `<artifact-dir>/debug` (or `release`).
-    dest: PathBuf,
-    /// The directory for examples
-    examples: PathBuf,
-    /// The directory for rustdoc output
-    doc: PathBuf,
-    /// The directory for --timings output
-    timings: PathBuf,
-    /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
-    /// struct is `drop`ped.
-    _lock: FileLock,
-}
-
-pub struct BuildDirLayout {
-    /// The root directory: `/path/to/build-dir`.
-    /// If cross compiling: `/path/to/build-dir/$TRIPLE`.
-    root: PathBuf,
-    /// The directory with rustc artifacts
-    deps: PathBuf,
-    /// The primary directory for build files
-    build: PathBuf,
-    /// The directory for artifacts, i.e. binaries, cdylibs, staticlibs
-    artifact: PathBuf,
-    /// The directory for incremental files
-    incremental: PathBuf,
-    /// The directory for fingerprints
-    fingerprint: PathBuf,
-    /// The directory for pre-uplifted examples: `build-dir/debug/examples`
-    examples: PathBuf,
-    /// The directory for temporary data of integration tests and benches
-    tmp: PathBuf,
-    /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
-    /// struct is `drop`ped.
-    ///
-    /// Will be `None` when the build-dir and target-dir are the same path as we cannot
-    /// lock the same path twice.
-    _lock: Option<FileLock>,
-    is_new_layout: bool,
-}
-
 impl Layout {
     /// Calculate the paths for build output, lock the build directory, and return as a Layout.
     ///
@@ -252,6 +211,20 @@ impl Layout {
     }
 }
 
+pub struct ArtifactDirLayout {
+    /// The final artifact destination: `<artifact-dir>/debug` (or `release`).
+    dest: PathBuf,
+    /// The directory for examples
+    examples: PathBuf,
+    /// The directory for rustdoc output
+    doc: PathBuf,
+    /// The directory for --timings output
+    timings: PathBuf,
+    /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
+    /// struct is `drop`ped.
+    _lock: FileLock,
+}
+
 impl ArtifactDirLayout {
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> CargoResult<()> {
@@ -275,6 +248,33 @@ impl ArtifactDirLayout {
     pub fn timings(&self) -> &Path {
         &self.timings
     }
+}
+
+pub struct BuildDirLayout {
+    /// The root directory: `/path/to/build-dir`.
+    /// If cross compiling: `/path/to/build-dir/$TRIPLE`.
+    root: PathBuf,
+    /// The directory with rustc artifacts
+    deps: PathBuf,
+    /// The primary directory for build files
+    build: PathBuf,
+    /// The directory for artifacts, i.e. binaries, cdylibs, staticlibs
+    artifact: PathBuf,
+    /// The directory for incremental files
+    incremental: PathBuf,
+    /// The directory for fingerprints
+    fingerprint: PathBuf,
+    /// The directory for pre-uplifted examples: `build-dir/debug/examples`
+    examples: PathBuf,
+    /// The directory for temporary data of integration tests and benches
+    tmp: PathBuf,
+    /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
+    /// struct is `drop`ped.
+    ///
+    /// Will be `None` when the build-dir and target-dir are the same path as we cannot
+    /// lock the same path twice.
+    _lock: Option<FileLock>,
+    is_new_layout: bool,
 }
 
 impl BuildDirLayout {
