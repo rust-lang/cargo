@@ -129,7 +129,8 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         //
         // See more comments in `value.rs` for the protocol used here.
         if name == value::NAME && fields == value::FIELDS {
-            return visitor.visit_map(ValueDeserializer::new(self)?);
+            let source = ValueSource::with_deserializer(self)?;
+            return visitor.visit_map(ValueDeserializer::new(source));
         }
         visitor.visit_map(ConfigMapAccess::new_struct(self, fields)?)
     }
@@ -480,20 +481,8 @@ enum ValueSource<'gctx> {
     ConfigValue(CV),
 }
 
-/// This is a deserializer that deserializes into a `Value<T>` for
-/// configuration.
-///
-/// This is a special deserializer because it deserializes one of its struct
-/// fields into the location that this configuration value was defined in.
-///
-/// See more comments in `value.rs` for the protocol used here.
-struct ValueDeserializer<'gctx> {
-    hits: u32,
-    source: ValueSource<'gctx>,
-}
-
-impl<'gctx> ValueDeserializer<'gctx> {
-    fn new(de: Deserializer<'gctx>) -> Result<ValueDeserializer<'gctx>, ConfigError> {
+impl<'gctx> ValueSource<'gctx> {
+    fn with_deserializer(de: Deserializer<'gctx>) -> Result<ValueSource<'gctx>, ConfigError> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
@@ -515,17 +504,29 @@ impl<'gctx> ValueDeserializer<'gctx> {
             }
         };
 
-        Ok(ValueDeserializer {
-            hits: 0,
-            source: ValueSource::Deserializer { de, definition },
-        })
+        Ok(Self::Deserializer { de, definition })
     }
 
-    fn with_cv(cv: CV) -> ValueDeserializer<'gctx> {
-        ValueDeserializer {
-            hits: 0,
-            source: ValueSource::ConfigValue(cv),
-        }
+    fn with_cv(cv: CV) -> Self {
+        Self::ConfigValue(cv)
+    }
+}
+
+/// This is a deserializer that deserializes into a `Value<T>` for
+/// configuration.
+///
+/// This is a special deserializer because it deserializes one of its struct
+/// fields into the location that this configuration value was defined in.
+///
+/// See more comments in `value.rs` for the protocol used here.
+struct ValueDeserializer<'gctx> {
+    hits: u32,
+    source: ValueSource<'gctx>,
+}
+
+impl<'gctx> ValueDeserializer<'gctx> {
+    fn new(source: ValueSource<'gctx>) -> ValueDeserializer<'gctx> {
+        Self { hits: 0, source }
     }
 
     fn definition(&self) -> &Definition {
@@ -625,7 +626,8 @@ impl<'de> de::Deserializer<'de> for ArrayItemDeserializer {
         //
         // See more comments in `value.rs` for the protocol used here.
         if name == value::NAME && fields == value::FIELDS {
-            return visitor.visit_map(ValueDeserializer::with_cv(self.cv));
+            let source = ValueSource::with_cv(self.cv);
+            return visitor.visit_map(ValueDeserializer::new(source));
         }
         visitor.visit_map(ArrayItemMapAccess::with_struct(self.cv, fields))
     }
