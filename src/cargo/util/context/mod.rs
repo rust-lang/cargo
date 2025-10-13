@@ -11,14 +11,30 @@
 //!
 //! There are a variety of helper types for deserializing some common formats:
 //!
-//! - `value::Value`: This type provides access to the location where the
+//! - [`value::Value`]: This type provides access to the location where the
 //!   config value was defined.
-//! - `ConfigRelativePath`: For a path that is relative to where it is
+//! - [`ConfigRelativePath`]: For a path that is relative to where it is
 //!   defined.
-//! - `PathAndArgs`: Similar to `ConfigRelativePath`, but also supports a list
-//!   of arguments, useful for programs to execute.
-//! - `StringList`: Get a value that is either a list or a whitespace split
+//! - [`PathAndArgs`]: Similar to [`ConfigRelativePath`],
+//!   but also supports a list of arguments, useful for programs to execute.
+//! - [`StringList`]: Get a value that is either a list or a whitespace split
 //!   string.
+//!
+//! ## Config deserialization
+//!
+//! Cargo uses a two-layer deserialization approach:
+//!
+//! 1. **External sources → `ConfigValue`** ---
+//!    Configuration files, environment variables, and CLI `--config` arguments
+//!    are parsed into [`ConfigValue`] instances via [`ConfigValue::from_toml`].
+//!    These parsed results are stored in [`GlobalContext`].
+//!
+//! 2. **`ConfigValue` → Target types** ---
+//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](Deserializer)
+//!    to convert [`ConfigValue`] instances to the caller's desired type.
+//!    Precedence between [`ConfigValue`] sources is resolved during retrieval
+//!    based on [`Definition`] priority.
+//!    See the top-level documentation of the [`de`] module for more.
 //!
 //! ## Map key recommendations
 //!
@@ -40,14 +56,6 @@
 //! structs/maps, but if it is a struct or map, then it will not be able to
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
-//!
-//! ## Internal API
-//!
-//! Internally config values are stored with the `ConfigValue` type after they
-//! have been loaded from disk. This is similar to the `toml::Value` type, but
-//! includes the definition location. The `get()` method uses serde to
-//! translate from `ConfigValue` and environment variables to the caller's
-//! desired type.
 
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
@@ -2061,6 +2069,7 @@ enum KeyOrIdx {
     Idx(usize),
 }
 
+/// Similar to [`toml::Value`] but includes the source location where it is defined.
 #[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
     Integer(i64, Definition),
