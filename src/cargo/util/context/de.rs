@@ -461,26 +461,25 @@ impl<'de, 'gctx> de::SeqAccess<'de> for ConfigSeqAccess<'gctx> {
     where
         T: de::DeserializeSeed<'de>,
     {
-        match self.list_iter.next() {
-            Some((i, cv)) => {
-                let mut key_path = ArrayItemKeyPath::new(self.de.key.clone());
-                let definition = Some(cv.definition().clone());
-                let de = ArrayItemDeserializer {
-                    cv,
-                    key_path: &mut key_path,
-                };
-                seed.deserialize(de)
-                    .map_err(|e| {
-                        // This along with ArrayItemKeyPath provide a better error context of the
-                        // ConfigValue definition + the key path within an array item that native
-                        // TOML key path can't express. For example, `foo.bar[3].baz`.
-                        key_path.push_index(i);
-                        e.with_array_item_key_context(&key_path, definition)
-                    })
-                    .map(Some)
-            }
-            None => Ok(None),
-        }
+        let Some((i, cv)) = self.list_iter.next() else {
+            return Ok(None);
+        };
+
+        let mut key_path = ArrayItemKeyPath::new(self.de.key.clone());
+        let definition = Some(cv.definition().clone());
+        let de = ArrayItemDeserializer {
+            cv,
+            key_path: &mut key_path,
+        };
+        seed.deserialize(de)
+            .map_err(|e| {
+                // This along with ArrayItemKeyPath provide a better error context of the
+                // ConfigValue definition + the key path within an array item that native
+                // TOML key path can't express. For example, `foo.bar[3].baz`.
+                key_path.push_index(i);
+                e.with_array_item_key_context(&key_path, definition)
+            })
+            .map(Some)
     }
 }
 
