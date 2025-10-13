@@ -27,7 +27,7 @@ fn bad1() {
 }
 
 #[cargo_test]
-fn bad2() {
+fn unsupported_float() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
