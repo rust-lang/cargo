@@ -110,6 +110,33 @@ Trade-offs:
 - ✅ Faster link times
 - ❌ Might not support all use-cases, in particular if you depend on C or C++ dependencies
 
+### Resolve features for the whole workspace
+
+Consider: adding to your project's `.cargo/config.toml`
+
+```toml
+[resolver]
+feature-unification = "workspace"
+```
+
+When invoking `cargo`,
+[features get activated][resolver-features] based on which workspace members you have selected.
+However, when contributing to an application,
+you may need to build and test various packages within the application,
+which can cause extraneous rebuilds because different sets of features may be activated for common dependencies.
+With [`feauture-unification`][feature-unification],
+you can reuse more dependency builds by ensuring the same set of dependency features are activated,
+independent of which package you are currently building and testing.
+
+Trade-offs:
+- ✅ Fewer rebuilds when building different packages in a workspace
+- ❌ **Requires using nightly Rust and an [unstable Cargo feature][feature-unification]**
+- ❌ A package activating a feature can mask bugs in other packages that should activate it but don't
+- ❌ If the feature unification from `--workspace` doesn't work for you, then this won't either
+
+[resolver-features]: ../reference/resolver.md#features
+[feature-unification]: ../reference/unstable.md#feature-unification
+
 ## Reducing built code
 
 ### Removing unused dependencies
