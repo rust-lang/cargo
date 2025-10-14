@@ -9,12 +9,12 @@
 //! from configuration, but also record where it was deserialized from when it
 //! was read.
 //!
-//! ## How `Value<T>` deserialization works
-//!
 //! Deserializing `Value<T>` is pretty special, and serde doesn't have built-in
 //! support for this operation. To implement this we extend serde's "data model"
 //! a bit. We configure deserialization of `Value<T>` to basically only work with
 //! our one deserializer using configuration.
+//!
+//! ## How `Value<T>` deserialization works
 //!
 //! We define that `Value<T>` deserialization asks the deserializer for a very
 //! special [struct name](NAME) and [struct field names](FIELDS). In doing so,
