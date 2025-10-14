@@ -13,7 +13,15 @@ Example workflows to consider include:
 
 Cargo uses configuration defaults that try to balance several aspects, including debuggability, runtime performance, build performance, binary size and others. This section describes several approaches for changing these defaults that should be designed to maximize build performance.
 
-You can set the described options either in the [`Cargo.toml` manifest](../reference/profiles.md), which will make them available for all developers who work on the given crate/project, or in the [`config.toml` configuration file](../reference/config.md), where you can apply them only for you or even globally for all your local projects.
+Common locations to override defaults are:
+- [`Cargo.toml` manifest](../reference/profiles.md)
+  - Available to all developers contributing to your project
+  - Limited in what configuration is supported (see [#12738](https://github.com/rust-lang/cargo/issues/12738) for expanding this)
+- [`$WORKSPACE_ROOT/.cargo/config.toml` configuration file](../reference/config.md)
+  - Available to all developers contributing to your project
+  - Unlike `Cargo.toml`, this is sensitive to what directory you invoke `cargo` from (see [#2930](https://github.com/rust-lang/cargo/issues/2930))
+- [`$CARGO_HOME/.cargo/config.toml` configuration file](../reference/config.md)
+  - For a developer to control the defaults for their development
 
 ### Reduce amount of generated debug information
 
