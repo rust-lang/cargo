@@ -20,6 +20,7 @@ pub fn cli() -> Command {
         )
         .arg(flag("no-run", "Compile, but don't run tests"))
         .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
+        .arg(flag("mutation", "Enable mutation testing"))
         .arg_future_incompat_report()
         .arg_message_format()
         .arg(
@@ -108,6 +109,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ops = ops::TestOptions {
         no_run,
         no_fail_fast: args.flag("no-fail-fast"),
+        mutation:args.flag("mutation"),
         compile_opts,
     };
 

@@ -16,6 +16,7 @@ pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
     pub no_run: bool,
     pub no_fail_fast: bool,
+    pub mutation: bool,
 }
 
 /// The kind of test.
