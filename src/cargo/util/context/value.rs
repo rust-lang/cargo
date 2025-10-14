@@ -9,28 +9,36 @@
 //! from configuration, but also record where it was deserialized from when it
 //! was read.
 //!
-//! ## How `Value<T>` deserialization works
-//!
 //! Deserializing `Value<T>` is pretty special, and serde doesn't have built-in
 //! support for this operation. To implement this we extend serde's "data model"
 //! a bit. We configure deserialization of `Value<T>` to basically only work with
 //! our one deserializer using configuration.
 //!
-//! We define that `Value<T>` deserialization asks the deserializer for a very
-//! special [struct name](NAME) and [struct field names](FIELDS). In doing so,
-//! the deserializer will recognize this and synthesize a magical value for the
-//! `definition` field when we deserialize it. This protocol is how we're able
-//! to have a channel of information flowing from the configuration deserializer
-//! into the deserialization implementation here.
+//! ## How `Value<T>` deserialization works
 //!
-//! You'll want to also check out the implementation of `ValueDeserializer` in
-//! the [`de`] module. Also note that the names below are intended to be invalid
-//! Rust identifiers to avoid conflicts with other valid structures.
+//! `Value<T>` uses a custom protocol to inject source location information
+//! into serde's deserialization process:
 //!
-//! Finally the `definition` field is transmitted as a tuple of i32/string,
-//! which is effectively a tagged union of [`Definition`] itself. You should
-//! update both places here and in the impl of [`serde::de::MapAccess`] for
-//! `ValueDeserializer` when adding or modifying enum variants of [`Definition`].
+//! **Magic identifiers**: `Value<T>::deserialize` requests a struct with special
+//! [name](NAME) and [field names](FIELDS) that use invalid Rust syntax to avoid
+//! conflicts. This signals to Cargo's deserializer that location tracking is needed.
+//!
+//! **Custom deserializer response**: When Cargo's deserializer sees these magic
+//! identifiers, it switches to `ValueDeserializer` (from the [`de`] module)
+//! instead of normal struct deserialization.
+//!
+//! **Two-field protocol**: `ValueDeserializer` presents exactly two fields
+//! through map visiting:
+//! * The actual value (deserialized normally)
+//! * The definition context (encoded as a `(u32, String)` tuple acting as a
+//!   tagged union of [`Definition`] variants)
+//!
+//! This allows `Value<T>` to capture both the deserialized data and where it
+//! came from.
+//!
+//! **Note**: When modifying [`Definition`] variants, be sure to update both
+//! the `Definition::deserialize` implementation here and the
+//! `MapAccess::next_value_seed` implementation in `ValueDeserializer`.
 //!
 //! [`de`]: crate::util::context::de
 
@@ -55,6 +63,8 @@ pub struct Value<T> {
 
 pub type OptValue<T> = Option<Value<T>>;
 
+// The names below are intended to be invalid Rust identifiers
+// to avoid conflicts with other valid structures.
 pub(crate) const VALUE_FIELD: &str = "$__cargo_private_value";
 pub(crate) const DEFINITION_FIELD: &str = "$__cargo_private_definition";
 pub(crate) const NAME: &str = "$__cargo_private_Value";
