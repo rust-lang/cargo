@@ -36,7 +36,7 @@ fn basic_rs() {
     p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
 args: []
 
@@ -45,7 +45,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
@@ -61,7 +61,7 @@ fn arg0() {
     p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [ROOT]/foo/echo.rs
 args: []
 
@@ -70,7 +70,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
@@ -86,8 +86,8 @@ fn arg0() {
     p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
-arg0: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
+arg0: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 args: []
 
 "#]])
@@ -95,7 +95,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
@@ -110,7 +110,7 @@ fn basic_path() {
     p.cargo("-Zscript -v ./echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
 args: []
 
@@ -119,7 +119,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
@@ -165,7 +165,7 @@ fn manifest_precedence_over_plugins() {
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
 args: []
 
@@ -174,7 +174,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
@@ -297,7 +297,7 @@ Hello world!
         .with_stderr_data(str![[r#"
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -327,7 +327,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -355,7 +355,7 @@ msg = undefined
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -370,7 +370,7 @@ msg = undefined
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -387,7 +387,7 @@ msg = hello
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -416,7 +416,7 @@ rustc = "non-existent-rustc"
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -427,7 +427,7 @@ args: ["-NotAnArg"]
     p.cargo("-Zscript ../script/script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -469,7 +469,7 @@ fn default_programmatic_verbosity() {
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -488,7 +488,7 @@ fn quiet() {
     p.cargo("-Zscript -q script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -519,7 +519,7 @@ line: 4
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -535,7 +535,7 @@ fn test_escaped_hyphen_arg() {
     p.cargo("-Zscript -v -- script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -544,7 +544,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] -NotAnArg`
 
 "#]])
         .run();
@@ -560,7 +560,7 @@ fn test_unescaped_hyphen_arg() {
     p.cargo("-Zscript -v script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["-NotAnArg"]
 
@@ -569,7 +569,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] -NotAnArg`
 
 "#]])
         .run();
@@ -585,7 +585,7 @@ fn test_same_flags() {
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: ["--help"]
 
@@ -594,7 +594,7 @@ args: ["--help"]
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -610,7 +610,7 @@ fn test_name_has_weird_chars() {
     p.cargo("-Zscript -v s-h.w§c!.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/s-h-w-c-[EXE]
 arg0: [..]
 args: []
 
@@ -619,7 +619,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo/s-h.w§c!.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/s-h-w-c-[EXE]`
 
 "#]])
         .run();
@@ -635,7 +635,7 @@ fn test_name_has_leading_number() {
     p.cargo("-Zscript -v 42answer.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/answer[EXE]
 arg0: [..]
 args: []
 
@@ -644,7 +644,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] answer v0.0.0 ([ROOT]/foo/42answer.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/answer[EXE]`
 
 "#]])
         .run();
@@ -658,7 +658,7 @@ fn test_name_is_number() {
     p.cargo("-Zscript -v 42.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/package[EXE]
 arg0: [..]
 args: []
 
@@ -667,7 +667,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] package v0.0.0 ([ROOT]/foo/42.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/package[EXE]`
 
 "#]])
         .run();
@@ -683,7 +683,7 @@ fn test_name_is_deps_dir_implicit() {
     p.cargo("-Zscript -v deps.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/deps-[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]
 arg0: [..]
 args: []
 
@@ -692,7 +692,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] deps- v0.0.0 ([ROOT]/foo/deps.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/deps-[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]`
 
 "#]])
         .run();
@@ -881,7 +881,7 @@ Hello world!
 [COMPILING] script v1.0.0
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -917,7 +917,7 @@ Hello world!
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -945,7 +945,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -973,7 +973,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -1001,7 +1001,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
         .run();
@@ -1417,7 +1417,7 @@ fn implicit_target_dir() {
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: []
 
@@ -1426,7 +1426,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -1445,7 +1445,7 @@ fn no_local_lockfile() {
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: []
 
@@ -1454,7 +1454,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -1587,7 +1587,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests script.rs ([ROOT]/home/.cargo/target/[HASH]/debug/deps/script-[HASH][EXE])
+[RUNNING] unittests script.rs ([ROOT]/home/.cargo/build/[HASH]/debug/deps/script-[HASH][EXE])
 
 "#]])
         .run();
@@ -1700,8 +1700,8 @@ fn cmd_metadata_with_embedded() {
     ],
     "root": "path+[ROOTURL]/foo/script.rs#script@0.0.0"
   },
-  "target_directory": "[ROOT]/home/.cargo/target/[HASH]",
-  "build_directory": "[ROOT]/home/.cargo/target/[HASH]",
+  "target_directory": "[ROOT]/home/.cargo/build/[HASH]/target",
+  "build_directory": "[ROOT]/home/.cargo/build/[HASH]",
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/script.rs#script@0.0.0"
@@ -1792,7 +1792,7 @@ fn cmd_run_with_embedded() {
     p.cargo("-Zscript run --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
 args: []
 
@@ -1801,7 +1801,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -2050,7 +2050,7 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
         .run();
@@ -2093,7 +2093,7 @@ members = [
     p.cargo("-Zscript -v script/echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
 args: []
 
@@ -2102,7 +2102,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/script/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
         .run();
