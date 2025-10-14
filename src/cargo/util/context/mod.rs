@@ -2155,10 +2155,7 @@ impl ConfigValue {
                     .collect::<CargoResult<_>>()?,
                 def,
             )),
-            v => bail!(
-                "found TOML configuration value of unknown type `{}`",
-                v.type_str()
-            ),
+            v => bail!("unsupported TOML configuration type `{}`", v.type_str()),
         }
     }
 

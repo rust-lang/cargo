@@ -502,7 +502,7 @@ Caused by:
   failed to parse config at `a`
 
 Caused by:
-  found TOML configuration value of unknown type `datetime`
+  unsupported TOML configuration type `datetime`
 "#]],
     );
 }

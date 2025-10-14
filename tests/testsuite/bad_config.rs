@@ -50,7 +50,7 @@ Caused by:
   failed to parse config at `http.proxy`
 
 Caused by:
-  found TOML configuration value of unknown type `float`
+  unsupported TOML configuration type `float`
 
 "#]])
         .run();
@@ -80,7 +80,7 @@ Caused by:
   failed to parse config at `http.proxy`
 
 Caused by:
-  found TOML configuration value of unknown type `datetime`
+  unsupported TOML configuration type `datetime`
 
 "#]])
         .run();
