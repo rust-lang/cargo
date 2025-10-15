@@ -239,7 +239,7 @@ fn requires_z_flag() {
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn manifest_parse_error() {
-    // Exagerate the newlines to make it more obvious if the error's line number is off
+    // Exaggerate the newlines to make it more obvious if the error's line number is off
     let script = r#"#!/usr/bin/env cargo
 
 

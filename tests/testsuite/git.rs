@@ -2990,7 +2990,7 @@ fn templatedir_doesnt_cause_problems() {
             &format!(
                 r#"
                     [package]
-                    name = "fo"
+                    name = "foo"
                     version = "0.5.0"
                     edition = "2015"
                     authors = []
