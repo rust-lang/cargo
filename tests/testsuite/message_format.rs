@@ -120,7 +120,10 @@ fn cargo_renders_ansi() {
 
     p.cargo("check --message-format json-diagnostic-rendered-ansi")
         .with_status(101)
-        .with_stdout_contains("[..]\\u001b[38;5;9merror[..]")
+        // Because 1b is the start of an ANSI escape sequence, checking for it
+        // allows us to verify that ANSI colors are being emitted without
+        // looking for specific color codes, that may change over time.
+        .with_stdout_contains("[..]\\u001b[..]")
         .run();
 }
 
