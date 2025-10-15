@@ -65,8 +65,6 @@ pub fn sanitize_name(name: &str) -> String {
         } else if restricted_names::is_conflicting_artifact_name(&name) {
             // Being an embedded manifest, we always assume it is a `[[bin]]`
             name.push(placeholder);
-        } else if name == "test" {
-            name.push(placeholder);
         } else {
             break;
         }

@@ -705,16 +705,16 @@ fn test_name_is_sysroot_package_name() {
     p.cargo("-Zscript -v ./test")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/test-[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]
 arg0: [..]
 args: []
 
 "#]])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[COMPILING] test- v0.0.0 ([ROOT]/foo/test)
+[COMPILING] test v0.0.0 ([ROOT]/foo/test)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/test-[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]`
 
 "#]])
         .run();
