@@ -728,16 +728,16 @@ fn test_name_is_keyword() {
     p.cargo("-Zscript -v ./self")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/self-[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]
 arg0: [..]
 args: []
 
 "#]])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[COMPILING] self- v0.0.0 ([ROOT]/foo/self)
+[COMPILING] self v0.0.0 ([ROOT]/foo/self)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/self-[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]`
 
 "#]])
         .run();

@@ -60,9 +60,7 @@ pub fn sanitize_name(name: &str) -> String {
     let mut name = PackageName::sanitize(name, placeholder).into_inner();
 
     loop {
-        if restricted_names::is_keyword(&name) {
-            name.push(placeholder);
-        } else if restricted_names::is_conflicting_artifact_name(&name) {
+        if restricted_names::is_conflicting_artifact_name(&name) {
             // Being an embedded manifest, we always assume it is a `[[bin]]`
             name.push(placeholder);
         } else {
