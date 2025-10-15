@@ -1,70 +1,83 @@
 {
-  "message": "cannot assign to captured outer variable in an `FnMut` closure",
-  "code": {
-    "code": "E0594",
-    "explanation": null
-  },
-  "level": "error",
-  "spans": [
-    {
-      "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
-      "byte_start": 615,
-      "byte_end": 624,
-      "line_start": 19,
-      "line_end": 19,
-      "column_start": 26,
-      "column_end": 35,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "    foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable",
-          "highlight_start": 26,
-          "highlight_end": 35
-        }
-      ],
-      "label": null,
-      "suggested_replacement": null,
-      "expansion": null
-    }
-  ],
+  "$message_type": "diagnostic",
   "children": [
     {
-      "message": "consider making `y` mutable",
+      "children": [],
       "code": null,
       "level": "help",
+      "message": "consider changing this to be mutable",
+      "rendered": null,
       "spans": [
         {
-          "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
-          "byte_start": 580,
-          "byte_end": 581,
-          "line_start": 18,
-          "line_end": 18,
+          "byte_end": 167,
+          "byte_start": 167,
+          "column_end": 9,
           "column_start": 9,
-          "column_end": 10,
+          "expansion": null,
+          "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
           "is_primary": true,
+          "label": null,
+          "line_end": 11,
+          "line_start": 11,
+          "suggested_replacement": "mut ",
+          "suggestion_applicability": "MachineApplicable",
           "text": [
             {
-              "text": "    let y = true;",
+              "highlight_end": 9,
               "highlight_start": 9,
-              "highlight_end": 10
+              "text": "    let y = true;"
             }
-          ],
-          "label": null,
-          "suggested_replacement": "mut y",
-          "expansion": null
+          ]
         }
-      ],
-      "children": [],
-      "rendered": null
+      ]
     }
   ],
-  "rendered": "error[E0594]: cannot assign to captured outer variable in an `FnMut` closure\n  --> ./tests/everything/closure-immutable-outer-variable.rs:19:26\n   |\n18 |     let y = true;\n   |         - help: consider making `y` mutable: `mut y`\n19 |     foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable\n   |                          ^^^^^^^^^\n\nIf you want more information on this error, try using \"rustc --explain E0594\"\n"
+  "code": {
+    "code": "E0594",
+    "explanation": "A non-mutable value was assigned a value./n/nErroneous code example:/n/n```compile_fail,E0594/nstruct SolarSystem {/n    earth: i32,/n}/n/nlet ss = SolarSystem { earth: 3 };/nss.earth = 2; // error!/n```/n/nTo fix this error, declare `ss` as mutable by using the `mut` keyword:/n/n```/nstruct SolarSystem {/n    earth: i32,/n}/n/nlet mut ss = SolarSystem { earth: 3 }; // declaring `ss` as mutable/nss.earth = 2; // ok!/n```/n"
+  },
+  "level": "error",
+  "message": "cannot assign to `y`, as it is not declared as mutable",
+  "rendered": "error[E0594]: cannot assign to `y`, as it is not declared as mutable/n  --> ./tests/everything/closure-immutable-outer-variable.rs:12:26/n   |/n12 |     foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable/n   |                          ^^^^^^^^^ cannot assign/n   |/nhelp: consider changing this to be mutable/n   |/n11 |     let mut y = true;/n   |         +++/n/n",
+  "spans": [
+    {
+      "byte_end": 211,
+      "byte_start": 202,
+      "column_end": 35,
+      "column_start": 26,
+      "expansion": null,
+      "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
+      "is_primary": true,
+      "label": "cannot assign",
+      "line_end": 12,
+      "line_start": 12,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "text": [
+        {
+          "highlight_end": 35,
+          "highlight_start": 26,
+          "text": "    foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable"
+        }
+      ]
+    }
+  ]
 }
 {
-  "message": "aborting due to previous error",
+  "$message_type": "diagnostic",
+  "children": [],
   "code": null,
   "level": "error",
-  "spans": [],
+  "message": "aborting due to 1 previous error",
+  "rendered": "error: aborting due to 1 previous error/n/n",
+  "spans": []
+}
+{
+  "$message_type": "diagnostic",
   "children": [],
-  "rendered": "error: aborting due to previous error\n\n"
+  "code": null,
+  "level": "failure-note",
+  "message": "For more information about this error, try `rustc --explain E0594`.",
+  "rendered": "For more information about this error, try `rustc --explain E0594`./n",
+  "spans": []
 }
