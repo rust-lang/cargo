@@ -1,5 +1,8 @@
 // Point at the captured immutable outer variable
 
+// Suppress unrelated warnings
+#![allow(unused)]
+
 fn foo(mut f: Box<dyn FnMut()>) {
     f();
 }
