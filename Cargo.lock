@@ -5212,6 +5212,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "xtask-spellcheck"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "cargo-util",
+ "cargo_metadata",
+ "clap",
+ "semver",
+]
+
+[[package]]
 name = "xtask-stale-label"
 version = "0.0.0"
 dependencies = [
