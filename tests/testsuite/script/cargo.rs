@@ -752,17 +752,14 @@ fn test_name_is_deps_dir_implicit() {
 
     p.cargo("-Zscript -v deps.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]
-arg0: [..]
-args: []
-
-"#]])
+        .with_status(101)
+        .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[COMPILING] deps- v0.0.0 ([ROOT]/foo/deps.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]`
+[ERROR] failed to parse manifest at `[ROOT]/foo/deps.rs`
+
+Caused by:
+  the binary target name `deps` is forbidden, it conflicts with cargo's build directory names
 
 "#]])
         .run();
