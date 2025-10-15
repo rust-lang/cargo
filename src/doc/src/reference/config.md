@@ -182,6 +182,7 @@ rustflags = ["…", "…"]    # custom flags for `rustc`
 rustdocflags = ["…", "…"] # custom flags for `rustdoc`
 
 [target.<cfg>]
+linker = "…"            # linker to use
 runner = "…"            # wrapper to run executables
 rustflags = ["…", "…"]  # custom flags for `rustc`
 
