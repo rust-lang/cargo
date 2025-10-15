@@ -674,6 +674,7 @@ args: []
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cfg(not(windows))]
 fn test_name_is_windows_reserved_name() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("con", script).build();
@@ -681,16 +682,16 @@ fn test_name_is_windows_reserved_name() {
     p.cargo("-Zscript -v ./con")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/con-[EXE]
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]
 arg0: [..]
 args: []
 
 "#]])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[COMPILING] con- v0.0.0 ([ROOT]/foo/con)
+[COMPILING] con v0.0.0 ([ROOT]/foo/con)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/con-[EXE]`
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]`
 
 "#]])
         .run();

@@ -67,9 +67,6 @@ pub fn sanitize_name(name: &str) -> String {
             name.push(placeholder);
         } else if name == "test" {
             name.push(placeholder);
-        } else if restricted_names::is_windows_reserved(&name) {
-            // Go ahead and be consistent across platforms
-            name.push(placeholder);
         } else {
             break;
         }
