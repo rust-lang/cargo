@@ -308,7 +308,7 @@ fn sync(
                     // This fallback is worked for sometimes `fs::rename` failed in a specific situation, such as:
                     // - In Windows 10 versions earlier than 1607, the destination of `fs::rename` can't be a directory in older versions.
                     // - `from` and `to` are on separate filesystems.
-                    // - AntiVirus or our system indexer are doing stuf simutaneously.
+                    // - AntiVirus or our system indexer are doing stuf simultaneously.
                     // - Any other reasons documented in std::fs::rename.
                     tracing::warn!("failed to `mv {unpacked_src:?} {dst:?}`: {e}");
                     let paths: Vec<_> = walkdir(&unpacked_src).map(|e| e.into_path()).collect();

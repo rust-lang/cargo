@@ -1459,16 +1459,16 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // effecting any builds that happened since that time stamp.
     let mut cleaned = false;
     dir.push(".fingerprint");
-    for fing in fs::read_dir(&dir).unwrap() {
-        let fing = fing.unwrap();
+    for fingerprint in fs::read_dir(&dir).unwrap() {
+        let fingerprint = fingerprint.unwrap();
 
         let outdated = |f: io::Result<fs::DirEntry>| {
             filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
                 <= timestamp
         };
-        if fs::read_dir(fing.path()).unwrap().all(outdated) {
-            fs::remove_dir_all(fing.path()).unwrap();
-            println!("remove: {:?}", fing.path());
+        if fs::read_dir(fingerprint.path()).unwrap().all(outdated) {
+            fs::remove_dir_all(fingerprint.path()).unwrap();
+            println!("remove: {:?}", fingerprint.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
             cleaned = true;

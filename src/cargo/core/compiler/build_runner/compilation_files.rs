@@ -235,16 +235,16 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// Note that some units may share the same directory, so care should be
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
-        let seperator = match self.ws.gctx().cli_unstable().build_dir_new_layout {
+        let separator = match self.ws.gctx().cli_unstable().build_dir_new_layout {
             true => "/",
             false => "-",
         };
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
         if let Some(c_extra_filename) = meta.c_extra_filename() {
-            format!("{}{}{}", name, seperator, c_extra_filename)
+            format!("{}{}{}", name, separator, c_extra_filename)
         } else {
-            format!("{}{}{}", name, seperator, self.target_short_hash(unit))
+            format!("{}{}{}", name, separator, self.target_short_hash(unit))
         }
     }
 

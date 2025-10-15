@@ -1069,18 +1069,18 @@ impl Fingerprint {
                 }
                 (
                     LocalFingerprint::CheckDepInfo {
-                        dep_info: adep,
+                        dep_info: a_dep,
                         checksum: checksum_a,
                     },
                     LocalFingerprint::CheckDepInfo {
-                        dep_info: bdep,
+                        dep_info: b_dep,
                         checksum: checksum_b,
                     },
                 ) => {
-                    if adep != bdep {
+                    if a_dep != b_dep {
                         return DirtyReason::DepInfoOutputChanged {
-                            old: bdep.clone(),
-                            new: adep.clone(),
+                            old: b_dep.clone(),
+                            new: a_dep.clone(),
                         };
                     }
                     if checksum_a != checksum_b {
@@ -1089,48 +1089,48 @@ impl Fingerprint {
                 }
                 (
                     LocalFingerprint::RerunIfChanged {
-                        output: aout,
-                        paths: apaths,
+                        output: a_out,
+                        paths: a_paths,
                     },
                     LocalFingerprint::RerunIfChanged {
-                        output: bout,
-                        paths: bpaths,
+                        output: b_out,
+                        paths: b_paths,
                     },
                 ) => {
-                    if aout != bout {
+                    if a_out != b_out {
                         return DirtyReason::RerunIfChangedOutputFileChanged {
-                            old: bout.clone(),
-                            new: aout.clone(),
+                            old: b_out.clone(),
+                            new: a_out.clone(),
                         };
                     }
-                    if apaths != bpaths {
+                    if a_paths != b_paths {
                         return DirtyReason::RerunIfChangedOutputPathsChanged {
-                            old: bpaths.clone(),
-                            new: apaths.clone(),
+                            old: b_paths.clone(),
+                            new: a_paths.clone(),
                         };
                     }
                 }
                 (
                     LocalFingerprint::RerunIfEnvChanged {
-                        var: akey,
-                        val: avalue,
+                        var: a_key,
+                        val: a_value,
                     },
                     LocalFingerprint::RerunIfEnvChanged {
-                        var: bkey,
-                        val: bvalue,
+                        var: b_key,
+                        val: b_value,
                     },
                 ) => {
-                    if *akey != *bkey {
+                    if *a_key != *b_key {
                         return DirtyReason::EnvVarsChanged {
-                            old: bkey.clone(),
-                            new: akey.clone(),
+                            old: b_key.clone(),
+                            new: a_key.clone(),
                         };
                     }
-                    if *avalue != *bvalue {
+                    if *a_value != *b_value {
                         return DirtyReason::EnvVarChanged {
-                            name: akey.clone(),
-                            old_value: bvalue.clone(),
-                            new_value: avalue.clone(),
+                            name: a_key.clone(),
+                            old_value: b_value.clone(),
+                            new_value: a_value.clone(),
                         };
                     }
                 }

@@ -102,12 +102,12 @@ impl CompileFilter {
         lib_only: bool,
         bins: Vec<String>,
         all_bins: bool,
-        tsts: Vec<String>,
-        all_tsts: bool,
-        exms: Vec<String>,
-        all_exms: bool,
-        bens: Vec<String>,
-        all_bens: bool,
+        tests: Vec<String>,
+        all_tests: bool,
+        examples: Vec<String>,
+        all_examples: bool,
+        benches: Vec<String>,
+        all_benches: bool,
         all_targets: bool,
     ) -> CompileFilter {
         if all_targets {
@@ -119,34 +119,34 @@ impl CompileFilter {
             LibRule::False
         };
         let rule_bins = FilterRule::new(bins, all_bins);
-        let rule_tsts = FilterRule::new(tsts, all_tsts);
-        let rule_exms = FilterRule::new(exms, all_exms);
-        let rule_bens = FilterRule::new(bens, all_bens);
+        let rule_tests = FilterRule::new(tests, all_tests);
+        let rule_examples = FilterRule::new(examples, all_examples);
+        let rule_benches = FilterRule::new(benches, all_benches);
 
-        CompileFilter::new(rule_lib, rule_bins, rule_tsts, rule_exms, rule_bens)
+        CompileFilter::new(rule_lib, rule_bins, rule_tests, rule_examples, rule_benches)
     }
 
     /// Constructs a filter from underlying primitives.
     pub fn new(
         rule_lib: LibRule,
         rule_bins: FilterRule,
-        rule_tsts: FilterRule,
-        rule_exms: FilterRule,
-        rule_bens: FilterRule,
+        rule_tests: FilterRule,
+        rule_examples: FilterRule,
+        rule_benches: FilterRule,
     ) -> CompileFilter {
         if rule_lib == LibRule::True
             || rule_bins.is_specific()
-            || rule_tsts.is_specific()
-            || rule_exms.is_specific()
-            || rule_bens.is_specific()
+            || rule_tests.is_specific()
+            || rule_examples.is_specific()
+            || rule_benches.is_specific()
         {
             CompileFilter::Only {
                 all_targets: false,
                 lib: rule_lib,
                 bins: rule_bins,
-                examples: rule_exms,
-                benches: rule_bens,
-                tests: rule_tsts,
+                examples: rule_examples,
+                benches: rule_benches,
+                tests: rule_tests,
             }
         } else {
             CompileFilter::Default {

@@ -3206,7 +3206,7 @@
   Some notable changes:
   - Renamed `credential-process` to `credential-provider` in Cargo configurations.
   - New JSON protocol for communicating with external credential providers via stdin/stdout.
-  - The GNOME Secert provider now dynamically loads `libsecert`.
+  - The GNOME Secret provider now dynamically loads `libsecert`.
   - The 1password provider is no longer built-in.
   - Changed the unstable key for asymmetric tokens from `registry-auth` to `credential-process`.
 - ❗️ Removed `--keep-going` flag support from `cargo test` and `cargo bench`.

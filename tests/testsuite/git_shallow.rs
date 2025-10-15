@@ -445,7 +445,7 @@ fn fetch_index_then_fetch(
         .run();
 
     let repo = gix::open_opts(find_remote_index(mode_1st), gix::open::Options::isolated())?;
-    let complete_depth = 2; // initial commmit, bar@1.0.0
+    let complete_depth = 2; // initial commit, bar@1.0.0
     mode_1st.assert_index(&repo, 1, complete_depth);
 
     Package::new("bar", "1.1.0").publish();
@@ -459,7 +459,7 @@ fn fetch_index_then_fetch(
         .run();
 
     let repo = gix::open_opts(find_remote_index(mode_2nd), gix::open::Options::isolated())?;
-    let complete_depth = 3; // initial commmit, bar@1.0.0, and bar@1.1.0
+    let complete_depth = 3; // initial commit, bar@1.0.0, and bar@1.1.0
     mode_2nd.assert_index(&repo, 1, complete_depth);
 
     Ok(())

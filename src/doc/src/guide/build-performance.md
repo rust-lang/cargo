@@ -132,7 +132,7 @@ When invoking `cargo`,
 However, when contributing to an application,
 you may need to build and test various packages within the application,
 which can cause extraneous rebuilds because different sets of features may be activated for common dependencies.
-With [`feauture-unification`][feature-unification],
+With [`feature-unification`][feature-unification],
 you can reuse more dependency builds by ensuring the same set of dependency features are activated,
 independent of which package you are currently building and testing.
 

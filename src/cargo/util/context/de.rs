@@ -200,7 +200,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
             let vals: Vec<String> = res
                 .into_iter()
                 .map(|val| match val {
-                    CV::String(s, _defintion) => Ok(s),
+                    CV::String(s, _definition) => Ok(s),
                     other => Err(ConfigError::expected(&self.key, "string", &other)),
                 })
                 .collect::<Result<_, _>>()?;
