@@ -674,6 +674,75 @@ args: []
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_windows_reserved_name() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("con", script).build();
+
+    p.cargo("-Zscript -v ./con")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/con-[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] con- v0.0.0 ([ROOT]/foo/con)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/con-[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_sysroot_package_name() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("test", script).build();
+
+    p.cargo("-Zscript -v ./test")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/test-[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] test- v0.0.0 ([ROOT]/foo/test)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/test-[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_keyword() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("self", script).build();
+
+    p.cargo("-Zscript -v ./self")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/self-[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] self- v0.0.0 ([ROOT]/foo/self)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/self-[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_is_deps_dir_implicit() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
