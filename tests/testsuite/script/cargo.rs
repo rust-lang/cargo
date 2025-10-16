@@ -674,6 +674,76 @@ args: []
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cfg(not(windows))]
+fn test_name_is_windows_reserved_name() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("con", script).build();
+
+    p.cargo("-Zscript -v ./con")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] con v0.0.0 ([ROOT]/foo/con)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_sysroot_package_name() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("test", script).build();
+
+    p.cargo("-Zscript -v ./test")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] test v0.0.0 ([ROOT]/foo/test)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn test_name_is_keyword() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project().file("self", script).build();
+
+    p.cargo("-Zscript -v ./self")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]
+arg0: [..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] self v0.0.0 ([ROOT]/foo/self)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn test_name_is_deps_dir_implicit() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -682,17 +752,14 @@ fn test_name_is_deps_dir_implicit() {
 
     p.cargo("-Zscript -v deps.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]
-arg0: [..]
-args: []
-
-"#]])
+        .with_status(101)
+        .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[COMPILING] deps- v0.0.0 ([ROOT]/foo/deps.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/deps-[EXE]`
+[ERROR] failed to parse manifest at `[ROOT]/foo/deps.rs`
+
+Caused by:
+  the binary target name `deps` is forbidden, it conflicts with cargo's build directory names
 
 "#]])
         .run();
