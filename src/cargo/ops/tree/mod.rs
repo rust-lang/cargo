@@ -8,6 +8,7 @@ use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspa
 use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
+use crate::util::style;
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
 use graph::Graph;
@@ -477,13 +478,9 @@ fn print_dependencies<'a>(
 
 fn edge_line_color(kind: EdgeKind) -> anstyle::Style {
     match kind {
-        EdgeKind::Dep(DepKind::Normal) => anstyle::Style::new() | anstyle::Effects::DIMMED,
-        EdgeKind::Dep(DepKind::Build) => {
-            anstyle::AnsiColor::Blue.on_default() | anstyle::Effects::BOLD
-        }
-        EdgeKind::Dep(DepKind::Development) => {
-            anstyle::AnsiColor::Cyan.on_default() | anstyle::Effects::BOLD
-        }
-        EdgeKind::Feature => anstyle::AnsiColor::Magenta.on_default() | anstyle::Effects::DIMMED,
+        EdgeKind::Dep(DepKind::Normal) => style::DEP_NORMAL,
+        EdgeKind::Dep(DepKind::Build) => style::DEP_BUILD,
+        EdgeKind::Dep(DepKind::Development) => style::DEP_DEV,
+        EdgeKind::Feature => style::DEP_FEATURE,
     }
 }
