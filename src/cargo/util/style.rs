@@ -18,3 +18,14 @@ pub const UPDATE_REMOVED: Style = ERROR;
 pub const UPDATE_UPGRADED: Style = GOOD;
 pub const UPDATE_DOWNGRADED: Style = WARN;
 pub const UPDATE_UNCHANGED: Style = anstyle::Style::new().bold();
+
+pub const DEP_NORMAL: Style = anstyle::Style::new().effects(anstyle::Effects::DIMMED);
+pub const DEP_BUILD: Style = anstyle::AnsiColor::Blue
+    .on_default()
+    .effects(anstyle::Effects::BOLD);
+pub const DEP_DEV: Style = anstyle::AnsiColor::Cyan
+    .on_default()
+    .effects(anstyle::Effects::BOLD);
+pub const DEP_FEATURE: Style = anstyle::AnsiColor::Magenta
+    .on_default()
+    .effects(anstyle::Effects::DIMMED);
