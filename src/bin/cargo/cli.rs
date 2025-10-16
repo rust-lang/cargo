@@ -1,3 +1,4 @@
+use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow};
 use cargo::core::{CliUnstable, features};
 use cargo::util::context::TermConfig;
@@ -318,26 +319,40 @@ To pass the arguments to the subcommand, remove `--`",
                 // a hard error.
                 if super::builtin_aliases_execs(cmd).is_none() {
                     if let Some(path) = super::find_external_subcommand(gctx, cmd) {
-                        gctx.shell().warn(format!(
-                        "\
-user-defined alias `{}` is shadowing an external subcommand found at: `{}`
-This was previously accepted but is being phased out; it will become a hard error in a future release.
-For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.",
-                        cmd,
-                        path.display(),
-                    ))?;
+                        gctx.shell().print_report(
+                            &[
+                                Level::WARNING.secondary_title(format!(
+                                    "user-defined alias `{}` is shadowing an external subcommand found at `{}`",
+                                    cmd,
+                                    path.display()
+                                )).element(
+                                    Level::NOTE.message(
+                                        "this was previously accepted but will become a hard error in the future; \
+                                        see <https://github.com/rust-lang/cargo/issues/10049>"
+                                    )
+                                )
+                            ],
+                            false,
+                        )?;
                     }
                 }
                 if commands::run::is_manifest_command(cmd) {
                     if gctx.cli_unstable().script {
                         return Ok((args, GlobalArgs::default()));
                     } else {
-                        gctx.shell().warn(format_args!(
-                            "\
-user-defined alias `{cmd}` has the appearance of a manifest-command
-This was previously accepted but will be phased out when `-Zscript` is stabilized.
-For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>."
-                        ))?;
+                        gctx.shell().print_report(
+                            &[
+                                Level::WARNING.secondary_title(
+                                    format!("user-defined alias `{cmd}` has the appearance of a manifest-command")
+                                ).element(
+                                    Level::NOTE.message(
+                                        "this was previously accepted but will be phased out when `-Zscript` is stabilized; \
+                                        see <https://github.com/rust-lang/cargo/issues/12207>"
+                                    )
+                                )
+                            ],
+                            false
+                        )?;
                     }
                 }
 
@@ -477,12 +492,20 @@ impl Exec {
             Self::Manifest(cmd) => {
                 let ext_path = super::find_external_subcommand(gctx, &cmd);
                 if !gctx.cli_unstable().script && ext_path.is_some() {
-                    gctx.shell().warn(format_args!(
-                        "\
-external subcommand `{cmd}` has the appearance of a manifest-command
-This was previously accepted but will be phased out when `-Zscript` is stabilized.
-For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.",
-                    ))?;
+                    gctx.shell().print_report(
+                        &[
+                            Level::WARNING.secondary_title(
+                                format!("external subcommand `{cmd}` has the appearance of a manifest-command")
+                            ).element(
+                                Level::NOTE.message(
+                                    "this was previously accepted but will be phased out when `-Zscript` is stabilized; \
+                                    see <https://github.com/rust-lang/cargo/issues/12207>"
+                                )
+                            )
+                        ],
+                        false
+                    )?;
+
                     Self::External(cmd).exec(gctx, subcommand_args)
                 } else {
                     let ext_args: Vec<OsString> = subcommand_args
