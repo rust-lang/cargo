@@ -1717,15 +1717,16 @@ fn build_deps_args(
         if let Some(dep) = deps.iter().find(|dep| {
             !dep.unit.mode.is_doc() && dep.unit.target.is_lib() && !dep.unit.artifact.is_true()
         }) {
-            bcx.gctx.shell().warn(format!(
-                "The package `{}` \
-                 provides no linkable target. The compiler might raise an error while compiling \
-                 `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
-                 Cargo.toml. This warning might turn into a hard error in the future.",
-                dep.unit.target.crate_name(),
-                unit.target.crate_name(),
-                dep.unit.target.crate_name()
-            ))?;
+            let dep_name = dep.unit.target.crate_name();
+            let name = unit.target.crate_name();
+            bcx.gctx.shell().print_report(&[
+                Level::WARNING.secondary_title(format!("the package `{dep_name}` provides no linkable target"))
+                    .elements([
+                        Level::NOTE.message(format!("this might cause `{name}` to fail compilation")),
+                        Level::NOTE.message("this warning might turn into a hard error in the future"),
+                        Level::HELP.message(format!("consider adding 'dylib' or 'rlib' to key 'crate-type' in `{dep_name}`'s Cargo.toml"))
+                    ])
+            ], false)?;
         }
     }
 
