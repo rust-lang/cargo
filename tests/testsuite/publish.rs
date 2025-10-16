@@ -3361,7 +3361,8 @@ fn timeout_waiting_for_publish() {
 [NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`
 [HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
 [WARNING] timed out waiting for delay v0.0.1 to be available in registry `crates-io`
-[NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
+  |
+  = [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 
 "#]])
         .run();
@@ -3463,7 +3464,8 @@ fn timeout_waiting_for_dependency_publish() {
 [NOTE] waiting for dep v0.0.1 to be available at registry `crates-io`.
       2 remaining crates to be published
 [WARNING] timed out waiting for dep v0.0.1 to be available in registry `crates-io`
-[NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
+  |
+  = [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
 [ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for published dependencies to be available.
 
 "#]])
@@ -4361,7 +4363,8 @@ fn all_unpublishable_packages() {
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [WARNING] nothing to publish, but found 2 unpublishable packages
-[NOTE] to publish packages, set `package.publish` to `true` or a non-empty list
+  |
+  = [HELP] to publish packages, set `package.publish` to `true` or a non-empty list
 
 "#]])
         .run();
