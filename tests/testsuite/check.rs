@@ -516,6 +516,27 @@ fn check_virtual_manifest_one_project() {
 }
 
 #[cargo_test]
+fn check_virtual_manifest_one_bin_project_not_in_default_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+                default-members = []
+                resolver = "3"
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/main.rs", "fn main() { let _ = (1); }")
+        .build();
+
+    p.cargo("check -p bar")
+        .with_stderr_contains("[..]run `cargo fix --bin \"bar\" -p bar` to apply[..]")
+        .run();
+}
+
+#[cargo_test]
 fn check_virtual_manifest_glob() {
     let p = project()
         .file(
@@ -1400,7 +1421,7 @@ fn check_fixable_example() {
     p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 ...
-[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1"` to apply 1 suggestion)
+[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1" -p foo` to apply 1 suggestion)
 ...
 "#]])
         .run();
@@ -1446,7 +1467,7 @@ fn check_fixable_bench() {
     p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 ...
-[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench"` to apply 1 suggestion)
+[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench" -p foo` to apply 1 suggestion)
 ...
 "#]])
         .run();
@@ -1496,9 +1517,9 @@ fn check_fixable_mixed() {
         .build();
     p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
-[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1"` to apply 1 suggestion)
-[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench"` to apply 1 suggestion)
-[WARNING] `foo` (bin "foo" test) generated 2 warnings (run `cargo fix --bin "foo" --tests` to apply 2 suggestions)
+[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1" -p foo` to apply 1 suggestion)
+[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench" -p foo` to apply 1 suggestion)
+[WARNING] `foo` (bin "foo" test) generated 2 warnings (run `cargo fix --bin "foo" -p foo --tests` to apply 2 suggestions)
 ...
 "#]].unordered())
         .run();

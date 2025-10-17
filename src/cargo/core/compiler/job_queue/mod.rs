@@ -1085,15 +1085,8 @@ impl<'gctx> DrainState<'gctx> {
                         Some(wrapper) if wrapper == clippy => "cargo clippy --fix",
                         _ => "cargo fix",
                     };
-                    let mut args = {
-                        let named = unit.target.description_named();
-                        // if its a lib we need to add the package to fix
-                        if unit.target.is_lib() {
-                            format!("{} -p {}", named, unit.pkg.name())
-                        } else {
-                            named
-                        }
-                    };
+                    let mut args =
+                        format!("{} -p {}", unit.target.description_named(), unit.pkg.name());
                     if unit.mode.is_rustc_test()
                         && !(unit.target.is_test() || unit.target.is_bench())
                     {
