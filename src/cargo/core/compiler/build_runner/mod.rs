@@ -9,6 +9,7 @@ use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::{self, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
+use annotate_snippets::{Level, Message};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use filetime::FileTime;
@@ -515,58 +516,56 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     #[tracing::instrument(skip_all)]
     fn check_collisions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
-        let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
+        let describe_collision = |unit: &Unit, other_unit: &Unit| -> String {
             format!(
-                "The {} target `{}` in package `{}` has the same output \
-                     filename as the {} target `{}` in package `{}`.\n\
-                     Colliding filename is: {}\n",
+                "the {} target `{}` in package `{}` has the same output filename as the {} target `{}` in package `{}`",
                 unit.target.kind().description(),
                 unit.target.name(),
                 unit.pkg.package_id(),
                 other_unit.target.kind().description(),
                 other_unit.target.name(),
                 other_unit.pkg.package_id(),
-                path.display()
             )
         };
-        let suggestion = "Consider changing their names to be unique or compiling them separately.\n\
-             This may become a hard error in the future; see \
-             <https://github.com/rust-lang/cargo/issues/6313>.";
-        let rustdoc_suggestion = "This is a known bug where multiple crates with the same name use\n\
-             the same path; see <https://github.com/rust-lang/cargo/issues/6313>.";
+        let suggestion = [
+            Level::NOTE.message("this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>"),
+            Level::HELP.message("consider changing their names to be unique or compiling them separately")
+        ];
+        let rustdoc_suggestion = [
+            Level::NOTE.message("this is a known bug where multiple crates with the same name use the same path; see <https://github.com/rust-lang/cargo/issues/6313>")
+        ];
         let report_collision = |unit: &Unit,
                                 other_unit: &Unit,
                                 path: &PathBuf,
-                                suggestion: &str|
+                                messages: &[Message<'_>]|
          -> CargoResult<()> {
             if unit.target.name() == other_unit.target.name() {
-                self.bcx.gctx.shell().warn(format!(
-                    "output filename collision.\n\
-                     {}\
-                     The targets should have unique names.\n\
-                     {}",
-                    describe_collision(unit, other_unit, path),
-                    suggestion
-                ))
+                self.bcx.gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("output filename collision at {}", path.display()))
+                        .elements(
+                            [Level::NOTE.message(describe_collision(unit, other_unit))]
+                                .into_iter()
+                                .chain(messages.iter().cloned()),
+                        )],
+                    false,
+                )
             } else {
-                self.bcx.gctx.shell().warn(format!(
-                    "output filename collision.\n\
-                    {}\
-                    The output filenames should be unique.\n\
-                    {}\n\
-                    If this looks unexpected, it may be a bug in Cargo. Please file a bug report at\n\
-                    https://github.com/rust-lang/cargo/issues/ with as much information as you\n\
-                    can provide.\n\
-                    cargo {} running on `{}` target `{}`\n\
-                    First unit: {:?}\n\
-                    Second unit: {:?}",
-                    describe_collision(unit, other_unit, path),
-                    suggestion,
-                    crate::version(),
-                    self.bcx.host_triple(),
-                    self.bcx.target_data.short_name(&unit.kind),
-                    unit,
-                    other_unit))
+                self.bcx.gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("output filename collision at {}", path.display()))
+                        .elements([
+                            Level::NOTE.message(describe_collision(unit, other_unit)),
+                            Level::NOTE.message("if this looks unexpected, it may be a bug in Cargo. Please file a bug \
+                                report at https://github.com/rust-lang/cargo/issues/ with as much information as you \
+                                can provide."),
+                            Level::NOTE.message(format!("cargo {} running on `{}` target `{}`",
+                                crate::version(), self.bcx.host_triple(), self.bcx.target_data.short_name(&unit.kind))),
+                            Level::NOTE.message(format!("first unit: {unit:?}")),
+                            Level::NOTE.message(format!("second unit: {other_unit:?}")),
+                        ])],
+                    false,
+                )
             }
         };
 
@@ -623,26 +622,31 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     if unit.mode.is_doc() {
                         // See https://github.com/rust-lang/rust/issues/56169
                         // and https://github.com/rust-lang/rust/issues/61378
-                        report_collision(unit, other_unit, &output.path, rustdoc_suggestion)?;
+                        report_collision(unit, other_unit, &output.path, &rustdoc_suggestion)?;
                     } else {
-                        report_collision(unit, other_unit, &output.path, suggestion)?;
+                        report_collision(unit, other_unit, &output.path, &suggestion)?;
                     }
                 }
                 if let Some(hardlink) = output.hardlink.as_ref() {
                     if let Some(other_unit) = output_collisions.insert(hardlink.clone(), unit) {
-                        report_collision(unit, other_unit, hardlink, suggestion)?;
+                        report_collision(unit, other_unit, hardlink, &suggestion)?;
                     }
                 }
                 if let Some(ref export_path) = output.export_path {
                     if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
-                        self.bcx.gctx.shell().warn(format!(
-                            "`--artifact-dir` filename collision.\n\
-                             {}\
-                             The exported filenames should be unique.\n\
-                             {}",
-                            describe_collision(unit, other_unit, export_path),
-                            suggestion
-                        ))?;
+                        self.bcx.gctx.shell().print_report(
+                            &[Level::WARNING
+                                .secondary_title(format!(
+                                    "`--artifact-dir` filename collision at {}",
+                                    export_path.display()
+                                ))
+                                .elements(
+                                    [Level::NOTE.message(describe_collision(unit, other_unit))]
+                                        .into_iter()
+                                        .chain(suggestion.iter().cloned()),
+                                )],
+                            false,
+                        )?;
                     }
                 }
             }

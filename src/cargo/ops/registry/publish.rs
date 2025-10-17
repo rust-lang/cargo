@@ -11,6 +11,7 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::time::Duration;
 
+use annotate_snippets::Level;
 use anyhow::Context as _;
 use anyhow::bail;
 use cargo_credential::Operation;
@@ -108,12 +109,16 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         if allow_unpublishable {
             let n = unpublishable.len();
             let plural = if n == 1 { "" } else { "s" };
-            ws.gctx().shell().warn(format_args!(
-                "nothing to publish, but found {n} unpublishable package{plural}"
-            ))?;
-            ws.gctx().shell().note(format_args!(
-                "to publish packages, set `package.publish` to `true` or a non-empty list"
-            ))?;
+            ws.gctx().shell().print_report(
+                &[Level::WARNING
+                    .secondary_title(format!(
+                        "nothing to publish, but found {n} unpublishable package{plural}"
+                    ))
+                    .element(Level::HELP.message(
+                        "to publish packages, set `package.publish` to `true` or a non-empty list",
+                    ))],
+                false,
+            )?;
             return Ok(());
         } else {
             unreachable!("must have at least one publishable package");
@@ -323,18 +328,23 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     )?;
                 } else {
                     let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
-                    opts.gctx.shell().warn(format!(
-                        "timed out waiting for {short_pkg_descriptions} to be available in {source_description}",
-                    ))?;
-                    opts.gctx.shell().note(format!(
-                        "the registry may have a backlog that is delaying making the \
-                        {crate} available. The {crate} should be available soon.",
-                        crate = if to_confirm.len() == 1 {
-                            "crate"
-                        } else {
-                            "crates"
-                        }
-                    ))?;
+                    let krate = if to_confirm.len() == 1 {
+                        "crate"
+                    } else {
+                        "crates"
+                    };
+                    opts.gctx.shell().print_report(
+                        &[Level::WARNING
+                            .secondary_title(format!(
+                                "timed out waiting for {short_pkg_descriptions} \
+                                    to be available in {source_description}",
+                            ))
+                            .element(Level::NOTE.message(format!(
+                                "the registry may have a backlog that is delaying making the \
+                                {krate} available. The {krate} should be available soon.",
+                            )))],
+                        false,
+                    )?;
                 }
                 confirmed
             } else {
@@ -676,25 +686,38 @@ fn transmit(
 
     if !warnings.invalid_categories.is_empty() {
         let msg = format!(
-            "the following are not valid category slugs and were \
-             ignored: {}. Please see https://crates.io/category_slugs \
-             for the list of all category slugs. \
-             ",
+            "the following are not valid category slugs and were ignored: {}",
             warnings.invalid_categories.join(", ")
         );
-        gctx.shell().warn(&msg)?;
+        gctx.shell().print_report(
+            &[Level::WARNING
+                .secondary_title(msg)
+                .element(Level::HELP.message(
+                "please see <https://crates.io/category_slugs> for the list of all category slugs",
+            ))],
+            false,
+        )?;
     }
 
     if !warnings.invalid_badges.is_empty() {
         let msg = format!(
-            "the following are not valid badges and were ignored: {}. \
-             Either the badge type specified is unknown or a required \
-             attribute is missing. Please see \
-             https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata \
-             for valid badge types and their required attributes.",
+            "the following are not valid badges and were ignored: {}",
             warnings.invalid_badges.join(", ")
         );
-        gctx.shell().warn(&msg)?;
+        gctx.shell().print_report(
+            &[Level::WARNING.secondary_title(msg).elements([
+                Level::NOTE.message(
+                    "either the badge type specified is unknown or a required \
+                    attribute is missing",
+                ),
+                Level::HELP.message(
+                    "please see \
+                    <https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata> \
+                    for valid badge types and their required attributes",
+                ),
+            ])],
+            false,
+        )?;
     }
 
     if !warnings.other.is_empty() {

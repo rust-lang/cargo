@@ -197,8 +197,8 @@ fn warn_when_plugin_masks_manifest_on_stable() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] external subcommand `echo.rs` has the appearance of a manifest-command
-This was previously accepted but will be phased out when `-Zscript` is stabilized.
-For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.
+  |
+  = [NOTE] this was previously accepted but will be phased out when `-Zscript` is stabilized; see <https://github.com/rust-lang/cargo/issues/12207>
 
 "#]])
         .run();

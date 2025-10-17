@@ -95,7 +95,8 @@ fn override_with_features() {
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
 [WARNING] unused field in replacement for `bar`: `features`
-[NOTE] configure `features` in the `dependencies` entry
+  |
+  = [NOTE] configure `features` in the `dependencies` entry
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -145,7 +146,8 @@ fn override_with_setting_default_features() {
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
 [WARNING] unused field in replacement for `bar`: `features`, `default-features`
-[NOTE] configure `features`, `default-features` in the `dependencies` entry
+  |
+  = [NOTE] configure `features`, `default-features` in the `dependencies` entry
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
