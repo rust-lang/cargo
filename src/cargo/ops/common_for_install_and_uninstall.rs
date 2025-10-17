@@ -21,6 +21,7 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::context::{ConfigRelativePath, OptValue, Value};
 use crate::util::errors::CargoResult;
 use crate::util::{FileLock, Filesystem};
 
@@ -545,7 +546,15 @@ impl InstallInfo {
 
 /// Determines the root directory where installation is done.
 pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Filesystem> {
-    let config_root = gctx.get_path("install.root")?;
+    let config_root = gctx
+        .get::<OptValue<ConfigRelativePath>>("install.root")
+        .map(|v| {
+            v.map(|v| Value {
+                val: v.val.resolve_program(gctx),
+                definition: v.definition,
+            })
+        })?;
+
     Ok(flag
         .map(PathBuf::from)
         .or_else(|| gctx.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
