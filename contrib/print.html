@@ -1,0 +1,2165 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Cargo Contributor Guide</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Thank you for your interest in contributing to <a href="https://doc.rust-lang.org/cargo/">Cargo</a>! This guide provides an
+overview of how to contribute to Cargo, how to dive into the code, and how the
+testing infrastructure works.</p>
+<p>There are many ways to contribute, such as <a href="https://users.rust-lang.org/">helping other users</a>, <a href="issues.html">filing
+issues</a>, improving <a href="https://github.com/rust-lang/cargo/tree/master/src/doc">the documentation</a>, <a href="issues.html#triaging-issues">triaging issues</a>, <a href="process/index.html#working-on-issues">fixing bugs</a>, and
+working on <a href="process/index.html#working-on-small-features">small</a> and <a href="process/index.html#working-on-large-features">large features</a>.</p>
+<p>If you have a general question about Cargo or its internals, feel free to ask
+on <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a>.</p>
+<p>This guide assumes you have some familiarity with Rust, and how to use Cargo,
+<a href="https://rust-lang.github.io/rustup/">rustup</a>, and general development tools like <a href="https://git-scm.com/">git</a>.</p>
+<p>Please also read the <a href="https://www.rust-lang.org/policies/code-of-conduct">Rust Code of Conduct</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="issue-tracker"><a class="header" href="#issue-tracker">Issue Tracker</a></h1>
+<p>Cargo’s issue tracker is located at
+<a href="https://github.com/rust-lang/cargo/issues/">https://github.com/rust-lang/cargo/issues/</a>. This is the primary spot where
+we track bugs and small feature requests. See <a href="process/index.html">Process</a> for more about our
+process for proposing changes.</p>
+<h2 id="filing-issues"><a class="header" href="#filing-issues">Filing issues</a></h2>
+<p>We can’t fix what we don’t know about, so please report problems liberally.
+This includes problems with understanding the documentation, unhelpful error
+messages, and unexpected behavior.</p>
+<p><strong>If you think that you have identified an issue with Cargo that might
+compromise its users’ security, please do not open a public issue on GitHub.
+Instead, we ask you to refer to Rust’s <a href="https://www.rust-lang.org/security.html">security policy</a>.</strong></p>
+<p>Opening an issue is as easy as following <a href="https://github.com/rust-lang/cargo/issues/new/choose">this link</a>. There are
+several templates for different issue kinds, but if none of them fit your
+issue, don’t hesitate to modify one of the templates, or click the <a href="https://github.com/rust-lang/cargo/issues/new">Open a
+blank issue</a> link.</p>
+<p>The Rust tools are spread across multiple repositories in the Rust
+organization. It may not always be clear where to file an issue. No worries!
+If you file in the wrong tracker, someone will either transfer it to the
+correct one or ask you to move it. Some other repositories that may be
+relevant are:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rust"><code>rust-lang/rust</code></a> — Home for the <a href="https://doc.rust-lang.org/rustc/"><code>rustc</code></a> compiler and <a href="https://doc.rust-lang.org/rustdoc/"><code>rustdoc</code></a>.</li>
+<li><a href="https://github.com/rust-lang/rustup"><code>rust-lang/rustup</code></a> — Home for the <a href="https://rust-lang.github.io/rustup/"><code>rustup</code></a> toolchain installer.</li>
+<li><a href="https://github.com/rust-lang/rustfmt"><code>rust-lang/rustfmt</code></a> — Home for the <code>rustfmt</code> tool, which also includes <code>cargo fmt</code>.</li>
+<li><a href="https://github.com/rust-lang/rust-clippy"><code>rust-lang/rust-clippy</code></a> — Home for the <code>clippy</code> tool, which also includes <code>cargo clippy</code>.</li>
+<li><a href="https://github.com/rust-lang/crates.io"><code>rust-lang/crates.io</code></a> — Home for the <a href="https://crates.io/">crates.io</a> website.</li>
+</ul>
+<p>Issues with <a href="https://doc.rust-lang.org/cargo/commands/cargo-fix.html"><code>cargo fix</code></a> can be tricky to know where they should be filed,
+since the fixes are driven by <code>rustc</code>, and the front-interface is implemented
+in Cargo. Feel free to file in the Cargo issue tracker, and it will get moved
+to the <a href="https://github.com/rust-lang/rust"><code>rust-lang/rust</code></a> issue tracker if necessary.</p>
+<h2 id="issue-labels"><a class="header" href="#issue-labels">Issue labels</a></h2>
+<p><a href="https://github.com/rust-lang/cargo/labels">Issue labels</a> are very helpful to identify the types of issues and which
+category they are related to.</p>
+<p>Anyone can apply most labels by posting comments with a form such as:</p>
+<pre><code class="language-text">@rustbot label: +A-doctests, -A-dependency-resolution
+</code></pre>
+<p>This example will add the <a href="https://github.com/rust-lang/cargo/labels/A-doctests"><code>A-doctests</code></a> label and remove the
+<a href="https://github.com/rust-lang/cargo/labels/A-dependency-resolution"><code>A-dependency-resolution</code></a> label.</p>
+<p>The labels use a naming convention with short prefixes and colors to indicate
+the kind of label:</p>
+<style>
+.label-color {
+    border-radius:0.5em;
+}
+table td:nth-child(2) {
+    white-space: nowrap;
+}
+
+</style>
+<div class="table-wrapper"><table><thead><tr><th>Labels</th><th>Color</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=A">A-</a></td><td><span class="label-color" style="background-color:#fbca04;"> </span> Yellow</td><td>The <strong>area</strong> of the project an issue relates to.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=beta">beta-</a></td><td><span class="label-color" style="background-color:#1e76d9;"> </span> Dark Blue</td><td>Tracks changes which need to be <a href="https://forge.rust-lang.org/release/backporting.html#beta-backporting-in-rust-langcargo">backported to beta</a></td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=C">C-</a></td><td><span class="label-color" style="background-color:#f5f1fd;"> </span> Light Purple</td><td>The <strong>category</strong> of an issue.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=Command">Command-</a></td><td><span class="label-color" style="background-color:#5319e7;"> </span> Dark Purple</td><td>The <code>cargo</code> command it is related to.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=E">E-</a></td><td><span class="label-color" style="background-color:#02e10c;"> </span> Green</td><td>The <strong>experience</strong> level necessary to fix an issue.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=I">I-</a></td><td><span class="label-color" style="background-color:#fc2929;"> </span> Red</td><td>The <strong>importance</strong> of the issue.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=O">O-</a></td><td><span class="label-color" style="background-color:#7e7ec8;"> </span> Purple Grey</td><td>The <strong>operating system</strong> or platform that the issue is specific to.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=P">P-</a></td><td><span class="label-color" style="background-color:#eb6420;"> </span> Orange</td><td>The issue <strong>priority</strong>.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=regression">regression-</a></td><td><span class="label-color" style="background-color:#e4008a;"> </span> Pink</td><td>Tracks regressions from a stable release.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/issues?q=label%3Arelnotes">relnotes</a></td><td><span class="label-color" style="background-color:#fad8c7;"> </span> Light Orange</td><td>Marks issues or PRs that should be highlighted in the <a href="https://github.com/rust-lang/rust/blob/master/RELEASES.md">Rust release notes</a> of the next release.</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=S">S-</a></td><td>Varies</td><td>Tracks the <strong>status</strong> of issues and pull requests (see <a href="issues.html#issue-status-labels">Issue status labels</a>)</td></tr>
+<tr><td><a href="https://github.com/rust-lang/cargo/labels?q=nightly">Z-</a></td><td><span class="label-color" style="background-color:#453574;"> </span> Dark Blue</td><td>Unstable, <a href="https://doc.rust-lang.org/nightly/cargo/reference/unstable.html">nightly features</a>.</td></tr>
+</tbody></table>
+</div>
+<h3 id="issue-status-labels"><a class="header" href="#issue-status-labels">Issue status labels</a></h3>
+<p>The <code>S-</code> prefixed <em>status</em> labels are the primary mechanism we use to track
+what is happening with an issue and what it is waiting on. The following is a
+list of the status labels and what they mean. This is listed roughly in the
+order that an issue might go through, though issues will often jump to
+different steps, or in rare cases have multiple statuses.</p>
+<ul>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-triage">S-triage</a></strong> — New issues get this label automatically assigned to them
+to indicate that nobody has yet looked at them, and they need someone to
+assign other labels and decide what the next step is.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-needs-info">S-needs-info</a></strong> — Needs more info, such as a reproduction or more
+background for a feature request.</p>
+<p>Anyone is welcome to help with providing additional info to help reproduce
+or provide more detail on use cases and such. But usually this is a request
+to the initial author.</p>
+<p>When adding this label, there should also usually be a comment that goes
+along with it stating the information requested.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-needs-team-input">S-needs-team-input</a></strong> — Needs input from team on whether/how to
+proceed.</p>
+<p>Here it is essentially blocked waiting for a team member to move it to the
+next stage.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-needs-design">S-needs-design</a></strong> — Needs someone to work further on the design for the
+feature or fix.</p>
+<p>Anyone is welcome to help at this stage, but it should be clear that it is
+not yet accepted. It is expected that people should contribute comments and
+ideas to the issue which furthers the process of fleshing out what is
+needed, or alternate ideas. This may also require reaching out to the wider
+community via forums and such.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-needs-rfc">S-needs-rfc</a></strong> — Needs an <a href="https://github.com/rust-lang/rfcs/">RFC</a> before this can make more progress.</p>
+<p>Anyone is welcome to help at this stage, but it should be clear that it is
+not yet accepted.
+See <a href="https://github.com/rust-lang/rfcs?tab=readme-ov-file#before-creating-an-rfc">Before creating an RFC</a>
+for next steps.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-needs-mentor">S-needs-mentor</a></strong> — Needs a Cargo team member to commit to helping and
+reviewing.</p>
+<p>This is for something that is accepted, such as after an RFC or a team
+discussion, or an obvious issue that just needs fixing, but no team member
+is available to help or review.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a></strong> — Issue or feature is accepted, and has a team member
+available to help mentor or review.</p>
+</li>
+<li>
+<p><strong><a href="https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback">S-waiting-on-feedback</a></strong> — An implemented feature is waiting on
+community feedback for bugs or design concerns.</p>
+<p>This is typically used on a <a href="https://github.com/rust-lang/cargo/labels/C-tracking-issue">tracking issue</a> after it has been implemented
+to indicate what it is waiting on.</p>
+</li>
+</ul>
+<h2 id="triaging-issues"><a class="header" href="#triaging-issues">Triaging issues</a></h2>
+<p>Triaging issues involves processing issues to assign appropriate labels, make
+sure the issue has sufficient information, and to decide the next steps.
+When new issues are filed, they should automatically get the <a href="https://github.com/rust-lang/cargo/labels/S-triage">S-triage</a> label
+assuming the author uses one of the templates. This helps identify which
+issues have not yet been triaged.</p>
+<p>There are several things to consider when triaging an issue:</p>
+<ul>
+<li>
+<p>Is this a duplicate? Search the issue tracker (including closed issues) to
+see if there is an issue with a similar or identical root cause to what is reported.
+We generally focus issues around root causes so alternative solutions can be
+discussed and evaluated together.
+If it is obviously a duplicate, write a comment that it is a duplicate of the
+other issue, and close the issue.
+If it isn’t obvious that it is a duplicate, leave a comment asking the author
+if the other issue covers what they reported.</p>
+</li>
+<li>
+<p>For a bug, check if the report contains enough information to reproduce it.
+If you can’t reproduce it, solicit more information from the author to
+better understand the issue.
+Change the label from <a href="https://github.com/rust-lang/cargo/labels/S-triage">S-triage</a> to <a href="https://github.com/rust-lang/cargo/labels/S-needs-info">S-needs-info</a> if this is the case.</p>
+</li>
+<li>
+<p>Add labels that describe what the issue is related to.</p>
+<ul>
+<li>Add the appropriate <a href="https://github.com/rust-lang/cargo/labels?q=A">A-</a>, <a href="https://github.com/rust-lang/cargo/labels?q=Command">Command-</a>, <a href="https://github.com/rust-lang/cargo/labels?q=O">O-</a>, and <a href="https://github.com/rust-lang/cargo/labels?q=nightly">Z-</a> prefixed labels.</li>
+<li>If this is a regression from stable, add one of the <a href="https://github.com/rust-lang/cargo/labels?q=regression">regression-</a>
+prefixed labels (depending on if it is a regression in an already
+released stable release, or it is in nightly).</li>
+</ul>
+</li>
+<li>
+<p>Assuming the issue looks valid, switch the <a href="https://github.com/rust-lang/cargo/labels/S-triage">S-triage</a> label for one of the following:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-team-input">S-needs-team-input</a> — The next steps are not clear, and the Cargo team
+needs to discuss whether or not to proceed and what needs to be done to
+address the issue.</li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-design">S-needs-design</a> — The resolution of the issue or small feature request
+will need more work to come up with the appropriate design.</li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-rfc">S-needs-rfc</a> — This is a large feature request that will require a
+public design process.</li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-mentor">S-needs-mentor</a> — This is something the Cargo team wants to address,
+but does not currently have the capacity to help with reviewing. <strong>(reserved for Cargo team)</strong></li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> — This is something that clearly needs to be addressed, and
+a Cargo team member has volunteered to help review. <strong>(reserved for Cargo team)</strong></li>
+</ul>
+</li>
+</ul>
+<p>Anyone is welcome to help with the triaging process. You can help with
+reproducing issues, checking for duplicates, gathering more information from
+the reporter, assigning labels using <a href="issues.html#issue-labels"><code>@rustbot</code> comments</a>, and
+creating a test using <a href="tests/writing.html">Cargo’s testsuite</a> (<a href="https://github.com/rust-lang/cargo/issues/11628#issuecomment-1411088951">example</a>).</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cargo-team"><a class="header" href="#cargo-team">Cargo Team</a></h1>
+<h2 id="mission"><a class="header" href="#mission">Mission</a></h2>
+<p>The Cargo Team is a group of volunteers that support the Rust community in developing and maintaining Cargo, the Rust package manager and build tool.
+The team is responsible for deciding how Cargo and its related libraries operate and evolve.
+The team has a shared responsibility with the <a href="https://www.rust-lang.org/governance/teams/crates-io">crates.io team</a> for the design and usage of Cargo’s index format and its registry API as it relates to the <a href="https://crates.io/">crates.io</a> service.</p>
+<p>The team is expected to keep Cargo in an operational state, to support Rust’s 6-week release cycle, and to uphold the <a href="design.html">Design Principles</a> of Cargo.</p>
+<h2 id="team-membership"><a class="header" href="#team-membership">Team membership</a></h2>
+<p>The Cargo Team consists of team members with one serving as a team leader.
+The team leader is responsible for coordinating the team and providing a contact point with other teams.
+The leader is selected by consensus of the existing members with no objections.</p>
+<p>Membership is maintained in the <a href="https://github.com/rust-lang/team/blob/master/teams/cargo.toml">Rust team database</a>.</p>
+<h3 id="membership-expectations"><a class="header" href="#membership-expectations">Membership expectations</a></h3>
+<p>Team members are expected to participate in voting on RFCs and major change proposals</p>
+<p>Team members are expected to regularly participate in at least some of the following membership-related activities.
+Members are not expected to participate in all of these activities, but exhibit some interest and involvement in the project that covers some of these activities.</p>
+<ul>
+<li>Attending meetings</li>
+<li>Reviewing contributions (auto-assignment is managed in <a href="https://github.com/rust-lang/cargo/blob/master/triagebot.toml">triagebot.toml</a>)</li>
+<li>Triaging and responding to issues</li>
+<li>Mentoring new contributors</li>
+<li>Shepherding major changes and RFCs</li>
+<li>Coordinating interaction with other Rust groups and outside interests</li>
+<li>Managing and updating the policies of the Cargo Team itself</li>
+<li>Keeping up with maintenance of the Cargo codebase, ensuring it stays functional and that infrastructure and team processes continue to run smoothly</li>
+</ul>
+<p>Breaks and vacations are welcome and encouraged.
+If a member is no longer participating after a few months, they may be asked to step down.</p>
+<p>Members are required to always:</p>
+<ul>
+<li>Represent the Rust project in a way that upholds the <a href="https://www.rust-lang.org/policies/code-of-conduct">Rust code of conduct</a> to a high standard.</li>
+<li>Represent the Cargo Team in a way that upholds the expectations of this charter, and be friendly, welcoming, and constructive with contributors and users.</li>
+</ul>
+<p>Members are given privileges, such as:</p>
+<ul>
+<li>Merge permissions (GitHub permissions)</li>
+<li>Issue and project management (GitHub permissions)</li>
+<li>Voting and decision making (RFCs, major changes)</li>
+<li>Access to private communications related to team management and security discussions</li>
+</ul>
+<h3 id="meetings"><a class="header" href="#meetings">Meetings</a></h3>
+<p>The primary focus of team meetings is for unblocking designs, including discussing</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rfcs/pulls?q=is%3Apr+is%3Aopen+label%3AT-cargo">RFCs</a></li>
+<li><a href="https://github.com/orgs/rust-lang/projects/47">FCPs</a></li>
+<li><a href="https://github.com/rust-lang/cargo/labels/I-nominated-to-discuss">Items marked <strong>I-nominated-to-discuss</strong></a></li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-team-input">Items marked <strong>S-needs-team-input</strong></a></li>
+<li>Topics proposed on <a href="https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/Cargo.20meeting">Zulip</a>, subject to availability</li>
+</ul>
+<p>Generally, topics for the agenda should be posted a day in advance to give people the opportunity to review them before the meeting.</p>
+<p>The team meets on a weekly basis (<a href="https://rust-lang.github.io/calendar/cargo/team-meeting.ics">ics</a>) on a video chat.
+Members of the community are welcome to attend.
+Minutes for all meetings are recorded on <a href="https://hackmd.io/@rust-cargo-team?tags=%5B%22meetings%22%5D">HackMD</a>.</p>
+<p>For discussing contributions, <a href="process/index.html#mentorship">Office Hours</a> would be more appropriate venue.</p>
+<h3 id="becoming-a-member"><a class="header" href="#becoming-a-member">Becoming a member</a></h3>
+<p>A contributor can become a member of the Cargo Team by requesting a review or being nominated by one of the existing members.
+They can be added by unanimous consent of the team.
+The team lead or another member of the team will also confirm with the moderation team that there are no concerns involving the proposed team member.</p>
+<p>Contributors who wish to join the team should exhibit an interest in carrying the design principles of Cargo and participate in some of the activities listed above in <a href="team.html#membership-expectations">Membership Expectations</a>.</p>
+<p>Members may leave at any time, preferably by letting the team know ahead of time.</p>
+<h2 id="team-resources"><a class="header" href="#team-resources">Team resources</a></h2>
+<h3 id="zulip"><a class="header" href="#zulip">Zulip</a></h3>
+<p>The Cargo team has several streams on Zulip:</p>
+<ul>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo"><code>#t-cargo</code></a> — General public channel for discussing any topics related to Cargo.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/334885-t-cargo.2Fbuild-integration"><code>#t-cargo/build-integration</code></a> — Discussions about integration with build systems.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/260232-t-cargo.2FPubGrub"><code>#t-cargo/PubGrub</code></a> — Discussions about the <a href="https://github.com/pubgrub-rs/pubgrub">PubGrub</a> project.</li>
+</ul>
+<p>The following are private streams for the Cargo team. The team should avoid using this unless necessary (for example, discussing a security issue or team and meeting organization).</p>
+<ul>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/296752-t-cargo.2Fprivate"><code>#t-cargo/private</code></a> — Private channel for discussions among the team.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/364532-t-cargo.2Fmeetings"><code>#t-cargo/meetings</code></a> — Private channel for discussions about team meetings, including non-members who regularly attend the meetings.</li>
+</ul>
+<h3 id="hackmd"><a class="header" href="#hackmd">HackMD</a></h3>
+<p>The Cargo team has a shared, public workspace on HackMD at <a href="https://hackmd.io/@rust-cargo-team">https://hackmd.io/@rust-cargo-team</a> for drafting documents and recording meeting minutes.</p>
+<p>Since this HackMD workspace is using the free service, it does not support private documents. If you need to draft a private document, create it in your personal workspace and use private channels to share the link.</p>
+<h2 id="decision-process"><a class="header" href="#decision-process">Decision process</a></h2>
+<p>The team uses a consensus-driven process for making decisions ranging from new features and major changes to management of the team itself.
+The degree of process is correlated with the degree of change being proposed:</p>
+<ul>
+<li>
+<p>Bug fixes, refactorings, documentation updates, and other small changes are usually delegated to a single team member (who is not the author) to approve based on their judgement.
+Team members may also solicit feedback from other members or the whole team for any change should they want to gather other perspectives from the team.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Bug fixes that do not introduce backwards-incompatible changes, and adhere to Cargo’s expected behavior.</li>
+<li>Addition of new warnings, or other diagnostic changes.</li>
+<li>New or updated documentation.</li>
+<li>Localized refactorings (that is, those that do not have a significant, wide-ranging impact to the usage and maintenance of the codebase).</li>
+<li>Minor or planned changes to Cargo’s console output.</li>
+<li>Beta backports that clearly address a regression, and are expected to be low-risk.</li>
+<li>Development of a previously approved unstable feature that matches the expected development of that feature.</li>
+</ul>
+</li>
+<li>
+<p>Small features or changes, large refactorings, or major changes to Cargo’s codebase or process require an approval by the team via consensus.
+These decisions can be done via the FCP process of <a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a>, or in an ad-hoc manner such as during a team meeting.
+rfcbot FCP requests do not require waiting for the 10-day feedback window if there is a complete team consensus, as this process is mostly aimed at polling the team rather than publicly soliciting feedback.
+Though, public feedback is welcome at any time.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Addition of a new, minor command-line argument, or an addition of an option to an existing one.</li>
+<li>Addition of new fields and values to JSON outputs.</li>
+<li>A bug fix or change that may technically involve a backwards-incompatible change.
+See the <a href="design.html#backwards-compatibility">Backwards compatibility</a> section for some examples.</li>
+<li>Documentation changes that may substantially change the expected usage of Rust and Cargo.
+For example, the <a href="https://doc.rust-lang.org/cargo/reference/semver.html">SemVer chapter</a> contains subjective prescriptions for how users should develop their code.</li>
+<li>A significant change in Cargo’s console output.</li>
+<li>A significant change to Cargo’s code structure, or how maintenance or usage of the Cargo codebase is handled.</li>
+<li>Beta backports that are risky or have any uncertainty about their necessity.</li>
+<li><a href="process/release.html#stable-backports">Stable backports</a>.
+These usually also require involvement with the Release team.</li>
+<li>A significant change to the management of the Cargo team itself or the processes it uses, such as significant updates to this document.</li>
+<li>Addition of new members to the Cargo team, or other actions involving the team membership.
+These decisions are usually processed via private channels by the entirety of the team.</li>
+<li>A change that is a “one-way door”.
+That is, something that is difficult to reverse without breaking backwards compatibility.</li>
+<li>New or transferred “Intentional Artifact” crates to the team, see also <a href="https://forge.rust-lang.org/policies/crate-ownership.html">Rust crate ownership policy</a></li>
+</ul>
+</li>
+<li>
+<p>Larger features should usually go through the <a href="https://github.com/rust-lang/rfcs/">RFC process</a>.
+This usually involves first soliciting feedback from the Cargo team and the rest of the community, often via the <a href="https://internals.rust-lang.org/">Rust Internals</a> discussion board, <a href="https://github.com/rust-lang/cargo/issues/">Cargo’s issue tracker</a>, and the <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a> channel.
+If there is positive feedback to the idea, the next step is to formally post an RFC on the RFC repo.
+The community and the Cargo team will have an opportunity to provide feedback on the proposal.
+After some period of time, the Cargo team may decide to either accept, postpone, or close a proposal based on the interest in the proposal and the team’s availability.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Major changes or new features or options in <code>Cargo.toml</code> or the config files.</li>
+<li>Changes to the registry index or API.</li>
+<li>New or changed CLI options that are expected to have a significant impact on how Cargo is used.</li>
+<li>New <code>cargo</code> commands that are not trivial.
+In some cases, the team may decide to adopt a pre-existing external command without an RFC if the command has already been broadly adopted.</li>
+</ul>
+</li>
+<li>
+<p>Stabilization of <a href="process/unstable.html">Unstable</a> features requires an approval via the FCP process of <a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a>.
+This provides a final opportunity to solicit feedback from the public, and for the Cargo team to agree via consensus.</p>
+</li>
+<li>
+<p>The team may decide to experiment with larger features without starting the RFC process if it is an initiative that the team has consensus that it is something they want to pursue.
+This is usually reserved for something that has an unclear path that the RFC process is not expected to provide feedback that would substantially move the process forward.
+Such experiments are expected to be nightly-only (see the <a href="process/unstable.html">Unstable</a> chapter), and involve efforts to shape the final result via exploration, testing, and public involvement.
+Any such features <em>must</em> ultimately have an RFC approved before they can be stabilized.</p>
+</li>
+</ul>
+<h2 id="intentional-artifacts"><a class="header" href="#intentional-artifacts">Intentional Artifacts</a></h2>
+<p>Per the <a href="https://forge.rust-lang.org/policies/crate-ownership.html">Rust crate ownership policy</a>, the Cargo team’s “Intentional Artifacts” include:</p>
+<ul>
+<li><a href="https://crates.io/crates/build-rs">build-rs</a></li>
+<li><a href="https://crates.io/crates/cargo-credential">cargo-credential</a></li>
+<li><a href="https://crates.io/crates/cargo-platform">cargo-platform</a></li>
+<li><a href="https://crates.io/crates/cargo-util-schemas">cargo-util-schemas</a></li>
+<li><a href="https://crates.io/crates/crates-io">crates-io</a></li>
+</ul>
+<h2 id="contacting-the-team"><a class="header" href="#contacting-the-team">Contacting the team</a></h2>
+<p>The team may be contacted through several channels:</p>
+<ul>
+<li>If you have a <strong>security concern</strong>, please refer to Rust’s <a href="https://www.rust-lang.org/security.html">security policy</a> for the correct contact method.</li>
+<li>Issues and feature requests can be submitted to <a href="https://github.com/rust-lang/cargo/issues/">Cargo’s issue tracker</a>.
+Please see the <a href="issues.html">Issues chapter</a> for more detail.</li>
+<li>The <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo"><code>t-cargo</code> Zulip channel</a> stream is the chat platform the Cargo Team uses to coordinate on.</li>
+<li>The <a href="mailto:cargo@rust-lang.org">cargo@rust-lang.org</a> email address can be used to contact the team.
+However, using one of the other channels is strongly encouraged.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="process"><a class="header" href="#process">Process</a></h1>
+<p>This chapter gives an overview of how Cargo comes together, and how you can be
+a part of that process.</p>
+<p>See the <a href="process/working-on-cargo.html">Working on Cargo</a> chapter for an overview of the contribution
+process.</p>
+<p>Please read the guidelines below before working on an issue or new feature.</p>
+<h2 id="mentorship"><a class="header" href="#mentorship">Mentorship</a></h2>
+<p>Some Cargo team members are available to directly mentor contributions to Cargo.
+See the <a href="https://github.com/rust-lang/cargo/wiki/Office-Hours">office hours</a> page for more information.</p>
+<h2 id="roadmap"><a class="header" href="#roadmap">Roadmap</a></h2>
+<p>The <a href="https://github.com/orgs/rust-lang/projects/37">Roadmap Project Board</a> is used for tracking major initiatives. This gives
+an overview of the things the team is interested in and thinking about.</p>
+<p>The <a href="https://github.com/orgs/rust-lang/projects/36">RFC Project Board</a> is used for tracking <a href="https://github.com/rust-lang/rfcs/">RFCs</a>.</p>
+<h2 id="working-on-issues"><a class="header" href="#working-on-issues">Working on issues</a></h2>
+<p>Issues labeled with the <a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> <a href="process/../issues.html#issue-labels">label</a> are typically issues that the
+Cargo team wants to see addressed. If you are interested in one of those, and
+it has not already been assigned to someone, leave a comment. See <a href="process/index.html#issue-assignment">Issue
+assignment</a> below for assigning yourself.</p>
+<p>When possible, the Cargo team will try to also include <a href="https://github.com/rust-lang/cargo/labels/E-easy">E-easy</a>, <a href="https://github.com/rust-lang/cargo/labels/E-medium">E-medium</a>,
+or <a href="https://github.com/rust-lang/cargo/labels/E-hard">E-hard</a> labels to try to give an estimate of the difficulty involved with
+the issue.</p>
+<p>If there is a specific issue that you are interested in, but it is not marked
+as <a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a>, leave a comment on the issue. If a Cargo team member has the
+time to help out, they will respond to help with the next steps.</p>
+<h2 id="working-on-small-features"><a class="header" href="#working-on-small-features">Working on small features</a></h2>
+<p>Small feature requests are typically managed on the <a href="https://github.com/rust-lang/cargo/labels/C-feature-request">issue
+tracker</a>. Features that the Cargo team have approved
+will have the <a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> label.</p>
+<p>If there is a feature request that you are interested in, but it is not marked
+as <a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a>, feel free to leave a comment expressing your interest. If a
+Cargo team member has the time to help out, they will respond to help with the
+next steps. Keep in mind that the Cargo team has limited time, and may not be
+able to help with every feature request. Most of them require some design
+work, which can be difficult. Check out the <a href="process/../design.html">design principles chapter</a> for
+some guidance.</p>
+<h2 id="working-on-large-features"><a class="header" href="#working-on-large-features">Working on large features</a></h2>
+<p>Cargo follows the Rust model of evolution. Major features usually go through
+an <a href="process/./rfc.html">RFC process</a>. Therefore, before opening a feature request issue create a
+Pre-RFC thread on the <a href="https://internals.rust-lang.org/">internals</a> forum to get preliminary feedback.</p>
+<p>Implementing a feature as a <a href="https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands">custom subcommand</a> is encouraged as
+it helps demonstrate the demand for the functionality and is a great way to
+deliver a working solution faster as it can iterate outside of Cargo’s release
+cadence.</p>
+<p>See the <a href="process/unstable.html">unstable chapter</a> for how new major features are typically
+implemented.</p>
+<h2 id="bots-and-infrastructure"><a class="header" href="#bots-and-infrastructure">Bots and infrastructure</a></h2>
+<p>The Cargo project uses several bots:</p>
+<ul>
+<li><a href="https://github.com/features/actions">GitHub Actions</a> are used to automatically run all tests for each PR.</li>
+<li><a href="https://forge.rust-lang.org/triagebot/index.html">triagebot</a> automatically assigns reviewers for PRs, see <a href="https://forge.rust-lang.org/triagebot/pr-assignment.html">PR Assignment</a> for
+how to configure.</li>
+<li><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue">GitHub merge queue</a> is used to merge PRs. See <a href="process/working-on-cargo.html#the-merging-process">The merging process</a>.</li>
+<li><a href="https://forge.rust-lang.org/triagebot/index.html">triagebot</a> is used for assigning issues to non-members, see <a href="process/index.html#issue-assignment">Issue
+assignment</a>.</li>
+<li><a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a> is used for making asynchronous decisions by team members.</li>
+</ul>
+<h2 id="issue-assignment"><a class="header" href="#issue-assignment">Issue assignment</a></h2>
+<p>Normally, if you plan to work on an issue that has been marked with the
+<a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> label, it is sufficient just to leave a comment that you are
+working on it. We also have a bot that allows you to formally claim an issue
+by entering the text <code>@rustbot claim</code> in a comment. See the <a href="https://forge.rust-lang.org/triagebot/issue-assignment.html">Issue Assignment</a> docs
+on how this works.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="working-on-cargo"><a class="header" href="#working-on-cargo">Working on Cargo</a></h1>
+<p>This chapter gives an overview of how to build Cargo, make a change, and
+submit a Pull Request.</p>
+<ol start="0">
+<li><a href="process/working-on-cargo.html#before-hacking-on-cargo">Before hacking on Cargo.</a></li>
+<li><a href="process/working-on-cargo.html#checkout-out-the-source">Check out the Cargo source.</a></li>
+<li><a href="process/working-on-cargo.html#building-cargo">Building Cargo.</a></li>
+<li><a href="process/working-on-cargo.html#making-a-change">Making a change.</a></li>
+<li><a href="process/../tests/index.html">Writing and running tests.</a></li>
+<li><a href="process/working-on-cargo.html#submitting-a-pull-request">Submitting a Pull Request.</a></li>
+<li><a href="process/working-on-cargo.html#the-merging-process">The merging process.</a></li>
+</ol>
+<h2 id="before-hacking-on-cargo"><a class="header" href="#before-hacking-on-cargo">Before hacking on Cargo</a></h2>
+<p>We encourage people to discuss their design before hacking on code. This gives
+the Cargo team a chance to know your idea more. Sometimes after a discussion,
+we even find a way to solve the problem without coding! Typically, you
+<a href="https://github.com/rust-lang/cargo/issues">file an issue</a> or start a thread on the <a href="https://internals.rust-lang.org/c/tools-and-infrastructure/cargo">internals forum</a> before submitting a
+pull request.</p>
+<p>Please read <a href="process/index.html">the process</a> of how features and bugs are managed in Cargo.
+<strong>Only issues that have been explicitly marked as <a href="https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AS-accepted">accepted</a> will be reviewed.</strong></p>
+<h2 id="checkout-the-source"><a class="header" href="#checkout-the-source">Checkout the source</a></h2>
+<p>We use the “fork and pull” model <a href="https://help.github.com/articles/about-collaborative-development-models/">described here</a>, where
+contributors push changes to their personal fork and <a href="https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request">create pull requests</a> to
+bring those changes into the source repository. Cargo uses <a href="https://git-scm.com/">git</a> and <a href="https://github.com/">GitHub</a>
+for all development.</p>
+<ol>
+<li>Fork the <a href="https://github.com/rust-lang/cargo/"><code>rust-lang/cargo</code></a> repository on GitHub to your personal account
+(see <a href="https://docs.github.com/en/github/getting-started-with-github/fork-a-repo">GitHub docs</a>).</li>
+<li>Clone your fork to your local machine using <code>git clone</code> (see <a href="https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository">GitHub
+docs</a>)</li>
+<li>It is recommended to start a new branch for the change you want to make.
+All Pull Requests are made against the master branch.</li>
+</ol>
+<h2 id="building-cargo"><a class="header" href="#building-cargo">Building Cargo</a></h2>
+<p>Cargo is built by…running <code>cargo</code>! There are a few prerequisites that you
+need to have installed:</p>
+<ul>
+<li><code>rustc</code> and <code>cargo</code> need to be installed. Cargo is expected to build and
+test with the current stable, beta, and nightly releases. It is your choice
+which to use. Nightly is recommended, since some nightly-specific tests are
+disabled when using the stable release. But using stable is fine if you
+aren’t working on those.</li>
+<li>A C compiler (typically gcc, clang, or MSVC).</li>
+<li><a href="https://git-scm.com/">git</a></li>
+<li>Unix:
+<ul>
+<li>pkg-config</li>
+<li>OpenSSL (<code>libssl-dev</code> on Ubuntu, <code>openssl-devel</code> on Fedora)</li>
+</ul>
+</li>
+<li>macOS:
+<ul>
+<li>OpenSSL (<a href="https://brew.sh/">homebrew</a> is recommended to install the <code>openssl</code> package)</li>
+</ul>
+</li>
+</ul>
+<p>If you can successfully run <code>cargo build</code>, you should be good to go!</p>
+<h2 id="running-cargo"><a class="header" href="#running-cargo">Running Cargo</a></h2>
+<p>You can use <code>cargo run</code> to run cargo itself, or you can use the path directly
+to the cargo binary, such as <code>target/debug/cargo</code>.</p>
+<p>If you are using <a href="https://rust-lang.github.io/rustup/"><code>rustup</code></a>, beware that running the binary directly can cause
+issues with rustup overrides. Usually, when <code>cargo</code> is executed as part of
+rustup, the toolchain becomes sticky (via an environment variable), and all
+calls to <code>rustc</code> will use the same toolchain. But when <code>cargo</code> is not run via
+rustup, the toolchain may change based on the directory. Since Cargo changes
+the directory for each compilation, this can cause different calls to <code>rustc</code>
+to use different versions. There are a few workarounds:</p>
+<ul>
+<li>Don’t use rustup overrides.</li>
+<li>Use <code>rustup run &lt;toolchain&gt; target/debug/cargo</code> to specify the toolchain(rustc) to use.
+For example, <code>rustup run nightly target/debug/cargo</code>.</li>
+<li>Set the <code>RUSTC</code> environment variable to a specific <code>rustc</code> executable (not
+the rustup wrapper).</li>
+<li>Create a <a href="https://rust-lang.github.io/rustup/concepts/toolchains.html#custom-toolchains">custom toolchain</a>. This is a bit of a hack, but you can create a
+directory in the rustup <code>toolchains</code> directory, and create symlinks for all
+the files and directories in there to your toolchain of choice (such as
+nightly), except for the <code>cargo</code> binary, which you can symlink to your
+<code>target/debug/cargo</code> binary in your project directory.</li>
+</ul>
+<p><em>Normally</em>, all development is done by running Cargo’s test suite, so running
+it directly usually isn’t required. But it can be useful for testing Cargo on
+more complex projects.</p>
+<h2 id="making-a-change"><a class="header" href="#making-a-change">Making a change</a></h2>
+<p>Some guidelines on working on a change:</p>
+<ul>
+<li>All code changes are expected to comply with the formatting suggested by
+<code>rustfmt</code>. You can use <code>rustup component add rustfmt</code> to install <code>rustfmt</code>
+and use <code>cargo fmt</code> to automatically format your code.</li>
+<li>Include tests that cover all non-trivial code. See the <a href="process/../tests/index.html">Testing chapter</a> for
+more about writing and running tests.</li>
+<li>All code should be warning-free. This is checked during tests.</li>
+</ul>
+<h2 id="submitting-a-pull-request"><a class="header" href="#submitting-a-pull-request">Submitting a Pull Request</a></h2>
+<p>After you have committed your work, and pushed it to GitHub, you can
+open a Pull Request</p>
+<ul>
+<li>Push your commits to GitHub and create a pull request against Cargo’s
+<code>master</code> branch.</li>
+<li>Include a clear description of what the change is and why it is being made.</li>
+<li>Use <a href="https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue">GitHub’s keywords</a> in the description to automatically link to an issue
+if the PR resolves the issue. For example <code>Closes #1234</code> will link issue
+#1234 to the PR. When the PR is merged, GitHub will automatically close the
+issue.</li>
+</ul>
+<p><a href="https://github.com/rustbot"><code>@rustbot</code></a> will automatically assign a reviewer for the PR. It
+may take at least a few days for someone to respond. If you don’t get a
+response in over a week, feel free to ping the assigned reviewer.</p>
+<p>When your PR is submitted, GitHub automatically runs all tests. The GitHub
+interface will show a green checkmark if it passes, or a red X if it fails.
+There are links to the logs on the PR page to diagnose any issues. The tests
+typically finish in under 30 minutes.</p>
+<p>The reviewer might point out changes deemed necessary. Large or tricky changes
+may require several passes of review and changes.</p>
+<blockquote>
+<p><strong>tip:</strong> Prefer atomic commits where each commit is a single, complete, and coherent unit of work.
+For example, if your feature work leads to renaming a module, make the rename its own commit.
+However, adding an internal function that is unused is not complete or coherent.</p>
+<p>As part of your atomic commits, prefer adding tests as their own commit <em>before</em> any functionality changes.
+The tests should pass in each commit, demonstrating the behavior before your
+change and how each commit affects behavior.
+This makes it easier for reviewers and community members to understand the
+precise details of the side effects of your change and gives you confidence
+that your tests are verifying the right behavior.</p>
+<p>Examples:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/pull/13910">#13910: fix: remove symlink dir on Windows</a></li>
+<li><a href="https://github.com/rust-lang/cargo/pull/14006">#14006: fix(add): Avoid escaping double-quotes by using string literals</a></li>
+</ul>
+</blockquote>
+<h3 id="status-labeling"><a class="header" href="#status-labeling">Status labeling</a></h3>
+<p>PRs will get marked with <a href="https://github.com/rust-lang/cargo/labels">labels</a> like <a href="https://github.com/rust-lang/cargo/labels/S-waiting-on-review"><code>S-waiting-on-review</code></a> or <a href="https://github.com/rust-lang/cargo/labels/S-waiting-on-author"><code>S-waiting-on-author</code></a> to indicate their status.
+The <a href="https://github.com/rustbot"><code>@rustbot</code></a> bot can be used by anyone to adjust the labels.
+If a PR gets marked as <code>S-waiting-on-author</code>, and you have pushed new changes that you would like to be reviewed, you can write a comment on the PR with the text <code>@rustbot ready</code>.
+The bot will switch the labels on the PR.</p>
+<p>More information about these commands can be found at the <a href="https://forge.rust-lang.org/triagebot/shortcuts.html">shortcuts documentation</a>.</p>
+<h2 id="the-merging-process"><a class="header" href="#the-merging-process">The merging process</a></h2>
+<p>After a reviewer has approved your PR,
+they will add the PR to <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue">GitHub merge queue</a>.
+The merge queue will create a temporary branch with your PR,
+and run all required jobs.
+If it fails, it will be removed from the queue.
+The merge queue ensures that the master branch is always in a good state,
+and that merges are processed one at a time.
+The <a href="https://github.com/rust-lang/cargo/queue/master">merge queue dashboard</a> shows the current queued pull requests.</p>
+<p>Assuming everything works, congratulations! It may take at least a week for
+the changes to arrive on the nightly channel. See the <a href="process/release.html">release chapter</a> for
+more information on how Cargo releases are made.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="release-process"><a class="header" href="#release-process">Release process</a></h1>
+<p>Cargo is released with <code>rustc</code> using a <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">“train model”</a>. After a
+change lands in Cargo’s master branch, it will be synced with the
+<a href="https://github.com/rust-lang/rust/">rust-lang/rust</a> repository by a Cargo team member, which happens about once a
+week. If there are complications, it can take longer. After it is synced and
+merged, the changes will appear in the next nightly release, which is usually
+published around 00:30 UTC.</p>
+<p>After changes are in the nightly release, they will make their way to the
+stable release anywhere from 6 to 12 weeks later, depending on when during the
+cycle it landed.</p>
+<p>The current release schedule is posted on the <a href="https://forge.rust-lang.org/">Rust Forge</a>. See the <a href="https://forge.rust-lang.org/release/process.html">release
+process</a> for more details on how Rust’s releases are created. Rust releases
+are managed by the <a href="https://www.rust-lang.org/governance/teams/operations#release">Release team</a>.</p>
+<h2 id="build-process"><a class="header" href="#build-process">Build process</a></h2>
+<p>The build process for Cargo is handled as part of building Rust. Every PR on
+the <a href="https://github.com/rust-lang/rust/">rust-lang/rust</a> repository creates a full collection of release artifacts
+for every platform. The code for this is in the <a href="https://github.com/rust-lang/rust/blob/master/src/bootstrap/src/core/build_steps/dist.rs"><code>dist</code> bootstrap module</a>.
+Every night at 00:00 UTC, the artifacts from the most recently merged PR are
+promoted to the nightly release channel. A similar process happens for beta
+and stable releases.</p>
+<h2 id="submodule-updates"><a class="header" href="#submodule-updates">Submodule updates</a></h2>
+<p>Cargo is tracked in the <a href="https://github.com/rust-lang/rust/">rust-lang/rust</a> repository using a <a href="https://git-scm.com/book/en/v2/Git-Tools-Submodules">git submodule</a>.
+It is updated manually about once a week by a Cargo team member.
+However, anyone is welcome to update it as needed.</p>
+<p><a href="https://github.com/ehuss/">@ehuss</a> has a tool called <a href="https://github.com/ehuss/subup">subup</a> to automate the process of updating the submodule, updating the lockfile, running tests, and creating a PR.
+Running the tests ahead-of-time helps avoid long cycle times waiting for bors if there are any errors.
+Subup will also provide a message to include in the PR with a list of all PRs it covers.
+Posting this in the PR message also helps create reference links on each Cargo PR to the submodule update PR to help track when it gets merged.</p>
+<p>The following is an example of the command to run in a local clone of rust-lang/rust to run a certain set of tests of things that are likely to get broken by a Cargo update:</p>
+<pre><code class="language-bash">subup --up-branch update-cargo \
+    --commit-message "Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt" \
+    src/tools/cargo
+</code></pre>
+<p>If doing a <a href="process/release.html#beta-backports">beta backport</a>, the command is similar, but needs to point to the correct branches:</p>
+<pre><code class="language-bash">subup --up-branch update-beta-cargo \
+    --rust-branch beta \
+    --set-config rust.channel=beta \
+    --commit-message "[beta] Update cargo" \
+    --test="src/tools/linkchecker tidy \
+        src/tools/cargo \
+        src/tools/rustfmt" \
+    rust-1.66.0:src/tools/cargo
+</code></pre>
+<h2 id="version-updates"><a class="header" href="#version-updates">Version updates</a></h2>
+<p>Shortly after each major release, a Cargo team member will post a PR to update
+Cargo’s version in <code>Cargo.toml</code>. Cargo’s library is permanently unstable, so
+its version number starts with a <code>0</code>. The minor version is always 1 greater
+than the Rust release it is a part of, so cargo 0.49.0 is part of the 1.48
+Rust release. The <a href="https://github.com/rust-lang/cargo/blob/master/src/doc/src/CHANGELOG.md">CHANGELOG</a> is also usually updated at this time.</p>
+<p>Also, any version-specific checks that are no longer needed can be removed.
+For example, some tests are disabled on stable if they require some nightly
+behavior. Once that behavior is available on the new stable release, the
+checks are no longer necessary. (I usually search for the word “nightly” in
+the testsuite directory, and read the comments to see if any of those nightly
+checks can be removed.)</p>
+<p>Sometimes Cargo will have a runtime check to probe <code>rustc</code> if it supports a
+specific feature. This is usually stored in the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/build_context/target_info.rs"><code>TargetInfo</code></a> struct. If this
+behavior is now stable, those checks should be removed.</p>
+<p>Cargo has several other packages in the <a href="https://github.com/rust-lang/cargo/tree/master/crates"><code>crates/</code> directory</a>. If any of these
+packages have changed, the version should be bumped <strong>before the beta
+release</strong>. It is rare that these get updated. Bumping these as-needed helps
+avoid churning incompatible version numbers. This process should be improved
+in the future!</p>
+<p><a href="https://github.com/ehuss/">@ehuss</a> has a tool called <a href="https://github.com/ehuss/cargo-new-release">cargo-new-release</a> to automate the process of doing a version bump.
+It runs through several steps:</p>
+<ol>
+<li>Creates a branch</li>
+<li>Updates the version numbers</li>
+<li>Creates a changelog for anything on the master branch that is not part of beta</li>
+<li>Creates a changelog for anything on the beta branch</li>
+</ol>
+<p>It opens a browser tab for every PR in order to review each change.
+It places each PR in the changelog with its title, but usually every PR should be rewritten to explain the change from the user’s perspective.
+Each PR should also be categorized as an Addition, Change, Fix, or Nightly-only change.
+Most PRs are deleted, since they are not relevant to users of Cargo.
+For example, remove all PRs related to Cargo internals, infrastructure, documentation, error changes, refactorings, etc.
+Usually about half of the PRs get removed.
+This process usually takes @ehuss about an hour to finish.</p>
+<h2 id="docs-publishing"><a class="header" href="#docs-publishing">Docs publishing</a></h2>
+<p>Docs are automatically published during the Rust release process. The nightly
+channel’s docs appear at <a href="https://doc.rust-lang.org/nightly/cargo/">https://doc.rust-lang.org/nightly/cargo/</a>. Once
+nightly is promoted to beta, those docs will appear at
+<a href="https://doc.rust-lang.org/beta/cargo/">https://doc.rust-lang.org/beta/cargo/</a>. Once the stable release is made, it
+will appear on <a href="https://doc.rust-lang.org/cargo/">https://doc.rust-lang.org/cargo/</a> (which is the “current”
+stable) and the release-specific URL such as
+<a href="https://doc.rust-lang.org/1.46.0/cargo/">https://doc.rust-lang.org/1.46.0/cargo/</a>.</p>
+<p>The code that builds the documentation is located in the <a href="https://github.com/rust-lang/rust/blob/master/src/bootstrap/src/core/build_steps/doc.rs"><code>doc</code> bootstrap
+module</a>.</p>
+<h2 id="cratesio-publishing"><a class="header" href="#cratesio-publishing">crates.io publishing</a></h2>
+<p>Cargo’s library and its related dependencies (like <code>cargo-util</code>) are published
+to <a href="https://crates.io/">crates.io</a> as part of the 6-week stable release process by the <a href="https://www.rust-lang.org/governance/teams/operations#release">Release
+team</a>. The release process involves a series of steps:</p>
+<ol>
+<li>The Release team’s automation scripts (see <a href="https://github.com/rust-lang/simpleinfra/">https://github.com/rust-lang/simpleinfra/</a>) will run <a href="https://github.com/rust-lang/promote-release"><code>promote-release</code></a> which will create a tag in the <code>rust-lang/cargo</code> repository associated with the version of the cargo submodule for that release.</li>
+<li>The creation of a tag will trigger the <a href="https://github.com/rust-lang/cargo/blob/master/.github/workflows/release.yml">release workflow</a> in <code>rust-lang/cargo</code>.</li>
+<li>The release workflow will run the <a href="https://github.com/rust-lang/cargo/blob/master/publish.py"><code>publish.py</code> script</a> on the commit associated with the tag.</li>
+<li>The <code>publish.py</code> script will run <code>cargo publish</code> on any crates that are not already published.</li>
+</ol>
+<p>On very rare cases, the Cargo team may decide to manually publish a new
+release to <a href="https://crates.io/">crates.io</a>. For example, this may be necessary if there is a
+problem with the current version that only affects API users, and does not
+affect the <code>cargo</code> binary shipped in the stable release. In this situation,
+PRs should be merged to the associated stable release branch in the cargo repo
+(like <code>rust-1.70.0</code>) that fix the issue and bump the patch version of the
+affected package. Then you need to work with the Release Team to get a release
+published to crates.io.<sup class="footnote-reference" id="fr-release-problem-1"><a href="#footnote-release-problem">1</a></sup></p>
+<p>Some packages are not published automatically because they are not part of the
+Rust release train. This currently only includes the <a href="https://github.com/rust-lang/cargo/tree/master/crates/home"><code>home</code></a> package. These
+are published manually on an as-needed or as-requested basis by whoever has
+permissions (currently <a href="https://github.com/ehuss/">@ehuss</a> or the Release/Infra team)<sup class="footnote-reference" id="fr-fix-manual-release-1"><a href="#footnote-fix-manual-release">2</a></sup>.</p>
+<h2 id="beta-backports"><a class="header" href="#beta-backports">Beta backports</a></h2>
+<p>If there is a regression or major problem detected during the beta phase, it
+may be necessary to backport a fix to beta. The process is documented in the
+<a href="https://forge.rust-lang.org/release/beta-backporting.html">Beta Backporting</a> page.</p>
+<h2 id="stable-backports"><a class="header" href="#stable-backports">Stable backports</a></h2>
+<p>In (hopefully!) very rare cases, a major regression or problem may be reported
+after the stable release. Decisions about this are usually coordinated between
+the <a href="https://www.rust-lang.org/governance/teams/operations#release">Release team</a> and the Cargo team. There is usually a high bar for making
+a stable patch release, and the decision may be influenced by whether or not
+there are other changes that need a new stable release.</p>
+<p>The process here is similar to the beta-backporting process. The
+<a href="https://github.com/rust-lang/cargo/">rust-lang/cargo</a> branch is the same as beta (<code>rust-1.XX.0</code>). The
+<a href="https://github.com/rust-lang/rust/">rust-lang/rust</a> branch is called <code>stable</code>.</p>
+<hr>
+<ol class="footnote-definition"><li id="footnote-release-problem">
+<p>Unfortunately there are some complications with this process. See <a href="https://github.com/rust-lang/cargo/issues/14538">https://github.com/rust-lang/cargo/issues/14538</a> for more detail, and thoughts on how to improve this. <a href="#fr-release-problem-1">↩</a></p>
+</li>
+<li id="footnote-fix-manual-release">
+<p>This should be fixed, see <a href="https://forge.rust-lang.org/policies/crate-ownership.html">crate ownership policy</a> about removing ownership. Also see <a href="https://github.com/rust-lang/cargo/issues/14538">https://github.com/rust-lang/cargo/issues/14538</a> for problems with tagging. In general, these should be published from GitHub Actions, but we don’t have the infrastructure set up for that, yet. <a href="#fr-fix-manual-release-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="writing-an-rfc"><a class="header" href="#writing-an-rfc">Writing an RFC</a></h1>
+<p>Generally, an RFC goes through:</p>
+<ol>
+<li>Pre-RFC discussions on the <a href="https://internals.rust-lang.org/">internals forum</a></li>
+<li><a href="https://github.com/rust-lang/rfcs/">RFC</a></li>
+<li><a href="process/unstable.html">Development and stabilization</a></li>
+</ol>
+<p>Please keep in mind our <a href="process/../design.html">design principles</a>.</p>
+<p>For more concrete areas of consideration:</p>
+<h2 id="cargoconfigtoml-and-cargotoml"><a class="header" href="#cargoconfigtoml-and-cargotoml"><code>.cargo/config.toml</code> and <code>Cargo.toml</code></a></h2>
+<p><code>.cargo/config.toml</code> is for environment or transient configuration,
+being dependent on what directory you are running from and settable on the command-line,
+independent of other flags like <code>--manifest-path</code> or <code>--package</code>.</p>
+<p>On the other hand <code>Cargo.toml</code> is for static, high-level project configuration.</p>
+<p>For example,</p>
+<ul>
+<li><a href="https://rust-lang.github.io/rfcs/3537-msrv-resolver.html">RFC 3537</a> chose
+configuration for the MSRV-aware resolver because users would likely need
+to change this setting, like in CI to verify the opposite case of
+what they run by default.</li>
+<li>The Cargo team rejected a <a href="https://github.com/rust-lang/cargo/pull/11631#issuecomment-1487424886"><code>[cfg]</code> table</a> to represent <code>rustc</code>
+<code>--cfg</code> flags as it was a direct port of low-level rustc behavior that didn’t
+mesh with the other high level abstractions of manifests.
+<ul>
+<li>For stabilization, this was worked around through a build script directive and a <code>[lints]</code> field configuration.</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/cargo/issues/12738">#12738</a> for exploring how existing config might be representable in <code>Cargo.toml</code>.</li>
+</ul>
+<h2 id="cargotoml"><a class="header" href="#cargotoml"><code>Cargo.toml</code></a></h2>
+<p>When adding a table to a manifest,</p>
+<ul>
+<li>Should it be inheritable?</li>
+<li>Ensure the package table and the inheritable table under <code>workspace</code> align</li>
+<li>Care is needed to ensure a <code>workspace = true</code> field doesn’t conflict with other entries
+<ul>
+<li>e.g. <a href="https://rust-lang.github.io/rfcs/3389-manifest-lint.html">RFC 3389</a> had to explicitly exclude ever supporting a <code>workspace</code> linter</li>
+</ul>
+</li>
+</ul>
+<p>When adding a field,</p>
+<ul>
+<li>Is it inheritable?
+<ul>
+<li>Consider whether sharing of the field would be driven by requirements or is a manifestation of the current implementation.
+For example, in most cases, dependency sources (e.g. <code>version</code> field) should be aligned across a workspace
+However, frequently dependency <code>features</code> will vary across a workspace.</li>
+</ul>
+</li>
+<li>When inheriting, can specify it in your package?</li>
+<li>How does specifying a field in both <code>workspace</code> and a package interact?
+<ul>
+<li>e.g. dependency sources cannot be overridden</li>
+<li>e.g. dependency <code>features</code> get merged</li>
+<li>e.g. dependency <code>default-features</code> has been hard to get right (<a href="https://github.com/rust-lang/cargo/issues/12162">#12162</a>)</li>
+</ul>
+</li>
+</ul>
+<p>When working extending <code>dependencies</code> tables:</p>
+<ul>
+<li>How does this affect <code>cargo add</code> or <code>cargo remove</code>?</li>
+<li>How does this affect <code>[patches]</code> which are just modified dependencies?</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="unstable-features"><a class="header" href="#unstable-features">Unstable features</a></h1>
+<p>Most new features should go through the unstable process. This means that the
+feature will only be usable on the nightly channel, and requires a specific
+opt-in by the user. Small changes can skip this process, but please consult
+with the Cargo team first.</p>
+<h2 id="tracking-issues"><a class="header" href="#tracking-issues">Tracking issues</a></h2>
+<p>Each unstable feature should get a <a href="https://github.com/rust-lang/cargo/labels/C-tracking-issue">tracking issue</a>. These issues are
+typically created when a PR is close to being merged, or soon after it is
+merged. Use the <a href="https://github.com/rust-lang/cargo/issues/new?labels=C-tracking-issue&amp;template=tracking_issue.yml">tracking issue template</a> when creating a tracking issue.</p>
+<p>Larger features should also get a new label in the issue tracker so that when
+issues are filed, they can be easily tied together. Typically this would be
+one of the <code>Z-</code> prefixed labels for nightly features.</p>
+<p>When opening a tracking issue, be sure to also add an <code>S-</code> status label to
+indicate what needs to happen for it to move forward:</p>
+<ul>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-needs-mentor">S-needs-mentor</a> — The feature isn’t yet implemented, and needs a Cargo
+team member to commit to helping guide and review the implementation.</li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> — The feature isn’t yet implemented, and has a Cargo team
+member willing to help review the implementation.</li>
+<li><a href="https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback">S-waiting-on-feedback</a> — After the feature has been implemented, this
+label indicates that it is waiting on community feedback for bugs or design
+concerns.</li>
+</ul>
+<p>Tracking issues may have multiple status labels if necessary, for example if
+something is only partially implemented, it may have both
+<a href="https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback">S-waiting-on-feedback</a> (for what is implemented) and <a href="https://github.com/rust-lang/cargo/labels/S-needs-mentor">S-needs-mentor</a> or
+<a href="https://github.com/rust-lang/cargo/labels/S-accepted">S-accepted</a> to finish the rest of the work.</p>
+<h2 id="implementation"><a class="header" href="#implementation">Implementation</a></h2>
+<p>See <a href="process/working-on-cargo.html">Working on Cargo</a>.</p>
+<p>During implementation and testing, you may find reasons to deviate from the RFC.
+Please call these out in the tracking issue, with links to more information justifying the change
+(e.g. see <a href="https://github.com/rust-lang/cargo/issues/8415">workspace inheritance tracking issue</a>).</p>
+<h4 id="unstable-feature-opt-in"><a class="header" href="#unstable-feature-opt-in">Unstable feature opt-in</a></h4>
+<p>For features that require behavior changes or new syntax in <code>Cargo.toml</code>, then
+it will need a <code>cargo-features</code> value placed at the top of <code>Cargo.toml</code> to
+enable it. The process for adding a new feature is described in the
+<a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/features.rs"><code>features</code> module</a>. Code that implements the feature will need to manually
+check that the feature is enabled for the current manifest.</p>
+<p>For features that add new command-line flags, config options, or environment
+variables, then the <code>-Z</code> flags will be needed to enable them. The <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/features.rs"><code>features</code>
+module</a> also describes how to add these. New flags should use the
+<code>fail_if_stable_opt</code> method to check if the <code>-Z unstable-options</code> flag has
+been passed.</p>
+<h4 id="unstable-documentation"><a class="header" href="#unstable-documentation">Unstable documentation</a></h4>
+<p>Every unstable feature should have a section added to the <a href="https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md">unstable chapter</a>
+describing how to use the feature.
+This can also serve as a place for the final documentation to live until its stabilized.</p>
+<h2 id="pre-stabilization"><a class="header" href="#pre-stabilization">Pre-Stabilization</a></h2>
+<p>Once an unstable feature is “complete”, the search for users to test
+and give feedback begins:</p>
+<ol>
+<li>Write up test instructions for users, summarizing where the feature is useful, how to use it (with links to the unstable documentation), and if there are any areas of particular concern</li>
+</ol>
+<ul>
+<li>This could be on the tracking issue or in a dedicated issue for feedback</li>
+<li>e.g. <a href="https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/src/doc/src/reference/unstable.md#testing-notes">workspace inheritance testing notes</a></li>
+</ul>
+<ol start="2">
+<li>Call for testing</li>
+</ol>
+<ul>
+<li>In the RFC, link to the test instructions and label it with <code>call-for-testing</code> to be picked up by <a href="https://this-week-in-rust.org/">This Week in Rust</a>
+<ul>
+<li>If there is not an RFC, a pull request should be made to the <a href="https://github.com/rust-lang/this-week-in-rust">TWiR repo</a>
+adding the feature to the <code>Call for Testing</code> section (<a href="https://github.com/rust-lang/this-week-in-rust/pull/3256">example</a>).</li>
+</ul>
+</li>
+<li>Post on various Rust communities (<a href="https://www.reddit.com/r/rust/">rust subreddit</a>, <a href="https://users.rust-lang.org/">users</a>, <a href="https://internals.rust-lang.org/">internals</a>, etc)</li>
+<li>e.g. <a href="https://www.reddit.com/r/rust/comments/uo8zeh/help_test_workspace_inheritance_in_preparation/">reddit post</a>, <a href="https://users.rust-lang.org/t/help-test-workspace-inheritance-in-preparation-for-stablization/75582">users post</a>, <a href="https://internals.rust-lang.org/t/help-test-workspace-inheritance-in-preparation-for-stablization/16618">internals post</a></li>
+</ul>
+<h2 id="stabilization"><a class="header" href="#stabilization">Stabilization</a></h2>
+<p>After some period of time, typically measured in months, the feature can be
+considered to be stabilized. The feature should not have any significant known
+bugs or issues, and any design concerns should be resolved.</p>
+<p>The stabilization process depends on the kind of feature. For smaller
+features, you can leave a comment on the tracking issue expressing interest in
+stabilizing it. It can usually help to indicate that the feature has received
+some real-world testing, and has exhibited some demand for broad use.</p>
+<p>For larger features that have not gone through the <a href="https://github.com/rust-lang/rfcs/">RFC process</a>, then an RFC
+to call for stabilization might be warranted. This gives the community a final
+chance to provide feedback about the proposed design.</p>
+<p>For a small feature, or one that has already gone through the RFC process, a
+Cargo Team member may decide to call for a “final comment period” using
+<a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a>. This is a public signal that a major change is being made, and gives
+the Cargo Team members an opportunity to confirm or block the change. This
+process can take a few days or weeks, or longer if a concern is raised.</p>
+<p>Once the stabilization has been approved, the person who called for
+stabilization should prepare a PR to stabilize the feature. This PR should:</p>
+<ul>
+<li>Flip the feature to stable in the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/features.rs"><code>features</code> module</a>.</li>
+<li>Remove any unstable checks that aren’t automatically handled by the feature
+system.</li>
+<li>Move the documentation from the <a href="https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md">unstable chapter</a> into the appropriate
+places in the Cargo book and man pages.</li>
+<li>Remove the <code>-Z</code> flags and help message if applicable.</li>
+<li>Update all tests to remove nightly checks.</li>
+<li>Tag the PR with <a href="https://github.com/rust-lang/cargo/issues?q=label%3Arelnotes">relnotes</a> label if it seems important enough to highlight
+in the <a href="https://github.com/rust-lang/rust/blob/master/RELEASES.md">Rust release notes</a>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="security-issues"><a class="header" href="#security-issues">Security issues</a></h1>
+<p>Issues involving reporting a security vulnerability in cargo usually start by following the <a href="https://www.rust-lang.org/policies/security">Rust security policy</a>.
+The Security Response Working Group (“the WG”) is responsible for running the process of handling the response to a security issue.
+Their process is documented at <a href="https://github.com/rust-lang/wg-security-response/blob/main/docs/handling-reports.md">Handling Reports</a>.
+This document gives an overview of the process from a Cargo team member’s perspective.</p>
+<p>The general order of events happens as follows:</p>
+<ol>
+<li>
+<p>The “reporter” (even if it is a Cargo team member) reports an issue to <a href="mailto:process/security@rust-lang.org">security@rust-lang.org</a>.</p>
+</li>
+<li>
+<p>The WG will evaluate if the report is credible, and manages responses to the reporter.</p>
+</li>
+<li>
+<p>The WG will start a private Zulip stream to coordinate discussion and plans for a fix.</p>
+</li>
+<li>
+<p>The WG will pull in one or more team members into the Zulip stream (“responders”).</p>
+<ul>
+<li>Security vulnerabilities are <strong>embargoed</strong> until they are released publicly.
+People who are brought into these discussions should <strong>not</strong> discuss the issue with <em>anyone</em> outside of the group, including your employer, without first consulting The WG.</li>
+</ul>
+</li>
+<li>
+<p>A discussion then starts to evaluate the severity of the issue and what possible solutions should be considered.
+This includes figuring out who will volunteer to actually develop the patches to resolve the issue, and who will review it.</p>
+</li>
+<li>
+<p>The WG will create a temporary private fork of the <code>rust-lang/cargo</code> repo using GitHub’s <a href="https://docs.github.com/en/code-security/security-advisories/repository-security-advisories">repository security advisory</a> system.
+This provides a space where changes can be securely posted, and the security advisory can be drafted.
+See <a href="https://docs.github.com/en/code-security/security-advisories/repository-security-advisories/collaborating-in-a-temporary-private-fork-to-resolve-a-repository-security-vulnerability">“Collaborating in a temporary private fork”</a> for some screenshots of what this looks like.
+GitHub includes instructions on how to work with the fork.</p>
+<p>Beware that the private fork has some limitations, such as not supporting CI, or (for some weird reason) not supporting syntax highlighting.</p>
+</li>
+<li>
+<p>Someone will need to review the patches and make sure everyone agrees on the solution.
+This may also involve the WG conferring with the reporter to validate the fix.</p>
+</li>
+<li>
+<p>Create a rollout plan.
+This includes deciding if there will be a new patch release of Rust, or if it should wait for the next stable release, or whether to remove the embargo on the fix.</p>
+</li>
+<li>
+<p>The WG will handle drafting a Security Advisory using GitHub’s Security Advisory (“GHSA”) system.
+<a href="https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j">GHSA-r5w3-xm58-jv6j</a> is an example of what this looks like.
+This process also involves reserving a <a href="https://www.cve.org/">CVE</a> number, where the report will eventually be posted.</p>
+<p>The responders should carefully review the report to make sure it is correct.</p>
+<p>This process may also involve deciding on the CVSS score.
+There are a bunch of calculators on the web where you can see how this works (such as the <a href="https://www.first.org/cvss/calculator">FIRST CVSS Calculator</a>, or you can view GitHub’s calculator by drafting a security advisory in one of your personal repos).
+FIRST has a <a href="https://www.first.org/cvss/user-guide">user guide</a> for deciding how to score each characteristic.</p>
+</li>
+<li>
+<p>If it is decided to do a patch release of Rust, the general overview of steps is:</p>
+<ol>
+<li>Finalizing the patches.
+This includes all the little details like updating changelogs, version numbers, and such.</li>
+<li>Preparing PRs in the private fork against the stable, beta, and nightly (master) branches.</li>
+<li>The WG handles creating a private fork of <code>rust-lang/rust</code> to prepare the point release.
+This usually includes changes for stable, beta, and nightly.</li>
+<li>The WG handles posting patches in various places (such as mailing lists), possibly several days in advance.</li>
+<li>The WG handles posting public PRs to <code>rust-lang/rust</code> to incorporate the fix and prepare a new release.</li>
+<li>The WG handles announcing everything, including publishing the GHSA, publishing a blog post, and several other places.</li>
+</ol>
+</li>
+</ol>
+<h2 id="external-dependency-patches"><a class="header" href="#external-dependency-patches">External dependency patches</a></h2>
+<p>Sometimes it may be necessary to make changes to external dependencies to support a fix.
+This can make things complicated.
+If the change is by itself benign and not directly related to the security issue,
+then it may be safe to publicly propose the change (but not giving context) and try to get a new release of the dependency made (though confer with the WG first!).
+However, if the issue is directly related to the dependency, then it becomes significantly more awkward.</p>
+<p>The general process for <a href="https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j">GHSA-r5w3-xm58-jv6j</a> which involved a fix in <code>git2-rs</code> was handled by the responders because it is a dependency owned by the rust-lang org.
+The general outline of how we managed this is:</p>
+<ul>
+<li>Pre-release:
+<ol>
+<li>Created a private fork of <code>rust-lang/git2-rs</code> just like we did for <code>rust-lang/cargo</code>.
+git2-rs also had its own Security Advisory just like cargo did.</li>
+<li>Created and reviewed PRs in the private fork for the fixes.
+<ul>
+<li>The PRs in the <code>rust-lang/cargo</code> private fork had to have a temporary <code>[patch]</code> git dependency on the <code>git2-rs</code> private fork.</li>
+</ul>
+</li>
+<li>Before the release, the PRs were changed to remove the <code>[patch]</code>, and pretend as-if git2-rs had already been published.</li>
+</ol>
+</li>
+<li>Showtime:
+<ol>
+<li>The git2-rs changes were publicly merged, and a new release was published to crates.io.</li>
+<li>The cargo PR was merged to cargo’s stable branch.</li>
+<li>The private rust-lang/rust PR updated the cargo submodule and updated <code>Cargo.lock</code> to pick up the new git2 dependencies.</li>
+<li>Release proceeds as normal (publish both GHSA, create release, etc.).</li>
+</ol>
+</li>
+<li>Post-release:
+<ol>
+<li>Various forward ports were created in git2-rs, and new releases were made.</li>
+</ol>
+</li>
+</ul>
+<p>If the change is in a crate not managed by any responder, then confer with the WG on a strategy.
+One option is to create a temporary fork used for the security response that will be removed as soon as the security advisory is released and a new public release of the dependency is made with the fix.</p>
+<h2 id="checklist"><a class="header" href="#checklist">Checklist</a></h2>
+<p>There are a lot of details to handle, and it can be a bit of a challenge under time pressure.
+The following is a checklist of some items to pay attention to during the process.</p>
+<p>Pre-release:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Check for any SemVer-incompatible changes in the public API of any crates that are modified.
+<ul>
+<li>Try to avoid these if at all possible.
+Although not a severe problem, making Cargo’s version number drift farther from Rust’s can contribute to confusion.</li>
+<li>If a SemVer-breaking release is made to a dependency, make sure this is coordinated correctly between the stable, beta, and master branches.</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+With a checkout of the proposed fixes, run as much of cargo’s CI testsuite locally as you can.
+Since private forks don’t support CI, the responders will be responsible for making sure all tests pass.
+Enlist other responders if you don’t have the necessary systems like Windows.</li>
+<li><input disabled="" type="checkbox"/>
+Manually exercise the fix locally.
+Since we will essentially have <em>no</em> nightly testing, the responders are responsible for making sure things work.
+Try to consider all the different environments users may be using.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure any comments or docs that need updating get updated.</li>
+<li><input disabled="" type="checkbox"/>
+Review the git commit messages of the patch.
+Make sure they clearly and accurately reflect what is being changed and why.
+Clean up the commit history if it goes through several revisions during review.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure that the <em>public</em> cargo repo’s stable and beta branches are in a state where they are passing CI.
+This may require backporting changes that fix problems that have already been fixed in master.
+This can be done publicly at any time, and helps with ensuring a smooth process once the security issue is released.
+(The WG may disable branch protections to push directly to the stable branch, but this step is still useful to assist with local testing and the beta branch.)</li>
+<li><input disabled="" type="checkbox"/>
+After the fix is approved, create backports to the stable and beta master branches and post PRs to the private fork.</li>
+<li><input disabled="" type="checkbox"/>
+If any internal dependencies are changed, make sure their versions are bumped appropriately, and dependency specifications are updated (stable, beta, and master branches).</li>
+<li><input disabled="" type="checkbox"/>
+Thoroughly test the stable and beta PRs locally, too. We want to make sure everything goes smoothly, and we can’t assume that just because a patch applied cleanly that there won’t be issues.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure cargo’s version in <a href="https://github.com/rust-lang/cargo/blob/master/Cargo.toml"><code>Cargo.toml</code></a> is updated correctly on the stable branch private PR.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure cargo’s <code>Cargo.lock</code> is updated (stable, beta, master branches).</li>
+<li><input disabled="" type="checkbox"/>
+Update <a href="https://github.com/rust-lang/cargo/blob/master/src/doc/src/CHANGELOG.md"><code>CHANGELOG.md</code></a> on cargo’s master branch private PR.</li>
+<li><input disabled="" type="checkbox"/>
+Update <a href="https://github.com/rust-lang/rust/blob/master/RELEASES.md"><code>RELEASES.md</code></a> on rust’s master branch private PR (and stable and beta?).</li>
+<li><input disabled="" type="checkbox"/>
+Remove any temporary things in the patch, like a temporary <code>[patch]</code> table.</li>
+</ul>
+<p>Showtime:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Publish any embargoed external dependencies to crates.io.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Merge the cargo stable change.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Update the cargo submodule in the rust-lang/rust private PR to point to the new stable commit.
+<ul>
+<li><input disabled="" type="checkbox"/>
+Also update <code>Cargo.lock</code>.</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Make a new stable release.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Publish the GHSA.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Send announcements.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure stable, beta, and master branches of <code>rust-lang/cargo</code> get updated.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure stable, beta, and master branches of <code>rust-lang/rust</code> get updated, pointing to the correct submodule versions.</li>
+<li><input disabled="" type="checkbox"/>
+If any external dependencies are updated, make sure their back or forward ports are handled.</li>
+</ul>
+<p>Post release:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Verify that the appropriate crates are published on crates.io.</li>
+<li><input disabled="" type="checkbox"/>
+Verify that <code>rust-lang/cargo</code> got a new tag.</li>
+<li><input disabled="" type="checkbox"/>
+Verify that the patches were backported to the correct branches in the <code>rust-lang/cargo</code> repository (stable, beta, and master).</li>
+<li><input disabled="" type="checkbox"/>
+Verify that the cargo submodule is updated on the correct branches in the <code>rust-lang/rust</code> repository (stable, beta, and master).</li>
+<li><input disabled="" type="checkbox"/>
+Follow up on any non-critical tasks that were identified during review.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h1>
+<p>The purpose of Cargo is to formalize a canonical Rust workflow, by automating
+the standard tasks associated with distributing software. Cargo simplifies
+structuring a new project, adding dependencies, writing and running unit
+tests, and more.</p>
+<p>Cargo is not intended to be a general-purpose build tool. Ideally, it should
+be easy to integrate it within another build tool, though admittedly that is
+not as seamless as desired.</p>
+<h2 id="stability-and-compatibility"><a class="header" href="#stability-and-compatibility">Stability and compatibility</a></h2>
+<h3 id="backwards-compatibility"><a class="header" href="#backwards-compatibility">Backwards compatibility</a></h3>
+<p>Cargo strives to remain backwards compatible with projects created in previous
+versions. The CLI interface also strives to remain backwards compatible, such
+that the commands and options behave the same. That being said, changes in
+behavior, and even outright breakage are sometimes done in limited situations.
+The following outlines some situations where backwards-incompatible changes are
+made:</p>
+<ul>
+<li>Anything that addresses a security concern.</li>
+<li>Dropping support for older platforms and tooling. Cargo follows the Rust
+<a href="https://doc.rust-lang.org/nightly/rustc/platform-support.html">tiered platform support</a>.</li>
+<li>Changes to resolve possibly unsafe or unreliable behavior.</li>
+</ul>
+<p>None of these changes should be taken lightly, and should be avoided if
+possible, or possibly with some transition period to alert the user of the
+potential change.</p>
+<p>Behavior is sometimes changed in ways that have a high confidence that it
+won’t break existing workflows. Almost every change carries this risk, so it
+is often a judgment call balancing the benefit of the change with the
+perceived possibility of its negative consequences.</p>
+<p>At times, some changes fall in the gray area, where the current behavior is
+undocumented, or not working as intended. These are more difficult judgment
+calls. The general preference is to balance towards avoiding breaking existing
+workflows.</p>
+<p>Support for older registry APIs and index formats may be dropped, if there is
+high confidence that there aren’t any active registries that may be affected.
+This has never (to my knowledge) happened so far, and is unlikely to happen in
+the future, but remains a possibility.</p>
+<p>In all of the above, a transition period may be employed if a change is known
+to cause breakage. A warning can be issued to alert the user that something
+will change, and provide them with an alternative to resolve the issue
+(preferably in a way that is compatible across versions if possible).</p>
+<p>Cargo is only expected to work with the version of the related Rust tools
+(<code>rustc</code>, <code>rustdoc</code>, etc.) that it is released with. As a matter of choice,
+the latest nightly works with the most recent stable release, but that is
+mostly to accommodate development of Cargo itself, and should not be expected
+by users.</p>
+<h3 id="forwards-compatibility"><a class="header" href="#forwards-compatibility">Forwards compatibility</a></h3>
+<p>Additionally, Cargo strives a limited degree of <em>forwards compatibility</em>.
+Changes should not egregiously prevent older versions from working. This is
+mostly relevant for persistent data, such as on-disk files and the registry
+interface and index. It also applies to a lesser degree to the registry API.</p>
+<p>Changes to <code>Cargo.lock</code> require a transition time, where the new format is not
+automatically written when the lock file is updated. The transition time
+should not be less than 6 months, though preferably longer. New projects may
+use the new format in a shorter time frame.</p>
+<p>Changes to <code>Cargo.toml</code> can be made in any release. This is because the user
+must manually modify the file, and opt-in to any new changes. Additionally,
+Cargo will usually only issue a warning about new fields it doesn’t
+understand, but otherwise continue to function.</p>
+<p>Changes to cache files (such as artifacts in the <code>target</code> directory, or cached
+data in Cargo’s home directory) should not <em>prevent</em> older versions from
+running, but they may cause older versions to recreate the cache, which may
+result in a performance impact.</p>
+<p>Changes to the registry index should not prevent older versions from working.
+Generally, older versions ignore new fields, so the format should be easily
+extensible. Changes to the format or interpretation of existing fields should
+be done very carefully to avoid preventing older versions of Cargo from
+working. In some cases, this may mean that older versions of Cargo will not be
+able to <em>select</em> a newly published crate, but it shouldn’t prevent them from
+working at all. This level of compatibility may not last forever, but the
+exact time frame for such a change has not yet been decided.</p>
+<p>The registry API may be changed in such a way to prevent older versions of
+Cargo from working. Generally, compatibility should be retained for as long as
+possible, but the exact length of time is not specified.</p>
+<h2 id="simplicity-and-layers"><a class="header" href="#simplicity-and-layers">Simplicity and layers</a></h2>
+<p>Standard workflows should be easy and consistent. Each knob that is added has
+a high cost, regardless if it is intended for a small audience. Layering and
+defaults can help avoid the surface area that the user needs to be concerned
+with. Try to avoid small functionalities that may have complex interactions
+with one another.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="implementing-a-change"><a class="header" href="#implementing-a-change">Implementing a Change</a></h1>
+<p>This chapter gives an overview of what you need to know in making a change to cargo.</p>
+<p>If you feel something is missing that would help you, feel free to ask on
+<a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
+<p>See the
+<a href="https://doc.rust-lang.org/nightly/nightly-rustc/cargo/index.html">nightly docs</a>
+for an overview of <code>cargo</code>s architecture and links out to further details.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="new-packages"><a class="header" href="#new-packages">New Packages</a></h1>
+<p>This chapter sketches out how to add a new package to the cargo workspace.</p>
+<h2 id="steps"><a class="header" href="#steps">Steps</a></h2>
+<p>Choose the relevant parent directory</p>
+<ul>
+<li><code>credential/</code> for credential-process related packages</li>
+<li><code>benches/</code> for benchmarking of cargo itself</li>
+<li><code>crates/</code> for everything else</li>
+</ul>
+<p>Run <code>cargo new &lt;name&gt;</code></p>
+<ul>
+<li><code>&lt;name&gt;</code>:
+<ul>
+<li>We tend to use <code>-</code> over <code>_</code></li>
+<li>For internal APIs, to avoid collisions with third-party subcommands, we can use the <code>cargo-util-</code> prefix</li>
+<li>For xtasks, we use the <code>xtask-</code> prefix</li>
+</ul>
+</li>
+<li><code>package.rust-version</code>
+<ul>
+<li>Internal packages tend to have a policy of “latest” with a <a href="implementation/packages.html#msrv-policy"><code># MSRV:1</code> comment</a></li>
+<li>Ecosystem packages tend to have a policy of “N-2” with a <a href="implementation/packages.html#msrv-policy"><code># MSRV:3</code> comment</a></li>
+<li>If the right choice is inherited from the workspace, feel free to keep it that way</li>
+</ul>
+</li>
+<li>If running without <a href="https://github.com/rust-lang/cargo/pull/12779">cargo new automatically adding to workspace</a>, add it as a workspace member if not already captured by a glob</li>
+</ul>
+<p>If its an xtask,</p>
+<ul>
+<li>Add it to <code>.cargo/config.toml</code>s <code>[alias]</code> table</li>
+<li>Mark <code>package.publish = false</code></li>
+</ul>
+<p>If needed to be published with <code>cargo</code>,
+add the package to <code>publish.py</code> in the repo root,
+in dependency order.</p>
+<p>Note: by adding the package to the workspace, you automatically get</p>
+<ul>
+<li>CI running <code>cargo test</code></li>
+<li>CI verifying MSRV</li>
+<li>CI checking for <code>cargo doc</code> warnings</li>
+</ul>
+<h2 id="msrv-policy"><a class="header" href="#msrv-policy">MSRV Policy</a></h2>
+<p>Our MSRV policies are</p>
+<ul>
+<li>Internal packages: support latest version</li>
+<li>Ecosystem packages: support latest 3 versions</li>
+</ul>
+<p>We proactively update the MSRV</p>
+<ul>
+<li>So contributors don’t shy away from using newer features, either assuming they
+can’t ask or feeling like they have to have a justification when asking</li>
+<li>To avoid a de facto MSRV developing from staying on a version for a long
+period of time, leaving users unhappy when their expectations aren’t met</li>
+</ul>
+<p>To proactively update the MSRV, we use <a href="https://docs.renovatebot.com/">RenovateBot</a>
+with the configuration file in <code>.github/renovatebot.json5</code>.
+To know what MSRV policy to use,
+it looks for comments of the form <code># MSRV:N</code>,
+where <code>N</code> is the number of supported rust versions.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="new-subcommands"><a class="header" href="#new-subcommands">New Subcommands</a></h1>
+<p>Cargo is a single binary composed of a set of <a href="https://docs.rs/clap"><code>clap</code></a> subcommands. All
+subcommands live in <a href="https://github.com/rust-lang/cargo/tree/master/src/bin/cargo/commands"><code>src/bin/cargo/commands</code></a> directory.
+<a href="https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/main.rs"><code>src/bin/cargo/main.rs</code></a> is the entry point.</p>
+<p>Each subcommand, such as <a href="https://github.com/rust-lang/cargo/tree/master/src/bin/cargo/commands/build.rs"><code>src/bin/cargo/commands/build.rs</code></a>, usually performs
+the following:</p>
+<ol>
+<li>Parse the CLI flags. See the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/util/command_prelude.rs"><code>command_prelude</code></a> module for some helpers to make this easier.</li>
+<li>Load the config files.</li>
+<li>Discover and load the workspace.</li>
+<li>Calls the actual implementation of the subcommand which resides in <a href="https://github.com/rust-lang/cargo/tree/master/src/cargo/ops"><code>src/cargo/ops</code></a>.</li>
+</ol>
+<p>If the subcommand is not found in the built-in list, then Cargo will
+automatically search for a subcommand named <code>cargo-{NAME}</code> in the users <code>PATH</code>
+to execute the subcommand.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="data-schemas"><a class="header" href="#data-schemas">Data Schemas</a></h1>
+<p>Cargo reads and writes user and machine facing data formats, like</p>
+<ul>
+<li><code>Cargo.toml</code>, read and written on <code>cargo package</code></li>
+<li><code>Cargo.lock</code>, read and written</li>
+<li><code>.cargo/config.toml</code>, read-only</li>
+<li><code>cargo metadata</code> output</li>
+<li><code>cargo build --message-format</code> output</li>
+</ul>
+<h2 id="schema-design"><a class="header" href="#schema-design">Schema Design</a></h2>
+<p>Generally,</p>
+<ul>
+<li>Fields should be kebab case
+<ul>
+<li><code>#[serde(rename_all = "kebab-case")]</code> should be applied defensively</li>
+</ul>
+</li>
+<li>Fields should only be present when needed, saving space and parse time
+<ul>
+<li>Also, we can always switch to always outputting the fields but its harder to stop outputting them</li>
+<li><code>#[serde(skip_serializing_if = "Default::default")]</code> should be applied liberally</li>
+</ul>
+</li>
+<li>For output, prefer <a href="https://jsonlines.org/">jsonlines</a> as it allows streaming output and flexibility to mix content (e.g. adding diagnostics to output that didn’t previously have it</li>
+<li><code>#[serde(deny_unknown_fields)]</code> should not be used to allow evolution of formats, including feature gating</li>
+</ul>
+<h2 id="schema-evolution-strategies"><a class="header" href="#schema-evolution-strategies">Schema Evolution Strategies</a></h2>
+<p>When changing a schema for data that is read, some options include:</p>
+<ul>
+<li>Adding new fields is relatively safe
+<ul>
+<li>If the field must not be ignored when present,
+have a transition period where it is invalid to use on stable Cargo before stabilizing it or
+error if its used before supported within the schema version
+(e.g. <code>edition</code> requires a minimum <code>package.rust-version</code>, if present)</li>
+</ul>
+</li>
+<li>Adding new values to a field is relatively safe
+<ul>
+<li>Unstable values should fail on stable Cargo</li>
+</ul>
+</li>
+<li>Version the structure and interpretation of the data (e.g. the <code>edition</code> field or <code>package.resolver</code> which has an <code>edition</code> fallback)</li>
+</ul>
+<p>Note: some formats that are read are also written back out
+(e.g. <code>cargo package</code> generating a <code>Cargo.toml</code> file)
+and those strategies need to be considered as well.</p>
+<p>When changing a schema for data that is written, some options include:</p>
+<ul>
+<li>Add new fields if the presence can be ignored</li>
+<li>Infer permission from the users use of the new schema (e.g. a new alias for an <code>enum</code> variant)</li>
+<li>Version the structure and interpretation of the format
+<ul>
+<li>Defaulting to the latest version with a warning that behavior may change (e.g. <code>cargo metadata --format-version</code>, <code>edition</code> in cargo script)</li>
+<li>Defaulting to the first version, eventually warning the user of the implicit stale behavior (e.g. <code>package.edition</code> in <code>Cargo.toml</code>)</li>
+<li>Without a default (e.g. <code>package.rust-version</code>, or a command-line flag like <code>--format-version</code>)</li>
+</ul>
+</li>
+</ul>
+<p>Note: While <code>serde</code> makes it easy to support data formats that add new fields,
+new data types or supported values for a field are more difficult to future-proof
+against.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="console-output"><a class="header" href="#console-output">Console Output</a></h1>
+<p>All of Cargo’s output should go through the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/shell.rs"><code>Shell</code></a> struct. You can normally
+obtain the <code>Shell</code> instance from the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/util/context/mod.rs"><code>GlobalContext</code></a> struct. Do <strong>not</strong> use
+the std <code>println!</code> macros.</p>
+<p>Most of Cargo’s output goes to stderr. When running in JSON mode, the output
+goes to stdout.</p>
+<p>It is important to properly handle errors when writing to the console.
+Informational commands, like <code>cargo list</code>, should ignore any errors writing
+the output. There are some <a href="https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/util/config/mod.rs#L1820-L1848"><code>drop_print</code></a> macros that are intended to make
+this easier.</p>
+<p>Messages written during compilation should handle errors, and abort the build
+if they are unable to be displayed. This is generally automatically handled in
+the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/job_queue/mod.rs"><code>JobQueue</code></a> as it processes each message.</p>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<p>Cargo uses <a href="https://docs.rs/anyhow"><code>anyhow</code></a> for managing errors. This makes it convenient to “chain”
+errors together, so that Cargo can report how an error originated, and what it
+was trying to do at the time.</p>
+<p>Error helpers are implemented in the <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/util/errors.rs"><code>errors</code></a> module. Use the
+<code>InternalError</code> error type for errors that are not expected to happen. This
+will print a message to the user to file a bug report.</p>
+<p>The binary side of Cargo uses the <code>CliError</code> struct to wrap the process exit
+code. Usually Cargo exits with 101 for an error, but some commands like <code>cargo test</code> will exit with different codes.</p>
+<h2 id="style"><a class="header" href="#style">Style</a></h2>
+<p>Some guidelines for Cargo’s output:</p>
+<ul>
+<li>Keep the normal output brief. Cargo is already fairly noisy, so try to keep
+the output as brief and clean as possible.</li>
+<li>Good error messages are very important! Try to keep them brief and to the
+point, but good enough that a beginner can understand what is wrong and can
+figure out how to fix. It is a difficult balance to hit! Err on the side of
+providing extra information.</li>
+<li>When using any low-level routines, such as <code>std::fs</code>, <em>always</em> add error
+context about what it is doing. For example, reading from a file should
+include context about which file is being read if there is an error.</li>
+<li>Cargo’s error style is usually a phrase, starting with a lowercase letter.
+If there is a longer error message that needs multiple sentences, go ahead
+and use multiple sentences. This should probably be improved sometime in the
+future to be more structured.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="filesystem"><a class="header" href="#filesystem">Filesystem</a></h1>
+<p>Cargo tends to get run on a very wide array of file systems. Different file
+systems can have a wide range of capabilities, and Cargo should strive to do
+its best to handle them. Some examples of issues to deal with:</p>
+<ul>
+<li>Not all file systems support locking. Cargo tries to detect if locking is
+supported, and if not, will ignore lock errors. This isn’t ideal, but it is
+difficult to deal with.</li>
+<li>The <a href="https://doc.rust-lang.org/std/fs/fn.canonicalize.html"><code>fs::canonicalize</code></a> function doesn’t work on all file systems
+(particularly some Windows file systems). If that function is used, there
+should be a fallback if it fails. This function will also return <code>\\?\</code>
+style paths on Windows, which can have some issues (such as some tools not
+supporting them, or having issues with relative paths).</li>
+<li>Timestamps can be unreliable. The <a href="https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/fingerprint/mod.rs"><code>fingerprint</code></a> module has a deeper
+discussion of this. One example is that Docker cache layers will erase the
+fractional part of the time stamp.</li>
+<li>Symlinks are not always supported, particularly on Windows.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="formatting"><a class="header" href="#formatting">Formatting</a></h1>
+<p>When modifying user files, like <code>Cargo.toml</code>, we should not change other
+sections of the file,
+preserving the general formatting.
+This includes the table, inline-table, or array that a field is being edited in.</p>
+<p>When adding new entries, they do not need to match the canonical style of the
+document but can use the default formatting.
+If the entry is already sorted, preserving the sort order is preferred.</p>
+<p>When removing entries,
+comments on the same line should be removed but comments on following lines
+should be preserved.</p>
+<p>Inconsistencies in style after making a change are left to the user and their
+preferred auto-formatter.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>Cargo uses the <a href="https://docs.rs/tracing"><code>tracing</code></a> crate to display debug log messages.
+The <code>CARGO_LOG</code> environment variable can be set to enable debug logging, with a value such as <code>trace</code>, <code>debug</code>, or <code>warn</code>.
+It also supports filtering for specific modules with comma-separated [directives].
+Feel free to use <a href="https://docs.rs/tracing/latest/tracing/index.html#shorthand-macros">shorthand macros</a> to help with diagnosing problems.
+We’re looking forward to making Cargo logging mechanism more structural!</p>
+<pre><code class="language-sh"># Outputs all logs with levels debug and higher
+CARGO_LOG=debug cargo generate-lockfile
+
+# Don't forget that you can filter by module as well
+CARGO_LOG=cargo::core::resolver=trace cargo generate-lockfile
+
+# This will print lots of info about the download process. `trace` prints even more.
+CARGO_HTTP_DEBUG=true CARGO_LOG=network=debug cargo fetch
+
+# This is an important command for diagnosing fingerprint issues.
+CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="tests"><a class="header" href="#tests">Tests</a></h1>
+<p>Cargo has an extensive test suite. Most of it is implemented as integration
+tests in the <a href="https://github.com/rust-lang/cargo/tree/master/tests/testsuite/"><code>testsuite</code></a> directory. There are several other tests:</p>
+<ul>
+<li>Unit tests are scattered throughout.</li>
+<li>The dependency resolver has its own set of tests in the <a href="https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests"><code>resolver-tests</code></a>
+directory.</li>
+<li>All of the packages in the <a href="https://github.com/rust-lang/cargo/tree/master/crates"><code>crates</code></a> directory have their own set of tests.</li>
+<li>The <a href="https://github.com/rust-lang/cargo/blob/master/tests/build-std/main.rs"><code>build-std</code></a> test is for the <a href="https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std">build-std feature</a>. It is separate since
+it has some special requirements.</li>
+<li>Documentation has a variety of tests, such as link validation, and the
+<a href="https://github.com/rust-lang/cargo/tree/master/src/doc/semver-check">SemVer chapter validity checks</a>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="running-tests"><a class="header" href="#running-tests">Running Tests</a></h1>
+<p>Using <code>cargo test</code> is usually sufficient for running the full test suite. This
+can take a few minutes, so you may want to use more targeted flags to pick the
+specific test you want to run, such as <code>cargo test --test testsuite -- check::check_success</code>.</p>
+<h2 id="running-nightly-tests"><a class="header" href="#running-nightly-tests">Running nightly tests</a></h2>
+<p>Some tests only run on the nightly toolchain, and will be ignored on other
+channels. It is recommended that you run tests with both nightly and stable to
+ensure everything is working as expected.</p>
+<p>Some of the nightly tests require the <code>rustc-dev</code> and <code>llvm-tools-preview</code>
+rustup components installed. These components include the compiler as a
+library. This may already be installed with your nightly toolchain, but if it
+isn’t, run <code>rustup component add rustc-dev llvm-tools-preview --toolchain=nightly</code>.</p>
+<h2 id="running-cross-tests"><a class="header" href="#running-cross-tests">Running cross tests</a></h2>
+<p>Some tests exercise cross compiling to a different target. This will require
+you to install the appropriate target. This typically is the 32-bit target of
+your host platform. For example, if your host is a 64-bit
+<code>x86_64-unknown-linux-gnu</code>, then you should install the 32-bit target with
+<code>rustup target add i686-unknown-linux-gnu</code>. If you don’t have the alternate
+target installed, there should be an error message telling you what to do. You
+may also need to install additional tools for the target. For example, on Ubuntu
+you should install the <code>gcc-multilib</code> package.</p>
+<p>If you can’t install an alternate target, you can set the
+<code>CFG_DISABLE_CROSS_TESTS=1</code> environment variable to disable these tests. The
+Windows cross tests only support the MSVC toolchain.</p>
+<h2 id="running-build-std-tests"><a class="header" href="#running-build-std-tests">Running build-std tests</a></h2>
+<p>The <code>build-std</code> tests are disabled by default, but you can run them by setting
+the <code>CARGO_RUN_BUILD_STD_TESTS=1</code> environment variable and running <code>cargo test --test build-std</code>. This requires the nightly channel, and also requires the
+<code>rust-src</code> component installed with <code>rustup component add rust-src --toolchain=nightly</code>.</p>
+<h2 id="running-with-gitoxide-as-default-git-backend-in-tests"><a class="header" href="#running-with-gitoxide-as-default-git-backend-in-tests">Running with <code>gitoxide</code> as default git backend in tests</a></h2>
+<p>By default, the <code>git2</code> backend is used for most git operations. As tests need to explicitly
+opt-in to use nightly features and feature flags, adjusting all tests to run with nightly
+and <code>-Zgitoxide</code> is unfeasible.</p>
+<p>This is why the private environment variable named <code>__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2</code> can be
+set while running tests to automatically enable the <code>-Zgitoxide</code> flag implicitly, allowing to
+test <code>gitoxide</code> for the entire cargo test suite.</p>
+<h2 id="running-public-network-tests"><a class="header" href="#running-public-network-tests">Running public network tests</a></h2>
+<p>Some (very rare) tests involve connecting to the public internet.
+These tests are disabled by default,
+but you can run them by setting the <code>CARGO_PUBLIC_NETWORK_TESTS=1</code> environment variable.
+Additionally our CI suite has a smoke test for fetching dependencies.
+For most contributors, you will never need to bother with this.</p>
+<h2 id="running-container-tests"><a class="header" href="#running-container-tests">Running container tests</a></h2>
+<p>Tests marked with <code>container_test</code> involve running Docker to test more complex configurations.
+These tests are disabled by default,
+but you can run them by setting the <code>CARGO_CONTAINER_TESTS=1</code> environment variable.
+You will need to have Docker installed and running to use these.</p>
+<blockquote>
+<p>Note: Container tests mostly do not work on Windows.</p>
+<ul>
+<li>The SSH tests require ssh-agent, but the two versions of ssh-agent
+on Windows are not suitable for testing.
+<ul>
+<li>The Microsoft version of ssh-agent runs as a global service, and can’t be isolated per test.</li>
+<li>The mingw/cygwin one can’t be accessed from a Windows executable like cargo.</li>
+<li>Pageant similarly does not seem to have a way to isolate it (and I’m not certain it can be driven completely from the command-line).</li>
+</ul>
+</li>
+</ul>
+<p>The tests also can’t run on Windows CI because the Docker that is preinstalled doesn’t support Linux containers, and setting up Windows containers is a pain.</p>
+<p>macOS should work with Docker installed and running,
+but unfortunately the tests are not run on CI because Docker is not available.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="writing-tests"><a class="header" href="#writing-tests">Writing Tests</a></h1>
+<p>The following focuses on writing an integration test. However, writing unit
+tests is also encouraged!</p>
+<h2 id="testsuite"><a class="header" href="#testsuite">Testsuite</a></h2>
+<p>Cargo has a wide variety of integration tests that execute the <code>cargo</code> binary
+and verify its behavior, located in the <a href="https://github.com/rust-lang/cargo/tree/master/tests/testsuite/"><code>testsuite</code></a> directory.  The
+<a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs"><code>support</code></a> crate and <a href="https://docs.rs/snapbox/latest/snapbox/"><code>snapbox</code></a> contain many helpers to make this process easy.</p>
+<p>There are two styles of tests that can roughly be categorized as</p>
+<ul>
+<li>functional tests
+<ul>
+<li>The fixture is programmatically defined</li>
+<li>The assertions may be in-source snapshots, hard-coded strings, or programmatically generated</li>
+<li>Easier to share in an issue as a code block is completely self-contained</li>
+</ul>
+</li>
+<li>ui tests
+<ul>
+<li>The fixture is file-based</li>
+<li>The assertions use file-backed snapshots that can be updated with an env variable</li>
+<li>Easier to review the expected behavior of the command as more details are included</li>
+<li>Easier to get up and running from an existing project</li>
+<li>Easier to reason about as everything is just files in the repo</li>
+</ul>
+</li>
+</ul>
+<p>These tests typically work by creating a temporary “project” with a
+<code>Cargo.toml</code> file, executing the <code>cargo</code> binary process, and checking the
+stdout and stderr output against the expected output.</p>
+<h3 id="functional-tests"><a class="header" href="#functional-tests">Functional Tests</a></h3>
+<p>Generally, a functional test will be placed in <code>tests/testsuite/&lt;command&gt;.rs</code> and will look roughly like:</p>
+<pre><code class="language-rust ignore">use crate::prelude::*;
+use cargo_test_support::str;
+use cargo_test_support::project;
+
+#[cargo_test]
+fn &lt;description&gt;() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+        .build();
+
+    p.cargo("run --bin foo")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/foo`
+"#]])
+        .with_stdout_data(str![["hi!"]])
+        .run();
+}</code></pre>
+<p>The <a href="https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_macro/attr.cargo_test.html"><code>#[cargo_test]</code> attribute</a> is used in place of
+<code>#[test]</code> to inject some setup code and declare requirements for running the
+test.</p>
+<p><a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L196-L202"><code>ProjectBuilder</code></a> via <code>project()</code>:</p>
+<ul>
+<li>Each project is in a separate directory in the sandbox</li>
+<li>If you do not specify a <code>Cargo.toml</code> manifest using <code>file()</code>, one is
+automatically created with a project name of <code>foo</code> using <code>basic_manifest()</code>.</li>
+</ul>
+<p><a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L531-L550"><code>Execs</code></a> via <code>p.cargo(...)</code>:</p>
+<ul>
+<li>This executes the command and evaluates different assertions
+<ul>
+<li>See <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/compare.rs"><code>support::compare</code></a> for an explanation of the string pattern matching.
+Patterns are used to make it easier to match against the expected output.</li>
+</ul>
+</li>
+</ul>
+<h4 id="filesystem-layout-testing"><a class="header" href="#filesystem-layout-testing">Filesystem layout testing</a></h4>
+<p>Tests often to need to verify Cargo created/removed files.
+The <code>CargoPathExt</code> trait (implemented by <code>Path</code> and <code>PathBuf</code>) provides a <code>assert_dir_layout()</code> to verify the files in a directory (including nested directories).
+This takes a snapshot of file paths for the given directory and asserts that all files are present and no new files have been created.
+This function also takes a list of patterns to ignore from the snapshot to make working with platform specific files easier.</p>
+<p>Note: You will commonly need to call <code>unordered()</code> before passing your snapshot to deal with platform differences like binaries having <code>.exe</code> on Windows.
+<code>assert_build_dir_layout</code> is a more specialized version of <code>assert_dir_layout()</code> that is automatically unordered and ignores common platform specific files designed for the Cargo build cache.</p>
+<h4 id="testing-nightly-features"><a class="header" href="#testing-nightly-features">Testing Nightly Features</a></h4>
+<p>If you are testing a Cargo feature that only works on “nightly” Cargo, then
+you need to call <code>masquerade_as_nightly_cargo</code> on the process builder and pass
+the name of the feature as the reason, like this:</p>
+<pre><code class="language-rust ignore">p.cargo("build").masquerade_as_nightly_cargo(&amp;["print-im-a-teapot"])</code></pre>
+<p>If you are testing a feature that only works on <em>nightly rustc</em> (such as
+benchmarks), then you should use the <code>nightly</code> option of the <code>cargo_test</code>
+attribute, like this:</p>
+<pre><code class="language-rust ignore">#[cargo_test(nightly, reason = "-Zfoo is unstable")]</code></pre>
+<p>This will cause the test to be ignored if not running on the nightly toolchain.</p>
+<h4 id="specifying-dependencies"><a class="header" href="#specifying-dependencies">Specifying Dependencies</a></h4>
+<p>You should not write any tests that use the network such as contacting
+crates.io. Typically, simple path dependencies are the easiest way to add a
+dependency. Example:</p>
+<pre><code class="language-rust ignore">let p = project()
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [dependencies]
+        bar = {path = "bar"}
+    "#)
+    .file("src/lib.rs", "extern crate bar;")
+    .file("bar/Cargo.toml", &amp;basic_manifest("bar", "1.0.0"))
+    .file("bar/src/lib.rs", "")
+    .build();</code></pre>
+<p>If you need to test with registry dependencies, see
+<a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/registry.rs#L311-L389"><code>support::registry::Package</code></a> for creating packages you can depend on.</p>
+<p>If you need to test git dependencies, see <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs"><code>support::git</code></a> to create a git
+dependency.</p>
+<h4 id="cross-compilation"><a class="header" href="#cross-compilation">Cross compilation</a></h4>
+<p>There are some utilities to help support tests that need to work against a
+target other than the host. See <a href="tests/running.html#running-cross-tests">Running cross
+tests</a> for more an introduction on cross
+compilation tests.</p>
+<p>Tests that need to do cross-compilation should include this at the top of the
+test to disable it in scenarios where cross compilation isn’t available:</p>
+<pre><code class="language-rust ignore">if crate::utils::cross_compile::disabled() {
+    return;
+}</code></pre>
+<p>The name of the target can be fetched with the <a href="https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/cross_compile.rs#L208-L225"><code>cross_compile::alternate()</code></a>
+function. The name of the host target can be fetched with
+<a href="https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/lib.rs#L1137-L1140"><code>cargo_test_support::rustc_host()</code></a>.</p>
+<p>If the test needs to run the cross-compiled binary, then it should have
+something like this to exit the test before doing so:</p>
+<pre><code class="language-rust ignore">if crate::utils::cross_compile::can_run_on_host() {
+    return;
+}</code></pre>
+<h3 id="ui-tests"><a class="header" href="#ui-tests">UI Tests</a></h3>
+<p>UI Tests are a bit more spread out and generally look like:</p>
+<p><code>tests/testsuite/&lt;command&gt;/mod.rs</code>:</p>
+<pre><code class="language-rust ignore">mod &lt;case&gt;;</code></pre>
+<p><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/mod.rs</code>:</p>
+<pre><code class="language-rust ignore">use crate::prelude::*;
+use cargo_test_support::compare::assert_ui;
+use cargo_test_support::current_dir;
+use cargo_test_support::file;
+use cargo_test_support::Project;
+
+#[cargo_test]
+fn case() {
+    let project = Project::from_template(current_dir!().join("in"));
+    let project_root = project.root();
+    let cwd = &amp;project_root;
+
+    snapbox::cmd::Command::cargo_ui()
+        .arg("run")
+        .arg_line("--bin foo")
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches(file!("stdout.log"))
+        .stderr_matches(file!("stderr.log"));
+
+    assert_ui().subset_matches(current_dir!().join("out"), &amp;project_root);
+}</code></pre>
+<p>Then populate</p>
+<ul>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/in</code> with the project’s directory structure</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/out</code> with the files you want verified</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/stdout.log</code> with nothing</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/stderr.log</code> with nothing</li>
+</ul>
+<p><code>#[cargo_test]</code>:</p>
+<ul>
+<li>This is used in place of <code>#[test]</code></li>
+<li>This attribute injects code which does some setup before starting the
+test, creating a filesystem “sandbox” under the “cargo integration test”
+directory for each test such as
+<code>/path/to/cargo/target/cit/t123/</code></li>
+<li>The sandbox will contain a <code>home</code> directory that will be used instead of your normal home directory</li>
+</ul>
+<p><code>Project</code>:</p>
+<ul>
+<li>The project is copied from a directory in the repo</li>
+<li>Each project is in a separate directory in the sandbox</li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html"><code>Command</code></a> via <code>Command::cargo_ui()</code>:</p>
+<ul>
+<li>Set up and run a command.</li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.OutputAssert.html"><code>OutputAssert</code></a> via <code>Command::assert()</code>:</p>
+<ul>
+<li>Perform assertions on the result of the <a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html"><code>Command</code></a></li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/struct.Assert.html"><code>Assert</code></a> via <code>assert_ui()</code>:</p>
+<ul>
+<li>Verify the command modified the file system as expected</li>
+</ul>
+<h4 id="updating-snapshots"><a class="header" href="#updating-snapshots">Updating Snapshots</a></h4>
+<p>The project, stdout, and stderr snapshots can be updated by running with the
+<code>SNAPSHOTS=overwrite</code> environment variable, like:</p>
+<pre><code class="language-console">$ SNAPSHOTS=overwrite cargo test
+</code></pre>
+<p>Be sure to check the snapshots to make sure they make sense.</p>
+<h4 id="testing-nightly-features-1"><a class="header" href="#testing-nightly-features-1">Testing Nightly Features</a></h4>
+<p>If you are testing a Cargo feature that only works on “nightly” Cargo, then
+you need to call <code>masquerade_as_nightly_cargo</code> on the process builder and pass
+the name of the feature as the reason, like this:</p>
+<pre><code class="language-rust ignore">    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo(&amp;["print-im-a-teapot"])</code></pre>
+<p>If you are testing a feature that only works on <em>nightly rustc</em> (such as
+benchmarks), then you should use the <code>nightly</code> option of the <code>cargo_test</code>
+attribute, like this:</p>
+<pre><code class="language-rust ignore">#[cargo_test(nightly, reason = "-Zfoo is unstable")]</code></pre>
+<p>This will cause the test to be ignored if not running on the nightly toolchain.</p>
+<h3 id="platform-specific-notes"><a class="header" href="#platform-specific-notes">Platform-specific Notes</a></h3>
+<p>When checking output, use <code>/</code> for paths even on Windows: the actual output
+of <code>\</code> on Windows will be replaced with <code>/</code>.</p>
+<p>Be careful when executing binaries on Windows. You should not rename, delete,
+or overwrite a binary immediately after running it. Under some conditions
+Windows will fail with errors like “directory not empty” or “failed to remove”
+or “access is denied”.</p>
+<h2 id="debugging-tests"><a class="header" href="#debugging-tests">Debugging tests</a></h2>
+<p>In some cases, you may need to dig into a test that is not working as you
+expect, or you just generally want to experiment within the sandbox
+environment. The general process is:</p>
+<ol>
+<li>
+<p>Build the sandbox for the test you want to investigate. For example:</p>
+<p><code>cargo test --test testsuite -- features2::inactivate_targets</code>.</p>
+</li>
+<li>
+<p>In another terminal, head into the sandbox directory to inspect the files and run <code>cargo</code> directly.</p>
+<ol>
+<li>
+<p>The sandbox directories start with <code>t0</code> for the first test.</p>
+<p><code>cd target/tmp/cit/t0</code></p>
+</li>
+<li>
+<p>Set up the environment so that the sandbox configuration takes effect:</p>
+<p><code>export CARGO_HOME=$(pwd)/home/.cargo</code></p>
+</li>
+<li>
+<p>Most tests create a <code>foo</code> project, so head into that:</p>
+<p><code>cd foo</code></p>
+</li>
+</ol>
+</li>
+<li>
+<p>Run whatever cargo command you want. See <a href="tests/../process/working-on-cargo.html#running-cargo">Running Cargo</a> for more details
+on running the correct <code>cargo</code> process. Some examples:</p>
+<ul>
+<li><code>/path/to/my/cargo/target/debug/cargo check</code></li>
+<li>Using a debugger like <code>lldb</code> or <code>gdb</code>:
+<ol>
+<li><code>lldb /path/to/my/cargo/target/debug/cargo</code></li>
+<li>Set a breakpoint, for example: <code>b generate_root_units</code></li>
+<li>Run with arguments: <code>r check</code></li>
+</ol>
+</li>
+</ul>
+</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="benchmarking-and-profiling"><a class="header" href="#benchmarking-and-profiling">Benchmarking and Profiling</a></h1>
+<h2 id="internal-profiler"><a class="header" href="#internal-profiler">Internal profiler</a></h2>
+<p>Cargo leverages <a href="https://crates.io/crates/tracing">tracing</a>
+as a basic, hierarchical built-in profiler.</p>
+<p>Environment variables:</p>
+<ul>
+<li><code>CARGO_LOG_PROFILE=&lt;true|1&gt;</code>: log tracing events to a file in the current working directory</li>
+<li><code>CARGO_LOG_PROFILE_CAPTURE_ARGS=&lt;true|1&gt;</code>: include arguments in the events</li>
+</ul>
+<p>At process exit, your trace will be in a file like <code>trace-1668480819035032.json</code>.
+Open that file with <a href="https://ui.perfetto.dev">ui.perfetto.dev</a> (or chrome://tracing) to browse your trace.</p>
+<p>Example:</p>
+<pre><code class="language-console">$ # Output first three levels of profiling info
+$ CARGO_LOG_PROFILE=true cargo generate-lockfile
+</code></pre>
+<p><strong>Note:</strong> This is intended for the development of cargo and there are no compatibility guarantees on this functionality.</p>
+<h2 id="benchmarking"><a class="header" href="#benchmarking">Benchmarking</a></h2>
+<h3 id="benchsuite"><a class="header" href="#benchsuite">Benchsuite</a></h3>
+<p>Head over to the <a href="https://github.com/rust-lang/cargo/tree/master/benches"><code>benches</code>
+directory</a> for more
+information about the benchmarking suite.</p>
+<h3 id="informal-benchmarking"><a class="header" href="#informal-benchmarking">Informal benchmarking</a></h3>
+<p>The overhead for starting a build should be kept as low as possible
+(preferably, well under 0.5 seconds on most projects and systems). Currently,
+the primary parts that affect this are:</p>
+<ul>
+<li>Running the resolver.</li>
+<li>Querying the index.</li>
+<li>Checking git dependencies.</li>
+<li>Scanning the local project.</li>
+<li>Building the unit dependency graph.</li>
+</ul>
+<p>One way to test this is to use <a href="https://github.com/sharkdp/hyperfine">hyperfine</a>. This is a tool that can be used to
+measure the difference between different commands and settings. Usually this
+is done by measuring the time it takes for <code>cargo build</code> to finish in a large
+project where the build is fresh (no actual compilation is performed). Just
+run <code>cargo build</code> once before using hyperfine.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="crater"><a class="header" href="#crater">Crater</a></h1>
+<p><a href="https://github.com/rust-lang/crater">Crater</a> is a tool for compiling and running tests for <em>every</em> crate on <a href="https://crates.io">crates.io</a> (and a few on GitHub).
+It is mainly used for checking the extent of breakage when implementing potentially breaking changes and ensuring lack of breakage by running beta vs stable compiler versions.</p>
+<p>Essentially it runs some <code>cargo</code> command on every crate twice; once against the “start” toolchain and again against the “end” toolchain.
+For example, “start” could be the stable release, and “end” could be beta.
+If it passes in “start” but fails with “end”, then that is reported as a regression.</p>
+<p>There is a bot called <a href="https://github.com/rust-lang/crater/blob/master/docs/bot-usage.md">craterbot</a> which is used to run crater on hardware managed by the rust-lang organization.</p>
+<p>Crater is run by the release team during the beta cycle.
+If there are any regressions that look like they are caused by Cargo, they should contact the Cargo team to decide how to handle it.</p>
+<h2 id="running-crater"><a class="header" href="#running-crater">Running crater</a></h2>
+<p>If you have a change that you want to test before the beta release, or you want to test behavior that is not normally exercised by crater, you can do a manual run of crater.
+Roughly the steps are:</p>
+<ol>
+<li>
+<p>Create a branch with your changes.</p>
+<p>In your clone of cargo, make the changes to incorporate whatever new thing you want to test and push it to a branch on your fork on GitHub.</p>
+</li>
+<li>
+<p>Get a clone of <a href="https://github.com/rust-lang/rust">https://github.com/rust-lang/rust</a></p>
+</li>
+<li>
+<p>Create a branch in your rust-lang/rust clone to add your changes.</p>
+</li>
+<li>
+<p>Change the <code>src/tools/cargo</code> submodule to point to your new branch.</p>
+<p>Modify <code>.gitmodules</code> to point to your clone and branch of cargo with the changes you want to test.
+For example:</p>
+<pre><code class="language-bash">git submodule set-url src/tools/cargo https://github.com/ehuss/cargo.git
+git submodule set-branch --branch my-awesome-feature src/tools/cargo
+git submodule update --remote src/tools/cargo
+git add .gitmodules src/tools/cargo
+git commit
+</code></pre>
+</li>
+<li>
+<p>Create a PR on rust-lang/rust.</p>
+<p>Push your submodule changes to GitHub and make a PR.
+Start the PR title with <code>[EXPERIMENT]</code> to make it clear what the PR is for and assign yourself or @ghost.</p>
+</li>
+<li>
+<p>Make a “try” build.</p>
+<p>A “try” build creates a full release of x86_64-unknown-linux-gnu and stores it on rust-lang servers.
+This can be done with a comment <code>@bors try</code> on the PR (all Cargo team members should have permission to do this).</p>
+</li>
+<li>
+<p>Run crater.</p>
+<p>Look at the <a href="https://github.com/rust-lang/crater/blob/master/docs/bot-usage.md">craterbot</a> docs to determine the command that you want to run.
+There are different modes like <code>check-only</code>, <code>build-and-test</code>, <code>rustdoc</code>, etc.</p>
+<p>You can also choose how many crates to run against.
+If you are uncertain if your cargo changes will work correctly, it might be a good idea to run against <code>top-100</code> first to check its behavior.
+This will run much faster.
+You can do a full run afterwards.</p>
+<p>After the try build finishes (which should take a couple hours), ask someone to make a crater run.
+The Cargo team does not have that permission, so just ask someone on Zulip.
+They will need to write a comment to <code>@craterbot</code> with the command that you have specified.</p>
+</li>
+<li>
+<p>Wait.</p>
+<p>Crater can take anywhere from a few hours to a few weeks to run depending on how long the <a href="https://crater.rust-lang.org/">craterbot queue</a> is and which mode you picked and the priority of your job.
+When the crater run finishes, craterbot will post a comment to the PR with a link to a report of the results.</p>
+</li>
+<li>
+<p>Investigate the report.</p>
+<p>Look through the report which contains links to build logs for any regressions or errors.</p>
+</li>
+<li>
+<p>Close the PR.</p>
+<p>Whenever you are done doing crater runs, close your PR.</p>
+</li>
+</ol>
+<h2 id="advanced-crater-modes"><a class="header" href="#advanced-crater-modes">Advanced crater modes</a></h2>
+<p>Crater only has a few built-in modes, such as running <code>cargo check</code> or <code>cargo test</code>.
+You can pass extra flags with <code>+cargoflags</code>.</p>
+<p>More complex tests can be accomplished by customizing Cargo to perform whatever actions you want.
+Since crater essentially runs <code>cargo check</code>, you can modify the <code>check</code> command to perform whichever actions you want.
+For example, to test <code>cargo fix --edition</code>, <a href="https://github.com/ehuss/cargo/commit/6901690a6f8d519efb4fabf48c1c2b94af0c3bd8">this commit</a> intercepted <code>cargo check</code> and modified it to instead:</p>
+<ol>
+<li>Only run on crates with the 2018 edition.</li>
+<li>Run <code>cargo fix --edition</code>.</li>
+<li>Modify the manifest to switch to the 2021 edition.</li>
+<li>Run <code>cargo check</code> to verify.</li>
+</ol>
+<p>If you need to compare the before and after of a command that is not part of crater’s built-in modes, that can be more difficult.
+Two possible options:</p>
+<ul>
+<li>Work with the infra team to add a new mode.</li>
+<li>Build two custom try builds.
+Each one should modify the <code>cargo check</code> command as described above.
+The “start” build should perform whichever action you want with an otherwise unmodified cargo.
+The “end” build should perform whichever action you want with your modified cargo.
+Then, in the <code>@craterbot</code> command, specify the start and end hashes of the two try builds.</li>
+</ul>
+<h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
+<p>There are some limitations of crater to consider when running Cargo:</p>
+<ul>
+<li>A crater run without regressions is not a green light to move forward.
+<ul>
+<li>A large portion of Rust code is not tested, such as closed-source projects or things otherwise not collected by crater.</li>
+<li>Many crates can’t build in crater’s environment or are otherwise broken.</li>
+<li>Some crates have flaky tests.</li>
+</ul>
+</li>
+<li>Crater runs in an isolated environment.
+<ul>
+<li>It only runs on Linux x86-64.</li>
+<li>It does not have network access.</li>
+<li>The crate source is in a read-only mount.</li>
+</ul>
+</li>
+<li>Crater does several steps before running the test (using its own copy of the stable toolchain):
+<ul>
+<li>It generates a lockfile using <code>generate-lockfile</code> and includes <code>-Zno-index-update</code> to prevent index updates (which makes it run much faster).</li>
+<li>All dependencies are downloaded ahead-of-time with <code>cargo fetch</code>.</li>
+</ul>
+</li>
+<li>The built-in modes pass several flags to cargo such as <code>--frozen</code> or <code>--message-format=json</code>.
+It will sometimes use <code>--all-targets</code> and sometimes not.
+Check the <a href="https://github.com/rust-lang/crater/blob/master/src/runner/test.rs">crater source</a> for more details on how it works.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="documentation"><a class="header" href="#documentation">Documentation</a></h1>
+<p>Cargo has several types of documentation that contributors work with:</p>
+<ul>
+<li><a href="https://doc.rust-lang.org/cargo/">The Cargo Book</a>
+<ul>
+<li>The primary user-facing Cargo documentation</li>
+<li>Source at <a href="https://github.com/rust-lang/cargo/tree/master/src/doc">https://github.com/rust-lang/cargo/tree/master/src/doc</a></li>
+<li>Built with <a href="https://github.com/rust-lang/mdBook">mdbook</a></li>
+<li>Published through <a href="documentation/../process/release.html#docs-publishing">“the doc publishing process”</a></li>
+</ul>
+</li>
+<li>Man pages
+<ul>
+<li>Man pages of the <code>cargo</code> command</li>
+<li>Built with <a href="https://github.com/rust-lang/cargo/tree/master/crates/mdman/">mdman</a></li>
+<li>Published through <a href="documentation/../process/release.html#docs-publishing">“the doc publishing process”</a></li>
+</ul>
+</li>
+<li><a href="https://rust-lang.github.io/cargo/contrib">Contributor guide</a>
+<ul>
+<li>This guide itself</li>
+<li>Source at <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib">https://github.com/rust-lang/cargo/tree/master/src/doc/contrib</a></li>
+<li>Published independently on GitHub Pages at
+<a href="https://rust-lang.github.io/cargo/contrib">https://rust-lang.github.io/cargo/contrib</a>
+when committing to the master branch.</li>
+</ul>
+</li>
+</ul>
+<h2 id="building-the-book"><a class="header" href="#building-the-book">Building the book</a></h2>
+<p>Building the book requires <a href="https://github.com/rust-lang/mdBook">mdBook</a>. To get it:</p>
+<pre><code class="language-console">$ cargo install mdbook
+</code></pre>
+<p>To build the book:</p>
+<pre><code class="language-console">$ mdbook build
+</code></pre>
+<p><code>mdbook</code> provides a variety of different commands and options to help you work
+on the book:</p>
+<ul>
+<li><code>mdbook build --open</code>: Build the book and open it in a web browser.</li>
+<li><code>mdbook serve</code>: Launches a web server on localhost. It also automatically
+rebuilds the book whenever any file changes and automatically reloads your
+web browser.</li>
+</ul>
+<p>The book contents are driven by a <code>SUMMARY.md</code> file,
+and every file must be linked there.
+See <a href="https://rust-lang.github.io/mdBook/">https://rust-lang.github.io/mdBook/</a> for its usage.</p>
+<h2 id="building-the-man-pages"><a class="header" href="#building-the-man-pages">Building the man pages</a></h2>
+<p>The man pages use a tool called <a href="https://github.com/rust-lang/cargo/tree/master/crates/mdman/">mdman</a> to convert Markdown templates into several output formats.
+See <a href="https://github.com/rust-lang/cargo/tree/master/crates/mdman/doc">https://github.com/rust-lang/cargo/tree/master/crates/mdman/doc</a>
+for usage details and template syntax.</p>
+<p>The templates are located in
+<a href="https://github.com/rust-lang/cargo/tree/master/src/doc/man">https://github.com/rust-lang/cargo/tree/master/src/doc/man</a>
+and are converted into three formats:</p>
+<ol>
+<li>Troff man pages — used by the <code>cargo help</code> command,
+and by distributions to provide man pages which people can install,
+saved in <a href="https://github.com/rust-lang/cargo/tree/master/src/etc/man">https://github.com/rust-lang/cargo/tree/master/src/etc/man</a>.</li>
+<li>Plain text — used for embedded help on platforms without <code>man</code> (such as Windows),
+saved in <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/man/generated_txt">https://github.com/rust-lang/cargo/tree/master/src/doc/man/generated_txt</a>.</li>
+<li>Markdown (with some HTML) — used for the Cargo Book,
+saved in <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/src/commands">https://github.com/rust-lang/cargo/tree/master/src/doc/src/commands</a>.</li>
+</ol>
+<p>To rebuild the man pages, run <code>cargo build-man</code> inside the workspace.</p>
+<h2 id="writing-guidelines"><a class="header" href="#writing-guidelines">Writing guidelines</a></h2>
+<p>Cargo’s documentation is a collective effort,
+so there isn’t a single fixed writing style.
+We recommend following the style of the surrounding text to keep things consistent.</p>
+<p>A few important guidelines:</p>
+<ul>
+<li>The <a href="https://doc.rust-lang.org/nightly/cargo/commands/index.html">Cargo Commands</a>
+chapters in the book are generated from man page templates.
+To update them, see the <a href="documentation/index.html#building-the-man-pages">Building the man pages</a> section.
+Do not edit the generated Markdown files directly.</li>
+<li>Links to pages under <a href="https://doc.rust-lang.org/">https://doc.rust-lang.org/</a> should use relative paths.
+This ensures versioned docs are redirected correctly.
+For example, if you are at <a href="https://doc.rust-lang.org/cargo/reference/config.html">https://doc.rust-lang.org/cargo/reference/config.html</a>
+and want to link to <a href="https://doc.rust-lang.org/rustc/codegen-options/index.html">https://doc.rust-lang.org/rustc/codegen-options/index.html</a>,
+you should write the link as <code>../../rustc/codegen-options/index.html</code>.
+This rule doesn’t apply if you specifically want to link to docs of a fixed version or channel.</li>
+<li>When renaming or removing any headings or pages,
+make sure to set up proper redirects via the [<code>output.html.redirect</code>] mdbook option.</li>
+<li>If a section refers to a concept explained elsewhere
+(like profiles, features, or workspaces), link to it.
+That keeps the book navigable without duplicating content.</li>
+</ul>
+<p>[[<code>output.html.redirect</code>]]: https://rust-lang.github.io/mdBook/format/configuration/renderers.html#outputhtmlredirect</p>
+<h2 id="semver-chapter-tests"><a class="header" href="#semver-chapter-tests">SemVer chapter tests</a></h2>
+<p>There is a script to verify that the examples in <a href="https://doc.rust-lang.org/nightly/cargo/reference/semver.html">the SemVer chapter</a> work as
+intended. To run the tests, run <code>cargo +stable run -p semver-check</code>.</p>
+<p>Note that these tests run on the most recent stable release because they
+validate the output of the compiler diagnostics. The output can change between
+releases, so we pin to a specific release to avoid frequent and unexpected
+breakage.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
