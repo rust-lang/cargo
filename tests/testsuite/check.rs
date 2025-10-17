@@ -516,6 +516,27 @@ fn check_virtual_manifest_one_project() {
 }
 
 #[cargo_test]
+fn check_virtual_manifest_one_bin_project_not_in_default_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar"]
+                default-members = []
+                resolver = "3"
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/main.rs", "fn main() { let _ = (1); }")
+        .build();
+
+    p.cargo("check -p bar")
+        .with_stderr_contains("[..]run `cargo fix --bin \"bar\"` to apply[..]")
+        .run();
+}
+
+#[cargo_test]
 fn check_virtual_manifest_glob() {
     let p = project()
         .file(
