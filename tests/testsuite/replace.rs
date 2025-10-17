@@ -178,9 +178,8 @@ fn missing_version() {
 
     p.cargo("check").with_status(101).with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  replacements must specify a version to replace, but `https://github.com/rust-lang/crates.io-index#bar` does not
+  |
+  = caused by: replacements must specify a version to replace, but `https://github.com/rust-lang/crates.io-index#bar` does not
 
 "#]]).run();
 }
@@ -211,9 +210,9 @@ fn invalid_semver_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  replacements must specify a valid semver version to replace, but `bar:*` does not
+  |
+  = caused by: replacements must specify a valid semver version to replace, but `bar:*` does not
+  = caused by: unexpected version requirement, expected a version like "1.32"
 ...
 "#]])
         .run();
@@ -246,9 +245,8 @@ fn different_version() {
 
     p.cargo("check").with_status(101).with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
+  |
+  = caused by: replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
 
 "#]]).run();
 }
@@ -682,11 +680,10 @@ fn override_wrong_name() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  no matching package for override `https://github.com/rust-lang/crates.io-index#baz@0.1.0` found
-  location searched: [ROOTURL]/override
-  version required: =0.1.0
+  |
+  = caused by: no matching package for override `https://github.com/rust-lang/crates.io-index#baz@0.1.0` found
+               location searched: [ROOTURL]/override
+               version required: =0.1.0
 
 "#]])
         .run();
@@ -729,15 +726,10 @@ fn override_with_nothing() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update [ROOTURL]/override
-
-Caused by:
-  Could not find Cargo.toml in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/[..]`
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update [ROOTURL]/override
+  = caused by: Could not find Cargo.toml in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/213c28d`
 
 "#]])
         .run();
@@ -764,9 +756,8 @@ fn override_wrong_version() {
 
     p.cargo("check").with_status(101).with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
+  |
+  = caused by: replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
 
 "#]]).run();
 }
@@ -812,14 +803,13 @@ fn multiple_specs() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  overlapping replacement specifications found:
-
-    * https://github.com/rust-lang/crates.io-index#bar@0.1.0
-    * https://github.com/rust-lang/crates.io-index#bar@0.1.0
-
-  both specifications match: bar v0.1.0
+  |
+  = caused by: overlapping replacement specifications found:
+               
+                 * https://github.com/rust-lang/crates.io-index#bar@0.1.0
+                 * https://github.com/rust-lang/crates.io-index#bar@0.1.0
+               
+               both specifications match: bar v0.1.0
 
 "#]])
         .run();
@@ -864,9 +854,9 @@ fn test_override_dep() {
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
-  registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
-  git+[ROOTURL]/override#bar@0.1.0
+       Please re-run this command with one of the following specifications:
+         registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
+         git+[ROOTURL]/override#bar@0.1.0
 
 "#]])
         .run();
@@ -1352,9 +1342,9 @@ fn override_plus_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] cyclic package dependency: package `bar v0.1.0 ([ROOT]/foo/bar)` depends on itself. Cycle:
-package `bar v0.1.0 ([ROOT]/foo/bar)`
-    ... which satisfies dependency `bar = "^0.1"` of package `foo v0.0.1 ([ROOT]/foo)`
-    ... which satisfies path dependency `foo` of package `bar v0.1.0 ([ROOT]/foo/bar)`
+       package `bar v0.1.0 ([ROOT]/foo/bar)`
+           ... which satisfies dependency `bar = "^0.1"` of package `foo v0.0.1 ([ROOT]/foo)`
+           ... which satisfies path dependency `foo` of package `bar v0.1.0 ([ROOT]/foo/bar)`
 
 "#]])
         .run();
@@ -1399,10 +1389,9 @@ fn override_generic_matching_other_versions() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  replacement specification `https://github.com/rust-lang/crates.io-index#bar@0.1.0` matched 0.1.0+a and tried to override it with 0.1.0
-  avoid matching unrelated packages by being more specific
+  |
+  = caused by: replacement specification `https://github.com/rust-lang/crates.io-index#bar@0.1.0` matched 0.1.0+a and tried to override it with 0.1.0
+               avoid matching unrelated packages by being more specific
 
 "#]]).with_status(101).run();
 }

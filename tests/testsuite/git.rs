@@ -814,9 +814,8 @@ fn update_with_shared_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
 [ERROR] Unable to update [ROOTURL]/bar#0.1.2
-
-Caused by:
-  revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)
+  |
+  = caused by: revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)
 
 "#]])
         .run();
@@ -1049,18 +1048,11 @@ fn dep_with_bad_submodule() {
 [UPDATING] git repository `[ROOTURL]/dep1`
 [UPDATING] git submodule `[ROOTURL]/dep2`
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  Unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to update submodule `src`
-
-Caused by:
-  object not found - no match for id ([..]); class=Odb (9); code=NotFound (-3)
+  |
+  = caused by: failed to load source for dependency `dep1`
+  = caused by: Unable to update [ROOTURL]/dep1
+  = caused by: failed to update submodule `src`
+  = caused by: object not found - no match for id (c5f4a589b646390cead42205e71ea5a95230c37a); class=Odb (9); code=NotFound (-3)
 
 "#]];
 
@@ -2108,9 +2100,9 @@ fn update_ambiguous() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
-  bar@0.5.0
-  bar@0.6.0
+       Please re-run this command with one of the following specifications:
+         bar@0.5.0
+         bar@0.6.0
 
 "#]])
         .run();
@@ -2813,12 +2805,9 @@ fn invalid_git_dependency_manifest() {
 9 |                     categories = ["algorithms"]
   |                     ^^^^^^^^^^
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  Unable to update [ROOTURL]/dep1
+  |
+  = caused by: failed to load source for dependency `dep1`
+  = caused by: Unable to update [ROOTURL]/dep1
 
 "#]])
         .run();
@@ -2890,22 +2879,42 @@ fn failed_submodule_checkout() {
         .cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-...
-  failed to update submodule `src`
-...
-  failed to update submodule `bar`
-...
+[UPDATING] git repository `[ROOTURL]/dep1`
+[UPDATING] git submodule `[ROOTURL]/dep2`
+[UPDATING] git submodule `https://127.0.0.1:38045/`
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
+  |
+  = caused by: failed to load source for dependency `dep1`
+  = caused by: Unable to update [ROOTURL]/dep1
+  = caused by: failed to update submodule `src`
+  = caused by: failed to update submodule `bar`
+  = caused by: failed to fetch submodule `bar` from https://127.0.0.1:38045/
+  = caused by: network failure seems to have happened
+               if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
+               https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+  = caused by: SSL [ERROR] [ERROR]0A00010B:SSL routines::wrong version number; class=Ssl (16)
+
 "#]])
         .run();
     project
         .cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-...
-  failed to update submodule `src`
-...
-  failed to update submodule `bar`
-...
+[UPDATING] git repository `[ROOTURL]/dep1`
+[UPDATING] git submodule `[ROOTURL]/dep2`
+[UPDATING] git submodule `https://127.0.0.1:38045/`
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
+  |
+  = caused by: failed to load source for dependency `dep1`
+  = caused by: Unable to update [ROOTURL]/dep1
+  = caused by: failed to update submodule `src`
+  = caused by: failed to update submodule `bar`
+  = caused by: failed to fetch submodule `bar` from https://127.0.0.1:38045/
+  = caused by: network failure seems to have happened
+               if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
+               https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+  = caused by: SSL [ERROR] [ERROR]0A00010B:SSL routines::wrong version number; class=Ssl (16)
+
 "#]])
         .run();
 
@@ -3162,11 +3171,11 @@ fn dirty_submodule() {
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-.gitmodules
-src/lib.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       .gitmodules
+       src/lib.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3184,10 +3193,10 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/lib.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/lib.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3211,11 +3220,11 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-src/.gitmodules
-src/bar/mod.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/.gitmodules
+       src/bar/mod.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -3235,10 +3244,10 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/bar/new_file.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/bar/new_file.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();

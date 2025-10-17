@@ -181,30 +181,50 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
 
 /// Displays an error, and all its causes, to stderr.
 pub fn display_error(err: &Error, shell: &mut Shell) {
+    use annotate_snippets::*;
+
     debug!("display_error; err={:?}", err);
-    _display_error(err, shell, true);
+
+    let mut errs = error_chain(err, shell.verbosity());
+    let Some(first) = errs.next() else {
+        return;
+    };
+    let mut group = Group::with_title(Level::ERROR.primary_title(first.to_string()));
+    for err in errs {
+        group = group.element(Level::ERROR.with_name("caused by").message(err.to_string()));
+    }
+
     if err
         .chain()
         .any(|e| e.downcast_ref::<InternalError>().is_some())
     {
-        drop(shell.note("this is an unexpected cargo internal error"));
-        drop(
-            shell.note(
+        group = group.elements([
+            Level::NOTE.message("this is an unexpected cargo internal error"),
+            Level::NOTE.message(
                 "we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/",
             ),
-        );
-        drop(shell.note(format!("cargo {}", version())));
+            Level::NOTE.message(format!("cargo {}", version())),
+        ]);
         // Once backtraces are stabilized, this should print out a backtrace
         // if it is available.
     }
+
+    drop(shell.print_report(&[group], true));
 }
 
 /// Displays a warning, with an error object providing detailed information
 /// and context.
 pub fn display_warning_with_error(warning: &str, err: &Error, shell: &mut Shell) {
-    drop(shell.warn(warning));
-    drop(writeln!(shell.err()));
-    _display_error(err, shell, false);
+    use annotate_snippets::*;
+
+    let mut group = Group::with_title(Level::WARNING.primary_title(warning));
+
+    let errs = error_chain(err, shell.verbosity());
+    for err in errs {
+        group = group.element(Level::ERROR.with_name("caused by").message(err.to_string()));
+    }
+
+    drop(shell.print_report(&[group], true));
 }
 
 fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn std::fmt::Display> {
@@ -218,19 +238,4 @@ fn error_chain(err: &Error, verbosity: Verbosity) -> impl Iterator<Item = &dyn s
         })
         .take_while(|err| !err.is::<AlreadyPrintedError>())
         .map(|err| err as &dyn std::fmt::Display)
-}
-
-fn _display_error(err: &Error, shell: &mut Shell, as_err: bool) {
-    for (i, err) in error_chain(err, shell.verbosity()).enumerate() {
-        if i == 0 {
-            if as_err {
-                drop(shell.error(&err));
-            } else {
-                drop(writeln!(shell.err(), "{}", err));
-            }
-        } else {
-            drop(writeln!(shell.err(), "\nCaused by:"));
-            drop(write!(shell.err(), "{}", indented_lines(&err.to_string())));
-        }
-    }
 }

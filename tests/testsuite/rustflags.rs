@@ -32,9 +32,9 @@ fn env_rustflags_normal_source() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -43,9 +43,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -54,9 +54,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -65,9 +65,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -76,9 +76,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -173,9 +173,9 @@ fn env_rustflags_normal_source_with_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -185,9 +185,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -197,9 +197,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -209,9 +209,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -221,9 +221,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -349,9 +349,9 @@ fn env_rustflags_recompile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -368,9 +368,9 @@ fn env_rustflags_recompile2() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -418,9 +418,9 @@ fn build_rustflags_normal_source() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -428,9 +428,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -438,9 +438,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -448,9 +448,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -458,9 +458,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -575,9 +575,9 @@ fn build_rustflags_normal_source_with_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -586,9 +586,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -597,9 +597,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -608,9 +608,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -619,9 +619,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --target [HOST_TARGET] --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -725,9 +725,9 @@ fn build_rustflags_recompile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -752,9 +752,9 @@ fn build_rustflags_recompile2() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -836,9 +836,9 @@ fn target_rustflags_normal_source() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -846,9 +846,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -856,9 +856,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -866,9 +866,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -876,9 +876,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -1092,9 +1092,9 @@ fn target_rustflags_precedence() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -1102,9 +1102,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -1112,9 +1112,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -1122,9 +1122,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();
@@ -1132,9 +1132,9 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  [..]bogus[..]
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -Z bogus --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
 ...
 "#]])
         .run();

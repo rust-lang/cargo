@@ -1,7 +1,8 @@
-<svg width="902px" height="146px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1003px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
+    .fg-bright-blue { fill: #5555FF }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -23,15 +24,13 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> versioned-package (git) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: failed to parse manifest at `[ROOT]/case/Cargo.toml`</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: failed to parse manifest at `[ROOT]/case/Cargo.toml`</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>Caused by:</tspan>
+    <tspan x="10px" y="100px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">caused by</tspan><tspan>: dependency (versioned-package) specification is ambiguous. Only one of `git` or `registry` is allowed.</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>  dependency (versioned-package) specification is ambiguous. Only one of `git` or `registry` is allowed.</tspan>
-</tspan>
-    <tspan x="10px" y="136px">
+    <tspan x="10px" y="118px">
 </tspan>
   </text>
 

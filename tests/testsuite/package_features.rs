@@ -76,8 +76,8 @@ fn virtual_no_default_features() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] none of the selected packages contains this feature: foo
-selected packages: a, b
-[HELP] there is a similarly named feature: f1
+       selected packages: a, b
+       [HELP] there is a similarly named feature: f1
 
 "#]])
         .run();
@@ -86,8 +86,8 @@ selected packages: a, b
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] none of the selected packages contains these features: b/f2, f2
-selected packages: a, b
-[HELP] there is a similarly named feature: f1
+       selected packages: a, b
+       [HELP] there is a similarly named feature: f1
 
 "#]])
         .run();
@@ -96,8 +96,8 @@ selected packages: a, b
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] none of the selected packages contains these features: a/dep, b/f2, f2
-selected packages: a, b
-[HELP] there are similarly named features: a/dep1, f1
+       selected packages: a, b
+       [HELP] there are similarly named features: a/dep1, f1
 
 "#]])
         .run();
@@ -106,8 +106,8 @@ selected packages: a, b
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] none of the selected packages contains this feature: a/dep
-selected packages: a, b
-[HELP] there is a similarly named feature: b/f1
+       selected packages: a, b
+       [HELP] there is a similarly named feature: b/f1
 
 "#]])
         .run();
@@ -116,7 +116,7 @@ selected packages: a, b
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the package 'b' does not contain this feature: dep1
-[HELP] package with the missing feature: a
+       [HELP] package with the missing feature: a
 
 "#]])
         .run();
@@ -144,7 +144,7 @@ fn virtual_typo_member_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the package 'a' does not contain this feature: a/deny-warning
-[HELP] there is a similarly named feature: a/deny-warnings
+       [HELP] there is a similarly named feature: a/deny-warnings
 
 "#]])
         .run();
@@ -339,8 +339,8 @@ f3f4
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `foo v0.1.0 ([ROOT]/foo)` does not have the feature `f2`
-
-[HELP] a feature with a similar name exists: `f1`
+       
+       [HELP] a feature with a similar name exists: `f1`
 
 "#]])
         .run();
@@ -407,8 +407,8 @@ fn feature_default_resolver() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have the feature `testt`
-
-[HELP] a feature with a similar name exists: `test`
+       
+       [HELP] a feature with a similar name exists: `test`
 
 "#]])
         .run();
@@ -459,10 +459,10 @@ fn command_line_optional_dep() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `bar` would be enabled by these features:
-	- `foo`
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `bar` would be enabled by these features:
+           - `foo`
 
 "#]])
         .run();
@@ -499,12 +499,12 @@ fn command_line_optional_dep_three_options() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `bar` would be enabled by these features:
-	- `f1`
-	- `f2`
-	- `f3`
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `bar` would be enabled by these features:
+           - `f1`
+           - `f2`
+           - `f3`
 
 "#]])
         .run();
@@ -542,13 +542,13 @@ fn command_line_optional_dep_many_options() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `bar` would be enabled by these features:
-	- `f1`
-	- `f2`
-	- `f3`
-	  ...
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `bar` would be enabled by these features:
+           - `f1`
+           - `f2`
+           - `f3`
+             ...
 
 "#]])
         .run();
@@ -590,12 +590,12 @@ fn command_line_optional_dep_many_paths() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `a v0.1.0 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
-Dependency `bar` would be enabled by these features:
-	- `f1`
-	- `f2`
-	- `f3`
+       
+       [HELP] an optional dependency with that name exists, but the `features` table includes it with the "dep:" syntax so it does not have an implicit feature with that name
+       Dependency `bar` would be enabled by these features:
+           - `f1`
+           - `f2`
+           - `f3`
 
 "#]])
         .run();
@@ -829,8 +829,8 @@ m1-feature set
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package `member1 v0.1.0 ([ROOT]/foo/member1)` does not have the feature `m2-feature`
-
-[HELP] a feature with a similar name exists: `m1-feature`
+       
+       [HELP] a feature with a similar name exists: `m1-feature`
 
 "#]])
         .run();
@@ -913,8 +913,8 @@ fn non_member_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -972,8 +972,8 @@ fn non_member_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `bar` did not match any packages
-
-[HELP] a package with a similar name exists: `foo`
+       
+       [HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();

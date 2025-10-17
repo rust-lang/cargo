@@ -378,12 +378,11 @@ fn path_dependency_no_version() {
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  all dependencies must have a version requirement specified when packaging.
-  dependency `bar` does not specify a version
-  Note: The packaged dependency will use the version from crates.io,
-  the `path` specification will be removed from the dependency declaration.
+  |
+  = caused by: all dependencies must have a version requirement specified when packaging.
+               dependency `bar` does not specify a version
+               Note: The packaged dependency will use the version from crates.io,
+               the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -419,12 +418,11 @@ fn git_dependency_no_version() {
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  all dependencies must have a version requirement specified when packaging.
-  dependency `foo` does not specify a version
-  Note: The packaged dependency will use the version from crates.io,
-  the `git` specification will be removed from the dependency declaration.
+  |
+  = caused by: all dependencies must have a version requirement specified when packaging.
+               dependency `foo` does not specify a version
+               Note: The packaged dependency will use the version from crates.io,
+               the `git` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -887,12 +885,9 @@ fn broken_symlink() {
         .with_stderr_data(str![[r#"
 ...
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  failed to open for archiving: `[ROOT]/foo/src/foo.rs`
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: failed to open for archiving: `[ROOT]/foo/src/foo.rs`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -1114,10 +1109,10 @@ fn do_not_package_if_repository_is_dirty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-Cargo.toml
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       Cargo.toml
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1128,10 +1123,10 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-../Cargo.toml
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       ../Cargo.toml
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1164,10 +1159,10 @@ fn dirty_ignored() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-src/build/mod.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       src/build/mod.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1244,11 +1239,11 @@ fn vcs_status_check_for_each_workspace_member() {
 [PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
-
-mordor/src/lib.rs
-mordor/src/main.rs
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       mordor/src/lib.rs
+       mordor/src/main.rs
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1391,14 +1386,14 @@ fn dirty_file_outside_pkg_root_considered_dirty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 5 files in the working directory contain changes that were not yet committed into git:
-
-Cargo.toml
-LICENSE
-README.md
-lib.rs
-original-dir/file
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       Cargo.toml
+       LICENSE
+       README.md
+       lib.rs
+       original-dir/file
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -1489,10 +1484,10 @@ fn dirty_file_outside_pkg_root_inside_submodule() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-isengard/src/file.txt
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+       
+       isengard/src/file.txt
+       
+       to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
 "#]])
         .run();
@@ -2065,12 +2060,9 @@ fn test_edition_malformed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse the `edition` key
-
-Caused by:
-  supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
+  |
+  = caused by: failed to parse the `edition` key
+  = caused by: supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
 
 "#]])
         .run();
@@ -2095,12 +2087,9 @@ fn test_edition_from_the_future() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse the `edition` key
-
-Caused by:
-  this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
+  |
+  = caused by: failed to parse the `edition` key
+  = caused by: this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
 
 "#]])
         .run();
@@ -2135,16 +2124,15 @@ fn do_not_package_if_src_was_modified() {
         .with_stderr_data(str![[r#"
 ...
 [ERROR] failed to verify package tarball
-
-Caused by:
-  Source directory was modified by build.rs during cargo publish. Build scripts should not modify anything outside of OUT_DIR.
-  Changed: [ROOT]/foo/target/package/foo-0.0.1/bar.txt
-  Added: [ROOT]/foo/target/package/foo-0.0.1/new-dir
-  	[ROOT]/foo/target/package/foo-0.0.1/src/generated.txt
-  Removed: [ROOT]/foo/target/package/foo-0.0.1/dir
-  	[ROOT]/foo/target/package/foo-0.0.1/dir/foo.txt
-
-  To proceed despite this, pass the `--no-verify` flag.
+  |
+  = caused by: Source directory was modified by build.rs during cargo publish. Build scripts should not modify anything outside of OUT_DIR.
+               Changed: [ROOT]/foo/target/package/foo-0.0.1/bar.txt
+               Added: [ROOT]/foo/target/package/foo-0.0.1/new-dir
+               	[ROOT]/foo/target/package/foo-0.0.1/src/generated.txt
+          [REMOVED]: [ROOT]/foo/target/package/foo-0.0.1/dir
+               	[ROOT]/foo/target/package/foo-0.0.1/dir/foo.txt
+               
+               To proceed despite this, pass the `--no-verify` flag.
 
 "#]])
         .run();
@@ -2535,7 +2523,7 @@ fn empty_readme_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] readme `` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2565,7 +2553,7 @@ fn invalid_readme_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2595,9 +2583,9 @@ fn readme_or_license_file_is_dir() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] license-file `./src` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
-readme `./src` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       readme `./src` does not appear to exist (relative to `[ROOT]/foo`).
+       Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2629,7 +2617,7 @@ fn empty_license_file_path() {
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] license-file `` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -2658,7 +2646,7 @@ fn invalid_license_file_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] license-file `does-not-exist` does not appear to exist (relative to `[ROOT]/foo`).
-Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+       Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
@@ -3057,12 +3045,11 @@ src/main.rs
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to verify manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  all dependencies must have a version requirement specified when packaging.
-  dependency `bar` does not specify a version
-  Note: The packaged dependency will use the version from crates.io,
-  the `path` specification will be removed from the dependency declaration.
+  |
+  = caused by: all dependencies must have a version requirement specified when packaging.
+               dependency `bar` does not specify a version
+               Note: The packaged dependency will use the version from crates.io,
+               the `path` specification will be removed from the dependency declaration.
 
 "#]])
         .run();
@@ -4264,8 +4251,8 @@ fn build_script_outside_pkg_root() {
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] the source file of build script doesn't appear to exist.
-This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+       This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+       Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
 
 "#]])
         .run();
@@ -4281,9 +4268,9 @@ Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] the source file of build script doesn't appear to be a path inside of the package.
-It is at `[ROOT]/t_custom_build/custom_build.rs`, whereas the root the package is `[ROOT]/foo`.
-This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+       It is at `[ROOT]/t_custom_build/custom_build.rs`, whereas the root the package is `[ROOT]/foo`.
+       This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+       Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
 
 "#]])
         .run();
@@ -5988,11 +5975,10 @@ fn workspace_with_local_deps_packaging_one_fails() {
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `level2` found
-  location searched: crates.io index
-  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+  |
+  = caused by: no matching package named `level2` found
+               location searched: crates.io index
+               required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
         .run();
@@ -6053,11 +6039,10 @@ fn workspace_with_local_deps_packaging_one_bin_fails() {
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `level2` found
-  location searched: crates.io index
-  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+  |
+  = caused by: no matching package named `level2` found
+               location searched: crates.io index
+               required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
         .run();
@@ -6270,11 +6255,10 @@ fn workspace_with_local_deps_index_mismatch() {
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] `dummy-registry` index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `level2` found
-  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+  |
+  = caused by: no matching package named `level2` found
+               location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+               required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
         .run();
@@ -6788,7 +6772,7 @@ fn registry_not_in_publish_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `foo` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -6955,7 +6939,7 @@ fn registry_not_inferred_because_of_conflict() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `dep` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+       The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -7342,11 +7326,10 @@ fn unpublishable_dependency() {
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `dep` found
-  location searched: `alternative` index
-  required by package `main v0.0.1 ([ROOT]/foo/main)`
+  |
+  = caused by: no matching package named `dep` found
+               location searched: `alternative` index
+               required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
@@ -7720,17 +7703,17 @@ fn checksum_changed() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  checksum for `dep v1.0.0` changed between lock files
-
-  this could be indicative of a few possible errors:
-
-      * the lock file is corrupt
-      * a replacement source in use (e.g., a mirror) returned a different checksum
-      * the source itself may be corrupt in one way or another
-
-  unable to verify that `dep v1.0.0` is the same as when the lockfile was generated
+  |
+  = caused by: checksum for `dep v1.0.0` changed between lock files
+               
+               this could be indicative of a few possible errors:
+               
+                   * the lock file is corrupt
+                   * a replacement source in use (e.g., a mirror) returned a different checksum
+                   * the source itself may be corrupt in one way or another
+               
+               unable to verify that `dep v1.0.0` is the same as when the lockfile was generated
+               
 
 "#]])
         .run();
