@@ -200,8 +200,13 @@ Then populate
 - This is used in place of `#[test]`
 - This attribute injects code which does some setup before starting the
   test, creating a filesystem "sandbox" under the "cargo integration test"
-  directory for each test such as
-  `/path/to/cargo/target/cit/t123/`
+  directory for each test similar to the following:
+  ```toml
+  # Most platforms
+  /path/to/cargo/target/tmp/cit/testsuite/bad_config/bad1
+  # Windows
+  /path/to/cargo/target/cit/t123/
+  ```
 - The sandbox will contain a `home` directory that will be used instead of your normal home directory
 
 `Project`:
