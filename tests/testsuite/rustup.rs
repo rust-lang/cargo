@@ -198,6 +198,7 @@ fn typical_rustup() {
     // `~/.cargo/bin/rustc to use our custom rustup proxies.
     let path = prepend_path(&cargo_bin);
     p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
@@ -215,6 +216,7 @@ real rustc running
     p.build_dir().rm_rf();
 
     p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
@@ -285,6 +287,7 @@ fn custom_calls_other_cargo() {
         // Set these to simulate what would happen when running under rustup.
         // We want to make sure that cargo-custom does not try to use the
         // rustup proxies.
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .with_stderr_data(str![[r#"
