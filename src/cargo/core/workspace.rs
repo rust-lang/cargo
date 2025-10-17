@@ -1327,7 +1327,7 @@ impl<'gctx> Workspace<'gctx> {
 
         // This is a short term hack to allow `blanket_hint_mostly_unused`
         // to run without requiring `-Zcargo-lints`, which should hopefully
-        // improve the testing expierience while we are collecting feedback
+        // improve the testing experience while we are collecting feedback
         if self.gctx.cli_unstable().profile_hint_mostly_unused {
             blanket_hint_mostly_unused(
                 self.root_maybe(),

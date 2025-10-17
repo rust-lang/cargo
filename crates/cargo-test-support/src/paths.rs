@@ -357,7 +357,7 @@ fn build_dir_ignored_path_patterns() -> Vec<String> {
         // Ignore MacOS debug symbols as there are many files/directories that would clutter up
         // tests few not a lot of benefit.
         "[..].dSYM/[..]",
-        // Ignore Windows debub symbols files (.pdb)
+        // Ignore Windows debug symbols files (.pdb)
         "[..].pdb",
     ]
     .into_iter()
