@@ -45,6 +45,7 @@ pub mod future_incompat;
 pub(crate) mod job_queue;
 pub(crate) mod layout;
 mod links;
+mod locking;
 mod lto;
 mod output_depinfo;
 mod output_sbom;
@@ -95,6 +96,7 @@ use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
+use crate::core::compiler::locking::CompilationLock;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
@@ -351,7 +353,22 @@ fn rustc(
         output_options.show_diagnostics = false;
     }
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
+
+    let mut lock = if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+        Some(CompilationLock::new(build_runner, unit))
+    } else {
+        None
+    };
+
     return Ok(Work::new(move |state| {
+        if let Some(lock) = &mut lock {
+            lock.lock().expect("failed to take lock");
+
+            // TODO: We need to revalidate the fingerprint here as another Cargo instance could
+            // have already compiled the crate before we recv'd the lock.
+            // For large crates re-compiling here would be quiet costly.
+        }
+
         // Artifacts are in a different location than typical units,
         // hence we must assure the crate- and target-dependent
         // directory is present.
