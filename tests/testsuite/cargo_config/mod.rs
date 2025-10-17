@@ -68,6 +68,48 @@ fn common_setup() -> PathBuf {
     sub_folder
 }
 
+fn array_setup() -> PathBuf {
+    let home = paths::home();
+    write_config_at(
+        home.join(".cargo/config.toml"),
+        r#"
+        ints = [1, 2, 3]
+
+        bools = [true, false, true]
+
+        strings = ["hello", "world", "test"]
+
+        nested_ints = [[1, 2], [3, 4]]
+        nested_bools = [[true], [false, true]]
+        nested_strings = [["a", "b"], ["3", "4"]]
+        nested_tables = [
+            [
+                { x = "a" },
+                { x = "b" },
+            ],
+            [
+                { x = "c" },
+                { x = "d" },
+            ],
+        ]
+        deeply_nested = [[
+            { x = [[[ { x = [], y = 2  } ]]], y = 1 },
+        ]]
+
+        mixed = [{ x = 1 }, true, [false], "hello", 123]
+
+        [[tables]]
+        name = "first"
+        value = 1
+        [[tables]]
+        name = "second"
+        value = 2
+
+        "#,
+    );
+    home
+}
+
 #[cargo_test]
 fn get_toml() {
     // Notes:
@@ -168,6 +210,42 @@ profile.dev.opt-level = 3
 [ERROR] config value `not.set` is not set
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn get_toml_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+bools = [true, false, true]
+deeply_nested = [[{ x = [[[{ x = [], y = 2 }]]], y = 1 }]]
+ints = [1, 2, 3]
+mixed = [{ x = 1 }, true, [false], "hello", 123]
+nested_bools = [[true], [false, true]]
+nested_ints = [[1, 2], [3, 4]]
+nested_strings = [["a", "b"], ["3", "4"]]
+nested_tables = [[{ x = "a" }, { x = "b" }], [{ x = "c" }, { x = "d" }]]
+strings = ["hello", "world", "test"]
+tables = [{ name = "first", value = 1 }, { name = "second", value = 2 }]
+# The following environment variables may affect the loaded values.
+# CARGO_HOME=[ROOT]/home/.cargo
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+tables = [{ name = "first", value = 1 }, { name = "second", value = 2 }]
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
 
@@ -301,6 +379,151 @@ CARGO_HOME=[ROOT]/home/.cargo
 }
 
 #[cargo_test]
+fn get_json_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get --format=json -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "bools": [
+    true,
+    false,
+    true
+  ],
+  "deeply_nested": [
+    [
+      {
+        "x": [
+          [
+            [
+              {
+                "x": [],
+                "y": 2
+              }
+            ]
+          ]
+        ],
+        "y": 1
+      }
+    ]
+  ],
+  "ints": [
+    1,
+    2,
+    3
+  ],
+  "mixed": [
+    {
+      "x": 1
+    },
+    true,
+    [
+      false
+    ],
+    "hello",
+    123
+  ],
+  "nested_bools": [
+    [
+      true
+    ],
+    [
+      false,
+      true
+    ]
+  ],
+  "nested_ints": [
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      4
+    ]
+  ],
+  "nested_strings": [
+    [
+      "a",
+      "b"
+    ],
+    [
+      "3",
+      "4"
+    ]
+  ],
+  "nested_tables": [
+    [
+      {
+        "x": "a"
+      },
+      {
+        "x": "b"
+      }
+    ],
+    [
+      {
+        "x": "c"
+      },
+      {
+        "x": "d"
+      }
+    ]
+  ],
+  "strings": [
+    "hello",
+    "world",
+    "test"
+  ],
+  "tables": [
+    {
+      "name": "first",
+      "value": 1
+    },
+    {
+      "name": "second",
+      "value": 2
+    }
+  ]
+}
+"#]]
+            .is_json(),
+        )
+        .with_stderr_data(str![[r#"
+[NOTE] The following environment variables may affect the loaded values.
+CARGO_HOME=[ROOT]/home/.cargo
+
+"#]])
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables --format=json -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "tables": [
+    {
+      "name": "first",
+      "value": 1
+    },
+    {
+      "name": "second",
+      "value": 2
+    }
+  ]
+}
+"#]]
+            .is_json(),
+        )
+        .with_stderr_data(str![""])
+        .run();
+}
+
+#[cargo_test]
 fn show_origin_toml() {
     let sub_folder = common_setup();
     cargo_process("config get --show-origin -Zunstable-options")
@@ -338,6 +561,80 @@ build.rustflags = [
     "--flag-directory", # [ROOT]/foo/.cargo/config.toml
     "env1", # environment variable `CARGO_BUILD_RUSTFLAGS`
     "env2", # environment variable `CARGO_BUILD_RUSTFLAGS`
+]
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+}
+
+#[cargo_test]
+fn show_origin_toml_with_array_any_types() {
+    let cwd = &array_setup();
+    cargo_process("config get --show-origin -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+bools = [
+    true, # [ROOT]/home/.cargo/config.toml
+    false, # [ROOT]/home/.cargo/config.toml
+    true, # [ROOT]/home/.cargo/config.toml
+]
+deeply_nested = [
+    [{ x = [[[{ x = [], y = 2 }]]], y = 1 }], # [ROOT]/home/.cargo/config.toml
+]
+ints = [
+    1, # [ROOT]/home/.cargo/config.toml
+    2, # [ROOT]/home/.cargo/config.toml
+    3, # [ROOT]/home/.cargo/config.toml
+]
+mixed = [
+    { x = 1 }, # [ROOT]/home/.cargo/config.toml
+    true, # [ROOT]/home/.cargo/config.toml
+    [false], # [ROOT]/home/.cargo/config.toml
+    "hello", # [ROOT]/home/.cargo/config.toml
+    123, # [ROOT]/home/.cargo/config.toml
+]
+nested_bools = [
+    [true], # [ROOT]/home/.cargo/config.toml
+    [false, true], # [ROOT]/home/.cargo/config.toml
+]
+nested_ints = [
+    [1, 2], # [ROOT]/home/.cargo/config.toml
+    [3, 4], # [ROOT]/home/.cargo/config.toml
+]
+nested_strings = [
+    ["a", "b"], # [ROOT]/home/.cargo/config.toml
+    ["3", "4"], # [ROOT]/home/.cargo/config.toml
+]
+nested_tables = [
+    [{ x = "a" }, { x = "b" }], # [ROOT]/home/.cargo/config.toml
+    [{ x = "c" }, { x = "d" }], # [ROOT]/home/.cargo/config.toml
+]
+strings = [
+    "hello", # [ROOT]/home/.cargo/config.toml
+    "world", # [ROOT]/home/.cargo/config.toml
+    "test", # [ROOT]/home/.cargo/config.toml
+]
+tables = [
+    { name = "first", value = 1 }, # [ROOT]/home/.cargo/config.toml
+    { name = "second", value = 2 }, # [ROOT]/home/.cargo/config.toml
+]
+# The following environment variables may affect the loaded values.
+# CARGO_HOME=[ROOT]/home/.cargo
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    // Unfortunately there is no TOML syntax to index an array item.
+    cargo_process("config get tables --show-origin -Zunstable-options")
+        .cwd(cwd)
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+tables = [
+    { name = "first", value = 1 }, # [ROOT]/home/.cargo/config.toml
+    { name = "second", value = 2 }, # [ROOT]/home/.cargo/config.toml
 ]
 
 "#]])
@@ -401,7 +698,7 @@ fn unmerged_toml() {
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(str![[r##"
 # Environment variables
 # CARGO=[..]
 # CARGO_ALIAS_BAR=[..]cat dog[..]
@@ -422,7 +719,7 @@ profile.dev.package.foo.opt-level = 1
 target.'cfg(target_os = "linux")'.runner = "runme"
 
 
-"#]])
+"##]])
         .with_stderr_data(str![[r#""#]])
         .run();
 
@@ -552,7 +849,7 @@ build.rustflags = [
     cargo_process("config get --merged=no -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(str![[r##"
 # Environment variables
 # CARGO=[..]
 # CARGO_HOME=[ROOT]/home/.cargo
@@ -574,7 +871,7 @@ profile.dev.package.foo.opt-level = 1
 target.'cfg(target_os = "linux")'.runner = "runme"
 
 
-"#]])
+"##]])
         .with_stderr_data(str![[r#""#]])
         .run();
 }
