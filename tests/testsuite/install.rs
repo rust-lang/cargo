@@ -554,7 +554,7 @@ fn install_path_with_lowercase_cargo_toml() {
     cargo_process("install --path .")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `[ROOT]` does not contain a Cargo.toml file, but found cargo.toml please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
+[ERROR] `[ROOT]` does not contain a Cargo.toml file, but does contain cargo.toml. Please try to rename it to Cargo.toml. --path must point to a directory containing a Cargo.toml file.
 
 "#]]
         )
@@ -1064,7 +1064,7 @@ fn git_repo_with_lowercase_cargo_toml() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository [..]
-[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml. Please try to rename it to Cargo.toml
 
 "#]]
         )
