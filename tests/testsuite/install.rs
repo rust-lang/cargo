@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::thread;
 
 use crate::prelude::*;
-use crate::utils::cargo_process;
+use crate::utils::{cargo_process, pkg};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
@@ -20,16 +20,6 @@ use cargo_util::{ProcessBuilder, ProcessError};
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, exe};
 use cargo_test_support::paths;
-
-fn pkg(name: &str, vers: &str) {
-    Package::new(name, vers)
-        .file("src/lib.rs", "")
-        .file(
-            "src/main.rs",
-            &format!("extern crate {}; fn main() {{}}", name),
-        )
-        .publish();
-}
 
 #[cargo_test]
 fn simple() {
