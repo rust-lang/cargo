@@ -316,7 +316,7 @@ fn cargo_install_with_non_default_toolchain() {
     execs()
         .with_process_builder(p)
         .with_stderr_data(str![[r#"
-`[..]/cargo` proxy running
+`[..]/cargo[EXE]` proxy running
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
@@ -325,8 +325,8 @@ fn cargo_install_with_non_default_toolchain() {
 Use `cargo +stable install` if you meant to use the stable toolchain.
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo
-[INSTALLED] package `foo v0.0.1` (executable `foo`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
