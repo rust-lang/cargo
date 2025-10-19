@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{env, fs};
+use std::{env, fmt, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
@@ -14,6 +14,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};
 
+use annotate_snippets::Level;
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
@@ -36,6 +37,26 @@ impl Drop for Transaction {
         for bin in self.bins.iter() {
             let _ = paths::remove_file(bin);
         }
+    }
+}
+
+enum RustupToolchainSource {
+    Default,
+    Environment,
+    CommandLine,
+    OverrideDB,
+    ToolchainFile,
+}
+
+impl fmt::Display for RustupToolchainSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Default => "default",
+            Self::Environment => "env",
+            Self::CommandLine => "cli",
+            Self::OverrideDB => "path-override",
+            Self::ToolchainFile => "toolchain-file",
+        })
     }
 }
 
@@ -316,6 +337,28 @@ impl<'gctx> InstallablePackage<'gctx> {
     fn install_one(mut self, dry_run: bool) -> CargoResult<bool> {
         self.gctx.shell().status("Installing", &self.pkg)?;
 
+        if let Some(source) = self.get_rustup_toolchain_source()
+            && !matches!(
+                source,
+                RustupToolchainSource::Default | RustupToolchainSource::CommandLine
+            )
+        {
+            let maybe_toolchain = self
+                .gctx
+                .get_env("RUSTUP_TOOLCHAIN")
+                .ok()
+                .map(|toolchain| format!(" `{toolchain}`"))
+                .unwrap_or_default();
+            let report = &[Level::WARNING
+                .primary_title(format!(
+                    "using non-default toolchain{maybe_toolchain} overridden by {source}"
+                ))
+                .element(Level::HELP.message(format!(
+                    "Use `cargo +stable install` if you meant to use the stable toolchain."
+                )))];
+            self.gctx.shell().print_report(report, false)?;
+        }
+
         let dst = self.root.join("bin").into_path_unlocked();
 
         let mut td_opt = None;
@@ -583,6 +626,20 @@ impl<'gctx> InstallablePackage<'gctx> {
             }
             Ok(true)
         }
+    }
+
+    fn get_rustup_toolchain_source(&self) -> Option<RustupToolchainSource> {
+        self.gctx
+            .get_env("RUSTUP_TOOLCHAIN_SOURCE")
+            .ok()
+            .and_then(|val| match val {
+                "default" => Some(RustupToolchainSource::Default),
+                "env" => Some(RustupToolchainSource::Environment),
+                "cli" => Some(RustupToolchainSource::CommandLine),
+                "path-override" => Some(RustupToolchainSource::OverrideDB),
+                "toolchain-file" => Some(RustupToolchainSource::ToolchainFile),
+                _ => None,
+            })
     }
 
     fn check_yanked_install(&self) -> CargoResult<()> {
