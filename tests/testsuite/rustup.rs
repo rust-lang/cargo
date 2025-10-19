@@ -329,7 +329,7 @@ fn cargo_install_with_toolchain_source_cli() {
 fn cargo_install_with_toolchain_source_env() {
     cargo_install_with_toolchain_source(
         Some("env"),
-        &warning_with_optional_rust_toolchain_source(None),
+        &warning_with_optional_rust_toolchain_source(Some("env")),
     );
 }
 
@@ -337,7 +337,7 @@ fn cargo_install_with_toolchain_source_env() {
 fn cargo_install_with_toolchain_source_path_override() {
     cargo_install_with_toolchain_source(
         Some("path-override"),
-        &warning_with_optional_rust_toolchain_source(None),
+        &warning_with_optional_rust_toolchain_source(Some("path-override")),
     );
 }
 
@@ -345,7 +345,7 @@ fn cargo_install_with_toolchain_source_path_override() {
 fn cargo_install_with_toolchain_source_toolchain_file() {
     cargo_install_with_toolchain_source(
         Some("toolchain-file"),
-        &warning_with_optional_rust_toolchain_source(None),
+        &warning_with_optional_rust_toolchain_source(Some("toolchain-file")),
     );
 }
 
@@ -353,7 +353,7 @@ fn cargo_install_with_toolchain_source_toolchain_file() {
 fn cargo_install_with_toolchain_source_unrecognized() {
     cargo_install_with_toolchain_source(
         Some("unrecognized"),
-        &warning_with_optional_rust_toolchain_source(None),
+        &warning_with_optional_rust_toolchain_source(Some("unrecognized")),
     );
 }
 
