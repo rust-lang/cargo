@@ -59,6 +59,13 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
     // The toolchain rustc needs to call the real rustc. In order to do that,
     // it needs to restore or clear the RUSTUP environment variables so that
     // if rustup is installed, it will call the correct rustc.
+    let rustup_toolchain_source_setup = match std::env::var_os("RUSTUP_TOOLCHAIN_SOURCE") {
+        Some(t) => format!(
+            ".env(\"RUSTUP_TOOLCHAIN_SOURCE\", \"{}\")",
+            t.into_string().unwrap()
+        ),
+        None => String::new(),
+    };
     let rustup_toolchain_setup = match std::env::var_os("RUSTUP_TOOLCHAIN") {
         Some(t) => format!(
             ".env(\"RUSTUP_TOOLCHAIN\", \"{}\")",
@@ -82,6 +89,7 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
                 eprintln!("{message}");
                 let r = std::process::Command::new(env!("CARGO_RUSTUP_TEST_real_rustc"))
                     .args(std::env::args_os().skip(1))
+                    {rustup_toolchain_source_setup}
                     {rustup_toolchain_setup}
                     {rustup_home_setup}
                     .status();
@@ -390,6 +398,10 @@ fn cargo_install_with_toolchain_source_env() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `test-toolchain` by environment variable
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -410,6 +422,10 @@ fn cargo_install_with_toolchain_source_path_override() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `test-toolchain` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -430,6 +446,10 @@ fn cargo_install_with_toolchain_source_toolchain_file() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `test-toolchain` by rustup toolchain file
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
