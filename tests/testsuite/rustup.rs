@@ -10,8 +10,10 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo_test_support::paths::{home, root};
-use cargo_test_support::{process, project, str};
+use cargo_test_support::install::assert_has_installed_exe;
+use cargo_test_support::paths::{cargo_home, home, root};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{execs, process, project, str};
 
 /// Helper to generate an executable.
 fn make_exe(dest: &Path, name: &str, contents: &str, env: &[(&str, PathBuf)]) -> PathBuf {
@@ -298,4 +300,112 @@ custom toolchain rustc running
 
 "#]])
         .run();
+}
+
+/// Performs a `cargo install` with a non-default toolchain in a simulated
+/// rustup environment. The purpose is to verify the warning that is emitted.
+#[cargo_test]
+fn cargo_install_with_toolchain_source_unset() {
+    cargo_install_with_toolchain_source(None, &warning_with_optional_rust_toolchain_source(None));
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_default() {
+    cargo_install_with_toolchain_source(
+        Some("default"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_cli() {
+    cargo_install_with_toolchain_source(
+        Some("cli"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_env() {
+    cargo_install_with_toolchain_source(
+        Some("env"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_path_override() {
+    cargo_install_with_toolchain_source(
+        Some("path-override"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_toolchain_file() {
+    cargo_install_with_toolchain_source(
+        Some("toolchain-file"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+#[cargo_test]
+fn cargo_install_with_toolchain_source_unrecognized() {
+    cargo_install_with_toolchain_source(
+        Some("unrecognized"),
+        &warning_with_optional_rust_toolchain_source(None),
+    );
+}
+
+fn cargo_install_with_toolchain_source(source: Option<&str>, stderr: &str) {
+    let mut builder = RustupEnvironmentBuilder::new();
+    builder.call_cargo_under_test();
+    builder.env("RUSTUP_TOOLCHAIN", "test-toolchain");
+    if let Some(source) = source {
+        builder.env("RUSTUP_TOOLCHAIN_SOURCE", source);
+    };
+    let RustupEnvironment {
+        cargo_bin,
+        rustup_home: _,
+        cargo_toolchain_exe: _,
+    } = builder.build();
+
+    Package::new("foo", "0.0.1")
+        .file("src/main.rs", "fn main() {{}}")
+        .publish();
+
+    let mut p = process(cargo_bin.join("cargo"));
+    p.arg_line("install foo");
+    execs()
+        .with_process_builder(p)
+        .with_stderr_data(stderr)
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+fn warning_with_optional_rust_toolchain_source(source: Option<&str>) -> String {
+    let maybe_warning = if let Some(source) = source {
+        format!(
+            r#"[WARNING] using non-default toolchain `test-toolchain` overridden by {}
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain.
+"#,
+            source
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        r#"`[..]/cargo[EXE]` proxy running
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+{maybe_warning}[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+"#
+    )
 }
