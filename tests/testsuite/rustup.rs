@@ -328,6 +328,9 @@ fn cargo_install_with_non_default_toolchain() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] using non-default toolchain `test-toolchain` overridden by env
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain.
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
