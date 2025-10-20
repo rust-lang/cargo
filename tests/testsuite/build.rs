@@ -5335,7 +5335,11 @@ fn no_linkable_target() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[WARNING] The package `the_lib` provides no linkable target. The compiler might raise an error while compiling `foo`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `the_lib`'s Cargo.toml. This warning might turn into a hard error in the future.
+[WARNING] the package `the_lib` provides no linkable target
+  |
+  = [NOTE] this might cause `foo` to fail compilation
+  = [NOTE] this warning might turn into a hard error in the future
+  = [HELP] consider adding 'dylib' or 'rlib' to key 'crate-type' in `the_lib`'s Cargo.toml
 [COMPILING] the_lib v0.1.0 ([ROOT]/foo/the_lib)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
