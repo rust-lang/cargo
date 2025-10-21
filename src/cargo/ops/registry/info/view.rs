@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use crate::core::Shell;
-use crate::util::style::{ERROR, HEADER, LITERAL, NOP, WARN};
+use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};
 use crate::{
     CargoResult, GlobalContext,
     core::{
@@ -26,7 +26,7 @@ pub(super) fn pretty_view(
     let header = HEADER;
     let error = ERROR;
     let warn = WARN;
-    let context = annotate_snippets::renderer::DEFAULT_CONTEXT_STYLE;
+    let context = CONTEXT;
 
     let mut shell = gctx.shell();
     let verbosity = shell.verbosity();

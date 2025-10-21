@@ -12,6 +12,7 @@ pub const GOOD: Style = AnsiColor::BrightGreen.on_default().effects(Effects::BOL
 pub const VALID: Style = AnsiColor::BrightCyan.on_default().effects(Effects::BOLD);
 pub const INVALID: Style = annotate_snippets::renderer::DEFAULT_WARNING_STYLE;
 pub const TRANSIENT: Style = annotate_snippets::renderer::DEFAULT_HELP_STYLE;
+pub const CONTEXT: Style = annotate_snippets::renderer::DEFAULT_CONTEXT_STYLE;
 
 pub const UPDATE_ADDED: Style = NOTE;
 pub const UPDATE_REMOVED: Style = ERROR;
