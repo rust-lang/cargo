@@ -621,7 +621,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 ";
 
         for dep in override_summary.dependencies() {
-            if let Some(i) = real_deps.iter().position(|d| dep == *d) {
+            if let Some(i) = real_deps.iter().position(|d| dep.eq_ignoring_location(d)) {
                 real_deps.remove(i);
                 continue;
             }

@@ -832,16 +832,21 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     .precise_version()
                     .expect("--precise <yanked-version> in use");
                 if self.selected_precise_yanked.insert((name, version.clone())) {
-                    let mut shell = self.gctx.shell();
-                    shell.print_report(
+                    let mut elements: Vec<annotate_snippets::Element<'_>> = Vec::new();
+                    if let Some(manifest_loc) = dep.toml_location() {
+                        elements.push(manifest_loc.to_snippet().into());
+                    }
+                    elements.push(
+                        Level::HELP
+                            .message("if possible, try a compatible non-yanked version")
+                            .into(),
+                    );
+                    self.gctx.shell().print_report(
                         &[Level::WARNING
                             .secondary_title(format!(
                                 "selected package `{name}@{version}` was yanked by the author"
                             ))
-                            .element(
-                                Level::HELP
-                                    .message("if possible, try a compatible non-yanked version"),
-                            )],
+                            .elements(elements)],
                         false,
                     )?;
                 }

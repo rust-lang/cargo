@@ -5,6 +5,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
+use std::sync::Arc;
 
 use crate::AlreadyPrintedError;
 use crate::core::summary::MissingDependencyError;
@@ -1579,33 +1580,49 @@ pub fn to_real_manifest(
         warnings,
         platform: None,
         root: package_root,
+        manifest_path: Some(rel_cwd_manifest_path(manifest_file, gctx)),
+        manifest_contents: Some(Arc::new(contents.clone())),
     };
     gather_dependencies(
         &mut manifest_ctx,
         normalized_toml.dependencies.as_ref(),
+        Some(document.get_ref()),
         None,
     )?;
     gather_dependencies(
         &mut manifest_ctx,
         normalized_toml.dev_dependencies(),
+        Some(document.get_ref()),
         Some(DepKind::Development),
     )?;
     gather_dependencies(
         &mut manifest_ctx,
         normalized_toml.build_dependencies(),
+        Some(document.get_ref()),
         Some(DepKind::Build),
     )?;
     for (name, platform) in normalized_toml.target.iter().flatten() {
         manifest_ctx.platform = Some(name.parse()?);
-        gather_dependencies(&mut manifest_ctx, platform.dependencies.as_ref(), None)?;
+        let target_table = document
+            .get_ref()
+            .get(name.as_str())
+            .and_then(|t| t.get_ref().as_table());
+        gather_dependencies(
+            &mut manifest_ctx,
+            platform.dependencies.as_ref(),
+            target_table,
+            None,
+        )?;
         gather_dependencies(
             &mut manifest_ctx,
             platform.build_dependencies(),
+            target_table,
             Some(DepKind::Build),
         )?;
         gather_dependencies(
             &mut manifest_ctx,
             platform.dev_dependencies(),
+            target_table,
             Some(DepKind::Development),
         )?;
     }
@@ -1974,6 +1991,8 @@ fn to_virtual_manifest(
             warnings,
             platform: None,
             root,
+            manifest_path: Some(rel_cwd_manifest_path(manifest_file, gctx)),
+            manifest_contents: Some(Arc::new(contents.clone())),
         };
         (
             replace(&normalized_toml, &mut manifest_ctx)?,
@@ -2042,21 +2061,36 @@ struct ManifestContext<'a, 'b> {
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
     root: &'a Path,
+    /// Path to the manifest, for reporting errors.
+    manifest_path: Option<String>,
+    manifest_contents: Option<Arc<String>>,
 }
 
+/// Gather dependencies from `normalized_deps` into `manifest_ctx`.
+///
+/// `table_location` optionally contains the location of the TOML table *containing* the
+/// dependency table we're interested in. If present, it will be used to attach locations
+/// to the dependencies for error reporting.
 #[tracing::instrument(skip_all)]
 fn gather_dependencies(
     manifest_ctx: &mut ManifestContext<'_, '_>,
     normalized_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
+    table_location: Option<&toml::de::DeTable<'static>>,
     kind: Option<DepKind>,
 ) -> CargoResult<()> {
     let Some(dependencies) = normalized_deps else {
         return Ok(());
     };
 
+    let table_name = kind.unwrap_or(DepKind::Normal).kind_table();
+    let table_location = table_location
+        .and_then(|t| t.get(table_name))
+        .and_then(|t| t.get_ref().as_table());
+
     for (n, v) in dependencies.iter() {
+        let loc = table_location.and_then(|t| t.get(n.as_str()));
         let resolved = v.normalized().expect("previously normalized");
-        let dep = dep_to_dependency(&resolved, n, manifest_ctx, kind)?;
+        let dep = dep_to_dependency(&resolved, n, manifest_ctx, loc, kind)?;
         manifest_ctx.deps.push(dep);
     }
     Ok(())
@@ -2090,7 +2124,7 @@ fn replace(
             );
         }
 
-        let mut dep = dep_to_dependency(replacement, spec.name(), manifest_ctx, None)?;
+        let mut dep = dep_to_dependency(replacement, spec.name(), manifest_ctx, None, None)?;
         let version = spec.version().ok_or_else(|| {
             anyhow!(
                 "replacements must specify a version \
@@ -2144,7 +2178,7 @@ fn patch(
                         dep.unused_keys(),
                         &mut manifest_ctx.warnings,
                     );
-                    dep_to_dependency(dep, name, manifest_ctx, None)
+                    dep_to_dependency(dep, name, manifest_ctx, None, None)
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
         );
@@ -2172,7 +2206,10 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
             warnings,
             platform,
             root,
+            manifest_path: None,
+            manifest_contents: None,
         },
+        None,
         kind,
     )
 }
@@ -2181,6 +2218,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
     orig: &manifest::TomlDependency<P>,
     name: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    location: Option<&toml::Spanned<toml::de::DeValue<'static>>>,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     match *orig {
@@ -2191,10 +2229,11 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
             },
             name,
             manifest_ctx,
+            location,
             kind,
         ),
         manifest::TomlDependency::Detailed(ref details) => {
-            detailed_dep_to_dependency(details, name, manifest_ctx, kind)
+            detailed_dep_to_dependency(details, name, manifest_ctx, location, kind)
         }
     }
 }
@@ -2203,6 +2242,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     orig: &manifest::TomlDetailedDependency<P>,
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    location: Option<&toml::Spanned<toml::de::DeValue<'static>>>,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
@@ -2338,6 +2378,18 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
                 name_in_toml
             )
         }
+    }
+
+    if let (Some(manifest_path), Some(manifest_contents), Some(loc)) = (
+        &manifest_ctx.manifest_path,
+        &manifest_ctx.manifest_contents,
+        location,
+    ) {
+        dep.set_toml_location(
+            manifest_path.clone(),
+            Arc::clone(manifest_contents),
+            loc.span(),
+        );
     }
     Ok(dep)
 }

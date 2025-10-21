@@ -49,6 +49,9 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+
+    // The TOML location of this dependency, for diagnostics.
+    manifest_location: Option<ManifestLocation>,
 }
 
 #[derive(Serialize)]
@@ -111,6 +114,26 @@ impl ser::Serialize for DepKind {
     }
 }
 
+/// Describes a location in a TOML file, for diagnostics.
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct ManifestLocation {
+    /// The full contents of the file.
+    contents: Arc<String>,
+    /// The file path (for display purposes, so it's a string relative
+    /// to the cwd).
+    path: String,
+    /// A byte range in `contents`.
+    span: std::ops::Range<usize>,
+}
+
+impl ManifestLocation {
+    pub fn to_snippet(&self) -> annotate_snippets::Snippet<'_, annotate_snippets::Annotation<'_>> {
+        annotate_snippets::Snippet::source(self.contents.as_str())
+            .path(&self.path)
+            .annotation(annotate_snippets::AnnotationKind::Primary.span(self.span.clone()))
+    }
+}
+
 impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(
@@ -160,6 +183,7 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                manifest_location: None,
             }),
         }
     }
@@ -452,6 +476,78 @@ impl Dependency {
     /// Previously, every dependency was potentially seen as library.
     pub(crate) fn maybe_lib(&self) -> bool {
         self.artifact().map(|a| a.is_lib).unwrap_or(true)
+    }
+
+    /// Are these dependencies equal if we ignore their manifest location?
+    pub fn eq_ignoring_location(&self, other: &Dependency) -> bool {
+        let Inner {
+            name,
+            source_id,
+            registry_id,
+            req,
+            specified_req,
+            kind,
+            only_match_name,
+            explicit_name_in_toml,
+            optional,
+            public,
+            default_features,
+            features,
+            artifact,
+            platform,
+            manifest_location: _,
+        } = &*self.inner;
+
+        let Inner {
+            name: other_name,
+            source_id: other_source_id,
+            registry_id: other_registry_id,
+            req: other_req,
+            specified_req: other_specified_req,
+            kind: other_kind,
+            only_match_name: other_only_match_name,
+            explicit_name_in_toml: other_explicit_name_in_toml,
+            optional: other_optional,
+            public: other_public,
+            default_features: other_default_features,
+            features: other_features,
+            artifact: other_artifact,
+            platform: other_platform,
+            manifest_location: _,
+        } = &*other.inner;
+
+        (name == other_name)
+            && (source_id == other_source_id)
+            && (registry_id == other_registry_id)
+            && (req == other_req)
+            && (specified_req == other_specified_req)
+            && (kind == other_kind)
+            && (only_match_name == other_only_match_name)
+            && (explicit_name_in_toml == other_explicit_name_in_toml)
+            && (optional == other_optional)
+            && (public == other_public)
+            && (default_features == other_default_features)
+            && (features == other_features)
+            && (artifact == other_artifact)
+            && (platform == other_platform)
+    }
+
+    pub(crate) fn set_toml_location(
+        &mut self,
+        path: String,
+        contents: Arc<String>,
+        span: std::ops::Range<usize>,
+    ) -> &mut Dependency {
+        Arc::make_mut(&mut self.inner).manifest_location = Some(ManifestLocation {
+            contents,
+            path,
+            span,
+        });
+        self
+    }
+
+    pub(crate) fn toml_location(&self) -> Option<&ManifestLocation> {
+        self.inner.manifest_location.as_ref()
     }
 }
 
