@@ -242,6 +242,9 @@ openssl = { workspace = true, optional = true }
 [target.'cfg(windows)'.dependencies]
 cargo-credential-wincred.workspace = true
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
 [target.'cfg(windows)'.dependencies.windows-sys]
 workspace = true
 features = [

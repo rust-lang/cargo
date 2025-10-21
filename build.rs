@@ -4,9 +4,24 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+// Function which adds ferris as a ICON for Cargo
+#[cfg(windows)]
+fn add_icon_windows() {
+    // ICON Link
+    // https://github.com/ShadowDara/photos-upload/tree/main/ferris
+    // https://raw.githubusercontent.com/ShadowDara/photos-upload/refs/heads/main/ferris/cargo.ico
+    let mut res = winres::WindowsResource::new();
+    res.set_icon("cargo.ico");
+    res.compile().unwrap();
+}
+
 fn main() {
     commit_info();
     compress_man();
+
+    #[cfg(windows)]
+    add_icon_windows();
+
     windows_manifest();
     // ALLOWED: Accessing environment during build time shouldn't be prohibited.
     #[allow(clippy::disallowed_methods)]

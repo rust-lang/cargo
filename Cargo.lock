@@ -314,7 +314,7 @@ dependencies = [
  "cargo_metadata",
  "flate2",
  "tar",
- "toml",
+ "toml 0.9.7",
 ]
 
 [[package]]
@@ -388,7 +388,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.17",
  "time",
- "toml",
+ "toml 0.9.7",
  "toml_edit",
  "tracing",
  "tracing-chrome",
@@ -400,6 +400,7 @@ dependencies = [
  "walkdir",
  "windows-sys 0.61.1",
  "winnow",
+ "winres",
 ]
 
 [[package]]
@@ -493,7 +494,7 @@ dependencies = [
  "snapbox",
  "tar",
  "time",
- "toml",
+ "toml 0.9.7",
  "url",
  "walkdir",
  "windows-sys 0.61.1",
@@ -532,7 +533,7 @@ dependencies = [
  "serde_json",
  "snapbox",
  "thiserror 2.0.17",
- "toml",
+ "toml 0.9.7",
  "unicode-xid",
  "url",
 ]
@@ -4518,6 +4519,15 @@ dependencies = [
 
 [[package]]
 name = "toml"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml"
 version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00e5e5d9bf2475ac9d4f0d9edab68cc573dc2fd644b0dba36b0c30a92dd9eaa0"
@@ -5253,6 +5263,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21a0236b59786fed61e2a80582dd500fe61f18b5dca67a4a067d0bc9039339cf"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "winres"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
+dependencies = [
+ "toml 0.5.11",
 ]
 
 [[package]]
