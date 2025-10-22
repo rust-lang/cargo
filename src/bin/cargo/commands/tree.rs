@@ -1,5 +1,6 @@
 use crate::cli;
 use crate::command_prelude::*;
+use annotate_snippets::Level;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
 use cargo::ops::Packages;
@@ -141,10 +142,16 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let no_dedupe = args.flag("no-dedupe") || args.flag("all");
     if args.flag("all") {
-        gctx.shell().warn(
-            "The `cargo tree` --all flag has been changed to --no-dedupe, \
-             and may be removed in a future version.\n\
-             If you are looking to display all workspace members, use the --workspace flag.",
+        gctx.shell().print_report(
+            &[Level::WARNING
+                .secondary_title(
+                    "the `cargo tree` --all flag has been changed to --no-dedupe, \
+                    and may be removed in a future version",
+                )
+                .element(Level::HELP.message(
+                    "if you are looking to display all workspace members, use the --workspace flag",
+                ))],
+            false,
         )?;
     }
 
