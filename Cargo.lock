@@ -394,8 +394,8 @@ dependencies = [
  "tracing-chrome",
  "tracing-subscriber",
  "unicase",
+ "unicode-ident",
  "unicode-width",
- "unicode-xid",
  "url",
  "walkdir",
  "windows-sys 0.61.1",
@@ -533,7 +533,7 @@ dependencies = [
  "snapbox",
  "thiserror 2.0.17",
  "toml",
- "unicode-xid",
+ "unicode-ident",
  "url",
 ]
 
@@ -4731,9 +4731,9 @@ checksum = "7eec5d1121208364f6793f7d2e222bf75a915c19557537745b195b253dd64217"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.19"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f63a545481291138910575129486daeaf8ac54aee4387fe7906919f7830c7d9d"
+checksum = "462eeb75aeb73aea900253ce739c8e18a67423fadf006037cd3ff27e82748a06"
 
 [[package]]
 name = "unicode-normalization"
