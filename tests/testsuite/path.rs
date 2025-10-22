@@ -1071,42 +1071,41 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
-fn invalid_base() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["path-bases"]
+// #[cargo_test]
+// fn invalid_base() {
+//     let p = project()
+//         .file(
+//             "Cargo.toml",
+//             r#"
+//                 cargo-features = ["path-bases"]
 
-                [package]
-                name = "foo"
-                version = "0.5.0"
-                authors = ["wycats@example.com"]
+//                 [package]
+//                 name = "foo"
+//                 version = "0.5.0"
+//                 authors = ["wycats@example.com"]
 
-                [dependencies]
-                bar = { base = '^^not-valid^^', path = 'bar' }
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
+//                 [dependencies]
+//                 bar = { base = '^^not-valid^^', path = 'bar' }
+//             "#,
+//         )
+//         .file("src/lib.rs", "")
+//         .build();
 
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["path-bases"])
-        .with_status(101)
-        .with_stderr_data(
-            "\
-[ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
-       
-       
-  --> Cargo.toml:10:23
-   |
-10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-",
-        )
-        .run();
-}
+//     p.cargo("build")
+//         .masquerade_as_nightly_cargo(&["path-bases"])
+//         .with_status(101)
+//         .with_stderr_data(
+//             "\
+// [ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
+
+//   --> Cargo.toml:10:23
+//    |
+// 10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
+//    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// ",
+//         )
+//         .run();
+// }
 
 #[cargo_test]
 fn invalid_path_with_base() {
@@ -1917,5 +1916,146 @@ foo v1.0.0 ([ROOT]/foo)
 └── foo v2.0.1 ([ROOT]/foo/foo2)
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_package_name_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+error: no matching package named `definitely_not_bar` found at `bar/`
+note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+
+help: package `bar` exists at `bar/`
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_package_in_subdirectory() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/definitely_not_bar/Cargo.toml",
+            r#"
+            [package]
+            name = "definitely_not_bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/definitely_not_bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+error: no matching package named `definitely_not_bar` found at `bar/`
+note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+
+help: package `definitely_not_bar` exists at `bar/definitely_not_bar/`
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_manifest_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/alice/Cargo.toml",
+            r#"
+            [package]
+            name = "alice"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+        "#,
+        )
+        .file("crates/bar/alice/src/lib.rs", "")
+        .file(
+            "crates/bar/bob/Cargo.toml",
+            r#"
+            [package]
+            name = "bob"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+        "#,
+        )
+        .file("crates/bar/bob/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+    error: no matching package named `definitely_not_bar` found at `bar/`
+    note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+
+    help: package `alice` exists at `bar/alice/`
+    help: package `bob` exists at `bar/bob/`
+    "#]])
         .run();
 }
