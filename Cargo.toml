@@ -183,7 +183,7 @@ ignore.workspace = true
 im-rc.workspace = true
 indexmap.workspace = true
 itertools.workspace = true
-jiff.workspace = true
+jiff = { workspace = true, features = ["serde", "std"] }
 jobserver.workspace = true
 lazycell.workspace = true
 libgit2-sys.workspace = true
