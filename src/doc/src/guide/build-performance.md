@@ -23,6 +23,8 @@ Common locations to override defaults are:
 - [`$CARGO_HOME/.cargo/config.toml` configuration file](../reference/config.md)
   - For a developer to control the defaults for their development
 
+You can use third-party tools like [cargo-wizard](https://crates.io/crates/cargo-wizard) to automatically configure options optimized for build performance in your project.
+
 ### Reduce amount of generated debug information
 
 Recommendation: Add to your `Cargo.toml` or `.cargo/config.toml`:
