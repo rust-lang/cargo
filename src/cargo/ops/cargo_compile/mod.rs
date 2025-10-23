@@ -58,6 +58,7 @@ use crate::util::interning::InternedString;
 use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
+use annotate_snippets::Level;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 pub(super) mod unit_generator;
@@ -230,17 +231,24 @@ pub fn create_bcx<'a, 'gctx>(
     match build_config.intent {
         UserIntent::Test | UserIntent::Build | UserIntent::Check { .. } | UserIntent::Bench => {
             if ws.gctx().get_env("RUST_FLAGS").is_ok() {
-                gctx.shell()
-                    .warn("ignoring environment variable `RUST_FLAGS`")?;
-                gctx.shell().note("rust flags are passed via `RUSTFLAGS`")?;
+                gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title("ignoring environment variable `RUST_FLAGS`")
+                        .element(Level::HELP.message("rust flags are passed via `RUSTFLAGS`"))],
+                    false,
+                )?;
             }
         }
         UserIntent::Doc { .. } | UserIntent::Doctest => {
             if ws.gctx().get_env("RUSTDOC_FLAGS").is_ok() {
-                gctx.shell()
-                    .warn("ignoring environment variable `RUSTDOC_FLAGS`")?;
-                gctx.shell()
-                    .note("rustdoc flags are passed via `RUSTDOCFLAGS`")?;
+                gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title("ignoring environment variable `RUSTDOC_FLAGS`")
+                        .element(
+                            Level::HELP.message("rustdoc flags are passed via `RUSTDOCFLAGS`"),
+                        )],
+                    false,
+                )?;
             }
         }
     }

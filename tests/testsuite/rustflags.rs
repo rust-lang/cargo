@@ -1441,13 +1441,12 @@ fn env_rustflags_misspelled() {
     for cmd in &["check", "build", "run", "test", "bench"] {
         p.cargo(cmd)
             .env("RUST_FLAGS", "foo")
-            .with_stderr_data(
-                "\
+            .with_stderr_data(str![[r#"
 [WARNING] ignoring environment variable `RUST_FLAGS`
-[NOTE] rust flags are passed via `RUSTFLAGS`
+  |
+  = [HELP] rust flags are passed via `RUSTFLAGS`
 ...
-",
-            )
+"#]])
             .run();
     }
 }
@@ -1473,7 +1472,8 @@ fn env_rustflags_misspelled_build_script() {
         .env("RUST_FLAGS", "foo")
         .with_stderr_data(str![[r#"
 [WARNING] ignoring environment variable `RUST_FLAGS`
-[NOTE] rust flags are passed via `RUSTFLAGS`
+  |
+  = [HELP] rust flags are passed via `RUSTFLAGS`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
