@@ -4,7 +4,7 @@ autoload -U regexp-replace
 
 _cargo() {
     local curcontext="$curcontext" ret=1
-    local -a command_scope_spec common parallel features msgfmt triple target registry
+    local -a command_scope_spec common jobs parallel features manifest msgfmt triple target registry
     local -a state line state_descr # These are set by _arguments
     typeset -A opt_args
 
