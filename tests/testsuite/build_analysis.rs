@@ -28,12 +28,16 @@ fn gated() {
 }
 
 #[cargo_test]
-fn simple() {
+fn one_logfile_per_invocation() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/lib.rs", "")
         .build();
 
+    let cargo_home = paths::cargo_home();
+    let log_dir = cargo_home.join("log");
+
+    // First invocation
     p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
@@ -43,6 +47,33 @@ fn simple() {
 
 "#]])
         .run();
+
+    assert!(log_dir.exists());
+    let entries = std::fs::read_dir(&log_dir).unwrap();
+    let log_files: Vec<_> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .collect();
+
+    assert_eq!(log_files.len(), 1);
+
+    // Second invocation
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let entries = std::fs::read_dir(&log_dir).unwrap();
+    let log_files: Vec<_> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .collect();
+
+    assert_eq!(log_files.len(), 2);
 }
 
 #[cargo_test]
