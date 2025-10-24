@@ -1,5 +1,7 @@
 //! Messages for logging.
 
+use std::path::Path;
+
 use jiff::Timestamp;
 use serde::Serialize;
 
@@ -8,9 +10,21 @@ use serde::Serialize;
 /// Each variant represents a different type of event.
 #[derive(Serialize)]
 #[serde(tag = "reason", rename_all = "kebab-case")]
-pub enum LogMessage {}
+pub enum LogMessage<'a> {
+    /// Emitted when a build starts.
+    BuildStarted {
+        cwd: &'a Path,
+        host: &'a str,
+        jobs: u32,
+        profile: &'a str,
+        rustc_version: &'a str,
+        rustc_version_verbose: &'a str,
+        target_dir: &'a Path,
+        workspace_root: &'a Path,
+    },
+}
 
-impl LogMessage {
+impl LogMessage<'_> {
     /// Converts this message to a JSON log line with run_id and timestamp.
     pub fn to_json_log(&self, run_id: &str) -> String {
         #[derive(Serialize)]
@@ -18,7 +32,7 @@ impl LogMessage {
             run_id: &'a str,
             timestamp: Timestamp,
             #[serde(flatten)]
-            msg: &'a LogMessage,
+            msg: &'a LogMessage<'a>,
         }
 
         let entry = LogEntry {

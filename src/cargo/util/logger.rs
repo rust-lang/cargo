@@ -85,7 +85,7 @@ impl BuildLogger {
     }
 
     /// Logs a message.
-    pub fn log(&self, msg: &LogMessage) {
+    pub fn log(&self, msg: &LogMessage<'_>) {
         let json = msg.to_json_log(&self.run_id);
         let _ = self.tx.send(json);
     }
