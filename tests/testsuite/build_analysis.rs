@@ -37,7 +37,6 @@ fn simple() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..].html
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
