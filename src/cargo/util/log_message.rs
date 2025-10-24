@@ -1,6 +1,7 @@
 //! Messages for logging.
 
 use std::io::Write;
+use std::path::PathBuf;
 
 use jiff::Timestamp;
 use serde::Serialize;
@@ -10,7 +11,19 @@ use serde::Serialize;
 /// Each variant represents a different type of event.
 #[derive(Serialize)]
 #[serde(tag = "reason", rename_all = "kebab-case")]
-pub enum LogMessage {}
+pub enum LogMessage {
+    /// Emitted when a build starts.
+    BuildStarted {
+        cwd: PathBuf,
+        host: String,
+        jobs: u32,
+        profile: String,
+        rustc_version: String,
+        rustc_version_verbose: String,
+        target_dir: PathBuf,
+        workspace_root: PathBuf,
+    },
+}
 
 impl LogMessage {
     /// Serializes this message as a JSON log line directly to the writer.

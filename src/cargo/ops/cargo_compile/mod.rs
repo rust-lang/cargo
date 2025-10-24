@@ -56,6 +56,7 @@ use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
 use crate::util::BuildLogger;
 use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
+use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
@@ -156,9 +157,24 @@ pub fn compile_ws<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let interner = UnitInterner::new();
-    let _logger = BuildLogger::maybe_new(ws)?;
+    let logger = BuildLogger::maybe_new(ws)?;
+
+    if let Some(ref logger) = logger {
+        let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+        logger.log(LogMessage::BuildStarted {
+            cwd: ws.gctx().cwd().to_path_buf(),
+            host: rustc.host.to_string(),
+            jobs: options.build_config.jobs,
+            profile: options.build_config.requested_profile.to_string(),
+            rustc_version: rustc.version.to_string(),
+            rustc_version_verbose: rustc.verbose_version.clone(),
+            target_dir: ws.target_dir().as_path_unlocked().to_path_buf(),
+            workspace_root: ws.root().to_path_buf(),
+        });
+    }
 
     let bcx = create_bcx(ws, options, &interner)?;
+
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
         return Compilation::new(&bcx);
