@@ -112,6 +112,56 @@ impl fmt::Display for ConfigKey {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum KeyOrIdx {
+    Key(String),
+    Idx(usize),
+}
+
+/// Tracks the key path to an item in an array for detailed errro context.
+#[derive(Debug, Clone)]
+pub struct ArrayItemKeyPath {
+    base: ConfigKey,
+    /// This is stored in reverse, and is pushed only when erroring out.
+    /// The first element is the innermost key.
+    path: Vec<KeyOrIdx>,
+}
+
+impl ArrayItemKeyPath {
+    pub fn new(base: ConfigKey) -> Self {
+        Self {
+            base,
+            path: Vec::new(),
+        }
+    }
+
+    pub fn push_key(&mut self, k: String) {
+        self.path.push(KeyOrIdx::Key(k))
+    }
+
+    pub fn push_index(&mut self, i: usize) {
+        self.path.push(KeyOrIdx::Idx(i))
+    }
+}
+
+impl fmt::Display for ArrayItemKeyPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.base)?;
+        for k in self.path.iter().rev() {
+            match k {
+                KeyOrIdx::Key(s) => {
+                    f.write_str(".")?;
+                    f.write_str(&escape_key_part(&s))?;
+                }
+                KeyOrIdx::Idx(i) => {
+                    write!(f, "[{i}]")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 pub(super) fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
     let ok = part.chars().all(|c| {
         matches!(c,
@@ -122,5 +172,30 @@ pub(super) fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
     } else {
         // This is a bit messy, but toml doesn't expose a function to do this.
         Cow::Owned(toml::Value::from(part).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use snapbox::assert_data_eq;
+    use snapbox::str;
+
+    use super::*;
+
+    #[test]
+    fn array_item_key_path_display() {
+        let base = ConfigKey::from_str("array");
+        let mut key_path = ArrayItemKeyPath::new(base);
+        // These are pushed in reverse order.
+        key_path.push_index(1);
+        key_path.push_key("rustflags".into());
+        key_path.push_key("thumbv8m.base-none-eabi".into());
+        key_path.push_index(2);
+        key_path.push_index(3);
+
+        assert_data_eq!(
+            key_path.to_string(),
+            str![[r#"array[3][2]."thumbv8m.base-none-eabi".rustflags[1]"#]]
+        );
     }
 }
