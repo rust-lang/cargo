@@ -61,20 +61,20 @@ fn broken_path_override_warns() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [WARNING] path override for crate `a` has altered the original list of
-dependencies; the dependency on `bar` was either added or
-modified to not match the previously resolved version
-
-This is currently allowed but is known to produce buggy behavior with spurious
-recompiles and changes to the crate graph. Path overrides unfortunately were
-never intended to support this feature, so for now this message is just a
-warning. In the future, however, this message will become a hard error.
-
-To change the dependency graph via an override it's recommended to use the
-`[patch]` feature of Cargo instead of the path override feature. This is
-documented online at the url below for more information.
-
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
-
+         dependencies; the dependency on `bar` was either added or
+         modified to not match the previously resolved version
+         
+         This is currently allowed but is known to produce buggy behavior with spurious
+         recompiles and changes to the crate graph. Path overrides unfortunately were
+         never intended to support this feature, so for now this message is just a
+         warning. In the future, however, this message will become a hard error.
+         
+         To change the dependency graph via an override it's recommended to use the
+         `[patch]` feature of Cargo instead of the path override feature. This is
+         documented online at the url below for more information.
+         
+         https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
+         
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.2.0 (registry `dummy-registry`)
 [CHECKING] bar v0.2.0
@@ -229,20 +229,20 @@ fn paths_add_optional_bad() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [WARNING] path override for crate `bar` has altered the original list of
-dependencies; the dependency on `baz` was either added or
-modified to not match the previously resolved version
-
-This is currently allowed but is known to produce buggy behavior with spurious
-recompiles and changes to the crate graph. Path overrides unfortunately were
-never intended to support this feature, so for now this message is just a
-warning. In the future, however, this message will become a hard error.
-
-To change the dependency graph via an override it's recommended to use the
-`[patch]` feature of Cargo instead of the path override feature. This is
-documented online at the url below for more information.
-
-https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
-
+         dependencies; the dependency on `baz` was either added or
+         modified to not match the previously resolved version
+         
+         This is currently allowed but is known to produce buggy behavior with spurious
+         recompiles and changes to the crate graph. Path overrides unfortunately were
+         never intended to support this feature, so for now this message is just a
+         warning. In the future, however, this message will become a hard error.
+         
+         To change the dependency graph via an override it's recommended to use the
+         `[patch]` feature of Cargo instead of the path override feature. This is
+         documented online at the url below for more information.
+         
+         https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
+         
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar2)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
