@@ -1071,41 +1071,42 @@ Caused by:
         .run();
 }
 
-// #[cargo_test]
-// fn invalid_base() {
-//     let p = project()
-//         .file(
-//             "Cargo.toml",
-//             r#"
-//                 cargo-features = ["path-bases"]
+#[cargo_test]
+fn invalid_base() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["path-bases"]
 
-//                 [package]
-//                 name = "foo"
-//                 version = "0.5.0"
-//                 authors = ["wycats@example.com"]
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
 
-//                 [dependencies]
-//                 bar = { base = '^^not-valid^^', path = 'bar' }
-//             "#,
-//         )
-//         .file("src/lib.rs", "")
-//         .build();
+                [dependencies]
+                bar = { base = '^^not-valid^^', path = 'bar' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
 
-//     p.cargo("build")
-//         .masquerade_as_nightly_cargo(&["path-bases"])
-//         .with_status(101)
-//         .with_stderr_data(
-//             "\
-// [ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
 
-//   --> Cargo.toml:10:23
-//    |
-// 10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
-//    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-// ",
-//         )
-//         .run();
-// }
+
+  --> Cargo.toml:10:23
+   |
+10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+",
+        )
+        .run();
+}
 
 #[cargo_test]
 fn invalid_path_with_base() {
@@ -1951,13 +1952,13 @@ fn invalid_package_name_in_path() {
         .file("crates/bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check")
+    p.cargo("generate-lockfile")
         .with_status(101)
         .with_stderr_data(str![[r#"
-error: no matching package named `definitely_not_bar` found at `bar/`
-note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/crates/bar
+required by package `foo v0.5.0 ([ROOT]/foo)`
 
-help: package `bar` exists at `bar/`
 "#]])
         .run();
 }
@@ -1997,10 +1998,14 @@ fn invalid_package_in_subdirectory() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-error: no matching package named `definitely_not_bar` found at `bar/`
-note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+[ERROR] failed to load manifest for dependency `definitely_not_bar`
 
-help: package `definitely_not_bar` exists at `bar/definitely_not_bar/`
+Caused by:
+  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+
 "#]])
         .run();
 }
@@ -2051,11 +2056,14 @@ fn invalid_manifest_in_path() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-    error: no matching package named `definitely_not_bar` found at `bar/`
-    note: required by package `foo v0.1.0 (/Users/eric/Temp/foo)`
+[ERROR] failed to load manifest for dependency `definitely_not_bar`
 
-    help: package `alice` exists at `bar/alice/`
-    help: package `bob` exists at `bar/bob/`
-    "#]])
+Caused by:
+  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
