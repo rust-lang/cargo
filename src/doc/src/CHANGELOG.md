@@ -104,7 +104,7 @@
   when `build.build-dir` is set. These tarballs were previously included due to
   an oversight and are now treated as intermediate artifacts.
   To get `.crate` tarballs as final artifacts, use `cargo package`.
-  In the next version, this change will apply regardless of `build.build-dir`.
+  In a future version, this change will apply regardless of `build.build-dir`.
   [#15910](https://github.com/rust-lang/cargo/pull/15910)
 - Adjust Cargo messages to match rustc diagnostic style
   [#15928](https://github.com/rust-lang/cargo/pull/15928)
