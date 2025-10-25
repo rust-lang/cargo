@@ -130,6 +130,10 @@ fn fetch_dep_two_revs(backend: Backend, mode: RepoMode) {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
+    fetch_shallow_dep_branch_and_rev(Backend::Gitoxide)
+}
+
+fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
             .file("src/lib.rs", "")
@@ -164,8 +168,8 @@ fn gitoxide_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
         .build();
 
     p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
+        .arg_line(backend.to_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -188,6 +192,10 @@ fn gitoxide_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
+    fetch_shallow_dep_branch_to_rev(Backend::Gitoxide)
+}
+
+fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
     // db exists from previous build, then dependency changes to refer to revision that isn't
     // available in the shallow fetch.
 
@@ -221,8 +229,8 @@ fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
         .build();
 
     p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
+        .arg_line(backend.to_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -252,8 +260,8 @@ fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
         .build();
 
     p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
+        .arg_line(backend.to_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -267,6 +275,10 @@ fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_index_then_git2_fetch_complete(Backend::Gitoxide)
+}
+
+fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -283,7 +295,7 @@ fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()>
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -323,6 +335,10 @@ fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()>
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_git2_fetch_complete(Backend::Gitoxide)
+}
+
+fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Result<()> {
     // Example where an old lockfile with an explicit branch="master" in Cargo.toml.
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
@@ -363,8 +379,8 @@ fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
         .build();
 
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
+        .arg_line(backend.to_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -460,6 +476,10 @@ fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_gitoxide_fetch_complete(Backend::Gitoxide)
+}
+
+fn fetch_shallow_dep_then_gitoxide_fetch_complete(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
@@ -499,8 +519,8 @@ fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<(
         .build();
 
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
+        .arg_line(backend.to_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -544,7 +564,7 @@ fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<(
     }
 
     p.cargo("update")
-        .arg("-Zgitoxide=fetch") // shallow-deps is omitted intentionally
+        .arg_line(Backend::Gitoxide.to_arg()) // shallow-deps is omitted intentionally
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -599,6 +619,10 @@ fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<(
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
+    fetch_shallow_index_then_preserve_shallow(Backend::Gitoxide)
+}
+
+fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -615,7 +639,7 @@ fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -633,7 +657,7 @@ fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -651,7 +675,7 @@ fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
     Package::new("bar", "1.2.0").publish();
     Package::new("bar", "1.3.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -672,6 +696,10 @@ fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
 /// If there is shallow *and* non-shallow fetches, non-shallow will naturally be returned due to sort order.
 #[cargo_test]
 fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
+    fetch_complete_index_then_shallow(Backend::Gitoxide)
+}
+
+fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -688,7 +716,7 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -705,7 +733,7 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -728,7 +756,7 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
     Package::new("bar", "1.2.0").publish();
     Package::new("bar", "1.3.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -745,7 +773,7 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
     assert!(shallow_repo.is_shallow());
 
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -763,6 +791,10 @@ fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
+    fetch_shallow_index_then_abort_and_update(Backend::Gitoxide)
+}
+
+fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -779,7 +811,7 @@ fn gitoxide_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
@@ -802,7 +834,7 @@ fn gitoxide_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
-        .arg("-Zgitoxide=fetch")
+        .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
