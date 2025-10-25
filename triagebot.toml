@@ -37,6 +37,11 @@ label = "O-windows"
 # Documentation at: https://forge.rust-lang.org/triagebot/note.html
 [note]
 
+# Enable comments linking to triagebot range-diff when a PR is rebased
+# onto a different base commit
+# Documentation at: https://forge.rust-lang.org/triagebot/range-diff.html
+[range-diff]
+
 [merge-conflicts]
 remove = []
 add = ["S-waiting-on-author"]
@@ -51,7 +56,6 @@ warn_non_default_branch = true
 
 [assign.owners]
 "*" = ["@ehuss", "@epage", "@weihanglo"]
-
 
 [review-submitted]
 reviewed_label = "S-waiting-on-author"
