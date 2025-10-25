@@ -866,3 +866,47 @@ fn fetch() {
         .with_stderr_does_not_contain("[DOWNLOADED] [..]")
         .run();
 }
+
+#[cargo_test(build_std_mock)]
+fn core_profile() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "profile-check"
+                edition = "2024"
+
+                [profile.dev.package.core]
+                debug-assertions = false
+            "#,
+        )
+        .file("src/lib.rs", "extern crate core;")
+        .build();
+    p.cargo("build -v")
+        .build_std_arg(&setup, "compiler_builtins,core")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] core v0.1.0 ([..]/library/core)
+[COMPILING] profile-check v0.0.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]`
+[RUNNING] `[..] rustc --crate-name core [..] -C debug-assertions=off [..]`
+[RUNNING] `[..] rustc --crate-name profile_check [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .with_stderr_does_not_contain(
+            "[RUNNING] `[..] rustc --crate-name compiler_builtins [..] -C debug-assertions=off [..]`",
+        )
+        .run();
+}
