@@ -277,6 +277,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.layout(unit.kind).build_dir().fingerprint(&dir)
     }
 
+    pub fn build_unit_lock(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build_dir().build_unit_lock(&dir)
+    }
+
     /// Directory where incremental output for the given unit should go.
     pub fn incremental_dir(&self, unit: &Unit) -> &Path {
         self.layout(unit.kind).build_dir().incremental()
