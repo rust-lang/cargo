@@ -1,7 +1,8 @@
-<svg width="911px" height="218px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1020px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
+    .fg-bright-blue { fill: #5555FF }
     .fg-bright-red { fill: #FF5555 }
     .container {
       padding: 0 10px;
@@ -18,27 +19,17 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan>: failed to load source for dependency `cargo-list-test-fixture`</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: failed to load source for dependency `cargo-list-test-fixture`</tspan>
 </tspan>
-    <tspan x="10px" y="46px">
+    <tspan x="10px" y="46px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>Caused by:</tspan>
+    <tspan x="10px" y="64px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">caused by</tspan><tspan>: Unable to update [ROOT]/case/tests/fixtures/local</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>  Unable to update [ROOT]/case/tests/fixtures/local</tspan>
+    <tspan x="10px" y="82px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">caused by</tspan><tspan>: failed to read `[ROOT]/case/tests/fixtures/local/Cargo.toml`</tspan>
 </tspan>
-    <tspan x="10px" y="100px">
+    <tspan x="10px" y="100px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">caused by</tspan><tspan>: [NOT_FOUND]</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>Caused by:</tspan>
-</tspan>
-    <tspan x="10px" y="136px"><tspan>  failed to read `[ROOT]/case/tests/fixtures/local/Cargo.toml`</tspan>
-</tspan>
-    <tspan x="10px" y="154px">
-</tspan>
-    <tspan x="10px" y="172px"><tspan>Caused by:</tspan>
-</tspan>
-    <tspan x="10px" y="190px"><tspan>  [..]</tspan>
-</tspan>
-    <tspan x="10px" y="208px">
+    <tspan x="10px" y="118px">
 </tspan>
   </text>
 

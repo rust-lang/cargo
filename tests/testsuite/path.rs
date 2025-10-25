@@ -572,18 +572,11 @@ fn error_message_for_missing_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update [ROOT]/foo/src/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/src/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: failed to load source for dependency `bar`
+  = caused by: Unable to update [ROOT]/foo/src/bar
+  = caused by: failed to read `[ROOT]/foo/src/bar/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -1599,12 +1592,9 @@ fn missing_path_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to update path override `[ROOT]/whoa-this-does-not-exist` (defined in `[ROOT]/foo/.cargo/config.toml`)
-
-Caused by:
-  failed to read directory `[ROOT]/whoa-this-does-not-exist`
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: failed to read directory `[ROOT]/whoa-this-does-not-exist`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -1671,10 +1661,10 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package found
-searched package name: `bar`
-perhaps you meant:      foo
-location searched: [ROOT]/foo/foo
-required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+       searched package name: `bar`
+       perhaps you meant:      foo
+       location searched: [ROOT]/foo/foo
+       required by package `foo v0.5.0 ([ROOT]/foo/foo)`
 
 "#]])
         .run();
@@ -1755,20 +1745,13 @@ fn deep_path_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `c` as a dependency of package `b v0.1.0 ([ROOT]/foo/b)`
-    ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `c`
-
-Caused by:
-  Unable to update [ROOT]/foo/c
-
-Caused by:
-  failed to read `[ROOT]/foo/c/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+           ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
+  |
+  = caused by: failed to load source for dependency `c`
+  = caused by: Unable to update [ROOT]/foo/c
+  = caused by: failed to read `[ROOT]/foo/c/Cargo.toml`
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -1848,7 +1831,7 @@ fn catch_tricky_cycle() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `ledger v0.1.0 ([ROOT]/foo/ledger)` depends on itself. Cycle:
-package `ledger v0.1.0 ([ROOT]/foo/ledger)`
+       package `ledger v0.1.0 ([ROOT]/foo/ledger)`
 ...
 "#]])
         .with_status(101)

@@ -39,9 +39,8 @@ fn check_with_invalid_artifact_dependency() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  'unknown' is not a valid artifact specifier
+  |
+  = caused by: 'unknown' is not a valid artifact specifier
 
 "#]])
         .with_status(101)
@@ -82,9 +81,8 @@ Caused by:
         cargo
             .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  'lib' specifier cannot be used without an 'artifact = …' value (bar)
+  |
+  = caused by: 'lib' specifier cannot be used without an 'artifact = …' value (bar)
 
 "#]])
             .with_status(101)
@@ -114,9 +112,8 @@ Caused by:
         cargo
             .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  'target' specifier cannot be used without an 'artifact = …' value (bar)
+  |
+  = caused by: 'target' specifier cannot be used without an 'artifact = …' value (bar)
 
 "#]])
             .with_status(101)
@@ -150,12 +147,14 @@ fn check_with_invalid_target_triple() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
 [ERROR] failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --target unknown-target-triple [..]` ([EXIT_STATUS]: 1)
-  --- stderr
-...
-
+  |
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --target unknown-target-triple --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
+               [ERROR] error loading target specification: could not find specification for target "unknown-target-triple"
+                 |
+                 = [HELP] run `rustc --print target-list` for a list of built-in targets
+               
+               
 
 "#]])
         .with_status(101)
@@ -187,9 +186,8 @@ fn build_without_nightly_aborts_with_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `artifact = …` requires `-Z bindeps` (bar)
+  |
+  = caused by: `artifact = …` requires `-Z bindeps` (bar)
 
 "#]])
         .run();
@@ -2089,9 +2087,8 @@ fn check_target_equals_target_in_non_build_dependency_errors() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `target = "target"` in normal- or dev-dependencies has no effect (bar)
+  |
+  = caused by: `target = "target"` in normal- or dev-dependencies has no effect (bar)
 
 "#]])
         .run();
@@ -3305,16 +3302,16 @@ fn check_transitive_artifact_dependency_with_different_target() {
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [ERROR] failed to determine target information for target `custom-target`.
-  Artifact dependency `baz` in package `bar v0.0.0 ([ROOT]/foo/bar)` requires building for `custom-target`
-
-Caused by:
-  failed to run `rustc` to learn about target-specific information
-
-Caused by:
-  process didn't exit successfully: `rustc [..] ([EXIT_STATUS]: 1)
-  --- stderr
-...
-
+         Artifact dependency `baz` in package `bar v0.0.0 ([ROOT]/foo/bar)` requires building for `custom-target`
+  |
+  = caused by: failed to run `rustc` to learn about target-specific information
+  = caused by: process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --target custom-target --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` ([EXIT_STATUS]: 1)
+               --- stderr
+               [ERROR] error loading target specification: could not find specification for target "custom-target"
+                 |
+                 = [HELP] run `rustc --print target-list` for a list of built-in targets
+               
+               
 
 "#]])
         .with_status(101)

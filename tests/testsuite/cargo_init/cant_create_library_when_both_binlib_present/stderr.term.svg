@@ -1,7 +1,7 @@
 <svg width="751px" height="74px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Creating</tspan><tspan> library package</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: cannot have a package with multiple libraries, found both `case.rs` and `lib.rs`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: cannot have a package with multiple libraries, found both `case.rs` and `lib.rs`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

@@ -103,12 +103,12 @@ fn credential_provider_auth_failure() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] token rejected for `alternative`
-You may need to log in using this registry's credential provider
+       You may need to log in using this registry's credential provider
+  |
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:34097/index/config.json`, got 401
+               body:
+               Unauthorized message from server.
 
-Caused by:
-  failed to get successful HTTP response from [..]
-  body:
-  [..]
 "#]])
         .run();
 }
@@ -128,9 +128,8 @@ fn basic_unsupported() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] credential provider `cargo:token-from-stdout false` failed action `login`
-
-Caused by:
-  requested operation not supported
+  |
+  = caused by: requested operation not supported
 
 "#]])
         .run();
@@ -140,9 +139,8 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] credential provider `cargo:token-from-stdout false` failed action `logout`
-
-Caused by:
-  requested operation not supported
+  |
+  = caused by: requested operation not supported
 
 "#]])
         .run();
@@ -247,9 +245,8 @@ fn invalid_token_output() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] credential provider `[..]test-cred[EXE]` failed action `get`
-
-Caused by:
-  process `[..]` returned more than one line of output; expected a single token
+  |
+  = caused by: process `[ROOT]/cred_proj/target/debug/test-cred` returned more than one line of output; expected a single token
 
 "#]])
         .run();
@@ -716,9 +713,8 @@ fn unsupported_version() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] credential provider `[..]` failed action `login`
-
-Caused by:
-  credential provider supports protocol versions [998, 999], while Cargo supports [1]
+  |
+  = caused by: credential provider supports protocol versions [998, 999], while Cargo supports [1]
 
 "#]])
         .run();

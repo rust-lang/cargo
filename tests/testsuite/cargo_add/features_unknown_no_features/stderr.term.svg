@@ -1,7 +1,7 @@
 <svg width="740px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -23,11 +23,11 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate my-package: noze</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: unrecognized feature for crate my-package: noze</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan>       </tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>no features available for crate my-package</tspan>
+    <tspan x="10px" y="100px"><tspan>       </tspan><tspan class="bold">no features available for crate my-package</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>
