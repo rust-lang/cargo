@@ -74,7 +74,7 @@ fn simple() {
 fn not_found() {
     setup();
     // Publish a package so that the directory hierarchy is created.
-    // Note, however, that we declare a dependency on baZ.
+    // Note, however, that we declare a dependency on baz.
     Package::new("bar", "0.0.1").local(true).publish();
 
     let p = project()
