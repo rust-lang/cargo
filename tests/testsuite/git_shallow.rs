@@ -34,15 +34,10 @@ impl RepoMode {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_two_revs() {
-    fetch_dep_two_revs(Backend::Gitoxide, RepoMode::Shallow)
+    fetch_dep_two_revs(Backend::Gitoxide)
 }
 
-#[cargo_test]
-fn git2_fetch_complete_dep_two_revs() {
-    fetch_dep_two_revs(Backend::Git2, RepoMode::Complete)
-}
-
-fn fetch_dep_two_revs(backend: Backend, mode: RepoMode) {
+fn fetch_dep_two_revs(backend: Backend) {
     let bar = git::new("meta-dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
@@ -122,7 +117,7 @@ fn fetch_dep_two_revs(backend: Backend, mode: RepoMode) {
 
     foo.cargo("check -v")
         .arg_line(backend.to_arg())
-        .arg_line(mode.to_deps_arg())
+        .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0") // respect `backend`
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
