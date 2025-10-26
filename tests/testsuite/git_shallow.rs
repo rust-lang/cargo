@@ -278,10 +278,13 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
-    fetch_shallow_index_then_git2_fetch_complete(Backend::Gitoxide)
+    fetch_shallow_index_then_fetch_complete(Backend::Gitoxide, Backend::Git2)
 }
 
-fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Result<()> {
+fn fetch_shallow_index_then_fetch_complete(
+    backend_1st: Backend,
+    backend_2nd: Backend,
+) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -298,7 +301,7 @@ fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Res
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .arg_line(backend.to_arg())
+        .arg_line(backend_1st.to_arg())
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
@@ -318,7 +321,9 @@ fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Res
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
+        .arg_line(backend_2nd.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
     let repo = gix::open_opts(
@@ -339,10 +344,18 @@ fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Res
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
-    fetch_shallow_dep_then_git2_fetch_complete(Backend::Gitoxide)
+    fetch_shallow_dep_then_fetch_complete(Backend::Gitoxide, Backend::Git2)
 }
 
-fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Result<()> {
+#[cargo_test]
+fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_fetch_complete(Backend::Gitoxide, Backend::Gitoxide)
+}
+
+fn fetch_shallow_dep_then_fetch_complete(
+    backend_1st: Backend,
+    backend_2nd: Backend,
+) -> anyhow::Result<()> {
     // Example where an old lockfile with an explicit branch="master" in Cargo.toml.
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
@@ -383,7 +396,7 @@ fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Resul
         .build();
 
     p.cargo("update")
-        .arg_line(backend.to_arg())
+        .arg_line(backend_1st.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
@@ -429,7 +442,9 @@ fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Resul
     }
 
     p.cargo("update")
+        .arg_line(backend_2nd.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
     let db_clone = gix::open_opts(
@@ -474,151 +489,6 @@ fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Resul
     assert_eq!(
         max_history_depth, 3,
         "the new checkout sees all commits of the non-shallow DB repository"
-    );
-
-    Ok(())
-}
-
-#[cargo_test]
-fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
-    fetch_shallow_dep_then_gitoxide_fetch_complete(Backend::Gitoxide)
-}
-
-fn fetch_shallow_dep_then_gitoxide_fetch_complete(backend: Backend) -> anyhow::Result<()> {
-    Package::new("bar", "1.0.0").publish();
-    let (bar, bar_repo) = git::new_repo("bar", |p| {
-        p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    bar.change_file("src/lib.rs", "// change");
-    git::add(&bar_repo);
-    git::commit(&bar_repo);
-
-    {
-        let mut walk = bar_repo.revwalk()?;
-        walk.push_head()?;
-        assert_eq!(
-            walk.count(),
-            2,
-            "original repo has initial commit and change commit"
-        );
-    }
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
-
-                    [dependencies]
-                    bar = {{ version = "1.0", git = "{}", branch = "master" }}
-                "#,
-                bar.url()
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("update")
-        .arg_line(backend.to_arg())
-        .arg_line(RepoMode::Shallow.to_deps_arg())
-        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
-        .run();
-
-    let shallow_db_clone = gix::open_opts(
-        find_bar_db(RepoMode::Shallow),
-        gix::open::Options::isolated(),
-    )?;
-    assert!(shallow_db_clone.is_shallow());
-    assert_eq!(
-        shallow_db_clone
-            .rev_parse_single("origin/master")?
-            .ancestors()
-            .all()?
-            .count(),
-        1,
-        "db fetches are shallow and have a shortened history"
-    );
-
-    let dep_checkout = gix::open_opts(
-        find_lexicographically_first_bar_checkout(),
-        gix::open::Options::isolated(),
-    )?;
-    assert!(dep_checkout.is_shallow());
-    assert_eq!(
-        dep_checkout.head_id()?.ancestors().all()?.count(),
-        1,
-        "db checkouts are hard-linked fetches with the shallow file copied separately."
-    );
-
-    bar.change_file("src/lib.rs", "// another change");
-    git::add(&bar_repo);
-    git::commit(&bar_repo);
-    {
-        let mut walk = bar_repo.revwalk()?;
-        walk.push_head()?;
-        assert_eq!(
-            walk.count(),
-            3,
-            "original repo has initial commit and change commit, and another change"
-        );
-    }
-
-    p.cargo("update")
-        .arg_line(Backend::Gitoxide.to_arg()) // shallow-deps is omitted intentionally
-        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
-        .run();
-
-    let db_clone = gix::open_opts(
-        find_bar_db(RepoMode::Complete),
-        gix::open::Options::isolated(),
-    )?;
-    assert_eq!(
-        db_clone
-            .rev_parse_single("origin/master")?
-            .ancestors()
-            .all()?
-            .count(),
-        3,
-        "we created an entirely new non-shallow clone"
-    );
-    assert!(!db_clone.is_shallow());
-    assert_eq!(
-        dep_checkout.head_id()?.ancestors().all()?.count(),
-        1,
-        "the original dep checkout didn't change - there is a new one for each update we get locally"
-    );
-
-    let max_history_depth = glob::glob(
-        paths::home()
-            .join(".cargo/git/checkouts/bar-*/*/.git")
-            .to_str()
-            .unwrap(),
-    )?
-    .map(|path| -> anyhow::Result<usize> {
-        let path = path?;
-        let dep_checkout = gix::open_opts(&path, gix::open::Options::isolated())?;
-        assert_eq!(
-            dep_checkout.is_shallow(),
-            path.to_string_lossy().contains("-shallow"),
-            "checkouts of shallow db repos are shallow as well"
-        );
-        let depth = dep_checkout.head_id()?.ancestors().all()?.count();
-        Ok(depth)
-    })
-    .map(Result::unwrap)
-    .max()
-    .expect("two checkout repos");
-
-    assert_eq!(
-        max_history_depth, 3,
-        "we see the previous shallow checkout as well as new unshallow one"
     );
 
     Ok(())
