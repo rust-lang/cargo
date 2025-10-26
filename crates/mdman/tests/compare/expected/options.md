@@ -29,26 +29,30 @@ A description of the command.
 <dl>
 
 <dt class="option-term" id="option-options---foo-bar"><a class="option-anchor" href="#option-options---foo-bar"></a><code>--foo-bar</code></dt>
-<dd class="option-desc">Demo <em>emphasis</em>, <strong>strong</strong>, <del>strike</del></dd>
+<dd class="option-desc"><p>Demo <em>emphasis</em>, <strong>strong</strong>, <del>strike</del></p>
+</dd>
 
 
 <dt class="option-term" id="option-options--p"><a class="option-anchor" href="#option-options--p"></a><code>-p</code> <em>spec</em></dt>
 <dt class="option-term" id="option-options---package"><a class="option-anchor" href="#option-options---package"></a><code>--package</code> <em>spec</em></dt>
-<dd class="option-desc">This has multiple flags.</dd>
+<dd class="option-desc"><p>This has multiple flags.</p>
+</dd>
 
 
 <dt class="option-term" id="option-options-named-arg…"><a class="option-anchor" href="#option-options-named-arg…"></a><em>named-arg…</em></dt>
-<dd class="option-desc">A named argument.</dd>
+<dd class="option-desc"><p>A named argument.</p>
+</dd>
 
 
 <dt class="option-term" id="option-options---complex"><a class="option-anchor" href="#option-options---complex"></a><code>--complex</code></dt>
-<dd class="option-desc">This option has a list.</p>
+<dd class="option-desc"><p>This option has a list.</p>
 <ul>
 <li>alpha</li>
 <li>beta</li>
 <li>gamma</li>
 </ul>
-<p>Then text continues here.</dd>
+<p>Then text continues here.</p>
+</dd>
 
 
 </dl>
@@ -57,19 +61,23 @@ A description of the command.
 
 <dl>
 <dt class="option-term" id="option-options-@filename"><a class="option-anchor" href="#option-options-@filename"></a><code>@</code><em>filename</em></dt>
-<dd class="option-desc">Load from filename.</dd>
+<dd class="option-desc"><p>Load from filename.</p>
+</dd>
 
 
 <dt class="option-term" id="option-options---foo"><a class="option-anchor" href="#option-options---foo"></a><code>--foo</code> [<em>bar</em>]</dt>
-<dd class="option-desc">Flag with optional value.</dd>
+<dd class="option-desc"><p>Flag with optional value.</p>
+</dd>
 
 
 <dt class="option-term" id="option-options---foo[=bar]"><a class="option-anchor" href="#option-options---foo[=bar]"></a><code>--foo</code>[<code>=</code><em>bar</em>]</dt>
-<dd class="option-desc">Alternate syntax for optional value (with required = for disambiguation).</dd>
+<dd class="option-desc"><p>Alternate syntax for optional value (with required = for disambiguation).</p>
+</dd>
 
 
 <dt class="option-term" id="option-options---split-block"><a class="option-anchor" href="#option-options---split-block"></a><code>--split-block</code></dt>
-<dd class="option-desc">An option where the description has a <code>block statement that is split across multiple lines</code></dd>
+<dd class="option-desc"><p>An option where the description has a <code>block statement that is split across multiple lines</code></p>
+</dd>
 
 
 </dl>

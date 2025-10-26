@@ -67,8 +67,7 @@ impl super::Formatter for MdFormatter {
         let rendered_block = self.render_html(block)?;
         write!(
             result,
-            "<dd class=\"option-desc\">{}</dd>\n\n",
-            unwrap_p(&rendered_block)
+            "<dd class=\"option-desc\">{rendered_block}</dd>\n\n",
         )?;
         Ok(result)
     }
