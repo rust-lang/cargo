@@ -7,6 +7,7 @@ use crate::git_gc::find_index;
 enum Backend {
     Git2,
     Gitoxide,
+    GitCli,
 }
 
 impl Backend {
@@ -14,6 +15,7 @@ impl Backend {
         match self {
             Backend::Git2 => "",
             Backend::Gitoxide => "-Zgitoxide=fetch",
+            Backend::GitCli => "--config=net.git-fetch-with-cli=true",
         }
     }
 
@@ -43,6 +45,11 @@ impl RepoMode {
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_two_revs() {
     fetch_dep_two_revs(Backend::Gitoxide)
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_dep_two_revs() {
+    fetch_dep_two_revs(Backend::GitCli)
 }
 
 fn fetch_dep_two_revs(backend: Backend) {
@@ -138,6 +145,11 @@ fn gitoxide_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
     fetch_shallow_dep_branch_and_rev(Backend::Gitoxide)
 }
 
+#[cargo_test]
+fn git_cli_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
+    fetch_shallow_dep_branch_and_rev(Backend::GitCli)
+}
+
 fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
@@ -201,6 +213,11 @@ fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
 #[cargo_test]
 fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
     fetch_shallow_dep_branch_to_rev(Backend::Gitoxide)
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
+    fetch_shallow_dep_branch_to_rev(Backend::GitCli)
 }
 
 fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
@@ -292,6 +309,11 @@ fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()>
     fetch_shallow_index_then_fetch_complete(Backend::Gitoxide, Backend::Git2)
 }
 
+#[cargo_test]
+fn git_cli_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_index_then_fetch_complete(Backend::GitCli, Backend::Git2)
+}
+
 fn fetch_shallow_index_then_fetch_complete(
     backend_1st: Backend,
     backend_2nd: Backend,
@@ -363,8 +385,28 @@ fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
 }
 
 #[cargo_test]
+fn git_cli_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_fetch_complete(Backend::GitCli, Backend::Git2)
+}
+
+#[cargo_test]
 fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
     fetch_shallow_dep_then_fetch_complete(Backend::Gitoxide, Backend::Gitoxide)
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_fetch_complete(Backend::GitCli, Backend::Gitoxide)
+}
+
+#[cargo_test]
+fn gitoxide_fetch_shallow_dep_then_git_cli_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_fetch_complete(Backend::Gitoxide, Backend::GitCli)
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_dep_then_git_cli_fetch_complete() -> anyhow::Result<()> {
+    fetch_shallow_dep_then_fetch_complete(Backend::GitCli, Backend::GitCli)
 }
 
 fn fetch_shallow_dep_then_fetch_complete(
@@ -518,6 +560,11 @@ fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
     fetch_shallow_index_then_preserve_shallow(Backend::Gitoxide)
 }
 
+#[cargo_test]
+fn git_cli_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
+    fetch_shallow_index_then_preserve_shallow(Backend::GitCli)
+}
+
 fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -602,6 +649,11 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
 #[cargo_test]
 fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
     fetch_complete_index_then_shallow(Backend::Gitoxide)
+}
+
+#[cargo_test]
+fn git_cli_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
+    fetch_complete_index_then_shallow(Backend::GitCli)
 }
 
 fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
@@ -709,6 +761,25 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
     fetch_shallow_index_then_abort_and_update(Backend::Gitoxide)
+}
+
+// Git CLI cannot recover from stale lock files like Gitoxide can.
+// This test simulates an aborted fetch by creating a stale shallow.lock file.
+// Gitoxide can detect and recover from this, but Git CLI will fail with:
+//
+// ```text
+// fatal: Unable to create \'/path/to/.git/shallow.lock\': File exists.
+//
+// Another git process seems to be running in this repository, e.g.
+// an editor opened by \'git commit\'. Please make sure all processes
+// are terminated then try again. If it still fails, a git process
+// may have crashed in this repository earlier:
+// remove the file manually to continue.
+// ```
+#[cargo_test]
+#[ignore = "Git CLI cannot recover from stale lock files"]
+fn git_cli_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
+    fetch_shallow_index_then_abort_and_update(Backend::GitCli)
 }
 
 fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result<()> {
