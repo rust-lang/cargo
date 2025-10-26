@@ -41,6 +41,16 @@ A description of the command.
 <dd class="option-desc">A named argument.</dd>
 
 
+<dt class="option-term" id="option-options---complex"><a class="option-anchor" href="#option-options---complex"></a><code>--complex</code></dt>
+<dd class="option-desc">This option has a list.</p>
+<ul>
+<li>alpha</li>
+<li>beta</li>
+<li>gamma</li>
+</ul>
+<p>Then text continues here.</dd>
+
+
 </dl>
 
 ### Common Options

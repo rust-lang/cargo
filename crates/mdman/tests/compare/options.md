@@ -40,6 +40,16 @@ This has multiple flags.
 A named argument.
 {{/option}}
 
+{{#option "`--complex`"}}
+This option has a list.
+
+- alpha
+- beta
+- gamma
+
+Then text continues here.
+{{/option}}
+
 {{/options}}
 
 ### Common Options

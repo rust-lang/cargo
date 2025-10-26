@@ -32,6 +32,17 @@ OPTIONS
        named-arg…
            A named argument.
 
+       --complex
+           This option has a list.
+
+           o  alpha
+
+           o  beta
+
+           o  gamma
+
+           Then text continues here.
+
    Common Options
        @filename
            Load from filename.
