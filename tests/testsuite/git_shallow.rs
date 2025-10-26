@@ -170,6 +170,7 @@ fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
     p.cargo("check")
         .arg_line(backend.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -231,6 +232,7 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
     p.cargo("check")
         .arg_line(backend.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -262,6 +264,7 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
     p.cargo("check")
         .arg_line(backend.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -297,6 +300,7 @@ fn fetch_shallow_index_then_git2_fetch_complete(backend: Backend) -> anyhow::Res
     p.cargo("fetch")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -381,6 +385,7 @@ fn fetch_shallow_dep_then_git2_fetch_complete(backend: Backend) -> anyhow::Resul
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -521,6 +526,7 @@ fn fetch_shallow_dep_then_gitoxide_fetch_complete(backend: Backend) -> anyhow::R
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg_line(RepoMode::Shallow.to_deps_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
@@ -565,6 +571,7 @@ fn fetch_shallow_dep_then_gitoxide_fetch_complete(backend: Backend) -> anyhow::R
 
     p.cargo("update")
         .arg_line(Backend::Gitoxide.to_arg()) // shallow-deps is omitted intentionally
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -641,6 +648,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
     p.cargo("fetch")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -659,6 +667,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -677,6 +686,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -717,6 +727,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         .build();
     p.cargo("fetch")
         .arg_line(backend.to_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -735,6 +746,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -758,6 +770,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -774,6 +787,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
 
     p.cargo("update")
         .arg_line(backend.to_arg())
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
@@ -813,6 +827,7 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
     p.cargo("fetch")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
@@ -836,6 +851,7 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
     p.cargo("update")
         .arg_line(backend.to_arg())
         .arg("-Zgit=shallow-index")
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
