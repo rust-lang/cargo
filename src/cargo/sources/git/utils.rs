@@ -1030,6 +1030,7 @@ pub fn fetch(
         }
     }
 
+    debug!("doing a fetch for {remote_url}");
     let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
         fetch_with_cli(repo, remote_url, &refspecs, tags, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
@@ -1077,6 +1078,8 @@ fn fetch_with_cli(
     tags: bool,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    debug!(target: "git-fetch", backend = "git-cli");
+
     let mut cmd = ProcessBuilder::new("git");
     cmd.arg("fetch");
     if tags {
@@ -1126,6 +1129,8 @@ fn fetch_with_gitoxide(
     shallow: gix::remote::fetch::Shallow,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    debug!(target: "git-fetch", backend = "gitoxide");
+
     let git2_repo = repo;
     let config_overrides = cargo_config_to_gitoxide_overrides(gctx)?;
     let repo_reinitialized = AtomicBool::default();
@@ -1234,7 +1239,8 @@ fn fetch_with_libgit2(
     shallow: gix::remote::fetch::Shallow,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    debug!("doing a fetch for {remote_url}");
+    debug!(target: "git-fetch", backend = "libgit2");
+
     let git_config = git2::Config::open_default()?;
     with_fetch_options(&git_config, remote_url, gctx, &mut |mut opts| {
         if tags {

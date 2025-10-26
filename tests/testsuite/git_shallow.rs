@@ -16,6 +16,14 @@ impl Backend {
             Backend::Gitoxide => "-Zgitoxide=fetch",
         }
     }
+
+    fn to_trace_log(&self) -> &str {
+        match self {
+            Backend::Git2 => r#"[..]git-fetch: backend="libgit2"[..]"#,
+            Backend::Gitoxide => r#"[..]git-fetch: backend="gitoxide"[..]"#,
+            Backend::GitCli => r#"[..]git-fetch: backend="git-cli"[..]"#,
+        }
+    }
 }
 
 enum RepoMode {
@@ -120,6 +128,8 @@ fn fetch_dep_two_revs(backend: Backend) {
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0") // respect `backend`
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 }
 
@@ -167,6 +177,8 @@ fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let db_paths = glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
@@ -229,6 +241,8 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let db_clone = gix::open_opts(
@@ -261,6 +275,8 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert!(
@@ -300,6 +316,8 @@ fn fetch_shallow_index_then_fetch_complete(
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend_1st.to_trace_log())
         .run();
 
     let shallow_repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -319,6 +337,8 @@ fn fetch_shallow_index_then_fetch_complete(
         .arg_line(backend_2nd.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend_2nd.to_trace_log())
         .run();
 
     let repo = gix::open_opts(
@@ -395,6 +415,8 @@ fn fetch_shallow_dep_then_fetch_complete(
         .arg_line(RepoMode::Shallow.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend_1st.to_trace_log())
         .run();
 
     let db_clone = gix::open_opts(
@@ -440,6 +462,8 @@ fn fetch_shallow_dep_then_fetch_complete(
         .arg_line(backend_2nd.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend_2nd.to_trace_log())
         .run();
 
     let db_clone = gix::open_opts(
@@ -515,6 +539,8 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -534,6 +560,8 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         .arg("-Zgit=shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert_eq!(
@@ -553,6 +581,8 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert_eq!(
@@ -594,6 +624,8 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         .arg_line(backend.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -613,6 +645,8 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let shallow_repo = gix::open_opts(
@@ -637,6 +671,8 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert_eq!(
@@ -654,6 +690,8 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         .arg_line(backend.to_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert_eq!(
@@ -694,6 +732,8 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -718,6 +758,8 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
         .arg("-Zgit=shallow-index")
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
+        .env("CARGO_LOG", "git-fetch=debug")
+        .with_stderr_contains(backend.to_trace_log())
         .run();
 
     assert!(!shallow_lock.is_file(), "the repository was re-initialized");
