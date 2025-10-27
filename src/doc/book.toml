@@ -3,6 +3,7 @@ title = "The Cargo Book"
 authors = ["Alex Crichton", "Steve Klabnik", "Carol Nichols", "with contributions from the Rust community"]
 
 [output.html]
+additional-css = ["theme/cargo.css"]
 smart-punctuation = true # Enable smart-punctuation feature for more than quotes.
 git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/src"
 edit-url-template = "https://github.com/rust-lang/cargo/edit/master/src/doc/{path}"

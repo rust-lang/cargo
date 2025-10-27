@@ -350,22 +350,25 @@ Notes:
 <dl>
 
 <dt class="option-term" id="option-cargo-metadata---no-deps"><a class="option-anchor" href="#option-cargo-metadata---no-deps"></a><code>--no-deps</code></dt>
-<dd class="option-desc">Output information only about the workspace members and don’t fetch
-dependencies.</dd>
+<dd class="option-desc"><p>Output information only about the workspace members and don’t fetch
+dependencies.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---format-version"><a class="option-anchor" href="#option-cargo-metadata---format-version"></a><code>--format-version</code> <em>version</em></dt>
-<dd class="option-desc">Specify the version of the output format to use. Currently <code>1</code> is the only
-possible value.</dd>
+<dd class="option-desc"><p>Specify the version of the output format to use. Currently <code>1</code> is the only
+possible value.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---filter-platform"><a class="option-anchor" href="#option-cargo-metadata---filter-platform"></a><code>--filter-platform</code> <em>triple</em></dt>
-<dd class="option-desc">This filters the <code>resolve</code> output to only include dependencies for the
+<dd class="option-desc"><p>This filters the <code>resolve</code> output to only include dependencies for the
 given <a href="../appendix/glossary.html#target">target triple</a>.
 Without this flag, the resolve includes all targets.</p>
 <p>Note that the dependencies listed in the “packages” array still includes all
 dependencies. Each package definition is intended to be an unaltered
-reproduction of the information within <code>Cargo.toml</code>.</dd>
+reproduction of the information within <code>Cargo.toml</code>.</p>
+</dd>
 
 
 </dl>
@@ -383,17 +386,20 @@ for more details.
 
 <dt class="option-term" id="option-cargo-metadata--F"><a class="option-anchor" href="#option-cargo-metadata--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-metadata---features"><a class="option-anchor" href="#option-cargo-metadata---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+<dd class="option-desc"><p>Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
-be specified multiple times, which enables all specified features.</dd>
+be specified multiple times, which enables all specified features.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---all-features"><a class="option-anchor" href="#option-cargo-metadata---all-features"></a><code>--all-features</code></dt>
-<dd class="option-desc">Activate all available features of all selected packages.</dd>
+<dd class="option-desc"><p>Activate all available features of all selected packages.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---no-default-features"><a class="option-anchor" href="#option-cargo-metadata---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
+<dd class="option-desc"><p>Do not activate the <code>default</code> feature of the selected packages.</p>
+</dd>
 
 
 </dl>
@@ -403,21 +409,23 @@ be specified multiple times, which enables all specified features.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-metadata--v"><a class="option-anchor" href="#option-cargo-metadata--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-metadata---verbose"><a class="option-anchor" href="#option-cargo-metadata---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
+<dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata--q"><a class="option-anchor" href="#option-cargo-metadata--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-metadata---quiet"><a class="option-anchor" href="#option-cargo-metadata---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.
+<dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---color"><a class="option-anchor" href="#option-cargo-metadata---color"></a><code>--color</code> <em>when</em></dt>
-<dd class="option-desc">Control when colored output is used. Valid values:</p>
+<dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
 terminal.</li>
@@ -425,7 +433,8 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 </dl>
 
@@ -433,12 +442,13 @@ terminal.</li>
 
 <dl>
 <dt class="option-term" id="option-cargo-metadata---manifest-path"><a class="option-anchor" href="#option-cargo-metadata---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
-<dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
-<code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
+<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
+<code>Cargo.toml</code> file in the current directory or any parent directory.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---locked"><a class="option-anchor" href="#option-cargo-metadata---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
+<dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
 <ul>
@@ -446,11 +456,12 @@ error when either of the following scenarios arises:</p>
 <li>Cargo attempted to change the lock file due to a different dependency resolution.</li>
 </ul>
 <p>It may be used in environments where deterministic builds are desired,
-such as in CI pipelines.</dd>
+such as in CI pipelines.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---offline"><a class="option-anchor" href="#option-cargo-metadata---offline"></a><code>--offline</code></dt>
-<dd class="option-desc">Prevents Cargo from accessing the network for any reason. Without this
+<dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
 proceed without the network if possible.</p>
@@ -459,15 +470,17 @@ mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---frozen"><a class="option-anchor" href="#option-cargo-metadata---frozen"></a><code>--frozen</code></dt>
-<dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+<dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---lockfile-path"><a class="option-anchor" href="#option-cargo-metadata---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<dd class="option-desc"><p>Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
 <code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
 <code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
 either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
@@ -475,7 +488,8 @@ This flag can be used to run most commands in read-only directories, writing loc
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</p>
+</dd>
 
 </dl>
 
@@ -484,37 +498,42 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 <dl>
 
 <dt class="option-term" id="option-cargo-metadata-+toolchain"><a class="option-anchor" href="#option-cargo-metadata-+toolchain"></a><code>+</code><em>toolchain</em></dt>
-<dd class="option-desc">If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+<dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
-for more information about how toolchain overrides work.</dd>
+for more information about how toolchain overrides work.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata---config"><a class="option-anchor" href="#option-cargo-metadata---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
-<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+<dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
-See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata--C"><a class="option-anchor" href="#option-cargo-metadata--C"></a><code>-C</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+<dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
 appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata--h"><a class="option-anchor" href="#option-cargo-metadata--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-metadata---help"><a class="option-anchor" href="#option-cargo-metadata---help"></a><code>--help</code></dt>
-<dd class="option-desc">Prints help information.</dd>
+<dd class="option-desc"><p>Prints help information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-metadata--Z"><a class="option-anchor" href="#option-cargo-metadata--Z"></a><code>-Z</code> <em>flag</em></dt>
-<dd class="option-desc">Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</dd>
+<dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
+</dd>
 
 
 </dl>

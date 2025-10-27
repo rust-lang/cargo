@@ -40,35 +40,42 @@ dependency will be listed in the command's output.
 <dl>
 
 <dt class="option-term" id="option-cargo-add---git"><a class="option-anchor" href="#option-cargo-add---git"></a><code>--git</code> <em>url</em></dt>
-<dd class="option-desc"><a href="../reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories">Git URL to add the specified crate from</a>.</dd>
+<dd class="option-desc"><p><a href="../reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories">Git URL to add the specified crate from</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---branch"><a class="option-anchor" href="#option-cargo-add---branch"></a><code>--branch</code> <em>branch</em></dt>
-<dd class="option-desc">Branch to use when adding from git.</dd>
+<dd class="option-desc"><p>Branch to use when adding from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---tag"><a class="option-anchor" href="#option-cargo-add---tag"></a><code>--tag</code> <em>tag</em></dt>
-<dd class="option-desc">Tag to use when adding from git.</dd>
+<dd class="option-desc"><p>Tag to use when adding from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---rev"><a class="option-anchor" href="#option-cargo-add---rev"></a><code>--rev</code> <em>sha</em></dt>
-<dd class="option-desc">Specific commit to use when adding from git.</dd>
+<dd class="option-desc"><p>Specific commit to use when adding from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---path"><a class="option-anchor" href="#option-cargo-add---path"></a><code>--path</code> <em>path</em></dt>
-<dd class="option-desc"><a href="../reference/specifying-dependencies.html#specifying-path-dependencies">Filesystem path</a> to local crate to add.</dd>
+<dd class="option-desc"><p><a href="../reference/specifying-dependencies.html#specifying-path-dependencies">Filesystem path</a> to local crate to add.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---base"><a class="option-anchor" href="#option-cargo-add---base"></a><code>--base</code> <em>base</em></dt>
-<dd class="option-desc">The <a href="../reference/unstable.html#path-bases">path base</a> to use when adding a local crate.</p>
-<p><a href="../reference/unstable.html#path-bases">Unstable (nightly-only)</a></dd>
+<dd class="option-desc"><p>The <a href="../reference/unstable.html#path-bases">path base</a> to use when adding a local crate.</p>
+<p><a href="../reference/unstable.html#path-bases">Unstable (nightly-only)</a></p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---registry"><a class="option-anchor" href="#option-cargo-add---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
+<dd class="option-desc"><p>Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
-<code>crates-io</code>.</dd>
+<code>crates-io</code>.</p>
+</dd>
 
 
 </dl>
@@ -78,16 +85,19 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dl>
 
 <dt class="option-term" id="option-cargo-add---dev"><a class="option-anchor" href="#option-cargo-add---dev"></a><code>--dev</code></dt>
-<dd class="option-desc">Add as a <a href="../reference/specifying-dependencies.html#development-dependencies">development dependency</a>.</dd>
+<dd class="option-desc"><p>Add as a <a href="../reference/specifying-dependencies.html#development-dependencies">development dependency</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---build"><a class="option-anchor" href="#option-cargo-add---build"></a><code>--build</code></dt>
-<dd class="option-desc">Add as a <a href="../reference/specifying-dependencies.html#build-dependencies">build dependency</a>.</dd>
+<dd class="option-desc"><p>Add as a <a href="../reference/specifying-dependencies.html#build-dependencies">build dependency</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---target"><a class="option-anchor" href="#option-cargo-add---target"></a><code>--target</code> <em>target</em></dt>
-<dd class="option-desc">Add as a dependency to the <a href="../reference/specifying-dependencies.html#platform-specific-dependencies">given target platform</a>.</p>
-<p>To avoid unexpected shell expansions, you may use quotes around each target, e.g., <code>--target 'cfg(unix)'</code>.</dd>
+<dd class="option-desc"><p>Add as a dependency to the <a href="../reference/specifying-dependencies.html#platform-specific-dependencies">given target platform</a>.</p>
+<p>To avoid unexpected shell expansions, you may use quotes around each target, e.g., <code>--target 'cfg(unix)'</code>.</p>
+</dd>
 
 
 </dl>
@@ -97,48 +107,57 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dl>
 
 <dt class="option-term" id="option-cargo-add---dry-run"><a class="option-anchor" href="#option-cargo-add---dry-run"></a><code>--dry-run</code></dt>
-<dd class="option-desc">Don’t actually write the manifest</dd>
+<dd class="option-desc"><p>Don’t actually write the manifest</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---rename"><a class="option-anchor" href="#option-cargo-add---rename"></a><code>--rename</code> <em>name</em></dt>
-<dd class="option-desc"><a href="../reference/specifying-dependencies.html#renaming-dependencies-in-cargotoml">Rename</a> the dependency.</dd>
+<dd class="option-desc"><p><a href="../reference/specifying-dependencies.html#renaming-dependencies-in-cargotoml">Rename</a> the dependency.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---optional"><a class="option-anchor" href="#option-cargo-add---optional"></a><code>--optional</code></dt>
-<dd class="option-desc">Mark the dependency as <a href="../reference/features.html#optional-dependencies">optional</a>.</dd>
+<dd class="option-desc"><p>Mark the dependency as <a href="../reference/features.html#optional-dependencies">optional</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---no-optional"><a class="option-anchor" href="#option-cargo-add---no-optional"></a><code>--no-optional</code></dt>
-<dd class="option-desc">Mark the dependency as <a href="../reference/features.html#optional-dependencies">required</a>.</dd>
+<dd class="option-desc"><p>Mark the dependency as <a href="../reference/features.html#optional-dependencies">required</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---public"><a class="option-anchor" href="#option-cargo-add---public"></a><code>--public</code></dt>
-<dd class="option-desc">Mark the dependency as public.</p>
+<dd class="option-desc"><p>Mark the dependency as public.</p>
 <p>The dependency can be referenced in your library’s public API.</p>
-<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
+<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---no-public"><a class="option-anchor" href="#option-cargo-add---no-public"></a><code>--no-public</code></dt>
-<dd class="option-desc">Mark the dependency as private.</p>
+<dd class="option-desc"><p>Mark the dependency as private.</p>
 <p>While you can use the crate in your implementation, it cannot be referenced in your public API.</p>
-<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
+<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---no-default-features"><a class="option-anchor" href="#option-cargo-add---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Disable the <a href="../reference/features.html#dependency-features">default features</a>.</dd>
+<dd class="option-desc"><p>Disable the <a href="../reference/features.html#dependency-features">default features</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---default-features"><a class="option-anchor" href="#option-cargo-add---default-features"></a><code>--default-features</code></dt>
-<dd class="option-desc">Re-enable the <a href="../reference/features.html#dependency-features">default features</a>.</dd>
+<dd class="option-desc"><p>Re-enable the <a href="../reference/features.html#dependency-features">default features</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--F"><a class="option-anchor" href="#option-cargo-add--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-add---features"><a class="option-anchor" href="#option-cargo-add---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of <a href="../reference/features.html#dependency-features">features to
+<dd class="option-desc"><p>Space or comma separated list of <a href="../reference/features.html#dependency-features">features to
 activate</a>. When adding multiple
 crates, the features for a specific crate may be enabled with
 <code>package-name/feature-name</code> syntax. This flag may be specified multiple times,
-which enables all specified features.</dd>
+which enables all specified features.</p>
+</dd>
 
 
 </dl>
@@ -149,21 +168,23 @@ which enables all specified features.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-add--v"><a class="option-anchor" href="#option-cargo-add--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-add---verbose"><a class="option-anchor" href="#option-cargo-add---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
+<dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--q"><a class="option-anchor" href="#option-cargo-add--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-add---quiet"><a class="option-anchor" href="#option-cargo-add---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.
+<dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---color"><a class="option-anchor" href="#option-cargo-add---color"></a><code>--color</code> <em>when</em></dt>
-<dd class="option-desc">Control when colored output is used. Valid values:</p>
+<dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
 terminal.</li>
@@ -171,7 +192,8 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 </dl>
 
@@ -179,21 +201,24 @@ terminal.</li>
 
 <dl>
 <dt class="option-term" id="option-cargo-add---manifest-path"><a class="option-anchor" href="#option-cargo-add---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
-<dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
-<code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
+<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
+<code>Cargo.toml</code> file in the current directory or any parent directory.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--p"><a class="option-anchor" href="#option-cargo-add--p"></a><code>-p</code> <em>spec</em></dt>
 <dt class="option-term" id="option-cargo-add---package"><a class="option-anchor" href="#option-cargo-add---package"></a><code>--package</code> <em>spec</em></dt>
-<dd class="option-desc">Add dependencies to only the specified package.</dd>
+<dd class="option-desc"><p>Add dependencies to only the specified package.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---ignore-rust-version"><a class="option-anchor" href="#option-cargo-add---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+<dd class="option-desc"><p>Ignore <code>rust-version</code> specification in packages.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---locked"><a class="option-anchor" href="#option-cargo-add---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
+<dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
 <ul>
@@ -201,11 +226,12 @@ error when either of the following scenarios arises:</p>
 <li>Cargo attempted to change the lock file due to a different dependency resolution.</li>
 </ul>
 <p>It may be used in environments where deterministic builds are desired,
-such as in CI pipelines.</dd>
+such as in CI pipelines.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---offline"><a class="option-anchor" href="#option-cargo-add---offline"></a><code>--offline</code></dt>
-<dd class="option-desc">Prevents Cargo from accessing the network for any reason. Without this
+<dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
 proceed without the network if possible.</p>
@@ -214,15 +240,17 @@ mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---frozen"><a class="option-anchor" href="#option-cargo-add---frozen"></a><code>--frozen</code></dt>
-<dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+<dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---lockfile-path"><a class="option-anchor" href="#option-cargo-add---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<dd class="option-desc"><p>Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
 <code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
 <code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
 either use the lockfile from <em>PATH</em>, or write a new lockfile into the provided <em>PATH</em> if it doesn’t exist.
@@ -230,7 +258,8 @@ This flag can be used to run most commands in read-only directories, writing loc
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</p>
+</dd>
 
 </dl>
 
@@ -239,37 +268,42 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 <dl>
 
 <dt class="option-term" id="option-cargo-add-+toolchain"><a class="option-anchor" href="#option-cargo-add-+toolchain"></a><code>+</code><em>toolchain</em></dt>
-<dd class="option-desc">If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+<dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
-for more information about how toolchain overrides work.</dd>
+for more information about how toolchain overrides work.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add---config"><a class="option-anchor" href="#option-cargo-add---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
-<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+<dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
-See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--C"><a class="option-anchor" href="#option-cargo-add--C"></a><code>-C</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+<dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
 appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--h"><a class="option-anchor" href="#option-cargo-add--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-add---help"><a class="option-anchor" href="#option-cargo-add---help"></a><code>--help</code></dt>
-<dd class="option-desc">Prints help information.</dd>
+<dd class="option-desc"><p>Prints help information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-add--Z"><a class="option-anchor" href="#option-cargo-add--Z"></a><code>-Z</code> <em>flag</em></dt>
-<dd class="option-desc">Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</dd>
+<dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
+</dd>
 
 
 </dl>

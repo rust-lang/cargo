@@ -92,89 +92,106 @@ will be used, beginning discovery at `$PATH/.cargo/config.toml`.
 
 <dt class="option-term" id="option-cargo-install---vers"><a class="option-anchor" href="#option-cargo-install---vers"></a><code>--vers</code> <em>version</em></dt>
 <dt class="option-term" id="option-cargo-install---version"><a class="option-anchor" href="#option-cargo-install---version"></a><code>--version</code> <em>version</em></dt>
-<dd class="option-desc">Specify a version to install. This may be a <a href="../reference/specifying-dependencies.html">version
+<dd class="option-desc"><p>Specify a version to install. This may be a <a href="../reference/specifying-dependencies.html">version
 requirement</a>, like <code>~1.2</code>, to have Cargo
 select the newest version from the given requirement. If the version does not
 have a requirement operator (such as <code>^</code> or <code>~</code>), then it must be in the form
 <em>MAJOR.MINOR.PATCH</em>, and will install exactly that version; it is <em>not</em>
-treated as a caret requirement like Cargo dependencies are.</dd>
+treated as a caret requirement like Cargo dependencies are.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---git"><a class="option-anchor" href="#option-cargo-install---git"></a><code>--git</code> <em>url</em></dt>
-<dd class="option-desc">Git URL to install the specified crate from.</dd>
+<dd class="option-desc"><p>Git URL to install the specified crate from.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---branch"><a class="option-anchor" href="#option-cargo-install---branch"></a><code>--branch</code> <em>branch</em></dt>
-<dd class="option-desc">Branch to use when installing from git.</dd>
+<dd class="option-desc"><p>Branch to use when installing from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---tag"><a class="option-anchor" href="#option-cargo-install---tag"></a><code>--tag</code> <em>tag</em></dt>
-<dd class="option-desc">Tag to use when installing from git.</dd>
+<dd class="option-desc"><p>Tag to use when installing from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---rev"><a class="option-anchor" href="#option-cargo-install---rev"></a><code>--rev</code> <em>sha</em></dt>
-<dd class="option-desc">Specific commit to use when installing from git.</dd>
+<dd class="option-desc"><p>Specific commit to use when installing from git.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---path"><a class="option-anchor" href="#option-cargo-install---path"></a><code>--path</code> <em>path</em></dt>
-<dd class="option-desc">Filesystem path to local crate to install from.</dd>
+<dd class="option-desc"><p>Filesystem path to local crate to install from.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---list"><a class="option-anchor" href="#option-cargo-install---list"></a><code>--list</code></dt>
-<dd class="option-desc">List all installed packages and their versions.</dd>
+<dd class="option-desc"><p>List all installed packages and their versions.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--n"><a class="option-anchor" href="#option-cargo-install--n"></a><code>-n</code></dt>
 <dt class="option-term" id="option-cargo-install---dry-run"><a class="option-anchor" href="#option-cargo-install---dry-run"></a><code>--dry-run</code></dt>
-<dd class="option-desc">(unstable) Perform all checks without installing.</dd>
+<dd class="option-desc"><p>(unstable) Perform all checks without installing.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--f"><a class="option-anchor" href="#option-cargo-install--f"></a><code>-f</code></dt>
 <dt class="option-term" id="option-cargo-install---force"><a class="option-anchor" href="#option-cargo-install---force"></a><code>--force</code></dt>
-<dd class="option-desc">Force overwriting existing crates or binaries. This can be used if a package
+<dd class="option-desc"><p>Force overwriting existing crates or binaries. This can be used if a package
 has installed a binary with the same name as another package. This is also
 useful if something has changed on the system that you want to rebuild with,
-such as a newer version of <code>rustc</code>.</dd>
+such as a newer version of <code>rustc</code>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---no-track"><a class="option-anchor" href="#option-cargo-install---no-track"></a><code>--no-track</code></dt>
-<dd class="option-desc">By default, Cargo keeps track of the installed packages with a metadata file
+<dd class="option-desc"><p>By default, Cargo keeps track of the installed packages with a metadata file
 stored in the installation root directory. This flag tells Cargo not to use or
 create that file. With this flag, Cargo will refuse to overwrite any existing
 files unless the <code>--force</code> flag is used. This also disables Cargo’s ability to
 protect against multiple concurrent invocations of Cargo installing at the
-same time.</dd>
+same time.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---bin"><a class="option-anchor" href="#option-cargo-install---bin"></a><code>--bin</code> <em>name</em>…</dt>
-<dd class="option-desc">Install only the specified binary.</dd>
+<dd class="option-desc"><p>Install only the specified binary.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---bins"><a class="option-anchor" href="#option-cargo-install---bins"></a><code>--bins</code></dt>
-<dd class="option-desc">Install all binaries. This is the default behavior.</dd>
+<dd class="option-desc"><p>Install all binaries. This is the default behavior.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---example"><a class="option-anchor" href="#option-cargo-install---example"></a><code>--example</code> <em>name</em>…</dt>
-<dd class="option-desc">Install only the specified example.</dd>
+<dd class="option-desc"><p>Install only the specified example.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---examples"><a class="option-anchor" href="#option-cargo-install---examples"></a><code>--examples</code></dt>
-<dd class="option-desc">Install all examples.</dd>
+<dd class="option-desc"><p>Install all examples.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---root"><a class="option-anchor" href="#option-cargo-install---root"></a><code>--root</code> <em>dir</em></dt>
-<dd class="option-desc">Directory to install packages into.</dd>
+<dd class="option-desc"><p>Directory to install packages into.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---registry"><a class="option-anchor" href="#option-cargo-install---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
+<dd class="option-desc"><p>Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
-<code>crates-io</code>.</dd>
+<code>crates-io</code>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---index"><a class="option-anchor" href="#option-cargo-install---index"></a><code>--index</code> <em>index</em></dt>
-<dd class="option-desc">The URL of the registry index to use.</dd>
+<dd class="option-desc"><p>The URL of the registry index to use.</p>
+</dd>
 
 
 </dl>
@@ -192,17 +209,20 @@ for more details.
 
 <dt class="option-term" id="option-cargo-install--F"><a class="option-anchor" href="#option-cargo-install--F"></a><code>-F</code> <em>features</em></dt>
 <dt class="option-term" id="option-cargo-install---features"><a class="option-anchor" href="#option-cargo-install---features"></a><code>--features</code> <em>features</em></dt>
-<dd class="option-desc">Space or comma separated list of features to activate. Features of workspace
+<dd class="option-desc"><p>Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
-be specified multiple times, which enables all specified features.</dd>
+be specified multiple times, which enables all specified features.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---all-features"><a class="option-anchor" href="#option-cargo-install---all-features"></a><code>--all-features</code></dt>
-<dd class="option-desc">Activate all available features of all selected packages.</dd>
+<dd class="option-desc"><p>Activate all available features of all selected packages.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---no-default-features"><a class="option-anchor" href="#option-cargo-install---no-default-features"></a><code>--no-default-features</code></dt>
-<dd class="option-desc">Do not activate the <code>default</code> feature of the selected packages.</dd>
+<dd class="option-desc"><p>Do not activate the <code>default</code> feature of the selected packages.</p>
+</dd>
 
 
 </dl>
@@ -212,7 +232,7 @@ be specified multiple times, which enables all specified features.</dd>
 <dl>
 
 <dt class="option-term" id="option-cargo-install---target"><a class="option-anchor" href="#option-cargo-install---target"></a><code>--target</code> <em>triple</em></dt>
-<dd class="option-desc">Install for the specified target architecture. The default is the host architecture. The general format of the triple is
+<dd class="option-desc"><p>Install for the specified target architecture. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>.</p>
 <p>Possible values:</p>
 <ul>
@@ -223,32 +243,36 @@ be specified multiple times, which enables all specified features.</dd>
 <p>This may also be specified with the <code>build.target</code> <a href="../reference/config.html">config value</a>.</p>
 <p>Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-<a href="../reference/build-cache.html">build cache</a> documentation for more details.</dd>
+<a href="../reference/build-cache.html">build cache</a> documentation for more details.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---target-dir"><a class="option-anchor" href="#option-cargo-install---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
-<dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
+<dd class="option-desc"><p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to a new temporary folder located in the
 temporary directory of the platform.</p>
 <p>When using <code>--path</code>, by default it will use <code>target</code> directory in the workspace
 of the local crate unless <code>--target-dir</code>
-is specified.</dd>
+is specified.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---debug"><a class="option-anchor" href="#option-cargo-install---debug"></a><code>--debug</code></dt>
-<dd class="option-desc">Build with the <code>dev</code> profile instead of the <code>release</code> profile.
-See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
+<dd class="option-desc"><p>Build with the <code>dev</code> profile instead of the <code>release</code> profile.
+See also the <code>--profile</code> option for choosing a specific profile by name.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---profile"><a class="option-anchor" href="#option-cargo-install---profile"></a><code>--profile</code> <em>name</em></dt>
-<dd class="option-desc">Install with the given profile.
-See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
+<dd class="option-desc"><p>Install with the given profile.
+See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
-<dd class="option-desc">Output information how long each compilation takes, and track concurrency
+<dd class="option-desc"><p>Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
 Specifying an output format (rather than the default) is unstable and requires
@@ -261,7 +285,8 @@ to look at older runs. HTML output is suitable for human consumption only,
 and does not provide machine-readable timing data.</li>
 <li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
 information about timing information.</li>
-</ul></dd>
+</ul>
+</dd>
 
 
 
@@ -271,11 +296,12 @@ information about timing information.</li>
 
 <dl>
 <dt class="option-term" id="option-cargo-install---ignore-rust-version"><a class="option-anchor" href="#option-cargo-install---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+<dd class="option-desc"><p>Ignore <code>rust-version</code> specification in packages.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---locked"><a class="option-anchor" href="#option-cargo-install---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
+<dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
 <ul>
@@ -283,11 +309,12 @@ error when either of the following scenarios arises:</p>
 <li>Cargo attempted to change the lock file due to a different dependency resolution.</li>
 </ul>
 <p>It may be used in environments where deterministic builds are desired,
-such as in CI pipelines.</dd>
+such as in CI pipelines.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---offline"><a class="option-anchor" href="#option-cargo-install---offline"></a><code>--offline</code></dt>
-<dd class="option-desc">Prevents Cargo from accessing the network for any reason. Without this
+<dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
 proceed without the network if possible.</p>
@@ -296,11 +323,13 @@ mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
-<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
+<p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---frozen"><a class="option-anchor" href="#option-cargo-install---frozen"></a><code>--frozen</code></dt>
-<dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
+<dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
+</dd>
 
 </dl>
 
@@ -309,21 +338,23 @@ offline.</p>
 <dl>
 <dt class="option-term" id="option-cargo-install--j"><a class="option-anchor" href="#option-cargo-install--j"></a><code>-j</code> <em>N</em></dt>
 <dt class="option-term" id="option-cargo-install---jobs"><a class="option-anchor" href="#option-cargo-install---jobs"></a><code>--jobs</code> <em>N</em></dt>
-<dd class="option-desc">Number of parallel jobs to run. May also be specified with the
+<dd class="option-desc"><p>Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
 parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
-Should not be 0.</dd>
+Should not be 0.</p>
+</dd>
 
 <dt class="option-term" id="option-cargo-install---keep-going"><a class="option-anchor" href="#option-cargo-install---keep-going"></a><code>--keep-going</code></dt>
-<dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
+<dd class="option-desc"><p>Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
 <p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
 one of which fails to build, <code>cargo install -j1</code> may or may not build the
 one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo install -j1 --keep-going</code> would definitely run both
-builds, even if the one run first fails.</dd>
+builds, even if the one run first fails.</p>
+</dd>
 
 </dl>
 
@@ -332,21 +363,23 @@ builds, even if the one run first fails.</dd>
 <dl>
 <dt class="option-term" id="option-cargo-install--v"><a class="option-anchor" href="#option-cargo-install--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-install---verbose"><a class="option-anchor" href="#option-cargo-install---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
+<dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--q"><a class="option-anchor" href="#option-cargo-install--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-install---quiet"><a class="option-anchor" href="#option-cargo-install---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.
+<dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---color"><a class="option-anchor" href="#option-cargo-install---color"></a><code>--color</code> <em>when</em></dt>
-<dd class="option-desc">Control when colored output is used. Valid values:</p>
+<dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
 terminal.</li>
@@ -354,11 +387,12 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---message-format"><a class="option-anchor" href="#option-cargo-install---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
-<dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
+<dd class="option-desc"><p>The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
 <ul>
 <li><code>human</code> (default): Display in a human-readable text format. Conflicts with
@@ -377,7 +411,8 @@ scheme. Cannot be used with <code>human</code> or <code>short</code>.</li>
 in JSON messages printed, but instead Cargo itself should render the
 JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
-</ul></dd>
+</ul>
+</dd>
 
 
 </dl>
@@ -387,37 +422,42 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 <dl>
 
 <dt class="option-term" id="option-cargo-install-+toolchain"><a class="option-anchor" href="#option-cargo-install-+toolchain"></a><code>+</code><em>toolchain</em></dt>
-<dd class="option-desc">If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+<dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
-for more information about how toolchain overrides work.</dd>
+for more information about how toolchain overrides work.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install---config"><a class="option-anchor" href="#option-cargo-install---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
-<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+<dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
-See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--C"><a class="option-anchor" href="#option-cargo-install--C"></a><code>-C</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+<dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
 appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--h"><a class="option-anchor" href="#option-cargo-install--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-install---help"><a class="option-anchor" href="#option-cargo-install---help"></a><code>--help</code></dt>
-<dd class="option-desc">Prints help information.</dd>
+<dd class="option-desc"><p>Prints help information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-install--Z"><a class="option-anchor" href="#option-cargo-install--Z"></a><code>-Z</code> <em>flag</em></dt>
-<dd class="option-desc">Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</dd>
+<dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
+</dd>
 
 
 </dl>

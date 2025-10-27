@@ -83,33 +83,38 @@ from keeping or even spreading the leaked credentials.
 
 <dt class="option-term" id="option-cargo-yank---vers"><a class="option-anchor" href="#option-cargo-yank---vers"></a><code>--vers</code> <em>version</em></dt>
 <dt class="option-term" id="option-cargo-yank---version"><a class="option-anchor" href="#option-cargo-yank---version"></a><code>--version</code> <em>version</em></dt>
-<dd class="option-desc">The version to yank or un-yank.</dd>
+<dd class="option-desc"><p>The version to yank or un-yank.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---undo"><a class="option-anchor" href="#option-cargo-yank---undo"></a><code>--undo</code></dt>
-<dd class="option-desc">Undo a yank, putting a version back into the index.</dd>
+<dd class="option-desc"><p>Undo a yank, putting a version back into the index.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---token"><a class="option-anchor" href="#option-cargo-yank---token"></a><code>--token</code> <em>token</em></dt>
-<dd class="option-desc">API token to use when authenticating. This overrides the token stored in
+<dd class="option-desc"><p>API token to use when authenticating. This overrides the token stored in
 the credentials file (which is created by <a href="cargo-login.html">cargo-login(1)</a>).</p>
 <p><a href="../reference/config.html">Cargo config</a> environment variables can be
 used to override the tokens stored in the credentials file. The token for
 crates.io may be specified with the <code>CARGO_REGISTRY_TOKEN</code> environment
 variable. Tokens for other registries may be specified with environment
 variables of the form <code>CARGO_REGISTRIES_NAME_TOKEN</code> where <code>NAME</code> is the name
-of the registry in all capital letters.</dd>
+of the registry in all capital letters.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---index"><a class="option-anchor" href="#option-cargo-yank---index"></a><code>--index</code> <em>index</em></dt>
-<dd class="option-desc">The URL of the registry index to use.</dd>
+<dd class="option-desc"><p>The URL of the registry index to use.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---registry"><a class="option-anchor" href="#option-cargo-yank---registry"></a><code>--registry</code> <em>registry</em></dt>
-<dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
+<dd class="option-desc"><p>Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
-<code>crates-io</code>.</dd>
+<code>crates-io</code>.</p>
+</dd>
 
 
 </dl>
@@ -120,21 +125,23 @@ which is defined by the <code>registry.default</code> config key which defaults 
 
 <dt class="option-term" id="option-cargo-yank--v"><a class="option-anchor" href="#option-cargo-yank--v"></a><code>-v</code></dt>
 <dt class="option-term" id="option-cargo-yank---verbose"><a class="option-anchor" href="#option-cargo-yank---verbose"></a><code>--verbose</code></dt>
-<dd class="option-desc">Use verbose output. May be specified twice for “very verbose” output which
+<dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank--q"><a class="option-anchor" href="#option-cargo-yank--q"></a><code>-q</code></dt>
 <dt class="option-term" id="option-cargo-yank---quiet"><a class="option-anchor" href="#option-cargo-yank---quiet"></a><code>--quiet</code></dt>
-<dd class="option-desc">Do not print cargo log messages.
+<dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---color"><a class="option-anchor" href="#option-cargo-yank---color"></a><code>--color</code> <em>when</em></dt>
-<dd class="option-desc">Control when colored output is used. Valid values:</p>
+<dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
 terminal.</li>
@@ -142,7 +149,8 @@ terminal.</li>
 <li><code>never</code>: Never display colors.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
-<a href="../reference/config.html">config value</a>.</dd>
+<a href="../reference/config.html">config value</a>.</p>
+</dd>
 
 
 </dl>
@@ -152,37 +160,42 @@ terminal.</li>
 <dl>
 
 <dt class="option-term" id="option-cargo-yank-+toolchain"><a class="option-anchor" href="#option-cargo-yank-+toolchain"></a><code>+</code><em>toolchain</em></dt>
-<dd class="option-desc">If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
+<dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
 See the <a href="https://rust-lang.github.io/rustup/overrides.html">rustup documentation</a>
-for more information about how toolchain overrides work.</dd>
+for more information about how toolchain overrides work.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank---config"><a class="option-anchor" href="#option-cargo-yank---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
-<dd class="option-desc">Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
+<dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
-See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</dd>
+See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank--C"><a class="option-anchor" href="#option-cargo-yank--C"></a><code>-C</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the current working directory before executing any specified operations. This affects
+<dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
 appear before the command name, for example <code>cargo -C path/to/my-project build</code>.</p>
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/10098">#10098</a>).</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank--h"><a class="option-anchor" href="#option-cargo-yank--h"></a><code>-h</code></dt>
 <dt class="option-term" id="option-cargo-yank---help"><a class="option-anchor" href="#option-cargo-yank---help"></a><code>--help</code></dt>
-<dd class="option-desc">Prints help information.</dd>
+<dd class="option-desc"><p>Prints help information.</p>
+</dd>
 
 
 <dt class="option-term" id="option-cargo-yank--Z"><a class="option-anchor" href="#option-cargo-yank--Z"></a><code>-Z</code> <em>flag</em></dt>
-<dd class="option-desc">Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</dd>
+<dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
+</dd>
 
 
 </dl>

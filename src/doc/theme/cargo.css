@@ -1,0 +1,5 @@
+dd > p {
+    /* For loose definitions that have a p tag inside, don't add a bunch of
+    space before the definition. This can removed after updating to mdbook 0.5. */
+    margin-top: 0;
+}
