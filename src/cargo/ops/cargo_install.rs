@@ -317,6 +317,14 @@ impl<'gctx> InstallablePackage<'gctx> {
         self.gctx.shell().status("Installing", &self.pkg)?;
 
         let dst = self.root.join("bin").into_path_unlocked();
+        // `dst` is usually absolute; if not, make it absolute so messages are clearer.
+        // See: https://github.com/rust-lang/cargo/issues/16023
+        let cwd = self.gctx.cwd();
+        let dst_abs_root = if dst.is_absolute() {
+            paths::normalize_path(dst.as_path())
+        } else {
+            paths::normalize_path(&cwd.join(&dst))
+        };
 
         let mut td_opt = None;
         let mut needs_cleanup = false;
@@ -458,13 +466,18 @@ impl<'gctx> InstallablePackage<'gctx> {
         // Move the temporary copies into `dst` starting with new binaries.
         for bin in to_install.iter() {
             let src = staging_dir.path().join(bin);
-            let dst = dst.join(bin);
-            self.gctx.shell().status("Installing", dst.display())?;
+            let dst_rel = dst.join(bin);
+            let dst_abs = dst_abs_root.join(bin);
+            self.gctx.shell().status("Installing", dst_abs.display())?;
             if !dry_run {
-                fs::rename(&src, &dst).with_context(|| {
-                    format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                fs::rename(&src, &dst_rel).with_context(|| {
+                    format!(
+                        "failed to move `{}` to `{}`",
+                        src.display(),
+                        dst_abs.display()
+                    )
                 })?;
-                installed.bins.push(dst);
+                installed.bins.push(dst_rel);
                 successful_bins.insert(bin.to_string());
             }
         }
@@ -475,11 +488,16 @@ impl<'gctx> InstallablePackage<'gctx> {
             let mut try_install = || -> CargoResult<()> {
                 for &bin in to_replace.iter() {
                     let src = staging_dir.path().join(bin);
-                    let dst = dst.join(bin);
-                    self.gctx.shell().status("Replacing", dst.display())?;
+                    let dst_rel = dst.join(bin);
+                    let dst_abs = dst_abs_root.join(bin);
+                    self.gctx.shell().status("Replacing", dst_abs.display())?;
                     if !dry_run {
-                        fs::rename(&src, &dst).with_context(|| {
-                            format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                        fs::rename(&src, &dst_rel).with_context(|| {
+                            format!(
+                                "failed to move `{}` to `{}`",
+                                src.display(),
+                                dst_abs.display()
+                            )
                         })?;
                         successful_bins.insert(bin.to_string());
                     }
@@ -777,6 +795,14 @@ pub fn install(
     if installed_anything {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
+        // `dst` is usually absolute; if not, make it absolute so messages are clearer.
+        // See: https://github.com/rust-lang/cargo/issues/16023
+        let cwd = gctx.cwd();
+        let dst_abs = if dst.is_absolute() {
+            paths::normalize_path(dst.as_path())
+        } else {
+            paths::normalize_path(&cwd.join(&dst))
+        };
         let path = gctx.get_env_os("PATH").unwrap_or_default();
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
@@ -784,7 +810,7 @@ pub fn install(
             gctx.shell().warn(&format!(
                 "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",
-                dst.display()
+                dst_abs.display()
             ))?;
         }
     }
