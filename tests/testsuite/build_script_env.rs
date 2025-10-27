@@ -452,3 +452,22 @@ fn rerun_if_env_newly_added_in_config() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn build_script_debug_assertions_dev() {
+    // Test that CARGO_CFG_DEBUG_ASSERTIONS is set in dev profile (default)
+    let build_rs = r#"
+        fn main() {
+            let has_debug_assertions = std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_some();
+            assert!(has_debug_assertions, "CARGO_CFG_DEBUG_ASSERTIONS should be set in dev profile");
+        }
+    "#;
+
+    let p = project()
+        .file("src/lib.rs", r#""#)
+        .file("build.rs", build_rs)
+        .build();
+
+    // Default dev profile has debug-assertions enabled
+    p.cargo("check").run();
+}
