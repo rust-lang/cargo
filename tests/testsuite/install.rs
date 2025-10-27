@@ -538,6 +538,42 @@ fn relative_install_location_without_trailing_slash() {
 }
 
 #[cargo_test]
+fn relative_install_location_with_trailing_slash() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let root_t1 = root.join("t1");
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/config.toml"),
+        r#"
+            [install]
+            root = "t1/"
+        "#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_process("install --path .");
+    cmd.cwd(p.root());
+    cmd.with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/t1/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    assert_has_installed_exe(&root_t1, "foo");
+    assert_has_not_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
 fn install_path() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
