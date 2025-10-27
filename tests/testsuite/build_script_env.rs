@@ -490,3 +490,35 @@ fn build_script_debug_assertions_release() {
     // Release profile has debug-assertions disabled by default
     p.cargo("check --release").run();
 }
+
+#[cargo_test]
+fn build_script_debug_assertions_override_dev() {
+    // Test that CARGO_CFG_DEBUG_ASSERTIONS respects profile overrides
+    // Dev profile with debug-assertions explicitly DISABLED
+    let build_rs = r#"
+        fn main() {
+            let has_debug_assertions = std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_some();
+            assert!(!has_debug_assertions, "CARGO_CFG_DEBUG_ASSERTIONS should NOT be set when dev profile disables it");
+        }
+    "#;
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                [profile.dev]
+                debug-assertions = false
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .file("build.rs", build_rs)
+        .build();
+
+    // Dev profile with debug-assertions explicitly disabled
+    p.cargo("check").run();
+}
