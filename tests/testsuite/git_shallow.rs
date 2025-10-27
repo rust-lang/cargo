@@ -40,6 +40,13 @@ impl RepoMode {
             RepoMode::Shallow => "-Zgit=shallow-deps",
         }
     }
+
+    fn to_index_arg(&self) -> &'static str {
+        match self {
+            RepoMode::Complete => "",
+            RepoMode::Shallow => "-Zgit=shallow-index",
+        }
+    }
 }
 
 #[cargo_test]
@@ -335,7 +342,7 @@ fn fetch_shallow_index_then_fetch_complete(
         .build();
     p.cargo("fetch")
         .arg_line(backend_1st.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -583,7 +590,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         .build();
     p.cargo("fetch")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -604,7 +611,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
+        .arg(RepoMode::Shallow.to_index_arg()) // NOTE: the flag needs to be consistent or else a different index is created
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -625,7 +632,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
     Package::new("bar", "1.3.0").publish();
     p.cargo("update")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -694,7 +701,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -720,7 +727,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
     Package::new("bar", "1.3.0").publish();
     p.cargo("update")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -800,7 +807,7 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
         .build();
     p.cargo("fetch")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
@@ -826,7 +833,7 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
         .arg_line(backend.to_arg())
-        .arg("-Zgit=shallow-index")
+        .arg(RepoMode::Shallow.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
