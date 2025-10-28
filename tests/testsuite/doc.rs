@@ -250,9 +250,9 @@ fn doc_multiple_targets_same_name_lib() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -346,9 +346,9 @@ fn doc_multiple_targets_same_name_bin() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] document output filename collision
-The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
-Only one may be documented at once since they output to the same path.
-Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
+       The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
+       Only one may be documented at once since they output to the same path.
+       Consider documenting only one, renaming one, or marking one with `doc = false` in Cargo.toml.
 
 "#]])
         .run();
@@ -2896,9 +2896,17 @@ fn rustdoc_failure_hides_command_line_by_default() {
     // ... but it still does so if requested with `--verbose`.
     p.cargo("doc --verbose")
         .with_stderr_data(str![[r#"
-...
-Caused by:
-  process didn't exit successfully[..]rustdoc[..]
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=abed4ffdd90a31bc -L dependency=[ROOT]/foo/target/debug/deps --crate-version 0.0.1`
+[ERROR] expected one of `!` or `::`, found `rust`
+ --> src/lib.rs:1:9
+  |
+1 | invalid rust code
+  |         ^^^^ expected one of `!` or `::`
+
+[ERROR] could not document `foo`
+  |
+  = caused by: process didn't exit successfully: `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=abed4ffdd90a31bc -L dependency=[ROOT]/foo/target/debug/deps --crate-version 0.0.1` ([EXIT_STATUS]: 1)
 
 "#]])
         .with_status(101)
@@ -2916,7 +2924,7 @@ fn rustdoc_depinfo_gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 
 "#]])
         .run();

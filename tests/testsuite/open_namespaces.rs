@@ -22,13 +22,13 @@ fn within_namespace_requires_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `open-namespaces` is required
-
-  The package requires the Cargo feature called `open-namespaces`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider adding `cargo-features = ["open-namespaces"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#open-namespaces for more information about the status of this feature.
+  |
+  = caused by: feature `open-namespaces` is required
+               
+               The package requires the Cargo feature called `open-namespaces`, but that feature is not stabilized in this version of Cargo (1.92.0 (3e9b30d52 2025-10-08)).
+               Consider adding `cargo-features = ["open-namespaces"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+               See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#open-namespaces for more information about the status of this feature.
+               
 
 "#]])
         .run();
@@ -452,9 +452,8 @@ fn publish_namespaced() {
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo::bar v0.0.1 ([ROOT]/foo)
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  cannot publish with `open-namespaces`
+  |
+  = caused by: cannot publish with `open-namespaces`
 
 "#]])
         .run();

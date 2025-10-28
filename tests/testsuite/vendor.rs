@@ -1366,12 +1366,11 @@ fn git_duplicate() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] b v0.5.0 (registry `dummy-registry`)
 [ERROR] failed to sync
-
-Caused by:
-  found duplicate version of package `b v0.5.0` vendored from two sources:
-
-  	source 1: registry `crates-io`
-  	source 2: [ROOTURL]/a#[..]
+  |
+  = caused by: found duplicate version of package `b v0.5.0` vendored from two sources:
+               
+               	source 1: registry `crates-io`
+               	source 2: [ROOTURL]/a#73c01889
 
 "#]])
         .with_status(101)
@@ -2033,15 +2032,10 @@ fn error_loading_which_lock() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to sync
-
-Caused by:
-  failed to load lockfile for [ROOT]/foo/b
-
-Caused by:
-  could not execute process `does-not-exist -vV` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+  |
+  = caused by: failed to load lockfile for [ROOT]/foo/b
+  = caused by: could not execute process `does-not-exist -vV` (never executed)
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -2073,15 +2067,10 @@ fn error_downloading() {
         .with_stderr_data(str![[r#"
 [DOWNLOADING] crates ...
 [ERROR] failed to sync
-
-Caused by:
-  failed to download packages for [ROOT]/foo
-
-Caused by:
-  failed to download from `[ROOTURL]/dl/bar/1.0.0/download`
-
-Caused by:
-  [37] Could[..]t read a file:// file (Couldn't open file [ROOT]/dl/bar/1.0.0/download)
+  |
+  = caused by: failed to download packages for [ROOT]/foo
+  = caused by: failed to download from `[ROOTURL]/dl/bar/1.0.0/download`
+  = caused by: [37] Could not read a file:// file (Couldn't open file [ROOT]/dl/bar/1.0.0/download)
 
 "#]])
         .run();
