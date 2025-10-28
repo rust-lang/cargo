@@ -87,36 +87,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn unsupported_int_array() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            ".cargo/config.toml",
-            r#"
-                [alias]
-                ints = [1, 2]
-            "#,
-        )
-        .build();
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `alias.ints[0]`
-
-Caused by:
-  expected string but found integer at index 0
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
 fn unsupported_float_array() {
     let p = project()
         .file("src/lib.rs", "")
@@ -140,7 +110,7 @@ Caused by:
   failed to parse config at `alias.floats[0]`
 
 Caused by:
-  expected string but found float at index 0
+  unsupported TOML configuration type `float`
 
 "#]])
         .run();
@@ -170,7 +140,7 @@ Caused by:
   failed to parse config at `alias.datetimes[0]`
 
 Caused by:
-  expected string but found datetime at index 0
+  unsupported TOML configuration type `datetime`
 
 "#]])
         .run();

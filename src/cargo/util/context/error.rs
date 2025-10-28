@@ -3,6 +3,7 @@ use std::fmt;
 use crate::util::ConfigValue;
 use crate::util::context::ConfigKey;
 use crate::util::context::Definition;
+use crate::util::context::key::ArrayItemKeyPath;
 
 /// Internal error for serde errors.
 #[derive(Debug)]
@@ -51,6 +52,17 @@ impl ConfigError {
             error: anyhow::Error::from(self)
                 .context(format!("could not load config key `{}`", key)),
             definition: definition,
+        }
+    }
+
+    pub(super) fn with_array_item_key_context(
+        self,
+        key: &ArrayItemKeyPath,
+        definition: Option<Definition>,
+    ) -> ConfigError {
+        ConfigError {
+            error: anyhow::Error::from(self).context(format!("failed to parse config at `{key}`")),
+            definition,
         }
     }
 }

@@ -12,6 +12,7 @@ use cargo::CargoResult;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::auth::RegistryConfig;
+use cargo::util::context::Value;
 use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
 };
@@ -1352,28 +1353,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn non_string_in_array() {
-    // Currently only strings are supported.
-    write_config_toml("foo = [1, 2, 3]");
-    let gctx = new_gctx();
-    assert_error(
-        gctx.get::<Vec<i32>>("foo").unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load TOML configuration from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to parse config at `foo[0]`
-
-Caused by:
-  expected string but found integer at index 0
-"#]],
-    );
-}
-
-#[cargo_test]
 fn struct_with_opt_inner_struct() {
     // Struct with a key that is Option of another struct.
     // Check that can be defined with environment variable.
@@ -2307,5 +2286,261 @@ fn build_std() {
             "panic-unwind".to_string(),
             "windows_raw_dylib".to_string(),
         ]
+    );
+}
+
+#[cargo_test]
+fn array_of_any_types() {
+    write_config_toml(
+        r#"
+        ints = [1, 2, 3]
+
+        bools = [true, false, true]
+
+        strings = ["hello", "world", "test"]
+
+        [[tables]]
+        name = "first"
+        value = 1
+        [[tables]]
+        name = "second"
+        value = 2
+        "#,
+    );
+
+    let gctx = new_gctx();
+
+    // Test integer array
+    let ints: Vec<i32> = gctx.get("ints").unwrap();
+    assert_eq!(ints, vec![1, 2, 3]);
+
+    let bools: Vec<bool> = gctx.get("bools").unwrap();
+    assert_eq!(bools, vec![true, false, true]);
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct T {
+        name: String,
+        value: i32,
+    }
+    let tables: Vec<T> = gctx.get("tables").unwrap();
+    assert_eq!(
+        tables,
+        vec![
+            T {
+                name: "first".into(),
+                value: 1,
+            },
+            T {
+                name: "second".into(),
+                value: 2,
+            },
+        ]
+    );
+}
+
+#[cargo_test]
+fn array_env() {
+    // for environment, only strings are supported.
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_INTS", "3 4 5")
+        .env("CARGO_BOOLS", "false true false")
+        .env("CARGO_STRINGS", "env1 env2 env3")
+        .build();
+
+    assert_error(
+        gctx.get::<Vec<i32>>("ints").unwrap_err(),
+        str![[r#"
+error in environment variable `CARGO_INTS`: failed to parse config at `ints[0]`
+
+Caused by:
+  invalid type: string "3", expected i32
+"#]],
+    );
+
+    assert_error(
+        gctx.get::<Vec<bool>>("bools").unwrap_err(),
+        str![[r#"
+error in environment variable `CARGO_BOOLS`: failed to parse config at `bools[0]`
+
+Caused by:
+  invalid type: string "false", expected a boolean
+"#]],
+    );
+
+    assert_eq!(
+        gctx.get::<Vec<String>>("strings").unwrap(),
+        vec!["env1".to_string(), "env2".to_string(), "env3".to_string()],
+    );
+}
+
+#[cargo_test]
+fn nested_array() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(
+        &root_path,
+        r#"
+        nested_ints = [[1, 2], [3, 4]]
+        nested_bools = [[true], [false, true]]
+        nested_strings = [["a", "b"], ["3", "4"]]
+        nested_tables = [
+            [
+                { x = "a" },
+                { x = "b" },
+            ],
+            [
+                { x = "c" },
+                { x = "d" },
+            ],
+        ]
+        deeply_nested = [[
+            { x = [[[ { x = [], y = 2  } ]]], y = 1 },
+        ]]
+        "#,
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("nested_ints = [[5]]")
+        .build();
+
+    let nested = gctx.get::<Vec<Vec<i32>>>("nested_ints").unwrap();
+    assert_eq!(nested, vec![vec![1, 2], vec![3, 4], vec![5]]);
+
+    // exercising Value and Definition
+    let nested = gctx
+        .get::<Vec<Value<Vec<Value<i32>>>>>("nested_ints")
+        .unwrap();
+    let def = Definition::Path(root_path);
+    assert_eq!(
+        nested,
+        vec![
+            Value {
+                val: vec![
+                    Value {
+                        val: 1,
+                        definition: def.clone(),
+                    },
+                    Value {
+                        val: 2,
+                        definition: def.clone(),
+                    },
+                ],
+                definition: def.clone()
+            },
+            Value {
+                val: vec![
+                    Value {
+                        val: 3,
+                        definition: def.clone(),
+                    },
+                    Value {
+                        val: 4,
+                        definition: def.clone(),
+                    },
+                ],
+                definition: def.clone(),
+            },
+            Value {
+                val: vec![Value {
+                    val: 5,
+                    definition: Definition::Cli(None),
+                },],
+                definition: Definition::Cli(None),
+            },
+        ]
+    );
+
+    let nested = gctx.get::<Vec<Vec<bool>>>("nested_bools").unwrap();
+    assert_eq!(nested, vec![vec![true], vec![false, true]]);
+
+    let nested = gctx.get::<Vec<Vec<String>>>("nested_strings").unwrap();
+    assert_eq!(
+        nested,
+        vec![
+            vec!["a".to_string(), "b".to_string()],
+            vec!["3".to_string(), "4".to_string()]
+        ]
+    );
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct S {
+        x: Vec<Vec<Vec<S>>>,
+        y: i32,
+    }
+    let nested = gctx.get::<Vec<Vec<S>>>("deeply_nested").unwrap();
+    assert_eq!(
+        nested,
+        vec![vec![S {
+            x: vec![vec![vec![S { x: vec![], y: 2 }]]],
+            y: 1,
+        }]],
+    );
+}
+
+#[cargo_test]
+fn mixed_type_array() {
+    let root_path = paths::root().join(".cargo/config.toml");
+    write_config_at(&root_path, r#"a = [{ x = 1 }]"#);
+
+    let foo_path = paths::root().join("foo/.cargo/config.toml");
+    write_config_at(&foo_path, r#"a = [true, [false]]"#);
+
+    let gctx = GlobalContextBuilder::new()
+        .cwd("foo")
+        .env("CARGO_A", "hello")
+        .config_arg("a = [123]")
+        .build();
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    #[serde(untagged)]
+    enum Item {
+        B(bool),
+        I(i32),
+        S(String),
+        T { x: i32 },
+        L(Vec<bool>),
+    }
+
+    use Item::*;
+
+    // Simple vector works
+    assert_eq!(
+        gctx.get::<Vec<Item>>("a").unwrap(),
+        vec![
+            T { x: 1 },
+            B(true),
+            L(vec![false]),
+            S("hello".into()),
+            I(123)
+        ],
+    );
+
+    // Value and Definition works
+    assert_eq!(
+        gctx.get::<Value<Vec<Value<Item>>>>("a").unwrap(),
+        Value {
+            val: vec![
+                Value {
+                    val: T { x: 1 },
+                    definition: Definition::Path(root_path.clone()),
+                },
+                Value {
+                    val: B(true),
+                    definition: Definition::Path(foo_path.clone()),
+                },
+                Value {
+                    val: L(vec![false]),
+                    definition: Definition::Path(foo_path.clone()),
+                },
+                Value {
+                    val: S("hello".into()),
+                    definition: Definition::Environment("CARGO_A".into()),
+                },
+                Value {
+                    val: I(123),
+                    definition: Definition::Cli(None),
+                },
+            ],
+            definition: Definition::Environment("CARGO_A".into()),
+        }
     );
 }

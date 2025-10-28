@@ -112,6 +112,7 @@ pub use value::{Definition, OptValue, Value};
 
 mod key;
 pub use key::ConfigKey;
+use key::KeyOrIdx;
 
 mod path;
 pub use path::{ConfigRelativePath, PathAndArgs};
@@ -1025,7 +1026,8 @@ impl GlobalContext {
             })?;
             let values = toml_v.as_array().expect("env var was not array");
             for value in values {
-                // TODO: support other types.
+                // Until we figure out how to deal with it through `-Zadvanced-env`,
+                // complex array types are unsupported.
                 let s = value.as_str().ok_or_else(|| {
                     ConfigError::new(
                         format!("expected string, found {}", value.type_str()),
@@ -2063,12 +2065,6 @@ impl GlobalContext {
     }
 }
 
-#[derive(Debug)]
-enum KeyOrIdx {
-    Key(String),
-    Idx(usize),
-}
-
 /// Similar to [`toml::Value`] but includes the source location where it is defined.
 #[derive(Eq, PartialEq, Clone)]
 pub enum ConfigValue {
@@ -2131,12 +2127,9 @@ impl ConfigValue {
             toml::Value::Array(val) => Ok(CV::List(
                 val.into_iter()
                     .enumerate()
-                    .map(|(i, toml)| match toml {
-                        toml::Value::String(val) => Ok(CV::String(val, def.clone())),
-                        v => {
-                            path.push(KeyOrIdx::Idx(i));
-                            bail!("expected string but found {} at index {i}", v.type_str())
-                        }
+                    .map(|(i, toml)| {
+                        CV::from_toml_inner(def.clone(), toml, path)
+                            .inspect_err(|_| path.push(KeyOrIdx::Idx(i)))
                     })
                     .collect::<CargoResult<_>>()?,
                 def,
