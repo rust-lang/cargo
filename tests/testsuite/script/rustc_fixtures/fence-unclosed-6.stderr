@@ -1,0 +1,7 @@
+[ERROR] unclosed frontmatter; expected `---`
+  --> script:12:14
+   |
+ 1 | ---
+...
+12 | fn main() {}
+   |             ^
