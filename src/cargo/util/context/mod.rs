@@ -1174,6 +1174,9 @@ impl GlobalContext {
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
         self.target_dir = cli_target_dir;
 
+        self.shell()
+            .set_unstable_flags_rustc_unicode(self.unstable_flags.rustc_unicode)?;
+
         Ok(())
     }
 
