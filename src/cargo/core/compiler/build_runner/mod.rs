@@ -1,6 +1,7 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -301,6 +302,49 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     .native_dirs
                     .insert(dir.clone().into_path_buf());
             }
+        }
+
+        if self.bcx.build_config.intent.is_doc()
+            && self.bcx.gctx.cli_unstable().rustdoc_mergeable_info
+            && let Some(unit) = self
+                .bcx
+                .roots
+                .iter()
+                .filter(|unit| unit.mode.is_doc())
+                .next()
+        {
+            let mut rustdoc = self.compilation.rustdoc_process(unit, None)?;
+            let doc_dir = self.files().out_dir(unit);
+            let mut include_arg = OsString::from("--include-parts-dir=");
+            include_arg.push(self.files().doc_parts_dir(&unit));
+            rustdoc
+                .arg("-o")
+                .arg(&doc_dir)
+                .arg("--emit=toolchain-shared-resources")
+                .arg("-Zunstable-options")
+                .arg("--merge=finalize")
+                .arg(include_arg);
+            exec.exec(
+                &rustdoc,
+                unit.pkg.package_id(),
+                &unit.target,
+                CompileMode::Doc,
+                // This is always single-threaded, and always gets run,
+                // so thread delinterleaving isn't needed and neither is
+                // the output cache.
+                &mut |line| {
+                    let mut shell = self.bcx.gctx.shell();
+                    shell.print_ansi_stdout(line.as_bytes())?;
+                    shell.err().write_all(b"\n")?;
+                    Ok(())
+                },
+                &mut |line| {
+                    let mut shell = self.bcx.gctx.shell();
+                    shell.print_ansi_stderr(line.as_bytes())?;
+                    shell.err().write_all(b"\n")?;
+                    Ok(())
+                },
+            )?;
         }
         Ok(self.compilation)
     }

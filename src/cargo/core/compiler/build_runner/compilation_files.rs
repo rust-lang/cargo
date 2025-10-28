@@ -328,6 +328,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .build_script(&dir)
     }
 
+    /// Returns the directory where mergeable cross crate info for docs is stored.
+    pub fn doc_parts_dir(&self, unit: &Unit) -> PathBuf {
+        assert!(unit.mode.is_doc());
+        assert!(self.metas.contains_key(unit));
+        self.layout(unit.kind).build_dir().doc_parts().to_path_buf()
+    }
+
     /// Returns the directory for compiled artifacts files.
     /// `/path/to/target/{debug,release}/deps/artifact/KIND/PKG-HASH`
     fn artifact_dir(&self, unit: &Unit) -> PathBuf {

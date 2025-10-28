@@ -1191,6 +1191,15 @@ impl RustDocFingerprint {
             })
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
+        if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+            build_runner
+                .bcx
+                .all_kinds
+                .iter()
+                .map(|kind| build_runner.files().layout(*kind).build_dir().doc_parts())
+                .filter(|path| path.exists())
+                .try_for_each(|path| clean_doc(&path))?;
+        }
         write_fingerprint()?;
         return Ok(());
 

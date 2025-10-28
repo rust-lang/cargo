@@ -830,8 +830,13 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     if build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo {
         // toolchain-shared-resources is required for keeping the shared styling resources
         // invocation-specific is required for keeping the original rustdoc emission
-        let mut arg =
-            OsString::from("--emit=toolchain-shared-resources,invocation-specific,dep-info=");
+        let mut arg = if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+            // toolchain resources are written at the end, at the same time as merging
+            OsString::from("--emit=invocation-specific,dep-info=")
+        } else {
+            // if not using mergeable CCI, everything is written every time
+            OsString::from("--emit=toolchain-shared-resources,invocation-specific,dep-info=")
+        };
         arg.push(rustdoc_dep_info_loc(build_runner, unit));
         rustdoc.arg(arg);
 
@@ -840,6 +845,18 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         }
 
         rustdoc.arg("-Zunstable-options");
+    } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+        // toolchain resources are written at the end, at the same time as merging
+        rustdoc.arg("--emit=invocation-specific");
+        rustdoc.arg("-Zunstable-options");
+    }
+
+    if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+        // write out mergeable data to be imported
+        rustdoc.arg("--merge=none");
+        let mut arg = OsString::from("--parts-out-dir=");
+        arg.push(build_runner.files().doc_parts_dir(&unit));
+        rustdoc.arg(arg);
     }
 
     if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {

@@ -353,6 +353,10 @@ impl BuildDirLayout {
             self.build().join(pkg_dir)
         }
     }
+    /// Fetch the doc parts path.
+    pub fn doc_parts(&self) -> PathBuf {
+        self.build().join("doc.parts")
+    }
     /// Fetch the build script execution path.
     pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
         if self.is_new_layout {
