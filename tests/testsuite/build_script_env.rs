@@ -554,3 +554,40 @@ fn build_script_debug_assertions_override_release() {
     // Release profile with debug-assertions explicitly enabled
     p.cargo("check --release").run();
 }
+
+#[cargo_test]
+fn build_script_debug_assertions_build_override() {
+    let build_rs = r#"
+        fn main() {
+            let profile = std::env::var("PROFILE").unwrap();
+            if profile == "debug" {
+                assert!(!cfg!(debug_assertions));
+            } else if profile == "release" {
+                assert!(cfg!(debug_assertions));
+            }
+        }
+    "#;
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                [profile.dev.build-override]
+                debug-assertions = false
+
+                [profile.release.build-override]
+                debug-assertions = true
+            "#,
+        )
+        .file("src/lib.rs", r#""#)
+        .file("build.rs", build_rs)
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("check --release").run();
+}
