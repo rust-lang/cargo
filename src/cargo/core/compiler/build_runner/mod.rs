@@ -10,12 +10,14 @@ use crate::core::compiler::locking::LockingMode;
 use crate::core::compiler::{self, Unit, UserIntent, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
+use crate::util::rlimit;
 use annotate_snippets::{Level, Message};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
+use tracing::{debug, warn};
 
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::{Checksum, Fingerprint};
@@ -116,7 +118,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         };
 
         let locking_mode = if bcx.gctx.cli_unstable().fine_grain_locking {
-            LockingMode::Fine
+            determine_locking_mode(&bcx)?
         } else {
             LockingMode::Coarse
         };
@@ -745,4 +747,50 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 .insert(unit.clone(), self.files().metadata(metadata_unit));
         }
     }
+}
+
+/// Determines if we have enough resources to safely use fine grain locking.
+/// This function will raises the number of max number file descriptors the current process
+/// can have open at once to make sure we are able to compile without running out of fds.
+///
+/// If we cannot acquire a safe max number of file descriptors, we fallback to coarse grain
+/// locking.
+pub fn determine_locking_mode(bcx: &BuildContext<'_, '_>) -> CargoResult<LockingMode> {
+    let total_units = bcx.unit_graph.keys().len() as u64;
+
+    // This is a bit arbitrary but if we do not have at least 10 times the remaining file
+    // descriptors than total build units there is a chance we could hit the limit.
+    // This is a fairly conservative estimate to make sure we don't hit max fd errors.
+    let safe_threshold = total_units * 10;
+
+    let Ok(mut limit) = rlimit::get_max_file_descriptors() else {
+        return Ok(LockingMode::Coarse);
+    };
+
+    if limit.soft_limit >= safe_threshold {
+        // The limit is higher or equal to what we deemed safe, so
+        // there is no need to raise the limit.
+        return Ok(LockingMode::Fine);
+    }
+
+    let display_fd_warning = || -> CargoResult<()> {
+        bcx.gctx.shell().verbose(|shell| shell.warn("ulimit was to low to safely enable fine grain locking, falling back to coarse grain locking"))
+    };
+
+    if limit.hard_limit < safe_threshold {
+        // The max we could raise the limit to is still not enough to safely compile.
+        display_fd_warning()?;
+        return Ok(LockingMode::Coarse);
+    }
+
+    limit.soft_limit = safe_threshold;
+
+    debug!("raising fd limit to {safe_threshold}");
+    if let Err(err) = rlimit::set_max_file_descriptors(limit) {
+        warn!("failed to raise max fds: {err}");
+        display_fd_warning()?;
+        return Ok(LockingMode::Coarse);
+    }
+
+    return Ok(LockingMode::Fine);
 }
