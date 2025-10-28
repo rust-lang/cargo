@@ -345,11 +345,71 @@ fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()>
 }
 
 #[cargo_test]
+fn gitoxide_fetch_shallow_index_then_git_cli_fetch_shallow() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::Gitoxide,
+        RepoMode::Shallow,
+        Backend::GitCli,
+        RepoMode::Shallow,
+    )
+}
+
+#[cargo_test]
+fn gitoxide_fetch_complete_index_then_git_cli_fetch_shallow() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::Gitoxide,
+        RepoMode::Complete,
+        Backend::GitCli,
+        RepoMode::Shallow,
+    )
+}
+
+#[cargo_test]
+fn gitoxide_fetch_shallow_index_then_git_cli_fetch_complete() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::Gitoxide,
+        RepoMode::Shallow,
+        Backend::GitCli,
+        RepoMode::Complete,
+    )
+}
+
+#[cargo_test]
 fn git_cli_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
     fetch_index_then_fetch(
         Backend::GitCli,
         RepoMode::Shallow,
         Backend::Git2,
+        RepoMode::Complete,
+    )
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_index_then_gitoxide_fetch_shallow() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::GitCli,
+        RepoMode::Shallow,
+        Backend::Gitoxide,
+        RepoMode::Shallow,
+    )
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_complete_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::GitCli,
+        RepoMode::Complete,
+        Backend::Gitoxide,
+        RepoMode::Shallow,
+    )
+}
+
+#[cargo_test]
+fn git_cli_fetch_shallow_index_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
+    fetch_index_then_fetch(
+        Backend::GitCli,
+        RepoMode::Shallow,
+        Backend::Gitoxide,
         RepoMode::Complete,
     )
 }
