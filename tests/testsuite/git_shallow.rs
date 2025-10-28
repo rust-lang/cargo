@@ -4,6 +4,7 @@ use cargo_test_support::{basic_manifest, git, paths, project};
 
 use crate::git_gc::find_index;
 
+#[derive(Copy, Clone, Debug)]
 enum Backend {
     Git2,
     Gitoxide,
@@ -28,6 +29,7 @@ impl Backend {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 enum RepoMode {
     Shallow,
     Complete,
@@ -45,6 +47,27 @@ impl RepoMode {
         match self {
             RepoMode::Complete => "",
             RepoMode::Shallow => "-Zgit=shallow-index",
+        }
+    }
+
+    #[track_caller]
+    fn assert_index(self, repo: &gix::Repository, shallow_depth: usize, complete_depth: usize) {
+        let commit_count = repo
+            .rev_parse_single("origin/HEAD")
+            .unwrap()
+            .ancestors()
+            .all()
+            .unwrap()
+            .count();
+        match self {
+            RepoMode::Shallow => {
+                assert_eq!(commit_count, shallow_depth,);
+                assert!(repo.is_shallow());
+            }
+            RepoMode::Complete => {
+                assert_eq!(commit_count, complete_depth,);
+                assert!(!repo.is_shallow());
+            }
         }
     }
 }
@@ -313,17 +336,29 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
 
 #[cargo_test]
 fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
-    fetch_shallow_index_then_fetch_complete(Backend::Gitoxide, Backend::Git2)
+    fetch_index_then_fetch(
+        Backend::Gitoxide,
+        RepoMode::Shallow,
+        Backend::Git2,
+        RepoMode::Complete,
+    )
 }
 
 #[cargo_test]
 fn git_cli_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
-    fetch_shallow_index_then_fetch_complete(Backend::GitCli, Backend::Git2)
+    fetch_index_then_fetch(
+        Backend::GitCli,
+        RepoMode::Shallow,
+        Backend::Git2,
+        RepoMode::Complete,
+    )
 }
 
-fn fetch_shallow_index_then_fetch_complete(
+fn fetch_index_then_fetch(
     backend_1st: Backend,
+    mode_1st: RepoMode,
     backend_2nd: Backend,
+    mode_2nd: RepoMode,
 ) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -342,47 +377,31 @@ fn fetch_shallow_index_then_fetch_complete(
         .build();
     p.cargo("fetch")
         .arg_line(backend_1st.to_arg())
-        .arg(RepoMode::Shallow.to_index_arg())
+        .arg_line(mode_1st.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
         .with_stderr_contains(backend_1st.to_trace_log())
         .run();
 
-    let shallow_repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
-    assert_eq!(
-        shallow_repo
-            .rev_parse_single("origin/HEAD")?
-            .ancestors()
-            .all()?
-            .count(),
-        1,
-        "shallow fetch always start at depth of 1 to minimize download size"
-    );
-    assert!(shallow_repo.is_shallow());
+    let repo = gix::open_opts(find_remote_index(mode_1st), gix::open::Options::isolated())?;
+    let complete_depth = 2; // initial commmit, bar@1.0.0
+    mode_1st.assert_index(&repo, 1, complete_depth);
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
         .arg_line(backend_2nd.to_arg())
+        .arg_line(mode_2nd.to_index_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .env("CARGO_LOG", "git-fetch=debug")
         .with_stderr_contains(backend_2nd.to_trace_log())
         .run();
 
-    let repo = gix::open_opts(
-        find_remote_index(RepoMode::Complete),
-        gix::open::Options::isolated(),
-    )?;
-    assert_eq!(
-        repo.rev_parse_single("origin/HEAD")?
-            .ancestors()
-            .all()?
-            .count(),
-        3,
-        "an entirely new repo was fetched which is never shallow"
-    );
-    assert!(!repo.is_shallow());
+    let repo = gix::open_opts(find_remote_index(mode_2nd), gix::open::Options::isolated())?;
+    let complete_depth = 3; // initial commmit, bar@1.0.0, and bar@1.1.0
+    mode_2nd.assert_index(&repo, 1, complete_depth);
+
     Ok(())
 }
 
