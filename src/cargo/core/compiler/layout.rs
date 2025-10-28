@@ -155,25 +155,29 @@ impl Layout {
         // directory, so just lock the entire thing for the duration of this
         // compile.
         let artifact_dir_lock = match locking_mode {
+            LockingMode::None => None,
             LockingMode::Fine => {
-                dest.open_ro_shared_create(".cargo-lock", ws.gctx(), "build directory")?
+                Some(dest.open_ro_shared_create(".cargo-lock", ws.gctx(), "build directory")?)
             }
             LockingMode::Coarse => {
-                dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?
+                Some(dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?)
             }
         };
 
         let build_dir_lock = if root != build_root {
-            Some(match locking_mode {
-                LockingMode::Fine => {
-                    build_dest.open_ro_shared_create(".cargo-lock", ws.gctx(), "build directory")?
-                }
-                LockingMode::Coarse => build_dest.open_rw_exclusive_create(
+            match locking_mode {
+                LockingMode::None => None,
+                LockingMode::Fine => Some(build_dest.open_ro_shared_create(
                     ".cargo-lock",
                     ws.gctx(),
                     "build directory",
-                )?,
-            })
+                )?),
+                LockingMode::Coarse => Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+            }
         } else {
             None
         };
@@ -235,7 +239,7 @@ pub struct ArtifactDirLayout {
     timings: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
-    _lock: FileLock,
+    _lock: Option<FileLock>,
 }
 
 impl ArtifactDirLayout {

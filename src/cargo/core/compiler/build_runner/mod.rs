@@ -10,6 +10,7 @@ use crate::core::compiler::locking::LockingMode;
 use crate::core::compiler::{self, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
+use crate::util::flock::is_on_nfs_mount;
 use crate::util::rlimit;
 use annotate_snippets::{Level, Message};
 use anyhow::{Context as _, bail};
@@ -747,6 +748,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 /// locking.
 pub fn determine_locking_mode(bcx: &BuildContext<'_, '_>) -> CargoResult<LockingMode> {
     let total_units = bcx.unit_graph.keys().len() as u64;
+
+    if is_on_nfs_mount(bcx.ws.build_dir().as_path_unlocked()) {
+        debug!("NFS detected. Disabling file system locking");
+        return Ok(LockingMode::None);
+    }
 
     // This is a bit arbitrary but if we do not have at least 10 times the remaining file
     // descriptors than total build units there is a chance we could hit the limit.

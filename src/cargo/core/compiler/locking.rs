@@ -49,6 +49,8 @@ use crate::{
 /// The locking mode that will be used for output directories.
 #[derive(Debug)]
 pub enum LockingMode {
+    /// Completely disables locking (used for filesystems that do not support locking)
+    None,
     /// Fine grain locking (Build unit level)
     Fine,
     /// Coarse grain locking (Profile level)
