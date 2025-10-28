@@ -1,3 +1,8 @@
+// Mod this command to use the new program
+mod mutation_iabr;
+use std::println;
+
+
 use crate::core::compiler::{Compilation, CompileKind, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::shell::ColorChoice;
@@ -12,6 +17,7 @@ use std::ffi::OsString;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug)]
 pub struct TestOptions {
     pub compile_opts: ops::CompileOptions,
     pub no_run: bool,
@@ -67,6 +73,12 @@ impl UnitTestError {
 /// code that Cargo should use.
 pub fn run_tests(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str]) -> CliResult {
     let compilation = compile_tests(ws, options)?;
+
+    // Call the mutation program
+    if options.mutation
+    {
+        return mutation_iabr::run_mutations(ws);
+    }
 
     if options.no_run {
         if !options.compile_opts.build_config.emit_json() {

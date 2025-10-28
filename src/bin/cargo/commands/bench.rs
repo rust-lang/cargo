@@ -70,6 +70,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         no_run: args.flag("no-run"),
         no_fail_fast: args.flag("no-fail-fast"),
         compile_opts,
+        mutation: false,
     };
 
     let bench_args = args.get_one::<String>("BENCHNAME").into_iter();

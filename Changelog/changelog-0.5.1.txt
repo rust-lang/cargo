@@ -1,0 +1,49 @@
+Additions 
+
+cargo_test.rs
+--Inside of pub rn run_tests
+----------------------------
+
+if options.mutation
+# If the --mutation flag is enabled
+
+return mutation_iabr::run_mutations(
+# Call the mutation_iabr program using the run_mutations() function that we will make in
+  mutation_iabr.rs
+
+(ws)
+# Passes the workspace. Things like addresses 
+
+----------------------------
+
+
+mutation_iabr
+----------------------------
+
+use crate::util::{CliResult, GlobalContext};
+# Import global context tools
+
+use crate::core::Workspace;
+# Import workspace tools 
+
+pub fn run_mutations(
+# Declares the name of the function to run and sets it as public
+
+_ws: &Workspace<'_>)
+# Use the workspace we have already passed
+  _ is to ignore the unused variable warning
+  <'_> is the lifetime annotation for memory safety to stop conflicts or leaks
+
+-> CliResult
+# Sets the return type as CliResult, if the program runs ok then it sends OK
+  otherwise, it sends a CliResult type error 
+
+----------------------------
+
+
+bench.rs
+----------------------------
+
+added missing mutation::default(false); flag
+
+----------------------------
