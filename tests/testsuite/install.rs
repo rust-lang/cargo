@@ -522,6 +522,7 @@ fn relative_install_location_without_trailing_slash() {
     let mut cmd = cargo_process("install --path .");
     cmd.cwd(p.root());
     cmd.with_stderr_data(str![[r#"
+[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated; a future version of Cargo will treat it as relative to the configuration directory. Add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning. See more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -602,6 +603,7 @@ fn relative_install_location_with_path_set() {
     cmd.cwd(p.root());
     cmd.env("PATH", new_path);
     cmd.with_stderr_data(str![[r#"
+[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated; a future version of Cargo will treat it as relative to the configuration directory. Add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning. See more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
