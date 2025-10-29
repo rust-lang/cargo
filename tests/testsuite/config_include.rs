@@ -494,3 +494,149 @@ fn cli_include_take_priority_over_env() {
         .build();
     assert_eq!(gctx.get::<String>("k").unwrap(), "include");
 }
+
+#[cargo_test]
+fn inline_table_style() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = ['simple.toml', { path = 'other.toml' }]
+        key1 = 1
+        key2 = 2
+        ",
+    );
+    write_config_at(
+        ".cargo/simple.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key3 = 5
+        key4 = 6
+        ",
+    );
+
+    // Currently this fails with an error
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  `include` expected a string or list of strings, but found table in list
+"#]],
+    );
+}
+
+#[cargo_test]
+fn array_of_tables_style() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+        key2 = 2
+
+        [[include]]
+        path = 'other1.toml'
+
+        [[include]]
+        path = 'other2.toml'
+        ",
+    );
+    write_config_at(
+        ".cargo/other1.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    write_config_at(
+        ".cargo/other2.toml",
+        "
+        key3 = 5
+        key4 = 6
+        ",
+    );
+
+    // Currently this also fails with an error
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  `include` expected a string or list of strings, but found table in list
+"#]],
+    );
+}
+
+#[cargo_test]
+fn table_with_unknown_fields() {
+    // Unknown fields should be ignored for forward compatibility
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+
+        [[include]]
+        path = 'other.toml'
+        unknown_foo = true
+        unknown_bar = 123
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key2 = 2
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  `include` expected a string or list of strings, but found table in list
+"#]],
+    );
+}
+
+#[cargo_test]
+fn table_missing_required_field() {
+    // Missing required field should fail
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+        [[include]]
+        random_field = true
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  `include` expected a string or list of strings, but found table in list
+"#]],
+    );
+}
