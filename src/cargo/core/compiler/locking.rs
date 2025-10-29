@@ -31,14 +31,15 @@
 //! [`CompilationLock`] is the primary interface for locking.
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::{File, OpenOptions},
     path::{Path, PathBuf},
+    sync::{Arc, Condvar, LazyLock, Mutex},
 };
 
-use anyhow::Context;
+use anyhow::{Context, anyhow};
 use itertools::Itertools;
-use tracing::{instrument, trace};
+use tracing::{instrument, trace, warn};
 
 use crate::{
     CargoResult,
@@ -122,8 +123,17 @@ struct UnitLock {
 }
 
 struct UnitLockGuard {
-    partial: File,
-    _full: Option<File>,
+    partial: Arc<RcFileLock>,
+    full: Option<Arc<RcFileLock>>,
+}
+
+impl Drop for UnitLockGuard {
+    fn drop(&mut self) {
+        self.partial.unlock().unwrap();
+        if let Some(full) = &self.full {
+            full.unlock().unwrap();
+        }
+    }
 }
 
 impl UnitLock {
@@ -138,15 +148,22 @@ impl UnitLock {
     pub fn lock_exclusive(&mut self) -> CargoResult<()> {
         assert!(self.guard.is_none());
 
-        let partial = open_file(&self.partial)?;
+        let partial = FileLockInterner::get_or_create_lock(&self.partial)?;
         partial.lock()?;
 
-        let full = open_file(&self.full)?;
-        full.lock()?;
+        let unlock_partial = || {
+            if let Err(err) = partial.unlock() {
+                warn!("Failed to unlock partial lock after failing to take full lock {err}");
+            }
+        };
+
+        let full =
+            FileLockInterner::get_or_create_lock(&self.full).inspect_err(|_| unlock_partial())?;
+        full.lock().inspect_err(|_| unlock_partial())?;
 
         self.guard = Some(UnitLockGuard {
             partial,
-            _full: Some(full),
+            full: Some(full),
         });
         Ok(())
     }
@@ -154,21 +171,25 @@ impl UnitLock {
     pub fn lock_shared(&mut self, ty: &SharedLockType) -> CargoResult<()> {
         assert!(self.guard.is_none());
 
-        let partial = open_file(&self.partial)?;
+        let partial = FileLockInterner::get_or_create_lock(&self.partial)?;
         partial.lock_shared()?;
 
+        let unlock_partial = || {
+            if let Err(err) = partial.unlock() {
+                warn!("Failed to unlock partial lock after failing to take full lock {err}");
+            }
+        };
+
         let full = if matches!(ty, SharedLockType::Full) {
-            let full_lock = open_file(&self.full)?;
-            full_lock.lock_shared()?;
+            let full_lock = FileLockInterner::get_or_create_lock(&self.full)
+                .inspect_err(|_| unlock_partial())?;
+            full_lock.lock_shared().inspect_err(|_| unlock_partial())?;
             Some(full_lock)
         } else {
             None
         };
 
-        self.guard = Some(UnitLockGuard {
-            partial,
-            _full: full,
-        });
+        self.guard = Some(UnitLockGuard { partial, full });
         Ok(())
     }
 
@@ -177,15 +198,7 @@ impl UnitLock {
             .guard
             .as_ref()
             .context("guard was None while calling downgrade")?;
-
-        // NOTE:
-        // > Subsequent flock() calls on an already locked file will convert an existing lock to the new lock mode.
-        // https://man7.org/linux/man-pages/man2/flock.2.html
-        //
-        // However, the `std::file::File::lock/lock_shared` is allowed to change this in the
-        // future. So its probably up to us if we are okay with using this or if we want to use a
-        // different interface to flock.
-        guard.partial.lock_shared()?;
+        guard.partial.downgrade()?;
 
         Ok(())
     }
@@ -219,4 +232,153 @@ fn all_dependency_units<'a>(
     let mut results = HashSet::new();
     inner(build_runner, unit, &mut results);
     return results;
+}
+
+/// An interner to manage [`RcFileLock`]s to make sharing across compilation jobs easier.
+pub struct FileLockInterner {
+    locks: Mutex<HashMap<PathBuf, Arc<RcFileLock>>>,
+}
+
+impl FileLockInterner {
+    pub fn new() -> Self {
+        Self {
+            locks: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub fn get_or_create_lock(path: &Path) -> CargoResult<Arc<RcFileLock>> {
+        static GLOBAL: LazyLock<FileLockInterner> = LazyLock::new(FileLockInterner::new);
+
+        let mut locks = GLOBAL
+            .locks
+            .lock()
+            .map_err(|_| anyhow!("lock was poisoned"))?;
+
+        if let Some(lock) = locks.get(path) {
+            return Ok(Arc::clone(lock));
+        }
+
+        let file = open_file(&path)?;
+
+        let lock = Arc::new(RcFileLock {
+            inner: Mutex::new(RcFileLockInner {
+                file,
+                share_count: 0,
+                exclusive: false,
+            }),
+            condvar: Condvar::new(),
+        });
+
+        locks.insert(path.to_path_buf(), Arc::clone(&lock));
+
+        return Ok(lock);
+    }
+}
+
+/// A reference counted file lock.
+///
+/// This lock is designed to reduce file descriptors by sharing a single file descriptor for a
+/// given lock when the lock is shared. The motivation for this is to avoid hitting file descriptor
+/// limits when fine grain locking is enabled.
+pub struct RcFileLock {
+    inner: Mutex<RcFileLockInner>,
+    condvar: Condvar,
+}
+
+struct RcFileLockInner {
+    file: File,
+    exclusive: bool,
+    share_count: u32,
+}
+
+impl RcFileLock {
+    pub fn lock(&self) -> CargoResult<()> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| anyhow!("lock was poisoned"))?;
+
+        while inner.exclusive || inner.share_count > 0 {
+            inner = self
+                .condvar
+                .wait(inner)
+                .map_err(|_| anyhow!("lock was poisoned"))?;
+        }
+
+        inner.file.lock()?;
+        inner.exclusive = true;
+
+        Ok(())
+    }
+
+    pub fn lock_shared(&self) -> CargoResult<()> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| anyhow!("lock was poisoned"))?;
+
+        while inner.exclusive {
+            inner = self
+                .condvar
+                .wait(inner)
+                .map_err(|_| anyhow!("lock was poisoned"))?;
+        }
+
+        if inner.share_count == 0 {
+            inner.file.lock_shared()?;
+            inner.share_count = 1;
+        } else {
+            inner.share_count += 1;
+        }
+
+        Ok(())
+    }
+
+    pub fn unlock(&self) -> CargoResult<()> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| anyhow!("lock was poisoned"))?;
+
+        if inner.exclusive {
+            assert!(inner.share_count == 0);
+            inner.file.unlock()?;
+            self.condvar.notify_all();
+            inner.exclusive = false;
+        } else {
+            if inner.share_count > 1 {
+                inner.share_count -= 1;
+            } else {
+                inner.file.unlock()?;
+                inner.share_count = 0;
+                self.condvar.notify_all();
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn downgrade(&self) -> CargoResult<()> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| anyhow!("lock was poisoned"))?;
+
+        assert!(inner.exclusive);
+        assert!(inner.share_count == 0);
+
+        // NOTE:
+        // > Subsequent flock() calls on an already locked file will convert an existing lock to the new lock mode.
+        // https://man7.org/linux/man-pages/man2/flock.2.html
+        //
+        // However, the `std::file::File::lock/lock_shared` is allowed to change this in the
+        // future. So its probably up to us if we are okay with using this or if we want to use a
+        // different interface to flock.
+        inner.file.lock_shared()?;
+
+        inner.exclusive = false;
+        inner.share_count = 1;
+
+        Ok(())
+    }
 }
