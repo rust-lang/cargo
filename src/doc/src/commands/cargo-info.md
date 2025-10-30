@@ -19,7 +19,7 @@ and presents it in a human-readable format.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-info-spec"><a class="option-anchor" href="#option-cargo-info-spec"></a><em>spec</em></dt>
+<dt class="option-term" id="option-cargo-info-spec"><a class="option-anchor" href="#option-cargo-info-spec"><em>spec</em></a></dt>
 <dd class="option-desc"><p>Fetch information about the specified package. The <em>spec</em> can be a package ID, see <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC
 format.
 If the specified package is part of the current workspace, information from the local Cargo.toml file will be displayed.
@@ -27,11 +27,11 @@ If the <code>Cargo.lock</code> file does not exist, it will be created. If no ve
 selected based on the Minimum Supported Rust Version (MSRV).</p>
 </dd>
 
-<dt class="option-term" id="option-cargo-info---index"><a class="option-anchor" href="#option-cargo-info---index"></a><code>--index</code> <em>index</em></dt>
+<dt class="option-term" id="option-cargo-info---index"><a class="option-anchor" href="#option-cargo-info---index"><code>--index</code> <em>index</em></a></dt>
 <dd class="option-desc"><p>The URL of the registry index to use.</p>
 </dd>
 
-<dt class="option-term" id="option-cargo-info---registry"><a class="option-anchor" href="#option-cargo-info---registry"></a><code>--registry</code> <em>registry</em></dt>
+<dt class="option-term" id="option-cargo-info---registry"><a class="option-anchor" href="#option-cargo-info---registry"><code>--registry</code> <em>registry</em></a></dt>
 <dd class="option-desc"><p>Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
@@ -43,8 +43,8 @@ which is defined by the <code>registry.default</code> config key which defaults 
 ### Display Options
 
 <dl>
-<dt class="option-term" id="option-cargo-info--v"><a class="option-anchor" href="#option-cargo-info--v"></a><code>-v</code></dt>
-<dt class="option-term" id="option-cargo-info---verbose"><a class="option-anchor" href="#option-cargo-info---verbose"></a><code>--verbose</code></dt>
+<dt class="option-term" id="option-cargo-info--v"><a class="option-anchor" href="#option-cargo-info--v"><code>-v</code></a></dt>
+<dt class="option-term" id="option-cargo-info---verbose"><a class="option-anchor" href="#option-cargo-info---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
@@ -52,15 +52,15 @@ May also be specified with the <code>term.verbose</code>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info--q"><a class="option-anchor" href="#option-cargo-info--q"></a><code>-q</code></dt>
-<dt class="option-term" id="option-cargo-info---quiet"><a class="option-anchor" href="#option-cargo-info---quiet"></a><code>--quiet</code></dt>
+<dt class="option-term" id="option-cargo-info--q"><a class="option-anchor" href="#option-cargo-info--q"><code>-q</code></a></dt>
+<dt class="option-term" id="option-cargo-info---quiet"><a class="option-anchor" href="#option-cargo-info---quiet"><code>--quiet</code></a></dt>
 <dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
 <a href="../reference/config.html">config value</a>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info---color"><a class="option-anchor" href="#option-cargo-info---color"></a><code>--color</code> <em>when</em></dt>
+<dt class="option-term" id="option-cargo-info---color"><a class="option-anchor" href="#option-cargo-info---color"><code>--color</code> <em>when</em></a></dt>
 <dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
@@ -77,7 +77,7 @@ terminal.</li>
 ### Manifest Options
 
 <dl>
-<dt class="option-term" id="option-cargo-info---locked"><a class="option-anchor" href="#option-cargo-info---locked"></a><code>--locked</code></dt>
+<dt class="option-term" id="option-cargo-info---locked"><a class="option-anchor" href="#option-cargo-info---locked"><code>--locked</code></a></dt>
 <dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
@@ -90,7 +90,7 @@ such as in CI pipelines.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info---offline"><a class="option-anchor" href="#option-cargo-info---offline"></a><code>--offline</code></dt>
+<dt class="option-term" id="option-cargo-info---offline"><a class="option-anchor" href="#option-cargo-info---offline"><code>--offline</code></a></dt>
 <dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
@@ -104,7 +104,7 @@ offline.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info---frozen"><a class="option-anchor" href="#option-cargo-info---frozen"></a><code>--frozen</code></dt>
+<dt class="option-term" id="option-cargo-info---frozen"><a class="option-anchor" href="#option-cargo-info---frozen"><code>--frozen</code></a></dt>
 <dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
 </dd>
 
@@ -114,7 +114,7 @@ offline.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-info-+toolchain"><a class="option-anchor" href="#option-cargo-info-+toolchain"></a><code>+</code><em>toolchain</em></dt>
+<dt class="option-term" id="option-cargo-info-+toolchain"><a class="option-anchor" href="#option-cargo-info-+toolchain"><code>+</code><em>toolchain</em></a></dt>
 <dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
@@ -123,14 +123,14 @@ for more information about how toolchain overrides work.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info---config"><a class="option-anchor" href="#option-cargo-info---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-info---config"><a class="option-anchor" href="#option-cargo-info---config"><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info--C"><a class="option-anchor" href="#option-cargo-info--C"></a><code>-C</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-info--C"><a class="option-anchor" href="#option-cargo-info--C"><code>-C</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
@@ -142,13 +142,13 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info--h"><a class="option-anchor" href="#option-cargo-info--h"></a><code>-h</code></dt>
-<dt class="option-term" id="option-cargo-info---help"><a class="option-anchor" href="#option-cargo-info---help"></a><code>--help</code></dt>
+<dt class="option-term" id="option-cargo-info--h"><a class="option-anchor" href="#option-cargo-info--h"><code>-h</code></a></dt>
+<dt class="option-term" id="option-cargo-info---help"><a class="option-anchor" href="#option-cargo-info---help"><code>--help</code></a></dt>
 <dd class="option-desc"><p>Prints help information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-info--Z"><a class="option-anchor" href="#option-cargo-info--Z"></a><code>-Z</code> <em>flag</em></dt>
+<dt class="option-term" id="option-cargo-info--Z"><a class="option-anchor" href="#option-cargo-info--Z"><code>-Z</code> <em>flag</em></a></dt>
 <dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
 </dd>
 

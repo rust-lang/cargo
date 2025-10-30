@@ -3,3 +3,8 @@ dd > p {
     space before the definition. This can removed after updating to mdbook 0.5. */
     margin-top: 0;
 }
+
+/* Override mdbook's link color for option links. */
+a.option-anchor, a.option-anchor > * {
+    color: var(--fg) !important;
+}

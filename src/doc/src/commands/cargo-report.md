@@ -16,13 +16,13 @@ Displays a report of the given _type_ --- currently, only `future-incompat` is s
 
 <dl>
 
-<dt class="option-term" id="option-cargo-report---id"><a class="option-anchor" href="#option-cargo-report---id"></a><code>--id</code> <em>id</em></dt>
+<dt class="option-term" id="option-cargo-report---id"><a class="option-anchor" href="#option-cargo-report---id"><code>--id</code> <em>id</em></a></dt>
 <dd class="option-desc"><p>Show the report with the specified Cargo-generated id</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-report--p"><a class="option-anchor" href="#option-cargo-report--p"></a><code>-p</code> <em>spec</em>…</dt>
-<dt class="option-term" id="option-cargo-report---package"><a class="option-anchor" href="#option-cargo-report---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-report--p"><a class="option-anchor" href="#option-cargo-report--p"><code>-p</code> <em>spec</em>…</a></dt>
+<dt class="option-term" id="option-cargo-report---package"><a class="option-anchor" href="#option-cargo-report---package"><code>--package</code> <em>spec</em>…</a></dt>
 <dd class="option-desc"><p>Only display a report for the specified package</p>
 </dd>
 

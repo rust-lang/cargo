@@ -76,29 +76,29 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package--l"><a class="option-anchor" href="#option-cargo-package--l"></a><code>-l</code></dt>
-<dt class="option-term" id="option-cargo-package---list"><a class="option-anchor" href="#option-cargo-package---list"></a><code>--list</code></dt>
+<dt class="option-term" id="option-cargo-package--l"><a class="option-anchor" href="#option-cargo-package--l"><code>-l</code></a></dt>
+<dt class="option-term" id="option-cargo-package---list"><a class="option-anchor" href="#option-cargo-package---list"><code>--list</code></a></dt>
 <dd class="option-desc"><p>Print files included in a package without making one.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"></a><code>--no-verify</code></dt>
+<dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"><code>--no-verify</code></a></dt>
 <dd class="option-desc"><p>Don’t verify the contents by building them.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---no-metadata"><a class="option-anchor" href="#option-cargo-package---no-metadata"></a><code>--no-metadata</code></dt>
+<dt class="option-term" id="option-cargo-package---no-metadata"><a class="option-anchor" href="#option-cargo-package---no-metadata"><code>--no-metadata</code></a></dt>
 <dd class="option-desc"><p>Ignore warnings about a lack of human-usable metadata (such as the description
 or the license).</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---allow-dirty"><a class="option-anchor" href="#option-cargo-package---allow-dirty"></a><code>--allow-dirty</code></dt>
+<dt class="option-term" id="option-cargo-package---allow-dirty"><a class="option-anchor" href="#option-cargo-package---allow-dirty"><code>--allow-dirty</code></a></dt>
 <dd class="option-desc"><p>Allow working directories with uncommitted VCS changes to be packaged.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---exclude-lockfile"><a class="option-anchor" href="#option-cargo-package---exclude-lockfile"></a><code>--exclude-lockfile</code></dt>
+<dt class="option-term" id="option-cargo-package---exclude-lockfile"><a class="option-anchor" href="#option-cargo-package---exclude-lockfile"><code>--exclude-lockfile</code></a></dt>
 <dd class="option-desc"><p>Don’t include the lock file when packaging.</p>
 <p>This flag is not for general use.
 Some tools may expect a lock file to be present (e.g. <code>cargo install --locked</code>).
@@ -106,12 +106,12 @@ Consider other options before using this.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---index"><a class="option-anchor" href="#option-cargo-package---index"></a><code>--index</code> <em>index</em></dt>
+<dt class="option-term" id="option-cargo-package---index"><a class="option-anchor" href="#option-cargo-package---index"><code>--index</code> <em>index</em></a></dt>
 <dd class="option-desc"><p>The URL of the registry index to use.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---registry"><a class="option-anchor" href="#option-cargo-package---registry"></a><code>--registry</code> <em>registry</em></dt>
+<dt class="option-term" id="option-cargo-package---registry"><a class="option-anchor" href="#option-cargo-package---registry"><code>--registry</code> <em>registry</em></a></dt>
 <dd class="option-desc"><p>Name of the registry to package for; see <code>cargo publish --help</code> for more details
 about configuration of registry names. The packages will not be published
 to this registry, but if we are packaging multiple inter-dependent crates,
@@ -120,7 +120,7 @@ published to this registry.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---message-format"><a class="option-anchor" href="#option-cargo-package---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dt class="option-term" id="option-cargo-package---message-format"><a class="option-anchor" href="#option-cargo-package---message-format"><code>--message-format</code> <em>fmt</em></a></dt>
 <dd class="option-desc"><p>Specifies the output message format.
 Currently, it only works with <code>--list</code> and affects the file listing format.
 This is unstable and requires <code>-Zunstable-options</code>.
@@ -181,8 +181,8 @@ virtual workspace will include all workspace members (equivalent to passing
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"></a><code>-p</code> <em>spec</em>…</dt>
-<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-package--p"><a class="option-anchor" href="#option-cargo-package--p"><code>-p</code> <em>spec</em>…</a></dt>
+<dt class="option-term" id="option-cargo-package---package"><a class="option-anchor" href="#option-cargo-package---package"><code>--package</code> <em>spec</em>…</a></dt>
 <dd class="option-desc"><p>Package only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
 glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally
@@ -191,13 +191,13 @@ double quotes around each pattern.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---workspace"><a class="option-anchor" href="#option-cargo-package---workspace"></a><code>--workspace</code></dt>
+<dt class="option-term" id="option-cargo-package---workspace"><a class="option-anchor" href="#option-cargo-package---workspace"><code>--workspace</code></a></dt>
 <dd class="option-desc"><p>Package all members in the workspace.</p>
 </dd>
 
 
 
-<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
+<dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"><code>--exclude</code> <em>SPEC</em>…</a></dt>
 <dd class="option-desc"><p>Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
 common Unix glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell
@@ -212,7 +212,7 @@ single quotes or double quotes around each pattern.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package---target"><a class="option-anchor" href="#option-cargo-package---target"></a><code>--target</code> <em>triple</em></dt>
+<dt class="option-term" id="option-cargo-package---target"><a class="option-anchor" href="#option-cargo-package---target"><code>--target</code> <em>triple</em></a></dt>
 <dd class="option-desc"><p>Package for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the triple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>.</p>
 <p>Possible values:</p>
@@ -228,7 +228,7 @@ target artifacts are placed in a separate directory. See the
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---target-dir"><a class="option-anchor" href="#option-cargo-package---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
+<dt class="option-term" id="option-cargo-package---target-dir"><a class="option-anchor" href="#option-cargo-package---target-dir"><code>--target-dir</code> <em>directory</em></a></dt>
 <dd class="option-desc"><p>Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
@@ -249,20 +249,20 @@ for more details.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package--F"><a class="option-anchor" href="#option-cargo-package--F"></a><code>-F</code> <em>features</em></dt>
-<dt class="option-term" id="option-cargo-package---features"><a class="option-anchor" href="#option-cargo-package---features"></a><code>--features</code> <em>features</em></dt>
+<dt class="option-term" id="option-cargo-package--F"><a class="option-anchor" href="#option-cargo-package--F"><code>-F</code> <em>features</em></a></dt>
+<dt class="option-term" id="option-cargo-package---features"><a class="option-anchor" href="#option-cargo-package---features"><code>--features</code> <em>features</em></a></dt>
 <dd class="option-desc"><p>Space or comma separated list of features to activate. Features of workspace
 members may be enabled with <code>package-name/feature-name</code> syntax. This flag may
 be specified multiple times, which enables all specified features.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---all-features"><a class="option-anchor" href="#option-cargo-package---all-features"></a><code>--all-features</code></dt>
+<dt class="option-term" id="option-cargo-package---all-features"><a class="option-anchor" href="#option-cargo-package---all-features"><code>--all-features</code></a></dt>
 <dd class="option-desc"><p>Activate all available features of all selected packages.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---no-default-features"><a class="option-anchor" href="#option-cargo-package---no-default-features"></a><code>--no-default-features</code></dt>
+<dt class="option-term" id="option-cargo-package---no-default-features"><a class="option-anchor" href="#option-cargo-package---no-default-features"><code>--no-default-features</code></a></dt>
 <dd class="option-desc"><p>Do not activate the <code>default</code> feature of the selected packages.</p>
 </dd>
 
@@ -273,13 +273,13 @@ be specified multiple times, which enables all specified features.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package---manifest-path"><a class="option-anchor" href="#option-cargo-package---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
+<dt class="option-term" id="option-cargo-package---manifest-path"><a class="option-anchor" href="#option-cargo-package---manifest-path"><code>--manifest-path</code> <em>path</em></a></dt>
 <dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---locked"><a class="option-anchor" href="#option-cargo-package---locked"></a><code>--locked</code></dt>
+<dt class="option-term" id="option-cargo-package---locked"><a class="option-anchor" href="#option-cargo-package---locked"><code>--locked</code></a></dt>
 <dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
@@ -292,7 +292,7 @@ such as in CI pipelines.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---offline"><a class="option-anchor" href="#option-cargo-package---offline"></a><code>--offline</code></dt>
+<dt class="option-term" id="option-cargo-package---offline"><a class="option-anchor" href="#option-cargo-package---offline"><code>--offline</code></a></dt>
 <dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
@@ -306,12 +306,12 @@ offline.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---frozen"><a class="option-anchor" href="#option-cargo-package---frozen"></a><code>--frozen</code></dt>
+<dt class="option-term" id="option-cargo-package---frozen"><a class="option-anchor" href="#option-cargo-package---frozen"><code>--frozen</code></a></dt>
 <dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---lockfile-path"><a class="option-anchor" href="#option-cargo-package---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-package---lockfile-path"><a class="option-anchor" href="#option-cargo-package---lockfile-path"><code>--lockfile-path</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
 <code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
 <code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
@@ -329,8 +329,8 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 ### Miscellaneous Options
 
 <dl>
-<dt class="option-term" id="option-cargo-package--j"><a class="option-anchor" href="#option-cargo-package--j"></a><code>-j</code> <em>N</em></dt>
-<dt class="option-term" id="option-cargo-package---jobs"><a class="option-anchor" href="#option-cargo-package---jobs"></a><code>--jobs</code> <em>N</em></dt>
+<dt class="option-term" id="option-cargo-package--j"><a class="option-anchor" href="#option-cargo-package--j"><code>-j</code> <em>N</em></a></dt>
+<dt class="option-term" id="option-cargo-package---jobs"><a class="option-anchor" href="#option-cargo-package---jobs"><code>--jobs</code> <em>N</em></a></dt>
 <dd class="option-desc"><p>Number of parallel jobs to run. May also be specified with the
 <code>build.jobs</code> <a href="../reference/config.html">config value</a>. Defaults to
 the number of logical CPUs. If negative, it sets the maximum number of
@@ -339,7 +339,7 @@ a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</p>
 </dd>
 
-<dt class="option-term" id="option-cargo-package---keep-going"><a class="option-anchor" href="#option-cargo-package---keep-going"></a><code>--keep-going</code></dt>
+<dt class="option-term" id="option-cargo-package---keep-going"><a class="option-anchor" href="#option-cargo-package---keep-going"><code>--keep-going</code></a></dt>
 <dd class="option-desc"><p>Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
 <p>For example if the current package depends on dependencies <code>fails</code> and <code>works</code>,
@@ -354,8 +354,8 @@ builds, even if the one run first fails.</p>
 ### Display Options
 
 <dl>
-<dt class="option-term" id="option-cargo-package--v"><a class="option-anchor" href="#option-cargo-package--v"></a><code>-v</code></dt>
-<dt class="option-term" id="option-cargo-package---verbose"><a class="option-anchor" href="#option-cargo-package---verbose"></a><code>--verbose</code></dt>
+<dt class="option-term" id="option-cargo-package--v"><a class="option-anchor" href="#option-cargo-package--v"><code>-v</code></a></dt>
+<dt class="option-term" id="option-cargo-package---verbose"><a class="option-anchor" href="#option-cargo-package---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
@@ -363,15 +363,15 @@ May also be specified with the <code>term.verbose</code>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package--q"><a class="option-anchor" href="#option-cargo-package--q"></a><code>-q</code></dt>
-<dt class="option-term" id="option-cargo-package---quiet"><a class="option-anchor" href="#option-cargo-package---quiet"></a><code>--quiet</code></dt>
+<dt class="option-term" id="option-cargo-package--q"><a class="option-anchor" href="#option-cargo-package--q"><code>-q</code></a></dt>
+<dt class="option-term" id="option-cargo-package---quiet"><a class="option-anchor" href="#option-cargo-package---quiet"><code>--quiet</code></a></dt>
 <dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
 <a href="../reference/config.html">config value</a>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---color"><a class="option-anchor" href="#option-cargo-package---color"></a><code>--color</code> <em>when</em></dt>
+<dt class="option-term" id="option-cargo-package---color"><a class="option-anchor" href="#option-cargo-package---color"><code>--color</code> <em>when</em></a></dt>
 <dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
@@ -389,7 +389,7 @@ terminal.</li>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-package-+toolchain"><a class="option-anchor" href="#option-cargo-package-+toolchain"></a><code>+</code><em>toolchain</em></dt>
+<dt class="option-term" id="option-cargo-package-+toolchain"><a class="option-anchor" href="#option-cargo-package-+toolchain"><code>+</code><em>toolchain</em></a></dt>
 <dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
@@ -398,14 +398,14 @@ for more information about how toolchain overrides work.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package---config"><a class="option-anchor" href="#option-cargo-package---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-package---config"><a class="option-anchor" href="#option-cargo-package---config"><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package--C"><a class="option-anchor" href="#option-cargo-package--C"></a><code>-C</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-package--C"><a class="option-anchor" href="#option-cargo-package--C"><code>-C</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
@@ -417,13 +417,13 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package--h"><a class="option-anchor" href="#option-cargo-package--h"></a><code>-h</code></dt>
-<dt class="option-term" id="option-cargo-package---help"><a class="option-anchor" href="#option-cargo-package---help"></a><code>--help</code></dt>
+<dt class="option-term" id="option-cargo-package--h"><a class="option-anchor" href="#option-cargo-package--h"><code>-h</code></a></dt>
+<dt class="option-term" id="option-cargo-package---help"><a class="option-anchor" href="#option-cargo-package---help"><code>--help</code></a></dt>
 <dd class="option-desc"><p>Prints help information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-package--Z"><a class="option-anchor" href="#option-cargo-package--Z"></a><code>-Z</code> <em>flag</em></dt>
+<dt class="option-term" id="option-cargo-package--Z"><a class="option-anchor" href="#option-cargo-package--Z"><code>-Z</code> <em>flag</em></a></dt>
 <dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
 </dd>
 
