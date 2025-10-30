@@ -1381,31 +1381,29 @@ impl GlobalContext {
         cv: &mut CV,
         remove: bool,
     ) -> CargoResult<Vec<(String, PathBuf, Definition)>> {
-        let abs = |path: &str, def: &Definition| -> (String, PathBuf, Definition) {
-            let abs_path = match def {
+        let abs = |path, def| -> (String, PathBuf, Definition) {
+            let abs_path = match &def {
                 Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().join(&path),
                 Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => {
                     self.cwd().join(&path)
                 }
             };
-            (path.to_string(), abs_path, def.clone())
+            (path, abs_path, def)
         };
         let CV::Table(table, _def) = cv else {
             unreachable!()
         };
-        let owned;
         let include = if remove {
-            owned = table.remove("include");
-            owned.as_ref()
+            table.remove("include").map(Cow::Owned)
         } else {
-            table.get("include")
+            table.get("include").map(Cow::Borrowed)
         };
-        let includes = match include {
+        let includes = match include.map(|c| c.into_owned()) {
             Some(CV::String(s, def)) => {
                 vec![abs(s, def)]
             }
             Some(CV::List(list, _def)) => list
-                .iter()
+                .into_iter()
                 .map(|cv| match cv {
                     CV::String(s, def) => Ok(abs(s, def)),
                     other => bail!(
