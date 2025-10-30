@@ -1,4 +1,4 @@
-{{#option "`--timings=`_fmts_"}}
+{{#option "`--timings` _fmts_"}}
 Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; `--timings` without an argument will default to `--timings=html`.

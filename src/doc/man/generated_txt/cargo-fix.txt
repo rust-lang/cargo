@@ -252,7 +252,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
-       --timings=fmts
+       --timings fmts
            Output information how long each compilation takes, and track
            concurrency information over time. Accepts an optional
            comma-separated list of output formats; --timings without an

@@ -271,7 +271,7 @@ See <a href="../reference/profiles.html">the reference</a> for more details on p
 </dd>
 
 
-<dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dt class="option-term" id="option-cargo-install---timings"><a class="option-anchor" href="#option-cargo-install---timings"></a><code>--timings</code> <em>fmts</em></dt>
 <dd class="option-desc"><p>Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.

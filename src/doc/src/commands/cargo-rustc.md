@@ -213,7 +213,7 @@ similar to the <code>test</code> profile.</li>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-rustc---timings=fmts"><a class="option-anchor" href="#option-cargo-rustc---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
+<dt class="option-term" id="option-cargo-rustc---timings"><a class="option-anchor" href="#option-cargo-rustc---timings"></a><code>--timings</code> <em>fmts</em></dt>
 <dd class="option-desc"><p>Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
 formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
