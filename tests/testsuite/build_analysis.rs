@@ -116,7 +116,8 @@ fn log_msg_build_started() {
     "target_dir": "[ROOT]/foo/target",
     "timestamp": "[..]T[..]Z",
     "workspace_root": "[ROOT]/foo"
-  }
+  },
+  "{...}"
 ]
 "#]]
         .is_json()
@@ -161,7 +162,6 @@ fn log_msg_timing_info() {
 
     let content = std::fs::read_to_string(log_file.path()).unwrap();
 
-    // Current behavior: only build-started, no timing-info logs exist yet
     assert_e2e().eq(
         &content,
         str![[r#"
@@ -169,6 +169,26 @@ fn log_msg_timing_info() {
   {
     "reason": "build-started",
     "...": "{...}"
+  },
+  {
+    "duration": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "timing-info",
+    "rmeta_time": "{...}",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": "{...}",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "duration": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "timing-info",
+    "rmeta_time": "{...}",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": "{...}",
+    "timestamp": "[..]T[..]Z"
   }
 ]
 "#]]

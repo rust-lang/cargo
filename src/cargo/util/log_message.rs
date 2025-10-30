@@ -3,8 +3,13 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+use cargo_util_schemas::core::PackageIdSpec;
 use jiff::Timestamp;
 use serde::Serialize;
+
+use crate::core::Target;
+use crate::core::compiler::CompilationSection;
+use crate::core::compiler::CompileMode;
 
 /// A log message.
 ///
@@ -22,6 +27,17 @@ pub enum LogMessage {
         rustc_version_verbose: String,
         target_dir: PathBuf,
         workspace_root: PathBuf,
+    },
+    /// Emitted when a compilation unit finishes.
+    TimingInfo {
+        package_id: PackageIdSpec,
+        target: Target,
+        mode: CompileMode,
+        duration: f64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rmeta_time: Option<f64>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        sections: Vec<(String, CompilationSection)>,
     },
 }
 

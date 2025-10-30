@@ -7,6 +7,7 @@ use crate::core::PackageId;
 use crate::core::compiler::job_queue::JobId;
 use crate::core::compiler::{BuildContext, BuildRunner, TimingOutput};
 use crate::util::cpu::State;
+use crate::util::log_message::LogMessage;
 use crate::util::machine_message::{self, Message};
 use crate::util::style;
 use crate::util::{CargoResult, GlobalContext};
@@ -208,7 +209,7 @@ impl<'gctx> Timings<'gctx> {
         let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
         let report_html = has_report(TimingOutput::Html);
         let report_json = has_report(TimingOutput::Json);
-        let enabled = report_html | report_json;
+        let enabled = report_html | report_json | bcx.logger.is_some();
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -316,7 +317,7 @@ impl<'gctx> Timings<'gctx> {
     /// Mark that a unit has finished running.
     pub fn unit_finished(
         &mut self,
-        _build_runner: &BuildRunner<'_, '_>,
+        build_runner: &BuildRunner<'_, '_>,
         id: JobId,
         unlocked: Vec<&Unit>,
     ) {
@@ -344,6 +345,16 @@ impl<'gctx> Timings<'gctx> {
             }
             .to_json_string();
             crate::drop_println!(self.gctx, "{}", msg);
+        }
+        if let Some(logger) = build_runner.bcx.logger {
+            logger.log(LogMessage::TimingInfo {
+                package_id: unit_time.unit.pkg.package_id().to_spec(),
+                target: unit_time.unit.target.clone(),
+                mode: unit_time.unit.mode,
+                duration: unit_time.duration,
+                rmeta_time: unit_time.rmeta_time,
+                sections: unit_time.sections.clone().into_iter().collect(),
+            });
         }
         self.unit_times.push(unit_time);
     }
