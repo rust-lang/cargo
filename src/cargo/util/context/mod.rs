@@ -1258,8 +1258,12 @@ impl GlobalContext {
     ) -> CargoResult<()> {
         let includes = self.include_paths(cv, false)?;
         for include in includes {
+            let Some(abs_path) = include.resolve_path(self) else {
+                continue;
+            };
+
             let mut cv = self
-                ._load_file(&include.abs_path(self), seen, false, WhyLoad::FileDiscovery)
+                ._load_file(&abs_path, seen, false, WhyLoad::FileDiscovery)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1369,7 +1373,11 @@ impl GlobalContext {
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
         for include in includes {
-            self._load_file(&include.abs_path(self), seen, true, why_load)
+            let Some(abs_path) = include.resolve_path(self) else {
+                continue;
+            };
+
+            self._load_file(&abs_path, seen, true, why_load)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
                     format!(
@@ -1410,7 +1418,20 @@ impl GlobalContext {
                             ),
                             None => bail!("missing field `path` at `include[{idx}]` in `{def}`"),
                         };
-                        Ok(ConfigInclude::new(s, def))
+
+                        // Extract optional `include.optional` field
+                        let optional = match table.remove("optional") {
+                            Some(CV::Boolean(b, _)) => b,
+                            Some(other) => bail!(
+                                "expected a boolean, but found {} at `include[{idx}].optional` in `{def}`",
+                                other.desc()
+                            ),
+                            None => false,
+                        };
+
+                        let mut include = ConfigInclude::new(s, def);
+                        include.optional = optional;
+                        Ok(include)
                     }
                     other => bail!(
                         "expected a string or table, but found {} at `include[{idx}]` in {}",
@@ -2495,6 +2516,8 @@ struct ConfigInclude {
     /// Could be either relative or absolute.
     path: PathBuf,
     def: Definition,
+    /// Whether this include is optional (missing files are silently ignored)
+    optional: bool,
 }
 
 impl ConfigInclude {
@@ -2502,10 +2525,11 @@ impl ConfigInclude {
         Self {
             path: p.into(),
             def,
+            optional: false,
         }
     }
 
-    /// Gets the absolute path of the config-include config file.
+    /// Resolves the absolute path for this include.
     ///
     /// For file based include,
     /// it is relative to parent directory of the config file includes it.
@@ -2514,12 +2538,27 @@ impl ConfigInclude {
     ///
     /// For CLI based include (e.g., `--config 'include = "foo.toml"'`),
     /// it is relative to the current working directory.
-    fn abs_path(&self, gctx: &GlobalContext) -> PathBuf {
-        match &self.def {
+    ///
+    /// Returns `None` if this is an optional include and the file doesn't exist.
+    /// Otherwise returns `Some(PathBuf)` with the absolute path.
+    fn resolve_path(&self, gctx: &GlobalContext) -> Option<PathBuf> {
+        let abs_path = match &self.def {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
             Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
         }
-        .join(&self.path)
+        .join(&self.path);
+
+        if self.optional && !abs_path.exists() {
+            tracing::info!(
+                "skipping optional include `{}` in `{}`:  file not found at `{}`",
+                self.path.display(),
+                self.def,
+                abs_path.display(),
+            );
+            None
+        } else {
+            Some(abs_path)
+        }
     }
 }
 

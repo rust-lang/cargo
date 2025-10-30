@@ -647,22 +647,9 @@ fn optional_include_missing_and_existing() {
 
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  failed to load config include `missing.toml` from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to read configuration file `[ROOT]/.cargo/missing.toml`
-
-Caused by:
-  [NOT_FOUND]
-"#]],
-    );
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
 }
 
 #[cargo_test]
