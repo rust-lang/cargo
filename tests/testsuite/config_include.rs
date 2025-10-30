@@ -317,19 +317,18 @@ fn missing_file() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        &format!(
-            "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `missing.toml` from `[..]/.cargo/config.toml`
+  failed to load config include `missing.toml` from `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to read configuration file `[..]/.cargo/missing.toml`
+  failed to read configuration file `[ROOT]/.cargo/missing.toml`
 
 Caused by:
-  [NOT_FOUND]",
-        ),
+  [NOT_FOUND]
+"#]],
     );
 }
 
@@ -342,11 +341,12 @@ fn wrong_file_extension() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  expected a config include path ending with `.toml`, but found `config.png` from `[ROOT]/.cargo/config.toml`",
+  expected a config include path ending with `.toml`, but found `config.png` from `[ROOT]/.cargo/config.toml`
+"#]],
     );
 }
 
@@ -361,20 +361,21 @@ fn cycle() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `one.toml` from `[..]/.cargo/config.toml`
+  failed to load config include `one.toml` from `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to load config include `two.toml` from `[..]/.cargo/one.toml`
+  failed to load config include `two.toml` from `[ROOT]/.cargo/one.toml`
 
 Caused by:
-  failed to load config include `config.toml` from `[..]/.cargo/two.toml`
+  failed to load config include `config.toml` from `[ROOT]/.cargo/two.toml`
 
 Caused by:
-  config `include` cycle detected with path `[..]/.cargo/config.toml`",
+  config `include` cycle detected with path `[ROOT]/.cargo/config.toml`
+"#]],
     );
 }
 
@@ -407,11 +408,12 @@ fn bad_format() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list, but found integer in `[..]/.cargo/config.toml`",
+  expected a string or list of strings, but found integer at `include` in `[ROOT]/.cargo/config.toml
+"#]],
     );
 }
 
@@ -424,19 +426,18 @@ fn cli_include_failed() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        &format!(
-            "\
+        str![[r#"
 failed to load --config include
 
 Caused by:
   failed to load config include `foobar.toml` from `--config cli option`
 
 Caused by:
-  failed to read configuration file `[..]/foobar.toml`
+  failed to read configuration file `[ROOT]/foobar.toml`
 
 Caused by:
-  [NOT_FOUND]"
-        ),
+  [NOT_FOUND]
+"#]],
     );
 }
 
@@ -457,12 +458,12 @@ fn cli_merge_failed() {
     // Maybe this error message should mention it was from an include file?
     assert_error(
         gctx.unwrap_err(),
-        "\
-failed to merge --config key `foo` into `[..]/.cargo/config.toml`
+        str![[r#"
+failed to merge --config key `foo` into `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/other.toml` into `[..]/.cargo/config.toml`: \
-  expected array, but found string",
+  failed to merge config value from `[ROOT]/.cargo/other.toml` into `[ROOT]/.cargo/config.toml`: expected array, but found string
+"#]],
     );
 }
 
@@ -492,4 +493,131 @@ fn cli_include_take_priority_over_env() {
         .config_arg(".cargo/foo.toml")
         .build();
     assert_eq!(gctx.get::<String>("k").unwrap(), "include");
+}
+
+#[cargo_test]
+fn inline_table_style() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = ['simple.toml', { path = 'other.toml' }]
+        key1 = 1
+        key2 = 2
+        ",
+    );
+    write_config_at(
+        ".cargo/simple.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key3 = 5
+        key4 = 6
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
+}
+
+#[cargo_test]
+fn array_of_tables_style() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+        key2 = 2
+
+        [[include]]
+        path = 'other1.toml'
+
+        [[include]]
+        path = 'other2.toml'
+        ",
+    );
+    write_config_at(
+        ".cargo/other1.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    write_config_at(
+        ".cargo/other2.toml",
+        "
+        key3 = 5
+        key4 = 6
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
+}
+
+#[cargo_test]
+fn table_with_unknown_fields() {
+    // Unknown fields should be ignored for forward compatibility
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+
+        [[include]]
+        path = 'other.toml'
+        unknown_foo = true
+        unknown_bar = 123
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key2 = 2
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+}
+
+#[cargo_test]
+fn table_missing_required_field() {
+    // Missing required field should fail
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+        [[include]]
+        random_field = true
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  missing field `path` at `include[0]` in `[ROOT]/.cargo/config.toml`
+"#]],
+    );
 }
