@@ -314,7 +314,12 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Mark that a unit has finished running.
-    pub fn unit_finished(&mut self, id: JobId, unlocked: Vec<&Unit>) {
+    pub fn unit_finished(
+        &mut self,
+        _build_runner: &BuildRunner<'_, '_>,
+        id: JobId,
+        unlocked: Vec<&Unit>,
+    ) {
         if !self.enabled {
             return;
         }

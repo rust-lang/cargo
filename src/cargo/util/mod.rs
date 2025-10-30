@@ -57,7 +57,7 @@ pub mod job;
 pub mod lints;
 mod lockserver;
 pub mod log_message;
-mod logger;
+pub mod logger;
 pub mod machine_message;
 pub mod network;
 mod once;

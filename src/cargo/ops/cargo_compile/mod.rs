@@ -173,7 +173,7 @@ pub fn compile_ws<'a>(
         });
     }
 
-    let bcx = create_bcx(ws, options, &interner)?;
+    let bcx = create_bcx(ws, options, &interner, logger.as_ref())?;
 
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
@@ -232,6 +232,7 @@ pub fn create_bcx<'a, 'gctx>(
     ws: &'a Workspace<'gctx>,
     options: &'a CompileOptions,
     interner: &'a UnitInterner,
+    logger: Option<&'a BuildLogger>,
 ) -> CargoResult<BuildContext<'a, 'gctx>> {
     let CompileOptions {
         ref build_config,
@@ -586,6 +587,7 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
 
     let bcx = BuildContext::new(
         ws,
+        logger,
         pkg_set,
         build_config,
         profiles,

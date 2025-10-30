@@ -9,6 +9,7 @@ use crate::util::Rustc;
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::logger::BuildLogger;
 use std::collections::{HashMap, HashSet};
 
 mod target_info;
@@ -50,6 +51,9 @@ pub struct BuildContext<'a, 'gctx> {
     /// The cargo context.
     pub gctx: &'gctx GlobalContext,
 
+    /// Build logger for `-Zbuild-analysis`.
+    pub logger: Option<&'a BuildLogger>,
+
     /// This contains a collection of compiler flags presets.
     pub profiles: Profiles,
 
@@ -83,6 +87,7 @@ pub struct BuildContext<'a, 'gctx> {
 impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     pub fn new(
         ws: &'a Workspace<'gctx>,
+        logger: Option<&'a BuildLogger>,
         packages: PackageSet<'gctx>,
         build_config: &'a BuildConfig,
         profiles: Profiles,
@@ -102,6 +107,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         Ok(BuildContext {
             ws,
             gctx: ws.gctx(),
+            logger,
             packages,
             build_config,
             profiles,
