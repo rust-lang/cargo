@@ -1400,8 +1400,20 @@ impl GlobalContext {
                 .enumerate()
                 .map(|(idx, cv)| match cv {
                     CV::String(s, def) => Ok(ConfigInclude::new(s, def)),
+                    CV::Table(mut table, def) => {
+                        // Extract `include.path`
+                        let s = match table.remove("path") {
+                            Some(CV::String(s, _)) => s,
+                            Some(other) => bail!(
+                                "expected a string, but found {} at `include[{idx}].path` in `{def}`",
+                                other.desc()
+                            ),
+                            None => bail!("missing field `path` at `include[{idx}]` in `{def}`"),
+                        };
+                        Ok(ConfigInclude::new(s, def))
+                    }
                     other => bail!(
-                        "expected a string, but found {} at `include[{idx}]` in `{}",
+                        "expected a string or table, but found {} at `include[{idx}]` in {}",
                         other.desc(),
                         other.definition(),
                     ),
@@ -2473,6 +2485,11 @@ pub fn save_credentials(
     }
 }
 
+/// Represents a config-include value in the configuration.
+///
+/// This intentionally doesn't derive serde deserialization
+/// to avoid any misuse of `GlobalContext::get::<ConfigInclude>()`,
+/// which might lead to wrong config loading order.
 struct ConfigInclude {
     /// Path to a config-include configuration file.
     /// Could be either relative or absolute.

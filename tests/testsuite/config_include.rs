@@ -520,19 +520,13 @@ fn inline_table_style() {
         ",
     );
 
-    // Currently this fails with an error
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  expected a string, but found table at `include[1]` in `[ROOT]/.cargo/config.toml
-"#]],
-    );
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
 }
 
 #[cargo_test]
@@ -565,19 +559,13 @@ fn array_of_tables_style() {
         ",
     );
 
-    // Currently this also fails with an error
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
-"#]],
-    );
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
 }
 
 #[cargo_test]
@@ -603,16 +591,9 @@ fn table_with_unknown_fields() {
 
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str![[r#"
-could not load Cargo configuration
-
-Caused by:
-  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
-"#]],
-    );
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
 }
 
 #[cargo_test]
@@ -636,7 +617,7 @@ fn table_missing_required_field() {
 could not load Cargo configuration
 
 Caused by:
-  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
+  missing field `path` at `include[0]` in `[ROOT]/.cargo/config.toml`
 "#]],
     );
 }
