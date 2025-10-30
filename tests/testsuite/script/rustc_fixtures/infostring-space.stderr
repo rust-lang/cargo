@@ -1,0 +1,8 @@
+[ERROR] unsupported frontmatter infostring `cargo clippy`; specify `cargo` for embedding a manifest
+ --> script:1:5
+  |
+1 | --- cargo clippy
+  |     ^^^^^^^^^^^^
+2 | //~^ ERROR: invalid infostring for frontmatter
+3 | ---
+  |

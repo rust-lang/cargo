@@ -6,6 +6,6 @@
 ---
 
 // frontmatters must be at the start of a file. This test ensures that.
-// CARGO(pass): can't detect this, deferring to rustc
+// CARGO(pass): not technitcally a frontmatter, so defer to rustc to error
 
 fn main() {}

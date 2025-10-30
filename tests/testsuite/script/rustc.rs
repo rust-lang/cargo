@@ -184,50 +184,154 @@ fn assert_failure(fixture_path: &str, assertion_path: &str) {
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn dot_in_infostring_leading() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/dot-in-infostring-leading.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/dot-in-infostring-leading.stderr";
+fn content_contains_whitespace() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/content-contains-whitespace.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/content-contains-whitespace.stderr";
     assert_failure(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn dot_in_infostring_non_leading() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/dot-in-infostring-non-leading.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/dot-in-infostring-non-leading.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn escape() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/escape.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/escape.stdout";
+fn content_non_lexible_tokens() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/content-non-lexible-tokens.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/content-non-lexible-tokens.stdout";
     assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn extra_after_end() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/extra-after-end.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/extra-after-end.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn frontmatter_after_tokens() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-after-tokens.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-after-tokens.stdout";
+fn escape_hyphens_leading() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-leading.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-leading.stdout";
     assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn frontmatter_contains_whitespace() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-contains-whitespace.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-contains-whitespace.stderr";
+fn escape_hyphens_nonleading_1() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-1.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-1.stdout";
+    assert_success(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn escape_hyphens_nonleading_2() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-2.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-2.stdout";
+    assert_success(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn escape_hyphens_nonleading_3() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-3.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-3.stdout";
+    assert_success(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_close_extra_after() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-close-extra-after.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-close-extra-after.stderr";
     assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_indented() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-indented.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-indented.stdout";
+    assert_success(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_indented_mismatch() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-indented-mismatch.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-indented-mismatch.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_mismatch_1() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-1.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-1.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_mismatch_2() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-2.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-2.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_1() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-1.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-1.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_2() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-2.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-2.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_3() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-3.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-3.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_4() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-4.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-4.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_5() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-5.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-5.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_unclosed_6() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-6.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-6.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_whitespace_trailing_1() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-1.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-1.stdout";
+    assert_success(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn fence_whitespace_trailing_2() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-2.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-2.stdout";
+    assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
@@ -240,106 +344,90 @@ fn frontmatter_crlf() {
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn frontmatter_inner_hyphens_1() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-inner-hyphens-1.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-inner-hyphens-1.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn frontmatter_inner_hyphens_2() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-inner-hyphens-2.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-inner-hyphens-2.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn frontmatter_non_lexible_tokens() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-non-lexible-tokens.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-non-lexible-tokens.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn frontmatter_whitespace_1() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-1.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-1.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn frontmatter_whitespace_2() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-2.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-2.stderr";
+fn infostring_comma() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-comma.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-comma.stderr";
     assert_failure(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn frontmatter_whitespace_3() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-3.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-3.stdout";
+fn infostring_dot_leading() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-leading.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-leading.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn infostring_dot_nonleading() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-nonleading.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-nonleading.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn infostring_hyphen_leading() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-leading.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-leading.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn infostring_hyphen_nonleading() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-nonleading.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-nonleading.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn infostring_space() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-space.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-space.stderr";
+    assert_failure(fixture_path, assertion_path);
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[rustfmt::skip]  // code-generated
+fn location_after_shebang() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/location-after-shebang.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/location-after-shebang.stdout";
     assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn frontmatter_whitespace_4() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-4.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/frontmatter-whitespace-4.stdout";
+fn location_after_tokens() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/location-after-tokens.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/location-after-tokens.stdout";
     assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn hyphen_in_infostring_leading() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/hyphen-in-infostring-leading.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/hyphen-in-infostring-leading.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn hyphen_in_infostring_non_leading() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/hyphen-in-infostring-non-leading.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/hyphen-in-infostring-non-leading.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn included_frontmatter() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/included-frontmatter.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/included-frontmatter.stdout";
+fn location_include_in_expr_ctxt() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/location-include-in-expr-ctxt.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/location-include-in-expr-ctxt.stdout";
     assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn infostring_fail() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-fail.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/infostring-fail.stderr";
-    assert_failure(fixture_path, assertion_path);
+fn location_include_in_item_ctxt() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/location-include-in-item-ctxt.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/location-include-in-item-ctxt.stdout";
+    assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[rustfmt::skip]  // code-generated
-fn mismatch_1() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/mismatch-1.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/mismatch-1.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn mismatch_2() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/mismatch-2.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/mismatch-2.stderr";
-    assert_failure(fixture_path, assertion_path);
+fn location_proc_macro_observer() {
+    let fixture_path = "tests/testsuite/script/rustc_fixtures/location-proc-macro-observer.rs";
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/location-proc-macro-observer.stdout";
+    assert_success(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
@@ -347,69 +435,5 @@ fn mismatch_2() {
 fn multifrontmatter() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/multifrontmatter.rs";
     let assertion_path = "tests/testsuite/script/rustc_fixtures/multifrontmatter.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn multifrontmatter_2() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/multifrontmatter-2.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/multifrontmatter-2.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn proc_macro_observer() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/proc-macro-observer.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/proc-macro-observer.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn shebang() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/shebang.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/shebang.stdout";
-    assert_success(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn unclosed_1() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/unclosed-1.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/unclosed-1.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn unclosed_2() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/unclosed-2.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/unclosed-2.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn unclosed_3() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/unclosed-3.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/unclosed-3.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn unclosed_4() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/unclosed-4.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/unclosed-4.stderr";
-    assert_failure(fixture_path, assertion_path);
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-#[rustfmt::skip]  // code-generated
-fn unclosed_5() {
-    let fixture_path = "tests/testsuite/script/rustc_fixtures/unclosed-5.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/unclosed-5.stderr";
     assert_failure(fixture_path, assertion_path);
 }

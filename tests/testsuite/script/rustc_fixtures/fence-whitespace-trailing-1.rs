@@ -10,6 +10,7 @@
 //@ check-pass
 // ignore-tidy-end-whitespace
 // ignore-tidy-leading-newlines
+// ignore-tidy-tab
 
 #![feature(frontmatter)]
 
