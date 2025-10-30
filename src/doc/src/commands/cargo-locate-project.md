@@ -23,7 +23,7 @@ locating the manifest of a workspace member.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-locate-project---workspace"><a class="option-anchor" href="#option-cargo-locate-project---workspace"></a><code>--workspace</code></dt>
+<dt class="option-term" id="option-cargo-locate-project---workspace"><a class="option-anchor" href="#option-cargo-locate-project---workspace"><code>--workspace</code></a></dt>
 <dd class="option-desc"><p>Locate the <code>Cargo.toml</code> at the root of the workspace, as opposed to the current
 workspace member.</p>
 </dd>
@@ -35,7 +35,7 @@ workspace member.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-locate-project---message-format"><a class="option-anchor" href="#option-cargo-locate-project---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
+<dt class="option-term" id="option-cargo-locate-project---message-format"><a class="option-anchor" href="#option-cargo-locate-project---message-format"><code>--message-format</code> <em>fmt</em></a></dt>
 <dd class="option-desc"><p>The representation in which to print the project location. Valid values:</p>
 <ul>
 <li><code>json</code> (default): JSON object with the path under the key “root”.</li>
@@ -44,8 +44,8 @@ workspace member.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project--v"><a class="option-anchor" href="#option-cargo-locate-project--v"></a><code>-v</code></dt>
-<dt class="option-term" id="option-cargo-locate-project---verbose"><a class="option-anchor" href="#option-cargo-locate-project---verbose"></a><code>--verbose</code></dt>
+<dt class="option-term" id="option-cargo-locate-project--v"><a class="option-anchor" href="#option-cargo-locate-project--v"><code>-v</code></a></dt>
+<dt class="option-term" id="option-cargo-locate-project---verbose"><a class="option-anchor" href="#option-cargo-locate-project---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
@@ -53,15 +53,15 @@ May also be specified with the <code>term.verbose</code>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project--q"><a class="option-anchor" href="#option-cargo-locate-project--q"></a><code>-q</code></dt>
-<dt class="option-term" id="option-cargo-locate-project---quiet"><a class="option-anchor" href="#option-cargo-locate-project---quiet"></a><code>--quiet</code></dt>
+<dt class="option-term" id="option-cargo-locate-project--q"><a class="option-anchor" href="#option-cargo-locate-project--q"><code>-q</code></a></dt>
+<dt class="option-term" id="option-cargo-locate-project---quiet"><a class="option-anchor" href="#option-cargo-locate-project---quiet"><code>--quiet</code></a></dt>
 <dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
 <a href="../reference/config.html">config value</a>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project---color"><a class="option-anchor" href="#option-cargo-locate-project---color"></a><code>--color</code> <em>when</em></dt>
+<dt class="option-term" id="option-cargo-locate-project---color"><a class="option-anchor" href="#option-cargo-locate-project---color"><code>--color</code> <em>when</em></a></dt>
 <dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
@@ -78,7 +78,7 @@ terminal.</li>
 ### Manifest Options
 
 <dl>
-<dt class="option-term" id="option-cargo-locate-project---manifest-path"><a class="option-anchor" href="#option-cargo-locate-project---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
+<dt class="option-term" id="option-cargo-locate-project---manifest-path"><a class="option-anchor" href="#option-cargo-locate-project---manifest-path"><code>--manifest-path</code> <em>path</em></a></dt>
 <dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
@@ -89,7 +89,7 @@ terminal.</li>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-locate-project-+toolchain"><a class="option-anchor" href="#option-cargo-locate-project-+toolchain"></a><code>+</code><em>toolchain</em></dt>
+<dt class="option-term" id="option-cargo-locate-project-+toolchain"><a class="option-anchor" href="#option-cargo-locate-project-+toolchain"><code>+</code><em>toolchain</em></a></dt>
 <dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
@@ -98,14 +98,14 @@ for more information about how toolchain overrides work.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project---config"><a class="option-anchor" href="#option-cargo-locate-project---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-locate-project---config"><a class="option-anchor" href="#option-cargo-locate-project---config"><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project--C"><a class="option-anchor" href="#option-cargo-locate-project--C"></a><code>-C</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-locate-project--C"><a class="option-anchor" href="#option-cargo-locate-project--C"><code>-C</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
@@ -117,13 +117,13 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project--h"><a class="option-anchor" href="#option-cargo-locate-project--h"></a><code>-h</code></dt>
-<dt class="option-term" id="option-cargo-locate-project---help"><a class="option-anchor" href="#option-cargo-locate-project---help"></a><code>--help</code></dt>
+<dt class="option-term" id="option-cargo-locate-project--h"><a class="option-anchor" href="#option-cargo-locate-project--h"><code>-h</code></a></dt>
+<dt class="option-term" id="option-cargo-locate-project---help"><a class="option-anchor" href="#option-cargo-locate-project---help"><code>--help</code></a></dt>
 <dd class="option-desc"><p>Prints help information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-locate-project--Z"><a class="option-anchor" href="#option-cargo-locate-project--Z"></a><code>-Z</code> <em>flag</em></dt>
+<dt class="option-term" id="option-cargo-locate-project--Z"><a class="option-anchor" href="#option-cargo-locate-project--Z"><code>-Z</code> <em>flag</em></a></dt>
 <dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
 </dd>
 

@@ -20,7 +20,7 @@ latest available versions.
 
 <dl>
 
-<dt class="option-term" id="option-cargo-update-spec…"><a class="option-anchor" href="#option-cargo-update-spec…"></a><em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-update-spec…"><a class="option-anchor" href="#option-cargo-update-spec…"><em>spec</em>…</a></dt>
 <dd class="option-desc"><p>Update only the specified packages. This flag may be specified
 multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
 <p>If packages are specified with <em>spec</em>, then a conservative update of
@@ -32,13 +32,13 @@ will remain locked at their currently recorded versions.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---recursive"><a class="option-anchor" href="#option-cargo-update---recursive"></a><code>--recursive</code></dt>
+<dt class="option-term" id="option-cargo-update---recursive"><a class="option-anchor" href="#option-cargo-update---recursive"><code>--recursive</code></a></dt>
 <dd class="option-desc"><p>When used with <em>spec</em>, dependencies of <em>spec</em> are forced to update as well.
 Cannot be used with <code>--precise</code>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---precise"><a class="option-anchor" href="#option-cargo-update---precise"></a><code>--precise</code> <em>precise</em></dt>
+<dt class="option-term" id="option-cargo-update---precise"><a class="option-anchor" href="#option-cargo-update---precise"><code>--precise</code> <em>precise</em></a></dt>
 <dd class="option-desc"><p>When used with <em>spec</em>, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).</p>
@@ -50,7 +50,7 @@ requirement in <code>Cargo.toml</code> doesn’t contain any pre-release identif
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"></a><code>--breaking</code> <em>directory</em></dt>
+<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"><code>--breaking</code> <em>directory</em></a></dt>
 <dd class="option-desc"><p>Update <em>spec</em> to latest SemVer-breaking version.</p>
 <p>Version requirements will be modified to allow this update.</p>
 <p>This only applies to dependencies when</p>
@@ -67,8 +67,8 @@ See <a href="https://github.com/rust-lang/cargo/issues/12425">https://github.com
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>
-<dt class="option-term" id="option-cargo-update---workspace"><a class="option-anchor" href="#option-cargo-update---workspace"></a><code>--workspace</code></dt>
+<dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"><code>-w</code></a></dt>
+<dt class="option-term" id="option-cargo-update---workspace"><a class="option-anchor" href="#option-cargo-update---workspace"><code>--workspace</code></a></dt>
 <dd class="option-desc"><p>Attempt to update only packages defined in the workspace. Other packages
 are updated only if they don’t already exist in the lockfile. This
 option is useful for updating <code>Cargo.lock</code> after you’ve changed version
@@ -76,7 +76,7 @@ numbers in <code>Cargo.toml</code>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---dry-run"><a class="option-anchor" href="#option-cargo-update---dry-run"></a><code>--dry-run</code></dt>
+<dt class="option-term" id="option-cargo-update---dry-run"><a class="option-anchor" href="#option-cargo-update---dry-run"><code>--dry-run</code></a></dt>
 <dd class="option-desc"><p>Displays what would be updated, but doesn’t actually write the lockfile.</p>
 </dd>
 
@@ -86,8 +86,8 @@ numbers in <code>Cargo.toml</code>.</p>
 ### Display Options
 
 <dl>
-<dt class="option-term" id="option-cargo-update--v"><a class="option-anchor" href="#option-cargo-update--v"></a><code>-v</code></dt>
-<dt class="option-term" id="option-cargo-update---verbose"><a class="option-anchor" href="#option-cargo-update---verbose"></a><code>--verbose</code></dt>
+<dt class="option-term" id="option-cargo-update--v"><a class="option-anchor" href="#option-cargo-update--v"><code>-v</code></a></dt>
+<dt class="option-term" id="option-cargo-update---verbose"><a class="option-anchor" href="#option-cargo-update---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
@@ -95,15 +95,15 @@ May also be specified with the <code>term.verbose</code>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update--q"><a class="option-anchor" href="#option-cargo-update--q"></a><code>-q</code></dt>
-<dt class="option-term" id="option-cargo-update---quiet"><a class="option-anchor" href="#option-cargo-update---quiet"></a><code>--quiet</code></dt>
+<dt class="option-term" id="option-cargo-update--q"><a class="option-anchor" href="#option-cargo-update--q"><code>-q</code></a></dt>
+<dt class="option-term" id="option-cargo-update---quiet"><a class="option-anchor" href="#option-cargo-update---quiet"><code>--quiet</code></a></dt>
 <dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
 <a href="../reference/config.html">config value</a>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---color"><a class="option-anchor" href="#option-cargo-update---color"></a><code>--color</code> <em>when</em></dt>
+<dt class="option-term" id="option-cargo-update---color"><a class="option-anchor" href="#option-cargo-update---color"><code>--color</code> <em>when</em></a></dt>
 <dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
@@ -121,18 +121,18 @@ terminal.</li>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-update---manifest-path"><a class="option-anchor" href="#option-cargo-update---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
+<dt class="option-term" id="option-cargo-update---manifest-path"><a class="option-anchor" href="#option-cargo-update---manifest-path"><code>--manifest-path</code> <em>path</em></a></dt>
 <dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---ignore-rust-version"><a class="option-anchor" href="#option-cargo-update---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dt class="option-term" id="option-cargo-update---ignore-rust-version"><a class="option-anchor" href="#option-cargo-update---ignore-rust-version"><code>--ignore-rust-version</code></a></dt>
 <dd class="option-desc"><p>Ignore <code>rust-version</code> specification in packages.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---locked"><a class="option-anchor" href="#option-cargo-update---locked"></a><code>--locked</code></dt>
+<dt class="option-term" id="option-cargo-update---locked"><a class="option-anchor" href="#option-cargo-update---locked"><code>--locked</code></a></dt>
 <dd class="option-desc"><p>Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
 error when either of the following scenarios arises:</p>
@@ -145,7 +145,7 @@ such as in CI pipelines.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---offline"><a class="option-anchor" href="#option-cargo-update---offline"></a><code>--offline</code></dt>
+<dt class="option-term" id="option-cargo-update---offline"><a class="option-anchor" href="#option-cargo-update---offline"><code>--offline</code></a></dt>
 <dd class="option-desc"><p>Prevents Cargo from accessing the network for any reason. Without this
 flag, Cargo will stop with an error if it needs to access the network and
 the network is not available. With this flag, Cargo will attempt to
@@ -159,12 +159,12 @@ offline.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---frozen"><a class="option-anchor" href="#option-cargo-update---frozen"></a><code>--frozen</code></dt>
+<dt class="option-term" id="option-cargo-update---frozen"><a class="option-anchor" href="#option-cargo-update---frozen"><code>--frozen</code></a></dt>
 <dd class="option-desc"><p>Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---lockfile-path"><a class="option-anchor" href="#option-cargo-update---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-update---lockfile-path"><a class="option-anchor" href="#option-cargo-update---lockfile-path"><code>--lockfile-path</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
 <code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
 <code>--lockfile-path</code> will ignore existing lockfile at the default path, and instead will
@@ -183,7 +183,7 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 <dl>
 
-<dt class="option-term" id="option-cargo-update-+toolchain"><a class="option-anchor" href="#option-cargo-update-+toolchain"></a><code>+</code><em>toolchain</em></dt>
+<dt class="option-term" id="option-cargo-update-+toolchain"><a class="option-anchor" href="#option-cargo-update-+toolchain"><code>+</code><em>toolchain</em></a></dt>
 <dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
@@ -192,14 +192,14 @@ for more information about how toolchain overrides work.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---config"><a class="option-anchor" href="#option-cargo-update---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-update---config"><a class="option-anchor" href="#option-cargo-update---config"><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update--C"><a class="option-anchor" href="#option-cargo-update--C"></a><code>-C</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-update--C"><a class="option-anchor" href="#option-cargo-update--C"><code>-C</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
@@ -211,13 +211,13 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"></a><code>-h</code></dt>
-<dt class="option-term" id="option-cargo-update---help"><a class="option-anchor" href="#option-cargo-update---help"></a><code>--help</code></dt>
+<dt class="option-term" id="option-cargo-update--h"><a class="option-anchor" href="#option-cargo-update--h"><code>-h</code></a></dt>
+<dt class="option-term" id="option-cargo-update---help"><a class="option-anchor" href="#option-cargo-update---help"><code>--help</code></a></dt>
 <dd class="option-desc"><p>Prints help information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update--Z"><a class="option-anchor" href="#option-cargo-update--Z"></a><code>-Z</code> <em>flag</em></dt>
+<dt class="option-term" id="option-cargo-update--Z"><a class="option-anchor" href="#option-cargo-update--Z"><code>-Z</code> <em>flag</em></a></dt>
 <dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
 </dd>
 

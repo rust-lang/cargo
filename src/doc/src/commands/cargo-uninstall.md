@@ -31,18 +31,18 @@ The installation root is determined, in order of precedence:
 
 <dl>
 
-<dt class="option-term" id="option-cargo-uninstall--p"><a class="option-anchor" href="#option-cargo-uninstall--p"></a><code>-p</code></dt>
-<dt class="option-term" id="option-cargo-uninstall---package"><a class="option-anchor" href="#option-cargo-uninstall---package"></a><code>--package</code> <em>spec</em>…</dt>
+<dt class="option-term" id="option-cargo-uninstall--p"><a class="option-anchor" href="#option-cargo-uninstall--p"><code>-p</code></a></dt>
+<dt class="option-term" id="option-cargo-uninstall---package"><a class="option-anchor" href="#option-cargo-uninstall---package"><code>--package</code> <em>spec</em>…</a></dt>
 <dd class="option-desc"><p>Package to uninstall.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall---bin"><a class="option-anchor" href="#option-cargo-uninstall---bin"></a><code>--bin</code> <em>name</em>…</dt>
+<dt class="option-term" id="option-cargo-uninstall---bin"><a class="option-anchor" href="#option-cargo-uninstall---bin"><code>--bin</code> <em>name</em>…</a></dt>
 <dd class="option-desc"><p>Only uninstall the binary <em>name</em>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall---root"><a class="option-anchor" href="#option-cargo-uninstall---root"></a><code>--root</code> <em>dir</em></dt>
+<dt class="option-term" id="option-cargo-uninstall---root"><a class="option-anchor" href="#option-cargo-uninstall---root"><code>--root</code> <em>dir</em></a></dt>
 <dd class="option-desc"><p>Directory to uninstall packages from.</p>
 </dd>
 
@@ -53,8 +53,8 @@ The installation root is determined, in order of precedence:
 
 <dl>
 
-<dt class="option-term" id="option-cargo-uninstall--v"><a class="option-anchor" href="#option-cargo-uninstall--v"></a><code>-v</code></dt>
-<dt class="option-term" id="option-cargo-uninstall---verbose"><a class="option-anchor" href="#option-cargo-uninstall---verbose"></a><code>--verbose</code></dt>
+<dt class="option-term" id="option-cargo-uninstall--v"><a class="option-anchor" href="#option-cargo-uninstall--v"><code>-v</code></a></dt>
+<dt class="option-term" id="option-cargo-uninstall---verbose"><a class="option-anchor" href="#option-cargo-uninstall---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
 includes extra output such as dependency warnings and build script output.
 May also be specified with the <code>term.verbose</code>
@@ -62,15 +62,15 @@ May also be specified with the <code>term.verbose</code>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall--q"><a class="option-anchor" href="#option-cargo-uninstall--q"></a><code>-q</code></dt>
-<dt class="option-term" id="option-cargo-uninstall---quiet"><a class="option-anchor" href="#option-cargo-uninstall---quiet"></a><code>--quiet</code></dt>
+<dt class="option-term" id="option-cargo-uninstall--q"><a class="option-anchor" href="#option-cargo-uninstall--q"><code>-q</code></a></dt>
+<dt class="option-term" id="option-cargo-uninstall---quiet"><a class="option-anchor" href="#option-cargo-uninstall---quiet"><code>--quiet</code></a></dt>
 <dd class="option-desc"><p>Do not print cargo log messages.
 May also be specified with the <code>term.quiet</code>
 <a href="../reference/config.html">config value</a>.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall---color"><a class="option-anchor" href="#option-cargo-uninstall---color"></a><code>--color</code> <em>when</em></dt>
+<dt class="option-term" id="option-cargo-uninstall---color"><a class="option-anchor" href="#option-cargo-uninstall---color"><code>--color</code> <em>when</em></a></dt>
 <dd class="option-desc"><p>Control when colored output is used. Valid values:</p>
 <ul>
 <li><code>auto</code> (default): Automatically detect if color support is available on the
@@ -89,7 +89,7 @@ terminal.</li>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-uninstall-+toolchain"><a class="option-anchor" href="#option-cargo-uninstall-+toolchain"></a><code>+</code><em>toolchain</em></dt>
+<dt class="option-term" id="option-cargo-uninstall-+toolchain"><a class="option-anchor" href="#option-cargo-uninstall-+toolchain"><code>+</code><em>toolchain</em></a></dt>
 <dd class="option-desc"><p>If Cargo has been installed with rustup, and the first argument to <code>cargo</code>
 begins with <code>+</code>, it will be interpreted as a rustup toolchain name (such
 as <code>+stable</code> or <code>+nightly</code>).
@@ -98,14 +98,14 @@ for more information about how toolchain overrides work.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall---config"><a class="option-anchor" href="#option-cargo-uninstall---config"></a><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-uninstall---config"><a class="option-anchor" href="#option-cargo-uninstall---config"><code>--config</code> <em>KEY=VALUE</em> or <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Overrides a Cargo configuration value. The argument should be in TOML syntax of <code>KEY=VALUE</code>,
 or provided as a path to an extra configuration file. This flag may be specified multiple times.
 See the <a href="../reference/config.html#command-line-overrides">command-line overrides section</a> for more information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall--C"><a class="option-anchor" href="#option-cargo-uninstall--C"></a><code>-C</code> <em>PATH</em></dt>
+<dt class="option-term" id="option-cargo-uninstall--C"><a class="option-anchor" href="#option-cargo-uninstall--C"><code>-C</code> <em>PATH</em></a></dt>
 <dd class="option-desc"><p>Changes the current working directory before executing any specified operations. This affects
 things like where cargo looks by default for the project manifest (<code>Cargo.toml</code>), as well as
 the directories searched for discovering <code>.cargo/config.toml</code>, for example. This option must
@@ -117,13 +117,13 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall--h"><a class="option-anchor" href="#option-cargo-uninstall--h"></a><code>-h</code></dt>
-<dt class="option-term" id="option-cargo-uninstall---help"><a class="option-anchor" href="#option-cargo-uninstall---help"></a><code>--help</code></dt>
+<dt class="option-term" id="option-cargo-uninstall--h"><a class="option-anchor" href="#option-cargo-uninstall--h"><code>-h</code></a></dt>
+<dt class="option-term" id="option-cargo-uninstall---help"><a class="option-anchor" href="#option-cargo-uninstall---help"><code>--help</code></a></dt>
 <dd class="option-desc"><p>Prints help information.</p>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-uninstall--Z"><a class="option-anchor" href="#option-cargo-uninstall--Z"></a><code>-Z</code> <em>flag</em></dt>
+<dt class="option-term" id="option-cargo-uninstall--Z"><a class="option-anchor" href="#option-cargo-uninstall--Z"><code>-Z</code> <em>flag</em></a></dt>
 <dd class="option-desc"><p>Unstable (nightly-only) flags to Cargo. Run <code>cargo -Z help</code> for details.</p>
 </dd>
 
