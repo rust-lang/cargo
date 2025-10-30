@@ -53,7 +53,7 @@ man page:
 
 <dl>
 
-<dt class="option-term" id="option-mdman--t"><a class="option-anchor" href="#option-mdman--t"></a><code>-t</code> <em>type</em></dt>
+<dt class="option-term" id="option-mdman--t"><a class="option-anchor" href="#option-mdman--t"><code>-t</code> <em>type</em></a></dt>
 <dd class="option-desc"><p>Specifies the output type. The following output types are supported:</p>
 <ul>
 <li><code>man</code> — A troff-style man page. Outputs with a numbered extension (like
@@ -66,18 +66,18 @@ available. Outputs with the <code>.txt</code> extension.</li>
 </dd>
 
 
-<dt class="option-term" id="option-mdman--o"><a class="option-anchor" href="#option-mdman--o"></a><code>-o</code> <em>outdir</em></dt>
+<dt class="option-term" id="option-mdman--o"><a class="option-anchor" href="#option-mdman--o"><code>-o</code> <em>outdir</em></a></dt>
 <dd class="option-desc"><p>Specifies the directory where to save the output.</p>
 </dd>
 
 
-<dt class="option-term" id="option-mdman---url"><a class="option-anchor" href="#option-mdman---url"></a><code>--url</code> <em>base_url</em></dt>
+<dt class="option-term" id="option-mdman---url"><a class="option-anchor" href="#option-mdman---url"><code>--url</code> <em>base_url</em></a></dt>
 <dd class="option-desc"><p>Specifies a base URL to use for relative URLs within the document. Any
 relative URL will be joined with this URL.</p>
 </dd>
 
 
-<dt class="option-term" id="option-mdman---man"><a class="option-anchor" href="#option-mdman---man"></a><code>--man</code> <em>name</em><code>:</code><em>section</em><code>=</code><em>url</em></dt>
+<dt class="option-term" id="option-mdman---man"><a class="option-anchor" href="#option-mdman---man"><code>--man</code> <em>name</em><code>:</code><em>section</em><code>=</code><em>url</em></a></dt>
 <dd class="option-desc"><p>Specifies a URL to use for the given man page. When the <code>{{man name section}}</code> expression is used, the given URL will be inserted as a link. This
 may be specified multiple times. If a man page reference does not have a
 matching <code>--man</code> entry, then a relative link to a file named <em>name</em><code>.md</code> will
@@ -85,7 +85,7 @@ be used.</p>
 </dd>
 
 
-<dt class="option-term" id="option-mdman-sources…"><a class="option-anchor" href="#option-mdman-sources…"></a><em>sources…</em></dt>
+<dt class="option-term" id="option-mdman-sources…"><a class="option-anchor" href="#option-mdman-sources…"><em>sources…</em></a></dt>
 <dd class="option-desc"><p>The source input filename, may be specified multiple times.</p>
 </dd>
 

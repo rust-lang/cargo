@@ -58,10 +58,8 @@ impl super::Formatter for MdFormatter {
             let id = format!("option-{}-{}", man_name, no_tags);
             write!(
                 result,
-                "<dt class=\"option-term\" id=\"{ID}\">\
-                <a class=\"option-anchor\" href=\"#{ID}\"></a>{OPTION}</dt>\n",
-                ID = id,
-                OPTION = no_p
+                "<dt class=\"option-term\" id=\"{id}\">\
+                <a class=\"option-anchor\" href=\"#{id}\">{no_p}</a></dt>\n",
             )?;
         }
         let rendered_block = self.render_html(block)?;
