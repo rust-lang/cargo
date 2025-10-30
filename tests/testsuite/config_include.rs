@@ -412,7 +412,7 @@ fn bad_format() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list, but found integer in `[ROOT]/.cargo/config.toml`
+  expected a string or list of strings, but found integer at `include` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -530,7 +530,7 @@ fn inline_table_style() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list of strings, but found table in list
+  expected a string, but found table at `include[1]` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -575,7 +575,7 @@ fn array_of_tables_style() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list of strings, but found table in list
+  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -610,7 +610,7 @@ fn table_with_unknown_fields() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list of strings, but found table in list
+  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -636,7 +636,7 @@ fn table_missing_required_field() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list of strings, but found table in list
+  expected a string, but found table at `include[0]` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }

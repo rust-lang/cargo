@@ -1397,16 +1397,18 @@ impl GlobalContext {
             Some(CV::String(s, def)) => vec![ConfigInclude::new(s, def)],
             Some(CV::List(list, _def)) => list
                 .into_iter()
-                .map(|cv| match cv {
+                .enumerate()
+                .map(|(idx, cv)| match cv {
                     CV::String(s, def) => Ok(ConfigInclude::new(s, def)),
                     other => bail!(
-                        "`include` expected a string or list of strings, but found {} in list",
-                        other.desc()
+                        "expected a string, but found {} at `include[{idx}]` in `{}",
+                        other.desc(),
+                        other.definition(),
                     ),
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
             Some(other) => bail!(
-                "`include` expected a string or list, but found {} in `{}`",
+                "expected a string or list of strings, but found {} at `include` in `{}",
                 other.desc(),
                 other.definition()
             ),
