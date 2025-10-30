@@ -1257,11 +1257,15 @@ impl GlobalContext {
         output: &mut Vec<CV>,
     ) -> CargoResult<()> {
         let includes = self.include_paths(cv, false)?;
-        for (path, abs_path, def) in includes {
+        for include in includes {
             let mut cv = self
-                ._load_file(&abs_path, seen, false, WhyLoad::FileDiscovery)
+                ._load_file(&include.abs_path(self), seen, false, WhyLoad::FileDiscovery)
                 .with_context(|| {
-                    format!("failed to load config include `{}` from `{}`", path, def)
+                    format!(
+                        "failed to load config include `{}` from `{}`",
+                        include.path.display(),
+                        include.def
+                    )
                 })?;
             self.load_unmerged_include(&mut cv, seen, output)?;
             output.push(cv);
@@ -1364,11 +1368,15 @@ impl GlobalContext {
         }
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
-        for (path, abs_path, def) in includes {
-            self._load_file(&abs_path, seen, true, why_load)
+        for include in includes {
+            self._load_file(&include.abs_path(self), seen, true, why_load)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
-                    format!("failed to load config include `{}` from `{}`", path, def)
+                    format!(
+                        "failed to load config include `{}` from `{}`",
+                        include.path.display(),
+                        include.def
+                    )
                 })?;
         }
         root.merge(value, true)?;
@@ -1376,20 +1384,7 @@ impl GlobalContext {
     }
 
     /// Converts the `include` config value to a list of absolute paths.
-    fn include_paths(
-        &self,
-        cv: &mut CV,
-        remove: bool,
-    ) -> CargoResult<Vec<(String, PathBuf, Definition)>> {
-        let abs = |path, def| -> (String, PathBuf, Definition) {
-            let abs_path = match &def {
-                Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().join(&path),
-                Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => {
-                    self.cwd().join(&path)
-                }
-            };
-            (path, abs_path, def)
-        };
+    fn include_paths(&self, cv: &mut CV, remove: bool) -> CargoResult<Vec<ConfigInclude>> {
         let CV::Table(table, _def) = cv else {
             unreachable!()
         };
@@ -1399,13 +1394,11 @@ impl GlobalContext {
             table.get("include").map(Cow::Borrowed)
         };
         let includes = match include.map(|c| c.into_owned()) {
-            Some(CV::String(s, def)) => {
-                vec![abs(s, def)]
-            }
+            Some(CV::String(s, def)) => vec![ConfigInclude::new(s, def)],
             Some(CV::List(list, _def)) => list
                 .into_iter()
                 .map(|cv| match cv {
-                    CV::String(s, def) => Ok(abs(s, def)),
+                    CV::String(s, def) => Ok(ConfigInclude::new(s, def)),
                     other => bail!(
                         "`include` expected a string or list of strings, but found {} in list",
                         other.desc()
@@ -1422,11 +1415,13 @@ impl GlobalContext {
             }
         };
 
-        for (path, abs_path, def) in &includes {
-            if abs_path.extension() != Some(OsStr::new("toml")) {
+        for include in &includes {
+            if include.path.extension() != Some(OsStr::new("toml")) {
                 bail!(
                     "expected a config include path ending with `.toml`, \
-                     but found `{path}` from `{def}`",
+                     but found `{}` from `{}`",
+                    include.path.display(),
+                    include.def,
                 )
             }
         }
@@ -2473,6 +2468,39 @@ pub fn save_credentials(
     #[allow(unused)]
     fn set_permissions(file: &File, mode: u32) -> CargoResult<()> {
         Ok(())
+    }
+}
+
+struct ConfigInclude {
+    /// Path to a config-include configuration file.
+    /// Could be either relative or absolute.
+    path: PathBuf,
+    def: Definition,
+}
+
+impl ConfigInclude {
+    fn new(p: impl Into<PathBuf>, def: Definition) -> Self {
+        Self {
+            path: p.into(),
+            def,
+        }
+    }
+
+    /// Gets the absolute path of the config-include config file.
+    ///
+    /// For file based include,
+    /// it is relative to parent directory of the config file includes it.
+    /// For example, if `.cargo/config.toml has a `include = "foo.toml"`,
+    /// Cargo will load `.cargo/foo.toml`.
+    ///
+    /// For CLI based include (e.g., `--config 'include = "foo.toml"'`),
+    /// it is relative to the current working directory.
+    fn abs_path(&self, gctx: &GlobalContext) -> PathBuf {
+        match &self.def {
+            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
+        }
+        .join(&self.path)
     }
 }
 
