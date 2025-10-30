@@ -317,19 +317,18 @@ fn missing_file() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        &format!(
-            "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `missing.toml` from `[..]/.cargo/config.toml`
+  failed to load config include `missing.toml` from `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to read configuration file `[..]/.cargo/missing.toml`
+  failed to read configuration file `[ROOT]/.cargo/missing.toml`
 
 Caused by:
-  [NOT_FOUND]",
-        ),
+  [NOT_FOUND]
+"#]],
     );
 }
 
@@ -342,11 +341,12 @@ fn wrong_file_extension() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  expected a config include path ending with `.toml`, but found `config.png` from `[ROOT]/.cargo/config.toml`",
+  expected a config include path ending with `.toml`, but found `config.png` from `[ROOT]/.cargo/config.toml`
+"#]],
     );
 }
 
@@ -361,20 +361,21 @@ fn cycle() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `one.toml` from `[..]/.cargo/config.toml`
+  failed to load config include `one.toml` from `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to load config include `two.toml` from `[..]/.cargo/one.toml`
+  failed to load config include `two.toml` from `[ROOT]/.cargo/one.toml`
 
 Caused by:
-  failed to load config include `config.toml` from `[..]/.cargo/two.toml`
+  failed to load config include `config.toml` from `[ROOT]/.cargo/two.toml`
 
 Caused by:
-  config `include` cycle detected with path `[..]/.cargo/config.toml`",
+  config `include` cycle detected with path `[ROOT]/.cargo/config.toml`
+"#]],
     );
 }
 
@@ -407,11 +408,12 @@ fn bad_format() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        "\
+        str![[r#"
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list, but found integer in `[..]/.cargo/config.toml`",
+  `include` expected a string or list, but found integer in `[ROOT]/.cargo/config.toml`
+"#]],
     );
 }
 
@@ -424,19 +426,18 @@ fn cli_include_failed() {
         .build_err();
     assert_error(
         gctx.unwrap_err(),
-        &format!(
-            "\
+        str![[r#"
 failed to load --config include
 
 Caused by:
   failed to load config include `foobar.toml` from `--config cli option`
 
 Caused by:
-  failed to read configuration file `[..]/foobar.toml`
+  failed to read configuration file `[ROOT]/foobar.toml`
 
 Caused by:
-  [NOT_FOUND]"
-        ),
+  [NOT_FOUND]
+"#]],
     );
 }
 
@@ -457,12 +458,12 @@ fn cli_merge_failed() {
     // Maybe this error message should mention it was from an include file?
     assert_error(
         gctx.unwrap_err(),
-        "\
-failed to merge --config key `foo` into `[..]/.cargo/config.toml`
+        str![[r#"
+failed to merge --config key `foo` into `[ROOT]/.cargo/config.toml`
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/other.toml` into `[..]/.cargo/config.toml`: \
-  expected array, but found string",
+  failed to merge config value from `[ROOT]/.cargo/other.toml` into `[ROOT]/.cargo/config.toml`: expected array, but found string
+"#]],
     );
 }
 
