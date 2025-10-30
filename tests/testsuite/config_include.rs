@@ -621,3 +621,79 @@ Caused by:
 "#]],
     );
 }
+
+#[cargo_test]
+fn optional_include_missing_and_existing() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+
+        [[include]]
+        path = 'missing.toml'
+        optional = true
+
+        [[include]]
+        path = 'other.toml'
+        optional = true
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key2 = 2
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `missing.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to read configuration file `[ROOT]/.cargo/missing.toml`
+
+Caused by:
+  [NOT_FOUND]
+"#]],
+    );
+}
+
+#[cargo_test]
+fn optional_false_missing_file() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        key1 = 1
+
+        [[include]]
+        path = 'missing.toml'
+        optional = false
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `missing.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to read configuration file `[ROOT]/.cargo/missing.toml`
+
+Caused by:
+  [NOT_FOUND]
+"#]],
+    );
+}
