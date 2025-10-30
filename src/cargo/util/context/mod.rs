@@ -1447,14 +1447,10 @@ impl GlobalContext {
             let arg_as_path = self.cwd.join(arg);
             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                let str_path = arg_as_path
-                    .to_str()
-                    .ok_or_else(|| {
-                        anyhow::format_err!("config path {:?} is not utf-8", arg_as_path)
+                self._load_file(&arg_as_path, &mut seen, true, WhyLoad::Cli)
+                    .with_context(|| {
+                        format!("failed to load config from `{}`", arg_as_path.display())
                     })?
-                    .to_string();
-                self._load_file(&self.cwd().join(&str_path), &mut seen, true, WhyLoad::Cli)
-                    .with_context(|| format!("failed to load config from `{}`", str_path))?
             } else {
                 let doc = toml_dotted_keys(arg)?;
                 let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
