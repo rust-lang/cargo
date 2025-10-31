@@ -116,6 +116,79 @@ fn log_msg_build_started() {
     "target_dir": "[ROOT]/foo/target",
     "timestamp": "[..]T[..]Z",
     "workspace_root": "[ROOT]/foo"
+  },
+  "{...}"
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
+fn log_msg_timing_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let cargo_home = paths::cargo_home();
+    let log_dir = cargo_home.join("log");
+    assert!(log_dir.exists());
+
+    let entries = std::fs::read_dir(&log_dir).unwrap();
+    let log_file = entries
+        .filter_map(Result::ok)
+        .find(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .unwrap();
+
+    let content = std::fs::read_to_string(log_file.path()).unwrap();
+
+    assert_e2e().eq(
+        &content,
+        str![[r#"
+[
+  {
+    "reason": "build-started",
+    "...": "{...}"
+  },
+  {
+    "duration": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "timing-info",
+    "rmeta_time": "{...}",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": "{...}",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "duration": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "timing-info",
+    "rmeta_time": "{...}",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": "{...}",
+    "timestamp": "[..]T[..]Z"
   }
 ]
 "#]]

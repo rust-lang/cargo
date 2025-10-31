@@ -1124,7 +1124,7 @@ impl<'gctx> DrainState<'gctx> {
         }
         let unlocked = self.queue.finish(unit, &artifact);
         match artifact {
-            Artifact::All => self.timings.unit_finished(id, unlocked),
+            Artifact::All => self.timings.unit_finished(build_runner, id, unlocked),
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
         }
         Ok(())
