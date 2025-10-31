@@ -658,28 +658,71 @@ like to stabilize it somehow!
 
 This feature requires the `-Zconfig-include` command-line option.
 
-The `include` key in a config file can be used to load another config file. It
-takes a string for a path to another file relative to the config file, or an
-array of config file paths. Only path ending with `.toml` is accepted.
+The `include` key in a config file can be used to load another config file.
+For example:
 
 ```toml
-# a path ending with `.toml`
-include = "path/to/mordor.toml"
+# .cargo/config.toml
+include = "other-config.toml"
 
-# or an array of paths
-include = ["frodo.toml", "samwise.toml"]
+[build]
+jobs = 4
 ```
 
-Unlike other config values, the merge behavior of the `include` key is
-different. When a config file contains an `include` key:
+```toml
+# .cargo/other-config.toml
+[build]
+rustflags = ["-W", "unsafe-code"]
+```
 
-1. The config values are first loaded from the `include` path.
-    * If the value of the `include` key is an array of paths, the config values
-      are loaded and merged from left to right for each path.
-    * Recurse this step if the config values from the `include` path also
-      contain an `include` key.
-2. Then, the config file's own values are merged on top of the config
-   from the `include` path.
+### Documentation updates
+
+#### `include`
+
+* Type: string, array of strings, or array of tables
+* Default: none
+
+Loads additional config files. Paths are relative to the config file that
+includes them. Only paths ending with `.toml` are accepted.
+
+Supports the following formats:
+
+```toml
+# single path
+include = "path/to/mordor.toml"
+
+# array of paths
+include = ["frodo.toml", "samwise.toml"]
+
+# inline tables
+include = [
+    "simple.toml",
+    { path = "optional.toml", optional = true }
+]
+
+# array of tables
+[[include]]
+path = "required.toml"
+
+[[include]]
+path = "optional.toml"
+optional = true
+```
+
+When using table syntax (inline tables or array of tables), the following
+fields are supported:
+
+* `path` (string, required): Path to the config file to include.
+* `optional` (boolean, default: false): If `true`, missing files are silently
+  skipped instead of causing an error.
+
+The merge behavior of `include` is different from other config values:
+
+1. Config values are first loaded from the `include` path.
+    * If `include` is an array, config values are loaded and merged from left
+      to right for each path.
+    * This step recurses if included config files also contain `include` keys.
+2. Then, the config file's own values are merged on top of the included config.
 
 ## target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
