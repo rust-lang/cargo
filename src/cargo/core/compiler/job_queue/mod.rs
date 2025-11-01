@@ -1159,10 +1159,8 @@ impl<'gctx> DrainState<'gctx> {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package.
             Dirty(dirty_reason) => {
-                if !dirty_reason.is_fresh_build() {
-                    gctx.shell()
-                        .verbose(|shell| dirty_reason.present_to(shell, unit, ws_root))?;
-                }
+                gctx.shell()
+                    .verbose(|shell| dirty_reason.present_to(shell, unit, ws_root))?;
 
                 if unit.mode.is_doc() {
                     self.documented.insert(unit.pkg.package_id());
