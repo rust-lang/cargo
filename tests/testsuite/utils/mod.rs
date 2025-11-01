@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use cargo_test_support::registry::Package;
 use cargo_test_support::{ArgLineCommandExt, Execs, execs, process};
 
 pub mod cross_compile;
@@ -18,4 +19,14 @@ pub fn cargo_process(arg_line: &str) -> Execs {
 /// Path to the cargo binary
 pub fn cargo_exe() -> PathBuf {
     snapbox::cmd::cargo_bin!("cargo").to_path_buf()
+}
+
+pub fn pkg(name: &str, vers: &str) {
+    Package::new(name, vers)
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            &format!("extern crate {}; fn main() {{}}", name),
+        )
+        .publish();
 }
