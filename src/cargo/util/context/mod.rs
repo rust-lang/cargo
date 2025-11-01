@@ -1002,7 +1002,7 @@ impl GlobalContext {
     fn string_to_path(&self, value: &str, definition: &Definition) -> PathBuf {
         let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
         if is_path {
-            definition.root(self).join(value)
+            definition.root(self.cwd()).join(value)
         } else {
             // A pathless name.
             PathBuf::from(value)
@@ -1675,7 +1675,7 @@ impl GlobalContext {
         // This handles relative file: URLs, relative to the config definition.
         let base = index
             .definition
-            .root(self)
+            .root(self.cwd())
             .join("truncated-by-url_with_base");
         // Parse val to check it is a URL, not a relative path without a protocol.
         let _parsed = index.val.into_url()?;
@@ -1921,7 +1921,7 @@ impl GlobalContext {
                     .into_iter()
                     .filter_map(|(k, v)| {
                         if v.is_force() || self.get_env_os(&k).is_none() {
-                            Some((k, v.resolve(self).to_os_string()))
+                            Some((k, v.resolve(self.cwd()).to_os_string()))
                         } else {
                             None
                         }

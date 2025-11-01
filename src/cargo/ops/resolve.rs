@@ -540,7 +540,7 @@ pub fn add_overrides<'a>(
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        (paths::normalize_path(&def.root(gctx).join(s)), def)
+        (paths::normalize_path(&def.root(gctx.cwd()).join(s)), def)
     });
 
     for (path, definition) in paths {

@@ -114,7 +114,7 @@ impl CompileKind {
         let kinds = match (fallback, &gctx.build_config()?.target) {
             (_, None) | (CompileKindFallback::JustHost, _) => Ok(vec![CompileKind::Host]),
             (CompileKindFallback::BuildConfig, Some(build_target_config)) => {
-                dedup(&build_target_config.values(gctx)?)
+                dedup(&build_target_config.values(gctx.cwd())?)
             }
         };
 

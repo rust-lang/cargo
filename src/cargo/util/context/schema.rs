@@ -6,8 +6,9 @@ use std::fmt;
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
 
+use std::path::Path;
+
 use crate::CargoResult;
-use crate::GlobalContext;
 
 use super::StringList;
 use super::Value;
@@ -219,14 +220,14 @@ impl<'de> Deserialize<'de> for BuildTargetConfigInner {
 
 impl BuildTargetConfig {
     /// Gets values of `build.target` as a list of strings.
-    pub fn values(&self, gctx: &GlobalContext) -> CargoResult<Vec<String>> {
+    pub fn values(&self, cwd: &Path) -> CargoResult<Vec<String>> {
         let map = |s: &String| {
             if s.ends_with(".json") {
                 // Path to a target specification file (in JSON).
                 // <https://doc.rust-lang.org/rustc/targets/custom.html>
                 self.inner
                     .definition
-                    .root(gctx)
+                    .root(cwd)
                     .join(s)
                     .to_str()
                     .expect("must be utf-8 in toml")
@@ -412,7 +413,7 @@ impl EnvConfigValue {
         }
     }
 
-    pub fn resolve<'a>(&'a self, gctx: &GlobalContext) -> Cow<'a, OsStr> {
+    pub fn resolve<'a>(&'a self, cwd: &Path) -> Cow<'a, OsStr> {
         match self.inner.val {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
             EnvConfigValueInner::WithOptions {
@@ -421,7 +422,7 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = self.inner.definition.root(gctx).join(&value);
+                    let p = self.inner.definition.root(cwd).join(&value);
                     Cow::Owned(p.into_os_string())
                 } else {
                     Cow::Borrowed(OsStr::new(value.as_str()))
