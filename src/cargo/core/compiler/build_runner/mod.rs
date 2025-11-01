@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::core::PackageId;
 use crate::core::compiler::compilation::{self, UnitOutput};
+use crate::core::compiler::locking::LockingStrategy;
 use crate::core::compiler::{self, Unit, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
@@ -89,6 +90,10 @@ pub struct BuildRunner<'a, 'gctx> {
     /// because the target has a type error. This is in an Arc<Mutex<..>>
     /// because it is continuously updated as the job progresses.
     pub failed_scrape_units: Arc<Mutex<HashSet<UnitHash>>>,
+
+    /// The locking mode to use for this build.
+    /// By default we use coarse grain locking, but disable locking on some filesystems like NFS
+    pub locking_strategy: LockingStrategy,
 }
 
 impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
@@ -111,6 +116,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
         };
 
+        let locking_strategy = LockingStrategy::determine_locking_strategy(&bcx.ws)?;
+
         Ok(Self {
             bcx,
             compilation: Compilation::new(bcx)?,
@@ -128,6 +135,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
             failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
+            locking_strategy,
         })
     }
 
@@ -360,11 +368,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     #[tracing::instrument(skip_all)]
     pub fn prepare_units(&mut self) -> CargoResult<()> {
         let dest = self.bcx.profiles.get_dir_name();
-        let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
+        let host_layout = Layout::new(self.bcx.ws, None, &dest, &self.locking_strategy)?;
         let mut targets = HashMap::new();
         for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
-                let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
+                let layout = Layout::new(self.bcx.ws, Some(target), &dest, &self.locking_strategy)?;
                 targets.insert(target, layout);
             }
         }

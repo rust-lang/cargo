@@ -103,6 +103,7 @@
 
 use crate::core::Workspace;
 use crate::core::compiler::CompileTarget;
+use crate::core::compiler::locking::{LockingMode, LockingStrategy};
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
 use std::path::{Path, PathBuf};
@@ -126,6 +127,7 @@ impl Layout {
         ws: &Workspace<'_>,
         target: Option<CompileTarget>,
         dest: &str,
+        locking_strategy: &LockingStrategy,
     ) -> CargoResult<Layout> {
         let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
         let mut root = ws.target_dir();
@@ -152,18 +154,29 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let artifact_dir_lock =
-            dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?;
-
-        let build_dir_lock = if root != build_root {
-            Some(build_dest.open_rw_exclusive_create(
+        let artifact_dir_lock = match locking_strategy.artifact_dir() {
+            LockingMode::Disabled => None,
+            LockingMode::Coarse => Some(dest.open_rw_exclusive_create(
                 ".cargo-lock",
                 ws.gctx(),
-                "build directory",
-            )?)
+                "artifact directory",
+            )?),
+        };
+
+        assert_eq!(locking_strategy.is_unified_output_dir(), root == build_root);
+        let build_dir_lock = if !locking_strategy.is_unified_output_dir() {
+            match locking_strategy.build_dir() {
+                LockingMode::Disabled => None,
+                LockingMode::Coarse => Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+            }
         } else {
             None
         };
+
         let root = root.into_path_unlocked();
         let build_root = build_root.into_path_unlocked();
         let dest = dest.into_path_unlocked();
@@ -222,7 +235,7 @@ pub struct ArtifactDirLayout {
     timings: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
-    _lock: FileLock,
+    _lock: Option<FileLock>,
 }
 
 impl ArtifactDirLayout {

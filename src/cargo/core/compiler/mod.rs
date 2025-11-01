@@ -45,6 +45,7 @@ pub mod future_incompat;
 pub(crate) mod job_queue;
 pub(crate) mod layout;
 mod links;
+pub mod locking;
 mod lto;
 mod output_depinfo;
 mod output_sbom;
