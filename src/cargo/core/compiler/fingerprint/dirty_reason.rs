@@ -223,22 +223,22 @@ impl DirtyReason {
             DirtyReason::FsStatusOutdated(status) => match status {
                 FsStatus::Stale => s.dirty_because(unit, "stale, unknown reason"),
                 FsStatus::StaleItem(item) => match item {
-                    StaleItem::MissingFile(missing_file) => {
-                        let file = missing_file.strip_prefix(root).unwrap_or(&missing_file);
+                    StaleItem::MissingFile { path } => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` is missing", file.display()),
                         )
                     }
-                    StaleItem::UnableToReadFile(file) => {
-                        let file = file.strip_prefix(root).unwrap_or(&file);
+                    StaleItem::UnableToReadFile { path } => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` could not be read", file.display()),
                         )
                     }
-                    StaleItem::FailedToReadMetadata(file) => {
-                        let file = file.strip_prefix(root).unwrap_or(&file);
+                    StaleItem::FailedToReadMetadata { path } => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
                         s.dirty_because(
                             unit,
                             format_args!("couldn't read metadata for file `{}`", file.display()),
@@ -285,7 +285,7 @@ impl DirtyReason {
                             ),
                         )
                     }
-                    StaleItem::MissingChecksum(path) => {
+                    StaleItem::MissingChecksum { path } => {
                         let file = path.strip_prefix(root).unwrap_or(&path);
                         s.dirty_because(
                             unit,
