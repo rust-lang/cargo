@@ -1,7 +1,7 @@
 <svg width="1255px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan>: the path `[ROOT]/case/test:ing/.` contains invalid PATH characters (usually `:`, `;`, or `"`)</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>It is recommended to use a different name to avoid problems.</tspan>
+    <tspan x="10px" y="64px"><tspan>         It is recommended to use a different name to avoid problems.</tspan>
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">note</tspan><tspan>: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
 </tspan>
