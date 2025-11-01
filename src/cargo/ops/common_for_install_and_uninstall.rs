@@ -21,6 +21,7 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::context::{ConfigRelativePath, Definition};
 use crate::util::errors::CargoResult;
 use crate::util::{FileLock, Filesystem};
 
@@ -545,11 +546,34 @@ impl InstallInfo {
 
 /// Determines the root directory where installation is done.
 pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Filesystem> {
-    let config_root = gctx.get_path("install.root")?;
+    let config_root = match gctx.get::<Option<ConfigRelativePath>>("install.root")? {
+        Some(p) => {
+            let resolved = p.resolve_program(gctx);
+            if resolved.is_relative() {
+                let definition = p.value().definition.clone();
+                if matches!(definition, Definition::Path(_)) {
+                    let suggested = format!("{}/", resolved.display());
+                    gctx.shell().warn(format!(
+                    "the `install.root` value `{}` defined in {} is deprecated; \
+                         a future version of Cargo will treat it as relative to the configuration \
+                         directory. Add a trailing slash (`{}`) to adopt the \
+                         correct behavior and silence this warning. See more at \
+                         https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths",
+                    resolved.display(),
+                    definition,
+                    suggested
+                ))?;
+                }
+            }
+            Some(resolved)
+        }
+        None => None,
+    };
+
     Ok(flag
         .map(PathBuf::from)
         .or_else(|| gctx.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
-        .or_else(move || config_root.map(|v| v.val))
+        .or_else(|| config_root)
         .map(Filesystem::new)
         .unwrap_or_else(|| gctx.home().clone()))
 }
