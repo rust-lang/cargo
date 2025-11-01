@@ -632,7 +632,8 @@ pub struct Fingerprint {
 }
 
 /// Indication of the status on the filesystem for a particular unit.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize)]
+#[serde(tag = "fs_status", rename_all = "kebab-case")]
 pub enum FsStatus {
     /// This unit is to be considered stale, even if hash information all
     /// matches.
@@ -647,7 +648,9 @@ pub enum FsStatus {
     /// A dependency was stale.
     StaleDependency {
         name: InternedString,
+        #[serde(serialize_with = "serialize_file_time")]
         dep_mtime: FileTime,
+        #[serde(serialize_with = "serialize_file_time")]
         max_mtime: FileTime,
     },
 
@@ -656,6 +659,7 @@ pub enum FsStatus {
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
     /// listed in the payload here for other dependencies to compare against.
+    #[serde(skip)]
     UpToDate { mtimes: HashMap<PathBuf, FileTime> },
 }
 
@@ -669,6 +673,16 @@ impl FsStatus {
             | FsStatus::StaleDepFingerprint { .. } => false,
         }
     }
+}
+
+/// Serialize FileTime as milliseconds with nano.
+fn serialize_file_time<S>(ft: &FileTime, s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let secs_as_millis = ft.unix_seconds() as f64 * 1000.0;
+    let nanos_as_millis = ft.nanoseconds() as f64 / 1_000_000.0;
+    (secs_as_millis + nanos_as_millis).serialize(s)
 }
 
 impl Serialize for DepFingerprint {
@@ -771,7 +785,8 @@ enum LocalFingerprint {
 }
 
 /// See [`FsStatus::StaleItem`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "stale_item", rename_all = "kebab-case")]
 pub enum StaleItem {
     MissingFile {
         path: PathBuf,
@@ -789,8 +804,10 @@ pub enum StaleItem {
     },
     ChangedFile {
         reference: PathBuf,
+        #[serde(serialize_with = "serialize_file_time")]
         reference_mtime: FileTime,
         stale: PathBuf,
+        #[serde(serialize_with = "serialize_file_time")]
         stale_mtime: FileTime,
     },
     ChangedChecksum {

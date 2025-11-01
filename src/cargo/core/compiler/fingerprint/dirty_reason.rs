@@ -1,6 +1,8 @@
 use std::fmt;
 use std::fmt::Debug;
 
+use serde::Serialize;
+
 use super::*;
 use crate::core::Shell;
 
@@ -8,7 +10,8 @@ use crate::core::Shell;
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].
 ///
 /// [`Fingerprint::compare`]: super::Fingerprint::compare
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "dirty_reason", rename_all = "kebab-case")]
 pub enum DirtyReason {
     RustcChanged,
     FeaturesChanged {
@@ -323,5 +326,523 @@ impl DirtyReason {
             DirtyReason::Forced => s.dirty_because(unit, "forced"),
             DirtyReason::FreshBuild => s.dirty_because(unit, "fresh build"),
         }
+    }
+}
+
+// These test the actual JSON structure that will be logged.
+// In the future we might decouple this from the actual log message schema.
+#[cfg(test)]
+mod json_schema {
+    use super::*;
+    use snapbox::IntoData;
+    use snapbox::assert_data_eq;
+    use snapbox::str;
+
+    fn to_json<T: Serialize>(value: &T) -> String {
+        serde_json::to_string_pretty(value).unwrap()
+    }
+
+    #[test]
+    fn rustc_changed() {
+        let reason = DirtyReason::RustcChanged;
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "rustc-changed"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fresh_build() {
+        let reason = DirtyReason::FreshBuild;
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fresh-build"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn forced() {
+        let reason = DirtyReason::Forced;
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "forced"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn nothing_obvious() {
+        let reason = DirtyReason::NothingObvious;
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "nothing-obvious"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn features_changed() {
+        let reason = DirtyReason::FeaturesChanged {
+            old: "f1".to_string(),
+            new: "f1,f2".to_string(),
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "features-changed",
+  "new": "f1,f2",
+  "old": "f1"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn rustflags_changed() {
+        let reason = DirtyReason::RustflagsChanged {
+            old: vec!["-C".into(), "opt-level=2".into()],
+            new: vec!["--cfg".into(), "tokio_unstable".into()],
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "rustflags-changed",
+  "old": [
+    "-C",
+    "opt-level=2"
+  ],
+  "new": [
+    "--cfg",
+    "tokio_unstable"
+  ]
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn env_var_changed_both_some() {
+        let reason = DirtyReason::EnvVarChanged {
+            name: "VAR".into(),
+            old_value: Some("old".into()),
+            new_value: Some("new".into()),
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "env-var-changed",
+  "name": "VAR",
+  "new_value": "new",
+  "old_value": "old"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn env_var_changed_old_none() {
+        let reason = DirtyReason::EnvVarChanged {
+            name: "VAR".into(),
+            old_value: None,
+            new_value: Some("new".into()),
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "env-var-changed",
+  "name": "VAR",
+  "new_value": "new",
+  "old_value": null
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn dep_info_output_changed() {
+        let reason = DirtyReason::DepInfoOutputChanged {
+            old: "target/debug/old.d".into(),
+            new: "target/debug/new.d".into(),
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "dep-info-output-changed",
+  "old": "target/debug/old.d",
+  "new": "target/debug/new.d"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn number_of_dependencies_changed() {
+        let reason = DirtyReason::NumberOfDependenciesChanged { old: 5, new: 7 };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "number-of-dependencies-changed",
+  "old": 5,
+  "new": 7
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn unit_dependency_name_changed() {
+        let reason = DirtyReason::UnitDependencyNameChanged {
+            old: "old_dep".into(),
+            new: "new_dep".into(),
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "unit-dependency-name-changed",
+  "old": "old_dep",
+  "new": "new_dep"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn unit_dependency_info_changed() {
+        let reason = DirtyReason::UnitDependencyInfoChanged {
+            old_name: "serde".into(),
+            old_fingerprint: 0x1234567890abcdef,
+            new_name: "serde".into(),
+            new_fingerprint: 0xfedcba0987654321,
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "unit-dependency-info-changed",
+  "new_fingerprint": 18364757930599072545,
+  "new_name": "serde",
+  "old_fingerprint": 1311768467294899695,
+  "old_name": "serde"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_stale() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::Stale);
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_missing_file() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::MissingFile {
+            path: "src/lib.rs".into(),
+        }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "path": "src/lib.rs",
+  "stale_item": "missing-file"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_changed_file() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::ChangedFile {
+            reference: "target/debug/deps/libfoo-abc123.rmeta".into(),
+            reference_mtime: FileTime::from_unix_time(1730567890, 123000000),
+            stale: "src/lib.rs".into(),
+            stale_mtime: FileTime::from_unix_time(1730567891, 456000000),
+        }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "reference": "target/debug/deps/libfoo-abc123.rmeta",
+  "reference_mtime": 1730567890123.0,
+  "stale": "src/lib.rs",
+  "stale_item": "changed-file",
+  "stale_mtime": 1730567891456.0
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_changed_checksum() {
+        use super::dep_info::ChecksumAlgo;
+        let reason =
+            DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::ChangedChecksum {
+                source: "src/main.rs".into(),
+                stored_checksum: Checksum::new(ChecksumAlgo::Sha256, [0xaa; 32]),
+                new_checksum: Checksum::new(ChecksumAlgo::Sha256, [0xbb; 32]),
+            }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "new_checksum": "sha256=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "source": "src/main.rs",
+  "stale_item": "changed-checksum",
+  "stored_checksum": "sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_stale_dependency() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleDependency {
+            name: "serde".into(),
+            dep_mtime: FileTime::from_unix_time(1730567892, 789000000),
+            max_mtime: FileTime::from_unix_time(1730567890, 123000000),
+        });
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dep_mtime": 1730567892789.0,
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-dependency",
+  "max_mtime": 1730567890123.0,
+  "name": "serde"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_stale_dep_fingerprint() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleDepFingerprint {
+            name: "tokio".into(),
+        });
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-dep-fingerprint",
+  "name": "tokio"
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn fs_status_unable_to_read_file() {
+        let reason =
+            DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::UnableToReadFile {
+                path: "src/lib.rs".into(),
+            }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "stale_item": "unable-to-read-file",
+  "path": "src/lib.rs"
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn fs_status_failed_to_read_metadata() {
+        let reason =
+            DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::FailedToReadMetadata {
+                path: "src/lib.rs".into(),
+            }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "stale_item": "failed-to-read-metadata",
+  "path": "src/lib.rs"
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn fs_status_file_size_changed() {
+        let reason =
+            DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::FileSizeChanged {
+                path: "src/lib.rs".into(),
+                old_size: 1024,
+                new_size: 2048,
+            }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "stale_item": "file-size-changed",
+  "path": "src/lib.rs",
+  "old_size": 1024,
+  "new_size": 2048
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn fs_status_missing_checksum() {
+        let reason =
+            DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::MissingChecksum {
+                path: "src/lib.rs".into(),
+            }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "stale_item": "missing-checksum",
+  "path": "src/lib.rs"
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn fs_status_changed_env() {
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleItem(StaleItem::ChangedEnv {
+            var: "VAR".into(),
+            previous: Some("old".into()),
+            current: Some("new".into()),
+        }));
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "fs-status-outdated",
+  "fs_status": "stale-item",
+  "stale_item": "changed-env",
+  "var": "VAR",
+  "previous": "old",
+  "current": "new"
+}
+"#]]
+        );
+    }
+
+    #[test]
+    fn checksum_use_changed() {
+        let reason = DirtyReason::ChecksumUseChanged { old: false };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "checksum-use-changed",
+  "old": false
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn rerun_if_changed_output_paths_changed() {
+        let reason = DirtyReason::RerunIfChangedOutputPathsChanged {
+            old: vec!["file1.txt".into(), "file2.txt".into()],
+            new: vec!["file1.txt".into(), "file2.txt".into(), "file3.txt".into()],
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "rerun-if-changed-output-paths-changed",
+  "old": [
+    "file1.txt",
+    "file2.txt"
+  ],
+  "new": [
+    "file1.txt",
+    "file2.txt",
+    "file3.txt"
+  ]
+}
+"#]]
+            .is_json()
+        );
+    }
+
+    #[test]
+    fn local_fingerprint_type_changed() {
+        let reason = DirtyReason::LocalFingerprintTypeChanged {
+            old: "precalculated",
+            new: "rerun-if-changed",
+        };
+        assert_data_eq!(
+            to_json(&reason),
+            str![[r#"
+{
+  "dirty_reason": "local-fingerprint-type-changed",
+  "new": "rerun-if-changed",
+  "old": "precalculated"
+}
+"#]]
+            .is_json()
+        );
     }
 }
