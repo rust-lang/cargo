@@ -1,5 +1,50 @@
 # Changelog
 
+## Cargo 1.93 (2026-01-22)
+[344c4567...HEAD](https://github.com/rust-lang/cargo/compare/344c4567...HEAD)
+
+### Added
+
+### Changed
+
+- Migrate more diagnostic formatting to rustc-like style (annotate-snippets style)
+  [#16143](https://github.com/rust-lang/cargo/pull/16143)
+
+### Fixed
+
+- Shell completion variables no longer leak into user's environment
+  [#16144](https://github.com/rust-lang/cargo/pull/16144)
+
+### Nightly only
+
+- `-Zbuild-analysis`: Emit timing-info logs with JSONL-based logging
+  infrastructure. Logs are stored in `~/.cargo/log/` with unique files
+  per cargo invocation.
+  [#16150](https://github.com/rust-lang/cargo/pull/16150)
+  [#16179](https://github.com/rust-lang/cargo/pull/16179)
+- `-Zconfig-include`: Allow using `optional = true` to silently skip
+  missing config files.
+  [#16103](https://github.com/rust-lang/cargo/pull/16103)
+  [#16174](https://github.com/rust-lang/cargo/pull/16174)
+  [#16180](https://github.com/rust-lang/cargo/pull/16180)
+- `-Zgit`: Support shallow fetch for Git CLI backend (`net.git-fetch-with-cli`)
+  [#16156](https://github.com/rust-lang/cargo/pull/16156)
+- `-Zgit`: Add more git fetch-index backend interop tests
+  [#16162](https://github.com/rust-lang/cargo/pull/16162)
+- `-Zscript`: Update script tests from rustc's test suite
+  [#16169](https://github.com/rust-lang/cargo/pull/16169)
+
+### Documentation
+
+### Internal
+
+- Fix mdman to not incorrectly strip `<p>` tags
+  [#16158](https://github.com/rust-lang/cargo/pull/16158)
+  [#16172](https://github.com/rust-lang/cargo/pull/16172)
+- Update dependencies.
+  [#16137](https://github.com/rust-lang/cargo/pull/16137)
+  [#16140](https://github.com/rust-lang/cargo/pull/16140)
+
 ## Cargo 1.92 (2025-12-11)
 [24bb93c3...rust-1.92.0](https://github.com/rust-lang/cargo/compare/24bb93c3...rust-1.92.0)
 
