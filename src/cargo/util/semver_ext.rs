@@ -1,6 +1,9 @@
 use super::semver_eval_ext;
 use semver::{Comparator, Op, Version, VersionReq};
-use std::fmt::{self, Display};
+use std::{
+    cmp::Ordering,
+    fmt::{self, Display},
+};
 
 pub trait VersionExt {
     fn is_prerelease(&self) -> bool;
@@ -171,6 +174,19 @@ impl OptVersionReq {
                     && (v.build == version.build || v.build.is_empty())
             }
         }
+    }
+}
+
+impl PartialOrd for OptVersionReq {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// OptVersionReq is not meaningfully orderable, so we default to considering all values equal.
+impl Ord for OptVersionReq {
+    fn cmp(&self, _: &Self) -> Ordering {
+        Ordering::Equal
     }
 }
 

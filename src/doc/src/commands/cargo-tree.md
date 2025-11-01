@@ -170,6 +170,7 @@ strings will be replaced with the corresponding value:</p>
 <li><code>{r}</code> — The package repository URL.</li>
 <li><code>{f}</code> — Comma-separated list of package features that are enabled.</li>
 <li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package’s library.</li>
+<li><code>{c}</code> — The version constraint resolved for the package.</li>
 </ul>
 </dd>
 

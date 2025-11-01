@@ -14,6 +14,7 @@ enum Chunk {
     Repository,
     Features,
     LibName,
+    Constraint,
 }
 
 pub struct Pattern(Vec<Chunk>);
@@ -30,6 +31,7 @@ impl Pattern {
                 RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("f") => Chunk::Features,
                 RawChunk::Argument("lib") => Chunk::LibName,
+                RawChunk::Argument("c") => Chunk::Constraint,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
                 }
@@ -63,6 +65,7 @@ impl<'a> fmt::Display for Display<'a> {
             Node::Package {
                 package_id,
                 features,
+                version_req,
                 ..
             } => {
                 let package = self.graph.package_for_id(*package_id);
@@ -110,6 +113,9 @@ impl<'a> fmt::Display for Display<'a> {
                             {
                                 write!(fmt, "{}", target.crate_name())?;
                             }
+                        }
+                        Chunk::Constraint => {
+                            write!(fmt, "{}", version_req)?;
                         }
                     }
                 }
