@@ -762,7 +762,7 @@ fn feature_unification_cargo_tree() {
 a v0.1.0 ([ROOT]/foo/a)
 ├── common feature "a"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line)
+├── common feature "default"
 │   └── common v0.1.0 ([ROOT]/foo/common)
 ├── outside feature "a"
 │   └── outside v0.1.0
@@ -772,10 +772,12 @@ a v0.1.0 ([ROOT]/foo/a)
 b v0.1.0 ([ROOT]/foo/b)
 ├── common feature "b"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line) (*)
+├── common feature "default" (*)
 ├── outside feature "b"
 │   └── outside v0.1.0
 └── outside feature "default" (*)
+
+common v0.1.0 ([ROOT]/foo/common)
 
 common v0.1.0 ([ROOT]/foo/common)
 
@@ -790,7 +792,7 @@ common v0.1.0 ([ROOT]/foo/common)
 a v0.1.0 ([ROOT]/foo/a)
 ├── common feature "a"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line)
+├── common feature "default"
 │   └── common v0.1.0 ([ROOT]/foo/common)
 ├── outside feature "a"
 │   └── outside v0.1.0
@@ -800,10 +802,12 @@ a v0.1.0 ([ROOT]/foo/a)
 b v0.1.0 ([ROOT]/foo/b)
 ├── common feature "b"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line) (*)
+├── common feature "default" (*)
 ├── outside feature "b"
 │   └── outside v0.1.0
 └── outside feature "default" (*)
+
+common v0.1.0 ([ROOT]/foo/common)
 
 common v0.1.0 ([ROOT]/foo/common)
 

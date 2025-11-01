@@ -6,8 +6,8 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
-use crate::util::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::util::{CargoResult, OptVersionReq};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
@@ -56,6 +56,7 @@ pub enum Node {
         /// Features that are enabled on this package.
         features: Vec<InternedString>,
         kind: CompileKind,
+        version_req: OptVersionReq,
     },
     Feature {
         /// Index of the package node this feature is for.
@@ -332,6 +333,7 @@ impl<'a> Graph<'a> {
                             Node::Package {
                                 package_id,
                                 features,
+                                version_req,
                                 ..
                             } => {
                                 // Do not treat duplicates on the host or target as duplicates.
@@ -339,6 +341,7 @@ impl<'a> Graph<'a> {
                                     package_id: package_id.clone(),
                                     features: features.clone(),
                                     kind: CompileKind::Host,
+                                    version_req: version_req.clone(),
                                 }
                             }
                             _ => unreachable!(),
@@ -376,12 +379,14 @@ pub fn build<'a>(
         let member_id = member.package_id();
         let features_for = FeaturesFor::from_for_host(member.proc_macro());
         for kind in requested_kinds {
+            let version_req = OptVersionReq::Any;
             let member_index = add_pkg(
                 &mut graph,
                 resolve,
                 resolved_features,
                 member_id,
                 features_for,
+                version_req,
                 target_data,
                 *kind,
                 opts,
@@ -409,6 +414,7 @@ fn add_pkg(
     resolved_features: &ResolvedFeatures,
     package_id: PackageId,
     features_for: FeaturesFor,
+    version_req: OptVersionReq,
     target_data: &RustcTargetData<'_>,
     requested_kind: CompileKind,
     opts: &TreeOptions,
@@ -423,6 +429,7 @@ fn add_pkg(
         package_id,
         features: node_features,
         kind: node_kind,
+        version_req: version_req,
     };
     if let Some(idx) = graph.index.get(&node) {
         return *idx;
@@ -513,12 +520,14 @@ fn add_pkg(
                     }
                 }
             };
+            let dep_version_req = dep.version_req().clone();
             let dep_index = add_pkg(
                 graph,
                 resolve,
                 resolved_features,
                 dep_id,
                 dep_features_for,
+                dep_version_req,
                 target_data,
                 requested_kind,
                 opts,

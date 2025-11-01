@@ -57,7 +57,8 @@ foo v0.1.0 ([ROOT]/foo)
     └── b v1.0.0 (*)
 [dev-dependencies]
 └── devdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
+        └── c v1.0.0
 
 "#]])
         .run();
@@ -110,6 +111,8 @@ a v1.0.0 ([ROOT]/foo/a)
 baz v0.1.0 ([ROOT]/foo/baz)
 ├── c v1.0.0 ([ROOT]/foo/c)
 └── somedep v1.0.0
+
+c v1.0.0 ([ROOT]/foo/c)
 
 c v1.0.0 ([ROOT]/foo/c)
 
@@ -693,7 +696,11 @@ fn cyclic_dev_dep() {
 foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
 └── dev-dep v0.1.0 ([ROOT]/foo/dev-dep)
-    └── foo v0.1.0 ([ROOT]/foo) (*)
+    └── foo v0.1.0 ([ROOT]/foo)
+        [dev-dependencies]
+        └── dev-dep v0.1.0 ([ROOT]/foo/dev-dep) (*)
+
+foo v0.1.0 ([ROOT]/foo) (*)
 
 "#]])
         .run();
@@ -701,8 +708,11 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree --invert foo")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
+
+foo v0.1.0 ([ROOT]/foo)
 └── dev-dep v0.1.0 ([ROOT]/foo/dev-dep)
     [dev-dependencies]
+    ├── foo v0.1.0 ([ROOT]/foo)
     └── foo v0.1.0 ([ROOT]/foo) (*)
 
 "#]])
@@ -815,7 +825,8 @@ c v1.0.0
 bdep v1.0.0
 b v1.0.0 (*)
 devdep v1.0.0
-b v1.0.0 (*)
+b v1.0.0
+c v1.0.0
 
 "#]])
         .run();
@@ -835,7 +846,8 @@ fn prefix_depth() {
 1bdep v1.0.0
 2b v1.0.0 (*)
 1devdep v1.0.0
-2b v1.0.0 (*)
+2b v1.0.0
+3c v1.0.0
 
 "#]])
         .run();
@@ -900,13 +912,24 @@ fn no_dedupe_cycle() {
 foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar v0.1.0 ([ROOT]/foo/bar)
-    └── foo v0.1.0 ([ROOT]/foo) (*)
+    └── foo v0.1.0 ([ROOT]/foo)
+        [dev-dependencies]
+        └── bar v0.1.0 ([ROOT]/foo/bar) (*)
+
+foo v0.1.0 ([ROOT]/foo) (*)
 
 "#]])
         .run();
 
     p.cargo("tree --no-dedupe")
         .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+[dev-dependencies]
+└── bar v0.1.0 ([ROOT]/foo/bar)
+    └── foo v0.1.0 ([ROOT]/foo)
+        [dev-dependencies]
+        └── bar v0.1.0 ([ROOT]/foo/bar) (*)
+
 foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar v0.1.0 ([ROOT]/foo/bar)
@@ -1119,7 +1142,8 @@ foo v0.1.0 ([ROOT]/foo)
     `-- b v1.0.0 (*)
 [dev-dependencies]
 `-- devdep v1.0.0
-    `-- b v1.0.0 (*)
+    `-- b v1.0.0
+        `-- c v1.0.0
 
 "#]])
         .run();
@@ -1158,7 +1182,7 @@ fn format() {
             [dependencies]
             dep = {version="1.0", optional=true}
             other-dep = {version="1.0", optional=true}
-            dep_that_is_awesome = {version="1.0", optional=true}
+            dep_that_is_awesome = {version=">=1.0, <2", optional=true}
 
 
             [features]
@@ -1207,6 +1231,17 @@ foo v0.1.0 ([ROOT]/foo) MIT https://github.com/rust-lang/cargo
         .arg("{p} {f}")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo) bar,default,foo
+
+"#]])
+        .run();
+
+    p.cargo("tree --all-features --format")
+        .arg("{p} satisfies {c}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) satisfies *
+├── dep v1.0.0 satisfies ^1.0
+├── dep_that_is_awesome v1.0.0 satisfies >=1.0, <2
+└── other-dep v1.0.0 satisfies ^1.0
 
 "#]])
         .run();
@@ -1798,7 +1833,7 @@ foo v0.1.0 ([ROOT]/foo)
     └── b v1.0.0 (*)
 [dev-dependencies]
 └── devdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
 
 "#]])
         .run();
@@ -1840,6 +1875,7 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree --depth 1 --invert c")
         .with_stdout_data(str![[r#"
 c v1.0.0
+├── b v1.0.0
 ├── b v1.0.0
 └── foo v0.1.0 ([ROOT]/foo)
 
@@ -1897,6 +1933,8 @@ b v0.1.0 ([ROOT]/foo/b)
 └── c v0.1.0 ([ROOT]/foo/c)
 
 c v0.1.0 ([ROOT]/foo/c) (*)
+
+c v0.1.0 ([ROOT]/foo/c)
 
 "#]])
         .run();
@@ -2010,12 +2048,19 @@ diamond v0.1.0 ([ROOT]/foo/diamond)
         .with_stdout_data(str![[r#"
 dep v0.1.0 ([ROOT]/foo/dep)
 
+dep v0.1.0 ([ROOT]/foo/dep)
+
 diamond v0.1.0 ([ROOT]/foo/diamond)
 ├── left-pub v0.1.0 ([ROOT]/foo/left-pub)
 │   └── dep v0.1.0 ([ROOT]/foo/dep)
 └── right-priv v0.1.0 ([ROOT]/foo/right-priv)
 
 left-pub v0.1.0 ([ROOT]/foo/left-pub) (*)
+
+left-pub v0.1.0 ([ROOT]/foo/left-pub)
+└── dep v0.1.0 ([ROOT]/foo/dep)
+
+right-priv v0.1.0 ([ROOT]/foo/right-priv)
 
 right-priv v0.1.0 ([ROOT]/foo/right-priv)
 
@@ -2048,7 +2093,7 @@ foo v0.1.0 ([ROOT]/foo)
     └── b v1.0.0 (*)
 [dev-dependencies]
 └── devdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
 
 "#]])
         .run();
@@ -2062,7 +2107,7 @@ foo v0.1.0 ([ROOT]/foo)
 [build-dependencies]
 [dev-dependencies]
 └── devdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
 
 "#]])
         .run();
@@ -2090,7 +2135,8 @@ foo v0.1.0 ([ROOT]/foo)
     └── b v1.0.0 (*)
 [dev-dependencies]
 └── devdep v1.0.0
-    └── b v1.0.0 (*)
+    └── b v1.0.0
+        └── c v1.0.0
 
 "#]])
         .run();
@@ -2190,8 +2236,12 @@ foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature "default" (command-line)
-            └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── foo feature "default"
+            └── foo v1.0.0 ([ROOT]/foo)
+                [dev-dependencies]
+                └── bar feature "default" (*)
+
+foo v1.0.0 ([ROOT]/foo) (*)
 
 "#]])
         .run();
@@ -2200,12 +2250,18 @@ foo v1.0.0 ([ROOT]/foo)
         .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 ├── foo feature "a" (command-line)
-│   └── bar feature "feat1"
-│       └── foo feature "a" (command-line) (*)
 └── foo feature "default" (command-line)
+
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature "a"
+│   └── bar feature "feat1"
+│       ├── foo feature "a" (command-line)
+│       └── foo feature "a" (*)
+└── foo feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature "default"
         │   [dev-dependencies]
+        │   ├── foo v1.0.0 ([ROOT]/foo) (*)
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature "feat1" (*)
 
@@ -2258,8 +2314,12 @@ foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
 └── bar feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature "default" (command-line)
-            └── foo v1.0.0 ([ROOT]/foo) (*)
+        └── foo feature "default"
+            └── foo v1.0.0 ([ROOT]/foo)
+                [dev-dependencies]
+                └── bar feature "default" (*)
+
+foo v1.0.0 ([ROOT]/foo) (*)
 
 "#]])
         .run();
@@ -2268,14 +2328,20 @@ foo v1.0.0 ([ROOT]/foo)
         .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 ├── foo feature "a" (command-line)
+└── foo feature "default" (command-line)
+
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature "a"
 │   └── foo feature "b"
 │       └── bar feature "feat1"
-│           └── foo feature "a" (command-line) (*)
+│           ├── foo feature "a" (command-line)
+│           └── foo feature "a" (*)
 ├── foo feature "b" (*)
-└── foo feature "default" (command-line)
+└── foo feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature "default"
         │   [dev-dependencies]
+        │   ├── foo v1.0.0 ([ROOT]/foo) (*)
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature "feat1" (*)
 
@@ -2287,13 +2353,21 @@ foo v1.0.0 ([ROOT]/foo)
 foo v1.0.0 ([ROOT]/foo)
 ├── foo feature "a"
 │   └── foo feature "b" (command-line)
-│       └── bar feature "feat1"
-│           └── foo feature "a" (*)
-├── foo feature "b" (command-line) (*)
+├── foo feature "b" (command-line)
 └── foo feature "default" (command-line)
+
+foo v1.0.0 ([ROOT]/foo)
+├── foo feature "a"
+│   └── foo feature "b"
+│       └── bar feature "feat1"
+│           ├── foo feature "a" (*)
+│           └── foo feature "a" (*)
+├── foo feature "b" (*)
+└── foo feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature "default"
         │   [dev-dependencies]
+        │   ├── foo v1.0.0 ([ROOT]/foo) (*)
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature "feat1" (*)
 
@@ -2303,15 +2377,19 @@ foo v1.0.0 ([ROOT]/foo)
     p.cargo("tree -e features --features bar/feat1 -i foo")
         .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
+└── foo feature "default" (command-line)
+
+foo v1.0.0 ([ROOT]/foo)
 ├── foo feature "a"
 │   └── foo feature "b"
 │       └── bar feature "feat1" (command-line)
 │           └── foo feature "a" (*)
 ├── foo feature "b" (*)
-└── foo feature "default" (command-line)
+└── foo feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
         ├── bar feature "default"
         │   [dev-dependencies]
+        │   ├── foo v1.0.0 ([ROOT]/foo) (*)
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
         └── bar feature "feat1" (command-line) (*)
 

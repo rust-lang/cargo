@@ -136,12 +136,14 @@ fn graph_features_ws_interdependent() {
     p.cargo("tree -e features")
         .with_stdout_data(str![[r#"
 a v0.1.0 ([ROOT]/foo/a)
-├── b feature "default" (command-line)
+├── b feature "default"
 │   ├── b v0.1.0 ([ROOT]/foo/b)
 │   └── b feature "feat1"
 │       └── b v0.1.0 ([ROOT]/foo/b)
 └── b feature "feat2"
     └── b v0.1.0 ([ROOT]/foo/b)
+
+b v0.1.0 ([ROOT]/foo/b)
 
 b v0.1.0 ([ROOT]/foo/b)
 
@@ -156,12 +158,17 @@ a v0.1.0 ([ROOT]/foo/a)
 └── a feature "default" (command-line)
 
 b v0.1.0 ([ROOT]/foo/b)
-├── b feature "default" (command-line)
+├── b feature "default"
 │   └── a v0.1.0 ([ROOT]/foo/a) (*)
 ├── b feature "feat1"
-│   └── b feature "default" (command-line) (*)
+│   └── b feature "default" (*)
 └── b feature "feat2"
     └── a v0.1.0 ([ROOT]/foo/a) (*)
+
+b v0.1.0 ([ROOT]/foo/b)
+├── b feature "default" (command-line)
+└── b feature "feat1"
+    └── b feature "default" (command-line)
 
 "#]])
         .run();
@@ -345,7 +352,8 @@ foo v0.1.0 ([ROOT]/foo)
 │   └── dep2 v1.0.0
 │       └── optdep feature "default"
 │           └── optdep v1.0.0
-└── optdep feature "default" (*)
+└── optdep feature "default"
+    └── optdep v1.0.0
 
 "#]])
         .run();
