@@ -634,7 +634,7 @@ impl<'gctx> Timings<'gctx> {
                     AggregatedSections::Sections(mut sections) => {
                         // We draw the sections in the pipeline graph in a way where the frontend
                         // section has the "default" build color, and then additional sections
-                        // (codegen, link) are overlayed on top with a different color.
+                        // (codegen, link) are overlaid on top with a different color.
                         // However, there might be some time after the final (usually link) section,
                         // which definitely shouldn't be classified as "Frontend". We thus try to
                         // detect this situation and add a final "Other" section.

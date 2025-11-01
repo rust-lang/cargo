@@ -383,7 +383,7 @@ Here's an example:
 # Cargo.toml
 
 [package]
-name = "zuser"
+name = "z_user"
 version = "0.1.0"
 edition = "2024"
 
@@ -403,12 +403,12 @@ script:
 
 fn main() {
     let mut cfg = cc::Build::new();
-    cfg.file("src/zuser.c");
+    cfg.file("src/z_user.c");
     if let Some(include) = std::env::var_os("DEP_Z_INCLUDE") {
         cfg.include(include);
     }
-    cfg.compile("zuser");
-    println!("cargo::rerun-if-changed=src/zuser.c");
+    cfg.compile("z_user");
+    println!("cargo::rerun-if-changed=src/z_user.c");
 }
 ```
 
@@ -417,7 +417,7 @@ the zlib header, and it should find the header, even on systems where it isn't
 already installed.
 
 ```c
-// src/zuser.c
+// src/z_user.c
 
 #include "zlib.h"
 

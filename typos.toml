@@ -1,0 +1,45 @@
+[files]
+extend-exclude = [
+  "crates/resolver-tests/*",
+  "LICENSE-THIRD-PARTY",
+  "tests/testsuite/script/rustc_fixtures",
+]
+
+[default]
+extend-ignore-re = [
+  # Handles ssh keys
+  "AAAA[0-9A-Za-z+/]+[=]{0,3}",
+
+  # Handles paseto from login tests
+  "k3[.](secret|public)[.][a-zA-Z0-9_-]+",
+]
+extend-ignore-identifiers-re = [
+  # Handles git short SHA-1 hashes
+  "[a-f0-9]{8,9}",
+]
+extend-ignore-words-re = [
+  # words with length <= 4 chars is likely noise
+  "^[a-zA-Z]{1,4}$",
+]
+
+[default.extend-identifiers]
+# This comes from `windows_sys`
+ERROR_FILENAME_EXCED_RANGE = "ERROR_FILENAME_EXCED_RANGE"
+
+# Name of a dependency
+flate2 = "flate2"
+
+[default.extend-words]
+filetimes = "filetimes"
+
+[type.cargo_command]
+extend-glob = ["cargo_command.rs"]
+
+[type.cargo_command.extend-words]
+biuld = "biuld"
+
+[type.random-sample]
+extend-glob = ["random-sample"]
+
+[type.random-sample.extend-words]
+objekt = "objekt"
