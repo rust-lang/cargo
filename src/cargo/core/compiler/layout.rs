@@ -103,6 +103,7 @@
 
 use crate::core::Workspace;
 use crate::core::compiler::CompileTarget;
+use crate::core::compiler::locking::LockingMode;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
 use std::path::{Path, PathBuf};
@@ -126,6 +127,7 @@ impl Layout {
         ws: &Workspace<'_>,
         target: Option<CompileTarget>,
         dest: &str,
+        locking_mode: &LockingMode,
     ) -> CargoResult<Layout> {
         let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
         let mut root = ws.target_dir();
@@ -152,15 +154,30 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let artifact_dir_lock =
-            dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?;
+        let artifact_dir_lock = match locking_mode {
+            LockingMode::None => None,
+            LockingMode::Fine => {
+                Some(dest.open_ro_shared_create(".cargo-lock", ws.gctx(), "build directory")?)
+            }
+            LockingMode::Coarse => {
+                Some(dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?)
+            }
+        };
 
         let build_dir_lock = if root != build_root {
-            Some(build_dest.open_rw_exclusive_create(
-                ".cargo-lock",
-                ws.gctx(),
-                "build directory",
-            )?)
+            match locking_mode {
+                LockingMode::None => None,
+                LockingMode::Fine => Some(build_dest.open_ro_shared_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+                LockingMode::Coarse => Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+            }
         } else {
             None
         };
@@ -222,7 +239,7 @@ pub struct ArtifactDirLayout {
     timings: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
-    _lock: FileLock,
+    _lock: Option<FileLock>,
 }
 
 impl ArtifactDirLayout {
@@ -345,6 +362,14 @@ impl BuildDirLayout {
             self.build().join(pkg_dir)
         }
     }
+    /// Fetch the lock paths for a build unit
+    pub fn build_unit_lock(&self, pkg_dir: &str) -> BuildUnitLockLocation {
+        let dir = self.build_unit(pkg_dir);
+        BuildUnitLockLocation {
+            partial: dir.join("partial.lock"),
+            full: dir.join("full.lock"),
+        }
+    }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {
         &self.artifact
@@ -358,4 +383,11 @@ impl BuildDirLayout {
         paths::create_dir_all(&self.tmp)?;
         Ok(&self.tmp)
     }
+}
+
+/// See [crate::core::compiler::locking] module docs for details about build system locking
+/// structure.
+pub struct BuildUnitLockLocation {
+    pub partial: PathBuf,
+    pub full: PathBuf,
 }
