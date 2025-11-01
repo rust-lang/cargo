@@ -1128,7 +1128,10 @@ foo v0.1.0 ([ROOT]/foo)
 #[cargo_test]
 fn format() {
     Package::new("dep", "1.0.0").publish();
-    Package::new("other-dep", "1.0.0").publish();
+    Package::new("dep", "2.0.0").publish();
+    Package::new("other-dep", "1.0.0")
+        .dep("dep", "^1.0")
+        .publish();
 
     Package::new("dep_that_is_awesome", "1.0.0")
         .file(
@@ -1140,6 +1143,10 @@ fn format() {
 
                 [lib]
                 name = "awesome_dep"
+
+                [dependencies]
+                dep1 = {package="dep", version="<2.0"}
+                dep2 = {package="dep", version="2.0"}
             "#,
         )
         .file("src/lib.rs", "pub struct Straw;")
@@ -1156,9 +1163,9 @@ fn format() {
             repository = "https://github.com/rust-lang/cargo"
 
             [dependencies]
-            dep = {version="1.0", optional=true}
+            dep = {version="=1.0"}
             other-dep = {version="1.0", optional=true}
-            dep_that_is_awesome = {version="1.0", optional=true}
+            dep_that_is_awesome = {version=">=1.0, <2", optional=true}
 
 
             [features]
@@ -1173,6 +1180,7 @@ fn format() {
     p.cargo("tree --format <<<{p}>>>")
         .with_stdout_data(str![[r#"
 <<<foo v0.1.0 ([ROOT]/foo)>>>
+└── <<<dep v1.0.0>>>
 
 "#]])
         .run();
@@ -1191,6 +1199,7 @@ Caused by:
     p.cargo("tree --format {p}-{{hello}}")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)-{hello}
+└── dep v1.0.0-{hello}
 
 "#]])
         .run();
@@ -1199,6 +1208,7 @@ foo v0.1.0 ([ROOT]/foo)-{hello}
         .arg("{p} {l} {r}")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo) MIT https://github.com/rust-lang/cargo
+└── dep v1.0.0  
 
 "#]])
         .run();
@@ -1207,6 +1217,7 @@ foo v0.1.0 ([ROOT]/foo) MIT https://github.com/rust-lang/cargo
         .arg("{p} {f}")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo) bar,default,foo
+└── dep v1.0.0 
 
 "#]])
         .run();
@@ -1214,10 +1225,11 @@ foo v0.1.0 ([ROOT]/foo) bar,default,foo
     p.cargo("tree --all-features --format")
         .arg("{p} [{f}]")
         .with_stdout_data(str![[r#"
-foo v0.1.0 ([ROOT]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
+foo v0.1.0 ([ROOT]/foo) [bar,default,dep_that_is_awesome,foo,other-dep]
 ├── dep v1.0.0 []
 ├── dep_that_is_awesome v1.0.0 []
 └── other-dep v1.0.0 []
+    └── dep v1.0.0 []
 
 "#]])
         .run();
@@ -1227,8 +1239,34 @@ foo v0.1.0 ([ROOT]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
         .arg("--format={lib}")
         .with_stdout_data(str![[r#"
 
+├── dep
 ├── awesome_dep
 └── other_dep
+    └── dep
+
+"#]])
+        .run();
+
+    p.cargo("tree --all-features")
+        .arg("--format={p}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── dep v1.0.0
+├── dep_that_is_awesome v1.0.0
+└── other-dep v1.0.0
+    └── dep v1.0.0
+
+"#]])
+        .run();
+
+    p.cargo("tree --all-features")
+        .arg("--format={p}")
+        .arg("--invert=dep")
+        .with_stdout_data(str![[r#"
+dep v1.0.0
+├── foo v0.1.0 ([ROOT]/foo)
+└── other-dep v1.0.0
+    └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
         .run();
