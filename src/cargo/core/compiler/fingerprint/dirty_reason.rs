@@ -4,12 +4,14 @@ use std::fmt::Debug;
 use super::*;
 use crate::core::Shell;
 
+pub type DirtyReason = DirtyDetail;
+
 /// Tells a better story of why a build is considered "dirty" that leads
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].
 ///
 /// [`Fingerprint::compare`]: super::Fingerprint::compare
 #[derive(Clone, Debug)]
-pub enum DirtyReason {
+pub enum DirtyDetail {
     RustcChanged,
     FeaturesChanged {
         old: String,
@@ -131,10 +133,10 @@ impl fmt::Display for After {
     }
 }
 
-impl DirtyReason {
+impl DirtyDetail {
     /// Whether a build is dirty because it is a fresh build being kicked off.
     pub fn is_fresh_build(&self) -> bool {
-        matches!(self, DirtyReason::FreshBuild)
+        matches!(self, DirtyDetail::FreshBuild)
     }
 
     fn after(old_time: FileTime, new_time: FileTime, what: &'static str) -> After {
@@ -147,30 +149,30 @@ impl DirtyReason {
 
     pub fn present_to(&self, s: &mut Shell, unit: &Unit, root: &Path) -> CargoResult<()> {
         match self {
-            DirtyReason::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
-            DirtyReason::FeaturesChanged { .. } => {
+            DirtyDetail::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
+            DirtyDetail::FeaturesChanged { .. } => {
                 s.dirty_because(unit, "the list of features changed")
             }
-            DirtyReason::DeclaredFeaturesChanged { .. } => {
+            DirtyDetail::DeclaredFeaturesChanged { .. } => {
                 s.dirty_because(unit, "the list of declared features changed")
             }
-            DirtyReason::TargetConfigurationChanged => {
+            DirtyDetail::TargetConfigurationChanged => {
                 s.dirty_because(unit, "the target configuration changed")
             }
-            DirtyReason::PathToSourceChanged => {
+            DirtyDetail::PathToSourceChanged => {
                 s.dirty_because(unit, "the path to the source changed")
             }
-            DirtyReason::ProfileConfigurationChanged => {
+            DirtyDetail::ProfileConfigurationChanged => {
                 s.dirty_because(unit, "the profile configuration changed")
             }
-            DirtyReason::RustflagsChanged { .. } => s.dirty_because(unit, "the rustflags changed"),
-            DirtyReason::ConfigSettingsChanged => {
+            DirtyDetail::RustflagsChanged { .. } => s.dirty_because(unit, "the rustflags changed"),
+            DirtyDetail::ConfigSettingsChanged => {
                 s.dirty_because(unit, "the config settings changed")
             }
-            DirtyReason::CompileKindChanged => {
+            DirtyDetail::CompileKindChanged => {
                 s.dirty_because(unit, "the rustc compile kind changed")
             }
-            DirtyReason::LocalLengthsChanged => {
+            DirtyDetail::LocalLengthsChanged => {
                 s.dirty_because(unit, "the local lengths changed")?;
                 s.note(
                     "this could happen because of added/removed `cargo::rerun-if` instructions in the build script",
@@ -178,10 +180,10 @@ impl DirtyReason {
 
                 Ok(())
             }
-            DirtyReason::PrecalculatedComponentsChanged { .. } => {
+            DirtyDetail::PrecalculatedComponentsChanged { .. } => {
                 s.dirty_because(unit, "the precalculated components changed")
             }
-            DirtyReason::ChecksumUseChanged { old } => {
+            DirtyDetail::ChecksumUseChanged { old } => {
                 if *old {
                     s.dirty_because(
                         unit,
@@ -191,36 +193,36 @@ impl DirtyReason {
                     s.dirty_because(unit, "checksum freshness requested, prior compilation did not use checksum freshness")
                 }
             }
-            DirtyReason::DepInfoOutputChanged { .. } => {
+            DirtyDetail::DepInfoOutputChanged { .. } => {
                 s.dirty_because(unit, "the dependency info output changed")
             }
-            DirtyReason::RerunIfChangedOutputFileChanged { .. } => {
+            DirtyDetail::RerunIfChangedOutputFileChanged { .. } => {
                 s.dirty_because(unit, "rerun-if-changed output file path changed")
             }
-            DirtyReason::RerunIfChangedOutputPathsChanged { .. } => {
+            DirtyDetail::RerunIfChangedOutputPathsChanged { .. } => {
                 s.dirty_because(unit, "the rerun-if-changed instructions changed")
             }
-            DirtyReason::EnvVarsChanged { .. } => {
+            DirtyDetail::EnvVarsChanged { .. } => {
                 s.dirty_because(unit, "the environment variables changed")
             }
-            DirtyReason::EnvVarChanged { name, .. } => {
+            DirtyDetail::EnvVarChanged { name, .. } => {
                 s.dirty_because(unit, format_args!("the env variable {name} changed"))
             }
-            DirtyReason::LocalFingerprintTypeChanged { .. } => {
+            DirtyDetail::LocalFingerprintTypeChanged { .. } => {
                 s.dirty_because(unit, "the local fingerprint type changed")
             }
-            DirtyReason::NumberOfDependenciesChanged { old, new } => s.dirty_because(
+            DirtyDetail::NumberOfDependenciesChanged { old, new } => s.dirty_because(
                 unit,
                 format_args!("number of dependencies changed ({old} => {new})",),
             ),
-            DirtyReason::UnitDependencyNameChanged { old, new } => s.dirty_because(
+            DirtyDetail::UnitDependencyNameChanged { old, new } => s.dirty_because(
                 unit,
                 format_args!("name of dependency changed ({old} => {new})"),
             ),
-            DirtyReason::UnitDependencyInfoChanged { .. } => {
+            DirtyDetail::UnitDependencyInfoChanged { .. } => {
                 s.dirty_because(unit, "dependency info changed")
             }
-            DirtyReason::FsStatusOutdated(status) => match status {
+            DirtyDetail::FsStatusOutdated(status) => match status {
                 FsStatus::Stale => s.dirty_because(unit, "stale, unknown reason"),
                 FsStatus::StaleItem(item) => match item {
                     StaleItem::MissingFile(missing_file) => {
@@ -316,12 +318,12 @@ impl DirtyReason {
                     unreachable!()
                 }
             },
-            DirtyReason::NothingObvious => {
+            DirtyDetail::NothingObvious => {
                 // See comment in fingerprint compare method.
                 s.dirty_because(unit, "the fingerprint comparison turned up nothing obvious")
             }
-            DirtyReason::Forced => s.dirty_because(unit, "forced"),
-            DirtyReason::FreshBuild => s.dirty_because(unit, "fresh build"),
+            DirtyDetail::Forced => s.dirty_because(unit, "forced"),
+            DirtyDetail::FreshBuild => s.dirty_because(unit, "fresh build"),
         }
     }
 }
