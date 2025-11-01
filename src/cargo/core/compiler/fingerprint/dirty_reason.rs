@@ -4,7 +4,16 @@ use std::fmt::Debug;
 use super::*;
 use crate::core::Shell;
 
-pub type DirtyReason = DirtyDetail;
+/// Tell why a unit needs to rebuild.
+#[derive(Clone, Debug)]
+pub enum DirtyReason {
+    /// First time to build something.
+    FreshBuild,
+    /// Simple dirty marker for non verbose output.
+    Dirty,
+    /// Detailed rebuild reason
+    Detailed(DirtyDetail),
+}
 
 /// Tells a better story of why a build is considered "dirty" that leads
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].
@@ -81,8 +90,6 @@ pub enum DirtyDetail {
     FsStatusOutdated(FsStatus),
     NothingObvious,
     Forced,
-    /// First time to build something.
-    FreshBuild,
 }
 
 trait ShellExt {
@@ -133,12 +140,28 @@ impl fmt::Display for After {
     }
 }
 
-impl DirtyDetail {
-    /// Whether a build is dirty because it is a fresh build being kicked off.
-    pub fn is_fresh_build(&self) -> bool {
-        matches!(self, DirtyDetail::FreshBuild)
+impl DirtyReason {
+    /// Create a forced rebuild reason.
+    pub fn forced() -> Self {
+        DirtyReason::Detailed(DirtyDetail::Forced)
     }
 
+    pub fn present_to(&self, s: &mut Shell, unit: &Unit, root: &Path) -> CargoResult<()> {
+        match self {
+            DirtyReason::Detailed(detail) => detail.present_to(s, unit, root),
+            DirtyReason::FreshBuild => {
+                // Not useful and too verbose to show a fresh build in "Dirty ..." status
+                Ok(())
+            }
+            DirtyReason::Dirty => {
+                // Dirty variant doesn't show verbose output
+                Ok(())
+            }
+        }
+    }
+}
+
+impl DirtyDetail {
     fn after(old_time: FileTime, new_time: FileTime, what: &'static str) -> After {
         After {
             old_time,
@@ -147,7 +170,7 @@ impl DirtyDetail {
         }
     }
 
-    pub fn present_to(&self, s: &mut Shell, unit: &Unit, root: &Path) -> CargoResult<()> {
+    fn present_to(&self, s: &mut Shell, unit: &Unit, root: &Path) -> CargoResult<()> {
         match self {
             DirtyDetail::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
             DirtyDetail::FeaturesChanged { .. } => {
@@ -323,7 +346,6 @@ impl DirtyDetail {
                 s.dirty_because(unit, "the fingerprint comparison turned up nothing obvious")
             }
             DirtyDetail::Forced => s.dirty_because(unit, "forced"),
-            DirtyDetail::FreshBuild => s.dirty_because(unit, "fresh build"),
         }
     }
 }

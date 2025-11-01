@@ -978,55 +978,59 @@ impl Fingerprint {
     /// The purpose of this is exclusively to produce a diagnostic message
     /// [`DirtyReason`], indicating why we're recompiling something.
     fn compare(&self, old: &Fingerprint) -> DirtyReason {
+        use dirty_reason::DirtyDetail;
+
         if self.rustc != old.rustc {
-            return DirtyReason::RustcChanged;
+            return DirtyReason::Detailed(DirtyDetail::RustcChanged);
         }
         if self.features != old.features {
-            return DirtyReason::FeaturesChanged {
+            return DirtyReason::Detailed(DirtyDetail::FeaturesChanged {
                 old: old.features.clone(),
                 new: self.features.clone(),
-            };
+            });
         }
         if self.declared_features != old.declared_features {
-            return DirtyReason::DeclaredFeaturesChanged {
+            return DirtyReason::Detailed(DirtyDetail::DeclaredFeaturesChanged {
                 old: old.declared_features.clone(),
                 new: self.declared_features.clone(),
-            };
+            });
         }
         if self.target != old.target {
-            return DirtyReason::TargetConfigurationChanged;
+            return DirtyReason::Detailed(DirtyDetail::TargetConfigurationChanged);
         }
         if self.path != old.path {
-            return DirtyReason::PathToSourceChanged;
+            return DirtyReason::Detailed(DirtyDetail::PathToSourceChanged);
         }
         if self.profile != old.profile {
-            return DirtyReason::ProfileConfigurationChanged;
+            return DirtyReason::Detailed(DirtyDetail::ProfileConfigurationChanged);
         }
         if self.rustflags != old.rustflags {
-            return DirtyReason::RustflagsChanged {
+            return DirtyReason::Detailed(DirtyDetail::RustflagsChanged {
                 old: old.rustflags.clone(),
                 new: self.rustflags.clone(),
-            };
+            });
         }
         if self.config != old.config {
-            return DirtyReason::ConfigSettingsChanged;
+            return DirtyReason::Detailed(DirtyDetail::ConfigSettingsChanged);
         }
         if self.compile_kind != old.compile_kind {
-            return DirtyReason::CompileKindChanged;
+            return DirtyReason::Detailed(DirtyDetail::CompileKindChanged);
         }
         let my_local = self.local.lock().unwrap();
         let old_local = old.local.lock().unwrap();
         if my_local.len() != old_local.len() {
-            return DirtyReason::LocalLengthsChanged;
+            return DirtyReason::Detailed(DirtyDetail::LocalLengthsChanged);
         }
         for (new, old) in my_local.iter().zip(old_local.iter()) {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
-                        return DirtyReason::PrecalculatedComponentsChanged {
-                            old: b.to_string(),
-                            new: a.to_string(),
-                        };
+                        return DirtyReason::Detailed(
+                            DirtyDetail::PrecalculatedComponentsChanged {
+                                old: b.to_string(),
+                                new: a.to_string(),
+                            },
+                        );
                     }
                 }
                 (
@@ -1040,13 +1044,15 @@ impl Fingerprint {
                     },
                 ) => {
                     if adep != bdep {
-                        return DirtyReason::DepInfoOutputChanged {
+                        return DirtyReason::Detailed(DirtyDetail::DepInfoOutputChanged {
                             old: bdep.clone(),
                             new: adep.clone(),
-                        };
+                        });
                     }
                     if checksum_a != checksum_b {
-                        return DirtyReason::ChecksumUseChanged { old: *checksum_b };
+                        return DirtyReason::Detailed(DirtyDetail::ChecksumUseChanged {
+                            old: *checksum_b,
+                        });
                     }
                 }
                 (
@@ -1060,16 +1066,20 @@ impl Fingerprint {
                     },
                 ) => {
                     if aout != bout {
-                        return DirtyReason::RerunIfChangedOutputFileChanged {
-                            old: bout.clone(),
-                            new: aout.clone(),
-                        };
+                        return DirtyReason::Detailed(
+                            DirtyDetail::RerunIfChangedOutputFileChanged {
+                                old: bout.clone(),
+                                new: aout.clone(),
+                            },
+                        );
                     }
                     if apaths != bpaths {
-                        return DirtyReason::RerunIfChangedOutputPathsChanged {
-                            old: bpaths.clone(),
-                            new: apaths.clone(),
-                        };
+                        return DirtyReason::Detailed(
+                            DirtyDetail::RerunIfChangedOutputPathsChanged {
+                                old: bpaths.clone(),
+                                new: apaths.clone(),
+                            },
+                        );
                     }
                 }
                 (
@@ -1083,61 +1093,61 @@ impl Fingerprint {
                     },
                 ) => {
                     if *akey != *bkey {
-                        return DirtyReason::EnvVarsChanged {
+                        return DirtyReason::Detailed(DirtyDetail::EnvVarsChanged {
                             old: bkey.clone(),
                             new: akey.clone(),
-                        };
+                        });
                     }
                     if *avalue != *bvalue {
-                        return DirtyReason::EnvVarChanged {
+                        return DirtyReason::Detailed(DirtyDetail::EnvVarChanged {
                             name: akey.clone(),
                             old_value: bvalue.clone(),
                             new_value: avalue.clone(),
-                        };
+                        });
                     }
                 }
                 (a, b) => {
-                    return DirtyReason::LocalFingerprintTypeChanged {
+                    return DirtyReason::Detailed(DirtyDetail::LocalFingerprintTypeChanged {
                         old: b.kind(),
                         new: a.kind(),
-                    };
+                    });
                 }
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            return DirtyReason::NumberOfDependenciesChanged {
+            return DirtyReason::Detailed(DirtyDetail::NumberOfDependenciesChanged {
                 old: old.deps.len(),
                 new: self.deps.len(),
-            };
+            });
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
-                return DirtyReason::UnitDependencyNameChanged {
+                return DirtyReason::Detailed(DirtyDetail::UnitDependencyNameChanged {
                     old: b.name,
                     new: a.name,
-                };
+                });
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
-                return DirtyReason::UnitDependencyInfoChanged {
+                return DirtyReason::Detailed(DirtyDetail::UnitDependencyInfoChanged {
                     new_name: a.name,
                     new_fingerprint: a.fingerprint.hash_u64(),
                     old_name: b.name,
                     old_fingerprint: b.fingerprint.hash_u64(),
-                };
+                });
             }
         }
 
         if !self.fs_status.up_to_date() {
-            return DirtyReason::FsStatusOutdated(self.fs_status.clone());
+            return DirtyReason::Detailed(DirtyDetail::FsStatusOutdated(self.fs_status.clone()));
         }
 
         // This typically means some filesystem modifications happened or
         // something transitive was odd. In general we should strive to provide
         // a better error message than this, so if you see this message a lot it
         // likely means this method needs to be updated!
-        DirtyReason::NothingObvious
+        DirtyReason::Detailed(DirtyDetail::NothingObvious)
     }
 
     /// Dynamically inspect the local filesystem to update the `fs_status` field
@@ -1903,7 +1913,7 @@ fn compare_old_fingerprint(
     }
 
     match compare {
-        Ok(None) if forced => Some(DirtyReason::Forced),
+        Ok(None) if forced => Some(DirtyReason::forced()),
         Ok(reason) => reason,
         Err(_) => Some(DirtyReason::FreshBuild),
     }
