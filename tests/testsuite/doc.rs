@@ -182,6 +182,125 @@ fn doc_no_deps() {
     assert!(!p.root().join("target/doc/bar/index.html").is_file());
 }
 
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn doc_deps_rustdoc_mergeable_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("doc -Zunstable-options -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to latest compatible version
+[DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+
+    // Verify that it only emits rmeta for the dependency.
+    assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -Zunstable-options -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn doc_no_deps_rustdoc_mergeable_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar; pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("doc --no-deps -Zunstable-options -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(!p.root().join("target/doc/bar/index.html").is_file());
+
+    // Verify that it only emits rmeta for the dependency.
+    assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
+    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc --no-deps -Zunstable-options -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    assert!(p.root().join("target/doc").is_dir());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(!p.root().join("target/doc/bar/index.html").is_file());
+}
+
 #[cargo_test]
 fn doc_only_bin() {
     let p = project()
