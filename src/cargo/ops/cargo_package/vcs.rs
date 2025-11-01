@@ -251,7 +251,7 @@ fn git(
         .collect();
     let dirty = !dirty_src_files.is_empty();
     if !dirty || opts.allow_dirty {
-        let maybe_head_id = repo.head()?.try_peel_to_id_in_place()?;
+        let maybe_head_id = repo.head()?.try_peel_to_id()?;
         Ok(maybe_head_id.map(|id| GitVcsInfo {
             sha1: id.to_string(),
             dirty,
