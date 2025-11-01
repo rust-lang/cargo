@@ -1248,25 +1248,25 @@ foo v0.1.0 ([ROOT]/foo) [bar,default,dep_that_is_awesome,foo,other-dep]
         .run();
 
     p.cargo("tree --all-features")
-        .arg("--format={p}")
+        .arg("--format={p} satisfies {ver-req}")
         .with_stdout_data(str![[r#"
-foo v0.1.0 ([ROOT]/foo)
-├── dep v1.0.0
-├── dep_that_is_awesome v1.0.0
-└── other-dep v1.0.0
-    └── dep v1.0.0
+foo v0.1.0 ([ROOT]/foo) satisfies 
+├── dep v1.0.0 satisfies ^1.0
+├── dep_that_is_awesome v1.0.0 satisfies >=1.0, <2
+└── other-dep v1.0.0 satisfies ^1.0
+    └── dep v1.0.0 satisfies ^1.0
 
 "#]])
         .run();
 
     p.cargo("tree --all-features")
-        .arg("--format={p}")
+        .arg("--format={p} satisfies {ver-req}")
         .arg("--invert=dep")
         .with_stdout_data(str![[r#"
-dep v1.0.0
-├── foo v0.1.0 ([ROOT]/foo)
-└── other-dep v1.0.0
-    └── foo v0.1.0 ([ROOT]/foo)
+dep v1.0.0 satisfies ^1.0
+├── foo v0.1.0 ([ROOT]/foo) satisfies 
+└── other-dep v1.0.0 satisfies ^1.0
+    └── foo v0.1.0 ([ROOT]/foo) satisfies 
 
 "#]])
         .run();
