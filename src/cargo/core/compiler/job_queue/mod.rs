@@ -844,8 +844,10 @@ impl<'gctx> DrainState<'gctx> {
             let profile_link = build_runner.bcx.gctx.shell().err_hyperlink(
                 "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
             );
+            let target_count = self.counts.len();
             let message = format!(
-                "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target(s) in {time_elapsed}",
+                "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target{} in {time_elapsed}",
+                (target_count == 1).then(|| "").unwrap_or("s")
             );
             if !build_runner.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
