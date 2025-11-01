@@ -1180,12 +1180,18 @@ impl UnitFor {
         } else {
             self.panic_setting
         };
+        let artifact_target_for_features =
+            if dep_target.proc_macro() || parent.target.is_custom_build() {
+                None
+            } else {
+                self.artifact_target_for_features
+            };
         UnitFor {
             host: self.host || dep_for_host,
             host_features,
             panic_setting,
             root_compile_kind,
-            artifact_target_for_features: self.artifact_target_for_features,
+            artifact_target_for_features,
         }
     }
 
