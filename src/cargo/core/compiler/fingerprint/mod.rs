@@ -393,6 +393,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::core::Package;
+use crate::core::Verbosity;
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::util;
 use crate::util::errors::CargoResult;
@@ -434,6 +435,7 @@ pub fn prepare_target(
 ) -> CargoResult<Job> {
     let bcx = build_runner.bcx;
     let loc = build_runner.files().fingerprint_file_path(unit, "");
+    let verbosity = bcx.gctx.shell().verbosity();
 
     debug!("fingerprint at: {}", loc.display());
 
@@ -442,7 +444,8 @@ pub fn prepare_target(
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(build_runner, unit)?;
     let mtime_on_use = build_runner.bcx.gctx.cli_unstable().mtime_on_use;
-    let dirty_reason = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
+    let dirty_reason =
+        compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force, verbosity);
 
     let Some(dirty_reason) = dirty_reason else {
         return Ok(Job::new_fresh());
@@ -977,59 +980,70 @@ impl Fingerprint {
     ///
     /// The purpose of this is exclusively to produce a diagnostic message
     /// [`DirtyReason`], indicating why we're recompiling something.
-    fn compare(&self, old: &Fingerprint) -> DirtyReason {
+    fn compare(&self, old: &Fingerprint, verbosity: Verbosity) -> DirtyReason {
         use dirty_reason::DirtyDetail;
+        use dirty_reason::dirty;
 
         if self.rustc != old.rustc {
-            return DirtyReason::Detailed(DirtyDetail::RustcChanged);
+            dirty!(verbosity, DirtyDetail::RustcChanged);
         }
         if self.features != old.features {
-            return DirtyReason::Detailed(DirtyDetail::FeaturesChanged {
-                old: old.features.clone(),
-                new: self.features.clone(),
-            });
+            dirty!(
+                verbosity,
+                DirtyDetail::FeaturesChanged {
+                    old: old.features.clone(),
+                    new: self.features.clone(),
+                }
+            );
         }
         if self.declared_features != old.declared_features {
-            return DirtyReason::Detailed(DirtyDetail::DeclaredFeaturesChanged {
-                old: old.declared_features.clone(),
-                new: self.declared_features.clone(),
-            });
+            dirty!(
+                verbosity,
+                DirtyDetail::DeclaredFeaturesChanged {
+                    old: old.declared_features.clone(),
+                    new: self.declared_features.clone(),
+                }
+            );
         }
         if self.target != old.target {
-            return DirtyReason::Detailed(DirtyDetail::TargetConfigurationChanged);
+            dirty!(verbosity, DirtyDetail::TargetConfigurationChanged);
         }
         if self.path != old.path {
-            return DirtyReason::Detailed(DirtyDetail::PathToSourceChanged);
+            dirty!(verbosity, DirtyDetail::PathToSourceChanged);
         }
         if self.profile != old.profile {
-            return DirtyReason::Detailed(DirtyDetail::ProfileConfigurationChanged);
+            dirty!(verbosity, DirtyDetail::ProfileConfigurationChanged);
         }
         if self.rustflags != old.rustflags {
-            return DirtyReason::Detailed(DirtyDetail::RustflagsChanged {
-                old: old.rustflags.clone(),
-                new: self.rustflags.clone(),
-            });
+            dirty!(
+                verbosity,
+                DirtyDetail::RustflagsChanged {
+                    old: old.rustflags.clone(),
+                    new: self.rustflags.clone(),
+                }
+            );
         }
         if self.config != old.config {
-            return DirtyReason::Detailed(DirtyDetail::ConfigSettingsChanged);
+            dirty!(verbosity, DirtyDetail::ConfigSettingsChanged);
         }
         if self.compile_kind != old.compile_kind {
-            return DirtyReason::Detailed(DirtyDetail::CompileKindChanged);
+            dirty!(verbosity, DirtyDetail::CompileKindChanged);
         }
         let my_local = self.local.lock().unwrap();
         let old_local = old.local.lock().unwrap();
         if my_local.len() != old_local.len() {
-            return DirtyReason::Detailed(DirtyDetail::LocalLengthsChanged);
+            dirty!(verbosity, DirtyDetail::LocalLengthsChanged);
         }
         for (new, old) in my_local.iter().zip(old_local.iter()) {
             match (new, old) {
                 (LocalFingerprint::Precalculated(a), LocalFingerprint::Precalculated(b)) => {
                     if a != b {
-                        return DirtyReason::Detailed(
+                        dirty!(
+                            verbosity,
                             DirtyDetail::PrecalculatedComponentsChanged {
                                 old: b.to_string(),
                                 new: a.to_string(),
-                            },
+                            }
                         );
                     }
                 }
@@ -1044,15 +1058,19 @@ impl Fingerprint {
                     },
                 ) => {
                     if adep != bdep {
-                        return DirtyReason::Detailed(DirtyDetail::DepInfoOutputChanged {
-                            old: bdep.clone(),
-                            new: adep.clone(),
-                        });
+                        dirty!(
+                            verbosity,
+                            DirtyDetail::DepInfoOutputChanged {
+                                old: bdep.clone(),
+                                new: adep.clone(),
+                            }
+                        );
                     }
                     if checksum_a != checksum_b {
-                        return DirtyReason::Detailed(DirtyDetail::ChecksumUseChanged {
-                            old: *checksum_b,
-                        });
+                        dirty!(
+                            verbosity,
+                            DirtyDetail::ChecksumUseChanged { old: *checksum_b }
+                        );
                     }
                 }
                 (
@@ -1066,19 +1084,21 @@ impl Fingerprint {
                     },
                 ) => {
                     if aout != bout {
-                        return DirtyReason::Detailed(
+                        dirty!(
+                            verbosity,
                             DirtyDetail::RerunIfChangedOutputFileChanged {
                                 old: bout.clone(),
                                 new: aout.clone(),
-                            },
+                            }
                         );
                     }
                     if apaths != bpaths {
-                        return DirtyReason::Detailed(
+                        dirty!(
+                            verbosity,
                             DirtyDetail::RerunIfChangedOutputPathsChanged {
                                 old: bpaths.clone(),
                                 new: apaths.clone(),
-                            },
+                            }
                         );
                     }
                 }
@@ -1093,61 +1113,82 @@ impl Fingerprint {
                     },
                 ) => {
                     if *akey != *bkey {
-                        return DirtyReason::Detailed(DirtyDetail::EnvVarsChanged {
-                            old: bkey.clone(),
-                            new: akey.clone(),
-                        });
+                        dirty!(
+                            verbosity,
+                            DirtyDetail::EnvVarsChanged {
+                                old: bkey.clone(),
+                                new: akey.clone(),
+                            }
+                        );
                     }
                     if *avalue != *bvalue {
-                        return DirtyReason::Detailed(DirtyDetail::EnvVarChanged {
-                            name: akey.clone(),
-                            old_value: bvalue.clone(),
-                            new_value: avalue.clone(),
-                        });
+                        dirty!(
+                            verbosity,
+                            DirtyDetail::EnvVarChanged {
+                                name: akey.clone(),
+                                old_value: bvalue.clone(),
+                                new_value: avalue.clone(),
+                            }
+                        );
                     }
                 }
                 (a, b) => {
-                    return DirtyReason::Detailed(DirtyDetail::LocalFingerprintTypeChanged {
-                        old: b.kind(),
-                        new: a.kind(),
-                    });
+                    dirty!(
+                        verbosity,
+                        DirtyDetail::LocalFingerprintTypeChanged {
+                            old: b.kind(),
+                            new: a.kind(),
+                        }
+                    );
                 }
             }
         }
 
         if self.deps.len() != old.deps.len() {
-            return DirtyReason::Detailed(DirtyDetail::NumberOfDependenciesChanged {
-                old: old.deps.len(),
-                new: self.deps.len(),
-            });
+            dirty!(
+                verbosity,
+                DirtyDetail::NumberOfDependenciesChanged {
+                    old: old.deps.len(),
+                    new: self.deps.len(),
+                }
+            );
         }
         for (a, b) in self.deps.iter().zip(old.deps.iter()) {
             if a.name != b.name {
-                return DirtyReason::Detailed(DirtyDetail::UnitDependencyNameChanged {
-                    old: b.name,
-                    new: a.name,
-                });
+                dirty!(
+                    verbosity,
+                    DirtyDetail::UnitDependencyNameChanged {
+                        old: b.name,
+                        new: a.name,
+                    }
+                );
             }
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
-                return DirtyReason::Detailed(DirtyDetail::UnitDependencyInfoChanged {
-                    new_name: a.name,
-                    new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name,
-                    old_fingerprint: b.fingerprint.hash_u64(),
-                });
+                dirty!(
+                    verbosity,
+                    DirtyDetail::UnitDependencyInfoChanged {
+                        new_name: a.name,
+                        new_fingerprint: a.fingerprint.hash_u64(),
+                        old_name: b.name,
+                        old_fingerprint: b.fingerprint.hash_u64(),
+                    }
+                );
             }
         }
 
         if !self.fs_status.up_to_date() {
-            return DirtyReason::Detailed(DirtyDetail::FsStatusOutdated(self.fs_status.clone()));
+            dirty!(
+                verbosity,
+                DirtyDetail::FsStatusOutdated(self.fs_status.clone())
+            );
         }
 
         // This typically means some filesystem modifications happened or
         // something transitive was odd. In general we should strive to provide
         // a better error message than this, so if you see this message a lot it
         // likely means this method needs to be updated!
-        DirtyReason::Detailed(DirtyDetail::NothingObvious)
+        dirty!(verbosity, DirtyDetail::NothingObvious);
     }
 
     /// Dynamically inspect the local filesystem to update the `fs_status` field
@@ -1884,6 +1925,7 @@ fn compare_old_fingerprint(
     new_fingerprint: &Fingerprint,
     mtime_on_use: bool,
     forced: bool,
+    verbosity: Verbosity,
 ) -> Option<DirtyReason> {
     if mtime_on_use {
         // update the mtime so other cleaners know we used it
@@ -1892,7 +1934,7 @@ fn compare_old_fingerprint(
         paths::set_file_time_no_err(old_hash_path, t);
     }
 
-    let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint);
+    let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint, verbosity);
 
     match compare.as_ref() {
         Ok(None) => {}
@@ -1922,6 +1964,7 @@ fn compare_old_fingerprint(
 fn _compare_old_fingerprint(
     old_hash_path: &Path,
     new_fingerprint: &Fingerprint,
+    verbosity: Verbosity,
 ) -> CargoResult<Option<DirtyReason>> {
     let old_fingerprint_short = paths::read(old_hash_path)?;
 
@@ -1942,7 +1985,7 @@ fn _compare_old_fingerprint(
         );
     }
 
-    Ok(Some(new_fingerprint.compare(&old_fingerprint)))
+    Ok(Some(new_fingerprint.compare(&old_fingerprint, verbosity)))
 }
 
 /// Calculates the fingerprint of a unit thats contains no dep-info files.

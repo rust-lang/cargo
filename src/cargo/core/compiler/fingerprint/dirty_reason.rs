@@ -4,6 +4,18 @@ use std::fmt::Debug;
 use super::*;
 use crate::core::Shell;
 
+macro_rules! dirty {
+    ($verbosity:expr, $detail:expr) => {
+        return if matches!($verbosity, crate::core::Verbosity::Verbose) {
+            DirtyReason::Detailed($detail)
+        } else {
+            DirtyReason::Dirty
+        };
+    };
+}
+
+pub(super) use dirty;
+
 /// Tell why a unit needs to rebuild.
 #[derive(Clone, Debug)]
 pub enum DirtyReason {
