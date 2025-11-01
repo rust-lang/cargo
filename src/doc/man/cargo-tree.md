@@ -167,6 +167,7 @@ strings will be replaced with the corresponding value:
 - `{r}` --- The package repository URL.
 - `{f}` --- Comma-separated list of package features that are enabled.
 - `{lib}` --- The name, as used in a `use` statement, of the package's library.
+- `{ver-req}` --- The version requirement resolved for the package.
 {{/option}}
 
 {{#option "`--prefix` _prefix_" }}
