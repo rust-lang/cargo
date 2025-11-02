@@ -26,6 +26,19 @@ use super::StringList;
 use super::Value;
 use super::path::ConfigRelativePath;
 
+/// The `[http]` table.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [http]
+/// proxy = "host:port"
+/// timeout = 30
+/// cainfo = "/path/to/ca-bundle.crt"
+/// check-revoke = true
+/// multiplexing = true
+/// ssl-version = "tlsv1.3"
+/// ```
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoHttpConfig {
@@ -41,6 +54,14 @@ pub struct CargoHttpConfig {
     pub ssl_version: Option<SslVersionConfig>,
 }
 
+/// The `[future-incompat-report]` stable
+///
+/// Example configuration:
+///
+/// ```toml
+/// [future-incompat-report]
+/// frequency = "always"
+/// ```
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoFutureIncompatConfig {
@@ -105,6 +126,16 @@ pub struct SslVersionConfigRange {
     pub max: Option<String>,
 }
 
+/// The `[net]` table.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [net]
+/// retry = 2
+/// offline = false
+/// git-fetch-with-cli = true
+/// ```
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNetConfig {
@@ -150,6 +181,18 @@ impl<'de> Deserialize<'de> for JobsConfig {
     }
 }
 
+/// The `[build]` table.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [build]
+/// jobs = 4
+/// target = "x86_64-unknown-linux-gnu"
+/// target-dir = "target"
+/// rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+/// incremental = true
+/// ```
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildConfig {
@@ -257,6 +300,15 @@ impl BuildTargetConfig {
     }
 }
 
+/// The `[resolver]` table.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [resolver]
+/// incompatible-rust-versions = "fallback"
+/// feature-unification = "workspace"
+/// ```
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
@@ -279,6 +331,17 @@ pub enum FeatureUnification {
     Workspace,
 }
 
+/// The `[term]` table.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [term]
+/// verbose = false
+/// quiet = false
+/// color = "auto"
+/// progress.when = "auto"
+/// ```
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TermConfig {
@@ -292,6 +355,20 @@ pub struct TermConfig {
     pub progress: Option<ProgressConfig>,
 }
 
+/// The `term.progress` configuration.
+///
+/// Example configuration:
+///
+/// ```toml
+/// [term]
+/// progress.when = "never" # or "auto"
+/// ```
+///
+/// ```toml
+/// # `when = "always"` requires a `width` field
+/// [term]
+/// progress = { when = "always", width = 80 }
+/// ```
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
@@ -411,6 +488,20 @@ impl<'de> Deserialize<'de> for EnvConfigValueInner {
     }
 }
 
+/// Configuration value for environment variables in `[env]` section.
+///
+/// Supports two formats: simple string and with options.
+///
+/// ```toml
+/// [env]
+/// FOO = "value"
+/// ```
+///
+/// ```toml
+/// [env]
+/// BAR = { value = "relative/path", relative = true }
+/// BAZ = { value = "override", force = true }
+/// ```
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
 pub struct EnvConfigValue {
@@ -418,6 +509,7 @@ pub struct EnvConfigValue {
 }
 
 impl EnvConfigValue {
+    /// Whether this value should override existing environment variables.
     pub fn is_force(&self) -> bool {
         match self.inner.val {
             EnvConfigValueInner::Simple(_) => false,
@@ -425,6 +517,10 @@ impl EnvConfigValue {
         }
     }
 
+    /// Resolves the environment variable value.
+    ///
+    /// If `relative = true`,
+    /// the value is interpreted as a [`ConfigRelativePath`]-like path.
     pub fn resolve<'a>(&'a self, cwd: &Path) -> Cow<'a, OsStr> {
         match self.inner.val {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
