@@ -156,3 +156,26 @@ fn never_progress() {
         .with_stderr_does_not_contain("[BUILDING] [..] [..]/4: [..]")
         .run();
 }
+
+#[cargo_test]
+fn plain_string_when_doesnt_work() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [term]
+            progress = "never"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid configuration for key `term.progress`
+expected a table, but found a string for `term.progress` in [ROOT]/foo/.cargo/config.toml
+
+"#]])
+        .run();
+}
