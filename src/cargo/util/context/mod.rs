@@ -20,6 +20,10 @@
 //! - [`StringList`]: Get a value that is either a list or a whitespace split
 //!   string.
 //!
+//! # Config schemas
+//!
+//! Configuration schemas are defined in the [`schema`] module.
+//!
 //! ## Config deserialization
 //!
 //! Cargo uses a two-layer deserialization approach:

@@ -1,3 +1,15 @@
+//! Cargo configuration schemas.
+//!
+//! This module contains types that define the schema for various configuration
+//! sections found in Cargo configuration.
+//!
+//! These types are mostly used by [`GlobalContext::get`](super::GlobalContext::get)
+//! to deserialize configuration values from TOML files, environment variables,
+//! and CLI arguments.
+//!
+//! Schema types here should only contain data and simple accessor methods.
+//! Avoid depending on [`GlobalContext`](super::GlobalContext) directly.
+
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ffi::OsStr;
