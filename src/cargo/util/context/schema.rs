@@ -398,27 +398,7 @@ where
         type Value = Option<ProgressConfig>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a string (\"auto\" or \"never\") or a table")
-        }
-
-        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            match s {
-                "auto" => Ok(Some(ProgressConfig {
-                    when: ProgressWhen::Auto,
-                    width: None,
-                    term_integration: None,
-                })),
-                "never" => Ok(Some(ProgressConfig {
-                    when: ProgressWhen::Never,
-                    width: None,
-                    term_integration: None,
-                })),
-                "always" => Err(E::custom("\"always\" progress requires a `width` key")),
-                _ => Err(E::unknown_variant(s, &["auto", "never"])),
-            }
+            formatter.write_str("a table")
         }
 
         fn visit_none<E>(self) -> Result<Self::Value, E>
