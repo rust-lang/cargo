@@ -342,7 +342,7 @@ pub enum FeatureUnification {
 /// color = "auto"
 /// progress.when = "auto"
 /// ```
-#[derive(Deserialize, Default)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TermConfig {
     pub verbose: Option<bool>,
