@@ -13,7 +13,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fmt;
 
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
@@ -350,7 +349,6 @@ pub struct TermConfig {
     pub color: Option<String>,
     pub hyperlinks: Option<bool>,
     pub unicode: Option<bool>,
-    #[serde(deserialize_with = "progress_or_string")]
     pub progress: Option<ProgressConfig>,
 }
 
@@ -368,10 +366,8 @@ pub struct TermConfig {
 /// [term]
 /// progress = { when = "always", width = 80 }
 /// ```
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Default)]
 pub struct ProgressConfig {
-    #[serde(default)]
     pub when: ProgressWhen,
     pub width: Option<usize>,
     /// Communicate progress status with a terminal
@@ -387,46 +383,39 @@ pub enum ProgressWhen {
     Always,
 }
 
-fn progress_or_string<'de, D>(deserializer: D) -> Result<Option<ProgressConfig>, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    struct ProgressVisitor;
-
-    impl<'de> serde::de::Visitor<'de> for ProgressVisitor {
-        type Value = Option<ProgressConfig>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a table")
+// We need this custom deserialization for validadting the rule of
+// `when = "always"` requiring a `width` field.
+impl<'de> Deserialize<'de> for ProgressConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        struct ProgressConfigInner {
+            #[serde(default)]
+            when: ProgressWhen,
+            width: Option<usize>,
+            term_integration: Option<bool>,
         }
 
-        fn visit_none<E>(self) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
+        let pc = ProgressConfigInner::deserialize(deserializer)?;
+        if let ProgressConfigInner {
+            when: ProgressWhen::Always,
+            width: None,
+            ..
+        } = pc
         {
-            Ok(None)
+            return Err(serde::de::Error::custom(
+                "\"always\" progress requires a `width` key",
+            ));
         }
-
-        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
-        {
-            let pc = ProgressConfig::deserialize(deserializer)?;
-            if let ProgressConfig {
-                when: ProgressWhen::Always,
-                width: None,
-                ..
-            } = pc
-            {
-                return Err(serde::de::Error::custom(
-                    "\"always\" progress requires a `width` key",
-                ));
-            }
-            Ok(Some(pc))
-        }
+        Ok(ProgressConfig {
+            when: pc.when,
+            width: pc.width,
+            term_integration: pc.term_integration,
+        })
     }
-
-    deserializer.deserialize_option(ProgressVisitor)
 }
 
 #[derive(Debug)]
