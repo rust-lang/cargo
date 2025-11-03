@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::task::Poll;
 
+use annotate_snippets::Level;
 use anyhow::{Context as _, bail, format_err};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
@@ -553,16 +554,21 @@ pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Fil
                 let definition = p.value().definition.clone();
                 if matches!(definition, Definition::Path(_)) {
                     let suggested = format!("{}/", resolved.display());
-                    gctx.shell().warn(format!(
-                    "the `install.root` value `{}` defined in {} without a trailing slash is deprecated; \
-                         a future version of Cargo will treat it as relative to the configuration \
-                         directory. Add a trailing slash (`{}`) to adopt the \
-                         correct behavior and silence this warning. See more at \
-                         https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths",
-                    resolved.display(),
-                    definition,
-                    suggested
-                ))?;
+                    let notes = [
+                        Level::NOTE.message("a future version of Cargo will treat it as relative to the configuration directory"),
+                        Level::HELP.message(format!("add a trailing slash (`{}`) to adopt the correct behavior and silence this warning", suggested)),
+                        Level::NOTE.message("see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths"),
+                    ];
+                    gctx.shell().print_report(
+                        &[Level::WARNING
+                            .secondary_title(format!(
+                                "the `install.root` value `{}` defined in {} without a trailing slash is deprecated",
+                                resolved.display(),
+                                definition
+                            ))
+                            .elements(notes)],
+                        false,
+                    )?;
                 }
             }
             Some(resolved)
