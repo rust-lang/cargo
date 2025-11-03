@@ -42,7 +42,6 @@
 //!
 //! [`de`]: crate::util::context::de
 
-use crate::util::context::GlobalContext;
 use serde::de;
 use std::cmp::Ordering;
 use std::fmt;
@@ -104,12 +103,12 @@ impl Ord for Definition {
 impl Definition {
     /// Root directory where this is defined.
     ///
-    /// If from a file, it is the directory above `.cargo/config`.
-    /// CLI and env are the current working directory.
-    pub fn root<'a>(&'a self, gctx: &'a GlobalContext) -> &'a Path {
+    /// If from a file, it is the directory above `.cargo/config.toml`.
+    /// CLI and env use the provided current working directory.
+    pub fn root<'a>(&'a self, cwd: &'a Path) -> &'a Path {
         match self {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
         }
     }
 
