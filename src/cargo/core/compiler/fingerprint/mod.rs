@@ -397,6 +397,7 @@ use crate::core::compiler::unit_graph::UnitDep;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::log_message::LogMessage;
 use crate::util::{StableHasher, internal, path_args};
 use crate::{CARGO_ENV, GlobalContext};
 
@@ -447,6 +448,18 @@ pub fn prepare_target(
     let Some(dirty_reason) = dirty_reason else {
         return Ok(Job::new_fresh());
     };
+
+    if let Some(logger) = bcx.logger {
+        // Dont log FreshBuild as it is noisy.
+        if !dirty_reason.is_fresh_build() {
+            logger.log(LogMessage::Rebuild {
+                package_id: unit.pkg.package_id().to_spec(),
+                target: unit.target.clone(),
+                mode: unit.mode,
+                cause: dirty_reason.clone(),
+            });
+        }
+    }
 
     // We're going to rebuild, so ensure the source of the crate passes all
     // verification checks before we build it.

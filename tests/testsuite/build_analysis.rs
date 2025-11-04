@@ -228,6 +228,23 @@ fn log_rebuild_reason_file_changed() {
     "reason": "build-started"
   },
   {
+    "cause": {
+      "dirty_reason": "fs-status-outdated",
+      "fs_status": "stale-item",
+      "reference": "[ROOT]/foo/target/debug/.fingerprint/foo-[HASH]/dep-lib-foo",
+      "reference_mtime": "{...}",
+      "stale": "[ROOT]/foo/src/lib.rs",
+      "stale_item": "changed-file",
+      "stale_mtime": "{...}"
+    },
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "rebuild",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": "{...}",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
     "...": "{...}",
     "reason": "timing-info"
   }
