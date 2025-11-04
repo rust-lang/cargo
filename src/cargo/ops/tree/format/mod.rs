@@ -25,10 +25,10 @@ impl Pattern {
         for raw in Parser::new(format) {
             let chunk = match raw {
                 RawChunk::Text(text) => Chunk::Raw(text.to_owned()),
-                RawChunk::Argument("p") => Chunk::Package,
-                RawChunk::Argument("l") => Chunk::License,
-                RawChunk::Argument("r") => Chunk::Repository,
-                RawChunk::Argument("f") => Chunk::Features,
+                RawChunk::Argument("package") | RawChunk::Argument("p") => Chunk::Package,
+                RawChunk::Argument("license") | RawChunk::Argument("l") => Chunk::License,
+                RawChunk::Argument("repository") | RawChunk::Argument("r") => Chunk::Repository,
+                RawChunk::Argument("features") | RawChunk::Argument("f") => Chunk::Features,
                 RawChunk::Argument("lib") => Chunk::LibName,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
