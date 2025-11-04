@@ -34,9 +34,6 @@ fn one_logfile_per_invocation() {
         .file("src/lib.rs", "")
         .build();
 
-    let cargo_home = paths::cargo_home();
-    let log_dir = cargo_home.join("log");
-
     // First invocation
     p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
@@ -48,14 +45,7 @@ fn one_logfile_per_invocation() {
 "#]])
         .run();
 
-    assert!(log_dir.exists());
-    let entries = std::fs::read_dir(&log_dir).unwrap();
-    let log_files: Vec<_> = entries
-        .filter_map(Result::ok)
-        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .collect();
-
-    assert_eq!(log_files.len(), 1);
+    let _ = get_log(0);
 
     // Second invocation
     p.cargo("check -Zbuild-analysis")
@@ -67,13 +57,7 @@ fn one_logfile_per_invocation() {
 "#]])
         .run();
 
-    let entries = std::fs::read_dir(&log_dir).unwrap();
-    let log_files: Vec<_> = entries
-        .filter_map(Result::ok)
-        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .collect();
-
-    assert_eq!(log_files.len(), 2);
+    let _ = get_log(1);
 }
 
 #[cargo_test]
@@ -88,20 +72,8 @@ fn log_msg_build_started() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    let cargo_home = paths::cargo_home();
-    let log_dir = cargo_home.join("log");
-    assert!(log_dir.exists());
-
-    let entries = std::fs::read_dir(&log_dir).unwrap();
-    let log_file = entries
-        .filter_map(Result::ok)
-        .find(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .unwrap();
-
-    let content = std::fs::read_to_string(log_file.path()).unwrap();
-
     assert_e2e().eq(
-        &content,
+        &get_log(0),
         str![[r#"
 [
   {
@@ -150,20 +122,8 @@ fn log_msg_timing_info() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    let cargo_home = paths::cargo_home();
-    let log_dir = cargo_home.join("log");
-    assert!(log_dir.exists());
-
-    let entries = std::fs::read_dir(&log_dir).unwrap();
-    let log_file = entries
-        .filter_map(Result::ok)
-        .find(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .unwrap();
-
-    let content = std::fs::read_to_string(log_file.path()).unwrap();
-
     assert_e2e().eq(
-        &content,
+        &get_log(0),
         str![[r#"
 [
   {
@@ -195,4 +155,29 @@ fn log_msg_timing_info() {
         .is_json()
         .against_jsonlines(),
     );
+}
+
+/// This also asserts the number of log files is exactly the same as `idx + 1`.
+fn get_log(idx: usize) -> String {
+    let cargo_home = paths::cargo_home();
+    let log_dir = cargo_home.join("log");
+
+    let entries = std::fs::read_dir(&log_dir).unwrap();
+    let mut log_files: Vec<_> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .collect();
+
+    // Sort them to get chronological order
+    log_files.sort_unstable_by(|a, b| a.file_name().to_str().cmp(&b.file_name().to_str()));
+
+    assert_eq!(
+        idx + 1,
+        log_files.len(),
+        "unexpected number of log files: {}, expected {}",
+        log_files.len(),
+        idx + 1
+    );
+
+    std::fs::read_to_string(log_files[idx].path()).unwrap()
 }
