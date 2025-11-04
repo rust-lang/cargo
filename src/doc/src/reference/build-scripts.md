@@ -475,7 +475,7 @@ convention of native-library-related packages:
 
 * Common dependencies on `foo-sys` alleviates the rule about one package per
   value of `links`.
-* Other `-sys` packages can take advantage of the `DEP_NAME_KEY=value`
+* Other `-sys` packages can take advantage of the `DEP_LINKS_KEY=value`
   environment variables to better integrate with other packages. See the
   ["Using another `sys` crate"][using-another-sys] example.
 * A common dependency allows centralizing logic on discovering `libfoo` itself
