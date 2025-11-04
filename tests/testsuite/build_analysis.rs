@@ -157,6 +157,123 @@ fn log_msg_timing_info() {
     );
 }
 
+#[cargo_test]
+fn log_rebuild_reason_fresh_build() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Fresh builds do NOT log rebuild-reason
+    // Only build-started and timing-info are logged
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "build-started"
+  },
+  {
+    "...": "{...}",
+    "reason": "timing-info"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
+fn log_rebuild_reason_file_changed() {
+    // Test that changing a file logs the appropriate rebuild reason
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+
+    // Change source file
+    p.change_file("src/lib.rs", "//! comment");
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // File changes SHOULD log rebuild-reason
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "build-started"
+  },
+  {
+    "...": "{...}",
+    "reason": "timing-info"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
+fn log_rebuild_reason_no_rebuild() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // First build
+    p.cargo("check").run();
+
+    // Second build without changes
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Should NOT contain any rebuild-reason messages since nothing rebuilt
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  {
+    "reason": "build-started",
+    "...": "{...}"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
 /// This also asserts the number of log files is exactly the same as `idx + 1`.
 fn get_log(idx: usize) -> String {
     let cargo_home = paths::cargo_home();
