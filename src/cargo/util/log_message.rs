@@ -10,6 +10,7 @@ use serde::Serialize;
 use crate::core::Target;
 use crate::core::compiler::CompilationSection;
 use crate::core::compiler::CompileMode;
+use crate::core::compiler::fingerprint::DirtyReason;
 
 /// A log message.
 ///
@@ -38,6 +39,13 @@ pub enum LogMessage {
         rmeta_time: Option<f64>,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         sections: Vec<(String, CompilationSection)>,
+    },
+    /// Emitted when a unit needs to be rebuilt.
+    Rebuild {
+        package_id: PackageIdSpec,
+        target: Target,
+        mode: CompileMode,
+        cause: DirtyReason,
     },
 }
 

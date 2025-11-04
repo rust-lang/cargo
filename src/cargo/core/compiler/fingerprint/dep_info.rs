@@ -18,6 +18,7 @@ use anyhow::bail;
 use cargo_util::ProcessBuilder;
 use cargo_util::Sha256;
 use cargo_util::paths;
+use serde::Serialize;
 
 use crate::CARGO_ENV;
 use crate::CargoResult;
@@ -657,6 +658,15 @@ impl fmt::Display for Checksum {
             self.algo,
             str::from_utf8(&checksum[0..(hash_len * 2)]).unwrap_or_default()
         )
+    }
+}
+
+impl Serialize for Checksum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 

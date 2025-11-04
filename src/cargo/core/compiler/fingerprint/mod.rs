@@ -397,6 +397,7 @@ use crate::core::compiler::unit_graph::UnitDep;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::util::log_message::LogMessage;
 use crate::util::{StableHasher, internal, path_args};
 use crate::{CARGO_ENV, GlobalContext};
 
@@ -447,6 +448,18 @@ pub fn prepare_target(
     let Some(dirty_reason) = dirty_reason else {
         return Ok(Job::new_fresh());
     };
+
+    if let Some(logger) = bcx.logger {
+        // Dont log FreshBuild as it is noisy.
+        if !dirty_reason.is_fresh_build() {
+            logger.log(LogMessage::Rebuild {
+                package_id: unit.pkg.package_id().to_spec(),
+                target: unit.target.clone(),
+                mode: unit.mode,
+                cause: dirty_reason.clone(),
+            });
+        }
+    }
 
     // We're going to rebuild, so ensure the source of the crate passes all
     // verification checks before we build it.
@@ -632,7 +645,8 @@ pub struct Fingerprint {
 }
 
 /// Indication of the status on the filesystem for a particular unit.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize)]
+#[serde(tag = "fs_status", rename_all = "kebab-case")]
 pub enum FsStatus {
     /// This unit is to be considered stale, even if hash information all
     /// matches.
@@ -647,7 +661,9 @@ pub enum FsStatus {
     /// A dependency was stale.
     StaleDependency {
         name: InternedString,
+        #[serde(serialize_with = "serialize_file_time")]
         dep_mtime: FileTime,
+        #[serde(serialize_with = "serialize_file_time")]
         max_mtime: FileTime,
     },
 
@@ -656,6 +672,7 @@ pub enum FsStatus {
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
     /// listed in the payload here for other dependencies to compare against.
+    #[serde(skip)]
     UpToDate { mtimes: HashMap<PathBuf, FileTime> },
 }
 
@@ -669,6 +686,16 @@ impl FsStatus {
             | FsStatus::StaleDepFingerprint { .. } => false,
         }
     }
+}
+
+/// Serialize FileTime as milliseconds with nano.
+fn serialize_file_time<S>(ft: &FileTime, s: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let secs_as_millis = ft.unix_seconds() as f64 * 1000.0;
+    let nanos_as_millis = ft.nanoseconds() as f64 / 1_000_000.0;
+    (secs_as_millis + nanos_as_millis).serialize(s)
 }
 
 impl Serialize for DepFingerprint {
@@ -771,11 +798,18 @@ enum LocalFingerprint {
 }
 
 /// See [`FsStatus::StaleItem`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "stale_item", rename_all = "kebab-case")]
 pub enum StaleItem {
-    MissingFile(PathBuf),
-    UnableToReadFile(PathBuf),
-    FailedToReadMetadata(PathBuf),
+    MissingFile {
+        path: PathBuf,
+    },
+    UnableToReadFile {
+        path: PathBuf,
+    },
+    FailedToReadMetadata {
+        path: PathBuf,
+    },
     FileSizeChanged {
         path: PathBuf,
         old_size: u64,
@@ -783,8 +817,10 @@ pub enum StaleItem {
     },
     ChangedFile {
         reference: PathBuf,
+        #[serde(serialize_with = "serialize_file_time")]
         reference_mtime: FileTime,
         stale: PathBuf,
+        #[serde(serialize_with = "serialize_file_time")]
         stale_mtime: FileTime,
     },
     ChangedChecksum {
@@ -792,7 +828,9 @@ pub enum StaleItem {
         stored_checksum: Checksum,
         new_checksum: Checksum,
     },
-    MissingChecksum(PathBuf),
+    MissingChecksum {
+        path: PathBuf,
+    },
     ChangedEnv {
         var: String,
         previous: Option<String>,
@@ -854,7 +892,7 @@ impl LocalFingerprint {
             LocalFingerprint::CheckDepInfo { dep_info, checksum } => {
                 let dep_info = build_root.join(dep_info);
                 let Some(info) = parse_dep_info(pkg_root, build_root, &dep_info)? else {
-                    return Ok(Some(StaleItem::MissingFile(dep_info)));
+                    return Ok(Some(StaleItem::MissingFile { path: dep_info }));
                 };
                 for (key, previous) in info.env.iter() {
                     if let Some(value) = pkg.manifest().metadata().env_var(key.as_str()) {
@@ -1170,7 +1208,9 @@ impl Fingerprint {
             let Ok(mtime) = paths::mtime(output) else {
                 // This path failed to report its `mtime`. It probably doesn't
                 // exists, so leave ourselves as stale and bail out.
-                let item = StaleItem::FailedToReadMetadata(output.clone());
+                let item = StaleItem::FailedToReadMetadata {
+                    path: output.clone(),
+                };
                 self.fs_status = FsStatus::StaleItem(item);
                 return Ok(());
             };
@@ -1366,13 +1406,13 @@ impl StaleItem {
     /// that.
     fn log(&self) {
         match self {
-            StaleItem::MissingFile(path) => {
+            StaleItem::MissingFile { path } => {
                 info!("stale: missing {:?}", path);
             }
-            StaleItem::UnableToReadFile(path) => {
+            StaleItem::UnableToReadFile { path } => {
                 info!("stale: unable to read {:?}", path);
             }
-            StaleItem::FailedToReadMetadata(path) => {
+            StaleItem::FailedToReadMetadata { path } => {
                 info!("stale: couldn't read metadata {:?}", path);
             }
             StaleItem::ChangedFile {
@@ -1403,7 +1443,7 @@ impl StaleItem {
                 info!("prior checksum {stored_checksum}");
                 info!("  new checksum {new_checksum}");
             }
-            StaleItem::MissingChecksum(path) => {
+            StaleItem::MissingChecksum { path } => {
                 info!("stale: no prior checksum {:?}", path);
             }
             StaleItem::ChangedEnv {
@@ -1958,8 +1998,13 @@ where
     I: IntoIterator<Item = (P, Option<(u64, Checksum)>)>,
     P: AsRef<Path>,
 {
-    let Ok(reference_mtime) = paths::mtime(reference) else {
-        return Some(StaleItem::MissingFile(reference.to_path_buf()));
+    let reference_mtime = match paths::mtime(reference) {
+        Ok(mtime) => mtime,
+        Err(..) => {
+            return Some(StaleItem::MissingFile {
+                path: reference.to_path_buf(),
+            });
+        }
     };
 
     let skippable_dirs = if let Ok(cargo_home) = home::cargo_home() {
@@ -1985,7 +2030,9 @@ where
         }
         if use_checksums {
             let Some((file_len, prior_checksum)) = prior_checksum else {
-                return Some(StaleItem::MissingChecksum(path.to_path_buf()));
+                return Some(StaleItem::MissingChecksum {
+                    path: path.to_path_buf(),
+                });
             };
             let path_buf = path.to_path_buf();
 
@@ -1993,7 +2040,9 @@ where
                 Entry::Occupied(o) => *o.get(),
                 Entry::Vacant(v) => {
                     let Ok(current_file_len) = fs::metadata(&path).map(|m| m.len()) else {
-                        return Some(StaleItem::FailedToReadMetadata(path.to_path_buf()));
+                        return Some(StaleItem::FailedToReadMetadata {
+                            path: path.to_path_buf(),
+                        });
                     };
                     if current_file_len != file_len {
                         return Some(StaleItem::FileSizeChanged {
@@ -2003,10 +2052,14 @@ where
                         });
                     }
                     let Ok(file) = File::open(path) else {
-                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                        return Some(StaleItem::MissingFile {
+                            path: path.to_path_buf(),
+                        });
                     };
                     let Ok(checksum) = Checksum::compute(prior_checksum.algo(), file) else {
-                        return Some(StaleItem::UnableToReadFile(path.to_path_buf()));
+                        return Some(StaleItem::UnableToReadFile {
+                            path: path.to_path_buf(),
+                        });
                     };
                     *v.insert(checksum)
                 }
@@ -2024,7 +2077,9 @@ where
                 Entry::Occupied(o) => *o.get(),
                 Entry::Vacant(v) => {
                     let Ok(mtime) = paths::mtime_recursive(path) else {
-                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                        return Some(StaleItem::MissingFile {
+                            path: path.to_path_buf(),
+                        });
                     };
                     *v.insert(mtime)
                 }
