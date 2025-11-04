@@ -445,7 +445,7 @@ The metadata is passed to the build scripts of **dependent** packages. For
 example, if the package `foo` depends on `bar`, which links `baz`, then if 
 `bar` generates `key=value` as part of its build script metadata, then the
 build script of `foo` will have the environment variables `DEP_BAZ_KEY=value`
-(note that the value of the `links` key is used).
+(note that the value of the `links` key is used and the case change for `key`).
 See the ["Using another `sys` crate"][using-another-sys] for an example of 
 how this can be used.
 
@@ -475,7 +475,7 @@ convention of native-library-related packages:
 
 * Common dependencies on `foo-sys` alleviates the rule about one package per
   value of `links`.
-* Other `-sys` packages can take advantage of the `DEP_NAME_KEY=value`
+* Other `-sys` packages can take advantage of the `DEP_LINKS_KEY=value`
   environment variables to better integrate with other packages. See the
   ["Using another `sys` crate"][using-another-sys] example.
 * A common dependency allows centralizing logic on discovering `libfoo` itself
