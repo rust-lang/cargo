@@ -632,7 +632,9 @@ impl<'gctx> DrainState<'gctx> {
                 if warning_handling != WarningHandling::Allow {
                     build_runner.bcx.gctx.shell().warn(warning)?;
                 }
-                self.bump_warning_count(id, true, false);
+                let emitted = true;
+                let fixable = false;
+                self.bump_warning_count(id, emitted, fixable);
             }
             Message::WarningCount {
                 id,
