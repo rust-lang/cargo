@@ -1,6 +1,6 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -16,7 +16,6 @@ use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
 
-use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::{Checksum, Fingerprint};
 use super::job_queue::JobQueue;
@@ -168,8 +167,6 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .gctx
             .acquire_package_cache_lock(CacheLockMode::Shared)?;
         let mut queue = JobQueue::new(self.bcx);
-        let mut plan = BuildPlan::new();
-        let build_plan = self.bcx.build_config.build_plan;
         self.lto = super::lto::generate(self.bcx)?;
         self.prepare_units()?;
         self.prepare()?;
@@ -191,7 +188,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
         for unit in &self.bcx.roots {
             let force_rebuild = self.bcx.build_config.force_rebuild;
-            super::compile(&mut self, &mut queue, &mut plan, unit, exec, force_rebuild)?;
+            super::compile(&mut self, &mut queue, unit, exec, force_rebuild)?;
         }
 
         // Now that we've got the full job queue and we've done all our
@@ -205,12 +202,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         }
 
         // Now that we've figured out everything that we're going to do, do it!
-        queue.execute(&mut self, &mut plan)?;
-
-        if build_plan {
-            plan.set_inputs(self.build_plan_inputs()?);
-            plan.output_plan(self.bcx.gctx);
-        }
+        queue.execute(&mut self)?;
 
         // Add `OUT_DIR` to env vars if unit has a build script.
         let units_with_build_script = &self
@@ -486,18 +478,6 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
-    }
-
-    /// Returns the list of filenames read by cargo to generate the [`BuildContext`]
-    /// (all `Cargo.toml`, etc.).
-    pub fn build_plan_inputs(&self) -> CargoResult<Vec<PathBuf>> {
-        // Keep sorted for consistency.
-        let mut inputs = BTreeSet::new();
-        // Note: dev-deps are skipped if they are not present in the unit graph.
-        for unit in self.bcx.unit_graph.keys() {
-            inputs.insert(unit.pkg.manifest_path().to_path_buf());
-        }
-        Ok(inputs.into_iter().collect())
     }
 
     /// Returns a [`UnitOutput`] which represents some information about the

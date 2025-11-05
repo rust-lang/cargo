@@ -14,7 +14,6 @@ mod build;
 mod build_analysis;
 mod build_dir;
 mod build_dir_legacy;
-mod build_plan;
 mod build_script;
 mod build_script_env;
 mod build_script_extra_link_arg;

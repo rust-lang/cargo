@@ -5,7 +5,6 @@ use std::{cell::Cell, marker, sync::Arc};
 use cargo_util::ProcessBuilder;
 
 use crate::CargoResult;
-use crate::core::compiler::build_runner::OutputFile;
 use crate::core::compiler::future_incompat::FutureBreakageItem;
 use crate::core::compiler::timings::SectionTiming;
 use crate::util::Queue;
@@ -71,16 +70,6 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
 
     pub fn running(&self, cmd: &ProcessBuilder) {
         self.messages.push(Message::Run(self.id, cmd.to_string()));
-    }
-
-    pub fn build_plan(
-        &self,
-        module_name: String,
-        cmd: ProcessBuilder,
-        filenames: Arc<Vec<OutputFile>>,
-    ) {
-        self.messages
-            .push(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
     pub fn stdout(&self, stdout: String) -> CargoResult<()> {

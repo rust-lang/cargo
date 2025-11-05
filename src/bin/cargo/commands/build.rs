@@ -35,7 +35,6 @@ pub fn cli() -> Command {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_artifact_dir()
-        .arg_build_plan()
         .arg_unit_graph()
         .arg_timings()
         .arg_compile_time_deps()

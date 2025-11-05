@@ -53,12 +53,6 @@ pub fn resolve_std<'gctx>(
     crates: &[String],
     kinds: &[CompileKind],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
-    if build_config.build_plan {
-        ws.gctx()
-            .shell()
-            .warn("-Zbuild-std does not currently fully support --build-plan")?;
-    }
-
     let src_path = detect_sysroot_src_path(target_data)?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();

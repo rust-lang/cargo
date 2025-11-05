@@ -123,7 +123,6 @@ use std::thread::{self, Scope};
 use std::time::Duration;
 
 use anyhow::{Context as _, format_err};
-use cargo_util::ProcessBuilder;
 use jobserver::{Acquired, HelperThread};
 use semver::Version;
 use tracing::{debug, trace};
@@ -131,10 +130,9 @@ use tracing::{debug, trace};
 pub use self::job::Freshness::{self, Dirty, Fresh};
 pub use self::job::{Job, Work};
 pub use self::job_state::JobState;
-use super::build_runner::OutputFile;
 use super::custom_build::Severity;
 use super::timings::{SectionTiming, Timings};
-use super::{BuildContext, BuildPlan, BuildRunner, CompileMode, Unit};
+use super::{BuildContext, BuildRunner, CompileMode, Unit};
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -344,7 +342,6 @@ enum Artifact {
 
 enum Message {
     Run(JobId, String),
-    BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
 
@@ -471,11 +468,7 @@ impl<'gctx> JobQueue<'gctx> {
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
     #[tracing::instrument(skip_all)]
-    pub fn execute(
-        mut self,
-        build_runner: &mut BuildRunner<'_, '_>,
-        plan: &mut BuildPlan,
-    ) -> CargoResult<()> {
+    pub fn execute(mut self, build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
         self.queue.queue_finished();
 
         let progress =
@@ -532,12 +525,12 @@ impl<'gctx> JobQueue<'gctx> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        thread::scope(move |scope| {
-            match state.drain_the_queue(build_runner, plan, scope, &helper) {
+        thread::scope(
+            move |scope| match state.drain_the_queue(build_runner, scope, &helper) {
                 Some(err) => Err(err),
                 None => Ok(()),
-            }
-        })
+            },
+        )
     }
 }
 
@@ -576,18 +569,16 @@ impl<'gctx> DrainState<'gctx> {
         while self.has_extra_tokens() && !self.pending_queue.is_empty() {
             let (unit, job, _) = self.pending_queue.pop().unwrap();
             *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
-            if !build_runner.bcx.build_config.build_plan {
-                // Print out some nice progress information.
-                // NOTE: An error here will drop the job without starting it.
-                // That should be OK, since we want to exit as soon as
-                // possible during an error.
-                self.note_working_on(
-                    build_runner.bcx.gctx,
-                    build_runner.bcx.ws.root(),
-                    &unit,
-                    job.freshness(),
-                )?;
-            }
+            // Print out some nice progress information.
+            // NOTE: An error here will drop the job without starting it.
+            // That should be OK, since we want to exit as soon as
+            // possible during an error.
+            self.note_working_on(
+                build_runner.bcx.gctx,
+                build_runner.bcx.ws.root(),
+                &unit,
+                job.freshness(),
+            )?;
             self.run(&unit, job, build_runner, scope);
         }
 
@@ -601,7 +592,6 @@ impl<'gctx> DrainState<'gctx> {
     fn handle_event(
         &mut self,
         build_runner: &mut BuildRunner<'_, '_>,
-        plan: &mut BuildPlan,
         event: Message,
     ) -> Result<(), ErrorToHandle> {
         let warning_handling = build_runner.bcx.gctx.warning_handling()?;
@@ -613,9 +603,6 @@ impl<'gctx> DrainState<'gctx> {
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
                 self.timings.unit_start(id, self.active[&id].clone());
-            }
-            Message::BuildPlanMsg(module_name, cmd, filenames) => {
-                plan.update(&module_name, &cmd, &filenames)?;
             }
             Message::Stdout(out) => {
                 writeln!(build_runner.bcx.gctx.shell().out(), "{}", out)?;
@@ -756,7 +743,6 @@ impl<'gctx> DrainState<'gctx> {
     fn drain_the_queue<'s>(
         mut self,
         build_runner: &mut BuildRunner<'_, '_>,
-        plan: &mut BuildPlan,
         scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
     ) -> Option<anyhow::Error> {
@@ -796,7 +782,7 @@ impl<'gctx> DrainState<'gctx> {
             // don't actually use, and if this happens just relinquish it back
             // to the jobserver itself.
             for event in self.wait_for_events() {
-                if let Err(event_err) = self.handle_event(build_runner, plan, event) {
+                if let Err(event_err) = self.handle_event(build_runner, event) {
                     self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, event_err);
                 }
             }
@@ -847,14 +833,12 @@ impl<'gctx> DrainState<'gctx> {
             let message = format!(
                 "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target(s) in {time_elapsed}",
             );
-            if !build_runner.bcx.build_config.build_plan {
-                // It doesn't really matter if this fails.
-                let _ = build_runner.bcx.gctx.shell().status("Finished", message);
-                future_incompat::save_and_display_report(
-                    build_runner.bcx,
-                    &self.per_package_future_incompat_reports,
-                );
-            }
+            // It doesn't really matter if this fails.
+            let _ = build_runner.bcx.gctx.shell().status("Finished", message);
+            future_incompat::save_and_display_report(
+                build_runner.bcx,
+                &self.per_package_future_incompat_reports,
+            );
 
             None
         } else {

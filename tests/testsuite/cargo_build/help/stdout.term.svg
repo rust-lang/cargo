@@ -1,7 +1,7 @@
-<svg width="827px" height="1136px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="1118px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -116,33 +116,31 @@
 </tspan>
     <tspan x="10px" y="874px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--artifact-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>     Copy final artifacts to this directory (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="892px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--build-plan</tspan><tspan>              Output the build plan in JSON (unstable)</tspan>
+    <tspan x="10px" y="892px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--unit-graph</tspan><tspan>              Output build graph in JSON (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="910px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--unit-graph</tspan><tspan>              Output build graph in JSON (unstable)</tspan>
+    <tspan x="10px" y="910px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan class="fg-cyan">[=</tspan><tspan class="fg-cyan">&lt;FMTS&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Timing output formats (unstable) (comma separated): html, json</tspan>
 </tspan>
-    <tspan x="10px" y="928px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan class="fg-cyan">[=</tspan><tspan class="fg-cyan">&lt;FMTS&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Timing output formats (unstable) (comma separated): html, json</tspan>
+    <tspan x="10px" y="928px">
 </tspan>
-    <tspan x="10px" y="946px">
+    <tspan x="10px" y="946px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="964px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="982px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+    <tspan x="10px" y="982px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
+    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
 </tspan>
-    <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
+    <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="1036px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="1036px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="1054px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="1054px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="1072px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="1072px">
 </tspan>
-    <tspan x="10px" y="1090px">
+    <tspan x="10px" y="1090px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help build</tspan><tspan class="bold">` for more detailed information.</tspan>
 </tspan>
-    <tspan x="10px" y="1108px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help build</tspan><tspan class="bold">` for more detailed information.</tspan>
-</tspan>
-    <tspan x="10px" y="1126px">
+    <tspan x="10px" y="1108px">
 </tspan>
   </text>
 

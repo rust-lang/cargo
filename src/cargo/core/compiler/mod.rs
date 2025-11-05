@@ -8,7 +8,7 @@
 //! caching the output artifact of a build.
 //!
 //! However, it hasn't yet exposed a clear definition of each phase or session,
-//! like what rustc has done[^1]. Also, no one knows if Cargo really needs that.
+//! like what rustc has done. Also, no one knows if Cargo really needs that.
 //! To be pragmatic, here we list a handful of items you may want to learn:
 //!
 //! * [`BuildContext`] is a static context containing all information you need
@@ -26,15 +26,11 @@
 //! * [`Unit`] contains sufficient information to build something, usually
 //!   turning into a compiler invocation in a later phase.
 //!
-//! [^1]: Maybe [`-Zbuild-plan`](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-plan)
-//!   was designed to serve that purpose but still [in flux](https://github.com/rust-lang/cargo/issues/7614).
-//!
 //! [`ops::cargo_compile::compile`]: crate::ops::compile
 
 pub mod artifact;
 mod build_config;
 pub(crate) mod build_context;
-mod build_plan;
 pub(crate) mod build_runner;
 mod compilation;
 mod compile_kind;
@@ -79,7 +75,6 @@ pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, TimingOutp
 pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
-use self::build_plan::BuildPlan;
 pub use self::build_runner::{BuildRunner, Metadata, UnitHash};
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileKindFallback, CompileTarget};
@@ -173,17 +168,15 @@ impl Executor for DefaultExecutor {
 /// Note that **no actual work is executed as part of this**, that's all done
 /// next as part of [`JobQueue::execute`] function which will run everything
 /// in order with proper parallelism.
-#[tracing::instrument(skip(build_runner, jobs, plan, exec))]
+#[tracing::instrument(skip(build_runner, jobs, exec))]
 fn compile<'gctx>(
     build_runner: &mut BuildRunner<'_, 'gctx>,
     jobs: &mut JobQueue<'gctx>,
-    plan: &mut BuildPlan,
     unit: &Unit,
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
-    let build_plan = bcx.build_config.build_plan;
     if !build_runner.compiled.insert(unit.clone()) {
         return Ok(());
     }
@@ -201,11 +194,6 @@ fn compile<'gctx>(
         } else if unit.mode.is_doc_test() {
             // We run these targets later, so this is just a no-op for now.
             Job::new_fresh()
-        } else if build_plan {
-            Job::new_dirty(
-                rustc(build_runner, unit, &exec.clone())?,
-                DirtyReason::FreshBuild,
-            )
         } else {
             let force = exec.force_rebuild(unit) || force_rebuild;
             let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
@@ -242,10 +230,7 @@ fn compile<'gctx>(
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(build_runner, jobs, plan, &dep.unit, exec, false)?;
-    }
-    if build_plan {
-        plan.add(build_runner, unit)?;
+        compile(build_runner, jobs, &dep.unit, exec, false)?;
     }
 
     Ok(())
@@ -279,10 +264,8 @@ fn rustc(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(build_runner, unit)?;
-    let build_plan = build_runner.bcx.build_config.build_plan;
 
     let name = unit.pkg.name();
-    let buildkey = unit.buildkey();
 
     let outputs = build_runner.outputs(unit)?;
     let root = build_runner.files().out_dir(unit);
@@ -368,18 +351,16 @@ fn rustc(
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_scripts) = build_scripts {
             let script_outputs = build_script_outputs.lock().unwrap();
-            if !build_plan {
-                add_native_deps(
-                    &mut rustc,
-                    &script_outputs,
-                    &build_scripts,
-                    pass_l_flag,
-                    &target,
-                    current_id,
-                    mode,
-                )?;
-                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
-            }
+            add_native_deps(
+                &mut rustc,
+                &script_outputs,
+                &build_scripts,
+                pass_l_flag,
+                &target,
+                current_id,
+                mode,
+            )?;
+            add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
             add_custom_flags(&mut rustc, &script_outputs, script_metadatas)?;
         }
 
@@ -410,71 +391,67 @@ fn rustc(
 
         state.running(&rustc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
-        if build_plan {
-            state.build_plan(buildkey, rustc.clone(), outputs.clone());
-        } else {
-            for file in sbom_files {
-                tracing::debug!("writing sbom to {}", file.display());
-                let outfile = BufWriter::new(paths::create(&file)?);
-                serde_json::to_writer(outfile, &sbom)?;
-            }
-
-            let result = exec
-                .exec(
-                    &rustc,
-                    package_id,
-                    &target,
-                    mode,
-                    &mut |line| on_stdout_line(state, line, package_id, &target),
-                    &mut |line| {
-                        on_stderr_line(
-                            state,
-                            line,
-                            package_id,
-                            &manifest,
-                            &target,
-                            &mut output_options,
-                        )
-                    },
-                )
-                .map_err(|e| {
-                    if output_options.errors_seen == 0 {
-                        // If we didn't expect an error, do not require --verbose to fail.
-                        // This is intended to debug
-                        // https://github.com/rust-lang/crater/issues/733, where we are seeing
-                        // Cargo exit unsuccessfully while seeming to not show any errors.
-                        e
-                    } else {
-                        verbose_if_simple_exit_code(e)
-                    }
-                })
-                .with_context(|| {
-                    // adapted from rustc_errors/src/lib.rs
-                    let warnings = match output_options.warnings_seen {
-                        0 => String::new(),
-                        1 => "; 1 warning emitted".to_string(),
-                        count => format!("; {} warnings emitted", count),
-                    };
-                    let errors = match output_options.errors_seen {
-                        0 => String::new(),
-                        1 => " due to 1 previous error".to_string(),
-                        count => format!(" due to {} previous errors", count),
-                    };
-                    let name = descriptive_pkg_name(&name, &target, &mode);
-                    format!("could not compile {name}{errors}{warnings}")
-                });
-
-            if let Err(e) = result {
-                if let Some(diagnostic) = failed_scrape_diagnostic {
-                    state.warning(diagnostic);
-                }
-
-                return Err(e);
-            }
-
-            // Exec should never return with success *and* generate an error.
-            debug_assert_eq!(output_options.errors_seen, 0);
+        for file in sbom_files {
+            tracing::debug!("writing sbom to {}", file.display());
+            let outfile = BufWriter::new(paths::create(&file)?);
+            serde_json::to_writer(outfile, &sbom)?;
         }
+
+        let result = exec
+            .exec(
+                &rustc,
+                package_id,
+                &target,
+                mode,
+                &mut |line| on_stdout_line(state, line, package_id, &target),
+                &mut |line| {
+                    on_stderr_line(
+                        state,
+                        line,
+                        package_id,
+                        &manifest,
+                        &target,
+                        &mut output_options,
+                    )
+                },
+            )
+            .map_err(|e| {
+                if output_options.errors_seen == 0 {
+                    // If we didn't expect an error, do not require --verbose to fail.
+                    // This is intended to debug
+                    // https://github.com/rust-lang/crater/issues/733, where we are seeing
+                    // Cargo exit unsuccessfully while seeming to not show any errors.
+                    e
+                } else {
+                    verbose_if_simple_exit_code(e)
+                }
+            })
+            .with_context(|| {
+                // adapted from rustc_errors/src/lib.rs
+                let warnings = match output_options.warnings_seen {
+                    0 => String::new(),
+                    1 => "; 1 warning emitted".to_string(),
+                    count => format!("; {} warnings emitted", count),
+                };
+                let errors = match output_options.errors_seen {
+                    0 => String::new(),
+                    1 => " due to 1 previous error".to_string(),
+                    count => format!(" due to {} previous errors", count),
+                };
+                let name = descriptive_pkg_name(&name, &target, &mode);
+                format!("could not compile {name}{errors}{warnings}")
+            });
+
+        if let Err(e) = result {
+            if let Some(diagnostic) = failed_scrape_diagnostic {
+                state.warning(diagnostic);
+            }
+
+            return Err(e);
+        }
+
+        // Exec should never return with success *and* generate an error.
+        debug_assert_eq!(output_options.errors_seen, 0);
 
         if rustc_dep_info_loc.exists() {
             fingerprint::translate_dep_info(

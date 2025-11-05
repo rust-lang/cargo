@@ -265,16 +265,6 @@ OPTIONS
               own JSON diagnostics and others coming from rustc are still
               emitted. Cannot be used with human or short.
 
-       --build-plan
-           Outputs a series of JSON messages to stdout that indicate the
-           commands to run the build.
-
-           This option is unstable and available only on the nightly channel
-           <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html> and
-           requires the -Z unstable-options flag to enable. See
-           <https://github.com/rust-lang/cargo/issues/5579> for more
-           information.
-
    Manifest Options
        --manifest-path path
            Path to the Cargo.toml file. By default, Cargo searches for the

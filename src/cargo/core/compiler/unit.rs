@@ -6,7 +6,6 @@ use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
 use crate::util::GlobalContext;
-use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
@@ -150,15 +149,6 @@ impl UnitInner {
     /// Returns whether or not warnings should be displayed for this unit.
     pub fn show_warnings(&self, gctx: &GlobalContext) -> bool {
         self.is_local() || gctx.extra_verbose()
-    }
-}
-
-impl Unit {
-    /// Gets the unique key for [`-Zbuild-plan`].
-    ///
-    /// [`-Zbuild-plan`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-plan
-    pub fn buildkey(&self) -> String {
-        format!("{}-{}", self.pkg.name(), short_hash(self))
     }
 }
 
