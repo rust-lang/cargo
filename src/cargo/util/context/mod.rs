@@ -1021,7 +1021,7 @@ impl GlobalContext {
             return Ok(());
         };
 
-        if is_nonmergable_list(&key) {
+        if is_nonmergeable_list(&key) {
             output.clear();
         }
 
@@ -2208,7 +2208,7 @@ impl ConfigValue {
         let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                if is_nonmergable_list(&parts) {
+                if is_nonmergeable_list(&parts) {
                     // Use whichever list is higher priority.
                     if force || is_higher_priority {
                         mem::swap(new, old);
@@ -2358,7 +2358,7 @@ impl ConfigValue {
 
 /// List of which configuration lists cannot be merged.
 /// Instead of merging, these the higher priority list replaces the lower priority list.
-fn is_nonmergable_list(key: &ConfigKey) -> bool {
+fn is_nonmergeable_list(key: &ConfigKey) -> bool {
     key.matches("registry.credential-provider")
         || key.matches("registries.*.credential-provider")
         || key.matches("target.*.runner")

@@ -98,7 +98,7 @@ impl ConfigRelativePath {
 /// to get the actual program.
 ///
 /// **Note**: Any usage of this type in config needs to be listed in
-/// the `util::context::is_nonmergable_list` check to prevent list merging
+/// the `util::context::is_nonmergeable_list` check to prevent list merging
 /// from multiple config files.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {

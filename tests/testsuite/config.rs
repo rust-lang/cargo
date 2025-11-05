@@ -2181,7 +2181,7 @@ gitoxide = \"fetch\"
 }
 
 #[cargo_test]
-fn nonmergable_lists() {
+fn nonmergeable_lists() {
     let root_path = paths::root().join(".cargo/config.toml");
     write_config_at(
         &root_path,
