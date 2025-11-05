@@ -76,6 +76,12 @@
       ],
       "format": "uint32",
       "minimum": 0
+    },
+    "proc_macro": {
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   },
   "required": [

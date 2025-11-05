@@ -674,6 +674,7 @@ impl IndexSummary {
                     cksum: Default::default(),
                     yanked: Default::default(),
                     links: Default::default(),
+                    proc_macro: Default::default(),
                 };
                 let summary = index_package_to_summary(&index, source_id)?;
                 (index, summary, false)
