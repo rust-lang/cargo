@@ -77,7 +77,7 @@ pub fn run_tests(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str]) 
     // Call the mutation program
     if options.mutation
     {
-        return mutation_iabr::run_mutations(ws);
+        return mutation_iabr::list_files(ws);
     }
 
     if options.no_run {
