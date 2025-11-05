@@ -7,6 +7,7 @@ use cargo::ops::Packages;
 use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
 use cargo::util::CargoResult;
 use cargo::util::print_available_packages;
+use clap_complete::ArgValueCandidates;
 use std::collections::HashSet;
 use std::str::FromStr;
 
@@ -36,7 +37,10 @@ pub fn cli() -> Command {
                 "SPEC",
                 "Invert the tree direction and focus on the given package",
             )
-            .short('i'),
+            .short('i')
+            .add(clap_complete::ArgValueCandidates::new(
+                get_pkg_id_spec_candidates,
+            )),
         )
         .arg(multi_opt(
             "prune",
@@ -88,6 +92,7 @@ pub fn cli() -> Command {
             "Package to be used as the root of the tree",
             "Display the tree for all packages in the workspace",
             "Exclude specific workspace members",
+            ArgValueCandidates::new(get_pkg_id_spec_candidates),
         )
         .arg_features()
         .arg(flag("all-targets", "Deprecated, use --target=all instead").hide(true))

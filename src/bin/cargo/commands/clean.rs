@@ -6,6 +6,7 @@ use cargo::core::global_cache_tracker::GlobalCacheTracker;
 use cargo::ops::CleanContext;
 use cargo::ops::{self, CleanOptions};
 use cargo::util::print_available_packages;
+use clap_complete::ArgValueCandidates;
 use std::time::Duration;
 
 pub fn cli() -> Command {
@@ -13,7 +14,10 @@ pub fn cli() -> Command {
         .about("Remove artifacts that cargo has generated in the past")
         .arg_doc("Whether or not to clean just the documentation directory")
         .arg_silent_suggestion()
-        .arg_package_spec_simple("Package to clean artifacts for")
+        .arg_package_spec_simple(
+            "Package to clean artifacts for",
+            ArgValueCandidates::new(get_pkg_name_candidates),
+        )
         .arg_release("Whether or not to clean release artifacts")
         .arg_profile("Clean artifacts of the specified profile")
         .arg_target_triple("Target triple to clean output for")

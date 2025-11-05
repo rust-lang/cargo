@@ -2,6 +2,7 @@ use crate::command_prelude::*;
 
 use cargo::ops::{self, PublishOpts};
 use cargo_credential::Secret;
+use clap_complete::ArgValueCandidates;
 
 pub fn cli() -> Command {
     subcommand("publish")
@@ -27,6 +28,7 @@ pub fn cli() -> Command {
             "Package(s) to publish",
             "Publish all packages in the workspace",
             "Don't publish specified packages",
+            ArgValueCandidates::new(get_ws_member_candidates),
         )
         .arg_features()
         .arg_parallel()
