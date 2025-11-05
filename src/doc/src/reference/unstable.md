@@ -96,6 +96,7 @@ Each new feature described below should explain how to use it.
     * [gc](#gc) --- Global cache garbage collection.
     * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
     * [panic-immediate-abort](#panic-immediate-abort) --- Passes `-Cpanic=immediate-abort` to the compiler.
+    * [compile-time-deps](#compile-time-deps) --- Perma-unstable feature for rust-analyzer
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -2033,6 +2034,20 @@ Enables the new build-dir filesystem layout.
 This layout change unblocks work towards caching and locking improvements.
 
 
+## compile-time-deps
+
+This permanently-unstable flag to only build proc-macros and build scripts (and their required dependencies),
+as well as run the build scripts.
+
+It is intended for use by tools like rust-analyzer and will never be stabilized.
+
+Example:
+
+```console
+cargo +nightly build --compile-time-deps -Z unstable-options
+cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
+```
+
 # Stabilized and removed features
 
 ## Compile progress
@@ -2298,20 +2313,6 @@ Doctest cross-compiling is now unconditionally enabled starting in Rust 1.89. Ru
 ## package-workspace
 
 Multi-package publishing has been stabilized in Rust 1.90.0.
-
-## compile-time-deps
-
-This permanently-unstable flag to only build proc-macros and build scripts (and their required dependencies),
-as well as run the build scripts.
-
-It is intended for use by tools like rust-analyzer and will never be stabilized.
-
-Example:
-
-```console
-cargo +nightly build --compile-time-deps -Z unstable-options
-cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
-```
 
 ## build-dir
 
