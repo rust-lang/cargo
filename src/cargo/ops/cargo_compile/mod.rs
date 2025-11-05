@@ -143,7 +143,8 @@ pub fn compile_with_exec<'a>(
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
     let compilation = compile_ws(ws, options, exec)?;
-    if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.warning_count > 0 {
+    if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.lint_warning_count > 0
+    {
         anyhow::bail!("warnings are denied by `build.warnings` configuration")
     }
     Ok(compilation)

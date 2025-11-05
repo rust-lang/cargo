@@ -2162,12 +2162,14 @@ fn on_stderr_line_inner(
                     count_diagnostic(&msg.level, options);
                     if msg
                         .code
+                        .as_ref()
                         .is_some_and(|c| c.code == "exported_private_dependencies")
                         && options.format != MessageFormat::Short
                     {
                         add_pub_in_priv_diagnostic(&mut rendered);
                     }
-                    state.emit_diag(&msg.level, rendered, machine_applicable)?;
+                    let lint = msg.code.is_some();
+                    state.emit_diag(&msg.level, rendered, lint, machine_applicable)?;
                 }
                 return Ok(true);
             }

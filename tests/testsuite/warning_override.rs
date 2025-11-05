@@ -253,10 +253,8 @@ fn hard_warning_deny() {
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
-        .with_status(101)
         .run();
 }
 

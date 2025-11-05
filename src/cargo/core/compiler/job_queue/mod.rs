@@ -207,6 +207,8 @@ struct DrainState<'gctx> {
 pub struct WarningCount {
     /// total number of warnings
     pub total: usize,
+    /// number of lint warnings
+    pub lints: usize,
     /// number of warnings that were suppressed because they
     /// were duplicates of a previous warning
     pub duplicates: usize,
@@ -350,12 +352,14 @@ enum Message {
         id: JobId,
         level: String,
         diag: String,
+        lint: bool,
         fixable: bool,
     },
     // This handles duplicate output that is suppressed, for showing
     // only a count of duplicate messages instead
     WarningCount {
         id: JobId,
+        lint: bool,
         emitted: bool,
         fixable: bool,
     },
@@ -616,11 +620,12 @@ impl<'gctx> DrainState<'gctx> {
                 id,
                 level,
                 diag,
+                lint,
                 fixable,
             } => {
                 let emitted = self.diag_dedupe.emit_diag(&diag)?;
                 if level == "warning" {
-                    self.bump_warning_count(id, emitted, fixable);
+                    self.bump_warning_count(id, lint, emitted, fixable);
                 }
                 if level == "error" {
                     let cnts = self.warning_count.entry(id).or_default();
@@ -632,16 +637,18 @@ impl<'gctx> DrainState<'gctx> {
                 if warning_handling != WarningHandling::Allow {
                     build_runner.bcx.gctx.shell().warn(warning)?;
                 }
+                let lint = false;
                 let emitted = true;
                 let fixable = false;
-                self.bump_warning_count(id, emitted, fixable);
+                self.bump_warning_count(id, lint, emitted, fixable);
             }
             Message::WarningCount {
                 id,
+                lint,
                 emitted,
                 fixable,
             } => {
-                self.bump_warning_count(id, emitted, fixable);
+                self.bump_warning_count(id, lint, emitted, fixable);
             }
             Message::FixDiagnostic(msg) => {
                 self.print.print(&msg)?;
@@ -1004,9 +1011,12 @@ impl<'gctx> DrainState<'gctx> {
         Ok(())
     }
 
-    fn bump_warning_count(&mut self, id: JobId, emitted: bool, fixable: bool) {
+    fn bump_warning_count(&mut self, id: JobId, lint: bool, emitted: bool, fixable: bool) {
         let cnts = self.warning_count.entry(id).or_default();
         cnts.total += 1;
+        if lint {
+            cnts.lints += 1;
+        }
         if !emitted {
             cnts.duplicates += 1;
         // Don't add to fixable if it's already been emitted
@@ -1039,7 +1049,7 @@ impl<'gctx> DrainState<'gctx> {
             Some(count) if count.total > 0 => count,
             None | Some(_) => return,
         };
-        runner.compilation.warning_count += count.total;
+        runner.compilation.lint_warning_count += count.lints;
         let unit = &self.active[&id];
         let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
         message.push_str(" generated ");
