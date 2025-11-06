@@ -29,6 +29,7 @@ struct Inner {
     checksum: Option<String>,
     links: Option<InternedString>,
     rust_version: Option<RustVersion>,
+    proc_macro: Option<bool>,
 }
 
 /// Indicates the dependency inferred from the `dep` syntax that should exist,
@@ -68,6 +69,7 @@ impl Summary {
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
         rust_version: Option<RustVersion>,
+        proc_macro: Option<bool>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -90,6 +92,7 @@ impl Summary {
                 checksum: None,
                 links: links.map(|l| l.into()),
                 rust_version,
+                proc_macro,
             }),
         })
     }
@@ -111,6 +114,9 @@ impl Summary {
     }
     pub fn features(&self) -> &FeatureMap {
         &self.inner.features
+    }
+    pub fn proc_macro(&self) -> &Option<bool> {
+        &self.inner.proc_macro
     }
 
     pub fn checksum(&self) -> Option<&str> {
