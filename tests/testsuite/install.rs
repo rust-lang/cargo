@@ -539,6 +539,33 @@ fn relative_install_location_without_trailing_slash() {
 }
 
 #[cargo_test]
+fn cli_root_argument_without_deprecation_warning() {
+    // Verify that using the --root CLI argument does not produce the deprecation warning.
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let root_t1 = root.join("t1");
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    cargo_process("install --path . --root")
+        .arg("t1")
+        .cwd(p.root())
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(&root_t1, "foo");
+    assert_has_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
 fn relative_install_location_with_trailing_slash() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
