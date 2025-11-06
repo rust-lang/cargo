@@ -132,6 +132,24 @@ pub use schema::*;
 
 use super::auth::RegistryConfig;
 
+/// List of which configuration lists cannot be merged.
+///
+/// Instead of merging,
+/// the higher priority list should replaces the lower priority list.
+///
+/// ## What kind of config is non-mergeable
+///
+/// The rule of thumb is that if a config is a path of a program,
+/// it should be added to this list.
+const NON_MERGEABLE_LISTS: &[&str] = &[
+    "credential-alias.*",
+    "doc.browser",
+    "host.runner",
+    "registries.*.credential-provider",
+    "registry.credential-provider",
+    "target.*.runner",
+];
+
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
@@ -2356,15 +2374,8 @@ impl ConfigValue {
     }
 }
 
-/// List of which configuration lists cannot be merged.
-/// Instead of merging, these the higher priority list replaces the lower priority list.
 fn is_nonmergeable_list(key: &ConfigKey) -> bool {
-    key.matches("registry.credential-provider")
-        || key.matches("registries.*.credential-provider")
-        || key.matches("target.*.runner")
-        || key.matches("host.runner")
-        || key.matches("credential-alias.*")
-        || key.matches("doc.browser")
+    NON_MERGEABLE_LISTS.iter().any(|l| key.matches(l))
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
