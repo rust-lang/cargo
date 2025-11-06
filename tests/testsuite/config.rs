@@ -652,7 +652,7 @@ Caused by:
     assert_error(
         gctx.unwrap_err(),
         str![[r#"
-failed to merge --config key `a` into `[ROOT]/.cargo/config.toml`
+failed to merge key `a` between [ROOT]/.cargo/config.toml and --config cli option
 
 Caused by:
   failed to merge config value from `--config cli option` into `[ROOT]/.cargo/config.toml`: expected boolean, but found array
@@ -2209,6 +2209,21 @@ credential-provider = ['c', 'd']
         .unwrap();
     assert_eq!(provider.path.raw_value(), "c");
     assert_eq!(provider.args, ["d"]);
+
+    let cli_arg = "registries.example.credential-provider=['cli', 'cli-arg']";
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(cli_arg)
+        .cwd("foo")
+        .build();
+    let provider = gctx
+        .get::<Option<RegistryConfig>>(&format!("registries.example"))
+        .unwrap()
+        .unwrap()
+        .credential_provider
+        .unwrap();
+    // expect: no merge happens; config CLI takes precedence
+    assert_eq!(provider.path.raw_value(), "cli");
+    assert_eq!(provider.args, ["cli-arg"]);
 }
 
 #[cargo_test]

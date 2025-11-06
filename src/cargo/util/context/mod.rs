@@ -1286,9 +1286,9 @@ impl GlobalContext {
 
     /// Start a config file discovery from a path and merges all config values found.
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
-        // This definition path is ignored, this is just a temporary container
-        // representing the entire file.
-        let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
+        // The root config value container isn't from any external source,
+        // so its definition should be built-in.
+        let mut cfg = CV::Table(HashMap::new(), Definition::BuiltIn);
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
@@ -1546,24 +1546,18 @@ impl GlobalContext {
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let CV::Table(loaded_map, _def) = self.cli_args_as_table()? else {
-            unreachable!()
-        };
-        let values = self.values_mut()?;
-        for (key, value) in loaded_map.into_iter() {
-            match values.entry(key) {
-                Vacant(entry) => {
-                    entry.insert(value);
-                }
-                Occupied(mut entry) => entry.get_mut().merge(value, true).with_context(|| {
-                    format!(
-                        "failed to merge --config key `{}` into `{}`",
-                        entry.key(),
-                        entry.get().definition(),
-                    )
-                })?,
-            };
-        }
+        let cv_from_cli = self.cli_args_as_table()?;
+        assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
+
+        let root_cv = mem::take(self.values_mut()?);
+        // The root config value container isn't from any external source,
+        // so its definition should be built-in.
+        let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
+        root_cv.merge(cv_from_cli, true)?;
+
+        // Put it back to gctx
+        mem::swap(self.values_mut()?, root_cv.table_mut("<root>")?.0);
+
         Ok(())
     }
 
@@ -1710,9 +1704,7 @@ impl GlobalContext {
         let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
-            let CV::Table(ref mut value_map, ref def) = value else {
-                unreachable!();
-            };
+            let (value_map, def) = value.table_mut("<root>")?;
 
             if let Some(token) = value_map.remove("token") {
                 if let Vacant(entry) = value_map.entry("registry".into()) {
@@ -2297,6 +2289,20 @@ impl ConfigValue {
             CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
         }
+    }
+
+    pub fn table_mut(
+        &mut self,
+        key: &str,
+    ) -> CargoResult<(&mut HashMap<String, ConfigValue>, &mut Definition)> {
+        match self {
+            CV::Table(table, def) => Ok((table, def)),
+            _ => self.expected("table", key),
+        }
+    }
+
+    pub fn is_table(&self) -> bool {
+        matches!(self, CV::Table(_table, _def))
     }
 
     pub fn string_list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
