@@ -223,6 +223,7 @@ url.workspace = true
 walkdir.workspace = true
 winnow.workspace = true
 syn = { version = "2.0.109", features = ["full"] }
+prettyplease = "0.2.37"
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true

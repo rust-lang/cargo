@@ -6,6 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use syn::File;
 use std::collections::HashMap;
+use prettyplease;
 
 
 pub fn create_trees(ws: &Workspace<'_>) -> syn::Result<HashMap<PathBuf, File>>
@@ -35,8 +36,11 @@ pub fn create_trees(ws: &Workspace<'_>) -> syn::Result<HashMap<PathBuf, File>>
             .expect("Failed to open file");
 
         let ast: File = syn::parse_file(&source)?;
-        println!("Tree created for {:?}", main_file);
-        
+        eprintln!("Tree created for {:?}", main_file);
+
+        // Print out the tree
+        let reformatted_ast = prettyplease::unparse(&ast);
+        eprintln!("{}", reformatted_ast);
         trees.insert(main_file, ast);
 
     }

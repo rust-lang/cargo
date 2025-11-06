@@ -12,7 +12,7 @@ use super::ast_iabr;
 /// Temporary proof of concept code to print something
 pub fn run_mutations(_ws: &Workspace<'_>) -> CliResult 
 {
-    println!("Mutation call success");
+    eprintln!("Mutation call success");
    // io::stdout().flush().unwrap(); // make sure it prints immediately
     Ok(())
 }
@@ -23,7 +23,7 @@ pub fn list_files(ws: &Workspace<'_>) -> CliResult
     let root = ws.root();
 
     // Basic print messages
-    println!("\nWorkspace Root: {}", root.display());
+    eprintln!("\nWorkspace Root: {}", root.display());
 
     // Declare the vector to store files 
     // Vec works dynamically so you dont need to size it
@@ -33,19 +33,19 @@ pub fn list_files(ws: &Workspace<'_>) -> CliResult
     for package in ws.members()
     {
         let package_root = package.root();
-        println!("Scanning Package: {}", package.name());
+        eprintln!("Scanning Package: {}", package.name());
         find_rust_files(package_root, &mut rust_files)?;
     }
 
     // Print the results
-    println!("Files to be tested");
+    eprintln!("Files to be tested");
     for file in rust_files
     {
-        println!("   {}", file.display());
+        eprintln!("   {}", file.display());
     }
 
     // Create the ASTs
-    println!("\nCREATING ABSTRACT SYNTAX TREES");
+    eprintln!("\nCREATING ABSTRACT SYNTAX TREES");
     let _trees = ast_iabr::create_trees(ws);
 
 
