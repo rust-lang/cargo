@@ -1546,24 +1546,18 @@ impl GlobalContext {
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let CV::Table(loaded_map, _def) = self.cli_args_as_table()? else {
-            unreachable!()
-        };
-        let values = self.values_mut()?;
-        for (key, value) in loaded_map.into_iter() {
-            match values.entry(key) {
-                Vacant(entry) => {
-                    entry.insert(value);
-                }
-                Occupied(mut entry) => entry.get_mut().merge(value, true).with_context(|| {
-                    format!(
-                        "failed to merge --config key `{}` into `{}`",
-                        entry.key(),
-                        entry.get().definition(),
-                    )
-                })?,
-            };
-        }
+        let cv_from_cli = self.cli_args_as_table()?;
+        assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
+
+        let root_cv = mem::take(self.values_mut()?);
+        // This definition path is ignored, this is just a temporary container
+        // representing the entire file.
+        let mut root_cv = CV::Table(root_cv, Definition::Path(PathBuf::from(".")));
+        root_cv.merge(cv_from_cli, true)?;
+
+        // Put it back to gctx
+        mem::swap(self.values_mut()?, root_cv.table_mut("<root>")?.0);
+
         Ok(())
     }
 
@@ -2297,6 +2291,20 @@ impl ConfigValue {
             CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
         }
+    }
+
+    pub fn table_mut(
+        &mut self,
+        key: &str,
+    ) -> CargoResult<(&mut HashMap<String, ConfigValue>, &mut Definition)> {
+        match self {
+            CV::Table(table, def) => Ok((table, def)),
+            _ => self.expected("table", key),
+        }
+    }
+
+    pub fn is_table(&self) -> bool {
+        matches!(self, CV::Table(_table, _def))
     }
 
     pub fn string_list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
