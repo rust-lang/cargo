@@ -5,6 +5,9 @@ use std::io::{self, Write};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// Import Syn parsing program
+use super::ast_iabr;
+
 
 /// Temporary proof of concept code to print something
 pub fn run_mutations(_ws: &Workspace<'_>) -> CliResult 
@@ -40,7 +43,12 @@ pub fn list_files(ws: &Workspace<'_>) -> CliResult
     {
         println!("   {}", file.display());
     }
-    println!("\n");
+
+    // Create the ASTs
+    println!("\nCREATING ABSTRACT SYNTAX TREES");
+    let _trees = ast_iabr::create_trees(ws);
+
+
     Ok(())
 
 }

@@ -1,8 +1,9 @@
 // Mod this command to use the new program
 mod mutation_iabr;
+mod ast_iabr;
+
+
 use std::println;
-
-
 use crate::core::compiler::{Compilation, CompileKind, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::shell::ColorChoice;

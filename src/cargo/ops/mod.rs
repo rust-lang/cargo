@@ -62,7 +62,7 @@ mod cargo_pkgid;
 mod cargo_read_manifest;
 pub mod cargo_remove;
 mod cargo_run;
-mod cargo_test;
+pub mod cargo_test;
 mod cargo_uninstall;
 mod cargo_update;
 mod common_for_install_and_uninstall;

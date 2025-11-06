@@ -222,6 +222,7 @@ unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 winnow.workspace = true
+syn = { version = "2.0.109", features = ["full"] }
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true
