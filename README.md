@@ -15,17 +15,15 @@ should have done by now. Next:
    You should see something with an older date code.
 
 2. If you see an older time code skip to step 3. Otherwise,
-   Enter this command: $env:PATH = "C:\Users\USER\.cargo\bin;" + $env:PATH
-   Please replace C: with your primary drive
-   Please replace USER with the name of your local user account
-   This will set your primary cargo compiler to be the base fork
+   Enter this command: $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
+   This will set your primary cargo compiler to be the base code
 
 3. Navigate to the folder containing our custom fork of cargo
    Enter this command: cargo build
    This will build the cargo.exe we need
 
-4. Enter this command: $env:PATH = "PATH\Cargo-Mutation-Enabled-Toolchain\target\debug;" + $env:PATH
-   Please replace PATH with whatever the path to the file containing our custom fork is
+4. Enter this command: $env:PATH = "CHANGETHIS\Cargo-Mutation-Enabled-Toolchain\target\debug;" + $env:PATH
+   Please replace CHANGETHIS with whatever the path to the file containing our custom fork is
    This will set the new cargo.exe to be the base compiler
 
 5. Enter this command: cargo --version
