@@ -42,7 +42,7 @@ mod dependency_queue;
 pub mod diagnostic_server;
 pub mod edit_distance;
 pub mod errors;
-mod flock;
+pub mod flock;
 pub mod frontmatter;
 pub mod graph;
 mod hasher;
