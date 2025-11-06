@@ -525,7 +525,7 @@ fn relative_install_location_without_trailing_slash() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] t1/bin/foo[EXE]
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add `t1/bin` to your PATH to be able to run the installed binaries
 
@@ -605,7 +605,7 @@ fn relative_install_location_with_path_set() {
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] t1/bin/foo[EXE]
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add `t1/bin` to your PATH to be able to run the installed binaries
 

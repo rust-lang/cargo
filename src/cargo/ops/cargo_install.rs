@@ -316,7 +316,15 @@ impl<'gctx> InstallablePackage<'gctx> {
     fn install_one(mut self, dry_run: bool) -> CargoResult<bool> {
         self.gctx.shell().status("Installing", &self.pkg)?;
 
+        // Normalize to absolute path for consistency throughout.
+        // See: https://github.com/rust-lang/cargo/issues/16023
         let dst = self.root.join("bin").into_path_unlocked();
+        let cwd = self.gctx.cwd();
+        let dst = if dst.is_absolute() {
+            paths::normalize_path(dst.as_path())
+        } else {
+            paths::normalize_path(&cwd.join(&dst))
+        };
 
         let mut td_opt = None;
         let mut needs_cleanup = false;
