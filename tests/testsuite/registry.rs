@@ -4653,3 +4653,63 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn proc_macro_dependency() {
+    Package::new("noop", "0.0.1")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "noop"
+                version = "0.0.1"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .proc_macro(true)
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate proc_macro;
+                use proc_macro::TokenStream;
+
+                #[proc_macro_derive(Noop)]
+                pub fn noop(_input: TokenStream) -> TokenStream {
+                    "".parse().unwrap()
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                noop = "0.0.1"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[macro_use]
+                extern crate noop;
+
+                #[derive(Noop)]
+                struct X;
+
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build").with_status(0).run();
+}

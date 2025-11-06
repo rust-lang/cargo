@@ -561,6 +561,7 @@ fn proc_macro() {
             proc-macro = true
         "#,
         )
+        .proc_macro(true)
         .file(
             "src/lib.rs",
             r#"
