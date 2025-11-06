@@ -1704,9 +1704,7 @@ impl GlobalContext {
         let mut value = self.load_file(&credentials)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
-            let CV::Table(ref mut value_map, ref def) = value else {
-                unreachable!();
-            };
+            let (value_map, def) = value.table_mut("<root>")?;
 
             if let Some(token) = value_map.remove("token") {
                 if let Vacant(entry) = value_map.entry("registry".into()) {
