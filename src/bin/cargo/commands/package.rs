@@ -3,6 +3,7 @@ use crate::command_prelude::*;
 use cargo::ops;
 use cargo::ops::PackageMessageFormat;
 use cargo::ops::PackageOpts;
+use clap_complete::ArgValueCandidates;
 
 pub fn cli() -> Command {
     subcommand("package")
@@ -44,6 +45,7 @@ pub fn cli() -> Command {
             "Package(s) to assemble",
             "Assemble all packages in the workspace",
             "Don't assemble specified packages",
+            ArgValueCandidates::new(get_ws_member_candidates),
         )
         .arg_features()
         .arg_target_triple("Build for the target triple")

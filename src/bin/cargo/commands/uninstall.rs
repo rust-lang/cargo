@@ -1,6 +1,9 @@
 use crate::command_prelude::*;
 
-use cargo::ops;
+use cargo::{CargoResult, core::PackageId, ops};
+use clap_complete::ArgValueCandidates;
+
+use std::collections::BTreeSet;
 
 pub fn cli() -> Command {
     subcommand("uninstall")
@@ -15,7 +18,10 @@ pub fn cli() -> Command {
         )
         .arg(opt("root", "Directory to uninstall packages from").value_name("DIR"))
         .arg_silent_suggestion()
-        .arg_package_spec_simple("Package to uninstall")
+        .arg_package_spec_simple(
+            "Package to uninstall",
+            ArgValueCandidates::new(get_installed_package_candidates),
+        )
         .arg(
             multi_opt("bin", "NAME", "Only uninstall the binary NAME")
                 .help_heading(heading::TARGET_SELECTION),
@@ -52,7 +58,7 @@ fn get_installed_crates() -> Vec<clap_complete::CompletionCandidate> {
 fn get_installed_crates_() -> Option<Vec<clap_complete::CompletionCandidate>> {
     let mut candidates = Vec::new();
 
-    let gctx = GlobalContext::default().ok()?;
+    let gctx = new_gctx_for_completions().ok()?;
 
     let root = ops::resolve_root(None, &gctx).ok()?;
 
@@ -65,4 +71,34 @@ fn get_installed_crates_() -> Option<Vec<clap_complete::CompletionCandidate>> {
     }
 
     Some(candidates)
+}
+
+fn get_installed_package_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_installed_packages()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(pkg, bins)| {
+            let single_binary = bins.iter().next().take_if(|_| bins.len() == 1);
+
+            let help = if single_binary.is_some_and(|bin| bin == pkg.name().as_str()) {
+                None
+            } else {
+                let binaries = bins.into_iter().collect::<Vec<_>>().as_slice().join(", ");
+                Some(binaries)
+            };
+
+            clap_complete::CompletionCandidate::new(pkg.name().as_str()).help(help.map(From::from))
+        })
+        .collect()
+}
+
+fn get_installed_packages() -> CargoResult<Vec<(PackageId, BTreeSet<String>)>> {
+    let gctx = new_gctx_for_completions()?;
+    let root = ops::resolve_root(None, &gctx)?;
+
+    let tracker = ops::InstallTracker::load(&gctx, &root)?;
+    Ok(tracker
+        .all_installed_bins()
+        .map(|(package_id, bins)| (*package_id, bins.clone()))
+        .collect())
 }
