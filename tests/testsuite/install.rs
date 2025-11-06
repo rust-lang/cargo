@@ -501,6 +501,157 @@ fn install_location_precedence() {
 }
 
 #[cargo_test]
+fn relative_install_location_without_trailing_slash() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let root_t1 = root.join("t1");
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/config.toml"),
+        r#"
+            [install]
+            root = "t1"
+        "#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_process("install --path .");
+    cmd.cwd(p.root());
+    cmd.with_stderr_data(str![[r#"
+[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
+  |
+  = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
+  = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
+  = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    // NOTE: the install location is relative to the CWD, not the config file
+    assert_has_not_installed_exe(&root_t1, "foo");
+    assert_has_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
+fn cli_root_argument_without_deprecation_warning() {
+    // Verify that using the --root CLI argument does not produce the deprecation warning.
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let root_t1 = root.join("t1");
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    cargo_process("install --path . --root")
+        .arg("t1")
+        .cwd(p.root())
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(&root_t1, "foo");
+    assert_has_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
+fn relative_install_location_with_trailing_slash() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let root_t1 = root.join("t1");
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/config.toml"),
+        r#"
+            [install]
+            root = "t1/"
+        "#,
+    )
+    .unwrap();
+
+    let mut cmd = cargo_process("install --path .");
+    cmd.cwd(p.root());
+    cmd.with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/t1/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    assert_has_installed_exe(&root_t1, "foo");
+    assert_has_not_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
+fn relative_install_location_with_path_set() {
+    // Test that when the absolute install path is in PATH, no warning is shown
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    let root = paths::root();
+    let p_path = p.root().to_path_buf();
+    let project_t1 = p_path.join("t1");
+
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/config.toml"),
+        r#"
+            [install]
+            root = "t1"
+        "#,
+    )
+    .unwrap();
+
+    // Add the absolute path to PATH environment variable
+    let install_bin_path = project_t1.join("bin");
+    let mut path = path();
+    path.push(install_bin_path);
+    let new_path = env::join_paths(path).unwrap();
+
+    let mut cmd = cargo_process("install --path .");
+    cmd.cwd(p.root());
+    cmd.env("PATH", new_path);
+    cmd.with_stderr_data(str![[r#"
+[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
+  |
+  = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
+  = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
+  = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+
+"#]])
+        .run();
+
+    assert_has_installed_exe(&project_t1, "foo");
+}
+
+#[cargo_test]
 fn install_path() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 

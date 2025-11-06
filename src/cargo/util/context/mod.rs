@@ -989,20 +989,6 @@ impl GlobalContext {
         self.get::<OptValue<String>>(key)
     }
 
-    /// Get a config value that is expected to be a path.
-    ///
-    /// This returns a relative path if the value does not contain any
-    /// directory separators. See `ConfigRelativePath::resolve_program` for
-    /// more details.
-    pub fn get_path(&self, key: &str) -> CargoResult<OptValue<PathBuf>> {
-        self.get::<OptValue<ConfigRelativePath>>(key).map(|v| {
-            v.map(|v| Value {
-                val: v.val.resolve_program(self),
-                definition: v.definition,
-            })
-        })
-    }
-
     fn string_to_path(&self, value: &str, definition: &Definition) -> PathBuf {
         let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
         if is_path {
