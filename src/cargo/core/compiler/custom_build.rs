@@ -35,7 +35,6 @@ use super::{BuildRunner, Job, Unit, Work, fingerprint, get_dynamic_search_path};
 use crate::core::compiler::CompileMode;
 use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
-use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{PackageId, Target, profiles::ProfileRoot};
 use crate::util::errors::CargoResult;
@@ -340,8 +339,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let script_dir = build_runner.files().build_script_dir(build_script_unit);
     let script_out_dir = build_runner.files().build_script_out_dir(unit);
     let script_run_dir = build_runner.files().build_script_run_dir(unit);
-    let build_plan = bcx.build_config.build_plan;
-    let invocation_name = unit.buildkey();
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
         prepare_metabuild(build_runner, build_script_unit, deps)?;
@@ -527,7 +524,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         // along to this custom build command. We're also careful to augment our
         // dynamic library search path in case the build script depended on any
         // native dynamic libraries.
-        if !build_plan {
+        {
             let build_script_outputs = build_script_outputs.lock().unwrap();
             for (name, dep_id, dep_metadata) in lib_deps {
                 let script_output = build_script_outputs.get(dep_metadata).ok_or_else(|| {
@@ -552,11 +549,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                     &host_target_root,
                 )?;
             }
-        }
-
-        if build_plan {
-            state.build_plan(invocation_name, cmd.clone(), Arc::new(Vec::new()));
-            return Ok(());
         }
 
         // And now finally, run the build command itself!
@@ -706,11 +698,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         Ok(())
     });
 
-    let mut job = if build_runner.bcx.build_config.build_plan {
-        Job::new_dirty(Work::noop(), DirtyReason::FreshBuild)
-    } else {
-        fingerprint::prepare_target(build_runner, unit, false)?
-    };
+    let mut job = fingerprint::prepare_target(build_runner, unit, false)?;
     if job.freshness().is_dirty() {
         job.before(dirty);
     } else {

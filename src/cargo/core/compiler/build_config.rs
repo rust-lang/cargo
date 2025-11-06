@@ -27,8 +27,6 @@ pub struct BuildConfig {
     pub message_format: MessageFormat,
     /// Force Cargo to do a full rebuild and treat each target as changed.
     pub force_rebuild: bool,
-    /// Output a build plan to stdout instead of actually compiling.
-    pub build_plan: bool,
     /// Output the unit graph to stdout instead of actually compiling.
     pub unit_graph: bool,
     /// `true` to avoid really compiling.
@@ -123,7 +121,6 @@ impl BuildConfig {
             intent,
             message_format: MessageFormat::Human,
             force_rebuild: false,
-            build_plan: false,
             unit_graph: false,
             dry_run: false,
             primary_unit_rustc: None,

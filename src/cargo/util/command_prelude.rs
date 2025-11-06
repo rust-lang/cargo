@@ -420,13 +420,6 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_build_plan(self) -> Self {
-        self._arg(
-            flag("build-plan", "Output the build plan in JSON (unstable)")
-                .help_heading(heading::COMPILATION_OPTIONS),
-        )
-    }
-
     fn arg_unit_graph(self) -> Self {
         self._arg(
             flag("unit-graph", "Output build graph in JSON (unstable)")
@@ -841,7 +834,6 @@ Run `{cmd}` to see possible targets."
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
         build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
-        build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
         build_config.compile_time_deps_only = self.flag("compile-time-deps");
@@ -871,10 +863,6 @@ Run `{cmd}` to see possible targets."
             }
         }
 
-        if build_config.build_plan {
-            gctx.cli_unstable()
-                .fail_if_stable_opt("--build-plan", 5579)?;
-        };
         if build_config.unit_graph {
             gctx.cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;

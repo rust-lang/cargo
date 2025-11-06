@@ -316,15 +316,6 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 </dd>
 
 
-<dt class="option-term" id="option-cargo-build---build-plan"><a class="option-anchor" href="#option-cargo-build---build-plan"><code>--build-plan</code></a></dt>
-<dd class="option-desc"><p>Outputs a series of JSON messages to stdout that indicate the commands to run
-the build.</p>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z unstable-options</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/rust-lang/cargo/issues/5579</a> for more information.</p>
-</dd>
-
 </dl>
 
 ### Manifest Options
