@@ -229,6 +229,7 @@ pub(crate) fn create_index_line(
     links: Option<String>,
     rust_version: Option<&str>,
     v: Option<u32>,
+    proc_macro: Option<bool>,
 ) -> String {
     // This emulates what crates.io does to retain backwards compatibility.
     let (features, features2) = split_index_features(features.clone());
@@ -240,6 +241,7 @@ pub(crate) fn create_index_line(
         "features": features,
         "yanked": yanked,
         "links": links,
+        "proc_macro": proc_macro,
     });
     if let Some(f2) = &features2 {
         json["features2"] = serde_json::json!(f2);

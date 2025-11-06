@@ -63,6 +63,7 @@ pub struct NewCrate {
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
     pub rust_version: Option<String>,
+    pub proc_macro: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]

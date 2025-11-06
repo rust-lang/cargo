@@ -1212,7 +1212,7 @@ impl<'a> TmpRegistry<'a> {
             yanked: None,
             links: new_crate.links.map(|x| x.into()),
             rust_version: None,
-            proc_macro: None,
+            proc_macro: Some(package.proc_macro()),
             v: Some(2),
         })?;
 
