@@ -1218,7 +1218,7 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
             feature_candidates.push(
                 clap_complete::CompletionCandidate::new(feature_name)
                     .display_order(Some(order))
-                    .help(Some(format!("(from {})", package_name).into())),
+                    .help(Some(format!("from {}", package_name).into())),
             );
         }
     }
@@ -1243,7 +1243,7 @@ fn get_crate_candidates(kind: TargetKind) -> CargoResult<Vec<clap_complete::Comp
             };
             clap_complete::CompletionCandidate::new(target.name())
                 .display_order(Some(order))
-                .help(Some(format!("(from {})", pkg_name).into()))
+                .help(Some(format!("from {}", pkg_name).into()))
         })
         .collect::<Vec<_>>();
 
