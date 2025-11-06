@@ -2209,6 +2209,21 @@ credential-provider = ['c', 'd']
         .unwrap();
     assert_eq!(provider.path.raw_value(), "c");
     assert_eq!(provider.args, ["d"]);
+
+    let cli_arg = "registries.example.credential-provider=['cli', 'cli-arg']";
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(cli_arg)
+        .cwd("foo")
+        .build();
+    let provider = gctx
+        .get::<Option<RegistryConfig>>(&format!("registries.example"))
+        .unwrap()
+        .unwrap()
+        .credential_provider
+        .unwrap();
+    // expect: no merge happens; config CLI takes precedence
+    assert_eq!(provider.path.raw_value(), "c");
+    assert_eq!(provider.args, ["d", "cli", "cli-arg"]);
 }
 
 #[cargo_test]
