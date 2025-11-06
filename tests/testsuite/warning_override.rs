@@ -221,3 +221,71 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn hard_warning_deny() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("rustc")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn hard_warning_allow() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("rustc")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+}
