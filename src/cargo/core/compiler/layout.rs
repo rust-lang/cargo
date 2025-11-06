@@ -103,6 +103,7 @@
 
 use crate::core::Workspace;
 use crate::core::compiler::CompileTarget;
+use crate::util::flock::is_on_nfs_mount;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
 use std::path::{Path, PathBuf};
@@ -152,17 +153,21 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let artifact_dir_lock =
-            dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "build directory")?;
+        let artifact_dir_lock = if is_on_nfs_mount(root.as_path_unlocked()) {
+            None
+        } else {
+            Some(dest.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "artifact directory")?)
+        };
 
-        let build_dir_lock = if root != build_root {
+        let build_dir_lock = if root == build_root || is_on_nfs_mount(build_root.as_path_unlocked())
+        {
+            None
+        } else {
             Some(build_dest.open_rw_exclusive_create(
                 ".cargo-lock",
                 ws.gctx(),
                 "build directory",
             )?)
-        } else {
-            None
         };
         let root = root.into_path_unlocked();
         let build_root = build_root.into_path_unlocked();
@@ -222,7 +227,7 @@ pub struct ArtifactDirLayout {
     timings: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
-    _lock: FileLock,
+    _lock: Option<FileLock>,
 }
 
 impl ArtifactDirLayout {
