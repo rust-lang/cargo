@@ -1286,9 +1286,9 @@ impl GlobalContext {
 
     /// Start a config file discovery from a path and merges all config values found.
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
-        // This definition path is ignored, this is just a temporary container
-        // representing the entire file.
-        let mut cfg = CV::Table(HashMap::new(), Definition::Path(PathBuf::from(".")));
+        // The root config value container isn't from any external source,
+        // so its definition should be built-in.
+        let mut cfg = CV::Table(HashMap::new(), Definition::BuiltIn);
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
@@ -1550,9 +1550,9 @@ impl GlobalContext {
         assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
 
         let root_cv = mem::take(self.values_mut()?);
-        // This definition path is ignored, this is just a temporary container
-        // representing the entire file.
-        let mut root_cv = CV::Table(root_cv, Definition::Path(PathBuf::from(".")));
+        // The root config value container isn't from any external source,
+        // so its definition should be built-in.
+        let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
         root_cv.merge(cv_from_cli, true)?;
 
         // Put it back to gctx
