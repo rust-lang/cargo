@@ -14,7 +14,7 @@ const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"
 
 pub fn cli() -> Command {
     subcommand("help")
-        .about("Displays help for a cargo subcommand")
+        .about("Displays help for a cargo command")
         .arg(Arg::new("COMMAND").action(ArgAction::Set).add(
             clap_complete::ArgValueCandidates::new(|| {
                 super::builtin()

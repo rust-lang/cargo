@@ -212,7 +212,7 @@ fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     commands.insert(
         "help".to_string(),
         CommandInfo::BuiltIn {
-            about: Some("Displays help for a cargo subcommand".to_string()),
+            about: Some("Displays help for a cargo command".to_string()),
         },
     );
 
