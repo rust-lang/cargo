@@ -1,18 +1,18 @@
 //! See [`CompilationFiles`].
 
+use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use lazycell::LazyCell;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
-use crate::util::{self, CargoResult, StableHasher};
+use crate::util::{self, CargoResult, OnceExt, StableHasher};
 
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output
@@ -128,7 +128,7 @@ pub struct CompilationFiles<'a, 'gctx> {
     /// Metadata hash to use for each unit.
     metas: HashMap<Unit, Metadata>,
     /// For each Unit, a list all files produced.
-    outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
+    outputs: HashMap<Unit, OnceCell<Arc<Vec<OutputFile>>>>,
 }
 
 /// Info about a single file emitted by the compiler.
@@ -168,7 +168,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let outputs = metas
             .keys()
             .cloned()
-            .map(|unit| (unit, LazyCell::new()))
+            .map(|unit| (unit, OnceCell::new()))
             .collect();
         CompilationFiles {
             ws: build_runner.bcx.ws,

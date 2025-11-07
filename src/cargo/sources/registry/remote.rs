@@ -11,10 +11,10 @@ use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Filesystem, GlobalContext};
+use crate::util::{Filesystem, GlobalContext, OnceExt};
 use anyhow::Context as _;
 use cargo_util::paths;
-use lazycell::LazyCell;
+use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell};
 use std::fs::File;
 use std::mem;
@@ -71,7 +71,7 @@ pub struct RemoteRegistry<'gctx> {
     /// [tree object]: https://git-scm.com/book/en/v2/Git-Internals-Git-Objects#_tree_objects
     tree: RefCell<Option<git2::Tree<'static>>>,
     /// A Git repository that contains the actual index we want.
-    repo: LazyCell<git2::Repository>,
+    repo: OnceCell<git2::Repository>,
     /// The current HEAD commit of the underlying Git repository.
     head: Cell<Option<git2::Oid>>,
     /// This stores sha value of the current HEAD commit for convenience.
@@ -103,7 +103,7 @@ impl<'gctx> RemoteRegistry<'gctx> {
             gctx,
             index_git_ref: GitReference::DefaultBranch,
             tree: RefCell::new(None),
-            repo: LazyCell::new(),
+            repo: OnceCell::new(),
             head: Cell::new(None),
             current_sha: Cell::new(None),
             needs_update: false,
@@ -378,7 +378,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         // Fetch the latest version of our `index_git_ref` into the index
         // checkout.
         let url = self.source_id.url();
-        let repo = self.repo.borrow_mut().unwrap();
+        let repo = self.repo.get_mut().unwrap();
         git::fetch(
             repo,
             url.as_str(),

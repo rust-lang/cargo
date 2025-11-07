@@ -1,5 +1,6 @@
 use annotate_snippets::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,6 @@ use cargo_util_schemas::manifest::{
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
-use lazycell::LazyCell;
 use pathdiff::diff_paths;
 use url::Url;
 
@@ -33,7 +33,9 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::lints::{get_key_value_span, rel_cwd_manifest_path};
-use crate::util::{self, GlobalContext, IntoUrl, OptVersionReq, context::ConfigRelativePath};
+use crate::util::{
+    self, GlobalContext, IntoUrl, OnceExt, OptVersionReq, context::ConfigRelativePath,
+};
 
 mod embedded;
 mod targets;
@@ -299,7 +301,7 @@ fn normalize_toml(
 ) -> CargoResult<manifest::TomlManifest> {
     let package_root = manifest_file.parent().unwrap();
 
-    let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
+    let inherit_cell: OnceCell<InheritableFields> = OnceCell::new();
     let inherit = || {
         inherit_cell
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
