@@ -794,7 +794,10 @@ impl HttpServer {
                     line.clear();
                     break;
                 }
-                let (name, value) = line.split_once(':').unwrap();
+                if line.as_bytes().iter().any(|&b| b > 127 || b == 0) {
+                    panic!("Invalid char in HTTP header: {line:?}");
+                }
+                let (name, value) = line.split_once(':').expect("http header syntax");
                 let name = name.trim().to_ascii_lowercase();
                 let value = value.trim().to_string();
                 match name.as_str() {
