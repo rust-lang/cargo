@@ -1043,11 +1043,11 @@ impl GlobalContext {
             output.clear();
         }
 
-        let def = Definition::Environment(key.as_env_key().to_string());
+        let env_def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
-                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+                ConfigError::new(format!("could not parse TOML list: {}", e), env_def.clone())
             })?;
             let values = toml_v.as_array().expect("env var was not array");
             for value in values {
@@ -1056,16 +1056,16 @@ impl GlobalContext {
                 let s = value.as_str().ok_or_else(|| {
                     ConfigError::new(
                         format!("expected string, found {}", value.type_str()),
-                        def.clone(),
+                        env_def.clone(),
                     )
                 })?;
-                output.push(CV::String(s.to_string(), def.clone()))
+                output.push(CV::String(s.to_string(), env_def.clone()))
             }
         } else {
             output.extend(
                 env_val
                     .split_whitespace()
-                    .map(|s| CV::String(s.to_string(), def.clone())),
+                    .map(|s| CV::String(s.to_string(), env_def.clone())),
             );
         }
         output.sort_by(|a, b| a.definition().cmp(b.definition()));
