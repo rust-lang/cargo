@@ -63,7 +63,6 @@
 
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
-use std::collections::hash_map::Entry::Vacant;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -1714,11 +1713,10 @@ impl GlobalContext {
             let (value_map, def) = value.table_mut("<root>")?;
 
             if let Some(token) = value_map.remove("token") {
-                if let Vacant(entry) = value_map.entry("registry".into()) {
+                value_map.entry("registry".into()).or_insert_with(|| {
                     let map = HashMap::from([("token".into(), token)]);
-                    let table = CV::Table(map, def.clone());
-                    entry.insert(table);
-                }
+                    CV::Table(map, def.clone())
+                });
             }
         }
 
