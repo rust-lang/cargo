@@ -2252,8 +2252,8 @@ credential-provider = ['c', 'd']
         .credential_provider
         .unwrap();
     // expect: no merge happens; cli takes precedence over files and env
-    assert_eq!(provider.path.raw_value(), "env");
-    assert_eq!(provider.args, ["env-arg"]);
+    assert_eq!(provider.path.raw_value(), "cli");
+    assert_eq!(provider.args, ["cli-arg"]);
 }
 
 #[cargo_test]

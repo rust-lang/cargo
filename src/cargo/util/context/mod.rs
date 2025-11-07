@@ -1039,11 +1039,29 @@ impl GlobalContext {
             return Ok(());
         };
 
+        let env_def = Definition::Environment(key.as_env_key().to_string());
+
         if is_nonmergeable_list(&key) {
-            output.clear();
+            assert!(
+                output
+                    .windows(2)
+                    .all(|cvs| cvs[0].definition() == cvs[1].definition()),
+                "non-mergeable list must have only one definition: {output:?}",
+            );
+
+            // Keep existing config if higher priority than env (e.g., --config CLI),
+            // otherwise clear for env
+            if output
+                .first()
+                .map(|o| o.definition() > &env_def)
+                .unwrap_or_default()
+            {
+                return Ok(());
+            } else {
+                output.clear();
+            }
         }
 
-        let env_def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
