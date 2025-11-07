@@ -48,7 +48,7 @@ use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_li
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
-use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
@@ -278,7 +278,7 @@ pub fn create_bcx<'a, 'gctx>(
         cli_features,
         &specs,
         has_dev_units,
-        crate::core::resolver::features::ForceAllTargets::No,
+        ForceAllTargets::No,
         dry_run,
     )?;
     let WorkspaceResolve {
@@ -974,6 +974,10 @@ pub fn resolve_all_features(
     resolved_features: &features::ResolvedFeatures,
     package_set: &PackageSet<'_>,
     package_id: PackageId,
+    has_dev_units: HasDevUnits,
+    requested_kinds: &[CompileKind],
+    target_data: &RustcTargetData<'_>,
+    force_all_targets: ForceAllTargets,
 ) -> HashSet<String> {
     let mut features: HashSet<String> = resolved_features
         .activated_features(package_id, FeaturesFor::NormalOrDev)
@@ -983,7 +987,15 @@ pub fn resolve_all_features(
 
     // Include features enabled for use by dependencies so targets can also use them with the
     // required-features field when deciding whether to be built or skipped.
-    for (dep_id, deps) in resolve_with_overrides.deps(package_id) {
+    let filtered_deps = PackageSet::filter_deps(
+        package_id,
+        resolve_with_overrides,
+        has_dev_units,
+        requested_kinds,
+        target_data,
+        force_all_targets,
+    );
+    for (dep_id, deps) in filtered_deps {
         let is_proc_macro = package_set
             .get_one(dep_id)
             .expect("packages downloaded")

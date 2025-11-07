@@ -629,7 +629,7 @@ impl<'gctx> PackageSet<'gctx> {
         Ok(())
     }
 
-    fn filter_deps<'a>(
+    pub fn filter_deps<'a>(
         pkg_id: PackageId,
         resolve: &'a Resolve,
         has_dev_units: HasDevUnits,
