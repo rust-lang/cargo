@@ -197,9 +197,8 @@ fn fail_on_tool_injection() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `lints.rust.clippy::cyclomatic_complexity` is not valid lint name; try `lints.clippy.cyclomatic_complexity`
+  |
+  = caused by: `lints.rust.clippy::cyclomatic_complexity` is not valid lint name; try `lints.clippy.cyclomatic_complexity`
 
 "#]])
         .run();
@@ -228,9 +227,8 @@ fn fail_on_redundant_tool() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `lints.rust.rust::unsafe_code` is not valid lint name; try `lints.rust.unsafe_code`
+  |
+  = caused by: `lints.rust.rust::unsafe_code` is not valid lint name; try `lints.rust.unsafe_code`
 
 "#]])
         .run();
@@ -259,9 +257,8 @@ fn fail_on_conflicting_tool() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `lints.rust.super-awesome-tool::unsafe_code` is not a valid lint name
+  |
+  = caused by: `lints.rust.super-awesome-tool::unsafe_code` is not a valid lint name
 
 "#]])
         .run();
@@ -419,9 +416,8 @@ pub fn foo(num: i32) -> u32 {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints
+  |
+  = caused by: cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints
 
 "#]])
         .run();

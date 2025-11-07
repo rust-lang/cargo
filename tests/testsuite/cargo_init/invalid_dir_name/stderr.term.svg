@@ -1,7 +1,7 @@
-<svg width="2036px" height="200px" xmlns="http://www.w3.org/2000/svg">
+<svg width="2095px" height="200px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,21 +21,21 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Creating</tspan><tspan> binary (application) package</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: invalid character `.` in package name: `foo.bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: invalid character `.` in package name: `foo.bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>If you need a package name to not match the directory name, consider using --name flag.</tspan>
+    <tspan x="10px" y="64px"><tspan>       </tspan><tspan class="bold">If you need a package name to not match the directory name, consider using --name flag.</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>If you need a binary with the name "foo.bar", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.bar.rs` or change the name in Cargo.toml with:</tspan>
+    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="bold">If you need a binary with the name "foo.bar", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.bar.rs` or change the name in Cargo.toml with:</tspan>
 </tspan>
-    <tspan x="10px" y="100px">
+    <tspan x="10px" y="100px"><tspan>       </tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>    [[bin]]</tspan>
+    <tspan x="10px" y="118px"><tspan>       </tspan><tspan class="bold">    [[bin]]</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>    name = "foo.bar"</tspan>
+    <tspan x="10px" y="136px"><tspan>       </tspan><tspan class="bold">    name = "foo.bar"</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>    path = "src/main.rs"</tspan>
+    <tspan x="10px" y="154px"><tspan>       </tspan><tspan class="bold">    path = "src/main.rs"</tspan>
 </tspan>
-    <tspan x="10px" y="172px">
+    <tspan x="10px" y="172px"><tspan>       </tspan>
 </tspan>
     <tspan x="10px" y="190px">
 </tspan>

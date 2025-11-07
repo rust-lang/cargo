@@ -29,8 +29,8 @@ fn rustdoc_simple_html() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `--output-format` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+       See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
 
 "#]])
         .run();
@@ -79,7 +79,7 @@ fn rustdoc_json_stable() {
         .with_stderr_data(
             str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
 
 "#]]
 	    )
@@ -95,7 +95,7 @@ fn rustdoc_json_without_unstable_options() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `--output-format` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
+       See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
 
 "#]])
         .run();

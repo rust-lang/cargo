@@ -1,7 +1,7 @@
-<svg width="1012px" height="128px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1070px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,13 +21,13 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> git repository `[ROOTURL]/git-package`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: multiple packages found at `[ROOTURL]/git-package`:</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: multiple packages found at `[ROOTURL]/git-package`:</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>    my-package1, my-package2, my-package3, my-package4, my-package5, my-package6</tspan>
+    <tspan x="10px" y="64px"><tspan>       </tspan><tspan class="bold">    my-package1, my-package2, my-package3, my-package4, my-package5, my-package6</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>    my-package7, my-package8, my-package9</tspan>
+    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="bold">    my-package7, my-package8, my-package9</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>To disambiguate, run `cargo add --git [ROOTURL]/git-package &lt;package&gt;`</tspan>
+    <tspan x="10px" y="100px"><tspan>       </tspan><tspan class="bold">To disambiguate, run `cargo add --git [ROOTURL]/git-package &lt;package&gt;`</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>

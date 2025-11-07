@@ -28,11 +28,10 @@ fn feature_activates_missing_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `baz` which is neither a dependency nor another feature
-
-  [HELP] a feature with a similar name exists: `bar`
+  |
+  = caused by: feature `bar` includes `baz` which is neither a dependency nor another feature
+               
+               [HELP] a feature with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -62,11 +61,10 @@ fn feature_activates_typoed_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `baz` which is neither a dependency nor another feature
-
-  [HELP] a feature with a similar name exists: `bar`
+  |
+  = caused by: feature `bar` includes `baz` which is neither a dependency nor another feature
+               
+               [HELP] a feature with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -180,10 +178,9 @@ fn feature_activates_required_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `bar` includes `baz`, but `baz` is not an optional dependency
-  A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
+  |
+  = caused by: feature `bar` includes `baz`, but `baz` is not an optional dependency
+               A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
 
 "#]])
         .run();
@@ -215,13 +212,13 @@ fn dependency_activates_missing_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
@@ -275,14 +272,14 @@ fn dependency_activates_typoed_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
- package `bar` does have feature `baz`
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
+        package `bar` does have feature `baz`
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
@@ -312,9 +309,8 @@ fn optional_dev_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dev-dependencies are not allowed to be optional: `bar`
+  |
+  = caused by: dev-dependencies are not allowed to be optional: `bar`
 
 "#]])
         .run();
@@ -413,10 +409,9 @@ fn dependency_activates_dep_feature() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo/bar` in dependency `bar` is not allowed to contain slashes
-  If you want to enable features [..]
+  |
+  = caused by: feature `foo/bar` in dependency `bar` is not allowed to contain slashes
+               If you want to enable features of a transitive dependency, the direct dependency needs to re-export those features from the `[features]` table.
 
 "#]])
         .run();
@@ -447,8 +442,8 @@ fn cli_activates_required_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`
-
-[HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
+       
+       [HELP] a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.
 
 "#]])
         .with_status(101)
@@ -494,14 +489,14 @@ fn dependency_activates_required_dependency() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `*` are: 0.0.1
-
-package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
- A required dependency with that name exists, but only optional dependencies can be used as features.
-
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `*` are: 0.0.1
+       
+       package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
+        A required dependency with that name exists, but only optional dependencies can be used as features.
+       
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .with_status(101)
@@ -573,9 +568,8 @@ fn no_transitive_dep_feature_requirement() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  multiple slashes in feature `derived/bar/qux` (included by feature `default`) are not allowed
+  |
+  = caused by: multiple slashes in feature `derived/bar/qux` (included by feature `default`) are not allowed
 
 "#]])
         .run();

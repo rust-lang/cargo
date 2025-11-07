@@ -28,7 +28,7 @@ fn gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `cargo config` command is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/9301 for more information about the `cargo config` command.
+       See https://github.com/rust-lang/cargo/issues/9301 for more information about the `cargo config` command.
 
 "#]])
         .run();

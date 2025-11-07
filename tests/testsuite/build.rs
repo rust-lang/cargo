@@ -372,16 +372,14 @@ fn cargo_compile_directory_not_cwd_with_invalid_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  TOML parse error at line 1, column 2
-    |
-  1 | !
-    |  ^
-  key with no value, expected `=`
+  |
+  = caused by: could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
+  = caused by: TOML parse error at line 1, column 2
+                 |
+               1 | !
+                 |  ^
+               key with no value, expected `=`
+               
 
 "#]])
         .run();
@@ -395,9 +393,8 @@ fn cargo_compile_with_invalid_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  manifest is missing either a `[package]` or a `[workspace]`
+  |
+  = caused by: manifest is missing either a `[package]` or a `[workspace]`
 
 "#]])
         .run();
@@ -559,9 +556,8 @@ fn cargo_compile_with_invalid_bin_target_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  binary target names cannot be empty
+  |
+  = caused by: binary target names cannot be empty
 
 "#]])
         .run();
@@ -589,9 +585,8 @@ fn cargo_compile_with_forbidden_bin_target_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the binary target name `build` is forbidden, it conflicts with cargo's build directory names
+  |
+  = caused by: the binary target name `build` is forbidden, it conflicts with cargo's build directory names
 
 "#]])
         .run();
@@ -622,9 +617,8 @@ fn cargo_compile_with_bin_and_crate_type() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
+  |
+  = caused by: the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
 
 "#]])
         .run();
@@ -710,9 +704,8 @@ fn cargo_compile_with_bin_and_proc() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
+  |
+  = caused by: the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
 
 "#]])
         .run();
@@ -740,9 +733,8 @@ fn cargo_compile_with_invalid_lib_target_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  library target names cannot be empty
+  |
+  = caused by: library target names cannot be empty
 
 "#]])
         .run();
@@ -770,12 +762,9 @@ fn cargo_compile_with_invalid_non_numeric_dep_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse the version requirement `y` for dependency `crossbeam`
-
-Caused by:
-  unexpected character 'y' while parsing major version number
+  |
+  = caused by: failed to parse the version requirement `y` for dependency `crossbeam`
+  = caused by: unexpected character 'y' while parsing major version number
 
 "#]])
         .run();
@@ -1278,8 +1267,8 @@ fn cargo_compile_with_dep_name_mismatch() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `notquitebar` found
-location searched: [ROOT]/foo/bar
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: [ROOT]/foo/bar
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1335,8 +1324,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `bin.rs` in default-run packages
-[HELP] available bin targets:
-    a
+       [HELP] available bin targets:
+           a
 
 "#]])
         .run();
@@ -1345,8 +1334,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -1355,8 +1344,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `example.rs` in default-run packages
-[HELP] available example targets:
-    a
+       [HELP] available example targets:
+           a
 
 "#]])
         .run();
@@ -1365,8 +1354,8 @@ fn cargo_compile_with_filename() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `a.rs` in default-run packages
-
-[HELP] a target with a similar name exists: `a`
+       
+       [HELP] a target with a similar name exists: `a`
 
 "#]])
         .run();
@@ -1408,17 +1397,17 @@ fn incompatible_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `bad`.
-    ... required by package `qux v0.1.0`
-    ... which satisfies dependency `qux = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `bad v1.0.0`
-    ... which satisfies dependency `bad = "=1.0.0"` of package `baz v0.1.0`
-    ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-failed to select a version for `bad` which could resolve this conflict
+           ... required by package `qux v0.1.0`
+           ... which satisfies dependency `qux = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `bad v1.0.0`
+           ... which satisfies dependency `bad = "=1.0.0"` of package `baz v0.1.0`
+           ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+       failed to select a version for `bad` which could resolve this conflict
 
 "#]])
         .run();
@@ -1456,20 +1445,20 @@ fn incompatible_dependencies_with_multi_semver() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `bad`.
-    ... required by package `foo v0.0.1 ([ROOT]/foo)`
-versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `bad v2.0.1`
-    ... which satisfies dependency `bad = ">=2.0.1"` of package `baz v0.1.0`
-    ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-  previously selected package `bad v1.0.0`
-    ... which satisfies dependency `bad = "=1.0.0"` of package `bar v0.1.0`
-    ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
-
-failed to select a version for `bad` which could resolve this conflict
+           ... required by package `foo v0.0.1 ([ROOT]/foo)`
+       versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `bad v2.0.1`
+           ... which satisfies dependency `bad = ">=2.0.1"` of package `baz v0.1.0`
+           ... which satisfies dependency `baz = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+         previously selected package `bad v1.0.0`
+           ... which satisfies dependency `bad = "=1.0.0"` of package `bar v0.1.0`
+           ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
+       
+       failed to select a version for `bad` which could resolve this conflict
 
 "#]])
         .run();
@@ -2057,9 +2046,8 @@ fn set_both_dylib_and_cdylib_crate_types() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  library `foo` cannot set the crate type of both `dylib` and `cdylib`
+  |
+  = caused by: library `foo` cannot set the crate type of both `dylib` and `cdylib`
 
 "#]])
         .run();
@@ -2093,8 +2081,8 @@ fn self_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `test v0.0.0 ([ROOT]/foo)` depends on itself. Cycle:
-package `test v0.0.0 ([ROOT]/foo)`
-    ... which satisfies path dependency `test` of package `test v0.0.0 ([ROOT]/foo)`
+       package `test v0.0.0 ([ROOT]/foo)`
+           ... which satisfies path dependency `test` of package `test v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -2145,10 +2133,9 @@ fn missing_lib_and_bin() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  |
+  = caused by: no targets specified in the manifest
+               either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
 
 "#]])
         .run();
@@ -2723,16 +2710,14 @@ fn bad_cargo_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  TOML parse error at line 1, column 6
-    |
-  1 | this is not valid toml
-    |      ^
-  key with no value, expected `=`
+  |
+  = caused by: could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
+  = caused by: TOML parse error at line 1, column 6
+                 |
+               1 | this is not valid toml
+                 |      ^
+               key with no value, expected `=`
+               
 
 "#]])
         .run();
@@ -3054,9 +3039,8 @@ fn transitive_dependencies_not_available() {
 error[E0463]: can't find crate for `bbbbb`
 ...
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
-
-Caused by:
-  process didn't exit successfully: `rustc [..]` ([EXIT_STATUS]: 1)
+  |
+  = caused by: process didn't exit successfully: `rustc --crate-name foo --edition=2015 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=1e2b9fbed8cc006d -C extra-filename=-385fad4a6fb846cd --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps --extern aaaaa=[ROOT]/foo/target/debug/deps/libaaaaa-[HASH].rlib` ([EXIT_STATUS]: 1)
 
 "#]])
         .run();
@@ -3099,9 +3083,9 @@ fn cyclic_deps_rejected() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `a v0.0.1 ([ROOT]/foo/a)` depends on itself. Cycle:
-package `a v0.0.1 ([ROOT]/foo/a)`
-    ... which satisfies path dependency `a` of package `foo v0.0.1 ([ROOT]/foo)`
-    ... which satisfies path dependency `foo` of package `a v0.0.1 ([ROOT]/foo/a)`
+       package `a v0.0.1 ([ROOT]/foo/a)`
+           ... which satisfies path dependency `a` of package `foo v0.0.1 ([ROOT]/foo)`
+           ... which satisfies path dependency `foo` of package `a v0.0.1 ([ROOT]/foo/a)`
 
 "#]])
         .run();
@@ -3169,9 +3153,8 @@ fn dashes_in_crate_name_bad() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  library target names cannot contain hyphens: foo-bar
+  |
+  = caused by: library target names cannot contain hyphens: foo-bar
 
 "#]])
         .run();
@@ -3186,9 +3169,8 @@ fn rustc_env_var() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not execute process `rustc-that-does-not-exist -vV` (never executed)
-
-Caused by:
-  [..]
+  |
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -4033,8 +4015,8 @@ fn build_all_exclude_broken_glob() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot build glob pattern from `[*z`
-
-Caused by:
+  |
+  = caused by: Pattern syntax error near position 0: invalid range pattern
 ...
 
 "#]])
@@ -4240,8 +4222,8 @@ fn build_virtual_manifest_broken_glob() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot build glob pattern from `[*z`
-
-Caused by:
+  |
+  = caused by: Pattern syntax error near position 0: invalid range pattern
 ...
 
 "#]])
@@ -4617,9 +4599,8 @@ fn rustc_wrapper_from_path() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not execute process `wannabe_sccache rustc -vV` (never executed)
-
-Caused by:
-  [..]
+  |
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -4629,9 +4610,8 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not execute process `wannabe_sccache rustc -vV` (never executed)
-
-Caused by:
-  [..]
+  |
+  = caused by: [NOT_FOUND]
 
 "#]])
         .run();
@@ -4855,9 +4835,8 @@ fn no_bin_in_src_with_lib() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
+  |
+  = caused by: can't find `foo` bin at `src/bin/foo.rs` or `src/bin/foo/main.rs`. Please specify bin.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -4890,9 +4869,8 @@ fn inferred_bins_duplicate_name() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  found duplicate binary name bar, but all binary targets must have a unique name
+  |
+  = caused by: found duplicate binary name bar, but all binary targets must have a unique name
 
 "#]])
         .run();
@@ -5095,12 +5073,9 @@ fn building_a_dependent_crate_without_bin_should_fail() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] testless v0.1.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to parse manifest at `[ROOT]/home/.cargo/registry/src/-[HASH]/testless-0.1.0/Cargo.toml`
-
-Caused by:
-  can't find `a_bin` bin at `src/bin/a_bin.rs` or `src/bin/a_bin/main.rs`. Please specify bin.path if you want to use a non-default path.
+  |
+  = caused by: failed to parse manifest at `[ROOT]/home/.cargo/registry/src/-[HASH]/testless-0.1.0/Cargo.toml`
+  = caused by: can't find `a_bin` bin at `src/bin/a_bin.rs` or `src/bin/a_bin/main.rs`. Please specify bin.path if you want to use a non-default path.
 
 "#]])
         .run();
@@ -5373,8 +5348,8 @@ fn avoid_dev_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `baz` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.1.0 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -5495,8 +5470,8 @@ fn target_filters_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target named `ex` in default-run packages
-
-[HELP] a target with a similar name exists: `ex1`
+       
+       [HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();
@@ -5505,8 +5480,8 @@ fn target_filters_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no example target matches pattern `ex??` in default-run packages
-
-[HELP] a target with a similar name exists: `ex1`
+       
+       [HELP] a target with a similar name exists: `ex1`
 
 "#]])
         .run();
@@ -5618,9 +5593,8 @@ fn signal_display() {
 [COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [ERROR] could not compile `foo` (lib)
-
-Caused by:
-  process didn't exit successfully: `rustc [..]` (signal: 6, SIGABRT: process abort signal)
+  |
+  = caused by: process didn't exit successfully: `rustc --crate-name foo --edition=2015 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=55453278b0f49684 -C extra-filename=-4b0dee79e002e527 --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps --extern pm=[ROOT]/foo/target/debug/deps/libpm-[HASH].so` (signal: 6, SIGABRT: process abort signal)
 
 "#]])
         .with_status(101)
@@ -6187,9 +6161,8 @@ fn simple_terminal_width() {
 error[E0308][..]
 ...
 [ERROR] could not compile `foo` (lib) due to 1 previous error
-
-Caused by:
-  process didn't exit successfully: `rustc [..]` ([EXIT_STATUS]: 1)
+  |
+  = caused by: process didn't exit successfully: `rustc --crate-name foo --edition=2015 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --diagnostic-width=20 --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=88f4df7e68c96ebb -C extra-filename=-5ac581d057822bf6 --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps` ([EXIT_STATUS]: 1)
 
 "#]])
         .run();

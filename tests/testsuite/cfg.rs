@@ -179,9 +179,8 @@ fn bad_target_spec() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `4` as a cfg expression: unexpected character `4` in cfg, expected parens, a comma, an identifier, or a string
+  |
+  = caused by: failed to parse `4` as a cfg expression: unexpected character `4` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
@@ -210,9 +209,8 @@ fn bad_target_spec2() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `bar =` as a cfg expression: expected a string, but cfg expression ended
+  |
+  = caused by: failed to parse `bar =` as a cfg expression: expected a string, but cfg expression ended
 
 "#]])
         .run();
@@ -400,8 +398,8 @@ fn bad_cfg_discovery() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `rustc -vV` didn't have a line for `host:`, got:
-foo
-
+       foo
+       
 
 "#]])
         .run();
@@ -412,8 +410,8 @@ foo
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] malformed output when learning about crate-type bin information
-command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
-(no output received)
+       command was: `[ROOT]/compiler/target/debug/compiler - --crate-name ___ --print=file-names --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings`
+       (no output received)
 
 "#]])
         .run();
@@ -424,16 +422,16 @@ command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] output of --print=sysroot missing when learning about target-specific information from rustc
-command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
-
---- stdout
-___[EXE]
-lib___.rlib
+       command was: `[ROOT]/compiler/target/debug/compiler - --crate-name ___ --print=file-names --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings`
+       
+       --- stdout
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
-
+       
 
 "#]])
         .run();
@@ -444,17 +442,17 @@ lib___.rlib
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] output of --print=split-debuginfo missing when learning about target-specific information from rustc
-command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
-
---- stdout
-___[EXE]
-lib___.rlib
+       command was: `[ROOT]/compiler/target/debug/compiler - --crate-name ___ --print=file-names --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings`
+       
+       --- stdout
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]
-
+       
 
 "#]])
         .run();
@@ -465,20 +463,19 @@ lib___.rlib
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse the cfg from `rustc --print=cfg`, got:
-___[EXE]
-lib___.rlib
+       ___
+       lib___.rlib
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]___.[..]
 [..]
 [..],[..]
-___
-123
-
-
-Caused by:
-  failed to parse `123` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
+       ___
+       123
+       
+  |
+  = caused by: failed to parse `123` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
@@ -574,9 +571,8 @@ fn cfg_raw_idents_empty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `r#)` as a cfg expression: unexpected character `)` in cfg, expected parens, a comma, an identifier, or a string
+  |
+  = caused by: failed to parse `r#)` as a cfg expression: unexpected character `)` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
@@ -603,9 +599,8 @@ fn cfg_raw_idents_not_really() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `r#11)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
+  |
+  = caused by: failed to parse `r#11)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();

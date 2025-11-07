@@ -213,9 +213,8 @@ fn unknown_value() {
         .arg("build.warnings='forbid'")
         .with_stderr_data(str![[r#"
 [ERROR] error in --config cli option: could not load config key `build.warnings`
-
-Caused by:
-  unknown variant `forbid`, expected one of `warn`, `allow`, `deny`
+  |
+  = caused by: unknown variant `forbid`, expected one of `warn`, `allow`, `deny`
 
 "#]])
         .with_status(101)

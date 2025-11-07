@@ -34,13 +34,13 @@ fn gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `different-binary-name` is required
-
-  The package requires the Cargo feature called `different-binary-name`, but that feature is not stabilized in this version of Cargo ([..]).
-  Consider adding `cargo-features = ["different-binary-name"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#different-binary-name for more information about the status of this feature.
+  |
+  = caused by: feature `different-binary-name` is required
+               
+               The package requires the Cargo feature called `different-binary-name`, but that feature is not stabilized in this version of Cargo (1.92.0 (3e9b30d52 2025-10-08)).
+               Consider adding `cargo-features = ["different-binary-name"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+               See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#different-binary-name for more information about the status of this feature.
+               
 
 "#]])
         .run();

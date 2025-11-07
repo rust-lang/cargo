@@ -441,10 +441,10 @@ fn update_precise_mismatched() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `serde = "~1.2"`
-candidate versions found which didn't match: 1.6.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 1.6.0
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.0.1 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .with_status(101)
@@ -456,8 +456,8 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `serde` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .with_status(101)
@@ -986,9 +986,8 @@ fn precise_with_build_metadata() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid version format for precise version `0.1`
-
-Caused by:
-  unexpected end of input while parsing minor version number
+  |
+  = caused by: unexpected end of input while parsing minor version number
 
 "#]])
         .run();
@@ -998,8 +997,8 @@ Caused by:
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1018,8 +1017,8 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1638,7 +1637,7 @@ fn update_breaking_unstable() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `--breaking` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/12425 for more information about the `--breaking` flag.
+       See https://github.com/rust-lang/cargo/issues/12425 for more information about the `--breaking` flag.
 
 "#]])
         .run();
@@ -2266,9 +2265,8 @@ fn update_breaking_spec_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid package ID specification: `incompatible@foo`
-
-Caused by:
-  expected a version like "1.32"
+  |
+  = caused by: expected a version like "1.32"
 
 "#]])
         .run();
@@ -2741,11 +2739,10 @@ fn prefixed_v_in_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the version provided, `v1.0.1` is not a valid SemVer version
-
-[HELP] try changing the version to `1.0.1`
-
-Caused by:
-  unexpected character 'v' while parsing major version number
+       
+       [HELP] try changing the version to `1.0.1`
+  |
+  = caused by: unexpected character 'v' while parsing major version number
 
 "#]])
         .run();

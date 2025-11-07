@@ -22,9 +22,8 @@ fn bad_progress_config_unknown_when() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `term.progress.when`
-
-Caused by:
-  unknown variant `unknown`, expected one of `auto`, `never`, `always`
+  |
+  = caused by: unknown variant `unknown`, expected one of `auto`, `never`, `always`
 
 "#]])
         .run();

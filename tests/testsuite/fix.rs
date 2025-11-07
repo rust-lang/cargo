@@ -734,10 +734,10 @@ fn warns_about_dirty_working_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
-
-  * src/lib.rs (dirty)
-
-
+       
+         * src/lib.rs (dirty)
+       
+       
 
 "#]])
         .run();
@@ -755,10 +755,10 @@ fn warns_about_staged_working_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
-
-  * src/lib.rs (staged)
-
-
+       
+         * src/lib.rs (staged)
+       
+       
 
 "#]])
         .run();
@@ -776,11 +776,11 @@ fn errors_about_untracked_files() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
-
-  * Cargo.toml (dirty)
-  * src/ (dirty)
-
-
+       
+         * Cargo.toml (dirty)
+         * src/ (dirty)
+       
+       
 
 "#]])
         .run();

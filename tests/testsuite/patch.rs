@@ -1415,12 +1415,9 @@ fn non_crates_io() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  [patch] entry `some-other-source` should be a URL or registry name
-
-Caused by:
-  invalid url `some-other-source`: relative URL without a base
+  |
+  = caused by: [patch] entry `some-other-source` should be a URL or registry name
+  = caused by: invalid url `some-other-source`: relative URL without a base
 
 "#]])
         .run();
@@ -1454,9 +1451,8 @@ fn replace_with_crates_io() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
+  |
+  = caused by: patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
 
 "#]])
         .run();
@@ -1732,9 +1728,9 @@ fn cycle() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] cyclic package dependency: package `a v1.0.0 ([ROOT]/foo/a)` depends on itself. Cycle:
-package `a v1.0.0 ([ROOT]/foo/a)`
-    ... which satisfies dependency `a = "^1.0"` of package `b v1.0.0 ([ROOT]/foo/b)`
-    ... which satisfies dependency `b = "^1.0"` of package `a v1.0.0 ([ROOT]/foo/a)`
+       package `a v1.0.0 ([ROOT]/foo/a)`
+           ... which satisfies dependency `a = "^1.0"` of package `b v1.0.0 ([ROOT]/foo/b)`
+           ... which satisfies dependency `b = "^1.0"` of package `a v1.0.0 ([ROOT]/foo/a)`
 
 "#]])
         .run();
@@ -2165,15 +2161,12 @@ fn too_many_matches() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
-
-Caused by:
-  patch for `bar` in `registry `alternative`` resolved to more than one candidate
-  Found versions: 0.1.0, 0.1.1
-  Update the patch definition to select only one package.
-  For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
+  |
+  = caused by: patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+  = caused by: patch for `bar` in `registry `alternative`` resolved to more than one candidate
+               Found versions: 0.1.0, 0.1.1
+               Update the patch definition to select only one package.
+               For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
 
 "#]])
         .run();
@@ -2207,12 +2200,9 @@ fn no_matches() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
-
-Caused by:
-  The patch location `[ROOT]/foo/bar` does not appear to contain any packages matching the name `bar`.
+  |
+  = caused by: patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+  = caused by: The patch location `[ROOT]/foo/bar` does not appear to contain any packages matching the name `bar`.
 
 "#]])
         .run();
@@ -2246,13 +2236,10 @@ fn mismatched_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
-
-Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
-  Check that the version in the patch location is what you expect, and update the patch definition to match.
+  |
+  = caused by: patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+  = caused by: The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+               Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
         .run();
@@ -2356,13 +2343,10 @@ fn patch_walks_backwards_restricted() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
-
-Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
-  Check that the version in the patch location is what you expect, and update the patch definition to match.
+  |
+  = caused by: patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+  = caused by: The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+               Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
         .run();
@@ -2768,15 +2752,15 @@ fn patch_eq_conflict_panic() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `bar`.
-    ... required by package `foo v0.1.0 ([ROOT]/foo)`
-versions that meet the requirements `=0.1.1` are: 0.1.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `bar v0.1.0`
-    ... which satisfies dependency `bar = "=0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
-
-failed to select a version for `bar` which could resolve this conflict
+           ... required by package `foo v0.1.0 ([ROOT]/foo)`
+       versions that meet the requirements `=0.1.1` are: 0.1.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `bar v0.1.0`
+           ... which satisfies dependency `bar = "=0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+       
+       failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
@@ -2825,16 +2809,16 @@ fn mismatched_version2() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for `qux`.
-    ... required by package `bar v0.1.0`
-    ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
-versions that meet the requirements `=0.1.0-beta.1` are: 0.1.0-beta.1
-
-all possible versions conflict with previously selected packages.
-
-  previously selected package `qux v0.1.0-beta.2`
-    ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([ROOT]/foo)`
-
-failed to select a version for `qux` which could resolve this conflict
+           ... required by package `bar v0.1.0`
+           ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+       versions that meet the requirements `=0.1.0-beta.1` are: 0.1.0-beta.1
+       
+       all possible versions conflict with previously selected packages.
+       
+         previously selected package `qux v0.1.0-beta.2`
+           ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([ROOT]/foo)`
+       
+       failed to select a version for `qux` which could resolve this conflict
 
 "#]])
         .run();
@@ -2873,12 +2857,12 @@ fn mismatched_version_with_prerelease() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `prerelease-deps = "^0.1.0"`
-candidate versions found which didn't match: 0.1.1-pre1, 0.0.1
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
-if you are looking for the prerelease package it needs to be specified explicitly
-    prerelease-deps = { version = "0.1.1-pre1" }
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.1.1-pre1, 0.0.1
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
+       if you are looking for the prerelease package it needs to be specified explicitly
+           prerelease-deps = { version = "0.1.1-pre1" }
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();
@@ -2918,9 +2902,8 @@ fn from_config_empty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] [patch] entry `` should be a URL or registry name
-
-Caused by:
-  invalid url ``: relative URL without a base
+  |
+  = caused by: invalid url ``: relative URL without a base
 
 "#]])
         .run();
@@ -2956,12 +2939,9 @@ fn from_manifest_empty() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  [patch] entry `` should be a URL or registry name
-
-Caused by:
-  invalid url ``: relative URL without a base
+  |
+  = caused by: [patch] entry `` should be a URL or registry name
+  = caused by: invalid url ``: relative URL without a base
 
 "#]])
         .run();

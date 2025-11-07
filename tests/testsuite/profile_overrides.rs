@@ -277,7 +277,7 @@ fn profile_override_spec_multiple() {
         .with_stderr_data(str![[r#"
 ...
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([ROOT]/foo/bar)`
-found package specs: bar, bar@0.5.0
+       found package specs: bar, bar@0.5.0
 
 "#]])
         .run();

@@ -2082,9 +2082,8 @@ fn cargo_metadata_with_invalid_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  manifest is missing either a `[package]` or a `[workspace]`
+  |
+  = caused by: manifest is missing either a `[package]` or a `[workspace]`
 
 "#]])
         .run();

@@ -142,11 +142,11 @@ fn help_alias() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `empty-alias`
-
-[HELP] a command with a similar name exists: `empty-alias`
-
-[HELP] view all installed commands with `cargo --list`
-[HELP] find a package to install `empty-alias` with `cargo search cargo-empty-alias`
+       
+       [HELP] a command with a similar name exists: `empty-alias`
+       
+       [HELP] view all installed commands with `cargo --list`
+       [HELP] find a package to install `empty-alias` with `cargo search cargo-empty-alias`
 
 "#]])
         .run();

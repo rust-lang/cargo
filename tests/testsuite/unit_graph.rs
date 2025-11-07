@@ -12,8 +12,8 @@ fn gated() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `--unit-graph` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
-See https://github.com/rust-lang/cargo/issues/8002 for more information about the `--unit-graph` flag.
+       See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+       See https://github.com/rust-lang/cargo/issues/8002 for more information about the `--unit-graph` flag.
 
 "#]])
         .run();

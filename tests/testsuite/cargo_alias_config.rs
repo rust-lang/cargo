@@ -25,7 +25,7 @@ fn alias_incorrect_config_type() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid configuration for key `alias.b-cargo-test`
-expected a list, but found a integer for `alias.b-cargo-test` in [ROOT]/foo/.cargo/config.toml
+       expected a list, but found a integer for `alias.b-cargo-test` in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();
@@ -49,16 +49,14 @@ fn alias_malformed_config_string() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
-
-Caused by:
-  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
-
-Caused by:
-  TOML parse error at line 3, column 32
-    |
-  3 |                 b-cargo-test = `
-    |                                ^
-  string values must be quoted, expected literal string
+  |
+  = caused by: could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
+  = caused by: TOML parse error at line 3, column 32
+                 |
+               3 |                 b-cargo-test = `
+                 |                                ^
+               string values must be quoted, expected literal string
+               
 
 "#]])
         .run();
@@ -82,9 +80,8 @@ fn alias_malformed_config_list() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] error in [ROOT]/foo/.cargo/config.toml: failed to parse config at `alias.b-cargo-test[0]`
-
-Caused by:
-  invalid type: integer `1`, expected a string
+  |
+  = caused by: invalid type: integer `1`, expected a string
 
 "#]])
         .run();
@@ -424,8 +421,8 @@ fn weird_check() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] trailing arguments after built-in command `check` are unsupported: `--invalid_argument -some-other-argument`
-
-To pass the arguments to the subcommand, remove `--`
+       
+       To pass the arguments to the subcommand, remove `--`
 
 "#]])
         .run();

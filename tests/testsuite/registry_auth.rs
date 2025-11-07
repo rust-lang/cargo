@@ -54,13 +54,10 @@ fn requires_credential_provider() {
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
-
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  authenticated registries require a credential-provider to be configured
-  see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details
+  |
+  = caused by: unable to get packages from source
+  = caused by: authenticated registries require a credential-provider to be configured
+               see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details
 
 "#]])
         .run();
@@ -221,15 +218,12 @@ fn bad_environment_token_with_asymmetric_subject() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  token rejected for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
-  body:
-  Unauthorized message from server.
+  |
+  = caused by: token rejected for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:34357/index/config.json`, got 401
+               body:
+               Unauthorized message from server.
 
 "#]])
         .with_status(101)
@@ -256,15 +250,12 @@ fn bad_environment_token_with_asymmetric_incorrect_subject() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  token rejected for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
-  body:
-  Unauthorized message from server.
+  |
+  = caused by: token rejected for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:35529/index/config.json`, got 401
+               body:
+               Unauthorized message from server.
 
 "#]])
         .with_status(101)
@@ -294,15 +285,12 @@ fn bad_environment_token_with_incorrect_asymmetric() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  token rejected for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
-  body:
-  Unauthorized message from server.
+  |
+  = caused by: token rejected for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:40963/index/config.json`, got 401
+               body:
+               Unauthorized message from server.
 
 "#]])
         .with_status(101)
@@ -324,10 +312,9 @@ fn missing_token() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  |
+  = caused by: no token found for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .run();
@@ -348,13 +335,10 @@ fn missing_token_git() {
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
-
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  no token found for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  |
+  = caused by: unable to get packages from source
+  = caused by: no token found for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .run();
@@ -376,15 +360,12 @@ fn incorrect_token() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  token rejected for `alternative`, please run `cargo login --registry alternative`
-  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
-  body:
-  Unauthorized message from server.
+  |
+  = caused by: token rejected for `alternative`, please run `cargo login --registry alternative`
+               or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:32883/index/config.json`, got 401
+               body:
+               Unauthorized message from server.
 
 "#]])
         .run();
@@ -408,11 +389,10 @@ fn incorrect_token_git() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [ERROR] failed to download from `http://127.0.0.1:[..]/dl/bar/0.0.1/download`
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/0.0.1/download` (127.0.0.1), got 401
-  body:
-  Unauthorized message from server.
+  |
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:43991/dl/bar/0.0.1/download` (127.0.0.1), got 401
+               body:
+               Unauthorized message from server.
 
 "#]])
         .run();
@@ -435,12 +415,12 @@ fn anonymous_alt_registry() {
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [ERROR] no token found for `sparse+http://127.0.0.1:[..]/index/`
-consider setting up an alternate registry in Cargo's configuration
-as described by https://doc.rust-lang.org/cargo/reference/registries.html
-
-[registries]
-my-registry = { index = "sparse+http://127.0.0.1:[..]/index/" }
-
+       consider setting up an alternate registry in Cargo's configuration
+       as described by https://doc.rust-lang.org/cargo/reference/registries.html
+       
+       [registries]
+       my-registry = { index = "sparse+http://127.0.0.1:35857/index/" }
+       
 
 "#]])
         .run();
@@ -499,12 +479,9 @@ fn duplicate_index() {
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
-
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  multiple registries are configured with the same index url 'registry+[ROOTURL]/alternative-registry': alternative1, alternative2
+  |
+  = caused by: unable to get packages from source
+  = caused by: multiple registries are configured with the same index url 'registry+[ROOTURL]/alternative-registry': alternative1, alternative2
 
 "#]])
         .run();

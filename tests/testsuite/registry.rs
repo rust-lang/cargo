@@ -167,8 +167,8 @@ fn nonexistent_http() {
     nonexistent(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `nonexistent` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -178,8 +178,8 @@ fn nonexistent_git() {
     nonexistent(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `nonexistent` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -216,10 +216,10 @@ fn wrong_case_http() {
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       searched package name: `Init`
+       perhaps you meant:      init
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -229,10 +229,10 @@ fn wrong_case_git() {
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       searched package name: `Init`
+       perhaps you meant:      init
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -270,10 +270,10 @@ fn mis_hyphenated_http() {
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       searched package name: `mis_hyphenated`
+       perhaps you meant:      mis-hyphenated
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -283,10 +283,10 @@ fn mis_hyphenated_git() {
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       searched package name: `mis_hyphenated`
+       perhaps you meant:      mis-hyphenated
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -325,19 +325,19 @@ fn wrong_version_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = ">=1.0.0"`
-candidate versions found which didn't match: 0.0.2, 0.0.1
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.0.2, 0.0.1
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = ">=1.0.0"`
-candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
     );
@@ -349,19 +349,19 @@ fn wrong_version_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = ">=1.0.0"`
-candidate versions found which didn't match: 0.0.2, 0.0.1
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.0.2, 0.0.1
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = ">=1.0.0"`
-candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+       candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
+       perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
     );
@@ -411,9 +411,8 @@ fn bad_cksum_http() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to verify the checksum of `bad-cksum v0.0.1 (registry `dummy-registry`)`
+  |
+  = caused by: failed to verify the checksum of `bad-cksum v0.0.1 (registry `dummy-registry`)`
 
 "#]]);
 }
@@ -426,9 +425,8 @@ fn bad_cksum_git() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to verify the checksum of `bad-cksum v0.0.1 (registry `dummy-registry`)`
+  |
+  = caused by: failed to verify the checksum of `bad-cksum v0.0.1 (registry `dummy-registry`)`
 
 "#]]);
 }
@@ -468,8 +466,8 @@ fn update_registry_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `notyet` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -491,8 +489,8 @@ fn update_registry_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `notyet` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -548,11 +546,10 @@ fn package_with_path_deps_http() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `notyet` found
-  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-  required by package `foo v0.0.1 ([ROOT]/foo)`
+  |
+  = caused by: no matching package named `notyet` found
+               location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+               required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -577,11 +574,10 @@ fn package_with_path_deps_git() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [ERROR] failed to prepare local package for uploading
-
-Caused by:
-  no matching package named `notyet` found
-  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-  required by package `foo v0.0.1 ([ROOT]/foo)`
+  |
+  = caused by: no matching package named `notyet` found
+               location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+               required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -863,10 +859,10 @@ fn relying_on_a_yank_is_bad_http() {
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-  version 0.0.2 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.0.1`
-    ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.2 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.0.1`
+           ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -876,10 +872,10 @@ fn relying_on_a_yank_is_bad_git() {
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-  version 0.0.2 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.0.1`
-    ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.2 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.0.1`
+           ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
 }
@@ -923,9 +919,9 @@ fn yanks_in_lockfiles_are_ok_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "*"`
-  version 0.0.1 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.1 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
     );
@@ -941,9 +937,9 @@ fn yanks_in_lockfiles_are_ok_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "*"`
-  version 0.0.1 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.1 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
     );
@@ -994,9 +990,9 @@ fn yanks_in_lockfiles_are_ok_for_other_update_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "*"`
-  version 0.0.1 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.1 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -1018,9 +1014,9 @@ fn yanks_in_lockfiles_are_ok_for_other_update_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "*"`
-  version 0.0.1 is yanked
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+         version 0.0.1 is yanked
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
         str![[r#"
@@ -2205,11 +2201,11 @@ fn use_semver_package_incorrectly_http() {
     let _server = setup_http();
     use_semver_package_incorrectly(str![[r#"
 [ERROR] failed to select a version for the requirement `a = "^0.1"`
-candidate versions found which didn't match: 0.1.1-alpha.0
-location searched: [ROOT]/foo/a
-required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
-    a = { version = "0.1.1-alpha.0" }
+       candidate versions found which didn't match: 0.1.1-alpha.0
+       location searched: [ROOT]/foo/a
+       required by package `b v0.1.0 ([ROOT]/foo/b)`
+       if you are looking for the prerelease package it needs to be specified explicitly
+           a = { version = "0.1.1-alpha.0" }
 
 "#]]);
 }
@@ -2218,11 +2214,11 @@ if you are looking for the prerelease package it needs to be specified explicitl
 fn use_semver_package_incorrectly_git() {
     use_semver_package_incorrectly(str![[r#"
 [ERROR] failed to select a version for the requirement `a = "^0.1"`
-candidate versions found which didn't match: 0.1.1-alpha.0
-location searched: [ROOT]/foo/a
-required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
-    a = { version = "0.1.1-alpha.0" }
+       candidate versions found which didn't match: 0.1.1-alpha.0
+       location searched: [ROOT]/foo/a
+       required by package `b v0.1.0 ([ROOT]/foo/b)`
+       if you are looking for the prerelease package it needs to be specified explicitly
+           a = { version = "0.1.1-alpha.0" }
 
 "#]]);
 }
@@ -2432,9 +2428,9 @@ fn disallow_network_http() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `foo` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.5.0 ([ROOT]/foo)`
+       As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
 
 "#]])
         .run();
@@ -2464,9 +2460,9 @@ fn disallow_network_git() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `foo` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `bar v0.5.0 ([ROOT]/foo)`
+       As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
 
 "#]])
         .run();
@@ -2716,12 +2712,9 @@ fn bad_and_or_malicious_packages_rejected_http() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to unpack package `foo v0.2.0 (registry `dummy-registry`)`
-
-Caused by:
-  invalid tarball downloaded, contains a file at "foo-0.1.0/src/lib.rs" which isn't under "foo-0.2.0"
+  |
+  = caused by: failed to unpack package `foo v0.2.0 (registry `dummy-registry`)`
+  = caused by: invalid tarball downloaded, contains a file at "foo-0.1.0/src/lib.rs" which isn't under "foo-0.2.0"
 
 "#]]);
 }
@@ -2734,12 +2727,9 @@ fn bad_and_or_malicious_packages_rejected_git() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to unpack package `foo v0.2.0 (registry `dummy-registry`)`
-
-Caused by:
-  invalid tarball downloaded, contains a file at "foo-0.1.0/src/lib.rs" which isn't under "foo-0.2.0"
+  |
+  = caused by: failed to unpack package `foo v0.2.0 (registry `dummy-registry`)`
+  = caused by: invalid tarball downloaded, contains a file at "foo-0.1.0/src/lib.rs" which isn't under "foo-0.2.0"
 
 "#]]);
 }
@@ -2999,13 +2989,13 @@ fn invalid_json_lines_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
-  version 0.1.3 requires cargo 1.2345
-  version 0.1.4 requires a Cargo version that supports index version 1000000000
-  version 0.1.5's index entry is invalid
-  version 0.1.6 requires a Cargo version that supports index version 1000000000
-  version 0.1.7's index entry is invalid
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `a v0.5.0 ([ROOT]/foo)`
+         version 0.1.3 requires cargo 1.2345
+         version 0.1.4 requires a Cargo version that supports index version 1000000000
+         version 0.1.5's index entry is invalid
+         version 0.1.6 requires a Cargo version that supports index version 1000000000
+         version 0.1.7's index entry is invalid
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `a v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3014,13 +3004,13 @@ required by package `a v0.5.0 ([ROOT]/foo)`
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
-  version 0.1.3 requires cargo 1.2345
-  version 0.1.4 requires a Cargo version that supports index version 1000000000
-  version 0.1.5's index entry is invalid
-  version 0.1.6 requires a Cargo version that supports index version 1000000000
-  version 0.1.7's index entry is invalid
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `a v0.5.0 ([ROOT]/foo)`
+         version 0.1.3 requires cargo 1.2345
+         version 0.1.4 requires a Cargo version that supports index version 1000000000
+         version 0.1.5's index entry is invalid
+         version 0.1.6 requires a Cargo version that supports index version 1000000000
+         version 0.1.7's index entry is invalid
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `a v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3163,15 +3153,14 @@ fn registry_index_rejected_http() {
     registry_index_rejected(
         str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the `registry.index` config value is no longer supported
-  Use `[source]` replacement to alter the default index for crates.io.
+  |
+  = caused by: the `registry.index` config value is no longer supported
+               Use `[source]` replacement to alter the default index for crates.io.
 
 "#]],
         str![[r#"
 [ERROR] the `registry.index` config value is no longer supported
-Use `[source]` replacement to alter the default index for crates.io.
+       Use `[source]` replacement to alter the default index for crates.io.
 
 "#]],
     );
@@ -3182,15 +3171,14 @@ fn registry_index_rejected_git() {
     registry_index_rejected(
         str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the `registry.index` config value is no longer supported
-  Use `[source]` replacement to alter the default index for crates.io.
+  |
+  = caused by: the `registry.index` config value is no longer supported
+               Use `[source]` replacement to alter the default index for crates.io.
 
 "#]],
         str![[r#"
 [ERROR] the `registry.index` config value is no longer supported
-Use `[source]` replacement to alter the default index for crates.io.
+       Use `[source]` replacement to alter the default index for crates.io.
 
 "#]],
     );
@@ -3388,9 +3376,9 @@ fn unknown_index_version_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1.0"`
-  version 1.0.1 requires a Cargo version that supports index version 4294967295
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+         version 1.0.1 requires a Cargo version that supports index version 4294967295
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3399,9 +3387,9 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1.0"`
-  version 1.0.1 requires a Cargo version that supports index version 4294967295
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+         version 1.0.1 requires a Cargo version that supports index version 4294967295
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3437,9 +3425,9 @@ fn unknown_index_version_with_msrv_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1.0"`
-  version 1.0.1 requires cargo 1.2345
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+         version 1.0.1 requires cargo 1.2345
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -3501,15 +3489,10 @@ fn reach_max_unpack_size() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to unpack package `bar v0.0.1 (registry `dummy-registry`)`
-
-Caused by:
-  failed to iterate over archive
-
-Caused by:
-  maximum limit reached when reading
+  |
+  = caused by: failed to unpack package `bar v0.0.1 (registry `dummy-registry`)`
+  = caused by: failed to iterate over archive
+  = caused by: maximum limit reached when reading
 
 "#]])
         .run();
@@ -4034,8 +4017,8 @@ foo v0.1.0 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .with_status(101)
@@ -4128,8 +4111,8 @@ fn not_found_permutations() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `a-b_c` found
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -4174,7 +4157,7 @@ fn default_auth_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .with_status(101)
@@ -4185,7 +4168,7 @@ or use environment variable CARGO_REGISTRY_TOKEN
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+       or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .with_status(101)
@@ -4206,7 +4189,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] no token found for `alternative`, please run `cargo login --registry alternative`
-or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+       or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 "#]])
         .with_status(101)
@@ -4217,7 +4200,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] no token found, please run `cargo login --registry crates-io`
-or use environment variable CARGO_REGISTRY_TOKEN
+       or use environment variable CARGO_REGISTRY_TOKEN
 
 "#]])
         .with_status(101)
@@ -4277,21 +4260,16 @@ Please slow down
 body:
 Please slow down
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  download of 3/b/bar failed
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-  debug headers:
-  x-amz-cf-pop: SFO53-P2
-  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-  x-cache: Hit from cloudfront
-  body:
-  Please slow down
+  |
+  = caused by: failed to query replaced source registry `crates-io`
+  = caused by: download of 3/b/bar failed
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:38819/index/3/b/bar` (127.0.0.1), got 503
+               debug headers:
+               x-amz-cf-pop: SFO53-P2
+               x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+               x-cache: Hit from cloudfront
+               body:
+               Please slow down
 
 "#]])
         .run();
@@ -4342,15 +4320,14 @@ Please slow down
 body:
 Please slow down
 [ERROR] failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`
-
-Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-  debug headers:
-  x-amz-cf-pop: SFO53-P2
-  x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
-  x-cache: Hit from cloudfront
-  body:
-  Please slow down
+  |
+  = caused by: failed to get successful HTTP response from `http://127.0.0.1:43263/dl/bar/1.0.0/download` (127.0.0.1), got 503
+               debug headers:
+               x-amz-cf-pop: SFO53-P2
+               x-amz-cf-id: vEc3osJrCAXVaciNnF4Vev-hZFgnYwmNZtxMKRJ5bF6h9FTOtbTMnA==
+               x-cache: Hit from cloudfront
+               body:
+               Please slow down
 
 "#]])
         .run();
@@ -4646,9 +4623,9 @@ fn builtin_source_replacement_no_vendor_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [ERROR] failed to select a version for the requirement `dep = "^0.2.0"`
-candidate versions found which didn't match: 0.1.0
-location searched: crates.io index
-required by package `foo v0.0.1 ([ROOT]/foo)`
+       candidate versions found which didn't match: 0.1.0
+       location searched: crates.io index
+       required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();

@@ -31,9 +31,9 @@ fn gated_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `trim-paths` is required
+  |
+  = caused by: feature `trim-paths` is required
+               
 ...
 "#]])
         .run();
@@ -57,9 +57,9 @@ fn gated_config_toml() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] config profile `dev` is not valid (defined in `[ROOT]/foo/.cargo/config.toml`)
-
-Caused by:
-  feature `trim-paths` is required
+  |
+  = caused by: feature `trim-paths` is required
+               
 ...
 "#]])
         .run();

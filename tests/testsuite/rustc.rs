@@ -69,7 +69,7 @@ fn fails_when_trying_to_build_main_and_lib_with_args() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
-the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target
+       the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target
 
 "#]])
         .run();
@@ -108,7 +108,7 @@ fn fails_with_args_to_all_binaries() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
-the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target
+       the package by passing, e.g., `--lib` or `--bin NAME` to specify a single target
 
 "#]])
         .run();
@@ -127,7 +127,7 @@ fn fails_with_crate_type_to_multi_binaries() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crate types to rustc can only be passed to one target, consider filtering
-the package by passing, e.g., `--lib` or `--example` to specify a single target
+       the package by passing, e.g., `--lib` or `--example` to specify a single target
 
 "#]])
         .run();
@@ -162,7 +162,7 @@ fn fails_with_crate_type_to_multi_examples() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crate types to rustc can only be passed to one target, consider filtering
-the package by passing, e.g., `--lib` or `--example` to specify a single target
+       the package by passing, e.g., `--lib` or `--example` to specify a single target
 
 "#]])
         .run();
@@ -176,7 +176,7 @@ fn fails_with_crate_type_to_binary() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] crate types can only be specified for libraries and example libraries.
-Binaries, tests, and benchmarks are always the `bin` crate type
+       Binaries, tests, and benchmarks are always the `bin` crate type
 
 "#]])
         .run();
@@ -553,8 +553,8 @@ fn fail_with_bad_bin_no_package() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no bin target named `main`
-[HELP] available bin targets:
-    foo
+       [HELP] available bin targets:
+           foo
 ...
 
 "#]])

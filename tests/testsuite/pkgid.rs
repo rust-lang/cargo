@@ -53,9 +53,8 @@ path+[ROOTURL]/foo#0.1.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid package ID specification: `./Cargo.toml`
-
-Caused by:
-  package ID specification `./Cargo.toml` looks like a file path, maybe try [ROOTURL]/foo/Cargo.toml
+  |
+  = caused by: package ID specification `./Cargo.toml` looks like a file path, maybe try [ROOTURL]/foo/Cargo.toml
 
 "#]])
         .run();
@@ -65,11 +64,10 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid package ID specification: `./bar`
-
-[HELP] a package with a similar name exists: `bar`
-
-Caused by:
-  package ID specification `./bar` looks like a file path, maybe try [ROOTURL]/foo/bar
+       
+       [HELP] a package with a similar name exists: `bar`
+  |
+  = caused by: package ID specification `./bar` looks like a file path, maybe try [ROOTURL]/foo/bar
 
 "#]])
         .run();
@@ -109,9 +107,9 @@ registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `https://example.com/crates-io` did not match any packages
-[HELP] there are similar package ID specifications:
-
-  crates-io@0.1.0
+       [HELP] there are similar package ID specifications:
+       
+         crates-io@0.1.0
 
 "#]])
         .run();
@@ -121,8 +119,8 @@ registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `crates_io` did not match any packages
-
-[HELP] a package with a similar name exists: `crates-io`
+       
+       [HELP] a package with a similar name exists: `crates-io`
 
 "#]])
         .run();
@@ -164,9 +162,9 @@ registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] There are multiple `two-ver` packages in your project, and the specification `two-ver@0` is ambiguous.
-Please re-run this command with one of the following specifications:
-  two-ver@0.1.0
-  two-ver@0.2.0
+       Please re-run this command with one of the following specifications:
+         two-ver@0.1.0
+         two-ver@0.2.0
 
 "#]])
         .run();
@@ -184,9 +182,9 @@ registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] There are multiple `two-ver` packages in your project, and the specification `two-ver` is ambiguous.
-Please re-run this command with one of the following specifications:
-  two-ver@0.1.0
-  two-ver@0.2.0
+       Please re-run this command with one of the following specifications:
+         two-ver@0.1.0
+         two-ver@0.2.0
 
 "#]])
         .run();
@@ -196,10 +194,10 @@ Please re-run this command with one of the following specifications:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] package ID specification `two-ver@0.3.0` did not match any packages
-[HELP] there are similar package ID specifications:
-
-  two-ver@0.1.0
-  two-ver@0.2.0
+       [HELP] there are similar package ID specifications:
+       
+         two-ver@0.1.0
+         two-ver@0.2.0
 
 "#]])
         .run();
@@ -279,9 +277,9 @@ foo v0.1.0 ([ROOT]/foo)
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
-Please re-run this command with one of the following specifications:
-  git+[ROOTURL]/xyz?rev=[..]#0.5.0
-  git+[ROOTURL]/xyz?rev=[..]#0.5.0
+       Please re-run this command with one of the following specifications:
+         git+[ROOTURL]/xyz?rev=135f6326542edb0c4570205cea6311f92cdda2cc#0.5.0
+         git+[ROOTURL]/xyz?rev=bf1456b1288387bf91f62bb5222b4ffed00edfb0#0.5.0
 
 "#]])
         .run();

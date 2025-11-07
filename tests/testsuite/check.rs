@@ -1118,9 +1118,8 @@ fn error_manifest_with_project_on_2024() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  `[project]` is not supported as of the 2024 Edition, please use `[package]`
+  |
+  = caused by: `[project]` is not supported as of the 2024 Edition, please use `[package]`
 
 "#]])
         .run();

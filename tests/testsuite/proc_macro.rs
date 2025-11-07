@@ -456,9 +456,8 @@ fn proc_macro_crate_type_multiple() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  cannot mix `proc-macro` crate type with others
+  |
+  = caused by: cannot mix `proc-macro` crate type with others
 
 "#]])
         .with_status(101)
