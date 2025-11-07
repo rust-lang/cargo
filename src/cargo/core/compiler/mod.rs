@@ -52,6 +52,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 
 use std::borrow::Cow;
+use std::cell::OnceCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -66,7 +67,6 @@ use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anyhow::{Context as _, Error};
 use cargo_platform::{Cfg, Platform};
 use itertools::Itertools;
-use lazycell::LazyCell;
 use regex::Regex;
 use tracing::{debug, instrument, trace};
 
@@ -95,6 +95,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
+use crate::util::OnceExt;
 use crate::util::context::WarningHandling;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
@@ -1897,7 +1898,7 @@ struct OutputOptions {
     /// is fresh. The file is created lazily so that in the normal case, lots
     /// of empty files are not created. If this is None, the output will not
     /// be cached (such as when replaying cached messages).
-    cache_cell: Option<(PathBuf, LazyCell<File>)>,
+    cache_cell: Option<(PathBuf, OnceCell<File>)>,
     /// If `true`, display any diagnostics.
     /// Other types of JSON messages are processed regardless
     /// of the value of this flag.
@@ -1917,7 +1918,7 @@ impl OutputOptions {
         let path = build_runner.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
-        let cache_cell = Some((path, LazyCell::new()));
+        let cache_cell = Some((path, OnceCell::new()));
         let show_diagnostics =
             build_runner.bcx.gctx.warning_handling().unwrap_or_default() != WarningHandling::Allow;
         OutputOptions {

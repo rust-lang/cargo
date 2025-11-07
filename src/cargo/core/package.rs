@@ -1,3 +1,4 @@
+use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -12,7 +13,6 @@ use anyhow::Context as _;
 use cargo_util_schemas::manifest::{Hints, RustVersion};
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
-use lazycell::LazyCell;
 use semver::Version;
 use serde::Serialize;
 use tracing::debug;
@@ -287,7 +287,7 @@ impl hash::Hash for Package {
 /// This is primarily used to convert a set of `PackageId`s to `Package`s. It
 /// will download as needed, or used the cached download if available.
 pub struct PackageSet<'gctx> {
-    packages: HashMap<PackageId, LazyCell<Package>>,
+    packages: HashMap<PackageId, OnceCell<Package>>,
     sources: RefCell<SourceMap<'gctx>>,
     gctx: &'gctx GlobalContext,
     multi: Multi,
@@ -408,7 +408,7 @@ impl<'gctx> PackageSet<'gctx> {
         Ok(PackageSet {
             packages: package_ids
                 .iter()
-                .map(|&id| (id, LazyCell::new()))
+                .map(|&id| (id, OnceCell::new()))
                 .collect(),
             sources: RefCell::new(sources),
             gctx,
@@ -423,7 +423,7 @@ impl<'gctx> PackageSet<'gctx> {
     }
 
     pub fn packages(&self) -> impl Iterator<Item = &Package> {
-        self.packages.values().filter_map(|p| p.borrow())
+        self.packages.values().filter_map(|p| p.get())
     }
 
     pub fn enable_download<'a>(&'a self) -> CargoResult<Downloads<'a, 'gctx>> {
@@ -457,7 +457,7 @@ impl<'gctx> PackageSet<'gctx> {
     }
 
     pub fn get_one(&self, id: PackageId) -> CargoResult<&Package> {
-        if let Some(pkg) = self.packages.get(&id).and_then(|slot| slot.borrow()) {
+        if let Some(pkg) = self.packages.get(&id).and_then(|slot| slot.get()) {
             return Ok(pkg);
         }
         Ok(self.get_many(Some(id))?.remove(0))
@@ -700,7 +700,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
             .packages
             .get(&id)
             .ok_or_else(|| internal(format!("couldn't find `{}` in package set", id)))?;
-        if let Some(pkg) = slot.borrow() {
+        if let Some(pkg) = slot.get() {
             return Ok(Some(pkg));
         }
 
@@ -717,8 +717,8 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
         let (url, descriptor, authorization) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
-                assert!(slot.fill(pkg).is_ok());
-                return Ok(Some(slot.borrow().unwrap()));
+                assert!(slot.set(pkg).is_ok());
+                return Ok(Some(slot.get().unwrap()));
             }
             MaybePackage::Download {
                 url,
@@ -941,8 +941,8 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
             .set(self.next_speed_check.get() + finish_dur);
 
         let slot = &self.set.packages[&dl.id];
-        assert!(slot.fill(pkg).is_ok());
-        Ok(slot.borrow().unwrap())
+        assert!(slot.set(pkg).is_ok());
+        Ok(slot.get().unwrap())
     }
 
     fn enqueue(&mut self, dl: Download<'gctx>, handle: Easy) -> CargoResult<()> {

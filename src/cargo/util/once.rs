@@ -10,6 +10,11 @@ pub trait OnceExt {
     where
         F: FnOnce() -> Result<Self::T, E>;
 
+    /// This might run `f` multiple times if different threads start initializing at once.
+    fn try_borrow_mut_with<F, E>(&mut self, f: F) -> Result<&mut Self::T, E>
+    where
+        F: FnOnce() -> Result<Self::T, E>;
+
     fn replace(&mut self, new_value: Self::T) -> Option<Self::T>;
 
     fn filled(&self) -> bool;
@@ -35,6 +40,25 @@ impl<T> OnceExt for std::sync::OnceLock<T> {
         // thread.
         let _ = self.set(value);
         Ok(self.get().unwrap())
+    }
+
+    fn try_borrow_mut_with<F, E>(&mut self, f: F) -> Result<&mut T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+    {
+        let value = if let Some(value) = self.take() {
+            value
+        } else {
+            // This is not how the unstable `OnceLock::get_or_try_init` works. That only starts `f` if
+            // no other `f` is executing and the value is not initialized. However, correctly implementing that is
+            // hard (one has properly handle panics in `f`) and not doable with the stable API of `OnceLock`.
+            f()?
+        };
+        // Another thread might have initialized `self` since we checked that `self.get()` returns `None`. If this is the case, `self.set()`
+        // returns an error. We ignore it and return the value set by the other
+        // thread.
+        let _ = self.set(value);
+        Ok(self.get_mut().unwrap())
     }
 
     fn replace(&mut self, new_value: T) -> Option<T> {
@@ -72,6 +96,25 @@ impl<T> OnceExt for std::cell::OnceCell<T> {
         // thread.
         let _ = self.set(value);
         Ok(self.get().unwrap())
+    }
+
+    fn try_borrow_mut_with<F, E>(&mut self, f: F) -> Result<&mut T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+    {
+        let value = if let Some(value) = self.take() {
+            value
+        } else {
+            // This is not how the unstable `OnceLock::get_or_try_init` works. That only starts `f` if
+            // no other `f` is executing and the value is not initialized. However, correctly implementing that is
+            // hard (one has properly handle panics in `f`) and not doable with the stable API of `OnceLock`.
+            f()?
+        };
+        // Another thread might have initialized `self` since we checked that `self.get()` returns `None`. If this is the case, `self.set()`
+        // returns an error. We ignore it and return the value set by the other
+        // thread.
+        let _ = self.set(value);
+        Ok(self.get_mut().unwrap())
     }
 
     fn replace(&mut self, new_value: T) -> Option<T> {
