@@ -43,7 +43,8 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .after_help(color_print::cstr!(
-            "Run `<bright-cyan,bold>cargo help run</>` for more detailed information.\n"
+            "Run `<bright-cyan,bold>cargo help run</>` for more detailed information.\n\
+             To pass `--help` to the specified binary, use `<bright-cyan,bold>-- --help</>`.\n",
         ))
 }
 
