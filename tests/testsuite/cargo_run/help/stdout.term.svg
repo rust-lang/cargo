@@ -1,7 +1,7 @@
-<svg width="827px" height="938px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="956px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -120,7 +120,9 @@
 </tspan>
     <tspan x="10px" y="910px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help run</tspan><tspan class="bold">` for more detailed information.</tspan>
 </tspan>
-    <tspan x="10px" y="928px">
+    <tspan x="10px" y="928px"><tspan class="bold">To pass `--help` to the specified binary, use `</tspan><tspan class="fg-bright-cyan bold">-- --help</tspan><tspan class="bold">`.</tspan>
+</tspan>
+    <tspan x="10px" y="946px">
 </tspan>
   </text>
 
