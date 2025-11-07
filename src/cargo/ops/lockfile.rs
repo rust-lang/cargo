@@ -53,13 +53,17 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     }
 
     if let Some(locked_flag) = ws.gctx().locked_flag() {
+        let lockfile_path = lock_root.as_path_unlocked().join(LOCKFILE_NAME);
+        let action = if lockfile_path.exists() {
+            "updated"
+        } else {
+            "created"
+        };
+        let lockfile_path = lockfile_path.display();
         anyhow::bail!(
-            "the lock file {} needs to be updated but {} was passed to prevent this\n\
-             If you want to try to generate the lock file without accessing the network, \
-             remove the {} flag and use --offline instead.",
-            lock_root.as_path_unlocked().join(LOCKFILE_NAME).display(),
-            locked_flag,
-            locked_flag
+            "the lock file {lockfile_path} needs to be {action} but {locked_flag} was passed to prevent this\n\
+             help: to generate the lock file without accessing the network, \
+             remove the {locked_flag} flag and use --offline instead."
         );
     }
 
