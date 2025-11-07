@@ -554,7 +554,7 @@ fn non_local_build_script() {
 }
 
 #[cargo_test]
-fn trailing_separator_after_package_root_build_script() {
+fn no_trailing_separator_after_package_root_build_script() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -582,14 +582,14 @@ fn trailing_separator_after_package_root_build_script() {
     assert_e2e().eq(
         &contents,
         str![[r#"
-[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/ [ROOT]/foo/build.rs [ROOT]/foo/src/main.rs
+[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo [ROOT]/foo/build.rs [ROOT]/foo/src/main.rs
 
 "#]],
     );
 }
 
 #[cargo_test(nightly, reason = "proc_macro::tracked_path is unstable")]
-fn trailing_separator_after_package_root_proc_macro() {
+fn no_trailing_separator_after_package_root_proc_macro() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -647,7 +647,7 @@ fn trailing_separator_after_package_root_proc_macro() {
     assert_e2e().eq(
         &contents,
         str![[r#"
-[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/ [ROOT]/foo/pm/src/lib.rs [ROOT]/foo/src/main.rs
+[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo [ROOT]/foo/pm/src/lib.rs [ROOT]/foo/src/main.rs
 
 "#]],
     );

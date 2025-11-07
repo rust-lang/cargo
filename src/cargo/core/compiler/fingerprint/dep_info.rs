@@ -503,11 +503,19 @@ fn make_absolute_path(
     build_root: &Path,
     path: PathBuf,
 ) -> PathBuf {
-    match ty {
-        DepInfoPathType::PackageRootRelative => pkg_root.join(path),
-        // N.B. path might be absolute here in which case the join will have no effect
-        DepInfoPathType::BuildRootRelative => build_root.join(path),
+    let relative_to = match ty {
+        DepInfoPathType::PackageRootRelative => pkg_root,
+        // N.B. path might be absolute here in which case the join below will have no effect
+        DepInfoPathType::BuildRootRelative => build_root,
+    };
+
+    if path.as_os_str().is_empty() {
+        // Joining with an empty path causes Rust to add a trailing path separator. On Windows, this
+        // would add an invalid trailing backslash to the .d file.
+        return relative_to.to_path_buf();
     }
+
+    relative_to.join(path)
 }
 
 /// Some algorithms are here to ensure compatibility with possible rustc outputs.
