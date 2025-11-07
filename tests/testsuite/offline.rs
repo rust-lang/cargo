@@ -768,7 +768,7 @@ fn offline_and_frozen_and_no_lock() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be updated but --frozen was passed to prevent this
-If you want to try to generate the lock file without accessing the network, remove the --frozen flag and use --offline instead.
+[HELP] to generate the lock file without accessing the network, remove the --frozen flag and use --offline instead.
 
 "#]])
         .run();
@@ -781,7 +781,7 @@ fn offline_and_locked_and_no_frozen() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be updated but --locked was passed to prevent this
-If you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+[HELP] to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
 
 "#]])
         .run();
