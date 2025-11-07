@@ -132,6 +132,24 @@ pub use schema::*;
 
 use super::auth::RegistryConfig;
 
+/// List of which configuration lists cannot be merged.
+///
+/// Instead of merging,
+/// the higher priority list should replaces the lower priority list.
+///
+/// ## What kind of config is non-mergeable
+///
+/// The rule of thumb is that if a config is a path of a program,
+/// it should be added to this list.
+const NON_MERGEABLE_LISTS: &[&str] = &[
+    "credential-alias.*",
+    "doc.browser",
+    "host.runner",
+    "registries.*.credential-provider",
+    "registry.credential-provider",
+    "target.*.runner",
+];
+
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
@@ -1007,15 +1025,33 @@ impl GlobalContext {
             return Ok(());
         };
 
-        if is_nonmergable_list(&key) {
-            output.clear();
+        let env_def = Definition::Environment(key.as_env_key().to_string());
+
+        if is_nonmergeable_list(&key) {
+            assert!(
+                output
+                    .windows(2)
+                    .all(|cvs| cvs[0].definition() == cvs[1].definition()),
+                "non-mergeable list must have only one definition: {output:?}",
+            );
+
+            // Keep existing config if higher priority than env (e.g., --config CLI),
+            // otherwise clear for env
+            if output
+                .first()
+                .map(|o| o.definition() > &env_def)
+                .unwrap_or_default()
+            {
+                return Ok(());
+            } else {
+                output.clear();
+            }
         }
 
-        let def = Definition::Environment(key.as_env_key().to_string());
         if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
-                ConfigError::new(format!("could not parse TOML list: {}", e), def.clone())
+                ConfigError::new(format!("could not parse TOML list: {}", e), env_def.clone())
             })?;
             let values = toml_v.as_array().expect("env var was not array");
             for value in values {
@@ -1024,16 +1060,16 @@ impl GlobalContext {
                 let s = value.as_str().ok_or_else(|| {
                     ConfigError::new(
                         format!("expected string, found {}", value.type_str()),
-                        def.clone(),
+                        env_def.clone(),
                     )
                 })?;
-                output.push(CV::String(s.to_string(), def.clone()))
+                output.push(CV::String(s.to_string(), env_def.clone()))
             }
         } else {
             output.extend(
                 env_val
                     .split_whitespace()
-                    .map(|s| CV::String(s.to_string(), def.clone())),
+                    .map(|s| CV::String(s.to_string(), env_def.clone())),
             );
         }
         output.sort_by(|a, b| a.definition().cmp(b.definition()));
@@ -2194,7 +2230,7 @@ impl ConfigValue {
         let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
-                if is_nonmergable_list(&parts) {
+                if is_nonmergeable_list(&parts) {
                     // Use whichever list is higher priority.
                     if force || is_higher_priority {
                         mem::swap(new, old);
@@ -2342,15 +2378,8 @@ impl ConfigValue {
     }
 }
 
-/// List of which configuration lists cannot be merged.
-/// Instead of merging, these the higher priority list replaces the lower priority list.
-fn is_nonmergable_list(key: &ConfigKey) -> bool {
-    key.matches("registry.credential-provider")
-        || key.matches("registries.*.credential-provider")
-        || key.matches("target.*.runner")
-        || key.matches("host.runner")
-        || key.matches("credential-alias.*")
-        || key.matches("doc.browser")
+fn is_nonmergeable_list(key: &ConfigKey) -> bool {
+    NON_MERGEABLE_LISTS.iter().any(|l| key.matches(l))
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
