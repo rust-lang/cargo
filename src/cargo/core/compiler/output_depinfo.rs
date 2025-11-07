@@ -84,9 +84,18 @@ fn add_deps_for_unit(
                 .get(metadata)
             {
                 for path in &output.rerun_if_changed {
-                    // The paths we have saved from the unit are of arbitrary relativeness and may be
-                    // relative to the crate root of the dependency.
-                    let path = unit.pkg.root().join(path);
+                    let package_root = unit.pkg.root();
+
+                    let path = if path.as_os_str().is_empty() {
+                        // Joining with an empty path causes Rust to add a trailing path separator.
+                        // On Windows, this would add an invalid trailing backslash to the .d file.
+                        package_root.to_path_buf()
+                    } else {
+                        // The paths we have saved from the unit are of arbitrary relativeness and
+                        // may be relative to the crate root of the dependency.
+                        package_root.join(path)
+                    };
+
                     deps.insert(path);
                 }
             }
