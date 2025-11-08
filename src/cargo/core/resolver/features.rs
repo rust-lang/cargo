@@ -862,6 +862,11 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
+                let proc_macro = self
+                    .resolve
+                    .summary(dep_id)
+                    .proc_macro()
+                    .unwrap_or_else(|| self.has_proc_macro_lib(dep_id));
                 let deps = deps
                     .iter()
                     .filter(|dep| {
@@ -907,10 +912,9 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         // for various targets which are either specified in the manifest
                         // or on the cargo command-line.
                         let lib_fk = if fk == FeaturesFor::default() {
-                            (self.track_for_host
-                                && (dep.is_build() || self.has_proc_macro_lib(dep_id)))
-                            .then(|| FeaturesFor::HostDep)
-                            .unwrap_or_default()
+                            (self.track_for_host && (dep.is_build() || proc_macro))
+                                .then(|| FeaturesFor::HostDep)
+                                .unwrap_or_default()
                         } else {
                             fk
                         };
