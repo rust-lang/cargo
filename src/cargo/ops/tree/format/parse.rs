@@ -3,6 +3,7 @@
 use std::iter;
 use std::str;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum RawChunk<'a> {
     /// Raw text to include in the output.
     Text(&'a str),
@@ -119,5 +120,105 @@ impl<'a> Iterator for Parser<'a> {
             Some(&(i, _)) => Some(self.text(i)),
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Parser, RawChunk};
+
+    #[test]
+    fn plain_text() {
+        let chunks: Vec<_> = Parser::new("Hello World").collect();
+        assert_eq!(chunks, vec![RawChunk::Text("Hello World")]);
+    }
+
+    #[test]
+    fn basic_argument() {
+        let chunks: Vec<_> = Parser::new("{pkg}").collect();
+        assert_eq!(chunks, vec![RawChunk::Argument("pkg")]);
+    }
+
+    #[test]
+    fn mixed_content() {
+        let chunks: Vec<_> = Parser::new("Package {p} version:{v}").collect();
+        assert_eq!(
+            chunks,
+            vec![
+                RawChunk::Text("Package "),
+                RawChunk::Argument("p"),
+                RawChunk::Text(" version:"),
+                RawChunk::Argument("v"),
+            ]
+        );
+    }
+
+    #[test]
+    fn escaped_braces() {
+        let chunks: Vec<_> = Parser::new("{{text}} in {{braces}}").collect();
+        assert_eq!(
+            chunks,
+            vec![
+                RawChunk::Text("{"),
+                RawChunk::Text("text"),
+                RawChunk::Text("}"),
+                RawChunk::Text(" in "),
+                RawChunk::Text("{"),
+                RawChunk::Text("braces"),
+                RawChunk::Text("}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn unclosed_brace() {
+        let chunks: Vec<_> = Parser::new("{unclosed").collect();
+        assert_eq!(chunks, vec![RawChunk::Error("expected '}'")])
+    }
+
+    #[test]
+    fn unexpected_close_brace() {
+        let chunks: Vec<_> = Parser::new("unexpected}").collect();
+        assert_eq!(
+            chunks,
+            vec![
+                RawChunk::Text("unexpected"),
+                RawChunk::Error("unexpected '}'"),
+            ]
+        );
+    }
+
+    #[test]
+    fn empty_argument() {
+        let chunks: Vec<_> = Parser::new("{}").collect();
+        assert_eq!(chunks, vec![RawChunk::Argument("")]);
+    }
+
+    #[test]
+    fn invalid_argument_chars() {
+        let chunks: Vec<_> = Parser::new("{a-b} {123}").collect();
+        assert_eq!(chunks, vec![RawChunk::Error("expected '}'")]);
+    }
+
+    #[test]
+    fn complex_format() {
+        let format = "Pkg{{name}}: {p} [{v}] (License: {l})";
+        let chunks: Vec<_> = Parser::new(format).collect();
+        assert_eq!(
+            chunks,
+            vec![
+                RawChunk::Text("Pkg"),
+                RawChunk::Text("{"),
+                RawChunk::Text("name"),
+                RawChunk::Text("}"),
+                RawChunk::Text(": "),
+                RawChunk::Argument("p"),
+                RawChunk::Text(" ["),
+                RawChunk::Argument("v"),
+                RawChunk::Text("] (License: "),
+                RawChunk::Argument("l"),
+                RawChunk::Text(")"),
+            ]
+        );
     }
 }
