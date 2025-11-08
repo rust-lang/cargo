@@ -943,7 +943,6 @@ fn template_workspace_path_hash_should_handle_symlink() {
 
     p.root().join("target").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target/CACHEDIR.TAG
-[ROOT]/foo/target/debug/.cargo-lock
 
 "#]]);
 
@@ -978,7 +977,6 @@ fn template_workspace_path_hash_should_handle_symlink() {
 
     p.root().join("target").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target/CACHEDIR.TAG
-[ROOT]/foo/target/debug/.cargo-lock
 
 "#]]);
 
