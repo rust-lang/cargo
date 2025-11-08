@@ -1684,3 +1684,28 @@ fn pkgid_querystring_works() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn check_build_should_not_output_files_to_artifact_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("check").enable_mac_dsym().run();
+
+    p.root()
+        .join("target-dir")
+        .assert_build_dir_layout(str![[r#"
+[ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/debug/.cargo-lock
+
+"#]]);
+}
