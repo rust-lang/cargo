@@ -1709,3 +1709,13 @@ fn check_build_should_not_output_files_to_artifact_dir() {
 
 "#]]);
 }
+
+#[cargo_test]
+fn check_build_should_lock_artifact_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .build();
+
+    p.cargo("check").enable_mac_dsym().run();
+    assert!(p.root().join("target/debug/.cargo-lock").exists());
+}
