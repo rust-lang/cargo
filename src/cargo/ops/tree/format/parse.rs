@@ -24,9 +24,9 @@ pub enum RawChunk<'a> {
 /// (and optionally source), and the `{l}` will be the license from
 /// `Cargo.toml`.
 ///
-/// Substitutions are alphabetic characters between curly braces, like `{p}`
-/// or `{foo}`. The actual interpretation of these are done in the `Pattern`
-/// struct.
+/// Substitutions are alphabetic characters or hyphens between curly braces,
+/// like `{p}`, {foo} or `{bar-baz}`. The actual interpretation of these is
+/// done in the `Pattern` struct.
 ///
 /// Bare curly braces can be included in the output with double braces like
 /// `{{` will include a single `{`, similar to Rust's format strings.
@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
 
         loop {
             match self.it.peek() {
-                Some(&(_, ch)) if ch.is_alphanumeric() => {
+                Some(&(_, ch)) if ch.is_alphanumeric() || ch == '-' => {
                     self.it.next();
                 }
                 Some(&(end, _)) => return &self.s[start..end],
@@ -171,6 +171,12 @@ mod tests {
     }
 
     #[test]
+    fn hyphenated_argument() {
+        let chunks: Vec<_> = Parser::new("{foo-bar}").collect();
+        assert_eq!(chunks, vec![RawChunk::Argument("foo-bar")]);
+    }
+
+    #[test]
     fn unclosed_brace() {
         let chunks: Vec<_> = Parser::new("{unclosed").collect();
         assert_eq!(chunks, vec![RawChunk::Error("expected '}'")])
@@ -197,7 +203,14 @@ mod tests {
     #[test]
     fn invalid_argument_chars() {
         let chunks: Vec<_> = Parser::new("{a-b} {123}").collect();
-        assert_eq!(chunks, vec![RawChunk::Error("expected '}'")]);
+        assert_eq!(
+            chunks,
+            vec![
+                RawChunk::Argument("a-b"),
+                RawChunk::Text(" "),
+                RawChunk::Error("expected '}'"),
+            ]
+        );
     }
 
     #[test]
