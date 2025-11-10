@@ -352,6 +352,13 @@ impl<T> InheritableField<T> {
         }
     }
 
+    pub fn into_value(self) -> Option<T> {
+        match self {
+            Self::Inherit(_) => None,
+            Self::Value(defined) => Some(defined),
+        }
+    }
+
     pub fn is_inherited(&self) -> bool {
         matches!(self, Self::Inherit(_))
     }
