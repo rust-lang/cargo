@@ -305,13 +305,23 @@ fn sync(
                 };
 
                 if let Err(e) = rename_result {
-                    // This fallback is mainly for Windows 10 versions earlier than 1607.
-                    // The destination of `fs::rename` can't be a directory in older versions.
-                    // Can be removed once the minimal supported Windows version gets bumped.
+                    // This fallback is worked for sometimes `fs::rename` failed in a specific situation, such as:
+                    // - In Windows 10 versions earlier than 1607, the destination of `fs::rename` can't be a directory in older versions.
+                    // - `from` and `to` are on separate filesystems.
+                    // - AntiVirus or our system indexer are doing stuf simutaneously.
+                    // - Any other reasons documented in std::fs::rename.
                     tracing::warn!("failed to `mv {unpacked_src:?} {dst:?}`: {e}");
                     let paths: Vec<_> = walkdir(&unpacked_src).map(|e| e.into_path()).collect();
-                    cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
-                        .with_context(|| format!("failed to copy vendored sources for {id}"))?;
+                    cp_sources(
+                        pkg,
+                        &unpacked_src,
+                        &paths,
+                        &dst,
+                        &mut file_cksums,
+                        &mut tmp_buf,
+                        gctx,
+                    )
+                    .with_context(|| format!("failed to copy vendored sources for {id}"))?;
                 } else {
                     compute_file_cksums(&dst)?;
                 }

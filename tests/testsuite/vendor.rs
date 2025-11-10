@@ -2109,15 +2109,13 @@ fn vendor_rename_fallback() {
     p.cargo("vendor --respect-source-config --no-delete")
         .env("CARGO_LOG", "cargo::ops::vendor=warn")
         .env("__CARGO_TEST_VENDOR_FALLBACK_CP_SOURCES", "true")
-        .with_status(101)
+        .with_status(0)
         .with_stderr_data(str![[r#"
 ...
 [..]failed to `mv "[..]vendor[..].vendor-staging[..]log-0.3.5" "[..]vendor[..]log"`: simulated rename error for testing
 ...
-[..]StripPrefixError[..]
-...
 "#]])
         .run();
 
-    assert!(!p.root().join("vendor/log/Cargo.toml").exists());
+    assert!(p.root().join("vendor/log/Cargo.toml").exists());
 }
