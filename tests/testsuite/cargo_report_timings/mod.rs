@@ -18,13 +18,11 @@ fn gated_stable_channel() {
         .build();
 
     p.cargo("report timings")
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report timings` command is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report timings` command.
 
 "#]])
         .run();
@@ -39,13 +37,10 @@ fn gated_unstable_options() {
 
     p.cargo("report timings")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report timings` command is unstable, pass `-Z build-analysis` to enable it
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report timings` command.
 
 "#]])
         .run();
@@ -55,15 +50,7 @@ For more information, try '--help'.
 fn no_log() {
     cargo_process("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -91,15 +78,7 @@ fn no_log_for_the_current_workspace() {
 
     bar.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -120,15 +99,7 @@ fn invalid_log() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -150,15 +121,7 @@ fn empty_log() {
     // If the make-up log file was picked, the command would have failed.
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -189,15 +152,7 @@ fn prefer_latest() {
     // if it had picked the corrupted first log file, it would have failed.
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
@@ -236,15 +191,7 @@ fn prefer_workspace() {
     // Back to foo, if it had picked the corrupted log file, it would have failed.
     foo.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     assert_eq!(foo.glob("**/cargo-timing-*.html").count(), 0);
@@ -267,15 +214,7 @@ fn outside_workspace() {
     // * save the report in a temp directory
     cargo_process("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     // Have no timing HTML under target directory
@@ -296,15 +235,7 @@ fn with_section_timings() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
@@ -335,15 +266,7 @@ fn with_multiple_targets() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'timings'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
