@@ -517,7 +517,7 @@ fn locked_correct_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be created but --locked was passed to prevent this
+[ERROR] cannot create the lock file [ROOT]/foo/Cargo.lock because --locked was passed to prevent this
 [HELP] to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
 
 "#]])
