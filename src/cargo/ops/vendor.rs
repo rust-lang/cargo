@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 pub struct VendorOptions<'a> {
@@ -291,7 +291,20 @@ fn sync(
                     .tempdir_in(vendor_dir)?;
                 let unpacked_src =
                     registry.unpack_package_in(id, staging_dir.path(), &vendor_this)?;
-                if let Err(e) = fs::rename(&unpacked_src, &dst) {
+
+                let rename_result = if gctx
+                    .get_env_os("__CARGO_TEST_VENDOR_FALLBACK_CP_SOURCES")
+                    .is_some()
+                {
+                    Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "simulated rename error for testing",
+                    ))
+                } else {
+                    fs::rename(&unpacked_src, &dst)
+                };
+
+                if let Err(e) = rename_result {
                     // This fallback is mainly for Windows 10 versions earlier than 1607.
                     // The destination of `fs::rename` can't be a directory in older versions.
                     // Can be removed once the minimal supported Windows version gets bumped.
