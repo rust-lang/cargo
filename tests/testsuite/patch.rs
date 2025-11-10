@@ -357,6 +357,63 @@ fn patch_to_git() {
         .run();
 }
 
+#[cargo_test(public_network_test)]
+fn patch_to_git_pull_request() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { git = 'https://github.com/rust-lang/does-not-exist/pull/123' }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(format!(
+            r#"[UPDATING] git repository `https://github.com/rust-lang/does-not-exist/pull/123`
+...
+[ERROR] failed to load source for dependency `bar`
+
+Caused by:
+  Unable to update https://github.com/rust-lang/does-not-exist/pull/123
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
+
+Caused by:
+  network failure seems to have happened
+  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+  [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository. 
+  [HELP] Replace the dependency with 
+         `git = "https://github.com/rust-lang/does-not-exist.git" rev = "refs/pull/123/head"` 
+     to specify pull requests as dependencies' revision.
+
+Caused by:
+...
+"#
+        ))
+        .run();
+}
+
 #[cargo_test]
 fn unused() {
     Package::new("bar", "0.1.0").publish();

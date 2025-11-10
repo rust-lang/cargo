@@ -798,12 +798,14 @@ where
             | ErrorClass::FetchHead
             | ErrorClass::Ssh
             | ErrorClass::Http => {
-                let mut msg = "network failure seems to have happened\n".to_string();
-                msg.push_str(
-                    "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
-                );
-                msg.push_str(
-                    "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                let msg = format!(
+                    concat!(
+                        "network failure seems to have happened\n",
+                        "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
+                        "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                        "{}"
+                    ),
+                    note_github_pull_request(url).unwrap_or_default()
                 );
                 err = err.context(msg);
             }
@@ -1142,6 +1144,7 @@ fn fetch_with_gitoxide(
     let res = oxide::with_retry_and_progress(
         git2_repo.path(),
         gctx,
+        remote_url,
         &|repo_path,
           should_interrupt,
           mut progress,
@@ -1587,6 +1590,33 @@ fn github_fast_path(
 /// Whether a `url` is one from GitHub.
 fn is_github(url: &Url) -> bool {
     url.host_str() == Some("github.com")
+}
+
+// Give some messages on GitHub PR URL given as is
+pub(crate) fn note_github_pull_request(url: &str) -> Option<String> {
+    if let Ok(url) = url.parse::<Url>()
+        && is_github(&url)
+    {
+        let path_segments = url
+            .path_segments()
+            .map(|p| p.into_iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        if let [owner, repo, "pull", pr_number, ..] = path_segments[..] {
+            let repo_url = format!("https://github.com/{owner}/{repo}.git");
+            let rev = format!("refs/pull/{pr_number}/head");
+            return Some(format!(
+                concat!(
+                    "\n\nnote: GitHub url {} is not a repository. \n",
+                    "help: Replace the dependency with \n",
+                    "       `git = \"{}\" rev = \"{}\"` \n",
+                    "   to specify pull requests as dependencies' revision."
+                ),
+                url, repo_url, rev
+            ));
+        }
+    }
+
+    None
 }
 
 /// Whether a `rev` looks like a commit hash (ASCII hex digits).
