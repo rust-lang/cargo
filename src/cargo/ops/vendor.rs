@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 pub struct VendorOptions<'a> {
@@ -291,14 +291,37 @@ fn sync(
                     .tempdir_in(vendor_dir)?;
                 let unpacked_src =
                     registry.unpack_package_in(id, staging_dir.path(), &vendor_this)?;
-                if let Err(e) = fs::rename(&unpacked_src, &dst) {
-                    // This fallback is mainly for Windows 10 versions earlier than 1607.
-                    // The destination of `fs::rename` can't be a directory in older versions.
-                    // Can be removed once the minimal supported Windows version gets bumped.
+
+                let rename_result = if gctx
+                    .get_env_os("__CARGO_TEST_VENDOR_FALLBACK_CP_SOURCES")
+                    .is_some()
+                {
+                    Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "simulated rename error for testing",
+                    ))
+                } else {
+                    fs::rename(&unpacked_src, &dst)
+                };
+
+                if let Err(e) = rename_result {
+                    // This fallback is worked for sometimes `fs::rename` failed in a specific situation, such as:
+                    // - In Windows 10 versions earlier than 1607, the destination of `fs::rename` can't be a directory in older versions.
+                    // - `from` and `to` are on separate filesystems.
+                    // - AntiVirus or our system indexer are doing stuf simutaneously.
+                    // - Any other reasons documented in std::fs::rename.
                     tracing::warn!("failed to `mv {unpacked_src:?} {dst:?}`: {e}");
                     let paths: Vec<_> = walkdir(&unpacked_src).map(|e| e.into_path()).collect();
-                    cp_sources(pkg, src, &paths, &dst, &mut file_cksums, &mut tmp_buf, gctx)
-                        .with_context(|| format!("failed to copy vendored sources for {id}"))?;
+                    cp_sources(
+                        pkg,
+                        &unpacked_src,
+                        &paths,
+                        &dst,
+                        &mut file_cksums,
+                        &mut tmp_buf,
+                        gctx,
+                    )
+                    .with_context(|| format!("failed to copy vendored sources for {id}"))?;
                 } else {
                     compute_file_cksums(&dst)?;
                 }
