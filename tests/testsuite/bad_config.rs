@@ -2259,6 +2259,42 @@ Caused by:
         .run();
 }
 
+#[cargo_test(public_network_test)]
+fn github_pull_request_url() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies.bar]
+                git = "https://github.com/rust-lang/does-not-exist/pull/123"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `https://github.com/rust-lang/does-not-exist/pull/123`
+...
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bar`
+
+Caused by:
+  Unable to update https://github.com/rust-lang/does-not-exist/pull/123
+...
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn fragment_in_git_url() {
     let p = project()
