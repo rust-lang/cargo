@@ -282,14 +282,14 @@ impl RegistryBuilder {
         self
     }
 
-    /// Sets whether or not to initialize as an alternative registry.
+    /// Initializes as an alternative registry with the given name.
     #[must_use]
     pub fn alternative_named(mut self, alt: &str) -> Self {
         self.alternative = Some(alt.to_string());
         self
     }
 
-    /// Sets whether or not to initialize as an alternative registry.
+    /// Initializes as an alternative registry named "alternative".
     #[must_use]
     pub fn alternative(self) -> Self {
         self.alternative_named("alternative")
