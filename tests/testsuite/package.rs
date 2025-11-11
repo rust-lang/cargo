@@ -3162,12 +3162,27 @@ fn reproducible_output() {
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let decoder = GzDecoder::new(f);
     let mut archive = Archive::new(decoder);
+
+    // Hardcoded value be removed once alexcrichton/tar-rs#420 is merged and released.
+    // See also rust-lang/cargo#16237
+    const DETERMINISTIC_TIMESTAMP: u64 = 1153704088;
     for ent in archive.entries().unwrap() {
         let ent = ent.unwrap();
         println!("checking {:?}", ent.path());
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
         assert!(header.mtime().unwrap() != 0);
+        // Generated files do not have deterministic timestamp (yet).
+        let path = ent.path().unwrap();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        if ["Cargo.toml", "Cargo.lock", ".cargo_vcs_info.json"]
+            .into_iter()
+            .any(|f| f == file_name)
+        {
+            assert!(header.mtime().unwrap() != DETERMINISTIC_TIMESTAMP);
+        } else {
+            assert!(header.mtime().unwrap() == DETERMINISTIC_TIMESTAMP);
+        }
         assert_eq!(header.username().unwrap().unwrap(), "");
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
