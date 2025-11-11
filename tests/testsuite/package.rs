@@ -3171,18 +3171,7 @@ fn reproducible_output() {
         println!("checking {:?}", ent.path());
         let header = ent.header();
         assert_eq!(header.mode().unwrap(), 0o644);
-        assert!(header.mtime().unwrap() != 0);
-        // Generated files do not have deterministic timestamp (yet).
-        let path = ent.path().unwrap();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        if ["Cargo.toml", "Cargo.lock", ".cargo_vcs_info.json"]
-            .into_iter()
-            .any(|f| f == file_name)
-        {
-            assert!(header.mtime().unwrap() != DETERMINISTIC_TIMESTAMP);
-        } else {
-            assert!(header.mtime().unwrap() == DETERMINISTIC_TIMESTAMP);
-        }
+        assert!(header.mtime().unwrap() == DETERMINISTIC_TIMESTAMP);
         assert_eq!(header.username().unwrap().unwrap(), "");
         assert_eq!(header.groupname().unwrap().unwrap(), "");
     }
