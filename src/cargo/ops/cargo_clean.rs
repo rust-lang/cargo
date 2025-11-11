@@ -236,19 +236,18 @@ fn clean_specs(
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
                         .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
+                    let artifact_dir = layout
+                        .artifact_dir()
+                        .expect("artifact-dir was not locked during clean");
                     let (dir, uplift_dir) = match target.kind() {
-                        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => (
-                            layout.build_dir().examples(),
-                            Some(layout.artifact_dir().examples()),
-                        ),
+                        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
+                            (layout.build_dir().examples(), Some(artifact_dir.examples()))
+                        }
                         // Tests/benchmarks are never uplifted.
                         TargetKind::Test | TargetKind::Bench => {
                             (layout.build_dir().legacy_deps(), None)
                         }
-                        _ => (
-                            layout.build_dir().legacy_deps(),
-                            Some(layout.artifact_dir().dest()),
-                        ),
+                        _ => (layout.build_dir().legacy_deps(), Some(artifact_dir.dest())),
                     };
                     let mut dir_glob_str = escape_glob_path(dir)?;
                     let dir_glob = Path::new(&dir_glob_str);

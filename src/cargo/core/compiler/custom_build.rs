@@ -473,7 +473,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let output_file = script_run_dir.join("output");
     let err_file = script_run_dir.join("stderr");
     let root_output_file = script_run_dir.join("root-output");
-    let host_target_root = build_runner.files().host_dest().to_path_buf();
+    let host_target_root = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let all = (
         id,
         library_name.clone(),
@@ -541,12 +541,14 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                     );
                 }
             }
-            if let Some(build_scripts) = build_scripts {
+            if let Some(build_scripts) = build_scripts
+                && let Some(ref host_target_root) = host_target_root
+            {
                 super::add_plugin_deps(
                     &mut cmd,
                     &build_script_outputs,
                     &build_scripts,
-                    &host_target_root,
+                    host_target_root,
                 )?;
             }
         }

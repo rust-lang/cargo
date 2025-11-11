@@ -112,7 +112,7 @@ use std::path::{Path, PathBuf};
 ///
 /// See module docs for more information.
 pub struct Layout {
-    artifact_dir: ArtifactDirLayout,
+    artifact_dir: Option<ArtifactDirLayout>,
     build_dir: BuildDirLayout,
 }
 
@@ -177,13 +177,13 @@ impl Layout {
         let artifact = deps.join("artifact");
 
         Ok(Layout {
-            artifact_dir: ArtifactDirLayout {
+            artifact_dir: Some(ArtifactDirLayout {
                 dest: dest.clone(),
                 examples: dest.join("examples"),
                 doc: root.join("doc"),
                 timings: root.join("cargo-timings"),
                 _lock: artifact_dir_lock,
-            },
+            }),
             build_dir: BuildDirLayout {
                 root: build_root.clone(),
                 deps,
@@ -201,14 +201,16 @@ impl Layout {
 
     /// Makes sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> CargoResult<()> {
-        self.artifact_dir.prepare()?;
+        if let Some(ref mut artifact_dir) = self.artifact_dir {
+            artifact_dir.prepare()?;
+        }
         self.build_dir.prepare()?;
 
         Ok(())
     }
 
-    pub fn artifact_dir(&self) -> &ArtifactDirLayout {
-        &self.artifact_dir
+    pub fn artifact_dir(&self) -> Option<&ArtifactDirLayout> {
+        self.artifact_dir.as_ref()
     }
 
     pub fn build_dir(&self) -> &BuildDirLayout {
