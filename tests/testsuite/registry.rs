@@ -9,6 +9,7 @@ use std::sync::Mutex;
 use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo::core::SourceId;
+use cargo_test_support::assert_deterministic_mtime;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{
     self, Dependency, Package, RegistryBuilder, Response, TestRegistry, registry_path,
@@ -4652,4 +4653,46 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+#[should_panic]
+fn deterministic_mtime() {
+    let registry = registry::init();
+    Package::new("foo", "0.1.0")
+        // content doesn't matter, we just want to check mtime
+        .file("Cargo.lock", "")
+        .file(".cargo_vcs_info.json", "")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                edition = "2015"
+
+                [dependencies]
+                foo = '0.1.0'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let id = SourceId::for_registry(registry.index_url()).unwrap();
+    let hash = cargo::util::hex::short_hash(&id);
+    let pkg_root = paths::cargo_home()
+        .join("registry")
+        .join("src")
+        .join(format!("-{hash}"))
+        .join("foo-0.1.0");
+
+    // Generated files should have deterministic mtime after unpacking.
+    assert_deterministic_mtime(pkg_root.join("Cargo.lock"));
+    assert_deterministic_mtime(pkg_root.join("Cargo.toml"));
+    assert_deterministic_mtime(pkg_root.join(".cargo_vcs_info.json"));
 }
