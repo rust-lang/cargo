@@ -35,7 +35,7 @@ cargo-test-macro = { version = "0.4.8", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.9.1", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.26", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.10.3", path = "crates/cargo-util-schemas" }
-cargo_metadata = "0.23.0"
+cargo_metadata = "0.23.1"
 clap = "4.5.51"
 clap_complete = { version = "4.5.60", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
