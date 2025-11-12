@@ -1095,11 +1095,14 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
-    match build_runner.bcx.build_config.message_format {
-        MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
-            json.push_str(",diagnostic-short");
-        }
-        _ => {}
+    if let MessageFormat::Short | MessageFormat::Json { short: true, .. } =
+        build_runner.bcx.build_config.message_format
+    {
+        json.push_str(",diagnostic-short");
+    } else if build_runner.bcx.gctx.shell().err_unicode()
+        && build_runner.bcx.gctx.cli_unstable().rustc_unicode
+    {
+        json.push_str(",diagnostic-unicode");
     }
 
     if enable_timings {

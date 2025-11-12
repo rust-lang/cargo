@@ -116,6 +116,7 @@ Each new feature described below should explain how to use it.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
     * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
+    * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages 
 * Configuration
     * [config-include](#config-include) --- Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
@@ -2027,6 +2028,12 @@ Example:
 cargo +nightly build --compile-time-deps -Z unstable-options
 cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
 ```
+
+# `rustc-unicode`
+* Tracking Issue: [rust#148607](https://github.com/rust-lang/rust/issues/148607)
+
+Enable `rustc`'s unicode error format in Cargo's error messages
+
 
 # Stabilized and removed features
 
