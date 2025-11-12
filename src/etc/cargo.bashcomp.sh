@@ -16,6 +16,13 @@ _cargo()
 	for (( cmd_i=1; cmd_i<$nwords; cmd_i++ ));
 	do
 		if [[ ! "${words[$cmd_i]}" =~ ^[+-] ]]; then
+			if [[ $cmd_i -gt 0 ]]; then
+				case "${words[(( $cmd_i - 1 ))]}" in
+					--color|--config)
+						continue
+						;;
+				esac
+			fi
 			cmd="${words[$cmd_i]}"
 			break
 		fi
@@ -109,8 +116,18 @@ _cargo()
 		elif [[ "$cur" == +* ]]; then
 			COMPREPLY=( $( compgen -W "$(_toolchains)" -- "$cur" ) )
 		else
-			_ensure_cargo_commands_cache_filled
-			COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
+			case "${prev}" in
+				--color)
+					COMPREPLY=( $( compgen -W "$color" -- "$cur" ) )
+					;;
+				--config)
+					_filedir
+					;;
+				*)
+					_ensure_cargo_commands_cache_filled
+					COMPREPLY=( $( compgen -W "$__cargo_commands_cache" -- "$cur" ) )
+					;;
+			esac
 		fi
 	else
 		case "${prev}" in
