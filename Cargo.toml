@@ -67,6 +67,7 @@ libc = "0.2.177"
 libgit2-sys = "0.18.2"
 libloading = "0.8.9"
 memchr = "2.7.6"
+memfd = "0.6.5"
 miow = "0.6.1"
 opener = "0.8.3"
 openssl = "0.10.74"
@@ -260,6 +261,9 @@ gix = { workspace = true, features = ["revision"] }
 gix-transport = { version = "0.49.1", features = ["http-client-insecure-credentials"] }
 same-file.workspace = true
 snapbox.workspace = true
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+memfd.workspace = true
 
 [build-dependencies]
 flate2.workspace = true

@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
@@ -2170,6 +2171,40 @@ args: []
 [COMPILING] echo v0.0.0 ([ROOT]/foo/script/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cfg(target_os = "linux")]
+fn memfd_script() {
+    use std::os::fd::AsRawFd;
+
+    let fd = memfd::MemfdOptions::new()
+        .close_on_exec(false)
+        .create("otkeep-script")
+        .unwrap();
+    let mut file = fd.into_file();
+    file.write_all(ECHO_SCRIPT.as_bytes()).unwrap();
+    file.flush().unwrap();
+
+    let raw_fd = file.as_raw_fd();
+
+    let p = cargo_test_support::project()
+        .file("echo.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo(&format!("-Zscript -v /proc/self/fd/{raw_fd}"))
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+
+thread 'main' ([..]) panicked at src/cargo/core/workspace.rs:465:18:
+template is correct: [NOT_FOUND]
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 "#]])
         .run();
