@@ -366,7 +366,7 @@ impl Shell {
     fn file_hyperlink(&mut self, path: &std::path::Path) -> Option<url::Url> {
         let mut url = url::Url::from_file_path(path).ok()?;
         // Do a best-effort of setting the host in the URL to avoid issues with opening a link
-        // scoped to the computer you've SSHed into
+        // scoped to the computer you've SSH'ed into
         let hostname = if cfg!(windows) {
             // Not supported correctly on windows
             None

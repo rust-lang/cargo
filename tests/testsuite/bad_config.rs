@@ -804,14 +804,14 @@ fn unused_keys() {
                 version = "0.5.0"
                 edition = "2015"
                 authors = ["wycats@example.com"]
-                bulid = "foo"
+                unused = "foo"
             "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: package.bulid
+[WARNING] unused manifest key: package.unused
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -854,7 +854,7 @@ fn unused_keys_in_virtual_manifest() {
             r#"
                 [workspace]
                 members = ["bar"]
-                bulid = "foo"
+                unused = "foo"
             "#,
         )
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -862,7 +862,7 @@ fn unused_keys_in_virtual_manifest() {
         .build();
     p.cargo("check --workspace")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.bulid
+[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.unused
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

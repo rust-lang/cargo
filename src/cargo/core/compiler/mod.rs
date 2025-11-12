@@ -1656,7 +1656,7 @@ fn build_deps_args(
     if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
         let mut map = BTreeMap::new();
 
-        // Recursively add all depenendency args to rustc process
+        // Recursively add all dependency args to rustc process
         add_dep_arg(&mut map, build_runner, unit);
 
         let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();

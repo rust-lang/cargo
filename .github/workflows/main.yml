@@ -28,6 +28,7 @@ jobs:
       - resolver
       - rustfmt
       - schema
+      - spellcheck
       - test
       - test_gitoxide
     permissions:
@@ -304,3 +305,12 @@ jobs:
     - uses: actions/checkout@v5
     - uses: taiki-e/install-action@cargo-hack
     - run: cargo hack check --all-targets --rust-version --workspace --ignore-private --locked
+
+  spellcheck:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Actions Repository
+      uses: actions/checkout@v5
+    - name: Spell Check Repo
+      uses: crate-ci/typos@v1.38.1

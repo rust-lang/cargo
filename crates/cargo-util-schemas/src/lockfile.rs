@@ -110,7 +110,7 @@ impl TomlLockfileSourceId {
             .ok_or_else(|| TomlLockfileSourceIdErrorKind::InvalidSource(source.clone()))?;
 
         // Sparse URLs store the kind prefix (sparse+) in the URL. Therefore, for sparse kinds, we
-        // want to use the raw `source` instead of the splitted `url`.
+        // want to use the raw `source` instead of the split `url`.
         let url = Url::parse(if kind == "sparse" { &source } else { url }).map_err(|msg| {
             TomlLockfileSourceIdErrorKind::InvalidUrl {
                 url: url.to_string(),

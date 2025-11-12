@@ -919,7 +919,7 @@ fn tar(
                 header.set_size(contents.len() as u64);
                 // We need to have the same DETERMINISTIC_TIMESTAMP for generated files
                 // https://github.com/alexcrichton/tar-rs/blob/d0261f1f6cc959ba0758e7236b3fd81e90dd1dc6/src/header.rs#L18-L24
-                // Unfortunately tar-rs doesn't expose that so we harcode the timestamp here.
+                // Unfortunately tar-rs doesn't expose that so we hardcode the timestamp here.
                 // Hardcoded value be removed once alexcrichton/tar-rs#420 is merged and released.
                 // See also rust-lang/cargo#16237
                 header.set_mtime(1153704088);
