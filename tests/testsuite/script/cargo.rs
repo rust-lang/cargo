@@ -2197,14 +2197,17 @@ fn memfd_script() {
 
     p.cargo(&format!("-Zscript -v /proc/self/fd/{raw_fd}"))
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout_data(str![""])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/package
+arg0: /proc/self/fd/[..]
+args: []
+
+"#]])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-
-thread 'main' ([..]) panicked at src/cargo/core/workspace.rs:465:18:
-template is correct: [NOT_FOUND]
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[COMPILING] package v0.0.0 (/proc/self/fd/[..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/package`
 
 "#]])
         .run();
