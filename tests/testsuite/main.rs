@@ -164,6 +164,7 @@ mod registry_overlay;
 mod rename_deps;
 mod replace;
 mod required_features;
+mod resolve_optional_dependency;
 mod run;
 mod rust_version;
 mod rustc;
