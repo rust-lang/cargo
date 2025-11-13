@@ -483,7 +483,7 @@ fn prepare_archive(
     src.load()?;
 
     if opts.check_metadata {
-        check_metadata(pkg, gctx)?;
+        check_metadata(pkg, opts.reg_or_index.as_ref(), gctx)?;
     }
 
     if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
@@ -808,7 +808,11 @@ fn build_lock(
 
 // Checks that the package has some piece of metadata that a human can
 // use to tell what the package is about.
-fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
+fn check_metadata(
+    pkg: &Package,
+    reg_or_index: Option<&RegistryOrIndex>,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
     let md = pkg.manifest().metadata();
 
     let mut missing = vec![];
@@ -829,20 +833,29 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
     );
 
     if !missing.is_empty() {
-        let mut things = missing[..missing.len() - 1].join(", ");
-        // `things` will be empty if and only if its length is 1 (i.e., the only case
-        // to have no `or`).
-        if !things.is_empty() {
-            things.push_str(" or ");
-        }
-        things.push_str(missing.last().unwrap());
+        // Only warn if publishing to crates.io based on resolved registry
+        let should_warn = match reg_or_index {
+            Some(RegistryOrIndex::Registry(reg_name)) => reg_name == CRATES_IO_REGISTRY,
+            None => true,                             // Default is crates.io
+            Some(RegistryOrIndex::Index(_)) => false, // Custom index, not crates.io
+        };
 
-        gctx.shell().print_report(&[
-            Level::WARNING.secondary_title(format!("manifest has no {things}"))
-                .element(Level::NOTE.message("see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info"))
-         ],
-             false
-        )?
+        if should_warn {
+            let mut things = missing[..missing.len() - 1].join(", ");
+            // `things` will be empty if and only if its length is 1 (i.e., the only case
+            // to have no `or`).
+            if !things.is_empty() {
+                things.push_str(" or ");
+            }
+            things.push_str(missing.last().unwrap());
+
+            gctx.shell().print_report(&[
+                Level::WARNING.secondary_title(format!("manifest has no {things}"))
+                    .element(Level::NOTE.message("see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info"))
+             ],
+                 false
+            )?
+        }
     }
 
     Ok(())
