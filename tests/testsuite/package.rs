@@ -7793,13 +7793,9 @@ fn publish_to_alt_registry_warns() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // There will be no warnings for alternative registry in the next commit
     p.cargo("publish --dry-run --registry alternative")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[WARNING] manifest has no license, license-file, documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.1.0 ([ROOT]/foo)

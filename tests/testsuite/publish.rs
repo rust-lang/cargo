@@ -211,9 +211,6 @@ fn simple_publish_with_http() {
         .with_stderr_data(str![[r#"
 [WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] `dummy-registry` index
-[WARNING] manifest has no documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
@@ -255,9 +252,6 @@ fn simple_publish_with_asymmetric() {
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[WARNING] manifest has no documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
@@ -359,9 +353,6 @@ fn simple_with_index() {
         .with_stderr_data(str![[r#"
 [WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
 [UPDATING] `[ROOT]/registry` index
-[WARNING] manifest has no documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
@@ -789,9 +780,6 @@ fn dry_run() {
         .arg(registry.index_url().as_str())
         .with_stderr_data(str![[r#"
 [UPDATING] `[ROOT]/registry` index
-[WARNING] manifest has no documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
