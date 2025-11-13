@@ -165,10 +165,10 @@ The default is the host platform. Use the value <code>all</code> to include <em>
 <p>This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:</p>
 <ul>
-<li><code>{p}</code> — The package name.</li>
-<li><code>{l}</code> — The package license.</li>
-<li><code>{r}</code> — The package repository URL.</li>
-<li><code>{f}</code> — Comma-separated list of package features that are enabled.</li>
+<li><code>{p}</code>, <code>{package}</code> — The package name.</li>
+<li><code>{l}</code>, <code>{license}</code> — The package license.</li>
+<li><code>{r}</code>, <code>{repository}</code> — The package repository URL.</li>
+<li><code>{f}</code>, <code>{features}</code> — Comma-separated list of package features that are enabled.</li>
 <li><code>{lib}</code> — The name, as used in a <code>use</code> statement, of the package’s library.</li>
 </ul>
 </dd>
