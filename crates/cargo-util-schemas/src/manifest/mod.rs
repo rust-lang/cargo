@@ -119,6 +119,35 @@ impl TomlManifest {
     pub fn normalized_lints(&self) -> Result<Option<&TomlLints>, UnresolvedError> {
         self.lints.as_ref().map(|l| l.normalized()).transpose()
     }
+
+    pub fn autobins(&self) -> bool {
+        self.autotargets(|p| p.autobins, |m| m.bin.as_deref())
+    }
+
+    pub fn autobenches(&self) -> bool {
+        self.autotargets(|p| p.autobenches, |m| m.bench.as_deref())
+    }
+
+    pub fn autoexamples(&self) -> bool {
+        self.autotargets(|p| p.autoexamples, |m| m.example.as_deref())
+    }
+
+    pub fn autotests(&self) -> bool {
+        self.autotargets(|p| p.autotests, |m| m.test.as_deref())
+    }
+
+    fn autotargets(
+        &self,
+        pkgfield: impl Fn(&TomlPackage) -> Option<bool>,
+        targetfield: impl Fn(&TomlManifest) -> Option<&[TomlTarget]>,
+    ) -> bool {
+        let Some(pkg) = &self.package else {
+            return false;
+        };
+        let no_explicit_targets = targetfield(self).as_ref().is_none_or(|t| t.is_empty());
+        pkgfield(&pkg)
+            .unwrap_or(!pkg.uses_edition_2015_target_auto_discovery() || no_explicit_targets)
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -326,6 +355,12 @@ impl TomlPackage {
 
     pub fn normalized_repository(&self) -> Result<Option<&String>, UnresolvedError> {
         self.repository.as_ref().map(|v| v.normalized()).transpose()
+    }
+
+    fn uses_edition_2015_target_auto_discovery(&self) -> bool {
+        self.edition
+            .as_ref()
+            .is_some_and(|ed| ed.as_value().is_some_and(|e| e == "2015"))
     }
 }
 
