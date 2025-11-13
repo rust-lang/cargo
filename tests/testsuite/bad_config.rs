@@ -772,19 +772,19 @@ fn unused_keys() {
         .file(
             "Cargo.toml",
             r#"
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               edition = "2015"
-               authors = []
-               unused = "foo"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2015"
+authors = []
+unused = "foo"
 
-               [target.foo]
-               bar = "3"
+[target.foo]
+bar = "3"
 
-               [lib]
-               build = "foo"
-            "#,
+[lib]
+build = "foo"
+"#,
         )
         .file("src/lib.rs", "")
         .build();
