@@ -853,26 +853,43 @@ quiet = false
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused manifest key: alias
+[HELP] alias is a valid .cargo/config.toml key
 [WARNING] unused manifest key: build
+[HELP] build is a valid .cargo/config.toml key
 [WARNING] unused manifest key: cache
+[HELP] cache is a valid .cargo/config.toml key
 [WARNING] unused manifest key: cargo-new
+[HELP] cargo-new is a valid .cargo/config.toml key
 [WARNING] unused manifest key: credential-alias
+[HELP] credential-alias is a valid .cargo/config.toml key
 [WARNING] unused manifest key: doc
+[HELP] doc is a valid .cargo/config.toml key
 [WARNING] unused manifest key: env
+[HELP] env is a valid .cargo/config.toml key
 [WARNING] unused manifest key: future-incompat-report
+[HELP] future-incompat-report is a valid .cargo/config.toml key
 [WARNING] unused manifest key: http
+[HELP] http is a valid .cargo/config.toml key
 [WARNING] unused manifest key: install
+[HELP] install is a valid .cargo/config.toml key
 [WARNING] unused manifest key: lib.build
 [WARNING] unused manifest key: net
+[HELP] net is a valid .cargo/config.toml key
 [WARNING] unused manifest key: package.unused
 [WARNING] unused manifest key: paths
+[HELP] paths is a valid .cargo/config.toml key
 [WARNING] unused manifest key: registries
+[HELP] registries is a valid .cargo/config.toml key
 [WARNING] unused manifest key: registry
+[HELP] registry is a valid .cargo/config.toml key
 [WARNING] unused manifest key: resolver
+[HELP] resolver is a valid .cargo/config.toml key
 [WARNING] unused manifest key: source
+[HELP] source is a valid .cargo/config.toml key
 [WARNING] unused manifest key: target.cfg(unix).linker
 [WARNING] unused manifest key: target.foo.bar
 [WARNING] unused manifest key: term
+[HELP] term is a valid .cargo/config.toml key
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

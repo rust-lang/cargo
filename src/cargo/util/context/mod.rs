@@ -158,6 +158,29 @@ macro_rules! get_value_typed {
     };
 }
 
+pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
+    "paths",
+    "alias",
+    "build",
+    "credential-alias",
+    "doc",
+    "env",
+    "future-incompat-report",
+    "cache",
+    "cargo-new",
+    "http",
+    "install",
+    "net",
+    "patch",
+    "profile",
+    "resolver",
+    "registries",
+    "registry",
+    "source",
+    "target",
+    "term",
+];
+
 /// Indicates why a config value is being loaded.
 #[derive(Clone, Copy, Debug)]
 enum WhyLoad {
