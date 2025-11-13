@@ -772,6 +772,8 @@ fn unused_keys() {
         .file(
             "Cargo.toml",
             r#"
+paths = ["/path/to/override"]
+
 [package]
 name = "foo"
 version = "0.1.0"
@@ -784,6 +786,65 @@ bar = "3"
 
 [lib]
 build = "foo"
+
+## Config fields
+
+[alias]
+b = "build"
+
+[build]
+jobs = 1
+
+[credential-alias]
+my-alias = ["/usr/bin/cargo-credential-example", "--argument", "value", "--flag"]
+
+[doc]
+browser = "chromium"
+
+[env]
+ENV_VAR_NAME = "value"
+
+[future-incompat-report]
+frequency = 'always'
+
+[cache]
+auto-clean-frequency = "1 day"
+
+[cargo-new]
+vcs = "none"
+
+[http]
+debug = false
+
+[install]
+root = "/some/path"
+
+[net]
+retry = 3
+
+[net.ssh]
+known-hosts = ["..."]
+
+[resolver]
+incompatible-rust-versions = "allow"
+
+[registries.alternative]
+index = "…"
+
+[registries.crates-io]
+protocol = "sparse"
+
+[registry]
+default = "…"
+
+[source.alternative]
+replace-with = "…"
+
+[target.'cfg(unix)']
+linker = "…"
+
+[term]
+quiet = false
 "#,
         )
         .file("src/lib.rs", "")
@@ -791,9 +852,27 @@ build = "foo"
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] unused manifest key: alias
+[WARNING] unused manifest key: build
+[WARNING] unused manifest key: cache
+[WARNING] unused manifest key: cargo-new
+[WARNING] unused manifest key: credential-alias
+[WARNING] unused manifest key: doc
+[WARNING] unused manifest key: env
+[WARNING] unused manifest key: future-incompat-report
+[WARNING] unused manifest key: http
+[WARNING] unused manifest key: install
 [WARNING] unused manifest key: lib.build
+[WARNING] unused manifest key: net
 [WARNING] unused manifest key: package.unused
+[WARNING] unused manifest key: paths
+[WARNING] unused manifest key: registries
+[WARNING] unused manifest key: registry
+[WARNING] unused manifest key: resolver
+[WARNING] unused manifest key: source
+[WARNING] unused manifest key: target.cfg(unix).linker
 [WARNING] unused manifest key: target.foo.bar
+[WARNING] unused manifest key: term
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
