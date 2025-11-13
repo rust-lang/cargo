@@ -612,6 +612,7 @@ fn publish() {
           "license_file": null,
           "links": null,
           "name": "foo",
+          "proc_macro": false,
           "readme": null,
           "readme_file": null,
           "repository": null,

@@ -634,6 +634,13 @@ pub(crate) fn prepare_transmit(
         None => BTreeMap::new(),
     };
 
+    let proc_macro = manifest
+        .normalized_toml()
+        .lib
+        .as_ref()
+        .and_then(|lib| lib.proc_macro())
+        .unwrap_or_default();
+
     Ok(NewCrate {
         name: publish_pkg.name().to_string(),
         vers: publish_pkg.version().to_string(),
@@ -653,6 +660,7 @@ pub(crate) fn prepare_transmit(
         badges: badges.clone(),
         links: links.clone(),
         rust_version,
+        proc_macro: Some(proc_macro),
     })
 }
 

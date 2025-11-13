@@ -1243,6 +1243,7 @@ fn save_new_crate(
         new_crate.links,
         new_crate.rust_version.as_deref(),
         None,
+        None,
     );
 
     write_to_index(registry_path, &new_crate.name, line, false);
@@ -1527,6 +1528,12 @@ impl Package {
             } else {
                 serde_json::json!(self.name)
             };
+            // simulate alternative registries not having proc_macro in the index
+            let proc_macro = if self.alternative {
+                None
+            } else {
+                Some(self.proc_macro)
+            };
             create_index_line(
                 name,
                 &self.vers,
@@ -1537,6 +1544,7 @@ impl Package {
                 self.links.clone(),
                 self.rust_version.as_deref(),
                 self.v,
+                proc_macro,
             )
         };
 

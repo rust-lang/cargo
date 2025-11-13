@@ -396,6 +396,7 @@ fn publish_with_registry_dependency() {
             "license_file": null,
             "links": null,
             "name": "foo",
+            "proc_macro": false,
             "readme": null,
             "readme_file": null,
             "repository": null,
@@ -550,6 +551,7 @@ fn publish_to_alt_registry() {
             "license_file": null,
             "links": null,
             "name": "foo",
+            "proc_macro": false,
             "readme": null,
             "readme_file": null,
             "repository": null,
@@ -560,6 +562,79 @@ fn publish_to_alt_registry() {
         }"#,
         "foo-0.0.1.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
+#[cargo_test]
+fn publish_proc_macro_to_alt_registry() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "fn t() -> i32 { 1 }")
+        .build();
+
+    p.cargo("publish --no-verify --registry alternative")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[WARNING] manifest has no documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `alternative`
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `alternative`
+
+"#]])
+        .run();
+
+    validate_alt_upload(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [],
+          "description": "foo",
+          "documentation": null,
+          "features": {},
+          "homepage": null,
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "proc_macro": true,
+          "readme": null,
+          "readme_file": null,
+          "repository": null,
+          "rust_version": null,
+          "vers": "0.0.1"
+          }
+        "#,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
     );
 }
 
@@ -644,6 +719,7 @@ fn publish_with_crates_io_dep() {
             "license_file": null,
             "links": null,
             "name": "foo",
+            "proc_macro": false,
             "readme": null,
             "readme_file": null,
             "repository": null,
@@ -1863,6 +1939,70 @@ fn publish_with_transitive_dep() {
         .file("src/lib.rs", "")
         .build();
     p2.cargo("publish").run();
+}
+
+#[cargo_test]
+fn proc_macro_dependency() {
+    registry::alt_init();
+
+    Package::new("noop", "0.0.1")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "noop"
+                version = "0.0.1"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .proc_macro(true)
+        .alternative(true)
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate proc_macro;
+                use proc_macro::TokenStream;
+
+                #[proc_macro_derive(Noop)]
+                pub fn noop(_input: TokenStream) -> TokenStream {
+                    "".parse().unwrap()
+                }
+            "#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies.noop]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                #[macro_use]
+                extern crate noop;
+
+                #[derive(Noop)]
+                struct X;
+
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build").with_status(0).run();
 }
 
 #[cargo_test]

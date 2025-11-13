@@ -1725,6 +1725,10 @@ pub fn to_real_manifest(
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
+    let proc_macro = normalized_toml
+        .lib
+        .as_ref()
+        .and_then(|lib| lib.proc_macro());
     let summary = {
         let summary = Summary::new(
             pkgid,
@@ -1743,6 +1747,7 @@ pub fn to_real_manifest(
                 .collect(),
             normalized_package.links.as_deref(),
             rust_version.clone(),
+            proc_macro,
         );
         // edition2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
         // need to check whether `dep_name` is stripped as unused dependency

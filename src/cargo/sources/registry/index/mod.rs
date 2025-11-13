@@ -215,7 +215,14 @@ fn index_package_to_summary(pkg: &IndexPackage<'_>, source_id: SourceId) -> Carg
         .map(|(name, values)| (name.into(), values.into_iter().map(|v| v.into()).collect()))
         .collect::<BTreeMap<_, _>>();
     let links: Option<InternedString> = pkg.links.as_ref().map(|l| l.as_ref().into());
-    let mut summary = Summary::new(pkgid, deps, &features, links, pkg.rust_version.clone())?;
+    let mut summary = Summary::new(
+        pkgid,
+        deps,
+        &features,
+        links,
+        pkg.rust_version.clone(),
+        pkg.proc_macro,
+    )?;
     summary.set_checksum(pkg.cksum.clone());
     Ok(summary)
 }
@@ -674,6 +681,7 @@ impl IndexSummary {
                     cksum: Default::default(),
                     yanked: Default::default(),
                     links: Default::default(),
+                    proc_macro: Default::default(),
                 };
                 let summary = index_package_to_summary(&index, source_id)?;
                 (index, summary, false)

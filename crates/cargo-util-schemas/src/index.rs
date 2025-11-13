@@ -69,6 +69,7 @@ pub struct IndexPackage<'a> {
     /// workaround is to downgrade any packages that are incompatible with the
     /// `--precise` flag of `cargo update`.
     pub v: Option<u32>,
+    pub proc_macro: Option<bool>,
 }
 
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
