@@ -2889,9 +2889,6 @@ fn deprecated_underscore<T>(
 fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
     for key in unused {
         warnings.push(format!("unused manifest key: {}", key));
-        if key == "profiles.debug" {
-            warnings.push("use `[profile.dev]` to configure debug builds".to_string());
-        }
     }
 }
 
