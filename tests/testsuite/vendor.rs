@@ -2122,7 +2122,6 @@ fn vendor_rename_fallback() {
 }
 
 #[cargo_test]
-#[should_panic]
 fn deterministic_mtime() {
     Package::new("foo", "0.1.0")
         // content doesn't matter, we just want to check mtime

@@ -4656,7 +4656,6 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 }
 
 #[cargo_test]
-#[should_panic]
 fn deterministic_mtime() {
     let registry = registry::init();
     Package::new("foo", "0.1.0")
