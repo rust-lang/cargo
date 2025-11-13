@@ -120,18 +120,22 @@ impl TomlManifest {
         self.lints.as_ref().map(|l| l.normalized()).transpose()
     }
 
+    /// Whether cargo will self-infer bin targets from this manifest
     pub fn autobins(&self) -> bool {
         self.autotargets(|p| p.autobins, |m| m.bin.as_deref())
     }
 
+    /// Whether cargo will self-infer bench targets from this manifest
     pub fn autobenches(&self) -> bool {
         self.autotargets(|p| p.autobenches, |m| m.bench.as_deref())
     }
 
+    /// Whether cargo will self-infer example targets from this manifest
     pub fn autoexamples(&self) -> bool {
         self.autotargets(|p| p.autoexamples, |m| m.example.as_deref())
     }
 
+    /// Whether cargo will self-infer test targets from this manifest
     pub fn autotests(&self) -> bool {
         self.autotargets(|p| p.autotests, |m| m.test.as_deref())
     }
