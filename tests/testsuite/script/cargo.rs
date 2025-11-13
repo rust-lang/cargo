@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
@@ -2170,6 +2171,43 @@ args: []
 [COMPILING] echo v0.0.0 ([ROOT]/foo/script/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cfg(target_os = "linux")]
+fn memfd_script() {
+    use std::os::fd::AsRawFd;
+
+    let fd = memfd::MemfdOptions::new()
+        .close_on_exec(false)
+        .create("otkeep-script")
+        .unwrap();
+    let mut file = fd.into_file();
+    file.write_all(ECHO_SCRIPT.as_bytes()).unwrap();
+    file.flush().unwrap();
+
+    let raw_fd = file.as_raw_fd();
+
+    let p = cargo_test_support::project()
+        .file("echo.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo(&format!("-Zscript -v /proc/self/fd/{raw_fd}"))
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/package
+arg0: /proc/self/fd/[..]
+args: []
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[COMPILING] package v0.0.0 (/proc/self/fd/[..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/package`
 
 "#]])
         .run();
