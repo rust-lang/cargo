@@ -662,7 +662,7 @@ fn cfg_booleans() {
 
                 [target.'cfg(true)'.dependencies]
                 b = { path = 'b' }
-                
+
                 [target.'cfg(false)'.dependencies]
                 c = { path = 'c' }
             "#,
@@ -794,7 +794,7 @@ fn cfg_booleans_rustflags_no_effect() {
 
                 [target.'cfg(true)'.dependencies]
                 b = { path = 'b' }
-                
+
                 [target.'cfg(false)'.dependencies]
                 c = { path = 'c' }
             "#,
@@ -807,7 +807,7 @@ fn cfg_booleans_rustflags_no_effect() {
         .build();
 
     p.cargo("check")
-        .env("RUSTFLAGS", "--cfg false")
+        .env("RUSTFLAGS", "--cfg r#false")
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
