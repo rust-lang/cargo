@@ -1913,6 +1913,14 @@ Specify which packages participate in [feature unification](../reference/feature
 * `package`: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
 
+## pubtime
+
+* Original Issue: [#15491](https://github.com/rust-lang/cargo/issues/15491)
+* Tracking Issue: [#16270](https://github.com/rust-lang/cargo/issues/16270)
+
+Documentation updates:
+- Add `pubtime` field to the Index Summary description
+
 ## Package message format
 
 * Original Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
