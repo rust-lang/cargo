@@ -3184,3 +3184,67 @@ fn use_mtime_cache_in_cargo_home() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
+    // See https://github.com/rust-lang/cargo/issues/16104
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("touch-me", "")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo::rerun-if-changed=touch-me") }"#,
+        )
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    p.change_file("touch-me", "oops");
+
+    // The first one is expected to rerun build script
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `touch-me` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // subsequent cargo check gets stuck...
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency build_script_build was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency build_script_build was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
