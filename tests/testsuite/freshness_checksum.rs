@@ -3007,9 +3007,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency build_script_build was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3019,9 +3017,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency build_script_build was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
