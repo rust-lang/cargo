@@ -78,6 +78,7 @@ Each new feature described below should explain how to use it.
     * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
+    * [lockfile-publish-time] --- Limit resolver to packages older than the specified time
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
@@ -1920,6 +1921,14 @@ Specify which packages participate in [feature unification](../reference/feature
 
 Documentation updates:
 - Add `pubtime` field to the Index Summary description
+
+## lockfile-publish-time
+
+* Original Issue: [#5221](https://github.com/rust-lang/cargo/issues/5221)
+* Tracking Issue: [#16271](https://github.com/rust-lang/cargo/issues/16271)
+
+With `cargo generate-lockfile -Zunstable-options --publish-time <time>`,
+package resolution will not consider any package newer than the specified time.
 
 ## Package message format
 

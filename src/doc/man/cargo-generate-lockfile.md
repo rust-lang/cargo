@@ -32,6 +32,15 @@ lockfile and has more options for controlling update behavior.
 
 {{> options-ignore-rust-version }}
 
+{{#option "`--publish-time` _yyyy-mm-ddThh:mm:ssZ_" }}
+Latest publish time allowed for registry packages (Unstable)
+
+This is a best-effort filter on allowed packages, including:
+- packages from unsupported registries are always accepted
+- only the current yank state is respected, not the state as of `--publish-time`
+- precision of the publish time
+{{/option}}
+
 {{> options-locked }}
 
 {{> options-lockfile-path }}
