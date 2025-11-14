@@ -477,6 +477,25 @@ fn rustc(
             paths::set_file_time_no_err(dep_info_loc, timestamp);
         }
 
+        // This mtime shift for .rmeta is a workaround as rustc incremental build
+        // since rust-lang/rust#114669 (1.90.0) skips unnecessary rmeta generation.
+        //
+        // The situation is like this:
+        //
+        // 1. When build script execution's external dependendies
+        //    (rerun-if-changed, rerun-if-env-changed) got updated,
+        //    the execution unit reran and got a newer mtime.
+        // 2. rustc type-checked the associated crate, though with incremental
+        //    compilation, no rmeta regeneration. Its `.rmeta` stays old.
+        // 3. Run `cargo check` again. Cargo found build script execution had
+        //    a new mtime than existing crate rmeta, so re-checking the crate.
+        //    However the check is a no-op (input has no change), so stuck.
+        if mode.is_check() {
+            for output in outputs.iter() {
+                paths::set_file_time_no_err(&output.path, timestamp);
+            }
+        }
+
         Ok(())
     }));
 
