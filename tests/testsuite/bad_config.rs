@@ -772,74 +772,125 @@ fn unused_keys() {
         .file(
             "Cargo.toml",
             r#"
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               edition = "2015"
-               authors = []
+paths = ["/path/to/override"]
 
-               [target.foo]
-               bar = "3"
-            "#,
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2015"
+authors = []
+unused = "foo"
+
+[target.foo]
+bar = "3"
+
+[lib]
+build = "foo"
+
+## Config fields
+
+[alias]
+b = "build"
+
+[build]
+jobs = 1
+
+[credential-alias]
+my-alias = ["/usr/bin/cargo-credential-example", "--argument", "value", "--flag"]
+
+[doc]
+browser = "chromium"
+
+[env]
+ENV_VAR_NAME = "value"
+
+[future-incompat-report]
+frequency = 'always'
+
+[cache]
+auto-clean-frequency = "1 day"
+
+[cargo-new]
+vcs = "none"
+
+[http]
+debug = false
+
+[install]
+root = "/some/path"
+
+[net]
+retry = 3
+
+[net.ssh]
+known-hosts = ["..."]
+
+[resolver]
+incompatible-rust-versions = "allow"
+
+[registries.alternative]
+index = "…"
+
+[registries.crates-io]
+protocol = "sparse"
+
+[registry]
+default = "…"
+
+[source.alternative]
+replace-with = "…"
+
+[target.'cfg(unix)']
+linker = "…"
+
+[term]
+quiet = false
+"#,
         )
         .file("src/lib.rs", "")
         .build();
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: target.foo.bar
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-
-                name = "foo"
-                version = "0.5.0"
-                edition = "2015"
-                authors = ["wycats@example.com"]
-                unused = "foo"
-            "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
-    p.cargo("check")
-        .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: package.unused
-[CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-
-    let p = project()
-        .at("bar")
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-
-                name = "foo"
-                version = "0.5.0"
-                edition = "2015"
-                authors = ["wycats@example.com"]
-
-                [lib]
-                build = "foo"
-            "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
-    p.cargo("check")
-        .with_stderr_data(str![[r#"
+[WARNING] unused manifest key: alias
+[HELP] alias is a valid .cargo/config.toml key
+[WARNING] unused manifest key: build
+[HELP] build is a valid .cargo/config.toml key
+[WARNING] unused manifest key: cache
+[HELP] cache is a valid .cargo/config.toml key
+[WARNING] unused manifest key: cargo-new
+[HELP] cargo-new is a valid .cargo/config.toml key
+[WARNING] unused manifest key: credential-alias
+[HELP] credential-alias is a valid .cargo/config.toml key
+[WARNING] unused manifest key: doc
+[HELP] doc is a valid .cargo/config.toml key
+[WARNING] unused manifest key: env
+[HELP] env is a valid .cargo/config.toml key
+[WARNING] unused manifest key: future-incompat-report
+[HELP] future-incompat-report is a valid .cargo/config.toml key
+[WARNING] unused manifest key: http
+[HELP] http is a valid .cargo/config.toml key
+[WARNING] unused manifest key: install
+[HELP] install is a valid .cargo/config.toml key
 [WARNING] unused manifest key: lib.build
-[CHECKING] foo v0.5.0 ([ROOT]/bar)
+[WARNING] unused manifest key: net
+[HELP] net is a valid .cargo/config.toml key
+[WARNING] unused manifest key: package.unused
+[WARNING] unused manifest key: paths
+[HELP] paths is a valid .cargo/config.toml key
+[WARNING] unused manifest key: registries
+[HELP] registries is a valid .cargo/config.toml key
+[WARNING] unused manifest key: registry
+[HELP] registry is a valid .cargo/config.toml key
+[WARNING] unused manifest key: resolver
+[HELP] resolver is a valid .cargo/config.toml key
+[WARNING] unused manifest key: source
+[HELP] source is a valid .cargo/config.toml key
+[WARNING] unused manifest key: target.cfg(unix).linker
+[WARNING] unused manifest key: target.foo.bar
+[WARNING] unused manifest key: term
+[HELP] term is a valid .cargo/config.toml key
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

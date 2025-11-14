@@ -35,6 +35,7 @@ use crate::util::interning::InternedString;
 use crate::util::lints::{get_key_value_span, rel_cwd_manifest_path};
 use crate::util::{
     self, GlobalContext, IntoUrl, OnceExt, OptVersionReq, context::ConfigRelativePath,
+    context::TOP_LEVEL_CONFIG_KEYS,
 };
 
 mod embedded;
@@ -2887,11 +2888,18 @@ fn deprecated_underscore<T>(
 }
 
 fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
     for key in unused {
-        warnings.push(format!("unused manifest key: {}", key));
-        if key == "profiles.debug" {
-            warnings.push("use `[profile.dev]` to configure debug builds".to_string());
+        let mut message = format!("unused manifest key: {}", key);
+        if TOP_LEVEL_CONFIG_KEYS.iter().any(|c| c == key) {
+            write!(
+                &mut message,
+                "\nhelp: {key} is a valid .cargo/config.toml key"
+            )
+            .unwrap();
         }
+        warnings.push(message);
     }
 }
 
