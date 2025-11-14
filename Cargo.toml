@@ -81,6 +81,7 @@ proptest = "1.9.0"
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
 rand = "0.9.2"
 regex = "1.12.2"
+rpassword = "7.4.0"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
@@ -221,6 +222,7 @@ unicode-ident.workspace = true
 url.workspace = true
 walkdir.workspace = true
 winnow.workspace = true
+rpassword.workspace = true
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true

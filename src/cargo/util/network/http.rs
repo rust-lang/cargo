@@ -69,6 +69,22 @@ pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoRe
     if let Some(check) = http.check_revoke {
         handle.ssl_options(SslOpt::new().no_revoke(!check))?;
     }
+    if let Some(client_ssl_cert) = &http.client_ssl_cert {
+        let client_ssl_cert = client_ssl_cert.resolve_path(gctx);
+        handle.ssl_cert(&client_ssl_cert)?;
+    }
+    if let Some(client_ssl_key) = &http.client_ssl_key {
+        let client_ssl_key = client_ssl_key.resolve_path(gctx);
+        handle.ssl_key(&client_ssl_key)?;
+
+        if http.client_ssl_key_protected.unwrap_or_default() {
+            let key_password = rpassword::prompt_password(format!(
+                "Password for certificate key file {}:",
+                client_ssl_key.display()
+            ))?;
+            handle.key_password(&key_password)?;
+        }
+    }
 
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;

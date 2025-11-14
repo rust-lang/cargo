@@ -51,6 +51,9 @@ pub struct CargoHttpConfig {
     pub debug: Option<bool>,
     pub multiplexing: Option<bool>,
     pub ssl_version: Option<SslVersionConfig>,
+    pub client_ssl_cert: Option<ConfigRelativePath>,
+    pub client_ssl_key: Option<ConfigRelativePath>,
+    pub client_ssl_key_protected: Option<bool>,
 }
 
 /// The `[future-incompat-report]` stable
