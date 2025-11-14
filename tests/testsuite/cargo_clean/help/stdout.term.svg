@@ -1,7 +1,7 @@
-<svg width="827px" height="614px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="632px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -54,37 +54,39 @@
 </tspan>
     <tspan x="10px" y="316px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Package to clean artifacts for</tspan>
 </tspan>
-    <tspan x="10px" y="334px">
+    <tspan x="10px" y="334px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--workspace</tspan><tspan>         Clean artifacts of the workspace members</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan class="fg-bright-green bold">Compilation Options:</tspan>
+    <tspan x="10px" y="352px">
 </tspan>
-    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--release</tspan><tspan>                 Whether or not to clean release artifacts</tspan>
+    <tspan x="10px" y="370px"><tspan class="fg-bright-green bold">Compilation Options:</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--profile</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PROFILE-NAME&gt;</tspan><tspan>  Clean artifacts of the specified profile</tspan>
+    <tspan x="10px" y="388px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--release</tspan><tspan>                 Whether or not to clean release artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Target triple to clean output for</tspan>
+    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--profile</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PROFILE-NAME&gt;</tspan><tspan>  Clean artifacts of the specified profile</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Target triple to clean output for</tspan>
 </tspan>
-    <tspan x="10px" y="442px">
+    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="460px">
 </tspan>
-    <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+    <tspan x="10px" y="478px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
+    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="514px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="514px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="532px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="568px">
+    <tspan x="10px" y="568px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="586px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help clean</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="586px">
 </tspan>
-    <tspan x="10px" y="604px">
+    <tspan x="10px" y="604px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help clean</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="622px">
 </tspan>
   </text>
 

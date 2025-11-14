@@ -248,7 +248,7 @@ fn clean_workspace_does_not_touch_non_workspace_packages() {
         .count();
     assert_ne!(num_external_dependency_artifacts, 0);
 
-    p.cargo("clean -p foo -p foo_core -p foo-base").run();
+    p.cargo("clean --workspace").run();
 
     fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
 
@@ -318,8 +318,7 @@ fn clean_workspace_with_extra_package_specifiers() {
         .count();
     assert_ne!(num_external_dependency_2_artifacts, 0);
 
-    p.cargo("clean -p foo -p foo_core -p foo-base -p external_dependency_1")
-        .run();
+    p.cargo("clean --workspace -p external_dependency_1").run();
 
     fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
 

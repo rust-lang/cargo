@@ -21,6 +21,9 @@ OPTIONS
            Clean only the specified packages. This flag may be specified
            multiple times. See cargo-pkgid(1) for the SPEC format.
 
+       --workspace
+           Clean artifacts of the workspace members.
+
    Clean Options
        --dry-run
            Displays a summary of what would be deleted without deleting
