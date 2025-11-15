@@ -224,6 +224,7 @@ walkdir.workspace = true
 winnow.workspace = true
 syn = { version = "2.0.109", features = ["full", "visit", "fold"] }
 prettyplease = "0.2.37"
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true

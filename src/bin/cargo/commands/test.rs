@@ -21,6 +21,15 @@ pub fn cli() -> Command {
         .arg(flag("no-run", "Compile, but don't run tests"))
         .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
         .arg(flag("mutation", "Enable mutation testing"))
+        .arg(flag("long", "Long (detailed) mutation output to console"))
+        .arg(flag("json", "Also write mutation results as JSON"))
+        .arg(
+            Arg::new("mutation-json-dir")
+                .short('d')
+                .value_name("DIRECTORY")
+                .help("Directory to write mutation-results.json into (defaults to project root)")
+                .action(ArgAction::Set),
+        )
         .arg_future_incompat_report()
         .arg_message_format()
         .arg(
@@ -109,7 +118,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ops = ops::TestOptions {
         no_run,
         no_fail_fast: args.flag("no-fail-fast"),
-        mutation:args.flag("mutation"),
+        mutation: args.flag("mutation"),
+        mutation_long: args.flag("long"),
+        mutation_json: args.flag("json"),
+        mutation_json_dir: args
+            .get_one::<String>("mutation-json-dir")
+            .map(|s| std::path::PathBuf::from(s)),
         compile_opts,
     };
 

@@ -1,7 +1,6 @@
 // mutation_iabr.rs
 use crate::util::CliResult;
 use crate::core::Workspace;
-use std::io;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -19,7 +18,7 @@ pub fn run_mutations(_ws: &Workspace<'_>) -> CliResult
 
 pub fn list_files(ws: &Workspace<'_>) -> CliResult
 {
-    // Set the root of this function to the top level of the passed workspace (The folder you are running this command in)
+    // Set the root of this function to the top level of the passed workspace
     let root = ws.root();
 
     // Basic print messages

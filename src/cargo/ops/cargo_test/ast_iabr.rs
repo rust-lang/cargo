@@ -64,6 +64,8 @@ pub enum OpKind {
 pub struct OpOccurrence {
     pub id: u32,
     pub kind: OpKind,
+    pub line: u32,
+    pub column: u32,
 }
 
 /// Visitor that walks expressions and collects binary `+` and `-` operators.
@@ -75,15 +77,21 @@ struct AddSubVisitor {
 
 impl<'ast> Visit<'ast> for AddSubVisitor {
     fn visit_expr_binary(&mut self, node: &'ast syn::ExprBinary) {
-        let kind = match node.op {
-            syn::BinOp::Add(_) => Some(OpKind::Add),
-            syn::BinOp::Sub(_) => Some(OpKind::Sub),
-            _ => None,
+        let (kind, line, column) = match &node.op {
+            syn::BinOp::Add(tok) => {
+                let lc = tok.span.start();
+                (Some(OpKind::Add), lc.line as u32, lc.column as u32)
+            }
+            syn::BinOp::Sub(tok) => {
+                let lc = tok.span.start();
+                (Some(OpKind::Sub), lc.line as u32, lc.column as u32)
+            }
+            _ => (None, 0, 0),
         };
         if let Some(kind) = kind {
             let id = self.next_id;
             self.next_id += 1;
-            self.occurrences.push(OpOccurrence { id, kind });
+            self.occurrences.push(OpOccurrence { id, kind, line, column });
         }
         syn::visit::visit_expr_binary(self, node);
     }

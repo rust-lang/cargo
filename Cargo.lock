@@ -368,6 +368,7 @@ dependencies = [
  "pasetors",
  "pathdiff",
  "prettyplease",
+ "proc-macro2",
  "rand",
  "regex",
  "rusqlite",
