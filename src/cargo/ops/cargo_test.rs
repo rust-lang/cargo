@@ -1,6 +1,7 @@
 // Mod this command to use the new program
 pub mod mutation_iabr;
 pub mod ast_iabr;
+pub mod mutators;
 
 
 use std::println;

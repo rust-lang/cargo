@@ -44,20 +44,23 @@ pub fn list_files(ws: &Workspace<'_>) -> CliResult
         eprintln!("   {}", file.display());
     }
 
-    // Create the ASTs for all `.rs` files found via Cargo's file lister.
-    // This ensures we only parse files relevant to the selected packages.
-    eprintln!("\nCREATING ABSTRACT SYNTAX TREES");
-    match ast_iabr::create_trees(ws) {
-        Ok(trees) => {
-            eprintln!("Created {} AST(s)", trees.len());
-            // Build add/sub operator index from existing ASTs.
-            // We keep a stable per-file ID for each operator to support
-            // deterministic mutation selection later.
-            let index = ast_iabr::index_add_sub_from_trees(&trees);
-            let total: usize = index.values().map(|v| v.len()).sum();
-            eprintln!("Indexed {} add/sub operator(s) across {} file(s)", total, index.len());
+    // Build the add/sub index and cache ASTs only for files with many targets.
+    eprintln!("\nINDEXING ADD/SUB OPERATORS (threshold {})", ast_iabr::CACHE_THRESHOLD);
+    match ast_iabr::build_index_with_cache(ws) {
+        Ok(result) => {
+            let total: usize = result.index.values().map(|v| v.len()).sum();
+            eprintln!(
+                "Indexed {} add/sub operator(s) across {} file(s)",
+                total,
+                result.index.len()
+            );
+            eprintln!(
+                "Cached ASTs for {} file(s) with ≥{} targets",
+                result.cached_asts.len(),
+                ast_iabr::CACHE_THRESHOLD
+            );
         }
-        Err(e) => eprintln!("AST creation failed: {}", e),
+        Err(e) => eprintln!("Indexing add/sub failed: {}", e),
     }
 
 

@@ -127,3 +127,52 @@ pub fn index_add_sub_from_trees(
     }
     index
 }
+
+/// Minimum number of add/sub operators in a file to keep its AST cached.
+pub const CACHE_THRESHOLD: usize = 10;
+
+/// Index add/sub operators across the workspace while caching only
+/// ASTs for files with at least `CACHE_THRESHOLD` targets.
+/// This balances memory usage against repeated parse cost for files
+/// with many planned mutations.
+pub struct IndexResult {
+    pub index: HashMap<PathBuf, Vec<OpOccurrence>>,   // all files with ≥1 target
+    pub cached_asts: HashMap<PathBuf, File>,          // only files with ≥CACHE_THRESHOLD
+}
+
+pub fn build_index_with_cache(ws: &Workspace<'_>) -> syn::Result<IndexResult> {
+    let mut index: HashMap<PathBuf, Vec<OpOccurrence>> = HashMap::new();
+    let mut cached_asts: HashMap<PathBuf, File> = HashMap::new();
+
+    // Iterate over packages and enumerate relevant files via Cargo.
+    for package in ws.members() {
+        let files = match src_path::list_files(package, ws.gctx()) {
+            Ok(list) => list,
+            Err(_) => continue,
+        };
+
+        for entry in files.into_iter() {
+            if !entry.is_file() {
+                continue;
+            }
+            let path = entry.into_path_buf();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+
+            // Parse once per file, decide whether to cache based on count.
+            let source = fs::read_to_string(&path).expect("Failed to open file");
+            let ast: File = syn::parse_file(&source)?;
+            let occ = index_add_sub_in_file(&ast);
+            if occ.is_empty() {
+                continue;
+            }
+            if occ.len() >= CACHE_THRESHOLD {
+                cached_asts.insert(path.clone(), ast);
+            }
+            index.insert(path, occ);
+        }
+    }
+
+    Ok(IndexResult { index, cached_asts })
+}
