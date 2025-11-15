@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use syn::{File};
 use syn::fold::{Fold, fold_expr_binary};
 
-use super::ast_iabr::{build_index_with_cache, index_add_sub_in_file, OpKind, OpOccurrence, IndexResult};
+use super::ast_iabr::{build_index_with_cache, OpOccurrence, IndexResult};
 use crate::core::Workspace;
 
 /// Mutation kinds supported (extensible).

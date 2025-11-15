@@ -4,7 +4,6 @@ pub mod ast_iabr;
 pub mod mutators;
 
 
-use std::println;
 use crate::core::compiler::{Compilation, CompileKind, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::shell::ColorChoice;
