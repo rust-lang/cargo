@@ -1,9 +1,25 @@
 Editing for the Project
 -------------------------------------------
-As far as I know we should only be working with (Or at least currently)
-cargo_test.rs in Cargo-Mutation-Enabled-Toolchain\src\cargo\ops
-mutation_iabr.rs in Cargo-Mutation-Enabled-Toolchain\src\cargo\ops
-test.rs in Cargo-Mutation-Enabled-Toolchain\src\bin\cargo\commands
+Mutation testing features implemented so far:
+
+- Modular framework: `Mutator` trait with `AddSubMutator` (Add ↔ Sub).
+- AST indexing: parses all `.rs` files via Cargo’s file lister; collects `+`/`-` occurrences with stable IDs and source locations (line/column).
+- Selective AST cache: caches ASTs only for files with ≥10 add/sub sites to balance memory/time.
+- One-at-a-time mutations: flips exactly one operator, runs tests, restores the file, repeats.
+- Output modes:
+   - Default compact: single-line progress bar with elapsed time, then final metrics only.
+   - `--long`: detailed per-mutation logs (start/indexed/results/summary).
+- JSON reporting:
+   - `--json`: writes `mutation-results.json` (short by default, long with `--long`).
+   - Includes per-mutation `{file, id, line, column, outcome}` in long mode.
+   - `-d <dir>` writes JSON to a specific directory; always prints the JSON directory at the end.
+
+CLI usage on any Cargo project (external or this repo):
+
+- Compact run: `cargo test --mutation`
+- Long run: `cargo test --mutation --long`
+- JSON (project root): `cargo test --mutation --json`
+- JSON (custom dir): `cargo test --mutation --json -d ".\out"`
 -------------------------------------------
 
 Compiling Rust
