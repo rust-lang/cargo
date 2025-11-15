@@ -44,9 +44,21 @@ pub fn list_files(ws: &Workspace<'_>) -> CliResult
         eprintln!("   {}", file.display());
     }
 
-    // Create the ASTs
+    // Create the ASTs for all `.rs` files found via Cargo's file lister.
+    // This ensures we only parse files relevant to the selected packages.
     eprintln!("\nCREATING ABSTRACT SYNTAX TREES");
-    let _trees = ast_iabr::create_trees(ws);
+    match ast_iabr::create_trees(ws) {
+        Ok(trees) => {
+            eprintln!("Created {} AST(s)", trees.len());
+            // Build add/sub operator index from existing ASTs.
+            // We keep a stable per-file ID for each operator to support
+            // deterministic mutation selection later.
+            let index = ast_iabr::index_add_sub_from_trees(&trees);
+            let total: usize = index.values().map(|v| v.len()).sum();
+            eprintln!("Indexed {} add/sub operator(s) across {} file(s)", total, index.len());
+        }
+        Err(e) => eprintln!("AST creation failed: {}", e),
+    }
 
 
     Ok(())
