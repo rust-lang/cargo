@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::core::PackageId;
 use crate::core::compiler::compilation::{self, UnitOutput};
-use crate::core::compiler::{self, Unit, artifact};
+use crate::core::compiler::{self, Unit, UserIntent, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use annotate_snippets::{Level, Message};
@@ -352,11 +352,32 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     #[tracing::instrument(skip_all)]
     pub fn prepare_units(&mut self) -> CargoResult<()> {
         let dest = self.bcx.profiles.get_dir_name();
-        let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
+        // We try to only lock the artifact-dir if we need to.
+        // For example, `cargo check` does not write any files to the artifact-dir so we don't need
+        // to lock it.
+        let must_take_artifact_dir_lock = match self.bcx.build_config.intent {
+            UserIntent::Check { .. } => {
+                // Generally cargo check does not need to take the artifact-dir lock but there is
+                // one exception: If check has `--timings` we still need to lock artifact-dir since
+                // we will output the report files.
+                !self.bcx.build_config.timing_outputs.is_empty()
+            }
+            UserIntent::Build
+            | UserIntent::Test
+            | UserIntent::Doc { .. }
+            | UserIntent::Doctest
+            | UserIntent::Bench => true,
+        };
+        let host_layout = Layout::new(self.bcx.ws, None, &dest, must_take_artifact_dir_lock)?;
         let mut targets = HashMap::new();
         for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
-                let layout = Layout::new(self.bcx.ws, Some(target), &dest)?;
+                let layout = Layout::new(
+                    self.bcx.ws,
+                    Some(target),
+                    &dest,
+                    must_take_artifact_dir_lock,
+                )?;
                 targets.insert(target, layout);
             }
         }
@@ -392,9 +413,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         let files = self.files.as_ref().unwrap();
         for &kind in self.bcx.all_kinds.iter() {
             let layout = files.layout(kind);
-            self.compilation
-                .root_output
-                .insert(kind, layout.artifact_dir().dest().to_path_buf());
+            if let Some(artifact_dir) = layout.artifact_dir() {
+                self.compilation
+                    .root_output
+                    .insert(kind, artifact_dir.dest().to_path_buf());
+            }
             if self.bcx.gctx.cli_unstable().build_dir_new_layout {
                 for (unit, _) in self.bcx.unit_graph.iter() {
                     let dep_dir = self.files().deps_dir(unit);

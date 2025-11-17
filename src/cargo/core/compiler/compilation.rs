@@ -305,12 +305,14 @@ impl<'gctx> Compilation<'gctx> {
             }
             search_path.push(self.deps_output[&CompileKind::Host].clone());
         } else {
-            search_path.extend(super::filter_dynamic_search_path(
-                self.native_dirs.iter(),
-                &self.root_output[&kind],
-            ));
+            if let Some(path) = self.root_output.get(&kind) {
+                search_path.extend(super::filter_dynamic_search_path(
+                    self.native_dirs.iter(),
+                    path,
+                ));
+                search_path.push(path.clone());
+            }
             search_path.push(self.deps_output[&kind].clone());
-            search_path.push(self.root_output[&kind].clone());
             // For build-std, we don't want to accidentally pull in any shared
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it

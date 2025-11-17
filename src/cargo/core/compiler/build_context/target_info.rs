@@ -1181,7 +1181,14 @@ impl RustDocFingerprint {
             .bcx
             .all_kinds
             .iter()
-            .map(|kind| build_runner.files().layout(*kind).artifact_dir().doc())
+            .map(|kind| {
+                build_runner
+                    .files()
+                    .layout(*kind)
+                    .artifact_dir()
+                    .expect("artifact-dir was not locked")
+                    .doc()
+            })
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;

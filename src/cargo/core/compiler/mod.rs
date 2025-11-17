@@ -298,7 +298,7 @@ fn rustc(
     exec.init(build_runner, unit);
     let exec = exec.clone();
 
-    let root_output = build_runner.files().host_dest().to_path_buf();
+    let root_output = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
@@ -361,7 +361,9 @@ fn rustc(
                 current_id,
                 mode,
             )?;
-            add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
+            if let Some(ref root_output) = root_output {
+                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, root_output)?;
+            }
             add_custom_flags(&mut rustc, &script_outputs, script_metadatas)?;
         }
 
@@ -1421,11 +1423,15 @@ fn build_base_args(
             .iter()
             .filter(|target| target.is_bin())
         {
-            let exe_path = build_runner.files().bin_link_for_target(
-                bin_target,
-                unit.kind,
-                build_runner.bcx,
-            )?;
+            // For `cargo check` builds we do not uplift the CARGO_BIN_EXE_ artifacts to the
+            // artifact-dir. We do not want to provide a path to a non-existent binary but we still
+            // need to provide *something* so `env!("CARGO_BIN_EXE_...")` macros will compile.
+            let exe_path = build_runner
+                .files()
+                .bin_link_for_target(bin_target, unit.kind, build_runner.bcx)?
+                .map(|path| path.as_os_str().to_os_string())
+                .unwrap_or_else(|| OsString::from(format!("placeholder:{}", bin_target.name())));
+
             let name = bin_target
                 .binary_filename()
                 .unwrap_or(bin_target.name().to_string());

@@ -211,7 +211,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
         // will be put into doc/ and not into deps/ where the *.examples files are stored.
         if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-            self.layout(unit.kind).artifact_dir().doc().to_path_buf()
+            self.layout(unit.kind)
+                .artifact_dir()
+                .expect("artifact-dir was not locked")
+                .doc()
+                .to_path_buf()
         } else if unit.mode.is_doc_test() {
             panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
@@ -249,8 +253,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     }
 
     /// Returns the final artifact path for the host (`/…/target/debug`)
-    pub fn host_dest(&self) -> &Path {
-        self.host.artifact_dir().dest()
+    pub fn host_dest(&self) -> Option<&Path> {
+        self.host.artifact_dir().map(|v| v.dest())
     }
 
     /// Returns the root of the build output tree for the host (`/…/build-dir`)
@@ -283,8 +287,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     }
 
     /// Directory where timing output should go.
-    pub fn timings_dir(&self) -> &Path {
-        self.host.artifact_dir().timings()
+    pub fn timings_dir(&self) -> Option<&Path> {
+        self.host.artifact_dir().map(|v| v.timings())
     }
 
     /// Returns the path for a file in the fingerprint directory.
@@ -378,9 +382,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         target: &Target,
         kind: CompileKind,
         bcx: &BuildContext<'_, '_>,
-    ) -> CargoResult<PathBuf> {
+    ) -> CargoResult<Option<PathBuf>> {
         assert!(target.is_bin());
-        let dest = self.layout(kind).artifact_dir().dest();
+        let Some(dest) = self.layout(kind).artifact_dir().map(|v| v.dest()) else {
+            return Ok(None);
+        };
         let info = bcx.target_data.info(kind);
         let (file_types, _) = info
             .rustc_outputs(
@@ -396,7 +402,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .find(|file_type| file_type.flavor == FileFlavor::Normal)
             .expect("target must support `bin`");
 
-        Ok(dest.join(file_type.uplift_filename(target)))
+        Ok(Some(dest.join(file_type.uplift_filename(target))))
     }
 
     /// Returns the filenames that the given unit will generate.
@@ -450,12 +456,17 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             // Examples live in their own little world.
             self.layout(unit.kind)
                 .artifact_dir()
+                .expect("artifact-dir was not locked")
                 .examples()
                 .join(filename)
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit).join(filename)
         } else {
-            self.layout(unit.kind).artifact_dir().dest().join(filename)
+            self.layout(unit.kind)
+                .artifact_dir()
+                .expect("artifact-dir was not locked")
+                .dest()
+                .join(filename)
         };
         if from_path == uplift_path {
             // This can happen with things like examples that reside in the
