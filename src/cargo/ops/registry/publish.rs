@@ -126,26 +126,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     }
 
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
-    let reg_or_index = match opts.reg_or_index.clone() {
-        Some(r) => {
-            validate_registry(&just_pkgs, Some(&r))?;
-            Some(r)
-        }
-        None => {
-            let reg = super::infer_registry(&just_pkgs)?;
-            validate_registry(&just_pkgs, reg.as_ref())?;
-            if let Some(RegistryOrIndex::Registry(registry)) = &reg {
-                if registry != CRATES_IO_REGISTRY {
-                    // Don't warn for crates.io.
-                    opts.gctx.shell().note(&format!(
-                        "found `{}` as only allowed registry. Publishing to it automatically.",
-                        registry
-                    ))?;
-                }
-            }
-            reg
-        }
-    };
+    let reg_or_index = resolve_registry_or_index(opts, &just_pkgs)?;
 
     // This is only used to confirm that we can create a token before we build the package.
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
@@ -812,6 +793,32 @@ fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> S
             format!("{}, {final_sep} {last}", names.join(", "))
         }
     }
+}
+
+fn resolve_registry_or_index(
+    opts: &PublishOpts<'_>,
+    just_pkgs: &[&Package],
+) -> CargoResult<Option<RegistryOrIndex>> {
+    Ok(match opts.reg_or_index.clone() {
+        Some(r) => {
+            validate_registry(&just_pkgs, Some(&r))?;
+            Some(r)
+        }
+        None => {
+            let reg = super::infer_registry(&just_pkgs)?;
+            validate_registry(&just_pkgs, reg.as_ref())?;
+            if let Some(RegistryOrIndex::Registry(registry)) = &reg {
+                if registry != CRATES_IO_REGISTRY {
+                    // Don't warn for crates.io.
+                    opts.gctx.shell().note(&format!(
+                        "found `{}` as only allowed registry. Publishing to it automatically.",
+                        registry
+                    ))?;
+                }
+            }
+            reg
+        }
+    })
 }
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
