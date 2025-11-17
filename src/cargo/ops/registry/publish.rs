@@ -802,9 +802,19 @@ fn resolve_registry_or_index(
     let opt_index_or_registry = opts.reg_or_index.clone();
 
     let res = match opt_index_or_registry {
-        Some(r) => {
-            validate_registry(&just_pkgs, Some(&r))?;
-            Some(r)
+        ref r @ Some(ref registry_or_index) => {
+            validate_registry(just_pkgs, r.as_ref())?;
+
+            let registry_is_specified_by_any_package = just_pkgs
+                .iter()
+                .any(|pkg| pkg.publish().as_ref().map(|v| v.len()).unwrap_or(0) > 0);
+
+            if registry_is_specified_by_any_package && registry_or_index.is_index() {
+                opts.gctx.shell().warn(r#"`--index` will ignore registries set by `package.publish` in Cargo.toml, and may cause unexpected push to prohibited registry
+help: use `--registry` instead or set `publish = true` in Cargo.toml to suppress this warning"#)?;
+            }
+
+            r.clone()
         }
         None => {
             let reg = super::infer_registry(&just_pkgs)?;
