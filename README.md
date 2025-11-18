@@ -52,3 +52,21 @@ If you get an access denied error:
 You probably forgot to clear your session using the clear command
 or
 You didn't set the path variable to use the base compiler, see step 2
+
+### Troubleshooting (macOS / Windows)
+-------------------------------------------
+- **Mutation flags not recognized (`unexpected argument '--mutation'`):**  
+  You are still using the stock `cargo`, not the mutation-enabled fork.  
+  - Run `which cargo` and ensure it points to the fork's `target/debug/cargo`.  
+  - On macOS (bash/zsh):
+    ```bash
+    export PATH="/path/to/Cargo-Mutation-Enabled-Toolchain/target/debug:$PATH"
+    hash -r
+    ```
+
+- **OpenSSL build error on macOS (openssl-sys):**  
+  Install dependencies via Homebrew:
+  ```bash
+  brew install openssl@3 pkg-config
+  export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig:$PKG_CONFIG_PATH"
+  cargo build -p cargo
