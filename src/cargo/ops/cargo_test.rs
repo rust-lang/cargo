@@ -298,17 +298,36 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
                     }
                 }
                 Err(_) => {
-                    survived += 1;
-                    results_vec.push(MutResultEntry { file: target.path.display().to_string(), id: target.id, line: target.line, column: target.column, outcome: "error" });
+                    // Any error while running tests is treated as killing the mutant
+                    killed += 1;
+                    results_vec.push(MutResultEntry {
+                        file: target.path.display().to_string(),
+                        id: target.id,
+                        line: target.line,
+                        column: target.column,
+                        outcome: "killed",
+                    });
                     if options.mutation_long {
-                        eprintln!("MUT result kind={} outcome=error_treated_as_survived file={:?} id={}", mutator.name(), &target.path, target.id);
+                        eprintln!(
+                            "MUT result kind={} outcome=killed (error while running tests) file={:?} id={}",
+                            mutator.name(),
+                            &target.path,
+                            target.id
+                        );
                     } else {
                         processed += 1;
                         let secs = start.elapsed().as_secs_f32();
-                        eprint!("\rProgress {}/{} [{}] ({:.2}s)", processed, total, render_bar(processed), secs);
+                        eprint!(
+                            "\rProgress {}/{} [{}] ({:.2}s)",
+                            processed,
+                            total,
+                            render_bar(processed),
+                            secs
+                        );
                         let _ = io::stderr().flush();
                     }
                 }
+
             }
         }
 
