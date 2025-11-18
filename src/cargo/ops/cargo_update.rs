@@ -722,6 +722,9 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
             write!(&mut cfg, " Rust {rust_version}")?;
         }
         write!(&mut cfg, " compatible version{plural}")?;
+        if let Some(publish_time) = ws.resolve_publish_time() {
+            write!(&mut cfg, " as of {publish_time}")?;
+        }
     }
 
     ws.gctx()

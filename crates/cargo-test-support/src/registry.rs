@@ -578,6 +578,7 @@ pub struct Package {
     links: Option<String>,
     rust_version: Option<String>,
     cargo_features: Vec<String>,
+    pubtime: Option<String>,
     v: Option<u32>,
 }
 
@@ -1243,6 +1244,7 @@ fn save_new_crate(
         new_crate.links,
         new_crate.rust_version.as_deref(),
         None,
+        None,
     );
 
     write_to_index(registry_path, &new_crate.name, line, false);
@@ -1273,6 +1275,7 @@ impl Package {
             links: None,
             rust_version: None,
             cargo_features: Vec::new(),
+            pubtime: None,
             v: None,
         }
     }
@@ -1460,6 +1463,12 @@ impl Package {
         self
     }
 
+    /// The publish time for the package in ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
+    pub fn pubtime(&mut self, time: &str) -> &mut Package {
+        self.pubtime = Some(time.to_owned());
+        self
+    }
+
     /// Sets the index schema version for this package.
     ///
     /// See `cargo::sources::registry::IndexPackage` for more information.
@@ -1536,6 +1545,7 @@ impl Package {
                 self.yanked,
                 self.links.clone(),
                 self.rust_version.as_deref(),
+                self.pubtime.as_deref(),
                 self.v,
             )
         };

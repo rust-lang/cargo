@@ -29,6 +29,7 @@ struct Inner {
     checksum: Option<String>,
     links: Option<InternedString>,
     rust_version: Option<RustVersion>,
+    pubtime: Option<jiff::Timestamp>,
 }
 
 /// Indicates the dependency inferred from the `dep` syntax that should exist,
@@ -90,6 +91,7 @@ impl Summary {
                 checksum: None,
                 links: links.map(|l| l.into()),
                 rust_version,
+                pubtime: None,
             }),
         })
     }
@@ -124,6 +126,10 @@ impl Summary {
         self.inner.rust_version.as_ref()
     }
 
+    pub fn pubtime(&self) -> Option<jiff::Timestamp> {
+        self.inner.pubtime
+    }
+
     pub fn override_id(mut self, id: PackageId) -> Summary {
         Arc::make_mut(&mut self.inner).package_id = id;
         self
@@ -131,6 +137,10 @@ impl Summary {
 
     pub fn set_checksum(&mut self, cksum: String) {
         Arc::make_mut(&mut self.inner).checksum = Some(cksum);
+    }
+
+    pub fn set_pubtime(&mut self, pubtime: jiff::Timestamp) {
+        Arc::make_mut(&mut self.inner).pubtime = Some(pubtime);
     }
 
     pub fn map_dependencies<F>(self, mut f: F) -> Summary

@@ -49,6 +49,18 @@ OPTIONS
        --ignore-rust-version
            Ignore rust-version specification in packages.
 
+       --publish-time yyyy-mm-ddThh:mm:ssZ
+           Latest publish time allowed for registry packages (Unstable)
+
+           This is a best-effort filter on allowed packages, including:
+
+           o  packages from unsupported registries are always accepted
+
+           o  only the current yank state is respected, not the state as of
+              --publish-time
+
+           o  precision of the publish time
+
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo

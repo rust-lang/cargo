@@ -1229,6 +1229,7 @@ impl<'a> TmpRegistry<'a> {
             yanked: None,
             links: new_crate.links.map(|x| x.into()),
             rust_version: None,
+            pubtime: None,
             v: Some(2),
         })?;
 

@@ -448,6 +448,9 @@ pub fn resolve_with_previous<'gctx>(
         }
         version_prefs.rust_versions(rust_versions);
     }
+    if let Some(publish_time) = ws.resolve_publish_time() {
+        version_prefs.publish_time(publish_time);
+    }
 
     let avoid_patch_ids = if register_patches {
         register_patch_entries(registry, ws, previous, &mut version_prefs, keep_previous)?

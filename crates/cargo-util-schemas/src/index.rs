@@ -46,6 +46,10 @@ pub struct IndexPackage<'a> {
     /// can be `None` if published before then or if not set in the manifest.
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<RustVersion>,
+    /// The publish time for the package.  Unstable.
+    ///
+    /// In ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
+    pub pubtime: Option<String>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version `1`. Entries with unknown

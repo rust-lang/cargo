@@ -122,6 +122,8 @@ pub struct Workspace<'gctx> {
     resolve_honors_rust_version: bool,
     /// The feature unification mode used when building packages.
     resolve_feature_unification: FeatureUnification,
+    /// Latest publish time allowed for packages
+    resolve_publish_time: Option<jiff::Timestamp>,
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
 
@@ -259,6 +261,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
             resolve_feature_unification: FeatureUnification::Selected,
+            resolve_publish_time: None,
             custom_metadata: None,
             local_overlays: HashMap::new(),
         }
@@ -715,6 +718,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn resolve_feature_unification(&self) -> FeatureUnification {
         self.resolve_feature_unification
+    }
+
+    pub fn set_resolve_publish_time(&mut self, publish_time: jiff::Timestamp) {
+        self.resolve_publish_time = Some(publish_time);
+    }
+
+    pub fn resolve_publish_time(&self) -> Option<jiff::Timestamp> {
+        self.resolve_publish_time
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

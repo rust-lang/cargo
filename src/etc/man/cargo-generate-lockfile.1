@@ -67,6 +67,25 @@ Path to the \fBCargo.toml\fR file. By default, Cargo searches for the
 Ignore \fBrust\-version\fR specification in packages.
 .RE
 .sp
+\fB\-\-publish\-time\fR \fIyyyy\-mm\-ddThh:mm:ssZ\fR
+.RS 4
+Latest publish time allowed for registry packages (Unstable)
+.sp
+This is a best\-effort filter on allowed packages, including:
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'packages from unsupported registries are always accepted
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'only the current yank state is respected, not the state as of \fB\-\-publish\-time\fR
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'precision of the publish time
+.RE
+.RE
+.sp
 \fB\-\-locked\fR
 .RS 4
 Asserts that the exact same dependencies and versions are used as when the

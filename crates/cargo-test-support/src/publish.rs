@@ -228,6 +228,7 @@ pub(crate) fn create_index_line(
     yanked: bool,
     links: Option<String>,
     rust_version: Option<&str>,
+    pubtime: Option<&str>,
     v: Option<u32>,
 ) -> String {
     // This emulates what crates.io does to retain backwards compatibility.
@@ -250,6 +251,9 @@ pub(crate) fn create_index_line(
     }
     if let Some(rust_version) = rust_version {
         json["rust_version"] = serde_json::json!(rust_version);
+    }
+    if let Some(pubtime) = pubtime {
+        json["pubtime"] = serde_json::json!(pubtime);
     }
 
     json.to_string()
