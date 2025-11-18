@@ -799,7 +799,9 @@ fn resolve_registry_or_index(
     opts: &PublishOpts<'_>,
     just_pkgs: &[&Package],
 ) -> CargoResult<Option<RegistryOrIndex>> {
-    Ok(match opts.reg_or_index.clone() {
+    let opt_index_or_registry = opts.reg_or_index.clone();
+
+    let res = match opt_index_or_registry {
         Some(r) => {
             validate_registry(&just_pkgs, Some(&r))?;
             Some(r)
@@ -818,7 +820,9 @@ fn resolve_registry_or_index(
             }
             reg
         }
-    })
+    };
+
+    Ok(res)
 }
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
