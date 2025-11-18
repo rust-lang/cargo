@@ -980,6 +980,60 @@ fn publish_implicitly_to_only_allowed_registry() {
 }
 
 #[cargo_test]
+fn publish_when_both_publish_and_index_specified() {
+    let registry = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project().build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                publish = ["registry"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .arg("--index")
+        .arg(registry.index_url().as_str())
+        .arg("--token")
+        .arg(registry.token())
+        .with_stderr_data(str![[r#"
+[WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
+[WARNING] `--index` will ignore registries set by `package.publish` in Cargo.toml, and may cause unexpected push to prohibited registry
+[HELP] use `--registry` instead or set `publish = true` in Cargo.toml to suppress this warning
+[UPDATING] [..] index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry [..]
+[NOTE] waiting for foo v0.0.1 to be available at registry [..]
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry [..]
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn publish_failed_with_index_and_only_allowed_registry() {
     let registry = RegistryBuilder::new()
         .http_api()
@@ -1014,6 +1068,7 @@ fn publish_failed_with_index_and_only_allowed_registry() {
         .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr_data(str![[r#"
+...
 [ERROR] command-line argument --index requires --token to be specified
 
 "#]])

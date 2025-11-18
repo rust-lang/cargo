@@ -126,26 +126,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     }
 
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
-    let reg_or_index = match opts.reg_or_index.clone() {
-        Some(r) => {
-            validate_registry(&just_pkgs, Some(&r))?;
-            Some(r)
-        }
-        None => {
-            let reg = super::infer_registry(&just_pkgs)?;
-            validate_registry(&just_pkgs, reg.as_ref())?;
-            if let Some(RegistryOrIndex::Registry(registry)) = &reg {
-                if registry != CRATES_IO_REGISTRY {
-                    // Don't warn for crates.io.
-                    opts.gctx.shell().note(&format!(
-                        "found `{}` as only allowed registry. Publishing to it automatically.",
-                        registry
-                    ))?;
-                }
-            }
-            reg
-        }
-    };
+    let reg_or_index = resolve_registry_or_index(opts, &just_pkgs)?;
 
     // This is only used to confirm that we can create a token before we build the package.
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
@@ -812,6 +793,46 @@ fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> S
             format!("{}, {final_sep} {last}", names.join(", "))
         }
     }
+}
+
+fn resolve_registry_or_index(
+    opts: &PublishOpts<'_>,
+    just_pkgs: &[&Package],
+) -> CargoResult<Option<RegistryOrIndex>> {
+    let opt_index_or_registry = opts.reg_or_index.clone();
+
+    let res = match opt_index_or_registry {
+        ref r @ Some(ref registry_or_index) => {
+            validate_registry(just_pkgs, r.as_ref())?;
+
+            let registry_is_specified_by_any_package = just_pkgs
+                .iter()
+                .any(|pkg| pkg.publish().as_ref().map(|v| v.len()).unwrap_or(0) > 0);
+
+            if registry_is_specified_by_any_package && registry_or_index.is_index() {
+                opts.gctx.shell().warn(r#"`--index` will ignore registries set by `package.publish` in Cargo.toml, and may cause unexpected push to prohibited registry
+help: use `--registry` instead or set `publish = true` in Cargo.toml to suppress this warning"#)?;
+            }
+
+            r.clone()
+        }
+        None => {
+            let reg = super::infer_registry(&just_pkgs)?;
+            validate_registry(&just_pkgs, reg.as_ref())?;
+            if let Some(RegistryOrIndex::Registry(registry)) = &reg {
+                if registry != CRATES_IO_REGISTRY {
+                    // Don't warn for crates.io.
+                    opts.gctx.shell().note(&format!(
+                        "found `{}` as only allowed registry. Publishing to it automatically.",
+                        registry
+                    ))?;
+                }
+            }
+            reg
+        }
+    };
+
+    Ok(res)
 }
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
