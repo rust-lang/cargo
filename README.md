@@ -22,6 +22,10 @@ CLI usage on any Cargo project (external or this repo):
 - JSON (custom dir): `cargo test --mutation --json -d ".\out"`
 -------------------------------------------
 
+Mutation notes
+-------------------------------------------
+- Supported mutators: `add_sub` (Addition <-> Subtraction) and `mul_div` (Multiplication <-> Division).
+
 Compiling Rust
 -------------------------------------------
 You will first need to compile the base version of cargo, which you

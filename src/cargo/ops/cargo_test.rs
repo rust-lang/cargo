@@ -184,54 +184,24 @@ impl Drop for FileReplacer {
 
 // Mutation campaign: flip one operator at a time and run tests; report killed/survivors.
 fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str]) -> CliResult {
-    use self::mutators::{AddSubMutator, Mutator};
+    use self::mutators::{AddSubMutator, DivMulMutator, Mutator};
 
-    // Select the mutator (can be parameterized later).
-    let mutator = AddSubMutator;
-    if options.mutation_long {
-        eprintln!("MUT start kind={} mode=one-at-a-time", mutator.name());
-    }
-
-    // Build index + selective AST cache (threshold policy inside).
-    let ctx = match mutator.build_context(ws) {
-        Ok(c) => c,
-        Err(e) => return Err(anyhow::format_err!("indexing failed: {e}").into()),
-    };
-
-    let mut total: usize;
-    let mut killed = 0usize;
-    let mut survived = 0usize;
+    // Select mutators to run (can be parameterized later).
+    let mutators: Vec<Box<dyn Mutator>> = vec![Box::new(AddSubMutator), Box::new(DivMulMutator)];
 
     // Prepare non-mutation test options to avoid recursion.
     let mut plain_opts = options.clone();
     plain_opts.mutation = false;
 
-    // Enumerate standardized targets.
-    let targets = mutator.enumerate_targets(&ctx);
-    total = targets.len();
-    if options.mutation_long {
-        eprintln!(
-            "MUT indexed kind={} files={} targets={} cached={}",
-            mutator.name(),
-            ctx.index.len(),
-            total,
-            ctx.cached_asts.len()
-        );
-    }
-    // Compact header and initial progress line
+    // Compact header and initial progress line will be shown per-mutator below.
     let bar_width: usize = 20;
-    let render_bar = |done: usize| -> String {
+    let render_bar = |done: usize, total: usize| -> String {
         let filled = if total == 0 { 0 } else { done * bar_width / total };
         let mut s = String::with_capacity(bar_width);
         for _ in 0..filled { s.push('#'); }
         for _ in filled..bar_width { s.push('-'); }
         s
     };
-    if !options.mutation_long {
-        eprintln!("Mutations:\nAddition <-> Subtraction\n");
-        eprint!("Progress {}/{} [{}] ({:.2}s)", 0, total, render_bar(0), 0.0);
-        let _ = io::stderr().flush();
-    }
     let start = Instant::now();
 
     #[derive(Serialize)]
@@ -249,18 +219,61 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
         mode: &'a str,
     }
 
-    let mut results_vec: Vec<MutResultEntry> = Vec::new();
-    let mut processed: usize = 0;
+    if !options.mutation_long {
+        eprintln!("Mutators: add_sub, mul_div\n");
+    }
+    // Run each mutator sequentially and emit per-mutator summaries.
+    for mutator in mutators.into_iter() {
+        if options.mutation_long {
+            eprintln!("MUT start kind={} mode=one-at-a-time", mutator.name());
+        }
 
-    for target in targets {
-        // Produce mutated source.
-        let mutated = match mutator.mutate(&ctx, &target) {
-            Ok(m) => m,
-            Err(e) => return Err(anyhow::format_err!(
-                "mutation failed for {:?} #{:?}: {e}",
-                target.path, target.id
-            ).into()),
+        // Build index + selective AST cache (threshold policy inside).
+        let ctx = match mutator.build_context(ws) {
+            Ok(c) => c,
+            Err(e) => return Err(anyhow::format_err!("indexing failed: {e}").into()),
         };
+
+        let mut total: usize;
+        let mut killed = 0usize;
+        let mut survived = 0usize;
+        let targets = mutator.enumerate_targets(&ctx);
+        total = targets.len();
+
+        if options.mutation_long {
+            eprintln!(
+                "MUT indexed kind={} files={} targets={} cached={}",
+                mutator.name(),
+                ctx.index.len(),
+                total,
+                ctx.cached_asts.len()
+            );
+        }
+
+        if !options.mutation_long {
+            // Brief human header per mutator
+            let header = match mutator.name() {
+                "add_sub" => "Addition <-> Subtraction",
+                "mul_div" => "Multiplication <-> Division",
+                other => other,
+            };
+            eprintln!("Mutations:\n{}\n", header);
+            eprint!("Progress {}/{} [{}] ({:.2}s)", 0, total, render_bar(0, total), 0.0);
+            let _ = io::stderr().flush();
+        }
+
+        let mut results_vec: Vec<MutResultEntry> = Vec::new();
+        let mut processed: usize = 0;
+
+        for target in targets {
+            // Produce mutated source.
+            let mutated = match mutator.mutate(&ctx, &target) {
+                Ok(m) => m,
+                Err(e) => return Err(anyhow::format_err!(
+                    "mutation failed for {:?} #{:?}: {e}",
+                    target.path, target.id
+                ).into()),
+            };
 
             // Replace file on disk; restore back automatically.
             let _guard = match FileReplacer::replace(&target.path, &mutated) {
@@ -281,7 +294,7 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
                     } else {
                         processed += 1;
                         let secs = start.elapsed().as_secs_f32();
-                        eprint!("\rProgress {}/{} [{}] ({:.2}s)", processed, total, render_bar(processed), secs);
+                        eprint!("\rProgress {}/{} [{}] ({:.2}s)", processed, total, render_bar(processed, total), secs);
                         let _ = io::stderr().flush();
                     }
                 }
@@ -293,7 +306,7 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
                     } else {
                         processed += 1;
                         let secs = start.elapsed().as_secs_f32();
-                        eprint!("\rProgress {}/{} [{}] ({:.2}s)", processed, total, render_bar(processed), secs);
+                        eprint!("\rProgress {}/{} [{}] ({:.2}s)", processed, total, render_bar(processed, total), secs);
                         let _ = io::stderr().flush();
                     }
                 }
@@ -321,7 +334,7 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
                             "\rProgress {}/{} [{}] ({:.2}s)",
                             processed,
                             total,
-                            render_bar(processed),
+                            render_bar(processed, total),
                             secs
                         );
                         let _ = io::stderr().flush();
@@ -331,76 +344,77 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
             }
         }
 
-    if options.mutation_long {
-        eprintln!("MUT summary kind={} total={} killed={} survived={}", mutator.name(), total, killed, survived);
-    } else {
-        // Final summary block (single header printed earlier; do not reprint bar)
-        eprintln!("\n");
-        eprintln!("Total {}", total);
-        eprintln!("Killed {}", killed);
-        eprintln!("Survived {}", survived);
-        eprintln!("Test {}", if survived == 0 && killed == total { "Passed" } else { "Failed" });
-    }
-
-    // JSON output if requested.
-    if options.mutation_json {
-        #[derive(Serialize)]
-        struct MutJsonShort<'a> {
-            kind: &'a str,
-            files: usize,
-            targets: usize,
-            cached: usize,
-            total: usize,
-            killed: usize,
-            survived: usize,
-            mode: &'a str,
+        if options.mutation_long {
+            eprintln!("MUT summary kind={} total={} killed={} survived={}", mutator.name(), total, killed, survived);
+        } else {
+            // Final summary block (single header printed earlier; do not reprint bar)
+            eprintln!("\n");
+            eprintln!("Total {}", total);
+            eprintln!("Killed {}", killed);
+            eprintln!("Survived {}", survived);
+            eprintln!("Test {}", if survived == 0 && killed == total { "Passed" } else { "Failed" });
         }
 
-        let s = if options.mutation_long {
-            let json = MutJson {
-                kind: mutator.name(),
-                files: ctx.index.len(),
-                targets: total,
-                cached: ctx.cached_asts.len(),
-                results: results_vec,
-                total,
-                killed,
-                survived,
-                mode: "long",
-            };
-            serde_json::to_string_pretty(&json).unwrap_or_else(|_| "{}".to_string())
-        } else {
-            let json = MutJsonShort {
-                kind: mutator.name(),
-                files: ctx.index.len(),
-                targets: total,
-                cached: ctx.cached_asts.len(),
-                total,
-                killed,
-                survived,
-                mode: "short",
-            };
-            serde_json::to_string_pretty(&json).unwrap_or_else(|_| "{}".to_string())
-        };
-
-        // Determine output path
-        let out_dir = if let Some(ref dir) = options.mutation_json_dir {
-            dir.clone()
-        } else {
-            ws.gctx().cwd().to_path_buf()
-        };
-        let out_path = out_dir.join("mutation-results.json");
-        // Ensure dir exists
-        if let Err(e) = std::fs::create_dir_all(&out_dir) {
-            eprintln!("failed to create output dir {}: {}", out_dir.display(), e);
-        }
-        match std::fs::write(&out_path, &s) {
-            Ok(_) => {
-                // Print the directory where the JSON was written (at the end).
-                eprintln!("Mutation JSON directory: {}", out_dir.display());
+        // JSON output if requested: write mutator JSON file by kind
+        if options.mutation_json {
+            #[derive(Serialize)]
+            struct MutJsonShort<'a> {
+                kind: &'a str,
+                files: usize,
+                targets: usize,
+                cached: usize,
+                total: usize,
+                killed: usize,
+                survived: usize,
+                mode: &'a str,
             }
-            Err(e) => {
-                eprintln!("failed to write mutation JSON to {}: {}", out_path.display(), e);
+
+            let s = if options.mutation_long {
+                let json = MutJson {
+                    kind: mutator.name(),
+                    files: ctx.index.len(),
+                    targets: total,
+                    cached: ctx.cached_asts.len(),
+                    results: results_vec,
+                    total,
+                    killed,
+                    survived,
+                    mode: "long",
+                };
+                serde_json::to_string_pretty(&json).unwrap_or_else(|_| "{}".to_string())
+            } else {
+                let json = MutJsonShort {
+                    kind: mutator.name(),
+                    files: ctx.index.len(),
+                    targets: total,
+                    cached: ctx.cached_asts.len(),
+                    total,
+                    killed,
+                    survived,
+                    mode: "short",
+                };
+                serde_json::to_string_pretty(&json).unwrap_or_else(|_| "{}".to_string())
+            };
+
+            // Determine output path, include mutator kind in filename
+            let out_dir = if let Some(ref dir) = options.mutation_json_dir {
+                dir.clone()
+            } else {
+                ws.gctx().cwd().to_path_buf()
+            };
+            let out_path = out_dir.join(format!("mutation-results-{}.json", mutator.name()));
+            // Ensure dir exists
+            if let Err(e) = std::fs::create_dir_all(&out_dir) {
+                eprintln!("failed to create output dir {}: {}", out_dir.display(), e);
+            }
+            match std::fs::write(&out_path, &s) {
+                Ok(_) => {
+                    // Print the directory where the JSON was written (at the end).
+                    eprintln!("Mutation JSON file: {}", out_path.display());
+                }
+                Err(e) => {
+                    eprintln!("failed to write mutation JSON to {}: {}", out_path.display(), e);
+                }
             }
         }
     }

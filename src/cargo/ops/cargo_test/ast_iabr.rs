@@ -1,7 +1,7 @@
 // ast_iabr.rs
 // Purpose: Build syn ASTs for all relevant Rust source files in the
 // workspace and provide indexers for specific operator kinds used by
-// mutation testing (starting with addition/subtraction).
+// mutation testing (addition/subtraction/multiplication/division).
 // Key references:
 // - Workspace file discovery uses Cargo's own `sources::path::list_files` to
 //   respect include/exclude rules and ignore `target/` and subpackages.
@@ -55,6 +55,8 @@ pub fn create_trees(ws: &Workspace<'_>) -> syn::Result<HashMap<PathBuf, File>> {
 pub enum OpKind {
     Add,
     Sub,
+    Mul,
+    Div,
 }
 
 /// A single operator occurrence with a stable per-file identifier.
@@ -68,14 +70,14 @@ pub struct OpOccurrence {
     pub column: u32,
 }
 
-/// Visitor that walks expressions and collects binary `+` and `-` operators.
+/// Visitor that walks expressions and collects binary arithmetic operators.
 /// Uses a monotonic `next_id` counter to assign IDs to each matched node.
-struct AddSubVisitor {
+struct ArithVisitor {
     next_id: u32,
     occurrences: Vec<OpOccurrence>,
 }
 
-impl<'ast> Visit<'ast> for AddSubVisitor {
+impl<'ast> Visit<'ast> for ArithVisitor {
     fn visit_expr_binary(&mut self, node: &'ast syn::ExprBinary) {
         let (kind, line, column) = match &node.op {
             syn::BinOp::Add(tok) => {
@@ -85,6 +87,14 @@ impl<'ast> Visit<'ast> for AddSubVisitor {
             syn::BinOp::Sub(tok) => {
                 let lc = tok.span.start();
                 (Some(OpKind::Sub), lc.line as u32, lc.column as u32)
+            }
+            syn::BinOp::Mul(tok) => {
+                let lc = tok.span.start();
+                (Some(OpKind::Mul), lc.line as u32, lc.column as u32)
+            }
+            syn::BinOp::Div(tok) => {
+                let lc = tok.span.start();
+                (Some(OpKind::Div), lc.line as u32, lc.column as u32)
             }
             _ => (None, 0, 0),
         };
@@ -97,10 +107,11 @@ impl<'ast> Visit<'ast> for AddSubVisitor {
     }
 }
 
-/// Build the add/sub operator index for a single parsed file.
+/// Build the operator index for a single parsed file.
 /// Returns a list of occurrences in preorder, each with a unique `id`.
+/// Operators indexed include `+`, `-`, `*`, and `/`.
 pub fn index_add_sub_in_file(ast: &File) -> Vec<OpOccurrence> {
-    let mut v = AddSubVisitor {
+    let mut v = ArithVisitor {
         next_id: 0,
         occurrences: Vec::new(),
     };
@@ -108,8 +119,9 @@ pub fn index_add_sub_in_file(ast: &File) -> Vec<OpOccurrence> {
     v.occurrences
 }
 
-/// Build add/sub operator indexes for the entire workspace.
+/// Build operator indexes for the entire workspace.
 /// Internally parses files first via `create_trees` and returns matches per file.
+/// Operators indexed include `+`, `-`, `*`, and `/`.
 pub fn index_add_sub(ws: &Workspace<'_>) -> syn::Result<HashMap<PathBuf, Vec<OpOccurrence>>> {
     let trees = create_trees(ws)?;
     let mut index: HashMap<PathBuf, Vec<OpOccurrence>> = HashMap::new();
@@ -123,6 +135,7 @@ pub fn index_add_sub(ws: &Workspace<'_>) -> syn::Result<HashMap<PathBuf, Vec<OpO
 }
 
 /// Variant of the indexer that reuses already-parsed ASTs to avoid reparsing.
+/// Operators indexed include `+`, `-`, `*`, and `/`.
 pub fn index_add_sub_from_trees(
     trees: &HashMap<PathBuf, File>,
 ) -> HashMap<PathBuf, Vec<OpOccurrence>> {
@@ -136,10 +149,10 @@ pub fn index_add_sub_from_trees(
     index
 }
 
-/// Minimum number of add/sub operators in a file to keep its AST cached.
+/// Minimum number of operator occurrences in a file to keep its AST cached.
 pub const CACHE_THRESHOLD: usize = 10;
 
-/// Index add/sub operators across the workspace while caching only
+/// Index arithmetic operators across the workspace while caching only
 /// ASTs for files with at least `CACHE_THRESHOLD` targets.
 /// This balances memory usage against repeated parse cost for files
 /// with many planned mutations.

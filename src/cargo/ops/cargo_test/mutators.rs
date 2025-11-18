@@ -53,7 +53,10 @@ impl Mutator for AddSubMutator {
         let mut out = Vec::new();
         for (path, occs) in ctx.index.iter() {
             for occ in occs {
-                out.push(Target { path: path.clone(), id: occ.id, line: occ.line, column: occ.column });
+                // Only include addition/subtraction occurrences for this mutator
+                if occ.kind == super::ast_iabr::OpKind::Add || occ.kind == super::ast_iabr::OpKind::Sub {
+                    out.push(Target { path: path.clone(), id: occ.id, line: occ.line, column: occ.column });
+                }
             }
         }
         out
@@ -61,6 +64,35 @@ impl Mutator for AddSubMutator {
 
     fn mutate(&self, ctx: &MutationContext, target: &Target) -> syn::Result<String> {
         mutate_add_sub(ctx, &target.path, target.id)
+    }
+}
+
+/// Mul/Div mutator.
+pub struct DivMulMutator;
+
+impl Mutator for DivMulMutator {
+    fn name(&self) -> &'static str { "mul_div" }
+
+    fn build_context(&self, ws: &Workspace<'_>) -> syn::Result<MutationContext> {
+        let IndexResult { index, cached_asts } = build_index_with_cache(ws)?;
+        Ok(MutationContext { index, cached_asts })
+    }
+
+    fn enumerate_targets(&self, ctx: &MutationContext) -> Vec<Target> {
+        let mut out = Vec::new();
+        for (path, occs) in ctx.index.iter() {
+            for occ in occs {
+                // Only include mul/div occurrences for this mutator
+                if occ.kind == super::ast_iabr::OpKind::Mul || occ.kind == super::ast_iabr::OpKind::Div {
+                    out.push(Target { path: path.clone(), id: occ.id, line: occ.line, column: occ.column });
+                }
+            }
+        }
+        out
+    }
+
+    fn mutate(&self, ctx: &MutationContext, target: &Target) -> syn::Result<String> {
+        mutate_div_mul(ctx, &target.path, target.id)
     }
 }
 
@@ -81,6 +113,48 @@ fn mutate_add_sub(ctx: &MutationContext, path: &Path, id: u32) -> syn::Result<St
 
     // Pretty-print the mutated AST back to source.
     Ok(prettyplease::unparse(&mutated))
+}
+
+/// Flip Mul<->Div for the given occurrence id in the specified file.
+fn mutate_div_mul(ctx: &MutationContext, path: &Path, id: u32) -> syn::Result<String> {
+    // Fetch AST from cache or parse source.
+    let ast: File = if let Some(cached) = ctx.cached_asts.get(path) {
+        cached.clone()
+    } else {
+        let src = fs::read_to_string(path).expect("Failed to open file");
+        syn::parse_file(&src)?
+    };
+
+    // Fold and flip the targeted operator.
+    let mut folder = DivMulFlipFold { target_id: id, seen: 0 };
+    let mutated = folder.fold_file(ast);
+
+    // Pretty-print the mutated AST back to source.
+    Ok(prettyplease::unparse(&mutated))
+}
+
+/// Folder that flips the Nth mul/div operator where N == target_id.
+struct DivMulFlipFold {
+    target_id: u32,
+    seen: u32,
+}
+
+impl Fold for DivMulFlipFold {
+    fn fold_expr_binary(&mut self, mut node: syn::ExprBinary) -> syn::ExprBinary {
+        let is_mul = matches!(node.op, syn::BinOp::Mul(_));
+        let is_div = matches!(node.op, syn::BinOp::Div(_));
+        if is_mul || is_div {
+            if self.seen == self.target_id {
+                node.op = if is_mul {
+                    syn::BinOp::Div(Default::default())
+                } else {
+                    syn::BinOp::Mul(Default::default())
+                };
+            }
+            self.seen += 1;
+        }
+        fold_expr_binary(self, node)
+    }
 }
 
 /// Folder that flips the Nth add/sub operator where N == target_id.
