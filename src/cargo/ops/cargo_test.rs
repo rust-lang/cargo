@@ -118,6 +118,16 @@ pub fn run_tests(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str]) 
 fn run_tests_once(ws: &Workspace<'_>, options: &TestOptions, test_args: &[&str], quiet: bool) -> CargoResult<bool> {
     let _guard = if quiet { Some(ShellVerbosityGuard::set(ws.gctx(), Verbosity::Quiet)) } else { None };
     let compilation = compile_tests(ws, options)?;
+
+    if options.mutation_long
+    {
+        for test in &compilation.tests 
+        {
+            eprintln!("[DEBUG] Compiling test binary for: {}", test.unit.target.name());
+            eprintln!("[DEBUG] Path: {}", test.path.display());
+        }
+    }      
+
     if options.no_run {
         if !options.compile_opts.build_config.emit_json() {
             display_no_run_information(ws, test_args, &compilation, "unittests")?;
@@ -267,12 +277,23 @@ fn run_mutation_campaign(ws: &Workspace<'_>, options: &TestOptions, test_args: &
 
         for target in targets {
             // Produce mutated source.
-            let mutated = match mutator.mutate(&ctx, &target) {
-                Ok(m) => m,
-                Err(e) => return Err(anyhow::format_err!(
+            let mutated = match mutator.mutate(&ctx, &target) 
+            {
+                Ok(m) => 
+                {
+                    if options.mutation_long
+                    {
+                        eprintln!("[DEBUG] Mutating file: {:?}, id: {}", target.path, target.id);
+                        eprintln!("[DEBUG] Mutated source:\n{}", m);
+                    }
+                    m
+                },
+                Err(e) => return Err(anyhow::format_err!
+                (
                     "mutation failed for {:?} #{:?}: {e}",
                     target.path, target.id
-                ).into()),
+                ).into()
+                ),
             };
 
             // Replace file on disk; restore back automatically.
