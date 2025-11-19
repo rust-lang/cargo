@@ -684,3 +684,88 @@ Caused by:
 "#]],
     );
 }
+
+#[cargo_test]
+fn user_config_toml_reserved() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        [[include]]
+        path = 'user.config.toml'
+        ",
+    );
+
+    write_config_at(
+        ".cargo/user.config.toml",
+        "
+        key1 = 1
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+}
+
+#[cargo_test]
+fn config_toml_fragment_dir_reserved() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        [[include]]
+        path = 'config.toml.d'
+        ",
+    );
+
+    write_config_at(
+        ".cargo/config.toml.d/00-myconfig.toml",
+        "
+        key1 = 1
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  expected a config include path ending with `.toml`, but found `config.toml.d` from `[ROOT]/.cargo/config.toml`
+"#]],
+    );
+}
+
+#[cargo_test]
+fn user_config_toml_fragment_dir_reserved() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        [[include]]
+        path = 'user.config.toml.d'
+        ",
+    );
+
+    write_config_at(
+        ".cargo/user.config.toml.d/00-myconfig.toml",
+        "
+        key1 = 1
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  expected a config include path ending with `.toml`, but found `user.config.toml.d` from `[ROOT]/.cargo/config.toml`
+"#]],
+    );
+}
