@@ -1298,7 +1298,7 @@ impl GlobalContext {
     ) -> CargoResult<()> {
         let includes = self.include_paths(cv, false)?;
         for include in includes {
-            let Some(abs_path) = include.resolve_path(self) else {
+            let Some(abs_path) = include.resolve_path(self)? else {
                 continue;
             };
 
@@ -1413,7 +1413,7 @@ impl GlobalContext {
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
         for include in includes {
-            let Some(abs_path) = include.resolve_path(self) else {
+            let Some(abs_path) = include.resolve_path(self)? else {
                 continue;
             };
 
@@ -2305,9 +2305,9 @@ impl ConfigInclude {
     /// For CLI based include (e.g., `--config 'include = "foo.toml"'`),
     /// it is relative to the current working directory.
     ///
-    /// Returns `None` if this is an optional include and the file doesn't exist.
-    /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    fn resolve_path(&self, gctx: &GlobalContext) -> Option<PathBuf> {
+    /// Returns `Ok(None)` if this is an optional include and the file doesn't exist.
+    /// Otherwise returns `Ok(Some(PathBuf))` with the absolute path.
+    fn resolve_path(&self, gctx: &GlobalContext) -> CargoResult<Option<PathBuf>> {
         let abs_path = match &self.def {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
             Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
@@ -2321,10 +2321,22 @@ impl ConfigInclude {
                 self.def,
                 abs_path.display(),
             );
-            None
-        } else {
-            Some(abs_path)
+            return Ok(None);
         }
+
+        let reserved_paths = ["config.toml.d", "user.config.toml", "user.config.toml.d"];
+        for reserved in &reserved_paths {
+            let suffix = Path::new(".cargo").join(reserved);
+            if abs_path.ends_with(&suffix) {
+                bail!(
+                    "`{}` is a reserved configuration path, but was included in `{}`",
+                    suffix.display(),
+                    self.def,
+                )
+            }
+        }
+
+        Ok(Some(abs_path))
     }
 }
 

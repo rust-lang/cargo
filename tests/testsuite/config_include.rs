@@ -704,8 +704,16 @@ fn user_config_toml_reserved() {
 
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  `.cargo/user.config.toml` is a reserved configuration path, but was included in `[ROOT]/.cargo/config.toml`
+"#]],
+    );
 }
 
 #[cargo_test]
