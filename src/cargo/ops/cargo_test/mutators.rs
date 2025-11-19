@@ -49,15 +49,29 @@ impl Mutator for AddSubMutator {
         Ok(MutationContext { index, cached_asts })
     }
 
-    fn enumerate_targets(&self, ctx: &MutationContext) -> Vec<Target> {
+    fn enumerate_targets(&self, ctx: &MutationContext) -> Vec<Target> 
+    {
         let mut out = Vec::new();
-        for (path, occs) in ctx.index.iter() {
-            for occ in occs {
-                // Only include addition/subtraction occurrences for this mutator
-                if occ.kind == super::ast_iabr::OpKind::Add || occ.kind == super::ast_iabr::OpKind::Sub {
-                    out.push(Target { path: path.clone(), id: occ.id, line: occ.line, column: occ.column });
-                }
+        for (path, occs) in ctx.index.iter() 
+        {
+
+        let mut local_id = 0;
+        for occ in occs 
+        {
+
+            // Grab only occurences of the +- operators
+            if occ.kind == super::ast_iabr::OpKind::Add || occ.kind == super::ast_iabr::OpKind::Sub 
+            {
+                out.push(Target 
+                {
+                    path: path.clone(),
+                    id: local_id,
+                    line: occ.line,
+                    column: occ.column,
+                });
+            local_id += 1;
             }
+        }
         }
         out
     }
@@ -80,13 +94,26 @@ impl Mutator for DivMulMutator {
 
     fn enumerate_targets(&self, ctx: &MutationContext) -> Vec<Target> {
         let mut out = Vec::new();
-        for (path, occs) in ctx.index.iter() {
-            for occ in occs {
-                // Only include mul/div occurrences for this mutator
-                if occ.kind == super::ast_iabr::OpKind::Mul || occ.kind == super::ast_iabr::OpKind::Div {
-                    out.push(Target { path: path.clone(), id: occ.id, line: occ.line, column: occ.column });
-                }
+        for (path, occs) in ctx.index.iter() 
+        {
+
+        let mut local_id = 0;
+        for occ in occs 
+        {
+
+            // Grab only occurences of the */ operators
+            if occ.kind == super::ast_iabr::OpKind::Mul || occ.kind == super::ast_iabr::OpKind::Div 
+            {
+                out.push(Target 
+                {
+                    path: path.clone(),
+                    id: local_id,
+                    line: occ.line,
+                    column: occ.column,
+                });
+            local_id += 1;
             }
+        }
         }
         out
     }
