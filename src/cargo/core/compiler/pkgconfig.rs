@@ -2,6 +2,68 @@
 //!
 //! This module handles querying system pkg-config for dependencies declared
 //! in the `[pkgconfig-dependencies]` section and generating metadata.
+//!
+//! # Usage
+//!
+//! Declare pkgconfig dependencies in Cargo.toml under an unstable feature flag:
+//!
+//! ```toml
+//! # Requires: cargo build -Z pkgconfig-dependencies
+//!
+//! [pkgconfig-dependencies]
+//! # Simple form: just version constraint
+//! openssl = "1.1"
+//!
+//! # Detailed form with additional options
+//! [pkgconfig-dependencies.sqlite3]
+//! version = "3.0"
+//! # Try alternative pkg-config names
+//! names = ["sqlite3", "sqlite"]
+//! # Mark as optional - doesn't fail build if not found
+//! optional = true
+//! # Fallback specification if pkg-config fails
+//! [pkgconfig-dependencies.sqlite3.fallback]
+//! libs = ["sqlite3"]
+//! lib-paths = ["/usr/local/lib"]
+//! include-paths = ["/usr/local/include"]
+//! ```
+//!
+//! # Generated Metadata
+//!
+//! The module generates `OUT_DIR/pkgconfig_meta.rs` with compile-time constants:
+//!
+//! ```ignore
+//! pub mod pkgconfig {
+//!     pub mod openssl {
+//!         pub const VERSION: &str = "1.1.1";
+//!         pub const FOUND: bool = true;
+//!         pub const RESOLVED_VIA: &str = "pkg-config";
+//!         pub const INCLUDE_PATHS: &[&str] = &["/usr/include"];
+//!         pub const LIB_PATHS: &[&str] = &["/usr/lib"];
+//!         pub const LIBS: &[&str] = &["ssl", "crypto"];
+//!         // ... and more fields
+//!     }
+//! }
+//! ```
+//!
+//! # Accessing Metadata
+//!
+//! In your build script or build-time code:
+//!
+//! ```ignore
+//! include!(concat!(env!("OUT_DIR"), "/pkgconfig_meta.rs"));
+//!
+//! fn main() {
+//!     let version = pkgconfig::openssl::VERSION;
+//!     let is_found = pkgconfig::openssl::FOUND;
+//!
+//!     if is_found {
+//!         for lib in pkgconfig::openssl::LIBS {
+//!             println!("cargo:rustc-link-lib={}", lib);
+//!         }
+//!     }
+//! }
+//! ```
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -203,6 +265,31 @@ fn generate_dep_module(name: &str, lib: &PkgConfigLibrary) -> String {
 }
 
 /// Generate the pkgconfig_meta.rs file content
+///
+/// Creates a Rust module with compile-time constants for each dependency.
+///
+/// # Output Structure
+///
+/// For each dependency, creates a module like:
+/// ```ignore
+/// pub mod pkgconfig {
+///     pub mod dependency_name {
+///         pub const VERSION: &str = "1.0.0";
+///         pub const FOUND: bool = true;
+///         pub const RESOLVED_VIA: &str = "pkg-config";
+///         pub const INCLUDE_PATHS: &[&str] = &["/usr/include", ...];
+///         pub const LIB_PATHS: &[&str] = &["/usr/lib", ...];
+///         pub const LIBS: &[&str] = &["lib1", "lib2"];
+///         pub const CFLAGS: &[&str] = &[...];
+///         pub const DEFINES: &[&str] = &[...];
+///         pub const LDFLAGS: &[&str] = &[...];
+///         pub const RAW_CFLAGS: &str = "-I/usr/include ...";
+///         pub const RAW_LDFLAGS: &str = "-L/usr/lib -llib1 -llib2";
+///     }
+/// }
+/// ```
+///
+/// Module names are sanitized for Rust identifier rules (special chars become underscores).
 pub fn generate_metadata_file(libraries: &BTreeMap<String, PkgConfigLibrary>) -> String {
     let mut modules = String::new();
 
@@ -288,8 +375,30 @@ fn query_pkg_config_by_name(
 
 /// Query pkg-config for a single dependency
 ///
-/// Tries alternative names in order if provided, returning the first successful match.
-/// If all names fail and a fallback is provided, uses the fallback specification.
+/// # Resolution Strategy
+///
+/// 1. First tries the primary package name
+/// 2. If that fails, tries each alternative name in order (if provided)
+/// 3. If all pkg-config queries fail and a fallback is provided, uses the fallback spec
+/// 4. Returns the first successful match
+///
+/// # Arguments
+///
+/// * `name` - Primary package name for this dependency
+/// * `version_constraint` - Minimum version constraint (passed to pkg-config)
+/// * `alternative_names` - Optional list of alternative pkg-config names to try
+/// * `fallback` - Optional fallback specification for manual configuration
+///
+/// # Returns
+///
+/// Returns `PkgConfigLibrary` with resolved metadata if found via pkg-config or fallback.
+/// Returns `Err` with detailed error message if all resolution methods fail.
+///
+/// # Errors
+///
+/// Returns error if:
+/// - All pkg-config names fail AND no fallback is provided
+/// - The fallback spec itself is invalid
 pub fn query_pkg_config(
     name: &str,
     version_constraint: &str,
@@ -367,22 +476,29 @@ pub fn query_pkg_config(
         return Ok(apply_fallback(name, fb));
     }
 
-    // No fallback available - report error
-    if let Some(e) = last_error {
-        bail!(
-            "pkg-config dependency `{} {}` not found (tried: {}): {}",
-            name,
-            version_constraint,
-            names_to_try.join(", "),
-            e
-        )
-    } else {
-        bail!(
-            "pkg-config dependency `{} {}` not found",
-            name,
-            version_constraint
-        )
+    // No fallback available - report error with helpful suggestions
+    let mut error_msg = format!(
+        "pkg-config dependency `{}` (version {}) not found",
+        name, version_constraint
+    );
+
+    if names_to_try.len() > 1 {
+        error_msg.push_str(&format!("\n  tried pkg-config names: {}", names_to_try.join(", ")));
     }
+
+    if let Some(e) = last_error {
+        error_msg.push_str(&format!("\n  error: {}", e));
+    }
+
+    error_msg.push_str(&format!(
+        "\n\nTo fix this, you can:\n\
+         1. Install the system library (e.g., libfoo-dev on Debian, libfoo-devel on Fedora)\n\
+         2. Set the PKG_CONFIG_PATH environment variable to include the directory with the .pc file\n\
+         3. Add a [fallback] specification in Cargo.toml to manually specify library paths\n\
+         4. Use alternative names via the `names` field if the package has multiple names"
+    ));
+
+    bail!("{}", error_msg)
 }
 
 /// Probe all pkgconfig dependencies for a package
@@ -404,6 +520,12 @@ pub fn probe_all_dependencies(
             Err(e) => {
                 if is_optional {
                     // For optional dependencies, insert a "not found" entry
+                    // Log a warning so users know which optional dependency wasn't found
+                    eprintln!(
+                        "warning: optional pkg-config dependency `{}` not found (ignoring)\n  {}",
+                        name, e
+                    );
+
                     results.insert(
                         name.clone(),
                         PkgConfigLibrary {
@@ -430,7 +552,6 @@ pub fn probe_all_dependencies(
 
     Ok(results)
 }
-
 /// Write the pkgconfig metadata file to OUT_DIR
 pub fn write_metadata_file(
     out_dir: &Path,
@@ -449,6 +570,24 @@ pub fn write_metadata_file(
 ///
 /// This is the main entry point for integrating pkgconfig dependencies into the build.
 /// It probes pkg-config for all declared dependencies and writes the metadata file.
+///
+/// # Process
+///
+/// 1. Probes each declared dependency using pkg-config
+/// 2. For each dependency, tries alternative names if specified
+/// 3. Uses fallback specification if pkg-config fails
+/// 4. Handles optional dependencies (doesn't fail build if not found)
+/// 5. Generates Rust code with compile-time constants
+/// 6. Writes `OUT_DIR/pkgconfig_meta.rs` for inclusion in build scripts
+///
+/// # Returns
+///
+/// Returns `Ok(())` if all required dependencies are found.
+/// Returns `Err` if any required (non-optional) dependency is not found.
+///
+/// # Panics
+///
+/// Does not panic. All errors are returned as `CargoResult`.
 pub fn probe_and_generate_metadata(
     deps: &BTreeMap<String, TomlPkgConfigDependency>,
     out_dir: &Path,
