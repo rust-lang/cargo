@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context as _};
-use cargo_util_schemas::manifest::TomlPkgConfigDependency;
+use cargo_util_schemas::manifest::{TomlPkgConfigDependency, TomlPkgConfigFallback};
 
 use crate::util::errors::CargoResult;
 
@@ -224,75 +224,164 @@ pub mod pkgconfig {{
     )
 }
 
+/// Apply fallback specification as a PkgConfigLibrary
+fn apply_fallback(
+    name: &str,
+    fallback: &TomlPkgConfigFallback,
+) -> PkgConfigLibrary {
+    let libs = fallback.libs.as_ref().map(|v| v.clone()).unwrap_or_default();
+    let include_paths = fallback
+        .include_paths
+        .as_ref()
+        .map(|v| v.clone())
+        .unwrap_or_default();
+    let lib_paths = fallback
+        .lib_paths
+        .as_ref()
+        .map(|v| v.clone())
+        .unwrap_or_default();
+
+    // Reconstruct raw flags from fallback
+    let raw_cflags = {
+        let mut parts = Vec::new();
+        for path in &include_paths {
+            parts.push(format!("-I{}", path));
+        }
+        parts.join(" ")
+    };
+
+    let raw_ldflags = {
+        let mut parts = Vec::new();
+        for path in &lib_paths {
+            parts.push(format!("-L{}", path));
+        }
+        for lib in &libs {
+            parts.push(format!("-l{}", lib));
+        }
+        parts.join(" ")
+    };
+
+    PkgConfigLibrary {
+        name: name.to_string(),
+        version: String::new(),
+        resolved_via: ResolutionMethod::Fallback,
+        include_paths,
+        lib_paths,
+        libs,
+        cflags: Vec::new(),
+        defines: Vec::new(),
+        ldflags: Vec::new(),
+        raw_cflags,
+        raw_ldflags,
+    }
+}
+
+/// Query pkg-config for a single dependency by name
+fn query_pkg_config_by_name(
+    name: &str,
+    version_constraint: &str,
+) -> CargoResult<pkg_config::Library> {
+    let mut config = pkg_config::Config::new();
+    config.atleast_version(version_constraint);
+    config.probe(name).map_err(|e| anyhow::anyhow!("{}", e))
+}
+
 /// Query pkg-config for a single dependency
+///
+/// Tries alternative names in order if provided, returning the first successful match.
+/// If all names fail and a fallback is provided, uses the fallback specification.
 pub fn query_pkg_config(
     name: &str,
     version_constraint: &str,
+    alternative_names: Option<&[String]>,
+    fallback: Option<&TomlPkgConfigFallback>,
 ) -> CargoResult<PkgConfigLibrary> {
-    let mut config = pkg_config::Config::new();
+    // Collect all names to try, with the primary name first
+    let mut names_to_try = vec![name.to_string()];
+    if let Some(alts) = alternative_names {
+        names_to_try.extend(alts.iter().cloned());
+    }
 
-    // Set version constraint
-    config.atleast_version(version_constraint);
+    // Try each name in order
+    let mut last_error = None;
+    for try_name in names_to_try.iter() {
+        match query_pkg_config_by_name(try_name, version_constraint) {
+            Ok(lib) => {
+                let include_paths = lib
+                    .include_paths
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>();
 
-    match config.probe(name) {
-        Ok(lib) => {
-            let include_paths = lib
-                .include_paths
-                .iter()
-                .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>();
+                let lib_paths = lib
+                    .link_paths
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>();
 
-            let lib_paths = lib
-                .link_paths
-                .iter()
-                .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>();
+                let libs = lib.libs.clone();
 
-            let libs = lib.libs.clone();
+                // Reconstruct raw cflags and ldflags for debugging output
+                let raw_cflags = {
+                    let mut parts = Vec::new();
+                    for path in &include_paths {
+                        parts.push(format!("-I{}", path));
+                    }
+                    parts.join(" ")
+                };
 
-            // Reconstruct raw cflags and ldflags for debugging output
-            let raw_cflags = {
-                let mut parts = Vec::new();
-                for path in &include_paths {
-                    parts.push(format!("-I{}", path));
-                }
-                // Note: We don't have access to original defines in the library struct
-                parts.join(" ")
-            };
+                let raw_ldflags = {
+                    let mut parts = Vec::new();
+                    for path in &lib_paths {
+                        parts.push(format!("-L{}", path));
+                    }
+                    for lib in &libs {
+                        parts.push(format!("-l{}", lib));
+                    }
+                    parts.join(" ")
+                };
 
-            let raw_ldflags = {
-                let mut parts = Vec::new();
-                for path in &lib_paths {
-                    parts.push(format!("-L{}", path));
-                }
-                for lib in &libs {
-                    parts.push(format!("-l{}", lib));
-                }
-                parts.join(" ")
-            };
-
-            Ok(PkgConfigLibrary {
-                name: name.to_string(),
-                version: lib.version.clone(),
-                resolved_via: ResolutionMethod::PkgConfig,
-                include_paths,
-                lib_paths,
-                libs,
-                cflags: Vec::new(),
-                defines: Vec::new(),
-                ldflags: Vec::new(),
-                raw_cflags,
-                raw_ldflags,
-            })
+                return Ok(PkgConfigLibrary {
+                    name: name.to_string(),
+                    version: lib.version.clone(),
+                    resolved_via: ResolutionMethod::PkgConfig,
+                    include_paths,
+                    lib_paths,
+                    libs,
+                    cflags: Vec::new(),
+                    defines: Vec::new(),
+                    ldflags: Vec::new(),
+                    raw_cflags,
+                    raw_ldflags,
+                });
+            }
+            Err(e) => {
+                last_error = Some(e);
+                continue;
+            }
         }
-        Err(e) => {
-            bail!(
-                "pkg-config dependency `{} {}` not found: {}",
-                name,
-                version_constraint,
-                e
-            )
-        }
+    }
+
+    // All names failed - try fallback if available
+    if let Some(fb) = fallback {
+        return Ok(apply_fallback(name, fb));
+    }
+
+    // No fallback available - report error
+    if let Some(e) = last_error {
+        bail!(
+            "pkg-config dependency `{} {}` not found (tried: {}): {}",
+            name,
+            version_constraint,
+            names_to_try.join(", "),
+            e
+        )
+    } else {
+        bail!(
+            "pkg-config dependency `{} {}` not found",
+            name,
+            version_constraint
+        )
     }
 }
 
@@ -304,15 +393,37 @@ pub fn probe_all_dependencies(
 
     for (name, dep) in deps.iter() {
         let version_constraint = dep.version_constraint().unwrap_or("0");
+        let alternative_names = dep.names();
+        let is_optional = dep.is_optional();
+        let fallback = dep.fallback();
 
-        match query_pkg_config(name, version_constraint) {
+        match query_pkg_config(name, version_constraint, alternative_names, fallback) {
             Ok(lib) => {
                 results.insert(name.clone(), lib);
             }
             Err(e) => {
-                // For now, we error on missing required dependencies
-                // In Phase 2, we'll add support for optional=true and fallbacks
-                return Err(e);
+                if is_optional {
+                    // For optional dependencies, insert a "not found" entry
+                    results.insert(
+                        name.clone(),
+                        PkgConfigLibrary {
+                            name: name.clone(),
+                            version: String::new(),
+                            resolved_via: ResolutionMethod::NotFound,
+                            include_paths: Vec::new(),
+                            lib_paths: Vec::new(),
+                            libs: Vec::new(),
+                            cflags: Vec::new(),
+                            defines: Vec::new(),
+                            ldflags: Vec::new(),
+                            raw_cflags: String::new(),
+                            raw_ldflags: String::new(),
+                        },
+                    );
+                } else {
+                    // Required dependency not found - error
+                    return Err(e);
+                }
             }
         }
     }
@@ -437,5 +548,189 @@ mod tests {
         assert_eq!(ResolutionMethod::Fallback.as_str(), "fallback");
         assert_eq!(ResolutionMethod::NotFound.as_str(), "not-found");
         assert_eq!(ResolutionMethod::NotProbed.as_str(), "not-probed");
+    }
+
+    #[test]
+    fn test_sanitize_module_name_edge_cases() {
+        // Test with special characters
+        assert_eq!(sanitize_module_name("lib++"), "lib__");
+        assert_eq!(sanitize_module_name("lib-3.0"), "lib_3_0");
+        assert_eq!(sanitize_module_name("PKG_CONFIG"), "pkg_config");
+
+        // Test starting with digit
+        assert_eq!(sanitize_module_name("123"), "lib_123");
+        assert_eq!(sanitize_module_name("2to3"), "lib_2to3");
+    }
+
+    #[test]
+    fn test_generate_metadata_file_module_naming() {
+        let mut deps = BTreeMap::new();
+
+        // Test various names that need sanitization
+        deps.insert(
+            "gtk+-3.0".to_string(),
+            PkgConfigLibrary {
+                name: "gtk+-3.0".to_string(),
+                version: "3.0".to_string(),
+                resolved_via: ResolutionMethod::PkgConfig,
+                include_paths: vec![],
+                lib_paths: vec![],
+                libs: vec![],
+                cflags: vec![],
+                defines: vec![],
+                ldflags: vec![],
+                raw_cflags: String::new(),
+                raw_ldflags: String::new(),
+            },
+        );
+
+        let content = generate_metadata_file(&deps);
+
+        // Should sanitize the module name
+        assert!(content.contains("pub mod gtk_plus_3_0"));
+        // But keep the original name in comments
+        assert!(content.contains("gtk+-3.0"));
+    }
+
+    #[test]
+    fn test_pkgconfig_library_with_multiple_items() {
+        let mut libs = BTreeMap::new();
+
+        libs.insert(
+            "lib1".to_string(),
+            PkgConfigLibrary {
+                name: "lib1".to_string(),
+                version: "1.0".to_string(),
+                resolved_via: ResolutionMethod::PkgConfig,
+                include_paths: vec!["/usr/include/lib1".to_string()],
+                lib_paths: vec!["/usr/lib".to_string()],
+                libs: vec!["lib1".to_string()],
+                cflags: vec![],
+                defines: vec!["LIB1_ENABLED".to_string()],
+                ldflags: vec![],
+                raw_cflags: "-I/usr/include/lib1 -DLIB1_ENABLED".to_string(),
+                raw_ldflags: "-L/usr/lib -llib1".to_string(),
+            },
+        );
+
+        libs.insert(
+            "lib2".to_string(),
+            PkgConfigLibrary {
+                name: "lib2".to_string(),
+                version: "2.0".to_string(),
+                resolved_via: ResolutionMethod::PkgConfig,
+                include_paths: vec!["/usr/include/lib2".to_string()],
+                lib_paths: vec!["/usr/lib".to_string()],
+                libs: vec!["lib2".to_string()],
+                cflags: vec![],
+                defines: vec![],
+                ldflags: vec![],
+                raw_cflags: "-I/usr/include/lib2".to_string(),
+                raw_ldflags: "-L/usr/lib -llib2".to_string(),
+            },
+        );
+
+        let content = generate_metadata_file(&libs);
+
+        // Should have both modules
+        assert!(content.contains("pub mod lib1"));
+        assert!(content.contains("pub mod lib2"));
+        // Each should have their own version
+        assert!(content.contains("pub const VERSION: &str = \"1.0\""));
+        assert!(content.contains("pub const VERSION: &str = \"2.0\""));
+    }
+
+    #[test]
+    fn test_apply_fallback_creates_library() {
+        use cargo_util_schemas::manifest::TomlPkgConfigFallback;
+
+        let fallback = TomlPkgConfigFallback {
+            libs: Some(vec!["mylib".to_string()]),
+            lib_paths: Some(vec!["/usr/local/lib".to_string()]),
+            include_paths: Some(vec!["/usr/local/include".to_string()]),
+        };
+
+        let lib = apply_fallback("mylib", &fallback);
+
+        assert_eq!(lib.name, "mylib");
+        assert_eq!(lib.libs, vec!["mylib"]);
+        assert_eq!(lib.lib_paths, vec!["/usr/local/lib"]);
+        assert_eq!(lib.include_paths, vec!["/usr/local/include"]);
+        assert_eq!(lib.resolved_via.as_str(), "fallback");
+        assert!(lib.version.is_empty());
+    }
+
+    #[test]
+    fn test_apply_fallback_empty_values() {
+        use cargo_util_schemas::manifest::TomlPkgConfigFallback;
+
+        let fallback = TomlPkgConfigFallback {
+            libs: None,
+            lib_paths: None,
+            include_paths: None,
+        };
+
+        let lib = apply_fallback("test", &fallback);
+
+        assert_eq!(lib.name, "test");
+        assert!(lib.libs.is_empty());
+        assert!(lib.lib_paths.is_empty());
+        assert!(lib.include_paths.is_empty());
+        assert_eq!(lib.resolved_via.as_str(), "fallback");
+    }
+
+    #[test]
+    fn test_generate_metadata_with_fallback_resolution() {
+        let mut deps = BTreeMap::new();
+        deps.insert(
+            "fallback-lib".to_string(),
+            PkgConfigLibrary {
+                name: "fallback-lib".to_string(),
+                version: String::new(),
+                resolved_via: ResolutionMethod::Fallback,
+                include_paths: vec!["/custom/include".to_string()],
+                lib_paths: vec!["/custom/lib".to_string()],
+                libs: vec!["customlib".to_string()],
+                cflags: Vec::new(),
+                defines: Vec::new(),
+                ldflags: Vec::new(),
+                raw_cflags: "-I/custom/include".to_string(),
+                raw_ldflags: "-L/custom/lib -lcustomlib".to_string(),
+            },
+        );
+
+        let content = generate_metadata_file(&deps);
+
+        assert!(content.contains("pub mod fallback_lib"));
+        assert!(content.contains("\"fallback\""));
+        assert!(content.contains("pub const RESOLVED_VIA: &str = \"fallback\""));
+        assert!(content.contains("pub const FOUND: bool = true"));
+    }
+
+    #[test]
+    fn test_generate_metadata_with_not_found_resolution() {
+        let mut deps = BTreeMap::new();
+        deps.insert(
+            "missing-lib".to_string(),
+            PkgConfigLibrary {
+                name: "missing-lib".to_string(),
+                version: String::new(),
+                resolved_via: ResolutionMethod::NotFound,
+                include_paths: Vec::new(),
+                lib_paths: Vec::new(),
+                libs: Vec::new(),
+                cflags: Vec::new(),
+                defines: Vec::new(),
+                ldflags: Vec::new(),
+                raw_cflags: String::new(),
+                raw_ldflags: String::new(),
+            },
+        );
+
+        let content = generate_metadata_file(&deps);
+
+        assert!(content.contains("pub mod missing_lib"));
+        assert!(content.contains("pub const FOUND: bool = false"));
+        assert!(content.contains("\"not-found\""));
     }
 }

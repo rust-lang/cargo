@@ -944,6 +944,20 @@ impl TomlPkgConfigDependency {
         }
     }
 
+    pub fn link(&self) -> Option<&str> {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => None,
+            TomlPkgConfigDependency::Detailed(d) => d.link.as_deref(),
+        }
+    }
+
+    pub fn fallback(&self) -> Option<&TomlPkgConfigFallback> {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => None,
+            TomlPkgConfigDependency::Detailed(d) => d.fallback.as_ref(),
+        }
+    }
+
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlPkgConfigDependency::Simple(_) => vec![],
@@ -983,6 +997,7 @@ pub struct TomlPkgConfigDetailedDependency {
     pub optional: Option<bool>,
     pub feature: Option<String>,
     pub link: Option<String>,
+    pub fallback: Option<TomlPkgConfigFallback>,
 
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
@@ -1000,9 +1015,24 @@ impl Default for TomlPkgConfigDetailedDependency {
             optional: Default::default(),
             feature: Default::default(),
             link: Default::default(),
+            fallback: Default::default(),
             _unused_keys: Default::default(),
         }
     }
+}
+
+/// Fallback specification for pkg-config dependencies
+/// Used when pkg-config query fails
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub struct TomlPkgConfigFallback {
+    /// Library names to link (-l flags)
+    pub libs: Option<Vec<String>>,
+    /// Library search paths (-L flags)
+    pub lib_paths: Option<Vec<String>>,
+    /// Include search paths (-I flags)
+    pub include_paths: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
