@@ -673,8 +673,8 @@ mod tests {
 
         let content = generate_metadata_file(&deps);
 
-        // Should sanitize the module name
-        assert!(content.contains("pub mod gtk_plus_3_0"));
+        // Should sanitize the module name (+ becomes _, - becomes _, . becomes _)
+        assert!(content.contains("pub mod gtk__3_0"));
         // But keep the original name in comments
         assert!(content.contains("gtk+-3.0"));
     }
