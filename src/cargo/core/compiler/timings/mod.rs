@@ -401,298 +401,9 @@ impl<'gctx> Timings<'gctx> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(build_runner, error)
+            report_html(self, build_runner, error)
                 .context("failed to save timing report")?;
         }
-        Ok(())
-    }
-
-    /// Save HTML report to disk.
-    fn report_html(
-        &self,
-        build_runner: &BuildRunner<'_, '_>,
-        error: &Option<anyhow::Error>,
-    ) -> CargoResult<()> {
-        let duration = self.start.elapsed().as_secs_f64();
-        let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let timings_path = build_runner
-            .files()
-            .timings_dir()
-            .expect("artifact-dir was not locked");
-        paths::create_dir_all(&timings_path)?;
-        let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
-        let mut f = BufWriter::new(paths::create(&filename)?);
-        let roots: Vec<&str> = self
-            .root_targets
-            .iter()
-            .map(|(name, _targets)| name.as_str())
-            .collect();
-        f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, build_runner.bcx, error)?;
-        f.write_all(HTML_CANVAS.as_bytes())?;
-        self.write_unit_table(&mut f)?;
-        // It helps with pixel alignment to use whole numbers.
-        writeln!(
-            f,
-            "<script>\n\
-             DURATION = {};",
-            f64::ceil(duration) as u32
-        )?;
-        self.write_js_data(&mut f)?;
-        write!(
-            f,
-            "{}\n\
-             </script>\n\
-             </body>\n\
-             </html>\n\
-             ",
-            include_str!("timings.js")
-        )?;
-        drop(f);
-
-        let unstamped_filename = timings_path.join("cargo-timing.html");
-        paths::link_or_copy(&filename, &unstamped_filename)?;
-
-        let mut shell = self.gctx.shell();
-        let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
-        let link = shell.err_file_hyperlink(&timing_path);
-        let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
-        shell.status_with_color("Timing", msg, &style::NOTE)?;
-
-        Ok(())
-    }
-
-    /// Render the summary table.
-    fn write_summary_table(
-        &self,
-        f: &mut impl Write,
-        duration: f64,
-        bcx: &BuildContext<'_, '_>,
-        error: &Option<anyhow::Error>,
-    ) -> CargoResult<()> {
-        let targets: Vec<String> = self
-            .root_targets
-            .iter()
-            .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
-            .collect();
-        let targets = targets.join("<br>");
-        let time_human = if duration > 60.0 {
-            format!(" ({}m {:.1}s)", duration as u32 / 60, duration % 60.0)
-        } else {
-            "".to_string()
-        };
-        let total_time = format!("{:.1}s{}", duration, time_human);
-        let max_concurrency = self.concurrency.iter().map(|c| c.active).max().unwrap();
-        let num_cpus = available_parallelism()
-            .map(|x| x.get().to_string())
-            .unwrap_or_else(|_| "n/a".into());
-        let rustc_info = render_rustc_info(bcx);
-        let error_msg = match error {
-            Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
-            None => "".to_string(),
-        };
-        write!(
-            f,
-            r#"
-<table class="my-table summary-table">
-  <tr>
-    <td>Targets:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Profile:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Fresh units:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Dirty units:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Total units:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Max concurrency:</td><td>{} (jobs={} ncpu={})</td>
-  </tr>
-  <tr>
-    <td>Build start:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>Total time:</td><td>{}</td>
-  </tr>
-  <tr>
-    <td>rustc:</td><td>{}</td>
-  </tr>
-{}
-</table>
-"#,
-            targets,
-            self.profile,
-            self.total_fresh,
-            self.total_dirty,
-            self.total_fresh + self.total_dirty,
-            max_concurrency,
-            bcx.jobs(),
-            num_cpus,
-            self.start_str,
-            total_time,
-            rustc_info,
-            error_msg,
-        )?;
-        Ok(())
-    }
-
-    /// Write timing data in JavaScript. Primarily for `timings.js` to put data
-    /// in a `<script>` HTML element to draw graphs.
-    fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
-        let unit_data = to_unit_data(&self.unit_times);
-
-        writeln!(
-            f,
-            "const UNIT_DATA = {};",
-            serde_json::to_string_pretty(&unit_data)?
-        )?;
-        writeln!(
-            f,
-            "const CONCURRENCY_DATA = {};",
-            serde_json::to_string_pretty(&self.concurrency)?
-        )?;
-        writeln!(
-            f,
-            "const CPU_USAGE = {};",
-            serde_json::to_string_pretty(&self.cpu_usage)?
-        )?;
-        Ok(())
-    }
-
-    /// Render the table of all units.
-    fn write_unit_table(&self, f: &mut impl Write) -> CargoResult<()> {
-        let mut units: Vec<&UnitTime> = self.unit_times.iter().collect();
-        units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
-
-        // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
-        // should be Unicode compatible.
-        fn capitalize(s: &str) -> String {
-            let first_char = s
-                .chars()
-                .next()
-                .map(|c| c.to_uppercase().to_string())
-                .unwrap_or_default();
-            format!("{first_char}{}", s.chars().skip(1).collect::<String>())
-        }
-
-        // We can have a bunch of situations here.
-        // - -Zsection-timings is enabled, and we received some custom sections, in which
-        // case we use them to determine the headers.
-        // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
-        // - We only have total durations, so we don't add any additional headers.
-        let aggregated: Vec<AggregatedSections> = units
-            .iter()
-            .map(|u|
-                // Normalize the section names so that they are capitalized, so that we can later
-                // refer to them with the capitalized name both when computing headers and when
-                // looking up cells.
-                match aggregate_sections(u) {
-                    AggregatedSections::Sections(sections) => AggregatedSections::Sections(
-                        sections.into_iter()
-                            .map(|(name, data)| (capitalize(&name), data))
-                            .collect()
-                    ),
-                    s => s
-                })
-            .collect();
-
-        let headers: Vec<String> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
-            AggregatedSections::Sections(sections) => Some(sections),
-            _ => None,
-        }) {
-            sections.into_iter().map(|s| s.0.clone()).collect()
-        } else if aggregated
-            .iter()
-            .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
-        {
-            vec![
-                FRONTEND_SECTION_NAME.to_string(),
-                CODEGEN_SECTION_NAME.to_string(),
-            ]
-        } else {
-            vec![]
-        };
-
-        write!(
-            f,
-            r#"
-<table class="my-table">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Unit</th>
-      <th>Total</th>
-      {headers}
-      <th>Features</th>
-    </tr>
-  </thead>
-  <tbody>
-"#,
-            headers = headers.iter().map(|h| format!("<th>{h}</th>")).join("\n")
-        )?;
-
-        for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
-            let format_duration = |section: Option<SectionData>| match section {
-                Some(section) => {
-                    let duration = section.duration();
-                    let pct = (duration / unit.duration) * 100.0;
-                    format!("{duration:.1}s ({:.0}%)", pct)
-                }
-                None => "".to_string(),
-            };
-
-            // This is a bit complex, as we assume the most general option - we can have an
-            // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
-            // initiate the cells to be empty, and then try to find a corresponding column for which
-            // we might have data.
-            let mut cells: HashMap<&str, SectionData> = Default::default();
-
-            match &aggregated_sections {
-                AggregatedSections::Sections(sections) => {
-                    for (name, data) in sections {
-                        cells.insert(&name, *data);
-                    }
-                }
-                AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
-                    cells.insert(FRONTEND_SECTION_NAME, *frontend);
-                    cells.insert(CODEGEN_SECTION_NAME, *codegen);
-                }
-                AggregatedSections::OnlyTotalDuration => {}
-            };
-            let cells = headers
-                .iter()
-                .map(|header| {
-                    format!(
-                        "<td>{}</td>",
-                        format_duration(cells.remove(header.as_str()))
-                    )
-                })
-                .join("\n");
-
-            let features = unit.unit.features.join(", ");
-            write!(
-                f,
-                r#"
-<tr>
-  <td>{}.</td>
-  <td>{}{}</td>
-  <td>{:.1}s</td>
-  {cells}
-  <td>{features}</td>
-</tr>
-"#,
-                i + 1,
-                unit.name_ver(),
-                unit.target,
-                unit.duration,
-            )?;
-        }
-        write!(f, "</tbody>\n</table>\n")?;
         Ok(())
     }
 }
@@ -741,6 +452,295 @@ pub enum SectionTimingEvent {
 pub struct SectionTiming {
     pub name: String,
     pub event: SectionTimingEvent,
+}
+
+/// Save HTML report to disk.
+pub(super) fn report_html(
+    ctx: &Timings<'_>,
+    build_runner: &BuildRunner<'_, '_>,
+    error: &Option<anyhow::Error>,
+) -> CargoResult<()> {
+    let duration = ctx.start.elapsed().as_secs_f64();
+    let timestamp = ctx.start_str.replace(&['-', ':'][..], "");
+    let timings_path = build_runner
+        .files()
+        .timings_dir()
+        .expect("artifact-dir was not locked");
+    paths::create_dir_all(&timings_path)?;
+    let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
+    let mut f = BufWriter::new(paths::create(&filename)?);
+    let roots: Vec<&str> = ctx
+        .root_targets
+        .iter()
+        .map(|(name, _targets)| name.as_str())
+        .collect();
+    f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
+    write_summary_table(ctx, &mut f, duration, build_runner.bcx, error)?;
+    f.write_all(HTML_CANVAS.as_bytes())?;
+    write_unit_table(ctx, &mut f)?;
+    // It helps with pixel alignment to use whole numbers.
+    writeln!(
+        f,
+        "<script>\n\
+         DURATION = {};",
+        f64::ceil(duration) as u32
+    )?;
+    write_js_data(ctx, &mut f)?;
+    write!(
+        f,
+        "{}\n\
+         </script>\n\
+         </body>\n\
+         </html>\n\
+         ",
+        include_str!("timings.js")
+    )?;
+    drop(f);
+
+    let unstamped_filename = timings_path.join("cargo-timing.html");
+    paths::link_or_copy(&filename, &unstamped_filename)?;
+
+    let mut shell = ctx.gctx.shell();
+    let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
+    let link = shell.err_file_hyperlink(&timing_path);
+    let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
+    shell.status_with_color("Timing", msg, &style::NOTE)?;
+
+    Ok(())
+}
+
+/// Render the summary table.
+fn write_summary_table(
+    ctx: &Timings<'_>,
+    f: &mut impl Write,
+    duration: f64,
+    bcx: &BuildContext<'_, '_>,
+    error: &Option<anyhow::Error>,
+) -> CargoResult<()> {
+    let targets: Vec<String> = ctx
+        .root_targets
+        .iter()
+        .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
+        .collect();
+    let targets = targets.join("<br>");
+    let time_human = if duration > 60.0 {
+        format!(" ({}m {:.1}s)", duration as u32 / 60, duration % 60.0)
+    } else {
+        "".to_string()
+    };
+    let total_time = format!("{:.1}s{}", duration, time_human);
+    let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap();
+    let num_cpus = available_parallelism()
+        .map(|x| x.get().to_string())
+        .unwrap_or_else(|_| "n/a".into());
+    let rustc_info = render_rustc_info(bcx);
+    let error_msg = match error {
+        Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
+        None => "".to_string(),
+    };
+    write!(
+        f,
+        r#"
+<table class="my-table summary-table">
+<tr>
+<td>Targets:</td><td>{}</td>
+</tr>
+<tr>
+<td>Profile:</td><td>{}</td>
+</tr>
+<tr>
+<td>Fresh units:</td><td>{}</td>
+</tr>
+<tr>
+<td>Dirty units:</td><td>{}</td>
+</tr>
+<tr>
+<td>Total units:</td><td>{}</td>
+</tr>
+<tr>
+<td>Max concurrency:</td><td>{} (jobs={} ncpu={})</td>
+</tr>
+<tr>
+<td>Build start:</td><td>{}</td>
+</tr>
+<tr>
+<td>Total time:</td><td>{}</td>
+</tr>
+<tr>
+<td>rustc:</td><td>{}</td>
+</tr>
+{}
+</table>
+"#,
+        targets,
+        ctx.profile,
+        ctx.total_fresh,
+        ctx.total_dirty,
+        ctx.total_fresh + ctx.total_dirty,
+        max_concurrency,
+        bcx.jobs(),
+        num_cpus,
+        ctx.start_str,
+        total_time,
+        rustc_info,
+        error_msg,
+    )?;
+    Ok(())
+}
+
+/// Write timing data in JavaScript. Primarily for `timings.js` to put data
+/// in a `<script>` HTML element to draw graphs.
+fn write_js_data(ctx: &Timings<'_>, f: &mut impl Write) -> CargoResult<()> {
+    let unit_data = to_unit_data(&ctx.unit_times);
+
+    writeln!(
+        f,
+        "const UNIT_DATA = {};",
+        serde_json::to_string_pretty(&unit_data)?
+    )?;
+    writeln!(
+        f,
+        "const CONCURRENCY_DATA = {};",
+        serde_json::to_string_pretty(&ctx.concurrency)?
+    )?;
+    writeln!(
+        f,
+        "const CPU_USAGE = {};",
+        serde_json::to_string_pretty(&ctx.cpu_usage)?
+    )?;
+    Ok(())
+}
+
+/// Render the table of all units.
+fn write_unit_table(ctx: &Timings<'_>, f: &mut impl Write) -> CargoResult<()> {
+    let mut units: Vec<&UnitTime> = ctx.unit_times.iter().collect();
+    units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
+
+    // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
+    // should be Unicode compatible.
+    fn capitalize(s: &str) -> String {
+        let first_char = s
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default();
+        format!("{first_char}{}", s.chars().skip(1).collect::<String>())
+    }
+
+    // We can have a bunch of situations here.
+    // - -Zsection-timings is enabled, and we received some custom sections, in which
+    // case we use them to determine the headers.
+    // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
+    // - We only have total durations, so we don't add any additional headers.
+    let aggregated: Vec<AggregatedSections> = units
+        .iter()
+        .map(|u|
+            // Normalize the section names so that they are capitalized, so that we can later
+            // refer to them with the capitalized name both when computing headers and when
+            // looking up cells.
+            match aggregate_sections(u) {
+                AggregatedSections::Sections(sections) => AggregatedSections::Sections(
+                    sections.into_iter()
+                        .map(|(name, data)| (capitalize(&name), data))
+                        .collect()
+                ),
+                s => s
+            })
+        .collect();
+
+    let headers: Vec<String> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
+        AggregatedSections::Sections(sections) => Some(sections),
+        _ => None,
+    }) {
+        sections.into_iter().map(|s| s.0.clone()).collect()
+    } else if aggregated
+        .iter()
+        .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
+    {
+        vec![
+            FRONTEND_SECTION_NAME.to_string(),
+            CODEGEN_SECTION_NAME.to_string(),
+        ]
+    } else {
+        vec![]
+    };
+
+    write!(
+        f,
+        r#"
+<table class="my-table">
+<thead>
+<tr>
+  <th></th>
+  <th>Unit</th>
+  <th>Total</th>
+  {headers}
+  <th>Features</th>
+</tr>
+</thead>
+<tbody>
+"#,
+        headers = headers.iter().map(|h| format!("<th>{h}</th>")).join("\n")
+    )?;
+
+    for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
+        let format_duration = |section: Option<SectionData>| match section {
+            Some(section) => {
+                let duration = section.duration();
+                let pct = (duration / unit.duration) * 100.0;
+                format!("{duration:.1}s ({:.0}%)", pct)
+            }
+            None => "".to_string(),
+        };
+
+        // This is a bit complex, as we assume the most general option - we can have an
+        // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
+        // initiate the cells to be empty, and then try to find a corresponding column for which
+        // we might have data.
+        let mut cells: HashMap<&str, SectionData> = Default::default();
+
+        match &aggregated_sections {
+            AggregatedSections::Sections(sections) => {
+                for (name, data) in sections {
+                    cells.insert(&name, *data);
+                }
+            }
+            AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
+                cells.insert(FRONTEND_SECTION_NAME, *frontend);
+                cells.insert(CODEGEN_SECTION_NAME, *codegen);
+            }
+            AggregatedSections::OnlyTotalDuration => {}
+        };
+        let cells = headers
+            .iter()
+            .map(|header| {
+                format!(
+                    "<td>{}</td>",
+                    format_duration(cells.remove(header.as_str()))
+                )
+            })
+            .join("\n");
+
+        let features = unit.unit.features.join(", ");
+        write!(
+            f,
+            r#"
+<tr>
+<td>{}.</td>
+<td>{}{}</td>
+<td>{:.1}s</td>
+{cells}
+<td>{features}</td>
+</tr>
+"#,
+            i + 1,
+            unit.name_ver(),
+            unit.target,
+            unit.duration,
+        )?;
+    }
+    write!(f, "</tbody>\n</table>\n")?;
+    Ok(())
 }
 
 fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
