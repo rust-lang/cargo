@@ -604,80 +604,8 @@ impl<'gctx> Timings<'gctx> {
     /// Write timing data in JavaScript. Primarily for `timings.js` to put data
     /// in a `<script>` HTML element to draw graphs.
     fn write_js_data(&self, f: &mut impl Write) -> CargoResult<()> {
-        // Create a map to link indices of unlocked units.
-        let unit_map: HashMap<Unit, usize> = self
-            .unit_times
-            .iter()
-            .enumerate()
-            .map(|(i, ut)| (ut.unit.clone(), i))
-            .collect();
-        let round = |x: f64| (x * 100.0).round() / 100.0;
-        let unit_data: Vec<UnitData> = self
-            .unit_times
-            .iter()
-            .enumerate()
-            .map(|(i, ut)| {
-                let mode = if ut.unit.mode.is_run_custom_build() {
-                    "run-custom-build"
-                } else {
-                    "todo"
-                }
-                .to_string();
-                // These filter on the unlocked units because not all unlocked
-                // units are actually "built". For example, Doctest mode units
-                // don't actually generate artifacts.
-                let unlocked_units: Vec<usize> = ut
-                    .unlocked_units
-                    .iter()
-                    .filter_map(|unit| unit_map.get(unit).copied())
-                    .collect();
-                let unlocked_rmeta_units: Vec<usize> = ut
-                    .unlocked_rmeta_units
-                    .iter()
-                    .filter_map(|unit| unit_map.get(unit).copied())
-                    .collect();
-                let aggregated = ut.aggregate_sections();
-                let sections = match aggregated {
-                    AggregatedSections::Sections(mut sections) => {
-                        // We draw the sections in the pipeline graph in a way where the frontend
-                        // section has the "default" build color, and then additional sections
-                        // (codegen, link) are overlaid on top with a different color.
-                        // However, there might be some time after the final (usually link) section,
-                        // which definitely shouldn't be classified as "Frontend". We thus try to
-                        // detect this situation and add a final "Other" section.
-                        if let Some((_, section)) = sections.last()
-                            && section.end < ut.duration
-                        {
-                            sections.push((
-                                "other".to_string(),
-                                SectionData {
-                                    start: section.end,
-                                    end: ut.duration,
-                                },
-                            ));
-                        }
+        let unit_data = to_unit_data(&self.unit_times);
 
-                        Some(sections)
-                    }
-                    AggregatedSections::OnlyMetadataTime { .. }
-                    | AggregatedSections::OnlyTotalDuration => None,
-                };
-
-                UnitData {
-                    i,
-                    name: ut.unit.pkg.name().to_string(),
-                    version: ut.unit.pkg.version().to_string(),
-                    mode,
-                    target: ut.target.clone(),
-                    start: round(ut.start),
-                    duration: round(ut.duration),
-                    rmeta_time: ut.rmeta_time.map(round),
-                    unlocked_units,
-                    unlocked_rmeta_units,
-                    sections,
-                }
-            })
-            .collect();
         writeln!(
             f,
             "const UNIT_DATA = {};",
@@ -895,6 +823,81 @@ fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
         bcx.rustc().host,
         requested_target
     )
+}
+
+fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
+    // Create a map to link indices of unlocked units.
+    let unit_map: HashMap<Unit, usize> = unit_times
+        .iter()
+        .enumerate()
+        .map(|(i, ut)| (ut.unit.clone(), i))
+        .collect();
+    let round = |x: f64| (x * 100.0).round() / 100.0;
+    unit_times
+        .iter()
+        .enumerate()
+        .map(|(i, ut)| {
+            let mode = if ut.unit.mode.is_run_custom_build() {
+                "run-custom-build"
+            } else {
+                "todo"
+            }
+            .to_string();
+            // These filter on the unlocked units because not all unlocked
+            // units are actually "built". For example, Doctest mode units
+            // don't actually generate artifacts.
+            let unlocked_units: Vec<usize> = ut
+                .unlocked_units
+                .iter()
+                .filter_map(|unit| unit_map.get(unit).copied())
+                .collect();
+            let unlocked_rmeta_units: Vec<usize> = ut
+                .unlocked_rmeta_units
+                .iter()
+                .filter_map(|unit| unit_map.get(unit).copied())
+                .collect();
+            let aggregated = ut.aggregate_sections();
+            let sections = match aggregated {
+                AggregatedSections::Sections(mut sections) => {
+                    // We draw the sections in the pipeline graph in a way where the frontend
+                    // section has the "default" build color, and then additional sections
+                    // (codegen, link) are overlaid on top with a different color.
+                    // However, there might be some time after the final (usually link) section,
+                    // which definitely shouldn't be classified as "Frontend". We thus try to
+                    // detect this situation and add a final "Other" section.
+                    if let Some((_, section)) = sections.last()
+                        && section.end < ut.duration
+                    {
+                        sections.push((
+                            "other".to_string(),
+                            SectionData {
+                                start: section.end,
+                                end: ut.duration,
+                            },
+                        ));
+                    }
+
+                    Some(sections)
+                }
+                AggregatedSections::OnlyMetadataTime { .. }
+                | AggregatedSections::OnlyTotalDuration => None,
+            };
+
+            UnitData {
+                i,
+                name: ut.unit.pkg.name().to_string(),
+                version: ut.unit.pkg.version().to_string(),
+                mode,
+                target: ut.target.clone(),
+                start: round(ut.start),
+                duration: round(ut.duration),
+                rmeta_time: ut.rmeta_time.map(round),
+                unlocked_units,
+                unlocked_rmeta_units,
+                sections,
+            }
+        })
+        .collect()
 }
 
 static HTML_TMPL: &str = r#"
