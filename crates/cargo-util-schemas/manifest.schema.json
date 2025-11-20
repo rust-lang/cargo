@@ -148,6 +148,15 @@
         "$ref": "#/$defs/InheritableDependency"
       }
     },
+    "pkgconfig-dependencies": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlPkgConfigDependency"
+      }
+    },
     "target": {
       "type": [
         "object",
@@ -922,6 +931,103 @@
         "workspace"
       ]
     },
+    "TomlPkgConfigDependency": {
+      "description": "A pkg-config dependency specification",
+      "anyOf": [
+        {
+          "description": "In the simple format, only a version is specified, eg.\n`libfoo = \"1.2\"`",
+          "type": "string"
+        },
+        {
+          "description": "The simple format is equivalent to a detailed dependency\nspecifying only a version, eg.\n`libfoo = { version = \"1.2\" }`",
+          "$ref": "#/$defs/TomlPkgConfigDetailedDependency"
+        }
+      ]
+    },
+    "TomlPkgConfigDetailedDependency": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "names": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "link": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlPkgConfigFallback"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "TomlPkgConfigFallback": {
+      "description": "Fallback specification for pkg-config dependencies\nUsed when pkg-config query fails",
+      "type": "object",
+      "properties": {
+        "libs": {
+          "description": "Library names to link (-l flags)",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "lib-paths": {
+          "description": "Library search paths (-L flags)",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "include-paths": {
+          "description": "Include search paths (-I flags)",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "TomlPlatform": {
       "description": "Corresponds to a `target` entry, but `TomlTarget` is already used.",
       "type": "object",
@@ -969,6 +1075,15 @@
           ],
           "additionalProperties": {
             "$ref": "#/$defs/InheritableDependency"
+          }
+        },
+        "pkgconfig-dependencies": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/TomlPkgConfigDependency"
           }
         }
       }
