@@ -409,8 +409,9 @@ impl<'gctx> Timings<'gctx> {
                 host: &build_runner.bcx.rustc().host,
                 requested_targets,
                 jobs: build_runner.bcx.jobs(),
+                error,
             };
-            report::write_html(ctx, &mut f, error)?;
+            report::write_html(ctx, &mut f)?;
 
             let unstamped_filename = timings_path.join("cargo-timing.html");
             paths::link_or_copy(&filename, &unstamped_filename)?;

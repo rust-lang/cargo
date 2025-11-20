@@ -77,14 +77,12 @@ pub struct RenderContext<'a> {
     pub requested_targets: &'a [&'a str],
     /// The number of jobs specified for this build.
     pub jobs: u32,
+    /// Fatal error during the build.
+    pub error: &'a Option<anyhow::Error>,
 }
 
 /// Writes an HTML report.
-pub(super) fn write_html(
-    ctx: RenderContext<'_>,
-    f: &mut impl Write,
-    error: &Option<anyhow::Error>,
-) -> CargoResult<()> {
+pub(super) fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     let duration = ctx.start.elapsed().as_secs_f64();
     let roots: Vec<&str> = ctx
         .root_units
@@ -92,7 +90,7 @@ pub(super) fn write_html(
         .map(|(name, _targets)| name.as_str())
         .collect();
     f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-    write_summary_table(&ctx, f, duration, error)?;
+    write_summary_table(&ctx, f, duration)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
     write_unit_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
@@ -121,7 +119,6 @@ fn write_summary_table(
     ctx: &RenderContext<'_>,
     f: &mut impl Write,
     duration: f64,
-    error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let targets = ctx
         .root_units
@@ -146,7 +143,7 @@ fn write_summary_table(
 
     let requested_targets = ctx.requested_targets.join(", ");
 
-    let error_msg = match error {
+    let error_msg = match ctx.error {
         Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
         None => "".to_string(),
     };
