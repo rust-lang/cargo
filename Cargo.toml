@@ -191,6 +191,7 @@ opener.workspace = true
 os_info.workspace = true
 pasetors.workspace = true
 pathdiff.workspace = true
+pkg-config.workspace = true
 rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true

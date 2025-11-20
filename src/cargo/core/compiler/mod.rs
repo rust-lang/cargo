@@ -44,6 +44,7 @@ mod links;
 mod lto;
 mod output_depinfo;
 mod output_sbom;
+pub mod pkgconfig;
 pub mod rustdoc;
 pub mod standard_lib;
 mod timings;

@@ -14,7 +14,7 @@ use cargo_platform::Platform;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
-    TomlPackageBuild, TomlWorkspace,
+    TomlPackageBuild, TomlPkgConfigDependency, TomlWorkspace,
 };
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
@@ -325,6 +325,7 @@ fn normalize_toml(
         dev_dependencies2: None,
         build_dependencies: None,
         build_dependencies2: None,
+        pkgconfig_dependencies: None,
         target: None,
         lints: None,
         hints: None,
@@ -493,6 +494,15 @@ fn normalize_toml(
             package_root,
             warnings,
         )?;
+
+        normalized_toml.pkgconfig_dependencies =
+            normalize_pkgconfig_dependencies(original_toml.pkgconfig_dependencies.as_ref(), warnings)?;
+
+        // Check if pkgconfig-dependencies is used and require unstable feature
+        if normalized_toml.pkgconfig_dependencies.is_some() {
+            features.require(Feature::pkgconfig_dependencies())?;
+        }
+
         let mut normalized_target = BTreeMap::new();
         for (name, platform) in original_toml.target.iter().flatten() {
             let normalized_dependencies = normalize_dependencies(
@@ -546,6 +556,8 @@ fn normalize_toml(
                 package_root,
                 warnings,
             )?;
+            let normalized_pkgconfig_dependencies =
+                normalize_pkgconfig_dependencies(platform.pkgconfig_dependencies.as_ref(), warnings)?;
             normalized_target.insert(
                 name.clone(),
                 manifest::TomlPlatform {
@@ -554,6 +566,7 @@ fn normalize_toml(
                     build_dependencies2: None,
                     dev_dependencies: normalized_dev_dependencies,
                     dev_dependencies2: None,
+                    pkgconfig_dependencies: normalized_pkgconfig_dependencies,
                 },
             );
         }
@@ -957,6 +970,38 @@ fn normalize_path_dependency<'a>(
         }
     }
     Ok(())
+}
+
+fn normalize_pkgconfig_dependencies(
+    orig_deps: Option<&BTreeMap<String, TomlPkgConfigDependency>>,
+    warnings: &mut Vec<String>,
+) -> CargoResult<Option<BTreeMap<String, TomlPkgConfigDependency>>> {
+    let Some(dependencies) = orig_deps else {
+        return Ok(None);
+    };
+
+    let mut deps = BTreeMap::new();
+    for (name, dep) in dependencies.iter() {
+        // Validate that a version constraint is present
+        if dep.version_constraint().is_none() {
+            bail!(
+                "pkgconfig dependency `{}` must have a version constraint",
+                name
+            );
+        }
+
+        // Check for unused keys
+        for unused_key in dep.unused_keys() {
+            warnings.push(format!(
+                "unused manifest key in pkgconfig-dependencies.{}: `{}`",
+                name, unused_key
+            ));
+        }
+
+        deps.insert(name.clone(), dep.clone());
+    }
+
+    Ok(Some(deps))
 }
 
 fn load_inheritable_fields(
@@ -1809,6 +1854,7 @@ note: only a feature named `default` will be enabled by default"
         .cloned()
         .unwrap_or_default();
     let links = normalized_package.links.clone();
+    let pkgconfig_dependencies = normalized_toml.pkgconfig_dependencies.clone();
     let custom_metadata = normalized_package.metadata.clone();
     let im_a_teapot = normalized_package.im_a_teapot;
     let default_run = normalized_package.default_run.clone();
@@ -1825,6 +1871,7 @@ note: only a feature named `default` will be enabled by default"
         exclude,
         include,
         links,
+        pkgconfig_dependencies,
         metadata,
         custom_metadata,
         publish,

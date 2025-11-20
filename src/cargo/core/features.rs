@@ -582,6 +582,9 @@ features! {
 
     /// Allows use of panic="immediate-abort".
     (unstable, panic_immediate_abort, "", "reference/unstable.html#panic-immediate-abort"),
+
+    /// Allows use of [pkgconfig-dependencies] in Cargo.toml.
+    (unstable, pkgconfig_dependencies, "", "reference/unstable.html#pkgconfig-dependencies"),
 }
 
 /// Status and metadata for a single unstable feature.
@@ -876,6 +879,7 @@ unstable_cli_options!(
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     panic_immediate_abort: bool = ("Enable setting `panic = \"immediate-abort\"` in profiles"),
+    pkgconfig_dependencies: bool = ("Enable the `[pkgconfig-dependencies]` table in Cargo.toml"),
     profile_hint_mostly_unused: bool = ("Enable the `hint-mostly-unused` setting in profiles to mark a crate as mostly unused."),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     public_dependency: bool = ("Respect a dependency's `public` field in Cargo.toml to control public/private dependencies"),

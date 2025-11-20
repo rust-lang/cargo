@@ -54,6 +54,7 @@ pub struct TomlManifest {
     pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
     pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub pkgconfig_dependencies: Option<BTreeMap<String, TomlPkgConfigDependency>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub lints: Option<InheritableLints>,
     pub hints: Option<Hints>,
@@ -84,6 +85,7 @@ impl TomlManifest {
             self.build_dependencies()
                 .as_ref()
                 .map(|_| "build-dependencies"),
+            self.pkgconfig_dependencies.as_ref().map(|_| "pkgconfig-dependencies"),
             self.target.as_ref().map(|_| "target"),
             self.lints.as_ref().map(|_| "lints"),
             self.hints.as_ref().map(|_| "hints"),
@@ -899,6 +901,110 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
     }
 }
 
+/// A pkg-config dependency specification
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub enum TomlPkgConfigDependency {
+    /// In the simple format, only a version is specified, eg.
+    /// `libfoo = "1.2"`
+    Simple(String),
+    /// The simple format is equivalent to a detailed dependency
+    /// specifying only a version, eg.
+    /// `libfoo = { version = "1.2" }`
+    Detailed(TomlPkgConfigDetailedDependency),
+}
+
+impl TomlPkgConfigDependency {
+    pub fn version_constraint(&self) -> Option<&str> {
+        match self {
+            TomlPkgConfigDependency::Simple(v) => Some(v),
+            TomlPkgConfigDependency::Detailed(d) => d.version.as_deref(),
+        }
+    }
+
+    pub fn names(&self) -> Option<&[String]> {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => None,
+            TomlPkgConfigDependency::Detailed(d) => d.names.as_deref(),
+        }
+    }
+
+    pub fn is_optional(&self) -> bool {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => false,
+            TomlPkgConfigDependency::Detailed(d) => d.optional.unwrap_or(false),
+        }
+    }
+
+    pub fn feature(&self) -> Option<&str> {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => None,
+            TomlPkgConfigDependency::Detailed(d) => d.feature.as_deref(),
+        }
+    }
+
+    pub fn unused_keys(&self) -> Vec<String> {
+        match self {
+            TomlPkgConfigDependency::Simple(_) => vec![],
+            TomlPkgConfigDependency::Detailed(detailed) => {
+                detailed._unused_keys.keys().cloned().collect()
+            }
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for TomlPkgConfigDependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+        let expected = "a version string like \"1.2\" or a \
+                     detailed dependency like { version = \"1.2\" }";
+        UntaggedEnumVisitor::new()
+            .expecting(expected)
+            .string(|value| Ok(TomlPkgConfigDependency::Simple(value.to_owned())))
+            .map(|value| {
+                value
+                    .deserialize()
+                    .map(TomlPkgConfigDependency::Detailed)
+            })
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+pub struct TomlPkgConfigDetailedDependency {
+    pub version: Option<String>,
+    pub names: Option<Vec<String>>,
+    pub optional: Option<bool>,
+    pub feature: Option<String>,
+    pub link: Option<String>,
+
+    /// This is here to provide a way to see the "unused manifest keys" when deserializing
+    #[serde(skip_serializing)]
+    #[serde(flatten)]
+    #[cfg_attr(feature = "unstable-schema", schemars(skip))]
+    pub _unused_keys: BTreeMap<String, toml::Value>,
+}
+
+// Explicit implementation so we avoid pulling in default from flatten
+impl Default for TomlPkgConfigDetailedDependency {
+    fn default() -> Self {
+        Self {
+            version: Default::default(),
+            names: Default::default(),
+            optional: Default::default(),
+            feature: Default::default(),
+            link: Default::default(),
+            _unused_keys: Default::default(),
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlProfiles(pub BTreeMap<ProfileName, TomlProfile>);
@@ -1517,6 +1623,7 @@ pub struct TomlPlatform {
     pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
     pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub pkgconfig_dependencies: Option<BTreeMap<String, TomlPkgConfigDependency>>,
 }
 
 impl TomlPlatform {

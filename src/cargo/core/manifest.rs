@@ -73,6 +73,7 @@ pub struct Manifest {
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
+    pkgconfig_dependencies: Option<BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>>,
     warnings: Warnings,
     exclude: Vec<String>,
     include: Vec<String>,
@@ -508,6 +509,7 @@ impl Manifest {
         exclude: Vec<String>,
         include: Vec<String>,
         links: Option<String>,
+        pkgconfig_dependencies: Option<BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>>,
         metadata: ManifestMetadata,
         custom_metadata: Option<toml::Value>,
         publish: Option<Vec<String>>,
@@ -539,6 +541,7 @@ impl Manifest {
             exclude,
             include,
             links,
+            pkgconfig_dependencies,
             metadata,
             custom_metadata,
             publish,
@@ -646,6 +649,13 @@ impl Manifest {
     pub fn links(&self) -> Option<&str> {
         self.links.as_deref()
     }
+
+    pub fn pkgconfig_dependencies(
+        &self,
+    ) -> Option<&BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>> {
+        self.pkgconfig_dependencies.as_ref()
+    }
+
     pub fn is_embedded(&self) -> bool {
         self.embedded
     }
