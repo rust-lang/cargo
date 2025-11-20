@@ -67,7 +67,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{bail, Context as _};
 use cargo_util_schemas::manifest::{TomlPkgConfigDependency, TomlPkgConfigFallback};
@@ -125,43 +125,6 @@ impl ResolutionMethod {
     }
 }
 
-/// Parse pkg-config output and extract flags
-fn parse_pkg_config_output(
-    cflags_output: &str,
-    ldflags_output: &str,
-) -> (Vec<String>, Vec<String>, Vec<String>, Vec<String>, Vec<String>) {
-    let mut include_paths = Vec::new();
-    let mut lib_paths = Vec::new();
-    let mut libs = Vec::new();
-    let mut cflags = Vec::new();
-    let mut defines = Vec::new();
-
-    // Parse cflags
-    for flag in cflags_output.split_whitespace() {
-        if flag.starts_with("-I") {
-            include_paths.push(flag[2..].to_string());
-        } else if flag.starts_with("-D") {
-            defines.push(flag[2..].to_string());
-        } else if !flag.is_empty() {
-            cflags.push(flag.to_string());
-        }
-    }
-
-    // Parse ldflags
-    let mut ldflags_collected = Vec::new();
-    for flag in ldflags_output.split_whitespace() {
-        if flag.starts_with("-L") {
-            lib_paths.push(flag[2..].to_string());
-        } else if flag.starts_with("-l") {
-            libs.push(flag[2..].to_string());
-        } else if !flag.is_empty() {
-            ldflags_collected.push(flag.to_string());
-        }
-    }
-
-    (include_paths, lib_paths, libs, cflags, defines)
-}
-
 /// Sanitize a package name to be a valid Rust module name
 pub fn sanitize_module_name(name: &str) -> String {
     let mut result = String::new();
@@ -189,8 +152,8 @@ pub fn sanitize_module_name(name: &str) -> String {
 fn generate_dep_module(name: &str, lib: &PkgConfigLibrary) -> String {
     let module_name = sanitize_module_name(name);
 
-    // Format arrays for Rust code
-    let format_str_array = |items: &[String]| -> String {
+    // Format arrays for Rust code (helper for potential future use)
+    let _format_str_array = |items: &[String]| -> String {
         let strs: Vec<_> = items.iter().map(|s| format!("\"{}\"", s)).collect();
         format!("&[{}]", strs.join(", "))
     };
@@ -625,21 +588,6 @@ mod tests {
         assert_eq!(sanitize_module_name("lib.foo"), "lib_foo");
         assert_eq!(sanitize_module_name("gtk+-3.0"), "gtk__3_0");
         assert_eq!(sanitize_module_name("3dlib"), "lib_3dlib");
-    }
-
-    #[test]
-    fn test_parse_pkg_config_output() {
-        let cflags = "-I/usr/include/openssl -DOPENSSL_ENABLED";
-        let ldflags = "-L/usr/lib -lssl -lcrypto";
-
-        let (include_paths, lib_paths, libs, cflags_out, defines) =
-            parse_pkg_config_output(cflags, ldflags);
-
-        assert_eq!(include_paths, vec!["/usr/include/openssl"]);
-        assert_eq!(lib_paths, vec!["/usr/lib"]);
-        assert_eq!(libs, vec!["ssl", "crypto"]);
-        assert_eq!(defines, vec!["OPENSSL_ENABLED"]);
-        assert!(cflags_out.is_empty());
     }
 
     #[test]

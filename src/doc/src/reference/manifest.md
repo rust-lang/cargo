@@ -627,6 +627,118 @@ See the [specifying dependencies page](specifying-dependencies.md) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
+## The `[pkgconfig-dependencies]` section
+
+The `[pkgconfig-dependencies]` table (currently unstable) allows declaring
+system library dependencies managed by pkg-config. This enables Cargo to
+automatically query system libraries for compiler flags and link information.
+
+**Note:** This feature requires the `-Z pkgconfig-dependencies` unstable flag.
+```toml
+cargo build -Z pkgconfig-dependencies
+```
+
+### Simple form
+
+The simplest form specifies only a version constraint:
+
+```toml
+[pkgconfig-dependencies]
+openssl = "1.1"
+sqlite3 = "3.0"
+```
+
+### Detailed form
+
+For more control, use the detailed form:
+
+```toml
+[pkgconfig-dependencies.openssl]
+version = "1.1"
+# Try multiple pkg-config names (if library has different names on different systems)
+names = ["openssl", "libssl"]
+# Mark as optional - build continues if not found
+optional = true
+# Fallback specification for when pkg-config fails
+[pkgconfig-dependencies.openssl.fallback]
+libs = ["ssl", "crypto"]
+lib-paths = ["/usr/local/lib"]
+include-paths = ["/usr/local/include"]
+```
+
+### Fields
+
+* `version` — The minimum version constraint to require from pkg-config.
+  If not specified, any version is accepted.
+
+* `names` — Alternative pkg-config package names to try. If the primary name
+  (from the table key) fails, these names are tried in order. Useful when
+  a library has different names on different systems (e.g., `sqlite3` vs
+  `sqlite`).
+
+* `optional` — If `true`, the build continues even if the library is not
+  found. Users can check the `FOUND` constant in the generated metadata.
+  Default is `false` (required).
+
+* `feature` — (Reserved for future use) Can be used to conditionally include
+  the dependency based on a Cargo feature.
+
+* `link` — (Reserved for future use) Specifies how to link the library.
+
+* `fallback` — Manual specification of compiler and linker flags for when
+  pkg-config fails. Contains:
+  * `libs` — Library names to link (e.g., `["ssl", "crypto"]`)
+  * `lib-paths` — Directories to search for libraries (e.g., `["/usr/lib"]`)
+  * `include-paths` — Directories to search for headers (e.g., `["/usr/include"]`)
+
+### Generated metadata
+
+Cargo generates a Rust module at `OUT_DIR/pkgconfig_meta.rs` with compile-time
+constants for each dependency. Include it in your build script:
+
+```rust
+include!(concat!(env!("OUT_DIR"), "/pkgconfig_meta.rs"));
+
+fn main() {
+    // Access metadata for openssl dependency
+    if pkgconfig::openssl::FOUND {
+        for lib in pkgconfig::openssl::LIBS {
+            println!("cargo:rustc-link-lib={}", lib);
+        }
+        for path in pkgconfig::openssl::LIB_PATHS {
+            println!("cargo:rustc-link-search=native={}", path);
+        }
+    }
+}
+```
+
+Each dependency module contains constants for:
+* `VERSION` — Version string from pkg-config
+* `FOUND` — Boolean indicating if library was found
+* `RESOLVED_VIA` — How it was resolved: `"pkg-config"`, `"fallback"`, or `"not-found"`
+* `INCLUDE_PATHS` — Array of include directories
+* `LIB_PATHS` — Array of library directories
+* `LIBS` — Array of library names
+* `CFLAGS` — Compiler flags
+* `DEFINES` — Preprocessor defines
+* `LDFLAGS` — Linker flags
+* `RAW_CFLAGS` and `RAW_LDFLAGS` — Raw flag strings from pkg-config
+
+### Error handling
+
+If a required dependency is not found:
+* Cargo will error with a helpful message listing attempted pkg-config names
+* The message suggests solutions:
+  1. Installing the system library
+  2. Setting PKG_CONFIG_PATH environment variable
+  3. Using a fallback specification
+  4. Using alternative names if the package has different names
+
+Optional dependencies that are not found will:
+* Log a warning message
+* Generate metadata with `FOUND = false`
+* Allow the build to continue
+
 ## The `[profile.*]` sections
 
 The `[profile]` tables provide a way to customize compiler settings such as

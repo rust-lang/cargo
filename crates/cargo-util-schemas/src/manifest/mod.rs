@@ -973,7 +973,6 @@ impl<'de> de::Deserialize<'de> for TomlPkgConfigDependency {
     where
         D: de::Deserializer<'de>,
     {
-        use serde::de::Error as _;
         let expected = "a version string like \"1.2\" or a \
                      detailed dependency like { version = \"1.2\" }";
         UntaggedEnumVisitor::new()

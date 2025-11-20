@@ -67,6 +67,7 @@ Each new feature described below should explain how to use it.
 * Build scripts and linking
     * [Metabuild](#metabuild) --- Provides declarative build scripts.
     * [Multiple Build Scripts](#multiple-build-scripts) --- Allows use of multiple build scripts.
+    * [pkgconfig-dependencies](#pkgconfig-dependencies) --- Declarative system library dependencies via pkg-config.
 * Resolver and features
     * [no-index-update](#no-index-update) --- Prevents cargo from updating the index cache.
     * [avoid-dev-deps](#avoid-dev-deps) --- Prevents the resolver from including dev-dependencies during resolution.
@@ -2322,6 +2323,130 @@ Multi-package publishing has been stabilized in Rust 1.90.0.
 
 Support for `build.build-dir` was stabilized in the 1.91 release.
 See the [config documentation](config.md#buildbuild-dir) for information about changing the build-dir
+
+## pkgconfig-dependencies
+
+The `pkgconfig-dependencies` feature (enabled with `-Z pkgconfig-dependencies`)
+allows you to declaratively specify system library dependencies in your `Cargo.toml`
+that are managed by pkg-config. Cargo automatically queries pkg-config for
+compiler and linker flags needed to use these libraries.
+
+### Motivation
+
+Traditionally, when a Rust crate needs to use a system library, you either:
+1. Manually specify compiler and linker flags in your build script
+2. Use a build-dependency that probes pkg-config and generates code
+
+This feature streamlines the process by making pkg-config dependency declarations
+first-class citizens in `Cargo.toml`, similar to regular Rust dependencies.
+
+### Usage
+
+Enable the feature with `-Z pkgconfig-dependencies`:
+
+```
+cargo build -Z pkgconfig-dependencies
+```
+
+Or in `.cargo/config.toml`:
+
+```toml
+[unstable]
+pkgconfig-dependencies = true
+```
+
+### Declaring dependencies
+
+In your `Cargo.toml`, add a `[pkgconfig-dependencies]` section:
+
+```toml
+[pkgconfig-dependencies]
+# Simple form: just version constraint
+openssl = "1.1"
+sqlite3 = "3.0"
+
+# Detailed form for more control
+[pkgconfig-dependencies.libfoo]
+version = "2.0"
+names = ["libfoo", "foo"]  # Try alternative pkg-config names
+optional = true            # Don't fail build if not found
+[pkgconfig-dependencies.libfoo.fallback]
+libs = ["foo"]
+lib-paths = ["/usr/local/lib"]
+include-paths = ["/usr/local/include"]
+```
+
+See the [manifest reference](manifest.md#the-pkgconfig-dependencies-section)
+for complete documentation of the `[pkgconfig-dependencies]` table.
+
+### Generated metadata
+
+Cargo generates Rust code in `OUT_DIR/pkgconfig_meta.rs` containing compile-time
+constants for each dependency. Use it in your build script:
+
+```rust
+include!(concat!(env!("OUT_DIR"), "/pkgconfig_meta.rs"));
+
+fn main() {
+    if pkgconfig::openssl::FOUND {
+        println!("cargo:rustc-link-search=native={}",
+                 pkgconfig::openssl::LIB_PATHS[0]);
+        for lib in pkgconfig::openssl::LIBS {
+            println!("cargo:rustc-link-lib={}", lib);
+        }
+    }
+}
+```
+
+Each dependency has a module with these constants:
+- `VERSION`: Version string
+- `FOUND`: Boolean indicating if found
+- `RESOLVED_VIA`: How resolved (`"pkg-config"`, `"fallback"`, or `"not-found"`)
+- `INCLUDE_PATHS`: Include directories
+- `LIB_PATHS`: Library directories
+- `LIBS`: Library names to link
+- `CFLAGS`, `DEFINES`, `LDFLAGS`: Compiler and linker flags
+
+### Resolution strategy
+
+For each dependency, Cargo:
+
+1. Tries the primary pkg-config name
+2. If that fails, tries alternative names (from the `names` field) in order
+3. If all pkg-config queries fail, uses the fallback specification (if provided)
+4. If nothing succeeds and the dependency is not optional, errors with helpful suggestions
+
+### Error messages
+
+When a required dependency is not found, Cargo provides clear error messages with
+suggestions:
+
+```
+error: pkg-config dependency `openssl` (version 1.1) not found
+  tried pkg-config names: openssl
+  error: pkg-config failed
+
+To fix this, you can:
+1. Install the system library (e.g., libssl-dev on Debian, openssl-devel on Fedora)
+2. Set the PKG_CONFIG_PATH environment variable to include the directory with the .pc file
+3. Add a [fallback] specification in Cargo.toml to manually specify library paths
+4. Use alternative names via the `names` field if the package has multiple names
+```
+
+### Optional dependencies
+
+If a dependency is marked `optional = true`:
+- Cargo will emit a warning if not found but continue the build
+- The generated metadata will have `FOUND = false`
+- Build scripts can check the `FOUND` constant to handle missing libraries
+
+```rust
+if pkgconfig::libfoo::FOUND {
+    // Use libfoo
+} else {
+    // Provide alternative implementation or feature gate
+}
+```
 
 ## Build-plan
 

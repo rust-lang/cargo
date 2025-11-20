@@ -1445,6 +1445,7 @@ pub fn to_real_manifest(
             profile: _,
             patch: _,
             replace: _,
+            pkgconfig_dependencies: _,
             _unused_keys: _,
         } = &original_toml;
         let mut invalid_fields = vec![
@@ -3186,6 +3187,7 @@ fn prepare_toml_for_publish(
                             dev_dependencies2: None,
                             build_dependencies: map_deps(gctx, v.build_dependencies(), all)?,
                             build_dependencies2: None,
+                            pkgconfig_dependencies: None,
                         },
                     ))
                 })
@@ -3201,6 +3203,7 @@ fn prepare_toml_for_publish(
         profile: me.profile.clone(),
         patch: None,
         replace: None,
+        pkgconfig_dependencies: None,
         _unused_keys: Default::default(),
     };
     strip_features(&mut manifest);
