@@ -125,67 +125,69 @@ fn write_summary_table(
         .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
         .collect();
     let targets = targets.join("<br>");
+    let total_units = ctx.total_fresh + ctx.total_dirty;
+
     let time_human = if duration > 60.0 {
         format!(" ({}m {:.1}s)", duration as u32 / 60, duration % 60.0)
     } else {
         "".to_string()
     };
     let total_time = format!("{:.1}s{}", duration, time_human);
+
     let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap();
+    let jobs = bcx.jobs();
     let num_cpus = std::thread::available_parallelism()
         .map(|x| x.get().to_string())
         .unwrap_or_else(|_| "n/a".into());
+
     let rustc_info = render_rustc_info(bcx);
     let error_msg = match error {
         Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
         None => "".to_string(),
     };
+
+    let RenderContext {
+        start_str,
+        profile,
+        total_fresh,
+        total_dirty,
+        ..
+    } = &ctx;
+
     write!(
         f,
         r#"
 <table class="my-table summary-table">
 <tr>
-<td>Targets:</td><td>{}</td>
+<td>Targets:</td><td>{targets}</td>
 </tr>
 <tr>
-<td>Profile:</td><td>{}</td>
+<td>Profile:</td><td>{profile}</td>
 </tr>
 <tr>
-<td>Fresh units:</td><td>{}</td>
+<td>Fresh units:</td><td>{total_fresh}</td>
 </tr>
 <tr>
-<td>Dirty units:</td><td>{}</td>
+<td>Dirty units:</td><td>{total_dirty}</td>
 </tr>
 <tr>
-<td>Total units:</td><td>{}</td>
+<td>Total units:</td><td>{total_units}</td>
 </tr>
 <tr>
-<td>Max concurrency:</td><td>{} (jobs={} ncpu={})</td>
+<td>Max concurrency:</td><td>{max_concurrency} (jobs={jobs} ncpu={num_cpus})</td>
 </tr>
 <tr>
-<td>Build start:</td><td>{}</td>
+<td>Build start:</td><td>{start_str}</td>
 </tr>
 <tr>
-<td>Total time:</td><td>{}</td>
+<td>Total time:</td><td>{total_time}</td>
 </tr>
 <tr>
-<td>rustc:</td><td>{}</td>
+<td>rustc:</td><td>{rustc_info}</td>
 </tr>
-{}
+{error_msg}
 </table>
 "#,
-        targets,
-        ctx.profile,
-        ctx.total_fresh,
-        ctx.total_dirty,
-        ctx.total_fresh + ctx.total_dirty,
-        max_concurrency,
-        bcx.jobs(),
-        num_cpus,
-        ctx.start_str,
-        total_time,
-        rustc_info,
-        error_msg,
     )?;
     Ok(())
 }
