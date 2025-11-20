@@ -69,7 +69,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use cargo_util_schemas::manifest::{TomlPkgConfigDependency, TomlPkgConfigFallback};
 use tracing::warn;
 
@@ -211,23 +211,11 @@ fn generate_dep_module(name: &str, lib: &PkgConfigLibrary) -> String {
             .iter()
             .map(|s| s.as_str())
             .collect::<Vec<_>>(),
-        lib.lib_paths
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<_>>(),
+        lib.lib_paths.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         lib.libs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-        lib.cflags
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<_>>(),
-        lib.defines
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<_>>(),
-        lib.ldflags
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<_>>(),
+        lib.cflags.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        lib.defines.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        lib.ldflags.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         lib.raw_cflags.replace('\\', "\\\\").replace('"', "\\\""),
         lib.raw_ldflags.replace('\\', "\\\\").replace('"', "\\\""),
         match &lib.link_type {
@@ -290,7 +278,11 @@ fn apply_fallback(
     fallback: &TomlPkgConfigFallback,
     link_type: Option<&str>,
 ) -> PkgConfigLibrary {
-    let libs = fallback.libs.as_ref().map(|v| v.clone()).unwrap_or_default();
+    let libs = fallback
+        .libs
+        .as_ref()
+        .map(|v| v.clone())
+        .unwrap_or_default();
     let include_paths = fallback
         .include_paths
         .as_ref()
@@ -339,10 +331,7 @@ fn apply_fallback(
 }
 
 /// Parse and apply version constraints to pkg-config config
-fn apply_version_constraint(
-    config: &mut pkg_config::Config,
-    constraint: &str,
-) -> CargoResult<()> {
+fn apply_version_constraint(config: &mut pkg_config::Config, constraint: &str) -> CargoResult<()> {
     let constraint = constraint.trim();
 
     // Exact version: "= 3.0"
@@ -355,7 +344,7 @@ fn apply_version_constraint(
         if parts.len() == 2 {
             let min = parts[0].trim();
             let max = parts[1].trim();
-            config.range_version(min, max);
+            config.range_version(min..max);
         } else {
             bail!("invalid version range constraint: {}", constraint);
         }
@@ -493,7 +482,10 @@ pub fn query_pkg_config(
     );
 
     if names_to_try.len() > 1 {
-        error_msg.push_str(&format!("\n  tried pkg-config names: {}", names_to_try.join(", ")));
+        error_msg.push_str(&format!(
+            "\n  tried pkg-config names: {}",
+            names_to_try.join(", ")
+        ));
     }
 
     if let Some(e) = last_error {
@@ -545,7 +537,6 @@ pub fn probe_all_dependencies(
                         ldflags: Vec::new(),
                         raw_cflags: String::new(),
                         raw_ldflags: String::new(),
-                link_type: None,
                         link_type: None,
                     },
                 );
@@ -559,7 +550,13 @@ pub fn probe_all_dependencies(
         let fallback = dep.fallback();
         let link_type = dep.link();
 
-        match query_pkg_config(name, version_constraint, alternative_names, fallback, link_type) {
+        match query_pkg_config(
+            name,
+            version_constraint,
+            alternative_names,
+            fallback,
+            link_type,
+        ) {
             Ok(lib) => {
                 results.insert(name.clone(), lib);
             }
@@ -586,7 +583,6 @@ pub fn probe_all_dependencies(
                             ldflags: Vec::new(),
                             raw_cflags: String::new(),
                             raw_ldflags: String::new(),
-                link_type: None,
                             link_type: None,
                         },
                     );
@@ -608,8 +604,12 @@ pub fn write_metadata_file(
     let content = generate_metadata_file(libraries);
     let metadata_path = out_dir.join("pkgconfig_meta.rs");
 
-    fs::write(&metadata_path, content)
-        .with_context(|| format!("failed to write pkgconfig metadata to {}", metadata_path.display()))?;
+    fs::write(&metadata_path, content).with_context(|| {
+        format!(
+            "failed to write pkgconfig metadata to {}",
+            metadata_path.display()
+        )
+    })?;
 
     Ok(())
 }
@@ -659,8 +659,12 @@ pub fn probe_and_generate_metadata(
 pub mod pkgconfig {}
 "#;
         let metadata_path = out_dir.join("pkgconfig_meta.rs");
-        fs::write(&metadata_path, empty_metadata)
-            .with_context(|| format!("failed to write pkgconfig metadata to {}", metadata_path.display()))?;
+        fs::write(&metadata_path, empty_metadata).with_context(|| {
+            format!(
+                "failed to write pkgconfig metadata to {}",
+                metadata_path.display()
+            )
+        })?;
         return Ok(());
     }
 
