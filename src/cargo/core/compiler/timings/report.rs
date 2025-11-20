@@ -1,10 +1,8 @@
 //! Render HTML report from timing tracking data.
 
 use std::collections::HashMap;
-use std::io::BufWriter;
 use std::io::Write;
 
-use cargo_util::paths;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
@@ -13,7 +11,6 @@ use crate::core::compiler::BuildRunner;
 use crate::core::compiler::CompilationSection;
 use crate::core::compiler::Unit;
 use crate::core::compiler::timings::Timings;
-use crate::util::style;
 
 use super::UnitData;
 use super::UnitTime;
@@ -49,30 +46,23 @@ impl SectionData {
     }
 }
 
-/// Save HTML report to disk.
-pub(super) fn report_html(
+/// Writes an HTML report.
+pub(super) fn write_html(
     ctx: &Timings<'_>,
+    f: &mut impl Write,
     build_runner: &BuildRunner<'_, '_>,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let duration = ctx.start.elapsed().as_secs_f64();
-    let timestamp = ctx.start_str.replace(&['-', ':'][..], "");
-    let timings_path = build_runner
-        .files()
-        .timings_dir()
-        .expect("artifact-dir was not locked");
-    paths::create_dir_all(&timings_path)?;
-    let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
-    let mut f = BufWriter::new(paths::create(&filename)?);
     let roots: Vec<&str> = ctx
         .root_targets
         .iter()
         .map(|(name, _targets)| name.as_str())
         .collect();
     f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-    write_summary_table(ctx, &mut f, duration, build_runner.bcx, error)?;
+    write_summary_table(ctx, f, duration, build_runner.bcx, error)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
-    write_unit_table(ctx, &mut f)?;
+    write_unit_table(ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
     writeln!(
         f,
@@ -80,7 +70,7 @@ pub(super) fn report_html(
          DURATION = {};",
         f64::ceil(duration) as u32
     )?;
-    write_js_data(ctx, &mut f)?;
+    write_js_data(ctx, f)?;
     write!(
         f,
         "{}\n\
@@ -90,16 +80,6 @@ pub(super) fn report_html(
          ",
         include_str!("timings.js")
     )?;
-    drop(f);
-
-    let unstamped_filename = timings_path.join("cargo-timing.html");
-    paths::link_or_copy(&filename, &unstamped_filename)?;
-
-    let mut shell = ctx.gctx.shell();
-    let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
-    let link = shell.err_file_hyperlink(&timing_path);
-    let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
-    shell.status_with_color("Timing", msg, &style::NOTE)?;
 
     Ok(())
 }

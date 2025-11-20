@@ -12,11 +12,13 @@ use crate::core::compiler::{BuildContext, BuildRunner, TimingOutput};
 use crate::util::cpu::State;
 use crate::util::log_message::LogMessage;
 use crate::util::machine_message::{self, Message};
+use crate::util::style;
 use crate::util::{CargoResult, GlobalContext};
 
-use anyhow::Context as _;
+use cargo_util::paths;
 use indexmap::IndexMap;
 use std::collections::HashMap;
+use std::io::BufWriter;
 use std::time::{Duration, Instant};
 use tracing::warn;
 
@@ -369,8 +371,25 @@ impl<'gctx> Timings<'gctx> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            report::report_html(self, build_runner, error)
-                .context("failed to save timing report")?;
+            let timestamp = self.start_str.replace(&['-', ':'][..], "");
+            let timings_path = build_runner
+                .files()
+                .timings_dir()
+                .expect("artifact-dir was not locked");
+            paths::create_dir_all(&timings_path)?;
+            let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
+            let mut f = BufWriter::new(paths::create(&filename)?);
+
+            report::write_html(&self, &mut f, build_runner, error)?;
+
+            let unstamped_filename = timings_path.join("cargo-timing.html");
+            paths::link_or_copy(&filename, &unstamped_filename)?;
+
+            let mut shell = self.gctx.shell();
+            let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
+            let link = shell.err_file_hyperlink(&timing_path);
+            let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
+            shell.status_with_color("Timing", msg, &style::NOTE)?;
         }
         Ok(())
     }

@@ -817,7 +817,11 @@ impl<'gctx> DrainState<'gctx> {
         }
 
         let time_elapsed = util::elapsed(build_runner.bcx.gctx.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(build_runner, &errors.to_error()) {
+        if let Err(e) = self
+            .timings
+            .finished(build_runner, &errors.to_error())
+            .context("failed to render timing report")
+        {
             self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, e);
         }
         if build_runner.bcx.build_config.emit_json() {
