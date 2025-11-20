@@ -380,7 +380,18 @@ impl<'gctx> Timings<'gctx> {
             let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
             let mut f = BufWriter::new(paths::create(&filename)?);
 
-            report::write_html(&self, &mut f, build_runner, error)?;
+            let ctx = report::RenderContext {
+                start: self.start,
+                start_str: &self.start_str,
+                root_units: &self.root_targets,
+                profile: &self.profile,
+                total_fresh: self.total_fresh,
+                total_dirty: self.total_dirty,
+                unit_times: &self.unit_times,
+                concurrency: &self.concurrency,
+                cpu_usage: &self.cpu_usage,
+            };
+            report::write_html(ctx, &mut f, build_runner, error)?;
 
             let unstamped_filename = timings_path.join("cargo-timing.html");
             paths::link_or_copy(&filename, &unstamped_filename)?;

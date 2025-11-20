@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::io::Write;
+use std::time::Instant;
 
 use itertools::Itertools as _;
 
@@ -10,8 +11,8 @@ use crate::core::compiler::BuildContext;
 use crate::core::compiler::BuildRunner;
 use crate::core::compiler::CompilationSection;
 use crate::core::compiler::Unit;
-use crate::core::compiler::timings::Timings;
 
+use super::Concurrency;
 use super::UnitData;
 use super::UnitTime;
 
@@ -46,23 +47,49 @@ impl SectionData {
     }
 }
 
+pub struct RenderContext<'a> {
+    /// When Cargo started.
+    pub start: Instant,
+    /// A rendered string of when compilation started.
+    pub start_str: &'a str,
+    /// A summary of the root units.
+    ///
+    /// Tuples of `(package_description, target_descriptions)`.
+    pub root_units: &'a [(String, Vec<String>)],
+    /// The build profile.
+    pub profile: &'a str,
+    /// Total number of fresh units.
+    pub total_fresh: u32,
+    /// Total number of dirty units.
+    pub total_dirty: u32,
+    /// Time tracking for each individual unit.
+    pub unit_times: &'a [UnitTime],
+    /// Concurrency-tracking information. This is periodically updated while
+    /// compilation progresses.
+    pub concurrency: &'a [Concurrency],
+    /// Recorded CPU states, stored as tuples. First element is when the
+    /// recording was taken and second element is percentage usage of the
+    /// system.
+    pub cpu_usage: &'a [(f64, f64)],
+}
+
 /// Writes an HTML report.
 pub(super) fn write_html(
-    ctx: &Timings<'_>,
+    ctx: RenderContext<'_>,
     f: &mut impl Write,
     build_runner: &BuildRunner<'_, '_>,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let duration = ctx.start.elapsed().as_secs_f64();
     let roots: Vec<&str> = ctx
-        .root_targets
+        .root_units
         .iter()
         .map(|(name, _targets)| name.as_str())
         .collect();
     f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-    write_summary_table(ctx, f, duration, build_runner.bcx, error)?;
+    write_summary_table(&ctx, f, duration, build_runner.bcx, error)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
-    write_unit_table(ctx, f)?;
+    write_unit_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
     writeln!(
         f,
@@ -70,7 +97,7 @@ pub(super) fn write_html(
          DURATION = {};",
         f64::ceil(duration) as u32
     )?;
-    write_js_data(ctx, f)?;
+    write_js_data(&ctx, f)?;
     write!(
         f,
         "{}\n\
@@ -86,14 +113,14 @@ pub(super) fn write_html(
 
 /// Render the summary table.
 fn write_summary_table(
-    ctx: &Timings<'_>,
+    ctx: &RenderContext<'_>,
     f: &mut impl Write,
     duration: f64,
     bcx: &BuildContext<'_, '_>,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let targets: Vec<String> = ctx
-        .root_targets
+        .root_units
         .iter()
         .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
         .collect();
@@ -165,7 +192,7 @@ fn write_summary_table(
 
 /// Write timing data in JavaScript. Primarily for `timings.js` to put data
 /// in a `<script>` HTML element to draw graphs.
-fn write_js_data(ctx: &Timings<'_>, f: &mut impl Write) -> CargoResult<()> {
+fn write_js_data(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     let unit_data = to_unit_data(&ctx.unit_times);
 
     writeln!(
@@ -187,7 +214,7 @@ fn write_js_data(ctx: &Timings<'_>, f: &mut impl Write) -> CargoResult<()> {
 }
 
 /// Render the table of all units.
-fn write_unit_table(ctx: &Timings<'_>, f: &mut impl Write) -> CargoResult<()> {
+fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     let mut units: Vec<&UnitTime> = ctx.unit_times.iter().collect();
     units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
