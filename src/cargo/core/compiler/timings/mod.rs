@@ -191,6 +191,24 @@ impl SectionData {
     }
 }
 
+/// Data for a single compilation unit, prepared for serialization to JSON.
+///
+/// This is used by the HTML report's JavaScript to render the pipeline graph.
+#[derive(serde::Serialize)]
+struct UnitData {
+    i: usize,
+    name: String,
+    version: String,
+    mode: String,
+    target: String,
+    start: f64,
+    duration: f64,
+    rmeta_time: Option<f64>,
+    unlocked_units: Vec<usize>,
+    unlocked_rmeta_units: Vec<usize>,
+    sections: Option<Vec<(String, SectionData)>>,
+}
+
 /// Contains post-processed data of individual compilation sections.
 enum AggregatedSections {
     /// We know the names and durations of individual compilation sections
@@ -593,20 +611,6 @@ impl<'gctx> Timings<'gctx> {
             .enumerate()
             .map(|(i, ut)| (ut.unit.clone(), i))
             .collect();
-        #[derive(serde::Serialize)]
-        struct UnitData {
-            i: usize,
-            name: String,
-            version: String,
-            mode: String,
-            target: String,
-            start: f64,
-            duration: f64,
-            rmeta_time: Option<f64>,
-            unlocked_units: Vec<usize>,
-            unlocked_rmeta_units: Vec<usize>,
-            sections: Option<Vec<(String, SectionData)>>,
-        }
         let round = |x: f64| (x * 100.0).round() / 100.0;
         let unit_data: Vec<UnitData> = self
             .unit_times
