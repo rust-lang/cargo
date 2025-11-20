@@ -71,6 +71,7 @@ use std::path::Path;
 
 use anyhow::{bail, Context as _};
 use cargo_util_schemas::manifest::{TomlPkgConfigDependency, TomlPkgConfigFallback};
+use tracing::warn;
 
 use crate::util::errors::CargoResult;
 
@@ -99,6 +100,8 @@ pub struct PkgConfigLibrary {
     pub raw_cflags: String,
     /// Raw output from pkg-config --libs
     pub raw_ldflags: String,
+    /// How to link this library (e.g., "static", "dynamic")
+    pub link_type: Option<String>,
 }
 
 /// How a pkg-config dependency was resolved
@@ -193,6 +196,9 @@ fn generate_dep_module(name: &str, lib: &PkgConfigLibrary) -> String {
 
         /// Raw pkg-config --libs output
         pub const RAW_LDFLAGS: &str = "{}";
+
+        /// How to link this library (e.g., "static", "dynamic")
+        pub const LINK_TYPE: Option<&str> = {};
     }}
 "#,
         name,
@@ -224,6 +230,10 @@ fn generate_dep_module(name: &str, lib: &PkgConfigLibrary) -> String {
             .collect::<Vec<_>>(),
         lib.raw_cflags.replace('\\', "\\\\").replace('"', "\\\""),
         lib.raw_ldflags.replace('\\', "\\\\").replace('"', "\\\""),
+        match &lib.link_type {
+            Some(lt) => format!("Some(\"{}\")", lt),
+            None => "None".to_string(),
+        },
     )
 }
 
@@ -278,6 +288,7 @@ pub mod pkgconfig {{
 fn apply_fallback(
     name: &str,
     fallback: &TomlPkgConfigFallback,
+    link_type: Option<&str>,
 ) -> PkgConfigLibrary {
     let libs = fallback.libs.as_ref().map(|v| v.clone()).unwrap_or_default();
     let include_paths = fallback
@@ -323,6 +334,7 @@ fn apply_fallback(
         ldflags: Vec::new(),
         raw_cflags,
         raw_ldflags,
+        link_type: link_type.map(|s| s.to_string()),
     }
 }
 
@@ -367,6 +379,7 @@ pub fn query_pkg_config(
     version_constraint: &str,
     alternative_names: Option<&[String]>,
     fallback: Option<&TomlPkgConfigFallback>,
+    link_type: Option<&str>,
 ) -> CargoResult<PkgConfigLibrary> {
     // Collect all names to try, with the primary name first
     let mut names_to_try = vec![name.to_string()];
@@ -425,6 +438,7 @@ pub fn query_pkg_config(
                     ldflags: Vec::new(),
                     raw_cflags,
                     raw_ldflags,
+                    link_type: link_type.map(|s| s.to_string()),
                 });
             }
             Err(e) => {
@@ -436,7 +450,7 @@ pub fn query_pkg_config(
 
     // All names failed - try fallback if available
     if let Some(fb) = fallback {
-        return Ok(apply_fallback(name, fb));
+        return Ok(apply_fallback(name, fb, link_type));
     }
 
     // No fallback available - report error with helpful suggestions
@@ -465,18 +479,54 @@ pub fn query_pkg_config(
 }
 
 /// Probe all pkgconfig dependencies for a package
+///
+/// # Behavior
+///
+/// - Skips dependencies that have a `feature` requirement that isn't enabled
+/// - Probes remaining dependencies using pkg-config
+/// - Tracks how each was resolved (pkg-config, fallback, not-found)
+/// - Records the `link` field for each dependency's metadata
+/// - For optional dependencies, records "not-found" state instead of erroring
 pub fn probe_all_dependencies(
     deps: &BTreeMap<String, TomlPkgConfigDependency>,
+    enabled_features: &[&str],
 ) -> CargoResult<BTreeMap<String, PkgConfigLibrary>> {
     let mut results = BTreeMap::new();
 
     for (name, dep) in deps.iter() {
+        // Skip if this dependency is gated by a feature that's not enabled
+        if let Some(feature_name) = dep.feature() {
+            if !enabled_features.contains(&feature_name) {
+                // Record as not-probed since the feature isn't enabled
+                results.insert(
+                    name.clone(),
+                    PkgConfigLibrary {
+                        name: name.clone(),
+                        version: String::new(),
+                        resolved_via: ResolutionMethod::NotProbed,
+                        include_paths: Vec::new(),
+                        lib_paths: Vec::new(),
+                        libs: Vec::new(),
+                        cflags: Vec::new(),
+                        defines: Vec::new(),
+                        ldflags: Vec::new(),
+                        raw_cflags: String::new(),
+                        raw_ldflags: String::new(),
+                link_type: None,
+                        link_type: None,
+                    },
+                );
+                continue;
+            }
+        }
+
         let version_constraint = dep.version_constraint().unwrap_or("0");
         let alternative_names = dep.names();
         let is_optional = dep.is_optional();
         let fallback = dep.fallback();
+        let link_type = dep.link();
 
-        match query_pkg_config(name, version_constraint, alternative_names, fallback) {
+        match query_pkg_config(name, version_constraint, alternative_names, fallback, link_type) {
             Ok(lib) => {
                 results.insert(name.clone(), lib);
             }
@@ -484,8 +534,8 @@ pub fn probe_all_dependencies(
                 if is_optional {
                     // For optional dependencies, insert a "not found" entry
                     // Log a warning so users know which optional dependency wasn't found
-                    eprintln!(
-                        "warning: optional pkg-config dependency `{}` not found (ignoring)\n  {}",
+                    warn!(
+                        "optional pkg-config dependency `{}` not found (ignoring): {}",
                         name, e
                     );
 
@@ -503,6 +553,8 @@ pub fn probe_all_dependencies(
                             ldflags: Vec::new(),
                             raw_cflags: String::new(),
                             raw_ldflags: String::new(),
+                link_type: None,
+                            link_type: None,
                         },
                     );
                 } else {
@@ -534,14 +586,21 @@ pub fn write_metadata_file(
 /// This is the main entry point for integrating pkgconfig dependencies into the build.
 /// It probes pkg-config for all declared dependencies and writes the metadata file.
 ///
+/// # Arguments
+///
+/// * `deps` - Map of pkgconfig dependencies from the manifest
+/// * `out_dir` - Output directory where `pkgconfig_meta.rs` will be written
+/// * `enabled_features` - List of enabled Cargo features (for feature-gated dependencies)
+///
 /// # Process
 ///
-/// 1. Probes each declared dependency using pkg-config
-/// 2. For each dependency, tries alternative names if specified
-/// 3. Uses fallback specification if pkg-config fails
-/// 4. Handles optional dependencies (doesn't fail build if not found)
-/// 5. Generates Rust code with compile-time constants
-/// 6. Writes `OUT_DIR/pkgconfig_meta.rs` for inclusion in build scripts
+/// 1. Skips dependencies gated by disabled features
+/// 2. Probes each enabled dependency using pkg-config
+/// 3. For each dependency, tries alternative names if specified
+/// 4. Uses fallback specification if pkg-config fails
+/// 5. Handles optional dependencies (doesn't fail build if not found)
+/// 6. Generates Rust code with compile-time constants
+/// 7. Writes `OUT_DIR/pkgconfig_meta.rs` for inclusion in build scripts
 ///
 /// # Returns
 ///
@@ -554,6 +613,7 @@ pub fn write_metadata_file(
 pub fn probe_and_generate_metadata(
     deps: &BTreeMap<String, TomlPkgConfigDependency>,
     out_dir: &Path,
+    enabled_features: &[&str],
 ) -> CargoResult<()> {
     if deps.is_empty() {
         // No pkgconfig dependencies, write an empty module
@@ -571,7 +631,7 @@ pub mod pkgconfig {}
         return Ok(());
     }
 
-    let libraries = probe_all_dependencies(deps)?;
+    let libraries = probe_all_dependencies(deps, enabled_features)?;
     write_metadata_file(out_dir, &libraries)?;
 
     Ok(())
@@ -617,6 +677,7 @@ mod tests {
                 ldflags: Vec::new(),
                 raw_cflags: "-I/usr/include".to_string(),
                 raw_ldflags: "-L/usr/lib -ltestlib".to_string(),
+                link_type: None,
             },
         );
 
@@ -668,6 +729,7 @@ mod tests {
                 ldflags: vec![],
                 raw_cflags: String::new(),
                 raw_ldflags: String::new(),
+                link_type: None,
             },
         );
 
@@ -697,6 +759,7 @@ mod tests {
                 ldflags: vec![],
                 raw_cflags: "-I/usr/include/lib1 -DLIB1_ENABLED".to_string(),
                 raw_ldflags: "-L/usr/lib -llib1".to_string(),
+                link_type: None,
             },
         );
 
@@ -714,6 +777,7 @@ mod tests {
                 ldflags: vec![],
                 raw_cflags: "-I/usr/include/lib2".to_string(),
                 raw_ldflags: "-L/usr/lib -llib2".to_string(),
+                link_type: None,
             },
         );
 
@@ -737,7 +801,7 @@ mod tests {
             include_paths: Some(vec!["/usr/local/include".to_string()]),
         };
 
-        let lib = apply_fallback("mylib", &fallback);
+        let lib = apply_fallback("mylib", &fallback, None);
 
         assert_eq!(lib.name, "mylib");
         assert_eq!(lib.libs, vec!["mylib"]);
@@ -745,6 +809,7 @@ mod tests {
         assert_eq!(lib.include_paths, vec!["/usr/local/include"]);
         assert_eq!(lib.resolved_via.as_str(), "fallback");
         assert!(lib.version.is_empty());
+        assert_eq!(lib.link_type, None);
     }
 
     #[test]
@@ -757,13 +822,14 @@ mod tests {
             include_paths: None,
         };
 
-        let lib = apply_fallback("test", &fallback);
+        let lib = apply_fallback("test", &fallback, Some("static"));
 
         assert_eq!(lib.name, "test");
         assert!(lib.libs.is_empty());
         assert!(lib.lib_paths.is_empty());
         assert!(lib.include_paths.is_empty());
         assert_eq!(lib.resolved_via.as_str(), "fallback");
+        assert_eq!(lib.link_type, Some("static".to_string()));
     }
 
     #[test]
@@ -783,6 +849,7 @@ mod tests {
                 ldflags: Vec::new(),
                 raw_cflags: "-I/custom/include".to_string(),
                 raw_ldflags: "-L/custom/lib -lcustomlib".to_string(),
+                link_type: None,
             },
         );
 
@@ -811,6 +878,7 @@ mod tests {
                 ldflags: Vec::new(),
                 raw_cflags: String::new(),
                 raw_ldflags: String::new(),
+                link_type: None,
             },
         );
 

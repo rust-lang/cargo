@@ -343,6 +343,7 @@ dependencies = [
  "os_info",
  "pasetors",
  "pathdiff",
+ "pkg-config",
  "rand",
  "regex",
  "rusqlite",
