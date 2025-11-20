@@ -123,12 +123,13 @@ fn write_summary_table(
     duration: f64,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
-    let targets: Vec<String> = ctx
+    let targets = ctx
         .root_units
         .iter()
         .map(|(name, targets)| format!("{} ({})", name, targets.join(", ")))
-        .collect();
-    let targets = targets.join("<br>");
+        .collect::<Vec<_>>()
+        .join("<br>");
+
     let total_units = ctx.total_fresh + ctx.total_dirty;
 
     let time_human = if duration > 60.0 {
