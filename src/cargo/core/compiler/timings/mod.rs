@@ -380,6 +380,21 @@ impl<'gctx> Timings<'gctx> {
             let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
             let mut f = BufWriter::new(paths::create(&filename)?);
 
+            let rustc_version = build_runner
+                .bcx
+                .rustc()
+                .verbose_version
+                .lines()
+                .next()
+                .expect("rustc version");
+            let requested_targets = &build_runner
+                .bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .map(|kind| build_runner.bcx.target_data.short_name(kind))
+                .collect::<Vec<_>>();
+
             let ctx = report::RenderContext {
                 start: self.start,
                 start_str: &self.start_str,
@@ -390,8 +405,12 @@ impl<'gctx> Timings<'gctx> {
                 unit_times: &self.unit_times,
                 concurrency: &self.concurrency,
                 cpu_usage: &self.cpu_usage,
+                rustc_version,
+                host: &build_runner.bcx.rustc().host,
+                requested_targets,
+                jobs: build_runner.bcx.jobs(),
             };
-            report::write_html(ctx, &mut f, build_runner, error)?;
+            report::write_html(ctx, &mut f, error)?;
 
             let unstamped_filename = timings_path.join("cargo-timing.html");
             paths::link_or_copy(&filename, &unstamped_filename)?;

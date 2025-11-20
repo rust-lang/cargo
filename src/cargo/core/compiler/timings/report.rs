@@ -7,8 +7,6 @@ use std::time::Instant;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
-use crate::core::compiler::BuildContext;
-use crate::core::compiler::BuildRunner;
 use crate::core::compiler::CompilationSection;
 use crate::core::compiler::Unit;
 
@@ -71,13 +69,20 @@ pub struct RenderContext<'a> {
     /// recording was taken and second element is percentage usage of the
     /// system.
     pub cpu_usage: &'a [(f64, f64)],
+    /// Compiler version info, i.e., `rustc 1.92.0-beta.2 (0a411606e 2025-10-31)`.
+    pub rustc_version: &'a str,
+    /// The host triple (arch-platform-OS).
+    pub host: &'a str,
+    /// The requested target platforms of compilation for this build.
+    pub requested_targets: &'a [&'a str],
+    /// The number of jobs specified for this build.
+    pub jobs: u32,
 }
 
 /// Writes an HTML report.
 pub(super) fn write_html(
     ctx: RenderContext<'_>,
     f: &mut impl Write,
-    build_runner: &BuildRunner<'_, '_>,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let duration = ctx.start.elapsed().as_secs_f64();
@@ -87,7 +92,7 @@ pub(super) fn write_html(
         .map(|(name, _targets)| name.as_str())
         .collect();
     f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-    write_summary_table(&ctx, f, duration, build_runner.bcx, error)?;
+    write_summary_table(&ctx, f, duration, error)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
     write_unit_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
@@ -116,7 +121,6 @@ fn write_summary_table(
     ctx: &RenderContext<'_>,
     f: &mut impl Write,
     duration: f64,
-    bcx: &BuildContext<'_, '_>,
     error: &Option<anyhow::Error>,
 ) -> CargoResult<()> {
     let targets: Vec<String> = ctx
@@ -135,12 +139,12 @@ fn write_summary_table(
     let total_time = format!("{:.1}s{}", duration, time_human);
 
     let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap();
-    let jobs = bcx.jobs();
     let num_cpus = std::thread::available_parallelism()
         .map(|x| x.get().to_string())
         .unwrap_or_else(|_| "n/a".into());
 
-    let rustc_info = render_rustc_info(bcx);
+    let requested_targets = ctx.requested_targets.join(", ");
+
     let error_msg = match error {
         Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
         None => "".to_string(),
@@ -151,6 +155,9 @@ fn write_summary_table(
         profile,
         total_fresh,
         total_dirty,
+        rustc_version,
+        host,
+        jobs,
         ..
     } = &ctx;
 
@@ -183,7 +190,7 @@ fn write_summary_table(
 <td>Total time:</td><td>{total_time}</td>
 </tr>
 <tr>
-<td>rustc:</td><td>{rustc_info}</td>
+<td>rustc:</td><td>{rustc_version}<br>Host: {host}<br>Target: {requested_targets}</td>
 </tr>
 {error_msg}
 </table>
@@ -345,28 +352,6 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     }
     write!(f, "</tbody>\n</table>\n")?;
     Ok(())
-}
-
-fn render_rustc_info(bcx: &BuildContext<'_, '_>) -> String {
-    let version = bcx
-        .rustc()
-        .verbose_version
-        .lines()
-        .next()
-        .expect("rustc version");
-    let requested_target = bcx
-        .build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| bcx.target_data.short_name(kind))
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!(
-        "{}<br>Host: {}<br>Target: {}",
-        version,
-        bcx.rustc().host,
-        requested_target
-    )
 }
 
 fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
