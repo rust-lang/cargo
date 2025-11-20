@@ -102,66 +102,6 @@ struct UnitTime {
 const FRONTEND_SECTION_NAME: &str = "Frontend";
 const CODEGEN_SECTION_NAME: &str = "Codegen";
 
-impl UnitTime {
-    fn aggregate_sections(&self) -> AggregatedSections {
-        let end = self.duration;
-
-        if !self.sections.is_empty() {
-            // We have some detailed compilation section timings, so we postprocess them
-            // Since it is possible that we do not have an end timestamp for a given compilation
-            // section, we need to iterate them and if an end is missing, we assign the end of
-            // the section to the start of the following section.
-
-            let mut sections = vec![];
-
-            // The frontend section is currently implicit in rustc, it is assumed to start at
-            // compilation start and end when codegen starts. So we hard-code it here.
-            let mut previous_section = (
-                FRONTEND_SECTION_NAME.to_string(),
-                CompilationSection {
-                    start: 0.0,
-                    end: None,
-                },
-            );
-            for (name, section) in self.sections.clone() {
-                // Store the previous section, potentially setting its end to the start of the
-                // current section.
-                sections.push((
-                    previous_section.0.clone(),
-                    SectionData {
-                        start: previous_section.1.start,
-                        end: previous_section.1.end.unwrap_or(section.start),
-                    },
-                ));
-                previous_section = (name, section);
-            }
-            // Store the last section, potentially setting its end to the end of the whole
-            // compilation.
-            sections.push((
-                previous_section.0.clone(),
-                SectionData {
-                    start: previous_section.1.start,
-                    end: previous_section.1.end.unwrap_or(end),
-                },
-            ));
-
-            AggregatedSections::Sections(sections)
-        } else if let Some(rmeta) = self.rmeta_time {
-            // We only know when the rmeta time was generated
-            AggregatedSections::OnlyMetadataTime {
-                frontend: SectionData {
-                    start: 0.0,
-                    end: rmeta,
-                },
-                codegen: SectionData { start: rmeta, end },
-            }
-        } else {
-            // We only know the total duration
-            AggregatedSections::OnlyTotalDuration
-        }
-    }
-}
-
 /// Periodic concurrency tracking information.
 #[derive(serde::Serialize)]
 struct Concurrency {
@@ -651,7 +591,7 @@ impl<'gctx> Timings<'gctx> {
                 // Normalize the section names so that they are capitalized, so that we can later
                 // refer to them with the capitalized name both when computing headers and when
                 // looking up cells.
-                match u.aggregate_sections() {
+                match aggregate_sections(u) {
                     AggregatedSections::Sections(sections) => AggregatedSections::Sections(
                         sections.into_iter()
                             .map(|(name, data)| (capitalize(&name), data))
@@ -856,7 +796,7 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let aggregated = ut.aggregate_sections();
+            let aggregated = aggregate_sections(ut);
             let sections = match aggregated {
                 AggregatedSections::Sections(mut sections) => {
                     // We draw the sections in the pipeline graph in a way where the frontend
@@ -898,6 +838,65 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
             }
         })
         .collect()
+}
+
+/// Aggregates section timing information from individual compilation sections.
+fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
+    let end = unit_time.duration;
+
+    if !unit_time.sections.is_empty() {
+        // We have some detailed compilation section timings, so we postprocess them
+        // Since it is possible that we do not have an end timestamp for a given compilation
+        // section, we need to iterate them and if an end is missing, we assign the end of
+        // the section to the start of the following section.
+
+        let mut sections = vec![];
+
+        // The frontend section is currently implicit in rustc, it is assumed to start at
+        // compilation start and end when codegen starts. So we hard-code it here.
+        let mut previous_section = (
+            FRONTEND_SECTION_NAME.to_string(),
+            CompilationSection {
+                start: 0.0,
+                end: None,
+            },
+        );
+        for (name, section) in unit_time.sections.clone() {
+            // Store the previous section, potentially setting its end to the start of the
+            // current section.
+            sections.push((
+                previous_section.0.clone(),
+                SectionData {
+                    start: previous_section.1.start,
+                    end: previous_section.1.end.unwrap_or(section.start),
+                },
+            ));
+            previous_section = (name, section);
+        }
+        // Store the last section, potentially setting its end to the end of the whole
+        // compilation.
+        sections.push((
+            previous_section.0.clone(),
+            SectionData {
+                start: previous_section.1.start,
+                end: previous_section.1.end.unwrap_or(end),
+            },
+        ));
+
+        AggregatedSections::Sections(sections)
+    } else if let Some(rmeta) = unit_time.rmeta_time {
+        // We only know when the rmeta time was generated
+        AggregatedSections::OnlyMetadataTime {
+            frontend: SectionData {
+                start: 0.0,
+                end: rmeta,
+            },
+            codegen: SectionData { start: rmeta, end },
+        }
+    } else {
+        // We only know the total duration
+        AggregatedSections::OnlyTotalDuration
+    }
 }
 
 static HTML_TMPL: &str = r#"
