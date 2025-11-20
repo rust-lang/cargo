@@ -85,7 +85,9 @@ impl TomlManifest {
             self.build_dependencies()
                 .as_ref()
                 .map(|_| "build-dependencies"),
-            self.pkgconfig_dependencies.as_ref().map(|_| "pkgconfig-dependencies"),
+            self.pkgconfig_dependencies
+                .as_ref()
+                .map(|_| "pkgconfig-dependencies"),
             self.target.as_ref().map(|_| "target"),
             self.lints.as_ref().map(|_| "lints"),
             self.hints.as_ref().map(|_| "hints"),
@@ -978,11 +980,7 @@ impl<'de> de::Deserialize<'de> for TomlPkgConfigDependency {
         UntaggedEnumVisitor::new()
             .expecting(expected)
             .string(|value| Ok(TomlPkgConfigDependency::Simple(value.to_owned())))
-            .map(|value| {
-                value
-                    .deserialize()
-                    .map(TomlPkgConfigDependency::Detailed)
-            })
+            .map(|value| value.deserialize().map(TomlPkgConfigDependency::Detailed))
             .deserialize(deserializer)
     }
 }

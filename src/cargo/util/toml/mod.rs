@@ -495,8 +495,10 @@ fn normalize_toml(
             warnings,
         )?;
 
-        normalized_toml.pkgconfig_dependencies =
-            normalize_pkgconfig_dependencies(original_toml.pkgconfig_dependencies.as_ref(), warnings)?;
+        normalized_toml.pkgconfig_dependencies = normalize_pkgconfig_dependencies(
+            original_toml.pkgconfig_dependencies.as_ref(),
+            warnings,
+        )?;
 
         // Check if pkgconfig-dependencies is used and require unstable feature
         if normalized_toml.pkgconfig_dependencies.is_some() {
@@ -556,8 +558,10 @@ fn normalize_toml(
                 package_root,
                 warnings,
             )?;
-            let normalized_pkgconfig_dependencies =
-                normalize_pkgconfig_dependencies(platform.pkgconfig_dependencies.as_ref(), warnings)?;
+            let normalized_pkgconfig_dependencies = normalize_pkgconfig_dependencies(
+                platform.pkgconfig_dependencies.as_ref(),
+                warnings,
+            )?;
             normalized_target.insert(
                 name.clone(),
                 manifest::TomlPlatform {

@@ -73,7 +73,8 @@ pub struct Manifest {
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
     links: Option<String>,
-    pkgconfig_dependencies: Option<BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>>,
+    pkgconfig_dependencies:
+        Option<BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>>,
     warnings: Warnings,
     exclude: Vec<String>,
     include: Vec<String>,
@@ -509,7 +510,9 @@ impl Manifest {
         exclude: Vec<String>,
         include: Vec<String>,
         links: Option<String>,
-        pkgconfig_dependencies: Option<BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>>,
+        pkgconfig_dependencies: Option<
+            BTreeMap<String, cargo_util_schemas::manifest::TomlPkgConfigDependency>,
+        >,
         metadata: ManifestMetadata,
         custom_metadata: Option<toml::Value>,
         publish: Option<Vec<String>>,
