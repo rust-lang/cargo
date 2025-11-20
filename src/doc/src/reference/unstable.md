@@ -2362,14 +2362,17 @@ In your `Cargo.toml`, add a `[pkgconfig-dependencies]` section:
 ```toml
 [pkgconfig-dependencies]
 # Simple form: just version constraint
-openssl = "1.1"
-sqlite3 = "3.0"
+openssl = "1.1"              # Minimum version
+sqlite3 = ">= 3.0"           # Explicit minimum
+zlib = "= 1.2.11"            # Exact version
+curl = "7.0 .. 8.0"          # Version range
 
 # Detailed form for more control
 [pkgconfig-dependencies.libfoo]
 version = "2.0"
-names = ["libfoo", "foo"]  # Try alternative pkg-config names
-optional = true            # Don't fail build if not found
+names = ["libfoo", "foo"]    # Try alternative pkg-config names
+optional = true              # Don't fail build if not found
+link = "static"              # Prefer static linking
 [pkgconfig-dependencies.libfoo.fallback]
 libs = ["foo"]
 lib-paths = ["/usr/local/lib"]

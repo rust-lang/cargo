@@ -644,8 +644,10 @@ The simplest form specifies only a version constraint:
 
 ```toml
 [pkgconfig-dependencies]
-openssl = "1.1"
-sqlite3 = "3.0"
+openssl = "1.1"              # At least version 1.1
+sqlite3 = ">= 3.0"           # Explicit minimum version
+zlib = "= 1.2.11"            # Exact version
+curl = "7.0 .. 8.0"          # Version range
 ```
 
 ### Detailed form
@@ -666,10 +668,28 @@ lib-paths = ["/usr/local/lib"]
 include-paths = ["/usr/local/include"]
 ```
 
+### Version Constraints
+
+The `version` field supports three constraint types:
+
+```toml
+[pkgconfig-dependencies]
+openssl = "1.1"              # Minimum version (at least 1.1)
+sqlite = ">= 3.0"            # Explicit minimum (same as above)
+zlib = "= 1.2.11"            # Exact version
+curl = "7.0 .. 8.0"          # Version range (7.x to 8.x)
+```
+
+**Constraint types:**
+- `1.1` or `>= 1.1` — Require at least this version
+- `= 1.1` — Require exactly this version
+- `3.0 .. 4.0` — Require version between 3.0 and 4.0 (inclusive)
+
 ### Fields
 
-* `version` — The minimum version constraint to require from pkg-config.
-  If not specified, any version is accepted.
+* `version` — Version constraint for the pkg-config library.
+  Supports exact version (`= 3.0`), minimum version (`>= 3.0` or `3.0`),
+  and version ranges (`3.0 .. 4.0`). If not specified, any version is accepted.
 
 * `names` — Alternative pkg-config package names to try. If the primary name
   (from the table key) fails, these names are tried in order. Useful when
