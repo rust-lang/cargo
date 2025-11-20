@@ -338,13 +338,46 @@ fn apply_fallback(
     }
 }
 
+/// Parse and apply version constraints to pkg-config config
+fn apply_version_constraint(
+    config: &mut pkg_config::Config,
+    constraint: &str,
+) -> CargoResult<()> {
+    let constraint = constraint.trim();
+
+    // Exact version: "= 3.0"
+    if let Some(version) = constraint.strip_prefix('=') {
+        config.exactly_version(version.trim());
+    }
+    // Range: "3.0 .. 4.0" or "3.0..4.0"
+    else if constraint.contains("..") {
+        let parts: Vec<&str> = constraint.split("..").collect();
+        if parts.len() == 2 {
+            let min = parts[0].trim();
+            let max = parts[1].trim();
+            config.range_version(min, max);
+        } else {
+            bail!("invalid version range constraint: {}", constraint);
+        }
+    }
+    // At least version: ">= 3.0" or just "3.0" (default)
+    else if let Some(version) = constraint.strip_prefix(">=") {
+        config.atleast_version(version.trim());
+    } else {
+        // Default: treat as minimum version
+        config.atleast_version(constraint);
+    }
+
+    Ok(())
+}
+
 /// Query pkg-config for a single dependency by name
 fn query_pkg_config_by_name(
     name: &str,
     version_constraint: &str,
 ) -> CargoResult<pkg_config::Library> {
     let mut config = pkg_config::Config::new();
-    config.atleast_version(version_constraint);
+    apply_version_constraint(&mut config, version_constraint)?;
     config.probe(name).map_err(|e| anyhow::anyhow!("{}", e))
 }
 
@@ -640,6 +673,45 @@ pub mod pkgconfig {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_version_constraint_parsing() {
+        // Exact version
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, "= 3.0").is_ok());
+        }
+
+        // At least version with >=
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, ">= 3.0").is_ok());
+        }
+
+        // At least version (default)
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, "3.0").is_ok());
+        }
+
+        // Range
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, "3.0 .. 4.0").is_ok());
+        }
+
+        // Range without spaces
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, "3.0..4.0").is_ok());
+        }
+
+        // Invalid range
+        {
+            let mut config = pkg_config::Config::new();
+            assert!(apply_version_constraint(&mut config, "3.0 .. 4.0 .. 5.0").is_err());
+        }
+    }
 
     #[test]
     fn test_sanitize_module_name() {
