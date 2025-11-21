@@ -684,3 +684,51 @@ Caused by:
 "#]],
     );
 }
+
+#[cargo_test]
+fn disallow_glob_syntax() {
+    // Reserved for future extension
+    write_config_toml("include = 'config-*.toml'");
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `config-*.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to read configuration file `[ROOT]/.cargo/config-*.toml`
+
+Caused by:
+  [NOT_FOUND]
+"#]],
+    );
+}
+
+#[cargo_test]
+fn disallow_template_syntax() {
+    // Reserved for future extension
+    write_config_toml("include = '{workspace-root}/config.toml'");
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `{workspace-root}/config.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to read configuration file `[ROOT]/.cargo/{workspace-root}/config.toml`
+
+Caused by:
+  [NOT_FOUND]
+"#]],
+    );
+}
