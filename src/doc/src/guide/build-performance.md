@@ -45,6 +45,8 @@ This will:
   - Avoid generating any debug information for dependencies
 - Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
 
+> **Note:** re-evaluating the `dev` profile is being tracked in [#15931](https://github.com/rust-lang/cargo/issues/15931).
+
 Trade-offs:
 - ✅ Faster code generation (`cargo build`)
 - ✅ Faster link times
