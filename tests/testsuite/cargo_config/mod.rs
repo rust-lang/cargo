@@ -822,9 +822,9 @@ fn includes() {
     )
     .unwrap();
 
-    cargo_process("config get build.rustflags -Zunstable-options -Zconfig-include")
+    cargo_process("config get build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout_data(str![[r#"
 build.rustflags = ["--flag-global", "--flag-other", "--flag-directory"]
 
@@ -832,9 +832,9 @@ build.rustflags = ["--flag-global", "--flag-other", "--flag-directory"]
         .with_stderr_data(str![[r#""#]])
         .run();
 
-    cargo_process("config get build.rustflags --show-origin -Zunstable-options -Zconfig-include")
+    cargo_process("config get build.rustflags --show-origin -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout_data(str![[r#"
 build.rustflags = [
     "--flag-global", # [ROOT]/home/.cargo/config.toml
@@ -846,9 +846,9 @@ build.rustflags = [
         .with_stderr_data(str![[r#""#]])
         .run();
 
-    cargo_process("config get --merged=no -Zunstable-options -Zconfig-include")
+    cargo_process("config get --merged=no -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
-        .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
+        .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_stdout_data(str![[r##"
 # Environment variables
 # CARGO=[..]

@@ -1,28 +1,12 @@
 //! Tests for `include` config field.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::str;
 
-use super::config::{GlobalContextBuilder, assert_error, write_config_at, write_config_toml};
-
-#[cargo_test]
-fn gated() {
-    // Requires -Z flag.
-    write_config_toml("include=['other.toml']");
-    write_config_at(
-        ".cargo/other.toml",
-        "
-        othervalue = 1
-        ",
-    );
-    let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<Option<i32>>("othervalue").unwrap(), None);
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
-    assert_eq!(gctx.get::<i32>("othervalue").unwrap(), 1);
-}
+use super::config::GlobalContextBuilder;
+use super::config::assert_error;
+use super::config::write_config_at;
+use super::config::write_config_toml;
 
 #[cargo_test]
 fn simple() {
@@ -42,38 +26,7 @@ fn simple() {
         key3 = 4
         ",
     );
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 4);
-}
-
-#[cargo_test]
-fn enable_in_unstable_config() {
-    // config-include enabled in the unstable config table:
-    write_config_at(
-        ".cargo/config.toml",
-        "
-        include = ['other.toml']
-        key1 = 1
-        key2 = 2
-
-        [unstable]
-        config-include = true
-        ",
-    );
-    write_config_at(
-        ".cargo/other.toml",
-        "
-        key2 = 3
-        key3 = 4
-        ",
-    );
-    let gctx = GlobalContextBuilder::new()
-        .nightly_features_allowed(true)
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
     assert_eq!(gctx.get::<i32>("key3").unwrap(), 4);
@@ -127,7 +80,6 @@ fn mix_of_hierarchy_and_include() {
         ",
     );
     let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
         .cwd("foo")
         .nightly_features_allowed(true)
         .build();
@@ -144,112 +96,6 @@ fn mix_of_hierarchy_and_include() {
             "1".to_string()
         ]
     );
-}
-
-#[cargo_test]
-fn mix_of_hierarchy_and_include_with_enable_in_unstable_config() {
-    // `mix_of_hierarchy_and_include`, but with the config-include
-    // feature itself enabled in the unstable config table:
-    write_config_at(
-        "foo/.cargo/config.toml",
-        "
-        include = ['other.toml']
-        key1 = 1
-
-        # also make sure unstable flags merge in the correct order
-        [unstable]
-        features = ['1']
-        config-include = true
-        ",
-    );
-    write_config_at(
-        "foo/.cargo/other.toml",
-        "
-        key1 = 2
-        key2 = 2
-
-        [unstable]
-        features = ['2']
-        ",
-    );
-    write_config_at(
-        ".cargo/config.toml",
-        "
-        include = ['other.toml']
-        key1 = 3
-        key2 = 3
-        key3 = 3
-
-        [unstable]
-        features = ['3']
-        ",
-    );
-    write_config_at(
-        ".cargo/other.toml",
-        "
-        key1 = 4
-        key2 = 4
-        key3 = 4
-        key4 = 4
-
-        [unstable]
-        features = ['4']
-        ",
-    );
-    let gctx = GlobalContextBuilder::new()
-        .cwd("foo")
-        .nightly_features_allowed(true)
-        .build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 3);
-    assert_eq!(gctx.get::<i32>("key4").unwrap(), 4);
-    assert_eq!(
-        gctx.get::<Vec<String>>("unstable.features").unwrap(),
-        vec![
-            "4".to_string(),
-            "3".to_string(),
-            "2".to_string(),
-            "1".to_string()
-        ]
-    );
-}
-
-#[cargo_test]
-fn works_with_cli() {
-    write_config_at(
-        ".cargo/config.toml",
-        "
-        include = ['other.toml']
-        [build]
-        rustflags = ['-W', 'unused']
-        ",
-    );
-    write_config_at(
-        ".cargo/other.toml",
-        "
-        [build]
-        rustflags = ['-W', 'unsafe-code']
-        ",
-    );
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("check -v")
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-W unused`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-    p.cargo("check -v -Z config-include")
-        .masquerade_as_nightly_cargo(&["config-include"])
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-W unsafe-code -W unused`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
 }
 
 #[cargo_test]
@@ -298,9 +144,7 @@ fn left_to_right_bottom_to_top() {
         left-bottom = -3
         ",
     );
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("top").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("right-middle").unwrap(), 0);
     assert_eq!(gctx.get::<i32>("right-bottom").unwrap(), -1);
@@ -340,9 +184,7 @@ fn nested_include_resolves_relative_to_including_file() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
 
     assert_eq!(gctx.get::<i32>("nested").unwrap(), 42);
     assert_eq!(gctx.get::<i32>("middle").unwrap(), 10);
@@ -352,11 +194,11 @@ fn nested_include_resolves_relative_to_including_file() {
 fn missing_file() {
     // Error when there's a missing file.
     write_config_toml("include=['missing.toml']");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -376,11 +218,11 @@ Caused by:
 fn wrong_file_extension() {
     // Error when it doesn't end with `.toml`.
     write_config_toml("include=['config.png']");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -396,11 +238,9 @@ fn cycle() {
     write_config_at(".cargo/config.toml", "include=['one.toml']");
     write_config_at(".cargo/one.toml", "include=['two.toml']");
     write_config_at(".cargo/two.toml", "include=['config.toml']");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -432,7 +272,6 @@ fn cli_include() {
     );
     write_config_at(".cargo/config-foo.toml", "foo = 2");
     let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
         .config_arg("include=['.cargo/config-foo.toml']")
         .build();
     assert_eq!(gctx.get::<i32>("foo").unwrap(), 2);
@@ -443,11 +282,11 @@ fn cli_include() {
 fn bad_format() {
     // Not a valid format.
     write_config_toml("include = 1");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -461,7 +300,6 @@ Caused by:
 fn cli_include_failed() {
     // Error message when CLI include fails to load.
     let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
         .config_arg("include=['foobar.toml']")
         .build_err();
     assert_error(
@@ -492,7 +330,6 @@ fn cli_merge_failed() {
         ",
     );
     let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
         .config_arg("include=['.cargo/other.toml']")
         .build_err();
     // Maybe this error message should mention it was from an include file?
@@ -519,7 +356,6 @@ fn cli_include_take_priority_over_env() {
     // --config 'include=".cargo/include.toml"'
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_K", "env")
-        .unstable_flag("config-include")
         .config_arg("include=['.cargo/include.toml']")
         .build();
     assert_eq!(gctx.get::<String>("k").unwrap(), "include");
@@ -529,7 +365,6 @@ fn cli_include_take_priority_over_env() {
     write_config_at(".cargo/foo.toml", "include=['include.toml']");
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_K", "env")
-        .unstable_flag("config-include")
         .config_arg(".cargo/foo.toml")
         .build();
     assert_eq!(gctx.get::<String>("k").unwrap(), "include");
@@ -560,9 +395,7 @@ fn inline_table_style() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
     assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
@@ -599,9 +432,7 @@ fn array_of_tables_style() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
     assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
@@ -629,9 +460,7 @@ fn table_with_unknown_fields() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
 }
@@ -648,11 +477,11 @@ fn table_missing_required_field() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -685,9 +514,7 @@ fn optional_include_missing_and_existing() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
 }
@@ -705,11 +532,11 @@ fn optional_false_missing_file() {
         ",
     );
 
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -729,11 +556,11 @@ Caused by:
 fn disallow_glob_syntax() {
     // Reserved for future extension
     write_config_toml("include = ['config-*.toml']");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -747,11 +574,11 @@ Caused by:
 fn disallow_template_syntax() {
     // Reserved for future extension
     write_config_toml("include = ['{workspace-root}/config.toml']");
-    let gctx = GlobalContextBuilder::new()
-        .unstable_flag("config-include")
-        .build_err();
+    // Config values are lazy loaded and fail at first retrieval.
+    // This ensures simple commands like `cargo --version` working even when
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.unwrap_err(),
+        gctx.get::<bool>("foo").unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
