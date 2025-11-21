@@ -698,13 +698,7 @@ fn disallow_glob_syntax() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `config-*.toml` from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to read configuration file `[ROOT]/.cargo/config-*.toml`
-
-Caused by:
-  [NOT_FOUND]
+  expected a config include path without glob patterns, but found `config-*.toml` from `[ROOT]/.cargo/config.toml`
 "#]],
     );
 }
@@ -722,13 +716,7 @@ fn disallow_template_syntax() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `{workspace-root}/config.toml` from `[ROOT]/.cargo/config.toml`
-
-Caused by:
-  failed to read configuration file `[ROOT]/.cargo/{workspace-root}/config.toml`
-
-Caused by:
-  [NOT_FOUND]
+  expected a config include path without template braces, but found `{workspace-root}/config.toml` from `[ROOT]/.cargo/config.toml`
 "#]],
     );
 }
