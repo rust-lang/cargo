@@ -61,7 +61,6 @@
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
 
-use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -85,9 +84,11 @@ use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::OnceExt as _;
+use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 
@@ -1498,6 +1499,26 @@ impl GlobalContext {
                     include.path.display(),
                     include.def,
                 )
+            }
+
+            if let Some(path) = include.path.to_str() {
+                // Ignore non UTF-8 bytes as glob and template syntax are for textual config.
+                if is_glob_pattern(path) {
+                    bail!(
+                        "expected a config include path without glob patterns, \
+                         but found `{}` from `{}`",
+                        include.path.display(),
+                        include.def,
+                    )
+                }
+                if path.contains(&['{', '}']) {
+                    bail!(
+                        "expected a config include path without template braces, \
+                         but found `{}` from `{}`",
+                        include.path.display(),
+                        include.def,
+                    )
+                }
             }
         }
 

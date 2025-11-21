@@ -724,3 +724,39 @@ Caused by:
 "#]],
     );
 }
+
+#[cargo_test]
+fn disallow_glob_syntax() {
+    // Reserved for future extension
+    write_config_toml("include = 'config-*.toml'");
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  expected a config include path without glob patterns, but found `config-*.toml` from `[ROOT]/.cargo/config.toml`
+"#]],
+    );
+}
+
+#[cargo_test]
+fn disallow_template_syntax() {
+    // Reserved for future extension
+    write_config_toml("include = '{workspace-root}/config.toml'");
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  expected a config include path without template braces, but found `{workspace-root}/config.toml` from `[ROOT]/.cargo/config.toml`
+"#]],
+    );
+}
