@@ -404,9 +404,19 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         "feature",
         unit.features.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
     );
+    // Manually inject debug_assertions based on the profile setting.
+    // The cfg query from rustc doesn't include profile settings and would always be true,
+    // so we override it with the actual profile setting.
+    if unit.profile.debug_assertions {
+        cfg_map.insert("debug_assertions", Vec::new());
+    }
     for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
+                // Skip debug_assertions from rustc query; we use the profile setting instead
+                if n.as_str() == "debug_assertions" {
+                    continue;
+                }
                 cfg_map.insert(n.as_str(), Vec::new());
             }
             Cfg::KeyPair(ref k, ref v) => {
@@ -416,11 +426,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         }
     }
     for (k, v) in cfg_map {
-        if k == "debug_assertions" {
-            // This cfg is always true and misleading, so avoid setting it.
-            // That is because Cargo queries rustc without any profile settings.
-            continue;
-        }
         // FIXME: We should handle raw-idents somehow instead of predenting they
         // don't exist here
         let k = format!("CARGO_CFG_{}", super::envify(k));

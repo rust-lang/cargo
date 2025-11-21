@@ -330,6 +330,7 @@ impl Profiles {
         result.root = for_unit_profile.root;
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
+        result.debug_assertions = for_unit_profile.debug_assertions;
         result.trim_paths = for_unit_profile.trim_paths.clone();
         result
     }
