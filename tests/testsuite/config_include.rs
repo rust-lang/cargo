@@ -309,6 +309,46 @@ fn left_to_right_bottom_to_top() {
 }
 
 #[cargo_test]
+fn nested_include_resolves_relative_to_including_file() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = '../config/cargo.toml'
+        ",
+    );
+    write_config_at(
+        "config/cargo.toml",
+        "
+        include = 'other.toml'
+        middle = 10
+        ",
+    );
+    write_config_at(
+        "config/other.toml",
+        "
+        nested = 42
+        ",
+    );
+
+    // This should not be included,
+    // because `include` path is resolved relative to the including config
+    // (where the `include` is defined)
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        INVALID = SYNTAX
+        ",
+    );
+
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .build();
+
+    assert_eq!(gctx.get::<i32>("nested").unwrap(), 42);
+    assert_eq!(gctx.get::<i32>("middle").unwrap(), 10);
+}
+
+#[cargo_test]
 fn missing_file() {
     // Error when there's a missing file.
     write_config_toml("include='missing.toml'");
