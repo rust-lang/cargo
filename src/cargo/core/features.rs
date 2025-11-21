@@ -856,7 +856,6 @@ unstable_cli_options!(
     cargo_lints: bool = ("Enable the `[lints.cargo]` table"),
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
-    config_include: bool = ("Enable the `include` key in config files"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
@@ -978,6 +977,8 @@ const STABILIZED_PACKAGE_WORKSPACE: &str =
     "Workspace packaging and publishing (a.k.a. `-Zpackage-workspace`) is now always enabled.";
 
 const STABILIZED_BUILD_DIR: &str = "build.build-dir is now always enabled.";
+
+const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always available";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1363,6 +1364,7 @@ impl CliUnstable {
             "doctest-xcompile" => stabilized_warn(k, "1.89", STABILIZED_DOCTEST_XCOMPILE),
             "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
             "build-dir" => stabilized_warn(k, "1.91", STABILIZED_BUILD_DIR),
+            "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1377,7 +1379,6 @@ impl CliUnstable {
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
-            "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
