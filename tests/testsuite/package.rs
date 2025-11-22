@@ -2949,10 +2949,7 @@ src/lib.rs
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "temporarily due to flakiness: https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/reserved_windows_name.20test.20failing/with/543085230"
-)]
+#[cargo_test]
 #[cfg(windows)]
 fn reserved_windows_name() {
     // If we are running on a version of Windows that allows these reserved filenames,
