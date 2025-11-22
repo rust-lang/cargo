@@ -2161,7 +2161,16 @@ fn update_breaking_specific_packages_that_wont_update() {
     Package::new("non-semver", "2.0.0").publish();
     Package::new("transitive-incompatible", "2.0.0").publish();
 
-    p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver transitive-compatible transitive-incompatible")
+    // Transitive dependencies are silently ignored
+    p.cargo("update -Zunstable-options --breaking transitive-compatible transitive-incompatible")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+
+"#]])
+        .run();
+
+    // Renamed, non-semver, no-breaking-update dependencies are silently ignored
+    p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
@@ -2746,6 +2755,69 @@ fn prefixed_v_in_version() {
 
 Caused by:
   unexpected character 'v' while parsing major version number
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_missing_package_error() {
+    Package::new("bar", "1.0.0").publish();
+    Package::new("transitive", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("bar", "2.0.0")
+        .add_dep(Dependency::new("transitive", "1.0.0").build())
+        .publish();
+
+    // This test demonstrates the current buggy behavior where invalid package
+    // specs are silently ignored instead of reporting an error. A subsequent
+    // commit will fix this behavior and update this test to verify proper
+    // error reporting.
+
+    // Non-existent package is silently ignored
+    p.cargo("update -Zunstable-options --breaking no_such_crate")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+
+"#]])
+        .run();
+
+    // Valid package processes, invalid package silently ignored
+    p.cargo("update -Zunstable-options --breaking bar no_such_crate")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPGRADING] bar ^1.0 -> ^2.0
+[LOCKING] 2 packages to latest compatible versions
+[UPDATING] bar v1.0.0 -> v2.0.0
+[ADDING] transitive v1.0.0
+
+"#]])
+        .run();
+
+    // Transitive dependency is silently ignored (produces no output)
+    p.cargo("update -Zunstable-options --breaking transitive")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
 
 "#]])
         .run();
