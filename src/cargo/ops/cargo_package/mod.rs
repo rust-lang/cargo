@@ -161,7 +161,9 @@ fn create_package(
     }
 
     let filename = pkg.package_id().tarball_name();
-    let dir = ws.build_dir().join("package");
+    let build_dir = ws.build_dir();
+    paths::create_dir_all_excluded_from_backups_atomic(build_dir.as_path_unlocked())?;
+    let dir = build_dir.join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
         dir.open_rw_exclusive_create(&tmp, gctx, "package scratch space")?
@@ -225,6 +227,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
         result.extend(packaged.into_iter().map(|(_, _, src)| src));
     } else {
         // Uplifting artifacts
+        paths::create_dir_all_excluded_from_backups_atomic(target_dir.as_path_unlocked())?;
         let artifact_dir = target_dir.join("package");
         for (pkg, _, src) in packaged {
             let filename = pkg.package_id().tarball_name();

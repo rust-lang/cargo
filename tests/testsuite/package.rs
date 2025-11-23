@@ -7825,10 +7825,10 @@ fn package_dir_not_excluded_from_backups() {
 "#]])
         .run();
 
-    // Verify CACHEDIR.TAG does NOT exist in target (documenting the buggy behavior)
+    // Verify CACHEDIR.TAG exists in target (which excludes target/ and all subdirectories)
     let cachedir_tag = p.root().join("target/CACHEDIR.TAG");
     assert!(
-        !cachedir_tag.exists(),
-        "CACHEDIR.TAG should not exist yet (this is the bug)"
+        cachedir_tag.exists(),
+        "CACHEDIR.TAG should exist in target directory to exclude it from backups"
     );
 }
