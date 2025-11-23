@@ -7804,3 +7804,31 @@ fn publish_to_alt_registry_warns() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn package_dir_not_excluded_from_backups() {
+    // This test documents the current behavior where target directory is NOT excluded from backups.
+    // After the fix, this test will be updated to verify that CACHEDIR.TAG exists.
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("package --allow-dirty")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Verify CACHEDIR.TAG does NOT exist in target (documenting the buggy behavior)
+    let cachedir_tag = p.root().join("target/CACHEDIR.TAG");
+    assert!(
+        !cachedir_tag.exists(),
+        "CACHEDIR.TAG should not exist yet (this is the bug)"
+    );
+}
