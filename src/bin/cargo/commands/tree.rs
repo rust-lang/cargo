@@ -26,11 +26,11 @@ pub fn cli() -> Command {
                 .short('e')
                 .value_delimiter(',')
                 .value_parser([
-                    "features",
+                    "all",
                     "normal",
                     "build",
                     "dev",
-                    "all",
+                    "features",
                     "public",
                     "no-normal",
                     "no-build",
