@@ -22,15 +22,21 @@ pub fn cli() -> Command {
         .arg_silent_suggestion()
         .arg(flag("no-dev-dependencies", "Deprecated, use -e=no-dev instead").hide(true))
         .arg(
-            multi_opt(
-                "edges",
-                "KINDS",
-                "The kinds of dependencies to display \
-                 (features, normal, build, dev, all, \
-                 no-normal, no-build, no-dev, no-proc-macro)",
-            )
-            .short('e')
-            .value_delimiter(','),
+            multi_opt("edges", "KINDS", "The kinds of dependencies to display")
+                .short('e')
+                .value_delimiter(',')
+                .value_parser([
+                    "features",
+                    "normal",
+                    "build",
+                    "dev",
+                    "all",
+                    "public",
+                    "no-normal",
+                    "no-build",
+                    "no-dev",
+                    "no-proc-macro",
+                ]),
         )
         .arg(
             optional_multi_opt(
@@ -311,15 +317,6 @@ fn parse_edge_kinds(
         result.insert(EdgeKind::Dep(DepKind::Build));
         result.insert(EdgeKind::Dep(DepKind::Development));
     };
-    let unknown = |k| {
-        bail!(
-            "unknown edge kind `{}`, valid values are \
-                \"normal\", \"build\", \"dev\", \
-                \"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
-                \"features\", or \"all\"",
-            k
-        )
-    };
     if kinds.iter().any(|k| k.starts_with("no-")) {
         insert_defaults(&mut result);
         for kind in &kinds {
@@ -336,7 +333,7 @@ fn parse_edge_kinds(
                         kind
                     )
                 }
-                k => return unknown(k),
+                _ => unreachable!("`{kind}` was validated by clap"),
             };
         }
         return Ok((result, no_proc_macro, public));
@@ -359,7 +356,7 @@ fn parse_edge_kinds(
             "dev" => {
                 result.insert(EdgeKind::Dep(DepKind::Development));
             }
-            k => return unknown(k),
+            _ => unreachable!("`{kind}` was validated by clap"),
         }
     }
     if kinds.len() == 1 && kinds[0] == "features" {

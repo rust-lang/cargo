@@ -1723,10 +1723,13 @@ fn unknown_edge_kind() {
 
     p.cargo("tree -e unknown")
         .with_stderr_data(str![[r#"
-[ERROR] unknown edge kind `unknown`, valid values are "normal", "build", "dev", "no-normal", "no-build", "no-dev", "no-proc-macro", "features", or "all"
+[ERROR] invalid value 'unknown' for '--edges <KINDS>'
+  [possible values: features, normal, build, dev, all, public, no-normal, no-build, no-dev, no-proc-macro]
+
+For more information, try '--help'.
 
 "#]])
-        .with_status(101)
+        .with_status(1)
         .run();
 }
 
