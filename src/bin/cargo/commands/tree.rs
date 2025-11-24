@@ -29,7 +29,8 @@ pub fn cli() -> Command {
                  (features, normal, build, dev, all, \
                  no-normal, no-build, no-dev, no-proc-macro)",
             )
-            .short('e'),
+            .short('e')
+            .value_delimiter(','),
         )
         .arg(
             optional_multi_opt(
@@ -271,7 +272,7 @@ fn parse_edge_kinds(
         let mut kinds = args.get_many::<String>("edges").map_or_else(
             || Vec::new(),
             |es| {
-                es.flat_map(|e| e.split(','))
+                es.map(|e| e.as_str())
                     .filter(|e| {
                         if *e == "no-proc-macro" {
                             no_proc_macro = true;
