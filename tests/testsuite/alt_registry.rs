@@ -261,6 +261,48 @@ Caused by:
 }
 
 #[cargo_test]
+fn registry_index_not_allowed_in_user_manifests() {
+    let registry = registry::alt_init();
+    Package::new("bar", "0.1.0").alternative(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = {{ version = "0.1.0", registry-index = "{}" }}
+            "#,
+                registry.index_url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // FIXME: This currently allows `registry-index` which is a bug.
+    // It should error during manifest parsing because `registry-index` is for internal use only.
+    // Instead, it tries to fetch from the URL and fails with a network error.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/alternative-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[ROOT]/alternative-registry`)
+[CHECKING] bar v0.1.0 (registry `[ROOT]/alternative-registry`)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
     let crates_io = registry::init();
     let _alternative = RegistryBuilder::new().alternative().build();
