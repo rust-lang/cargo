@@ -42,11 +42,16 @@ pub fn cli() -> Command {
                 get_pkg_id_spec_candidates,
             )),
         )
-        .arg(multi_opt(
-            "prune",
-            "SPEC",
-            "Prune the given package from the display of the dependency tree",
-        ))
+        .arg(
+            multi_opt(
+                "prune",
+                "SPEC",
+                "Prune the given package from the display of the dependency tree",
+            )
+            .add(clap_complete::ArgValueCandidates::new(
+                get_pkg_id_spec_candidates,
+            )),
+        )
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         .arg(flag("no-indent", "Deprecated, use --prefix=none instead").hide(true))
         .arg(flag("prefix-depth", "Deprecated, use --prefix=depth instead").hide(true))
