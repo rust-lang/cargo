@@ -22,14 +22,21 @@ pub fn cli() -> Command {
         .arg_silent_suggestion()
         .arg(flag("no-dev-dependencies", "Deprecated, use -e=no-dev instead").hide(true))
         .arg(
-            multi_opt(
-                "edges",
-                "KINDS",
-                "The kinds of dependencies to display \
-                 (features, normal, build, dev, all, \
-                 no-normal, no-build, no-dev, no-proc-macro)",
-            )
-            .short('e'),
+            multi_opt("edges", "KINDS", "The kinds of dependencies to display")
+                .short('e')
+                .value_delimiter(',')
+                .value_parser([
+                    "all",
+                    "normal",
+                    "build",
+                    "dev",
+                    "features",
+                    "public",
+                    "no-normal",
+                    "no-build",
+                    "no-dev",
+                    "no-proc-macro",
+                ]),
         )
         .arg(
             optional_multi_opt(
@@ -42,11 +49,16 @@ pub fn cli() -> Command {
                 get_pkg_id_spec_candidates,
             )),
         )
-        .arg(multi_opt(
-            "prune",
-            "SPEC",
-            "Prune the given package from the display of the dependency tree",
-        ))
+        .arg(
+            multi_opt(
+                "prune",
+                "SPEC",
+                "Prune the given package from the display of the dependency tree",
+            )
+            .add(clap_complete::ArgValueCandidates::new(
+                get_pkg_id_spec_candidates,
+            )),
+        )
         .arg(opt("depth", "Maximum display depth of the dependency tree").value_name("DEPTH"))
         .arg(flag("no-indent", "Deprecated, use --prefix=none instead").hide(true))
         .arg(flag("prefix-depth", "Deprecated, use --prefix=depth instead").hide(true))
@@ -266,7 +278,7 @@ fn parse_edge_kinds(
         let mut kinds = args.get_many::<String>("edges").map_or_else(
             || Vec::new(),
             |es| {
-                es.flat_map(|e| e.split(','))
+                es.map(|e| e.as_str())
                     .filter(|e| {
                         if *e == "no-proc-macro" {
                             no_proc_macro = true;
@@ -305,15 +317,6 @@ fn parse_edge_kinds(
         result.insert(EdgeKind::Dep(DepKind::Build));
         result.insert(EdgeKind::Dep(DepKind::Development));
     };
-    let unknown = |k| {
-        bail!(
-            "unknown edge kind `{}`, valid values are \
-                \"normal\", \"build\", \"dev\", \
-                \"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
-                \"features\", or \"all\"",
-            k
-        )
-    };
     if kinds.iter().any(|k| k.starts_with("no-")) {
         insert_defaults(&mut result);
         for kind in &kinds {
@@ -330,7 +333,7 @@ fn parse_edge_kinds(
                         kind
                     )
                 }
-                k => return unknown(k),
+                _ => unreachable!("`{kind}` was validated by clap"),
             };
         }
         return Ok((result, no_proc_macro, public));
@@ -353,7 +356,7 @@ fn parse_edge_kinds(
             "dev" => {
                 result.insert(EdgeKind::Dep(DepKind::Development));
             }
-            k => return unknown(k),
+            _ => unreachable!("`{kind}` was validated by clap"),
         }
     }
     if kinds.len() == 1 && kinds[0] == "features" {
