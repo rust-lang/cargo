@@ -4595,3 +4595,60 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn registry_index_not_allowed_in_publish() {
+    let registry = registry::init();
+    Package::new("bar", "0.1.0").publish();
+    let _registry = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                bar = {{ version = "0.1.0", registry-index = "{}" }}
+            "#,
+                registry.index_url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // FIXME: This currently allows `registry-index` which is a bug.
+    // It should error during manifest parsing because `registry-index` is for internal use only.
+    // Instead, it actually works and the package can be published.
+    p.cargo("publish --registry alternative")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `[ROOT]/registry` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[ROOT]/registry`)
+[COMPILING] bar v0.1.0 (registry `[ROOT]/registry`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `alternative`
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `alternative`
+
+"#]])
+        .run();
+}
