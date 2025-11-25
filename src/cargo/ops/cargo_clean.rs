@@ -200,6 +200,14 @@ fn clean_specs(
         let pkg_dir = format!("{}-*", pkg.name());
         clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
+        if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+            for (_compile_kind, layout) in &layouts {
+                let dir = layout.build_dir().build_unit(&pkg.name());
+                clean_ctx.rm_rf_glob(&dir)?;
+            }
+            continue;
+        }
+
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
             let dir = escape_glob_path(layout.build_dir().legacy_fingerprint())?;
@@ -228,12 +236,6 @@ fn clean_specs(
                 CompileMode::Check { test: false },
             ] {
                 for (compile_kind, layout) in &layouts {
-                    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
-                        let dir = layout.build_dir().build_unit(&pkg.name());
-                        clean_ctx.rm_rf_glob(&dir)?;
-                        continue;
-                    }
-
                     let triple = target_data.short_name(compile_kind);
                     let (file_types, _unsupported) = target_data
                         .info(*compile_kind)
