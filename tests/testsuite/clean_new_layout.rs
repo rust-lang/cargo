@@ -113,8 +113,8 @@ fn clean_multiple_packages() {
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     assert!(p.bin("foo").is_file());
-    assert!(d1_path.is_file()); // FIXME
-    assert!(d2_path.is_file()); // FIXME
+    assert!(!d1_path.is_file());
+    assert!(!d2_path.is_file());
 }
 
 #[cargo_test]
@@ -561,7 +561,7 @@ fn clean_remove_rlib_rmeta() {
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    assert!(p.target_debug_dir().join("libfoo.rlib").exists()); // FIXME
+    assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
     assert!(!rmeta.exists());
 }
 
