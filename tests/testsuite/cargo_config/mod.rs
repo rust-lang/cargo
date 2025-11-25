@@ -807,7 +807,7 @@ fn includes() {
     fs::write(
         sub_folder.join("config.toml"),
         "
-        include = 'other.toml'
+        include = ['other.toml']
         [build]
         rustflags = [\"--flag-directory\"]
         ",
@@ -859,7 +859,7 @@ build.rustflags = ["--flag-other"]
 
 # [ROOT]/foo/.cargo/config.toml
 build.rustflags = ["--flag-directory"]
-include = "other.toml"
+include = ["other.toml"]
 
 # [ROOT]/home/.cargo/config.toml
 alias.foo = "abc --xyz"

@@ -9,7 +9,7 @@ use super::config::{GlobalContextBuilder, assert_error, write_config_at, write_c
 #[cargo_test]
 fn gated() {
     // Requires -Z flag.
-    write_config_toml("include='other.toml'");
+    write_config_toml("include=['other.toml']");
     write_config_at(
         ".cargo/other.toml",
         "
@@ -30,7 +30,7 @@ fn simple() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 1
         key2 = 2
         ",
@@ -56,7 +56,7 @@ fn enable_in_unstable_config() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 1
         key2 = 2
 
@@ -84,7 +84,7 @@ fn mix_of_hierarchy_and_include() {
     write_config_at(
         "foo/.cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 1
 
         # also make sure unstable flags merge in the correct order
@@ -105,7 +105,7 @@ fn mix_of_hierarchy_and_include() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 3
         key2 = 3
         key3 = 3
@@ -153,7 +153,7 @@ fn mix_of_hierarchy_and_include_with_enable_in_unstable_config() {
     write_config_at(
         "foo/.cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 1
 
         # also make sure unstable flags merge in the correct order
@@ -175,7 +175,7 @@ fn mix_of_hierarchy_and_include_with_enable_in_unstable_config() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         key1 = 3
         key2 = 3
         key3 = 3
@@ -220,7 +220,7 @@ fn works_with_cli() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         [build]
         rustflags = ['-W', 'unused']
         ",
@@ -265,7 +265,7 @@ fn left_to_right_bottom_to_top() {
     write_config_at(
         ".cargo/right-middle.toml",
         "
-        include = 'right-bottom.toml'
+        include = ['right-bottom.toml']
         top = 0
         right-middle = 0
         ",
@@ -281,7 +281,7 @@ fn left_to_right_bottom_to_top() {
     write_config_at(
         ".cargo/left-middle.toml",
         "
-        include = 'left-bottom.toml'
+        include = ['left-bottom.toml']
         top = -2
         right-middle = -2
         right-bottom = -2
@@ -313,13 +313,13 @@ fn nested_include_resolves_relative_to_including_file() {
     write_config_at(
         ".cargo/config.toml",
         "
-        include = '../config/cargo.toml'
+        include = ['../config/cargo.toml']
         ",
     );
     write_config_at(
         "config/cargo.toml",
         "
-        include = 'other.toml'
+        include = ['other.toml']
         middle = 10
         ",
     );
@@ -351,7 +351,7 @@ fn nested_include_resolves_relative_to_including_file() {
 #[cargo_test]
 fn missing_file() {
     // Error when there's a missing file.
-    write_config_toml("include='missing.toml'");
+    write_config_toml("include=['missing.toml']");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -375,7 +375,7 @@ Caused by:
 #[cargo_test]
 fn wrong_file_extension() {
     // Error when it doesn't end with `.toml`.
-    write_config_toml("include='config.png'");
+    write_config_toml("include=['config.png']");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -393,9 +393,9 @@ Caused by:
 #[cargo_test]
 fn cycle() {
     // Detects a cycle.
-    write_config_at(".cargo/config.toml", "include='one.toml'");
-    write_config_at(".cargo/one.toml", "include='two.toml'");
-    write_config_at(".cargo/two.toml", "include='config.toml'");
+    write_config_at(".cargo/config.toml", "include=['one.toml']");
+    write_config_at(".cargo/one.toml", "include=['two.toml']");
+    write_config_at(".cargo/two.toml", "include=['config.toml']");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -433,7 +433,7 @@ fn cli_include() {
     write_config_at(".cargo/config-foo.toml", "foo = 2");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='.cargo/config-foo.toml'")
+        .config_arg("include=['.cargo/config-foo.toml']")
         .build();
     assert_eq!(gctx.get::<i32>("foo").unwrap(), 2);
     assert_eq!(gctx.get::<i32>("bar").unwrap(), 2);
@@ -452,7 +452,7 @@ fn bad_format() {
 could not load Cargo configuration
 
 Caused by:
-  expected a string or list of strings, but found integer at `include` in `[ROOT]/.cargo/config.toml
+  expected a list of strings or a list of tables, but found integer at `include` in `[ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -462,7 +462,7 @@ fn cli_include_failed() {
     // Error message when CLI include fails to load.
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='foobar.toml'")
+        .config_arg("include=['foobar.toml']")
         .build_err();
     assert_error(
         gctx.unwrap_err(),
@@ -493,7 +493,7 @@ fn cli_merge_failed() {
     );
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
-        .config_arg("include='.cargo/other.toml'")
+        .config_arg("include=['.cargo/other.toml']")
         .build_err();
     // Maybe this error message should mention it was from an include file?
     assert_error(
@@ -520,13 +520,13 @@ fn cli_include_take_priority_over_env() {
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_K", "env")
         .unstable_flag("config-include")
-        .config_arg("include='.cargo/include.toml'")
+        .config_arg("include=['.cargo/include.toml']")
         .build();
     assert_eq!(gctx.get::<String>("k").unwrap(), "include");
 
     // k=env
     // --config '.cargo/foo.toml'
-    write_config_at(".cargo/foo.toml", "include='include.toml'");
+    write_config_at(".cargo/foo.toml", "include=['include.toml']");
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_K", "env")
         .unstable_flag("config-include")
@@ -728,7 +728,7 @@ Caused by:
 #[cargo_test]
 fn disallow_glob_syntax() {
     // Reserved for future extension
-    write_config_toml("include = 'config-*.toml'");
+    write_config_toml("include = ['config-*.toml']");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -746,7 +746,7 @@ Caused by:
 #[cargo_test]
 fn disallow_template_syntax() {
     // Reserved for future extension
-    write_config_toml("include = '{workspace-root}/config.toml'");
+    write_config_toml("include = ['{workspace-root}/config.toml']");
     let gctx = GlobalContextBuilder::new()
         .unstable_flag("config-include")
         .build_err();
