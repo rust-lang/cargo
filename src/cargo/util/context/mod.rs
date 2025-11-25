@@ -1443,7 +1443,6 @@ impl GlobalContext {
             table.get("include").map(Cow::Borrowed)
         };
         let includes = match include.map(|c| c.into_owned()) {
-            Some(CV::String(s, def)) => vec![ConfigInclude::new(s, def)],
             Some(CV::List(list, _def)) => list
                 .into_iter()
                 .enumerate()
@@ -1482,7 +1481,7 @@ impl GlobalContext {
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
             Some(other) => bail!(
-                "expected a string or list of strings, but found {} at `include` in `{}",
+                "expected a list of strings or a list of tables, but found {} at `include` in `{}",
                 other.desc(),
                 other.definition()
             ),

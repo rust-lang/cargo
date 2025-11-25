@@ -646,7 +646,7 @@ For example:
 
 ```toml
 # .cargo/config.toml
-include = "other-config.toml"
+include = ["other-config.toml"]
 
 [build]
 jobs = 4
@@ -662,7 +662,7 @@ rustflags = ["-W", "unsafe-code"]
 
 #### `include`
 
-* Type: string, array of strings, or array of tables
+* Type: array of strings, or array of tables
 * Default: none
 
 Loads additional config files. Paths are relative to the config file that
@@ -671,9 +671,6 @@ includes them. Only paths ending with `.toml` are accepted.
 Supports the following formats:
 
 ```toml
-# single path
-include = "path/to/mordor.toml"
-
 # array of paths
 include = ["frodo.toml", "samwise.toml"]
 
