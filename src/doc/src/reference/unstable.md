@@ -660,37 +660,47 @@ rustflags = ["-W", "unsafe-code"]
 
 ### Documentation updates
 
-#### `include`
+> put this after `## Command-line overrides` before `## Config-relative paths`
+> to emphasize its special nature than other config keys.
 
-* Type: array of strings, or array of tables
+#### Including extra configuration files
+
+Configuration can include other configuration files using the top-level `include` key.
+This allows sharing configuration across multiple projects
+or splitting complex configurations into multiple files.
+
+##### `include`
+
+* Type: array of strings or tables
 * Default: none
+* Environment: not supported
 
-Loads additional config files. Paths are relative to the config file that
-includes them. Only paths ending with `.toml` are accepted.
+Loads additional configuration files.
+Paths are relative to the configuration file that includes them.
+Only paths ending with `.toml` are accepted.
 
 Supports the following formats:
 
 ```toml
 # array of paths
-include = ["frodo.toml", "samwise.toml"]
-
-# inline tables
 include = [
-    "simple.toml",
-    { path = "optional.toml", optional = true }
+    "frodo.toml",
+    "samwise.toml",
 ]
 
-# array of tables
-[[include]]
-path = "required.toml"
-
-[[include]]
-path = "optional.toml"
-optional = true
+# inline tables for more control
+include = [
+    { path = "required.toml" },
+    { path = "optional.toml", optional = true },
+]
 ```
 
-When using table syntax (inline tables or array of tables), the following
-fields are supported:
+> **Note:** For better readability and to avoid confusion, it is recommended to:
+> - Place `include` at the top of the configuration file
+> - Put one include per line for clearer version control diffs
+> - Use inline table syntax when optional includes are needed
+
+When using table syntax, the following fields are supported:
 
 * `path` (string, required): Path to the config file to include.
 * `optional` (boolean, default: false): If `true`, missing files are silently
@@ -698,11 +708,12 @@ fields are supported:
 
 The merge behavior of `include` is different from other config values:
 
-1. Config values are first loaded from the `include` path.
-    * If `include` is an array, config values are loaded and merged from left
-      to right for each path.
+1. Config values are first loaded from the `include` paths.
+    * Included files are loaded left to right,
+      with values from later files taking precedence over earlier ones.
     * This step recurses if included config files also contain `include` keys.
-2. Then, the config file's own values are merged on top of the included config.
+2. Then, the config file's own values are merged on top of the included config,
+   taking highest precedence.
 
 ## target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
