@@ -127,8 +127,8 @@ fn log_msg_timing_info() {
         str![[r#"
 [
   {
-    "reason": "build-started",
-    "...": "{...}"
+    "...": "{...}",
+    "reason": "build-started"
   },
   {
     "duration": "{...}",
@@ -137,7 +137,10 @@ fn log_msg_timing_info() {
     "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
-    "target": "{...}",
+    "target": {
+      "kind": "lib",
+      "name": "bar"
+    },
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -147,7 +150,10 @@ fn log_msg_timing_info() {
     "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
-    "target": "{...}",
+    "target": {
+      "kind": "lib",
+      "name": "foo"
+    },
     "timestamp": "[..]T[..]Z"
   }
 ]
@@ -241,7 +247,10 @@ fn log_rebuild_reason_file_changed() {
     "package_id": "path+[ROOTURL]/foo#0.0.0",
     "reason": "rebuild",
     "run_id": "[..]T[..]Z-[..]",
-    "target": "{...}",
+    "target": {
+      "kind": "lib",
+      "name": "foo"
+    },
     "timestamp": "[..]T[..]Z"
   },
   {

@@ -277,7 +277,7 @@ impl<'gctx> Timings<'gctx> {
         if let Some(logger) = build_runner.bcx.logger {
             logger.log(LogMessage::UnitFinished {
                 package_id: unit_time.unit.pkg.package_id().to_spec(),
-                target: unit_time.unit.target.clone(),
+                target: (&unit_time.unit.target).into(),
                 mode: unit_time.unit.mode,
                 duration: unit_time.duration,
                 rmeta_time: unit_time.rmeta_time,

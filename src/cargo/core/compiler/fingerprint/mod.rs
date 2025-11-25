@@ -454,7 +454,7 @@ pub fn prepare_target(
         if !dirty_reason.is_fresh_build() {
             logger.log(LogMessage::Rebuild {
                 package_id: unit.pkg.package_id().to_spec(),
-                target: unit.target.clone(),
+                target: (&unit.target).into(),
                 mode: unit.mode,
                 cause: dirty_reason.clone(),
             });

@@ -7,7 +7,6 @@ use cargo_util_schemas::core::PackageIdSpec;
 use jiff::Timestamp;
 use serde::Serialize;
 
-use crate::core::Target;
 use crate::core::compiler::CompilationSection;
 use crate::core::compiler::CompileMode;
 use crate::core::compiler::fingerprint::DirtyReason;
@@ -47,6 +46,29 @@ pub enum LogMessage {
         mode: CompileMode,
         cause: DirtyReason,
     },
+}
+
+#[derive(Serialize)]
+pub struct Target {
+    name: String,
+    kind: &'static str,
+}
+
+impl From<&crate::core::Target> for Target {
+    fn from(target: &crate::core::Target) -> Self {
+        use crate::core::TargetKind;
+        Self {
+            name: target.name().to_string(),
+            kind: match target.kind() {
+                TargetKind::Lib(..) => "lib",
+                TargetKind::Bin => "bin",
+                TargetKind::Test => "test",
+                TargetKind::Bench => "bench",
+                TargetKind::ExampleLib(..) | TargetKind::ExampleBin => "example",
+                TargetKind::CustomBuild => "build-script",
+            },
+        }
+    }
 }
 
 impl LogMessage {
