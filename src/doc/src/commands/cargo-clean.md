@@ -22,11 +22,18 @@ When no packages are selected, all packages and all dependencies in the
 workspace are cleaned.
 
 <dl>
+
 <dt class="option-term" id="option-cargo-clean--p"><a class="option-anchor" href="#option-cargo-clean--p"><code>-p</code> <em>spec</em>…</a></dt>
 <dt class="option-term" id="option-cargo-clean---package"><a class="option-anchor" href="#option-cargo-clean---package"><code>--package</code> <em>spec</em>…</a></dt>
 <dd class="option-desc"><p>Clean only the specified packages. This flag may be specified
 multiple times. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the SPEC format.</p>
 </dd>
+
+
+<dt class="option-term" id="option-cargo-clean---workspace"><a class="option-anchor" href="#option-cargo-clean---workspace"><code>--workspace</code></a></dt>
+<dd class="option-desc"><p>Clean artifacts of the workspace members.</p>
+</dd>
+
 
 </dl>
 

@@ -199,6 +199,145 @@ fn clean_p_only_cleans_specified_package() {
     );
 }
 
+#[cargo_test]
+fn clean_workspace_does_not_touch_non_workspace_packages() {
+    Package::new("external_dependency", "0.1.0").publish();
+    let foo_manifest = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2015"
+
+        [dependencies]
+        external_dependency = "0.1.0"
+        "#;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                    "foo-base",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", foo_manifest)
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
+        .file("foo-base/src/lib.rs", "//! foo-base")
+        .build();
+
+    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+
+    p.cargo("check -p foo -p foo_core -p foo-base").run();
+
+    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Artifacts present for all after building
+    assert!(fingerprint_names.iter().any(|e| e == "foo"));
+    assert!(fingerprint_names.iter().any(|e| e == "foo_core"));
+    assert!(fingerprint_names.iter().any(|e| e == "foo-base"));
+
+    let num_external_dependency_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "external_dependency")
+        .count();
+    assert_ne!(num_external_dependency_artifacts, 0);
+
+    p.cargo("clean --workspace").run();
+
+    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Cleaning workspace members leaves artifacts for the external dependency
+    assert!(
+        !fingerprint_names
+            .iter()
+            .any(|e| e == "foo" || e == "foo_core" || e == "foo-base")
+    );
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "external_dependency")
+            .count(),
+        num_external_dependency_artifacts,
+    );
+}
+
+#[cargo_test]
+fn clean_workspace_with_extra_package_specifiers() {
+    Package::new("external_dependency_1", "0.1.0").publish();
+    Package::new("external_dependency_2", "0.1.0").publish();
+    let foo_manifest = r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2015"
+
+        [dependencies]
+        external_dependency_1 = "0.1.0"
+        external_dependency_2 = "0.1.0"
+        "#;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = [
+                    "foo",
+                    "foo_core",
+                    "foo-base",
+                ]
+            "#,
+        )
+        .file("foo/Cargo.toml", foo_manifest)
+        .file("foo/src/lib.rs", "//! foo")
+        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
+        .file("foo_core/src/lib.rs", "//! foo_core")
+        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
+        .file("foo-base/src/lib.rs", "//! foo-base")
+        .build();
+
+    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+
+    p.cargo("check -p foo -p foo_core -p foo-base").run();
+
+    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Artifacts present for all after building
+    assert!(fingerprint_names.iter().any(|e| e == "foo"));
+    assert!(fingerprint_names.iter().any(|e| e == "foo_core"));
+    assert!(fingerprint_names.iter().any(|e| e == "foo-base"));
+
+    let num_external_dependency_2_artifacts = fingerprint_names
+        .iter()
+        .filter(|&e| e == "external_dependency_2")
+        .count();
+    assert_ne!(num_external_dependency_2_artifacts, 0);
+
+    p.cargo("clean --workspace -p external_dependency_1").run();
+
+    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+
+    // Cleaning workspace members and external_dependency_1 leaves artifacts for the external_dependency_2
+    assert!(
+        !fingerprint_names.iter().any(|e| e == "foo"
+            || e == "foo_core"
+            || e == "foo-base"
+            || e == "external_dependency_1")
+    );
+    assert_eq!(
+        fingerprint_names
+            .iter()
+            .filter(|&e| e == "external_dependency_2")
+            .count(),
+        num_external_dependency_2_artifacts,
+    );
+}
+
 fn get_fingerprints_without_hashes(fingerprint_path: &Path) -> Vec<String> {
     std::fs::read_dir(fingerprint_path)
         .expect("Build dir should be readable")

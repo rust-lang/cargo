@@ -9,6 +9,7 @@ use crate::util::interning::InternedString;
 use crate::util::{GlobalContext, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
+use indexmap::IndexSet;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,7 @@ use std::rc::Rc;
 pub struct CleanOptions<'gctx> {
     pub gctx: &'gctx GlobalContext,
     /// A list of packages to clean. If empty, everything is cleaned.
-    pub spec: Vec<String>,
+    pub spec: IndexSet<String>,
     /// The target arch triple to clean, or None for the host arch
     pub targets: Vec<String>,
     /// Whether to clean the release directory
@@ -108,7 +109,7 @@ fn clean_specs(
     ws: &Workspace<'_>,
     profiles: &Profiles,
     targets: &[String],
-    spec: &[String],
+    spec: &IndexSet<String>,
     dry_run: bool,
 ) -> CargoResult<()> {
     // Clean specific packages.
