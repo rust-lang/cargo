@@ -267,7 +267,12 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Mark that the `.rmeta` file as generated.
-    pub fn unit_rmeta_finished(&mut self, id: JobId, unblocked: Vec<&Unit>) {
+    pub fn unit_rmeta_finished(
+        &mut self,
+        build_runner: &BuildRunner<'_, '_>,
+        id: JobId,
+        unblocked: Vec<&Unit>,
+    ) {
         if !self.enabled {
             return;
         }
@@ -277,12 +282,21 @@ impl<'gctx> Timings<'gctx> {
         let Some(unit_time) = self.active.get_mut(&id) else {
             return;
         };
-        let t = self.start.elapsed().as_secs_f64();
-        unit_time.rmeta_time = Some(t - unit_time.start);
+        let elapsed = self.start.elapsed().as_secs_f64();
+        unit_time.rmeta_time = Some(elapsed - unit_time.start);
         assert!(unit_time.unblocked_rmeta_units.is_empty());
         unit_time
             .unblocked_rmeta_units
             .extend(unblocked.iter().cloned().cloned());
+
+        if let Some(logger) = build_runner.bcx.logger {
+            let unblocked = unblocked.iter().map(|u| self.unit_to_index[u]).collect();
+            logger.log(LogMessage::UnitRmetaFinished {
+                index: self.unit_to_index[&unit_time.unit],
+                elapsed,
+                unblocked,
+            });
+        }
     }
 
     /// Mark that a unit has finished running.
@@ -299,8 +313,8 @@ impl<'gctx> Timings<'gctx> {
         let Some(mut unit_time) = self.active.remove(&id) else {
             return;
         };
-        let t = self.start.elapsed().as_secs_f64();
-        unit_time.duration = t - unit_time.start;
+        let elapsed = self.start.elapsed().as_secs_f64();
+        unit_time.duration = elapsed - unit_time.start;
         assert!(unit_time.unblocked_units.is_empty());
         unit_time
             .unblocked_units
@@ -321,9 +335,7 @@ impl<'gctx> Timings<'gctx> {
             let unblocked = unblocked.iter().map(|u| self.unit_to_index[u]).collect();
             logger.log(LogMessage::UnitFinished {
                 index: self.unit_to_index[&unit_time.unit],
-                duration: unit_time.duration,
-                rmeta_time: unit_time.rmeta_time,
-                sections: unit_time.sections.clone().into_iter().collect(),
+                elapsed,
                 unblocked,
             });
         }
@@ -331,22 +343,44 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Handle the start/end of a compilation section.
-    pub fn unit_section_timing(&mut self, id: JobId, section_timing: &SectionTiming) {
+    pub fn unit_section_timing(
+        &mut self,
+        build_runner: &BuildRunner<'_, '_>,
+        id: JobId,
+        section_timing: &SectionTiming,
+    ) {
         if !self.enabled {
             return;
         }
         let Some(unit_time) = self.active.get_mut(&id) else {
             return;
         };
-        let now = self.start.elapsed().as_secs_f64();
+        let elapsed = self.start.elapsed().as_secs_f64();
 
         match section_timing.event {
             SectionTimingEvent::Start => {
-                unit_time.start_section(&section_timing.name, now);
+                unit_time.start_section(&section_timing.name, elapsed);
             }
             SectionTimingEvent::End => {
-                unit_time.end_section(&section_timing.name, now);
+                unit_time.end_section(&section_timing.name, elapsed);
             }
+        }
+
+        if let Some(logger) = build_runner.bcx.logger {
+            let index = self.unit_to_index[&unit_time.unit];
+            let section = section_timing.name.clone();
+            logger.log(match section_timing.event {
+                SectionTimingEvent::Start => LogMessage::UnitSectionStarted {
+                    index,
+                    elapsed,
+                    section,
+                },
+                SectionTimingEvent::End => LogMessage::UnitSectionFinished {
+                    index,
+                    elapsed,
+                    section,
+                },
+            })
         }
     }
 

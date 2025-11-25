@@ -7,7 +7,6 @@ use cargo_util_schemas::core::PackageIdSpec;
 use jiff::Timestamp;
 use serde::Serialize;
 
-use crate::core::compiler::CompilationSection;
 use crate::core::compiler::CompileMode;
 use crate::core::compiler::fingerprint::DirtyReason;
 
@@ -36,14 +35,29 @@ pub enum LogMessage {
         index: u64,
         elapsed: f64,
     },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
+    UnitRmetaFinished {
+        index: u64,
+        elapsed: f64,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        unblocked: Vec<u64>,
+    },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit starts.
+    UnitSectionStarted {
+        index: u64,
+        elapsed: f64,
+        section: String,
+    },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
+    UnitSectionFinished {
+        index: u64,
+        elapsed: f64,
+        section: String,
+    },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
         index: u64,
-        duration: f64,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        rmeta_time: Option<f64>,
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        sections: Vec<(String, CompilationSection)>,
+        elapsed: f64,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         unblocked: Vec<u64>,
     },

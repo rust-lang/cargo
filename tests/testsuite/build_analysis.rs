@@ -144,10 +144,16 @@ fn log_msg_timing_info() {
     "timestamp": "[..]T[..]Z"
   },
   {
-    "duration": "{...}",
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-rmeta-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
     "index": 0,
     "reason": "unit-finished",
-    "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z",
     "unblocked": [
@@ -168,10 +174,177 @@ fn log_msg_timing_info() {
     "timestamp": "[..]T[..]Z"
   },
   {
-    "duration": "{...}",
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-rmeta-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
     "index": 1,
     "reason": "unit-finished",
-    "rmeta_time": "{...}",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test(nightly, reason = "rustc --json=timings is unstable")]
+fn log_msg_timing_info_section_timings() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis -Zsection-timings")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
+        .run();
+
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "build-started"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "unit-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "bar"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-section-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "codegen",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-rmeta-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-section-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "codegen",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-section-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "link",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-section-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "link",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 0,
+    "reason": "unit-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z",
+    "unblocked": [
+      1
+    ]
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "unit-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "bin",
+      "name": "foo"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-section-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "codegen",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-rmeta-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-section-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "codegen",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-section-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "link",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-section-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "section": "link",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "index": 1,
+    "reason": "unit-finished",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z"
   }
@@ -212,6 +385,10 @@ fn log_rebuild_reason_fresh_build() {
   {
     "...": "{...}",
     "reason": "unit-started"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-rmeta-finished"
   },
   {
     "...": "{...}",
@@ -279,6 +456,10 @@ fn log_rebuild_reason_file_changed() {
   {
     "...": "{...}",
     "reason": "unit-started"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-rmeta-finished"
   },
   {
     "...": "{...}",

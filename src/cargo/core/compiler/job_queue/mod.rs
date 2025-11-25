@@ -713,7 +713,7 @@ impl<'gctx> DrainState<'gctx> {
                 self.tokens.push(token);
             }
             Message::SectionTiming(id, section) => {
-                self.timings.unit_section_timing(id, &section);
+                self.timings.unit_section_timing(build_runner, id, &section);
             }
         }
 
@@ -1126,7 +1126,9 @@ impl<'gctx> DrainState<'gctx> {
         let unblocked = self.queue.finish(unit, &artifact);
         match artifact {
             Artifact::All => self.timings.unit_finished(build_runner, id, unblocked),
-            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unblocked),
+            Artifact::Metadata => self
+                .timings
+                .unit_rmeta_finished(build_runner, id, unblocked),
         }
         Ok(())
     }
