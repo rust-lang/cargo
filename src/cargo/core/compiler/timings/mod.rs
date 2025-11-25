@@ -189,7 +189,7 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Mark that a unit has started running.
-    pub fn unit_start(&mut self, id: JobId, unit: Unit) {
+    pub fn unit_start(&mut self, build_runner: &BuildRunner<'_, '_>, id: JobId, unit: Unit) {
         if !self.enabled {
             return;
         }
@@ -210,16 +210,25 @@ impl<'gctx> Timings<'gctx> {
             CompileMode::Docscrape => target.push_str(" (doc scrape)"),
             CompileMode::RunCustomBuild => target.push_str(" (run)"),
         }
+        let start = self.start.elapsed().as_secs_f64();
         let unit_time = UnitTime {
             unit,
             target,
-            start: self.start.elapsed().as_secs_f64(),
+            start,
             duration: 0.0,
             rmeta_time: None,
             unblocked_units: Vec::new(),
             unblocked_rmeta_units: Vec::new(),
             sections: Default::default(),
         };
+        if let Some(logger) = build_runner.bcx.logger {
+            logger.log(LogMessage::UnitStarted {
+                package_id: unit_time.unit.pkg.package_id().to_spec(),
+                target: (&unit_time.unit.target).into(),
+                mode: unit_time.unit.mode,
+                elapsed: start,
+            });
+        }
         assert!(self.active.insert(id, unit_time).is_none());
     }
 

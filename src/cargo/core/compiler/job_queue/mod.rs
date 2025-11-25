@@ -606,7 +606,8 @@ impl<'gctx> DrainState<'gctx> {
                     .gctx
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
-                self.timings.unit_start(id, self.active[&id].clone());
+                self.timings
+                    .unit_start(build_runner, id, self.active[&id].clone());
             }
             Message::Stdout(out) => {
                 writeln!(build_runner.bcx.gctx.shell().out(), "{}", out)?;

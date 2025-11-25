@@ -131,6 +131,18 @@ fn log_msg_timing_info() {
     "reason": "build-started"
   },
   {
+    "elapsed": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "unit-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "bar"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
     "duration": "{...}",
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
@@ -140,6 +152,18 @@ fn log_msg_timing_info() {
     "target": {
       "kind": "lib",
       "name": "bar"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "unit-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "foo"
     },
     "timestamp": "[..]T[..]Z"
   },
@@ -189,6 +213,10 @@ fn log_rebuild_reason_fresh_build() {
   {
     "...": "{...}",
     "reason": "build-started"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-started"
   },
   {
     "...": "{...}",
@@ -252,6 +280,10 @@ fn log_rebuild_reason_file_changed() {
       "name": "foo"
     },
     "timestamp": "[..]T[..]Z"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-started"
   },
   {
     "...": "{...}",

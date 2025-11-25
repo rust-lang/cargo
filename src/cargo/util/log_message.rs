@@ -28,6 +28,13 @@ pub enum LogMessage {
         target_dir: PathBuf,
         workspace_root: PathBuf,
     },
+    /// Emitted when a compilation unit starts.
+    UnitStarted {
+        package_id: PackageIdSpec,
+        target: Target,
+        mode: CompileMode,
+        elapsed: f64,
+    },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
         package_id: PackageIdSpec,
