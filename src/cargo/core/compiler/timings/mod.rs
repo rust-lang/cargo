@@ -275,7 +275,7 @@ impl<'gctx> Timings<'gctx> {
             crate::drop_println!(self.gctx, "{}", msg);
         }
         if let Some(logger) = build_runner.bcx.logger {
-            logger.log(LogMessage::TimingInfo {
+            logger.log(LogMessage::UnitFinished {
                 package_id: unit_time.unit.pkg.package_id().to_spec(),
                 target: unit_time.unit.target.clone(),
                 mode: unit_time.unit.mode,

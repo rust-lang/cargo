@@ -134,7 +134,7 @@ fn log_msg_timing_info() {
     "duration": "{...}",
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
-    "reason": "timing-info",
+    "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
     "target": "{...}",
@@ -144,7 +144,7 @@ fn log_msg_timing_info() {
     "duration": "{...}",
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
-    "reason": "timing-info",
+    "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
     "target": "{...}",
@@ -186,7 +186,7 @@ fn log_rebuild_reason_fresh_build() {
   },
   {
     "...": "{...}",
-    "reason": "timing-info"
+    "reason": "unit-finished"
   }
 ]
 "#]]
@@ -246,7 +246,7 @@ fn log_rebuild_reason_file_changed() {
   },
   {
     "...": "{...}",
-    "reason": "timing-info"
+    "reason": "unit-finished"
   }
 ]
 "#]]

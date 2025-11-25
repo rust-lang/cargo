@@ -30,7 +30,7 @@ pub enum LogMessage {
         workspace_root: PathBuf,
     },
     /// Emitted when a compilation unit finishes.
-    TimingInfo {
+    UnitFinished {
         package_id: PackageIdSpec,
         target: Target,
         mode: CompileMode,
