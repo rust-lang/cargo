@@ -44,6 +44,8 @@ pub enum LogMessage {
         rmeta_time: Option<f64>,
         #[serde(skip_serializing_if = "Vec::is_empty")]
         sections: Vec<(String, CompilationSection)>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        unblocked: Vec<u64>,
     },
     /// Emitted when a unit needs to be rebuilt.
     Rebuild {

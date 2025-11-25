@@ -149,7 +149,10 @@ fn log_msg_timing_info() {
     "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
-    "timestamp": "[..]T[..]Z"
+    "timestamp": "[..]T[..]Z",
+    "unblocked": [
+      1
+    ]
   },
   {
     "elapsed": "{...}",

@@ -318,11 +318,13 @@ impl<'gctx> Timings<'gctx> {
             crate::drop_println!(self.gctx, "{}", msg);
         }
         if let Some(logger) = build_runner.bcx.logger {
+            let unblocked = unblocked.iter().map(|u| self.unit_to_index[u]).collect();
             logger.log(LogMessage::UnitFinished {
                 index: self.unit_to_index[&unit_time.unit],
                 duration: unit_time.duration,
                 rmeta_time: unit_time.rmeta_time,
                 sections: unit_time.sections.clone().into_iter().collect(),
+                unblocked,
             });
         }
         self.unit_times.push(unit_time);
