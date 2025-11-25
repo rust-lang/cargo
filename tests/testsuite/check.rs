@@ -1705,16 +1705,17 @@ fn check_build_should_not_output_files_to_artifact_dir() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);
 }
 
 #[cargo_test]
-fn check_build_should_not_lock_artifact_dir() {
+fn check_build_should_lock_artifact_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
     p.cargo("check").enable_mac_dsym().run();
-    assert!(!p.root().join("target/debug/.cargo-lock").exists());
+    assert!(p.root().join("target/debug/.cargo-lock").exists());
 }
