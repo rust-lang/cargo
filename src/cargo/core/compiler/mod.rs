@@ -41,6 +41,7 @@ pub mod future_incompat;
 pub(crate) mod job_queue;
 pub(crate) mod layout;
 mod links;
+pub mod locking;
 mod lto;
 mod output_depinfo;
 mod output_sbom;
@@ -90,6 +91,7 @@ use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
+use crate::core::compiler::locking::{CompilationLock, LockingMode, SharedLockType};
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
@@ -335,7 +337,33 @@ fn rustc(
         output_options.show_diagnostics = false;
     }
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
+
+    let mut lock = if build_runner.bcx.gctx.cli_unstable().fine_grain_locking
+        && matches!(build_runner.locking_mode, LockingMode::Fine)
+    {
+        Some(CompilationLock::new(build_runner, unit))
+    } else {
+        None
+    };
+
+    // For libraries, we only need rmeta so we only need a partial shared lock, but for things like
+    // proc-macros we need the rlib so we need a full shared lock to we know the compilation is
+    // completely done.
+    let dependency_locking_mode = match unit.requires_upstream_objects() {
+        true => SharedLockType::Full,
+        false => SharedLockType::Partial,
+    };
+
     return Ok(Work::new(move |state| {
+        if let Some(lock) = &mut lock {
+            lock.lock(&dependency_locking_mode)
+                .expect("failed to take lock");
+
+            // TODO: We should probably revalidate the fingerprint here as another Cargo instance could
+            // have already compiled the crate before we recv'd the lock.
+            // For large crates re-compiling here would be quiet costly.
+        }
+
         // Artifacts are in a different location than typical units,
         // hence we must assure the crate- and target-dependent
         // directory is present.
@@ -415,6 +443,7 @@ fn rustc(
                         &manifest,
                         &target,
                         &mut output_options,
+                        lock.as_mut(),
                     )
                 },
             )
@@ -968,7 +997,32 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
         output_options.show_diagnostics = false;
     }
 
+    let mut lock = if build_runner.bcx.gctx.cli_unstable().fine_grain_locking
+        && matches!(build_runner.locking_mode, LockingMode::Fine)
+    {
+        Some(CompilationLock::new(build_runner, unit))
+    } else {
+        None
+    };
+
+    // For libraries, we only need rmeta so we only need a partial shared lock, but for things like
+    // proc-macros we need the rlib so we need a full shared lock to we know the compilation is
+    // completely done.
+    let dependency_locking_mode = match unit.requires_upstream_objects() {
+        true => SharedLockType::Full,
+        false => SharedLockType::Partial,
+    };
+
     Ok(Work::new(move |state| {
+        if let Some(lock) = &mut lock {
+            lock.lock(&dependency_locking_mode)
+                .expect("failed to take lock");
+
+            // TODO: We should probably revalidate the fingerprint here as another Cargo instance could
+            // have already compiled the crate before we recv'd the lock.
+            // For large crates re-compiling here would be quiet costly.
+        }
+
         add_custom_flags(
             &mut rustdoc,
             &build_script_outputs.lock().unwrap(),
@@ -1009,6 +1063,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
                         &manifest,
                         &target,
                         &mut output_options,
+                        lock.as_mut(),
                     )
                 },
                 false,
@@ -2004,8 +2059,9 @@ fn on_stderr_line(
     manifest: &ManifestErrorContext,
     target: &Target,
     options: &mut OutputOptions,
+    lock: Option<&mut CompilationLock>,
 ) -> CargoResult<()> {
-    if on_stderr_line_inner(state, line, package_id, manifest, target, options)? {
+    if on_stderr_line_inner(state, line, package_id, manifest, target, options, lock)? {
         // Check if caching is enabled.
         if let Some((path, cell)) = &mut options.cache_cell {
             // Cache the output, which will be replayed later when Fresh.
@@ -2026,6 +2082,7 @@ fn on_stderr_line_inner(
     manifest: &ManifestErrorContext,
     target: &Target,
     options: &mut OutputOptions,
+    lock: Option<&mut CompilationLock>,
 ) -> CargoResult<bool> {
     // We primarily want to use this function to process JSON messages from
     // rustc. The compiler should always print one JSON message per line, and
@@ -2264,6 +2321,9 @@ fn on_stderr_line_inner(
         if artifact.artifact.ends_with(".rmeta") {
             debug!("looks like metadata finished early!");
             state.rmeta_produced();
+            if let Some(lock) = lock {
+                lock.rmeta_produced()?;
+            }
         }
         return Ok(false);
     }
@@ -2478,7 +2538,15 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &manifest, &target, &mut options)?;
+            on_stderr_line(
+                state,
+                trimmed,
+                package_id,
+                &manifest,
+                &target,
+                &mut options,
+                None,
+            )?;
             line.clear();
         }
         Ok(())
