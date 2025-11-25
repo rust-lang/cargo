@@ -303,6 +303,50 @@ fn registry_index_not_allowed_in_user_manifests() {
 }
 
 #[cargo_test]
+fn registry_index_allowed_in_registry_packages() {
+    registry::alt_init();
+
+    Package::new("base", "0.1.0").alternative(true).publish();
+
+    Package::new("intermediate", "0.1.0")
+        .registry_dep("base", "0.1.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                intermediate = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] `[ROOT]/alternative-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] intermediate v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] base v0.1.0 (registry `[ROOT]/alternative-registry`)
+[CHECKING] base v0.1.0 (registry `[ROOT]/alternative-registry`)
+[CHECKING] intermediate v0.1.0
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cannot_publish_to_crates_io_with_registry_dependency() {
     let crates_io = registry::init();
     let _alternative = RegistryBuilder::new().alternative().build();
