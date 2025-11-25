@@ -698,11 +698,12 @@ fields are supported:
 
 The merge behavior of `include` is different from other config values:
 
-1. Config values are first loaded from the `include` path.
-    * If `include` is an array, config values are loaded and merged from left
-      to right for each path.
+1. Config values are first loaded from the `include` paths.
+    * Included files are loaded left to right,
+      with values from later files taking precedence over earlier ones.
     * This step recurses if included config files also contain `include` keys.
-2. Then, the config file's own values are merged on top of the included config.
+2. Then, the config file's own values are merged on top of the included config,
+   taking highest precedence.
 
 ## target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
