@@ -33,13 +33,12 @@ pub enum LogMessage {
         package_id: PackageIdSpec,
         target: Target,
         mode: CompileMode,
+        index: u64,
         elapsed: f64,
     },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
-        package_id: PackageIdSpec,
-        target: Target,
-        mode: CompileMode,
+        index: u64,
         duration: f64,
         #[serde(skip_serializing_if = "Option::is_none")]
         rmeta_time: Option<f64>,

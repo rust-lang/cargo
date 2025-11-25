@@ -132,6 +132,7 @@ fn log_msg_timing_info() {
   },
   {
     "elapsed": "{...}",
+    "index": 0,
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
     "reason": "unit-started",
@@ -144,19 +145,15 @@ fn log_msg_timing_info() {
   },
   {
     "duration": "{...}",
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "index": 0,
     "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "bar"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {
     "elapsed": "{...}",
+    "index": 1,
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
     "reason": "unit-started",
@@ -169,15 +166,10 @@ fn log_msg_timing_info() {
   },
   {
     "duration": "{...}",
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "index": 1,
     "reason": "unit-finished",
     "rmeta_time": "{...}",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "foo"
-    },
     "timestamp": "[..]T[..]Z"
   }
 ]
