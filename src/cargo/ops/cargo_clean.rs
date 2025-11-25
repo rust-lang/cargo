@@ -203,7 +203,7 @@ fn clean_specs(
         if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
             for (_compile_kind, layout) in &layouts_with_host {
                 let dir = layout.build_dir().build_unit(&pkg.name());
-                clean_ctx.rm_rf_glob(&dir)?;
+                clean_ctx.rm_rf(&dir)?;
             }
 
             for target in pkg.targets() {

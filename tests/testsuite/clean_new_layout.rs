@@ -143,7 +143,7 @@ fn clean_multiple_packages_in_glob_char_path() {
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 2); // FIXME
+    assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
 }
 
 fn get_build_artifacts(path: &PathBuf, file_glob: &str) -> Vec<Result<PathBuf, GlobError>> {
