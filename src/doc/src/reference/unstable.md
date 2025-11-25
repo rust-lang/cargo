@@ -660,14 +660,24 @@ rustflags = ["-W", "unsafe-code"]
 
 ### Documentation updates
 
-#### `include`
+> put this after `## Command-line overrides` before `## Config-relative paths`
+> to emphasize its special nature than other config keys.
+
+#### Including extra configuration files
+
+Configuration can include other configuration files using the top-level `include` key.
+This allows sharing configuration across multiple projects
+or splitting complex configurations into multiple files.
+
+##### `include`
 
 * Type: array of strings or tables
 * Default: none
 * Environment: not supported
 
-Loads additional config files. Paths are relative to the config file that
-includes them. Only paths ending with `.toml` are accepted.
+Loads additional configuration files.
+Paths are relative to the configuration file that includes them.
+Only paths ending with `.toml` are accepted.
 
 Supports the following formats:
 
