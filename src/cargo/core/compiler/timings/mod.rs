@@ -134,10 +134,32 @@ struct UnitData {
 
 impl<'gctx> Timings<'gctx> {
     pub fn new(bcx: &BuildContext<'_, 'gctx>, root_units: &[Unit]) -> Timings<'gctx> {
+        let start = bcx.gctx.creation_time();
         let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
         let report_html = has_report(TimingOutput::Html);
         let report_json = has_report(TimingOutput::Json);
         let enabled = report_html | report_json | bcx.logger.is_some();
+
+        if !enabled {
+            return Timings {
+                gctx: bcx.gctx,
+                enabled,
+                report_html,
+                report_json,
+                start,
+                start_str: String::new(),
+                root_targets: Vec::new(),
+                profile: String::new(),
+                total_fresh: 0,
+                total_dirty: 0,
+                unit_times: Vec::new(),
+                active: HashMap::new(),
+                concurrency: Vec::new(),
+                last_cpu_state: None,
+                last_cpu_recording: Instant::now(),
+                cpu_usage: Vec::new(),
+            };
+        }
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -156,16 +178,12 @@ impl<'gctx> Timings<'gctx> {
             .collect();
         let start_str = jiff::Timestamp::now().to_string();
         let profile = bcx.build_config.requested_profile.to_string();
-        let last_cpu_state = if enabled {
-            match State::current() {
-                Ok(state) => Some(state),
-                Err(e) => {
-                    tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
-                    None
-                }
+        let last_cpu_state = match State::current() {
+            Ok(state) => Some(state),
+            Err(e) => {
+                tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                None
             }
-        } else {
-            None
         };
 
         Timings {
@@ -173,7 +191,7 @@ impl<'gctx> Timings<'gctx> {
             enabled,
             report_html,
             report_json,
-            start: bcx.gctx.creation_time(),
+            start,
             start_str,
             root_targets,
             profile,
