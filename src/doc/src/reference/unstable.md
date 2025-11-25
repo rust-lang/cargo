@@ -662,8 +662,9 @@ rustflags = ["-W", "unsafe-code"]
 
 #### `include`
 
-* Type: array of strings, or array of tables
+* Type: array of strings or tables
 * Default: none
+* Environment: not supported
 
 Loads additional config files. Paths are relative to the config file that
 includes them. Only paths ending with `.toml` are accepted.
@@ -672,25 +673,24 @@ Supports the following formats:
 
 ```toml
 # array of paths
-include = ["frodo.toml", "samwise.toml"]
-
-# inline tables
 include = [
-    "simple.toml",
-    { path = "optional.toml", optional = true }
+    "frodo.toml",
+    "samwise.toml",
 ]
 
-# array of tables
-[[include]]
-path = "required.toml"
-
-[[include]]
-path = "optional.toml"
-optional = true
+# inline tables for more control
+include = [
+    { path = "required.toml" },
+    { path = "optional.toml", optional = true },
+]
 ```
 
-When using table syntax (inline tables or array of tables), the following
-fields are supported:
+> **Note:** For better readability and to avoid confusion, it is recommended to:
+> - Place `include` at the top of the configuration file
+> - Put one include per line for clearer version control diffs
+> - Use inline table syntax when optional includes are needed
+
+When using table syntax, the following fields are supported:
 
 * `path` (string, required): Path to the config file to include.
 * `optional` (boolean, default: false): If `true`, missing files are silently
