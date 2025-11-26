@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::Write as _;
+use std::path::Path;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::IndexSummary;
+use crate::core::{Dependency, PackageId, Registry, SourceId, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -12,6 +13,45 @@ use anyhow::Error;
 
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
+
+fn debug_source_path() {
+    let path = Path::new("/home/ibilalkayy/Documents/rust/testing/fourth");
+    let gctx = GlobalContext::default().unwrap();
+    let sid = SourceId::for_path(path).unwrap();
+
+    let mut ps = PathSource::new(path, sid, &gctx);
+
+    match ps.root_package() {
+        Ok(pkg) => println!("Found package: {}", pkg.name()),
+        Err(e) => eprintln!("Err: {e:?}"),
+    }
+
+    let loading = ps.load().expect("Err: failed to load");
+    println!("Loading data: {:?}", loading);
+
+    let read_package = ps.read_package().expect("Err: failed to read the package");
+    println!("Read package: {:?}", read_package);
+}
+
+fn debug_recursive_source() {
+    let path = Path::new("/home/ibilalkayy/Documents/rust/testing/fourth");
+    let gctx = GlobalContext::default().unwrap();
+    let sid = SourceId::for_path(path).unwrap();
+
+    let mut rps = RecursivePathSource::new(path, sid, &gctx);
+
+    rps.load().expect("Err: failed to load");
+    match rps.read_packages() {
+        Ok(pkgs) => {
+            for p in pkgs {
+                println!("found pkg: {}", p.name());
+                let files = rps.list_files(&p);
+                println!("files: {:?}", files.unwrap());
+            }
+        }
+        Err(e) => eprintln!("err: {e:?}"),
+    };
+}
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -385,6 +425,8 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
+        debug_source_path();
+        debug_recursive_source();
         let _ = writeln!(
             &mut msg,
             "no matching package named `{}` found",
