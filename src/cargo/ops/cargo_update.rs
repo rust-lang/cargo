@@ -17,7 +17,7 @@ use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -238,6 +238,8 @@ pub fn upgrade_manifests(
     let mut registry = ws.package_registry()?;
     registry.lock_patches();
 
+    let mut remaining_specs: IndexSet<_> = to_update.iter().cloned().collect();
+
     for member in ws.members_mut().sorted() {
         debug!("upgrading manifest for `{}`", member.name());
 
@@ -252,9 +254,56 @@ pub fn upgrade_manifests(
                     &mut registry,
                     &mut upgrades,
                     &mut upgrade_messages,
+                    &mut remaining_specs,
                     d,
                 )
             })?;
+    }
+
+    if !remaining_specs.is_empty() {
+        let previous_resolve = ops::load_pkg_lockfile(ws)?;
+        let plural = if remaining_specs.len() == 1 { "" } else { "s" };
+
+        let mut error_msg = format!(
+            "package ID specification{plural} did not match any direct dependencies that could be upgraded"
+        );
+
+        let mut transitive_specs = Vec::new();
+        for spec in &remaining_specs {
+            error_msg.push_str(&format!("\n  {spec}"));
+
+            // Check if spec is in the lockfile (could be transitive)
+            let in_lockfile = if let Some(ref resolve) = previous_resolve {
+                spec.query(resolve.iter()).is_ok()
+            } else {
+                false
+            };
+
+            // Check if spec matches any direct dependency in the workspace
+            let matches_direct_dep = ws.members().any(|member| {
+                member.dependencies().iter().any(|dep| {
+                    spec.name() == dep.package_name().as_str()
+                        && dep.source_id().is_registry()
+                        && spec.url().map_or(true, |url| url == dep.source_id().url())
+                        && spec
+                            .version()
+                            .map_or(true, |v| dep.version_req().matches(&v))
+                })
+            });
+
+            // Track transitive specs for notes at the end
+            if in_lockfile && !matches_direct_dep {
+                transitive_specs.push(spec);
+            }
+        }
+
+        for spec in transitive_specs {
+            error_msg.push_str(&format!(
+                "\nnote: `{spec}` exists as a transitive dependency but those are not available for upgrading through `--breaking`"
+            ));
+        }
+
+        anyhow::bail!("{error_msg}");
     }
 
     Ok(upgrades)
@@ -266,6 +315,7 @@ fn upgrade_dependency(
     registry: &mut PackageRegistry<'_>,
     upgrades: &mut UpgradeMap,
     upgrade_messages: &mut HashSet<String>,
+    remaining_specs: &mut IndexSet<PackageIdSpec>,
     dependency: Dependency,
 ) -> CargoResult<Dependency> {
     let name = dependency.package_name();
@@ -366,6 +416,10 @@ fn upgrade_dependency(
     }
 
     upgrades.insert((name.to_string(), dependency.source_id()), latest.clone());
+
+    // Remove this spec from remaining_specs since we successfully upgraded it
+    remaining_specs
+        .retain(|spec| !(spec.name() == name.as_str() && dependency.source_id().is_registry()));
 
     let req = OptVersionReq::Req(VersionReq::parse(&latest.to_string())?);
     let mut dep = dependency.clone();
