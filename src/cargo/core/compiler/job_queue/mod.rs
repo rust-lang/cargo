@@ -606,7 +606,8 @@ impl<'gctx> DrainState<'gctx> {
                     .gctx
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
-                self.timings.unit_start(id, self.active[&id].clone());
+                self.timings
+                    .unit_start(build_runner, id, self.active[&id].clone());
             }
             Message::Stdout(out) => {
                 writeln!(build_runner.bcx.gctx.shell().out(), "{}", out)?;
@@ -712,7 +713,7 @@ impl<'gctx> DrainState<'gctx> {
                 self.tokens.push(token);
             }
             Message::SectionTiming(id, section) => {
-                self.timings.unit_section_timing(id, &section);
+                self.timings.unit_section_timing(build_runner, id, &section);
             }
         }
 
@@ -1122,10 +1123,12 @@ impl<'gctx> DrainState<'gctx> {
                 unit.show_warnings(build_runner.bcx.gctx),
             )?;
         }
-        let unlocked = self.queue.finish(unit, &artifact);
+        let unblocked = self.queue.finish(unit, &artifact);
         match artifact {
-            Artifact::All => self.timings.unit_finished(build_runner, id, unlocked),
-            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+            Artifact::All => self.timings.unit_finished(build_runner, id, unblocked),
+            Artifact::Metadata => self
+                .timings
+                .unit_rmeta_finished(build_runner, id, unblocked),
         }
         Ok(())
     }

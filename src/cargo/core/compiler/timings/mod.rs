@@ -17,6 +17,7 @@ use crate::util::{CargoResult, GlobalContext};
 
 use cargo_util::paths;
 use indexmap::IndexMap;
+use itertools::Itertools as _;
 use std::collections::HashMap;
 use std::io::BufWriter;
 use std::time::{Duration, Instant};
@@ -51,6 +52,11 @@ pub struct Timings<'gctx> {
     total_fresh: u32,
     /// Total number of dirty units.
     total_dirty: u32,
+    /// A map from unit to index.
+    ///
+    /// This for saving log size.
+    /// Only the unit-started event needs to hold the entire unit information.
+    unit_to_index: HashMap<Unit, u64>,
     /// Time tracking for each individual unit.
     unit_times: Vec<UnitTime>,
     /// Units that are in the process of being built.
@@ -89,10 +95,10 @@ struct UnitTime {
     /// The time when the `.rmeta` file was generated, an offset in seconds
     /// from `start`.
     rmeta_time: Option<f64>,
-    /// Reverse deps that are freed to run after this unit finished.
-    unlocked_units: Vec<Unit>,
-    /// Same as `unlocked_units`, but unlocked by rmeta.
-    unlocked_rmeta_units: Vec<Unit>,
+    /// Reverse deps that are unblocked and ready to run after this unit finishes.
+    unblocked_units: Vec<Unit>,
+    /// Same as `unblocked_units`, but unblocked by rmeta.
+    unblocked_rmeta_units: Vec<Unit>,
     /// Individual compilation section durations, gathered from `--json=timings`.
     ///
     /// IndexMap is used to keep original insertion order, we want to be able to tell which
@@ -127,17 +133,40 @@ struct UnitData {
     start: f64,
     duration: f64,
     rmeta_time: Option<f64>,
-    unlocked_units: Vec<usize>,
-    unlocked_rmeta_units: Vec<usize>,
+    unblocked_units: Vec<usize>,
+    unblocked_rmeta_units: Vec<usize>,
     sections: Option<Vec<(String, report::SectionData)>>,
 }
 
 impl<'gctx> Timings<'gctx> {
     pub fn new(bcx: &BuildContext<'_, 'gctx>, root_units: &[Unit]) -> Timings<'gctx> {
+        let start = bcx.gctx.creation_time();
         let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
         let report_html = has_report(TimingOutput::Html);
         let report_json = has_report(TimingOutput::Json);
         let enabled = report_html | report_json | bcx.logger.is_some();
+
+        if !enabled {
+            return Timings {
+                gctx: bcx.gctx,
+                enabled,
+                report_html,
+                report_json,
+                start,
+                start_str: String::new(),
+                root_targets: Vec::new(),
+                profile: String::new(),
+                total_fresh: 0,
+                total_dirty: 0,
+                unit_to_index: HashMap::new(),
+                unit_times: Vec::new(),
+                active: HashMap::new(),
+                concurrency: Vec::new(),
+                last_cpu_state: None,
+                last_cpu_recording: Instant::now(),
+                cpu_usage: Vec::new(),
+            };
+        }
 
         let mut root_map: HashMap<PackageId, Vec<String>> = HashMap::new();
         for unit in root_units {
@@ -156,29 +185,33 @@ impl<'gctx> Timings<'gctx> {
             .collect();
         let start_str = jiff::Timestamp::now().to_string();
         let profile = bcx.build_config.requested_profile.to_string();
-        let last_cpu_state = if enabled {
-            match State::current() {
-                Ok(state) => Some(state),
-                Err(e) => {
-                    tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
-                    None
-                }
+        let last_cpu_state = match State::current() {
+            Ok(state) => Some(state),
+            Err(e) => {
+                tracing::info!("failed to get CPU state, CPU tracking disabled: {:?}", e);
+                None
             }
-        } else {
-            None
         };
+        let unit_to_index = bcx
+            .unit_graph
+            .keys()
+            .sorted()
+            .enumerate()
+            .map(|(i, unit)| (unit.clone(), i as u64))
+            .collect();
 
         Timings {
             gctx: bcx.gctx,
             enabled,
             report_html,
             report_json,
-            start: bcx.gctx.creation_time(),
+            start,
             start_str,
             root_targets,
             profile,
             total_fresh: 0,
             total_dirty: 0,
+            unit_to_index,
             unit_times: Vec::new(),
             active: HashMap::new(),
             concurrency: Vec::new(),
@@ -189,7 +222,7 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Mark that a unit has started running.
-    pub fn unit_start(&mut self, id: JobId, unit: Unit) {
+    pub fn unit_start(&mut self, build_runner: &BuildRunner<'_, '_>, id: JobId, unit: Unit) {
         if !self.enabled {
             return;
         }
@@ -210,21 +243,36 @@ impl<'gctx> Timings<'gctx> {
             CompileMode::Docscrape => target.push_str(" (doc scrape)"),
             CompileMode::RunCustomBuild => target.push_str(" (run)"),
         }
+        let start = self.start.elapsed().as_secs_f64();
         let unit_time = UnitTime {
             unit,
             target,
-            start: self.start.elapsed().as_secs_f64(),
+            start,
             duration: 0.0,
             rmeta_time: None,
-            unlocked_units: Vec::new(),
-            unlocked_rmeta_units: Vec::new(),
+            unblocked_units: Vec::new(),
+            unblocked_rmeta_units: Vec::new(),
             sections: Default::default(),
         };
+        if let Some(logger) = build_runner.bcx.logger {
+            logger.log(LogMessage::UnitStarted {
+                package_id: unit_time.unit.pkg.package_id().to_spec(),
+                target: (&unit_time.unit.target).into(),
+                mode: unit_time.unit.mode,
+                index: self.unit_to_index[&unit_time.unit],
+                elapsed: start,
+            });
+        }
         assert!(self.active.insert(id, unit_time).is_none());
     }
 
     /// Mark that the `.rmeta` file as generated.
-    pub fn unit_rmeta_finished(&mut self, id: JobId, unlocked: Vec<&Unit>) {
+    pub fn unit_rmeta_finished(
+        &mut self,
+        build_runner: &BuildRunner<'_, '_>,
+        id: JobId,
+        unblocked: Vec<&Unit>,
+    ) {
         if !self.enabled {
             return;
         }
@@ -234,12 +282,21 @@ impl<'gctx> Timings<'gctx> {
         let Some(unit_time) = self.active.get_mut(&id) else {
             return;
         };
-        let t = self.start.elapsed().as_secs_f64();
-        unit_time.rmeta_time = Some(t - unit_time.start);
-        assert!(unit_time.unlocked_rmeta_units.is_empty());
+        let elapsed = self.start.elapsed().as_secs_f64();
+        unit_time.rmeta_time = Some(elapsed - unit_time.start);
+        assert!(unit_time.unblocked_rmeta_units.is_empty());
         unit_time
-            .unlocked_rmeta_units
-            .extend(unlocked.iter().cloned().cloned());
+            .unblocked_rmeta_units
+            .extend(unblocked.iter().cloned().cloned());
+
+        if let Some(logger) = build_runner.bcx.logger {
+            let unblocked = unblocked.iter().map(|u| self.unit_to_index[u]).collect();
+            logger.log(LogMessage::UnitRmetaFinished {
+                index: self.unit_to_index[&unit_time.unit],
+                elapsed,
+                unblocked,
+            });
+        }
     }
 
     /// Mark that a unit has finished running.
@@ -247,7 +304,7 @@ impl<'gctx> Timings<'gctx> {
         &mut self,
         build_runner: &BuildRunner<'_, '_>,
         id: JobId,
-        unlocked: Vec<&Unit>,
+        unblocked: Vec<&Unit>,
     ) {
         if !self.enabled {
             return;
@@ -256,12 +313,12 @@ impl<'gctx> Timings<'gctx> {
         let Some(mut unit_time) = self.active.remove(&id) else {
             return;
         };
-        let t = self.start.elapsed().as_secs_f64();
-        unit_time.duration = t - unit_time.start;
-        assert!(unit_time.unlocked_units.is_empty());
+        let elapsed = self.start.elapsed().as_secs_f64();
+        unit_time.duration = elapsed - unit_time.start;
+        assert!(unit_time.unblocked_units.is_empty());
         unit_time
-            .unlocked_units
-            .extend(unlocked.iter().cloned().cloned());
+            .unblocked_units
+            .extend(unblocked.iter().cloned().cloned());
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id().to_spec(),
@@ -275,35 +332,55 @@ impl<'gctx> Timings<'gctx> {
             crate::drop_println!(self.gctx, "{}", msg);
         }
         if let Some(logger) = build_runner.bcx.logger {
-            logger.log(LogMessage::TimingInfo {
-                package_id: unit_time.unit.pkg.package_id().to_spec(),
-                target: unit_time.unit.target.clone(),
-                mode: unit_time.unit.mode,
-                duration: unit_time.duration,
-                rmeta_time: unit_time.rmeta_time,
-                sections: unit_time.sections.clone().into_iter().collect(),
+            let unblocked = unblocked.iter().map(|u| self.unit_to_index[u]).collect();
+            logger.log(LogMessage::UnitFinished {
+                index: self.unit_to_index[&unit_time.unit],
+                elapsed,
+                unblocked,
             });
         }
         self.unit_times.push(unit_time);
     }
 
     /// Handle the start/end of a compilation section.
-    pub fn unit_section_timing(&mut self, id: JobId, section_timing: &SectionTiming) {
+    pub fn unit_section_timing(
+        &mut self,
+        build_runner: &BuildRunner<'_, '_>,
+        id: JobId,
+        section_timing: &SectionTiming,
+    ) {
         if !self.enabled {
             return;
         }
         let Some(unit_time) = self.active.get_mut(&id) else {
             return;
         };
-        let now = self.start.elapsed().as_secs_f64();
+        let elapsed = self.start.elapsed().as_secs_f64();
 
         match section_timing.event {
             SectionTimingEvent::Start => {
-                unit_time.start_section(&section_timing.name, now);
+                unit_time.start_section(&section_timing.name, elapsed);
             }
             SectionTimingEvent::End => {
-                unit_time.end_section(&section_timing.name, now);
+                unit_time.end_section(&section_timing.name, elapsed);
             }
+        }
+
+        if let Some(logger) = build_runner.bcx.logger {
+            let index = self.unit_to_index[&unit_time.unit];
+            let section = section_timing.name.clone();
+            logger.log(match section_timing.event {
+                SectionTimingEvent::Start => LogMessage::UnitSectionStarted {
+                    index,
+                    elapsed,
+                    section,
+                },
+                SectionTimingEvent::End => LogMessage::UnitSectionFinished {
+                    index,
+                    elapsed,
+                    section,
+                },
+            })
         }
     }
 

@@ -373,13 +373,13 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
             // These filter on the unlocked units because not all unlocked
             // units are actually "built". For example, Doctest mode units
             // don't actually generate artifacts.
-            let unlocked_units: Vec<usize> = ut
-                .unlocked_units
+            let unblocked_units: Vec<usize> = ut
+                .unblocked_units
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let unlocked_rmeta_units: Vec<usize> = ut
-                .unlocked_rmeta_units
+            let unblocked_rmeta_units: Vec<usize> = ut
+                .unblocked_rmeta_units
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
@@ -419,8 +419,8 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                 start: round(ut.start),
                 duration: round(ut.duration),
                 rmeta_time: ut.rmeta_time.map(round),
-                unlocked_units,
-                unlocked_rmeta_units,
+                unblocked_units,
+                unblocked_rmeta_units,
                 sections,
             }
         })
