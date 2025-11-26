@@ -192,12 +192,8 @@ fn clean_specs(
 
     clean_ctx.progress = Box::new(CleaningPackagesBar::new(clean_ctx.gctx, packages.len()));
 
-    {
-        // Try to reduce the amount of times we iterate over the same target directory by storing away
-        // the directories we've iterated over (and cleaned for a given package).
-        let mut cleaned_packages: HashMap<_, HashSet<_>> = HashMap::default();
+    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
         for pkg in packages {
-            let pkg_dir = format!("{}-*", pkg.name());
             clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
             if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
@@ -247,6 +243,14 @@ fn clean_specs(
                 }
                 continue;
             }
+        }
+    } else {
+        // Try to reduce the amount of times we iterate over the same target directory by storing away
+        // the directories we've iterated over (and cleaned for a given package).
+        let mut cleaned_packages: HashMap<_, HashSet<_>> = HashMap::default();
+        for pkg in packages {
+            let pkg_dir = format!("{}-*", pkg.name());
+            clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
             // Clean fingerprints.
             for (_, layout) in &layouts_with_host {
