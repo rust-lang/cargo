@@ -196,6 +196,7 @@ fn clean_specs(
         for pkg in packages {
             clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
+            // Remove intermediate artifacts
             for (_compile_kind, layout) in &layouts_with_host {
                 let dir = layout.build_dir().build_unit(&pkg.name());
                 clean_ctx.rm_rf(&dir)?;
