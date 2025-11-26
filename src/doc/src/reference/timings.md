@@ -22,7 +22,7 @@ version information of the currently used compiler.
 
 The "unit" graph shows the duration of each unit over time.
 A "unit" is a single compiler invocation.
-There are lines that show which additional units are "unlocked" when a unit finishes.
+There are lines that show which additional units are "unblocked" when a unit finishes.
 That is, it shows the new units that are now allowed to run because their dependencies are all finished.
 Hover the mouse over a unit to highlight the lines.
 This can help visualize the critical path of dependencies.

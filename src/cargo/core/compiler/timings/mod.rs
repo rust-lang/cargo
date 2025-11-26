@@ -89,10 +89,10 @@ struct UnitTime {
     /// The time when the `.rmeta` file was generated, an offset in seconds
     /// from `start`.
     rmeta_time: Option<f64>,
-    /// Reverse deps that are freed to run after this unit finished.
-    unlocked_units: Vec<Unit>,
-    /// Same as `unlocked_units`, but unlocked by rmeta.
-    unlocked_rmeta_units: Vec<Unit>,
+    /// Reverse deps that are unblocked and ready to run after this unit finishes.
+    unblocked_units: Vec<Unit>,
+    /// Same as `unblocked_units`, but unblocked by rmeta.
+    unblocked_rmeta_units: Vec<Unit>,
     /// Individual compilation section durations, gathered from `--json=timings`.
     ///
     /// IndexMap is used to keep original insertion order, we want to be able to tell which
@@ -127,8 +127,8 @@ struct UnitData {
     start: f64,
     duration: f64,
     rmeta_time: Option<f64>,
-    unlocked_units: Vec<usize>,
-    unlocked_rmeta_units: Vec<usize>,
+    unblocked_units: Vec<usize>,
+    unblocked_rmeta_units: Vec<usize>,
     sections: Option<Vec<(String, report::SectionData)>>,
 }
 
@@ -216,15 +216,15 @@ impl<'gctx> Timings<'gctx> {
             start: self.start.elapsed().as_secs_f64(),
             duration: 0.0,
             rmeta_time: None,
-            unlocked_units: Vec::new(),
-            unlocked_rmeta_units: Vec::new(),
+            unblocked_units: Vec::new(),
+            unblocked_rmeta_units: Vec::new(),
             sections: Default::default(),
         };
         assert!(self.active.insert(id, unit_time).is_none());
     }
 
     /// Mark that the `.rmeta` file as generated.
-    pub fn unit_rmeta_finished(&mut self, id: JobId, unlocked: Vec<&Unit>) {
+    pub fn unit_rmeta_finished(&mut self, id: JobId, unblocked: Vec<&Unit>) {
         if !self.enabled {
             return;
         }
@@ -236,10 +236,10 @@ impl<'gctx> Timings<'gctx> {
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.rmeta_time = Some(t - unit_time.start);
-        assert!(unit_time.unlocked_rmeta_units.is_empty());
+        assert!(unit_time.unblocked_rmeta_units.is_empty());
         unit_time
-            .unlocked_rmeta_units
-            .extend(unlocked.iter().cloned().cloned());
+            .unblocked_rmeta_units
+            .extend(unblocked.iter().cloned().cloned());
     }
 
     /// Mark that a unit has finished running.
@@ -247,7 +247,7 @@ impl<'gctx> Timings<'gctx> {
         &mut self,
         build_runner: &BuildRunner<'_, '_>,
         id: JobId,
-        unlocked: Vec<&Unit>,
+        unblocked: Vec<&Unit>,
     ) {
         if !self.enabled {
             return;
@@ -258,10 +258,10 @@ impl<'gctx> Timings<'gctx> {
         };
         let t = self.start.elapsed().as_secs_f64();
         unit_time.duration = t - unit_time.start;
-        assert!(unit_time.unlocked_units.is_empty());
+        assert!(unit_time.unblocked_units.is_empty());
         unit_time
-            .unlocked_units
-            .extend(unlocked.iter().cloned().cloned());
+            .unblocked_units
+            .extend(unblocked.iter().cloned().cloned());
         if self.report_json {
             let msg = machine_message::TimingInfo {
                 package_id: unit_time.unit.pkg.package_id().to_spec(),

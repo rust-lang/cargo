@@ -1122,10 +1122,10 @@ impl<'gctx> DrainState<'gctx> {
                 unit.show_warnings(build_runner.bcx.gctx),
             )?;
         }
-        let unlocked = self.queue.finish(unit, &artifact);
+        let unblocked = self.queue.finish(unit, &artifact);
         match artifact {
-            Artifact::All => self.timings.unit_finished(build_runner, id, unlocked),
-            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+            Artifact::All => self.timings.unit_finished(build_runner, id, unblocked),
+            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unblocked),
         }
         Ok(())
     }
