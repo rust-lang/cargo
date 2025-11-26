@@ -201,6 +201,7 @@ fn clean_specs(
                 clean_ctx.rm_rf(&dir)?;
             }
 
+            // Remove the uplifted copy.
             for target in pkg.targets() {
                 if target.is_custom_build() {
                     continue;
@@ -226,7 +227,6 @@ fn clean_specs(
                             TargetKind::Test | TargetKind::Bench => None,
                             _ => Some(artifact_dir.dest()),
                         };
-                        // Remove the uplifted copy.
                         if let Some(uplift_dir) = uplift_dir {
                             for file_type in file_types {
                                 let uplifted_path =
