@@ -285,18 +285,14 @@ fn registry_index_not_allowed_in_user_manifests() {
         .file("src/lib.rs", "")
         .build();
 
-    // FIXME: This currently allows `registry-index` which is a bug.
-    // It should error during manifest parsing because `registry-index` is for internal use only.
-    // Instead, it tries to fetch from the URL and fails with a network error.
     p.cargo("check")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `[ROOT]/alternative-registry` index
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 (registry `[ROOT]/alternative-registry`)
-[CHECKING] bar v0.1.0 (registry `[ROOT]/alternative-registry`)
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) specification uses `registry-index` which is for internal use only
+  [HELP] use `registry = "<name>"` and configure the registry in `.cargo/config.toml`
 
 "#]])
         .run();
