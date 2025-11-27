@@ -1,6 +1,7 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -230,6 +231,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
         }
 
+        self.collect_doc_merge_info()?;
+
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
             self.collect_tests_and_executables(unit)?;
@@ -332,6 +335,132 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     .push(self.unit_output(unit, bindst));
             }
         }
+        Ok(())
+    }
+
+    fn collect_doc_merge_info(&mut self) -> CargoResult<()> {
+        if !self.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+            return Ok(());
+        }
+
+        if !self.bcx.build_config.intent.is_doc() {
+            return Ok(());
+        }
+
+        if self.bcx.build_config.intent.wants_doc_json_output() {
+            // rustdoc JSON output doesn't support merge (yet?)
+            return Ok(());
+        }
+
+        let mut doc_merge_info = HashMap::new();
+
+        let unit_iter = if self.bcx.build_config.intent.wants_deps_docs() {
+            itertools::Either::Left(self.bcx.unit_graph.keys())
+        } else {
+            itertools::Either::Right(self.bcx.roots.iter())
+        };
+
+        for unit in unit_iter {
+            let has_doc_parts = unit.mode.is_doc()
+                && self
+                    .outputs(unit)?
+                    .iter()
+                    .any(|o| matches!(o.flavor, FileFlavor::DocParts));
+            if !has_doc_parts {
+                continue;
+            }
+
+            doc_merge_info.entry(unit.kind).or_insert_with(|| {
+                let out_dir = self
+                    .files()
+                    .layout(unit.kind)
+                    .artifact_dir()
+                    .expect("artifact-dir was not locked")
+                    .doc()
+                    .to_owned();
+                let docdeps_dir = self.files().docdeps_dir(unit);
+
+                let mut requires_merge = false;
+
+                // HACK: get mtime of crates.js to inform outside
+                // whether we need to merge cross-crate info.
+                // The content of `crates.js` looks like
+                //
+                // ```
+                // window.ALL_CRATES = ["cargo","cargo_util","cargo_util_schemas","crates_io"]
+                // ```
+                //
+                // and will be updated when any new crate got documented
+                // even with the legacy `--merge=shared` mode.
+                let crates_js = out_dir.join("crates.js");
+                let crates_js_mtime = paths::mtime(&crates_js);
+
+                let mut num_crates = 0;
+
+                for entry in walkdir::WalkDir::new(docdeps_dir).max_depth(1) {
+                    let Ok(entry) = entry else {
+                        tracing::debug!("failed to read entry at {}", docdeps_dir.display());
+                        continue;
+                    };
+
+                    if !entry.file_type().is_file()
+                        || entry.path().extension() != Some(OsStr::new("json"))
+                    {
+                        continue;
+                    }
+
+                    num_crates += 1;
+
+                    if requires_merge {
+                        continue;
+                    }
+
+                    let crates_js_mtime = match crates_js_mtime {
+                        Ok(mtime) => mtime,
+                        Err(ref err) => {
+                            tracing::debug!(
+                                ?err,
+                                "failed to read mtime of {}",
+                                crates_js.display()
+                            );
+                            requires_merge = true;
+                            continue;
+                        }
+                    };
+
+                    let parts_mtime = match paths::mtime(entry.path()) {
+                        Ok(mtime) => mtime,
+                        Err(err) => {
+                            tracing::debug!(
+                                ?err,
+                                "failed to read mtime of {}",
+                                entry.path().display()
+                            );
+                            requires_merge = true;
+                            continue;
+                        }
+                    };
+
+                    if parts_mtime > crates_js_mtime {
+                        requires_merge = true;
+                        continue;
+                    }
+                }
+
+                if requires_merge {
+                    compilation::DocMergeInfo::Merge {
+                        num_crates,
+                        parts_dir: docdeps_dir.to_owned(),
+                        out_dir,
+                    }
+                } else {
+                    compilation::DocMergeInfo::Fresh
+                }
+            });
+        }
+
+        self.compilation.doc_merge_info = doc_merge_info;
+
         Ok(())
     }
 

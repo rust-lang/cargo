@@ -106,6 +106,11 @@ pub struct Compilation<'gctx> {
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
 
+    /// Compilation information for running `rustdoc --merge=finalize`.
+    ///
+    /// See `-Zrustdoc-mergeable-info` for more.
+    pub doc_merge_info: HashMap<CompileKind, DocMergeInfo>,
+
     /// The target host triple.
     pub host: String,
 
@@ -143,6 +148,7 @@ impl<'gctx> Compilation<'gctx> {
             root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
+            doc_merge_info: Default::default(),
             gctx: bcx.gctx,
             host: bcx.host_triple().to_string(),
             rustc_process,
@@ -381,6 +387,25 @@ impl<'gctx> Compilation<'gctx> {
 
         Ok(cmd)
     }
+}
+
+/// Compilation information for running `rustdoc --merge=finalize`.
+#[derive(Default)]
+pub enum DocMergeInfo {
+    /// Doc merge disabled.
+    #[default]
+    None,
+    /// Nothing is stale.
+    Fresh,
+    /// Doc merge is required
+    Merge {
+        /// Number of crates to merge.
+        num_crates: u64,
+        /// Output directory holding every cross-crate info JSON file.
+        parts_dir: PathBuf,
+        /// Output directory for rustdoc.
+        out_dir: PathBuf,
+    },
 }
 
 /// Prepares a `rustc_tool` process with additional environment variables

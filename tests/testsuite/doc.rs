@@ -4,8 +4,11 @@ use std::fs;
 use std::str;
 
 use crate::prelude::*;
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use crate::utils::tools;
+
 use cargo::core::compiler::RustDocFingerprint;
+use cargo_test_support::cross_compile;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
@@ -3199,4 +3202,591 @@ fn rebuild_tracks_checksum() {
 
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("depinfo-after"));
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_gated() {
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zrustdoc-mergeable-info")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_with_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies.dep]
+                path = "dep"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate dep; pub fn foo() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.0.0"))
+        .file("dep/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to latest compatible version
+[DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
+[CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
+[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[RUNNING] `rustc --crate-name dep [..]`
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[MERGING] 2 docs for host
+[FINISHED] documentation merge in [ELAPSED]s
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+
+"#]].unordered()
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/dep/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/dep.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 2);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FRESH] dep v0.0.0 ([ROOT]/foo/dep)
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_no_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies.dep]
+                path = "dep"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate dep; pub fn foo() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.0.0"))
+        .file("dep/src/lib.rs", "pub fn dep() {}")
+        .build();
+
+    p.cargo("doc -v --no-deps -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
+[RUNNING] `rustc --crate-name dep --edition=2015 [..]`
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[MERGING] 1 doc for host
+[FINISHED] documentation merge in [ELAPSED]s
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+
+"#]].unordered()
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(!p.root().join("target/doc/dep/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v --no-deps -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FRESH] dep v0.0.0 ([ROOT]/foo/dep)
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+                resolver = "3"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies.dep]
+                path = "../dep"
+            "#,
+        )
+        .file("foo/src/lib.rs", "extern crate dep; pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.0.0"))
+        .file("dep/src/lib.rs", "pub fn dep() {}")
+        .build();
+
+    p.cargo("doc -v --workspace -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
+[CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
+[DOCUMENTING] bar v0.0.0 ([ROOT]/foo/bar)
+[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[RUNNING] `rustc --crate-name dep [..]
+[RUNNING] `rustdoc [..]--crate-name bar [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/bar/index.html
+[GENERATED] [ROOT]/foo/target/doc/dep/index.html
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[MERGING] 3 docs for host
+[FINISHED] documentation merge in [ELAPSED]s
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+
+"#]].unordered()
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p.root().join("target/doc/dep/index.html").is_file());
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/bar.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/dep.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 3);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v --workspace -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[FRESH] dep v0.0.0 ([ROOT]/foo/dep)
+[FRESH] bar v0.0.0 ([ROOT]/foo/bar)
+[FRESH] foo v0.0.0 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[GENERATED] [ROOT]/foo/target/doc/bar/index.html
+[GENERATED] [ROOT]/foo/target/doc/dep/index.html
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[FINISHED] documentation merge in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_multi_targets() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+    let host = rustc_host();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -v --target host-tuple -Zrustdoc-mergeable-info")
+        .args(&["--target", target])
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs --target [HOST_TARGET] [..]--merge=none --parts-out-dir=[ROOT]/foo/target/[HOST_TARGET]/debug/docdeps [..]`
+[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs --target [ALT_TARGET] [..]--merge=none --parts-out-dir=[ROOT]/foo/target/[ALT_TARGET]/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[ALT_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[ALT_TARGET]/doc/foo/index.html
+[MERGING] 1 doc for [ALT_TARGET]
+[MERGING] 1 doc for [HOST_TARGET]
+[FINISHED] documentation merge in [ELAPSED]s
+[RUNNING] `rustdoc -o [ROOT]/foo/target/[HOST_TARGET]/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/[HOST_TARGET]/debug/docdeps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/[ALT_TARGET]/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/[ALT_TARGET]/debug/docdeps`
+
+"#]].unordered()
+        )
+        .run();
+
+    let path = format!("target/{host}/doc/foo/index.html");
+    assert!(p.root().join(path).is_file());
+    let path = format!("target/{target}/doc/foo/index.html");
+    assert!(p.root().join(path).is_file());
+    let path = format!("target/{host}/debug/docdeps/foo.json");
+    assert!(p.root().join(path).is_file());
+    let path = format!("target/{target}/debug/docdeps/foo.json");
+    assert!(p.root().join(path).is_file());
+    let path = format!("target/{host}/debug/docdeps/*.json");
+    assert_eq!(p.glob(path).count(), 1);
+    let path = format!("target/{target}/debug/docdeps/*.json");
+    assert_eq!(p.glob(path).count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v --target host-tuple -Zrustdoc-mergeable-info")
+        .args(&["--target", target])
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for [ALT_TARGET]
+[FRESH] doc-merge for [HOST_TARGET]
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[ALT_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[GENERATED] [ROOT]/foo/target/[ALT_TARGET]/doc/foo/index.html
+[FINISHED] documentation merge in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_rebuild_detection() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 1 doc for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    // Changing source code trigger re-merge
+    p.change_file("src/lib.rs", "pub fn foo2() {}");
+
+    // Make sure it recompiles
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DIRTY] foo v0.0.0 ([ROOT]/foo): the precalculated components changed
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo[..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 1 doc for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+        )
+        .run();
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+}
+
+#[cargo_test(
+    nightly,
+    reason = "rustdoc mergeable crate info is unstable; `rustdoc --emit` is unstable"
+)]
+fn mergeable_info_rebuild_with_depinfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 1 doc for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 1);
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    // Changing source code trigger re-merge
+    p.change_file("src/lib.rs", "pub fn foo2() {}");
+
+    // Make sure it recompiles
+    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
+        .with_stderr_data(
+            str![[r#"
+[DIRTY] foo v0.0.0 ([ROOT]/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo[..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 1 doc for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+        )
+        .run();
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+
+    // Make sure it doesn't recompile.
+    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FRESH] doc-merge for host
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+}
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_additive() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+                resolver = "3"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies.dep]
+                path = "../dep"
+            "#,
+        )
+        .file("foo/src/lib.rs", "extern crate dep; pub fn foo() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("dep/Cargo.toml", &basic_manifest("dep", "0.0.0"))
+        .file("dep/src/lib.rs", "pub fn dep() {}")
+        .build();
+
+    p.cargo("doc -v -p foo --no-deps -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
+[RUNNING] `rustc --crate-name dep [..]`
+[DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 1 doc for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 1);
+
+    p.cargo("doc -v -p dep --no-deps -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
+[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 2 docs for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/dep/index.html
+
+"#]]
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/dep/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/dep.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 2);
+
+    p.cargo("doc -v -p bar --no-deps -Zrustdoc-mergeable-info")
+        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
+        .with_stderr_data(
+            str![[r#"
+[DOCUMENTING] bar v0.0.0 ([ROOT]/foo/bar)
+[RUNNING] `rustdoc [..]--crate-name bar [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/docdeps [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[MERGING] 3 docs for host
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/docdeps`
+[FINISHED] documentation merge in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/bar/index.html
+
+"#]]
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p.root().join("target/doc/dep/index.html").is_file());
+    assert!(p.root().join("target/debug/docdeps/foo.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/bar.json").is_file());
+    assert!(p.root().join("target/debug/docdeps/dep.json").is_file());
+    assert_eq!(p.glob("target/debug/docdeps/*.json").count(), 3);
 }
