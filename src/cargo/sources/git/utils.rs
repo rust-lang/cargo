@@ -483,7 +483,7 @@ impl<'a> GitCheckout<'a> {
                 format!("failed to fetch submodule `{name}` from {child_remote_url}",)
             })?;
 
-            // Clone and reset to the head commmit
+            // Clone and reset to the head commit
             let (_, guard) = GitCheckout::clone_into(&repo.path(), &db, actual_rev, gctx)
                 .with_context(|| {
                     let name = child.name().unwrap_or("");
