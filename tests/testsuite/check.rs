@@ -1720,9 +1720,8 @@ fn check_build_should_not_lock_artifact_dir() {
 }
 
 // Regression test for #16305
-#[should_panic]
 #[cargo_test]
-fn check_build_should_uplift_proc_macro_dylib_deps() {
+fn check_build_should_not_uplift_proc_macro_dylib_deps() {
     let p = project()
         .file(
             ".cargo/config.toml",
@@ -1802,4 +1801,11 @@ fn check_build_should_uplift_proc_macro_dylib_deps() {
         .build();
 
     p.cargo("check").enable_mac_dsym().run();
+
+    p.root()
+        .join("target-dir")
+        .assert_build_dir_layout(str![[r#"
+[ROOT]/foo/target-dir/CACHEDIR.TAG
+
+"#]]);
 }
