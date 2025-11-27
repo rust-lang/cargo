@@ -338,6 +338,7 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[BLOCKING]", "    Blocking"),
     ("[GENERATED]", "   Generated"),
     ("[OPENING]", "     Opening"),
+    ("[MERGING]", "     Merging"),
 ];
 
 /// Checks that the given string contains the given contiguous lines

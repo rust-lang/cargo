@@ -224,6 +224,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
         }
 
+        self.collect_doc_merge_info()?;
+
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
             self.collect_tests_and_executables(unit)?;
@@ -326,6 +328,58 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     .push(self.unit_output(unit, bindst));
             }
         }
+        Ok(())
+    }
+
+    fn collect_doc_merge_info(&mut self) -> CargoResult<()> {
+        if !self.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+            return Ok(());
+        }
+
+        if !self.bcx.build_config.intent.is_doc() {
+            return Ok(());
+        }
+
+        if self.bcx.build_config.intent.wants_doc_json_output() {
+            // rustdoc JSON output doesn't support merge (yet?)
+            return Ok(());
+        }
+
+        let mut doc_parts_map: HashMap<_, Vec<_>> = HashMap::new();
+
+        let unit_iter = if self.bcx.build_config.intent.wants_deps_docs() {
+            itertools::Either::Left(self.bcx.unit_graph.keys())
+        } else {
+            itertools::Either::Right(self.bcx.roots.iter())
+        };
+
+        for unit in unit_iter {
+            if !unit.mode.is_doc() {
+                continue;
+            }
+            // Assumption: one `rustdoc` call generates only one cross-crate info JSON.
+            let outputs = self.outputs(unit)?;
+
+            let Some(doc_parts) = outputs
+                .iter()
+                .find(|o| matches!(o.flavor, FileFlavor::DocParts))
+            else {
+                continue;
+            };
+
+            doc_parts_map
+                .entry(unit.kind)
+                .or_default()
+                .push(doc_parts.path.to_owned());
+        }
+
+        self.compilation.rustdoc_fingerprints = Some(
+            doc_parts_map
+                .into_iter()
+                .map(|(kind, doc_parts)| (kind, RustdocFingerprint::new(self, kind, doc_parts)))
+                .collect(),
+        );
+
         Ok(())
     }
 

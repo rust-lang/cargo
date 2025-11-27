@@ -1,9 +1,14 @@
 use crate::core::compiler::{Compilation, CompileKind};
 use crate::core::{Shell, Workspace, shell::Verbosity};
 use crate::ops;
+use crate::util;
 use crate::util::CargoResult;
 use crate::util::context::{GlobalContext, PathAndArgs};
+
 use anyhow::{Error, bail};
+use cargo_util::ProcessBuilder;
+
+use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -54,6 +59,10 @@ pub struct DocOptions {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
+
+    if ws.gctx().cli_unstable().rustdoc_mergeable_info {
+        merge_cross_crate_info(ws, &compilation)?;
+    }
 
     if options.open_result {
         let name = &compilation.root_crate_names.get(0).ok_or_else(|| {
@@ -113,6 +122,79 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             )?;
         }
     }
+
+    Ok(())
+}
+
+fn merge_cross_crate_info(ws: &Workspace<'_>, compilation: &Compilation<'_>) -> CargoResult<()> {
+    let Some(fingerprints) = compilation.rustdoc_fingerprints.as_ref() else {
+        return Ok(());
+    };
+
+    let now = std::time::Instant::now();
+    for (kind, fingerprint) in fingerprints.iter() {
+        let (target_name, build_dir, artifact_dir) = match kind {
+            CompileKind::Host => ("host", ws.build_dir(), ws.target_dir()),
+            CompileKind::Target(t) => {
+                let name = t.short_name();
+                let build_dir = ws.build_dir().join(name);
+                let artifact_dir = ws.target_dir().join(name);
+                (name, build_dir, artifact_dir)
+            }
+        };
+
+        // rustdoc needs to read doc parts files from build dir
+        build_dir.open_ro_shared_create(".cargo-lock", ws.gctx(), "build directory")?;
+        // rustdoc will write to `<artifact-dir>/doc/`
+        artifact_dir.open_rw_exclusive_create(".cargo-lock", ws.gctx(), "artifact directory")?;
+        // We're leaking the layout implementation detail here.
+        // This detail should be hidden when doc merge becomes a Unit of work inside the build.
+        let rustdoc_artifact_dir = artifact_dir.join("doc");
+
+        if !fingerprint.is_dirty() {
+            ws.gctx().shell().verbose(|shell| {
+                shell.status("Fresh", format_args!("doc-merge for {target_name}"))
+            })?;
+            continue;
+        }
+
+        fingerprint.persist(|doc_parts_dirs| {
+            let mut cmd = ProcessBuilder::new(ws.gctx().rustdoc()?);
+            if ws.gctx().extra_verbose() {
+                cmd.display_env_vars();
+            }
+            cmd.retry_with_argfile(true);
+            cmd.arg("-o")
+                .arg(rustdoc_artifact_dir.as_path_unlocked())
+                .arg("-Zunstable-options")
+                .arg("--merge=finalize");
+            for parts_dir in doc_parts_dirs {
+                let mut include_arg = OsString::from("--include-parts-dir=");
+                include_arg.push(parts_dir);
+                cmd.arg(include_arg);
+            }
+
+            let num_crates = doc_parts_dirs.len();
+            let plural = if num_crates == 1 { "" } else { "s" };
+
+            ws.gctx().shell().status(
+                "Merging",
+                format_args!("{num_crates} doc{plural} for {target_name}"),
+            )?;
+            ws.gctx()
+                .shell()
+                .verbose(|shell| shell.status("Running", cmd.to_string()))?;
+            cmd.exec()?;
+
+            Ok(())
+        })?;
+    }
+
+    let time_elapsed = util::elapsed(now.elapsed());
+    ws.gctx().shell().status(
+        "Finished",
+        format_args!("documentation merge in {time_elapsed}"),
+    )?;
 
     Ok(())
 }
