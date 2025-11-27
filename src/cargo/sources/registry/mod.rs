@@ -635,6 +635,7 @@ impl<'gctx> RegistrySource<'gctx> {
         dst.create_dir()?;
 
         let bytes_written = unpack(self.gctx, tarball, unpack_dir, &|_| true)?;
+        update_mtime_for_generated_files(unpack_dir);
 
         // Now that we've finished unpacking, create and write to the lock file to indicate that
         // unpacking was successful.
@@ -679,6 +680,7 @@ impl<'gctx> RegistrySource<'gctx> {
         let tarball =
             File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
         unpack(self.gctx, &tarball, &dst, include)?;
+        update_mtime_for_generated_files(&dst);
         Ok(dst)
     }
 
@@ -1103,4 +1105,26 @@ fn unpack(
     }
 
     Ok(bytes_written)
+}
+
+/// Workaround for rust-lang/cargo#16237
+///
+/// Generated files should have the same deterministic mtime as other files.
+/// However, since we forgot to set mtime for those files when uploading, they
+/// always have older mtime (1973-11-29) that prevents zip from packing (requiring >1980)
+///
+/// This workaround updates mtime after we unpack the tarball at the destination.
+fn update_mtime_for_generated_files(pkg_root: &Path) {
+    const GENERATED_FILES: &[&str] = &["Cargo.lock", "Cargo.toml", ".cargo_vcs_info.json"];
+    // Hardcoded value be removed once alexcrichton/tar-rs#420 is merged and released.
+    // See also rust-lang/cargo#16237
+    const DETERMINISTIC_TIMESTAMP: i64 = 1153704088;
+
+    for file in GENERATED_FILES {
+        let path = pkg_root.join(file);
+        let mtime = filetime::FileTime::from_unix_time(DETERMINISTIC_TIMESTAMP, 0);
+        if let Err(e) = filetime::set_file_mtime(&path, mtime) {
+            tracing::trace!("failed to set deterministic mtime for {path:?}: {e}");
+        }
+    }
 }

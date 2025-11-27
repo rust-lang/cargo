@@ -2161,10 +2161,30 @@ fn update_breaking_specific_packages_that_wont_update() {
     Package::new("non-semver", "2.0.0").publish();
     Package::new("transitive-incompatible", "2.0.0").publish();
 
-    p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver transitive-compatible transitive-incompatible")
+    // Test that transitive dependencies produce helpful errors
+    p.cargo("update -Zunstable-options --breaking transitive-compatible transitive-incompatible")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[ERROR] package ID specifications did not match any direct dependencies that could be upgraded
+  transitive-compatible
+  transitive-incompatible
+[NOTE] `transitive-compatible` exists as a transitive dependency but those are not available for upgrading through `--breaking`
+[NOTE] `transitive-incompatible` exists as a transitive dependency but those are not available for upgrading through `--breaking`
+
+"#]])
+        .run();
+
+    // Test that renamed, non-semver, no-breaking-update dependencies produce errors
+    p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] package ID specifications did not match any direct dependencies that could be upgraded
+  compatible
+  renamed-from
+  non-semver
 
 "#]])
         .run();
@@ -2276,13 +2296,23 @@ Caused by:
     // Spec version not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking incompatible@2.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  incompatible@2.0.0
+
+"#]])
         .run();
 
     // Spec source not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking https://alternative.com#incompatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  https://alternative.com/#incompatible@1.0.0
+
+"#]])
         .run();
 
     // Accepted spec
@@ -2313,8 +2343,11 @@ Caused by:
     // Spec matches a dependency that will not be upgraded
     p.cargo("update -Zunstable-options --breaking compatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  compatible@1.0.0
 
 "#]])
         .run();
@@ -2322,12 +2355,22 @@ Caused by:
     // Non-existing versions
     p.cargo("update -Zunstable-options --breaking incompatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  incompatible@9.0.0
+
+"#]])
         .run();
 
     p.cargo("update -Zunstable-options --breaking compatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  compatible@9.0.0
+
+"#]])
         .run();
 }
 
@@ -2388,8 +2431,11 @@ fn update_breaking_spec_version_transitive() {
     // But not the transitive one, because bar is not a workspace member
     p.cargo("update -Zunstable-options --breaking dep@1.1")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  dep@1.1
 
 "#]])
         .run();
@@ -2647,12 +2693,15 @@ fn update_breaking_pre_release_downgrade() {
 
     // The purpose of this test is
     // to demonstrate that `update --breaking` will not try to downgrade to the latest stable version (1.7.0),
-    // but will rather keep the latest pre-release (2.0.0-beta.21).
+    // but will error because the dependency uses an exact version (not caret).
     Package::new("bar", "1.7.0").publish();
     p.cargo("update -Zunstable-options --breaking bar")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  bar
 
 "#]])
         .run();
@@ -2681,21 +2730,27 @@ fn update_breaking_pre_release_upgrade() {
 
     p.cargo("generate-lockfile").run();
 
-    // TODO: `2.0.0-beta.21` can be upgraded to `2.0.0-beta.22`
+    // `2.0.0-beta.21` cannot be upgraded with --breaking because it uses an exact version (not caret)
     Package::new("bar", "2.0.0-beta.22").publish();
     p.cargo("update -Zunstable-options --breaking bar")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  bar
 
 "#]])
         .run();
-    // TODO: `2.0.0-beta.21` can be upgraded to `2.0.0`
+    // `2.0.0-beta.21` cannot be upgraded to `2.0.0` with --breaking because it uses an exact version (not caret)
     Package::new("bar", "2.0.0").publish();
     p.cargo("update -Zunstable-options --breaking bar")
         .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  bar
 
 "#]])
         .run();
@@ -2746,6 +2801,98 @@ fn prefixed_v_in_version() {
 
 Caused by:
   unexpected character 'v' while parsing major version number
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_missing_package_error() {
+    Package::new("bar", "1.0.0").publish();
+    Package::new("transitive", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("bar", "2.0.0")
+        .add_dep(Dependency::new("transitive", "1.0.0").build())
+        .publish();
+
+    // Non-existent package reports an error
+    p.cargo("update -Zunstable-options --breaking no_such_crate")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  no_such_crate
+
+"#]])
+        .run();
+
+    // Valid package processes, invalid package reports error
+    p.cargo("update -Zunstable-options --breaking bar no_such_crate")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPGRADING] bar ^1.0 -> ^2.0
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  no_such_crate
+
+"#]])
+        .run();
+
+    // Successfully upgrade bar to add transitive to lockfile
+    p.cargo("update -Zunstable-options --breaking bar")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPGRADING] bar ^1.0 -> ^2.0
+[LOCKING] 2 packages to latest compatible versions
+[UPDATING] bar v1.0.0 -> v2.0.0
+[ADDING] transitive v1.0.0
+
+"#]])
+        .run();
+
+    // Transitive dependency reports helpful error
+    p.cargo("update -Zunstable-options --breaking transitive")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification did not match any direct dependencies that could be upgraded
+  transitive
+[NOTE] `transitive` exists as a transitive dependency but those are not available for upgrading through `--breaking`
+
+"#]])
+        .run();
+
+    // Multiple error types reported together
+    p.cargo("update -Zunstable-options --breaking no_such_crate transitive another_missing")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specifications did not match any direct dependencies that could be upgraded
+  no_such_crate
+  transitive
+  another_missing
+[NOTE] `transitive` exists as a transitive dependency but those are not available for upgrading through `--breaking`
 
 "#]])
         .run();

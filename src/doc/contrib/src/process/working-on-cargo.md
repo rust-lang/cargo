@@ -99,6 +99,11 @@ Some guidelines on working on a change:
 * Include tests that cover all non-trivial code. See the [Testing chapter] for
   more about writing and running tests.
 * All code should be warning-free. This is checked during tests.
+* All changes should be free of typos. Cargo's CI has a job that runs [`typos`]
+  to enforce this. You can use `cargo spellcheck` to run this check locally,
+  and `cargo spellcheck --write-changes` to fix most typos automatically.
+
+[`typos`]: https://github.com/crate-ci/typos
 
 ## Submitting a Pull Request
 

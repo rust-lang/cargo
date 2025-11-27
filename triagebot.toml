@@ -247,8 +247,7 @@ trigger_files = [
 
 [autolabel."A-timings"]
 trigger_files = [
-    "src/cargo/core/compiler/timings.js",
-    "src/cargo/core/compiler/timings.rs",
+    "src/cargo/core/compiler/timings/",
     "src/cargo/util/cpu.rs",
 ]
 

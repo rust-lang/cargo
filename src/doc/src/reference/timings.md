@@ -20,13 +20,13 @@ version information of the currently used compiler.
 
 ![build-info](../images/build-info.png)
 
-The "unit" graph shows the duration of each unit over time. A "unit" is a single
-compiler invocation. There are lines that show which additional units are 
-"unlocked" when a unit finishes. That is, it shows the new units that are now 
-allowed to run because their dependencies are all finished. Hover the mouse over
-a unit to highlight the lines. This can help visualize the critical path of 
-dependencies. This may change between runs because the units may finish in 
-different orders.
+The "unit" graph shows the duration of each unit over time.
+A "unit" is a single compiler invocation.
+There are lines that show which additional units are "unblocked" when a unit finishes.
+That is, it shows the new units that are now allowed to run because their dependencies are all finished.
+Hover the mouse over a unit to highlight the lines.
+This can help visualize the critical path of dependencies.
+This may change between runs because the units may finish in different orders.
 
 The "codegen" times are highlighted in a lavender color. In some cases, build
 pipelining allows units to start when their dependencies are performing code

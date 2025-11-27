@@ -61,7 +61,6 @@
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
 
-use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -85,9 +84,11 @@ use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::OnceExt as _;
+use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
+use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 
@@ -157,6 +158,29 @@ macro_rules! get_value_typed {
         }
     };
 }
+
+pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
+    "paths",
+    "alias",
+    "build",
+    "credential-alias",
+    "doc",
+    "env",
+    "future-incompat-report",
+    "cache",
+    "cargo-new",
+    "http",
+    "install",
+    "net",
+    "patch",
+    "profile",
+    "resolver",
+    "registries",
+    "registry",
+    "source",
+    "target",
+    "term",
+];
 
 /// Indicates why a config value is being loaded.
 #[derive(Clone, Copy, Debug)]
@@ -710,7 +734,8 @@ impl GlobalContext {
                     .to_string(),
             ),
             ("{workspace-path-hash}", {
-                let real_path = std::fs::canonicalize(workspace_manifest_path)?;
+                let real_path = std::fs::canonicalize(workspace_manifest_path)
+                    .unwrap_or_else(|_err| workspace_manifest_path.to_owned());
                 let hash = crate::util::hex::short_hash(&real_path);
                 format!("{}{}{}", &hash[0..2], std::path::MAIN_SEPARATOR, &hash[2..])
             }),
@@ -1174,6 +1199,9 @@ impl GlobalContext {
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
         self.target_dir = cli_target_dir;
 
+        self.shell()
+            .set_unstable_flags_rustc_unicode(self.unstable_flags.rustc_unicode)?;
+
         Ok(())
     }
 
@@ -1415,7 +1443,6 @@ impl GlobalContext {
             table.get("include").map(Cow::Borrowed)
         };
         let includes = match include.map(|c| c.into_owned()) {
-            Some(CV::String(s, def)) => vec![ConfigInclude::new(s, def)],
             Some(CV::List(list, _def)) => list
                 .into_iter()
                 .enumerate()
@@ -1454,7 +1481,7 @@ impl GlobalContext {
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
             Some(other) => bail!(
-                "expected a string or list of strings, but found {} at `include` in `{}",
+                "expected a list of strings or a list of tables, but found {} at `include` in `{}",
                 other.desc(),
                 other.definition()
             ),
@@ -1471,6 +1498,26 @@ impl GlobalContext {
                     include.path.display(),
                     include.def,
                 )
+            }
+
+            if let Some(path) = include.path.to_str() {
+                // Ignore non UTF-8 bytes as glob and template syntax are for textual config.
+                if is_glob_pattern(path) {
+                    bail!(
+                        "expected a config include path without glob patterns, \
+                         but found `{}` from `{}`",
+                        include.path.display(),
+                        include.def,
+                    )
+                }
+                if path.contains(&['{', '}']) {
+                    bail!(
+                        "expected a config include path without template braces, \
+                         but found `{}` from `{}`",
+                        include.path.display(),
+                        include.def,
+                    )
+                }
             }
         }
 

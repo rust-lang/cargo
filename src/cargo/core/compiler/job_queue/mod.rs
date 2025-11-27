@@ -606,7 +606,8 @@ impl<'gctx> DrainState<'gctx> {
                     .gctx
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
-                self.timings.unit_start(id, self.active[&id].clone());
+                self.timings
+                    .unit_start(build_runner, id, self.active[&id].clone());
             }
             Message::Stdout(out) => {
                 writeln!(build_runner.bcx.gctx.shell().out(), "{}", out)?;
@@ -712,7 +713,7 @@ impl<'gctx> DrainState<'gctx> {
                 self.tokens.push(token);
             }
             Message::SectionTiming(id, section) => {
-                self.timings.unit_section_timing(id, &section);
+                self.timings.unit_section_timing(build_runner, id, &section);
             }
         }
 
@@ -817,7 +818,11 @@ impl<'gctx> DrainState<'gctx> {
         }
 
         let time_elapsed = util::elapsed(build_runner.bcx.gctx.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(build_runner, &errors.to_error()) {
+        if let Err(e) = self
+            .timings
+            .finished(build_runner, &errors.to_error())
+            .context("failed to render timing report")
+        {
             self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, e);
         }
         if build_runner.bcx.build_config.emit_json() {
@@ -1118,10 +1123,12 @@ impl<'gctx> DrainState<'gctx> {
                 unit.show_warnings(build_runner.bcx.gctx),
             )?;
         }
-        let unlocked = self.queue.finish(unit, &artifact);
+        let unblocked = self.queue.finish(unit, &artifact);
         match artifact {
-            Artifact::All => self.timings.unit_finished(build_runner, id, unlocked),
-            Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
+            Artifact::All => self.timings.unit_finished(build_runner, id, unblocked),
+            Artifact::Metadata => self
+                .timings
+                .unit_rmeta_finished(build_runner, id, unblocked),
         }
         Ok(())
     }

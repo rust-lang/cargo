@@ -3,6 +3,7 @@ build-man = "run --package xtask-build-man --"
 stale-label = "run --package xtask-stale-label --"
 bump-check = "run --package xtask-bump-check --"
 lint-docs = "run --package xtask-lint-docs --"
+spellcheck = "run --package xtask-spellcheck --"
 
 [env]
 # HACK: Until this is stabilized, `snapbox`s polyfill could get confused

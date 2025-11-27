@@ -330,6 +330,7 @@ impl Profiles {
         result.root = for_unit_profile.root;
         result.debuginfo = for_unit_profile.debuginfo;
         result.opt_level = for_unit_profile.opt_level;
+        result.debug_assertions = for_unit_profile.debug_assertions;
         result.trim_paths = for_unit_profile.trim_paths.clone();
         result
     }
@@ -1180,12 +1181,19 @@ impl UnitFor {
         } else {
             self.panic_setting
         };
+        let artifact_target_for_features =
+            // build.rs and proc-macros are always for host.
+            if dep_target.proc_macro() || parent.target.is_custom_build() {
+                None
+            } else {
+                self.artifact_target_for_features
+            };
         UnitFor {
             host: self.host || dep_for_host,
             host_features,
             panic_setting,
             root_compile_kind,
-            artifact_target_for_features: self.artifact_target_for_features,
+            artifact_target_for_features,
         }
     }
 

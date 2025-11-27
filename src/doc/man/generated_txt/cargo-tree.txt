@@ -154,14 +154,14 @@ OPTIONS
            package. The following strings will be replaced with the
            corresponding value:
 
-           o  {p} — The package name.
+           o  {p}, {package} — The package name.
 
-           o  {l} — The package license.
+           o  {l}, {license} — The package license.
 
-           o  {r} — The package repository URL.
+           o  {r}, {repository} — The package repository URL.
 
-           o  {f} — Comma-separated list of package features that are
-              enabled.
+           o  {f}, {features} — Comma-separated list of package features that
+              are enabled.
 
            o  {lib} — The name, as used in a use statement, of the
               package’s library.

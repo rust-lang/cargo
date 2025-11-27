@@ -118,7 +118,7 @@ pub enum KeyOrIdx {
     Idx(usize),
 }
 
-/// Tracks the key path to an item in an array for detailed errro context.
+/// Tracks the key path to an item in an array for detailed error context.
 #[derive(Debug, Clone)]
 pub struct ArrayItemKeyPath {
     base: ConfigKey,

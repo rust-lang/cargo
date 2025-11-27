@@ -573,7 +573,7 @@ syntax so it does not have an implicit feature with that name{}",
                         None => ActivateError::Fatal(anyhow::format_err!(
                             "package `{}` does not have feature `{}`
 
-help: a depednency with that name exists but it is required dependency and only optional dependencies can be used as features.",
+help: a dependency with that name exists but it is required dependency and only optional dependencies can be used as features.",
                             summary.package_id(),
                             feat,
                         )),

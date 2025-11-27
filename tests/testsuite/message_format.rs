@@ -165,3 +165,39 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "-Zrustc-unicode is unstable")]
+fn cargo_passes_unicode_output() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "\
+mod tests {
+    #[test]
+    fn t1() {
+        use std::io;
+    }
+}
+            ",
+        )
+        .build();
+
+    foo.cargo("check -v -Zrustc-unicode")
+        .masquerade_as_nightly_cargo(&["rustc-unicode"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,diagnostic-unicode [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

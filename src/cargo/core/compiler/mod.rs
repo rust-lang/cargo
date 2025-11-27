@@ -298,7 +298,7 @@ fn rustc(
     exec.init(build_runner, unit);
     let exec = exec.clone();
 
-    let root_output = build_runner.files().host_dest().to_path_buf();
+    let root_output = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
@@ -361,7 +361,9 @@ fn rustc(
                 current_id,
                 mode,
             )?;
-            add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, &root_output)?;
+            if let Some(ref root_output) = root_output {
+                add_plugin_deps(&mut rustc, &script_outputs, &build_scripts, root_output)?;
+            }
             add_custom_flags(&mut rustc, &script_outputs, script_metadatas)?;
         }
 
@@ -475,6 +477,25 @@ fn rustc(
             // This mtime shift allows Cargo to detect if a source file was
             // modified in the middle of the build.
             paths::set_file_time_no_err(dep_info_loc, timestamp);
+        }
+
+        // This mtime shift for .rmeta is a workaround as rustc incremental build
+        // since rust-lang/rust#114669 (1.90.0) skips unnecessary rmeta generation.
+        //
+        // The situation is like this:
+        //
+        // 1. When build script execution's external dependendies
+        //    (rerun-if-changed, rerun-if-env-changed) got updated,
+        //    the execution unit reran and got a newer mtime.
+        // 2. rustc type-checked the associated crate, though with incremental
+        //    compilation, no rmeta regeneration. Its `.rmeta` stays old.
+        // 3. Run `cargo check` again. Cargo found build script execution had
+        //    a new mtime than existing crate rmeta, so re-checking the crate.
+        //    However the check is a no-op (input has no change), so stuck.
+        if mode.is_check() {
+            for output in outputs.iter() {
+                paths::set_file_time_no_err(&output.path, timestamp);
+            }
         }
 
         Ok(())
@@ -1087,7 +1108,8 @@ fn add_allow_features(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuild
 /// [`--error-format`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--error-format-control-how-errors-are-produced
 fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuilder) {
     let enable_timings = build_runner.bcx.gctx.cli_unstable().section_timings
-        && !build_runner.bcx.build_config.timing_outputs.is_empty();
+        && (!build_runner.bcx.build_config.timing_outputs.is_empty()
+            || build_runner.bcx.logger.is_some());
     if enable_timings {
         cmd.arg("-Zunstable-options");
     }
@@ -1095,11 +1117,14 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
-    match build_runner.bcx.build_config.message_format {
-        MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
-            json.push_str(",diagnostic-short");
-        }
-        _ => {}
+    if let MessageFormat::Short | MessageFormat::Json { short: true, .. } =
+        build_runner.bcx.build_config.message_format
+    {
+        json.push_str(",diagnostic-short");
+    } else if build_runner.bcx.gctx.shell().err_unicode()
+        && build_runner.bcx.gctx.cli_unstable().rustc_unicode
+    {
+        json.push_str(",diagnostic-unicode");
     }
 
     if enable_timings {
@@ -1399,11 +1424,15 @@ fn build_base_args(
             .iter()
             .filter(|target| target.is_bin())
         {
-            let exe_path = build_runner.files().bin_link_for_target(
-                bin_target,
-                unit.kind,
-                build_runner.bcx,
-            )?;
+            // For `cargo check` builds we do not uplift the CARGO_BIN_EXE_ artifacts to the
+            // artifact-dir. We do not want to provide a path to a non-existent binary but we still
+            // need to provide *something* so `env!("CARGO_BIN_EXE_...")` macros will compile.
+            let exe_path = build_runner
+                .files()
+                .bin_link_for_target(bin_target, unit.kind, build_runner.bcx)?
+                .map(|path| path.as_os_str().to_os_string())
+                .unwrap_or_else(|| OsString::from(format!("placeholder:{}", bin_target.name())));
+
             let name = bin_target
                 .binary_filename()
                 .unwrap_or(bin_target.name().to_string());
@@ -1653,7 +1682,7 @@ fn build_deps_args(
     if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
         let mut map = BTreeMap::new();
 
-        // Recursively add all depenendency args to rustc process
+        // Recursively add all dependency args to rustc process
         add_dep_arg(&mut map, build_runner, unit);
 
         let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();

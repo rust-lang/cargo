@@ -7,8 +7,6 @@ use cargo_util_schemas::core::PackageIdSpec;
 use jiff::Timestamp;
 use serde::Serialize;
 
-use crate::core::Target;
-use crate::core::compiler::CompilationSection;
 use crate::core::compiler::CompileMode;
 use crate::core::compiler::fingerprint::DirtyReason;
 
@@ -20,33 +18,115 @@ use crate::core::compiler::fingerprint::DirtyReason;
 pub enum LogMessage {
     /// Emitted when a build starts.
     BuildStarted {
+        /// Current working directory.
         cwd: PathBuf,
+        /// Host triple.
         host: String,
+        /// Number of parallel jobs.
         jobs: u32,
+        /// Build profile name (e.g., "dev", "release").
         profile: String,
+        /// The rustc version (`1.23.4-beta.2`).
         rustc_version: String,
+        /// The rustc verbose version information (the output of `rustc -vV`).
         rustc_version_verbose: String,
+        /// Target directory for build artifacts.
         target_dir: PathBuf,
+        /// Workspace root directory.
         workspace_root: PathBuf,
     },
-    /// Emitted when a compilation unit finishes.
-    TimingInfo {
+    /// Emitted when a compilation unit starts.
+    UnitStarted {
+        /// Package ID specification.
         package_id: PackageIdSpec,
+        /// Cargo target (lib, bin, example, etc.).
         target: Target,
+        /// The compilation action this unit is for (check, build, test, etc.).
         mode: CompileMode,
-        duration: f64,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        rmeta_time: Option<f64>,
+        /// Unit index for compact reference in subsequent events.
+        index: u64,
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
+    UnitRmetaFinished {
+        /// Unit index from the associated unit-started event.
+        index: u64,
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// Unit indices that were unblocked by this rmeta completion.
         #[serde(skip_serializing_if = "Vec::is_empty")]
-        sections: Vec<(String, CompilationSection)>,
+        unblocked: Vec<u64>,
+    },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit starts.
+    ///
+    /// Requires `-Zsection-timings` to be enabled.
+    UnitSectionStarted {
+        /// Unit index from the associated unit-started event.
+        index: u64,
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// Section name from rustc's `-Zjson=timings` (e.g., "codegen", "link").
+        section: String,
+    },
+    /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
+    ///
+    /// Requires `-Zsection-timings` to be enabled.
+    UnitSectionFinished {
+        /// Unit index from the associated unit-started event.
+        index: u64,
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// Section name from rustc's `-Zjson=timings` (e.g., "codegen", "link").
+        section: String,
+    },
+    /// Emitted when a compilation unit finishes.
+    UnitFinished {
+        /// Unit index from the associated unit-started event.
+        index: u64,
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// Unit indices that were unblocked by this completion.
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        unblocked: Vec<u64>,
     },
     /// Emitted when a unit needs to be rebuilt.
     Rebuild {
+        /// Package ID specification.
         package_id: PackageIdSpec,
+        /// Cargo target (lib, bin, example, etc.).
         target: Target,
+        /// The compilation action this unit is for (check, build, test, etc.).
         mode: CompileMode,
+        /// Reason why the unit is dirty and needs rebuilding.
         cause: DirtyReason,
     },
+}
+
+/// Cargo target information.
+#[derive(Serialize)]
+pub struct Target {
+    /// Target name.
+    name: String,
+    /// Target kind (lib, bin, test, bench, example, build-script).
+    kind: &'static str,
+}
+
+impl From<&crate::core::Target> for Target {
+    fn from(target: &crate::core::Target) -> Self {
+        use crate::core::TargetKind;
+        Self {
+            name: target.name().to_string(),
+            kind: match target.kind() {
+                TargetKind::Lib(..) => "lib",
+                TargetKind::Bin => "bin",
+                TargetKind::Test => "test",
+                TargetKind::Bench => "bench",
+                TargetKind::ExampleLib(..) | TargetKind::ExampleBin => "example",
+                TargetKind::CustomBuild => "build-script",
+            },
+        }
+    }
 }
 
 impl LogMessage {

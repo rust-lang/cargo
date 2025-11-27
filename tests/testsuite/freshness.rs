@@ -1459,16 +1459,16 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // effecting any builds that happened since that time stamp.
     let mut cleaned = false;
     dir.push(".fingerprint");
-    for fing in fs::read_dir(&dir).unwrap() {
-        let fing = fing.unwrap();
+    for fingerprint in fs::read_dir(&dir).unwrap() {
+        let fingerprint = fingerprint.unwrap();
 
         let outdated = |f: io::Result<fs::DirEntry>| {
             filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
                 <= timestamp
         };
-        if fs::read_dir(fing.path()).unwrap().all(outdated) {
-            fs::remove_dir_all(fing.path()).unwrap();
-            println!("remove: {:?}", fing.path());
+        if fs::read_dir(fingerprint.path()).unwrap().all(outdated) {
+            fs::remove_dir_all(fingerprint.path()).unwrap();
+            println!("remove: {:?}", fingerprint.path());
             // a real cleaner would remove the big files in deps and build as well
             // but fingerprint is sufficient for our tests
             cleaned = true;
@@ -3181,6 +3181,66 @@ fn use_mtime_cache_in_cargo_home() {
 ...
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 ...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
+    // See https://github.com/rust-lang/cargo/issues/16104
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("touch-me", "")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo::rerun-if-changed=touch-me") }"#,
+        )
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    if is_coarse_mtime() {
+        sleep_ms(1000);
+    }
+
+    p.change_file("touch-me", "oops");
+
+    // The first one is expected to rerun build script
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `touch-me` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // subsequent cargo check gets stuck...
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -v")
+        .env("CARGO_INCREMENTAL", "1")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
 "#]])
         .run();
 }

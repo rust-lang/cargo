@@ -162,10 +162,10 @@ Set the format string for each package. The default is "{p}".
 This is an arbitrary string which will be used to display each package. The following
 strings will be replaced with the corresponding value:
 
-- `{p}` --- The package name.
-- `{l}` --- The package license.
-- `{r}` --- The package repository URL.
-- `{f}` --- Comma-separated list of package features that are enabled.
+- `{p}`, `{package}` --- The package name.
+- `{l}`, `{license}` --- The package license.
+- `{r}`, `{repository}` --- The package repository URL.
+- `{f}`, `{features}` --- Comma-separated list of package features that are enabled.
 - `{lib}` --- The name, as used in a `use` statement, of the package's library.
 {{/option}}
 

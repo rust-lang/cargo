@@ -22,6 +22,7 @@ pub struct VersionPreferences {
     prefer_patch_deps: HashMap<InternedString, HashSet<Dependency>>,
     version_ordering: VersionOrdering,
     rust_versions: Vec<PartialVersion>,
+    publish_time: Option<jiff::Timestamp>,
 }
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
@@ -53,6 +54,10 @@ impl VersionPreferences {
         self.rust_versions = vers;
     }
 
+    pub fn publish_time(&mut self, publish_time: jiff::Timestamp) {
+        self.publish_time = Some(publish_time);
+    }
+
     /// Sort (and filter) the given vector of summaries in-place
     ///
     /// Note: all summaries presumed to be for the same package.
@@ -63,6 +68,7 @@ impl VersionPreferences {
     /// 3. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
     ///
     /// Filtering:
+    /// - `publish_time`
     /// - `first_version`
     pub fn sort_summaries(
         &self,
@@ -77,6 +83,15 @@ impl VersionPreferences {
                     .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
                     .unwrap_or(false)
         };
+        if let Some(max_publish_time) = self.publish_time {
+            summaries.retain(|s| {
+                if let Some(summary_publish_time) = s.pubtime() {
+                    summary_publish_time <= max_publish_time
+                } else {
+                    true
+                }
+            });
+        }
         summaries.sort_unstable_by(|a, b| {
             let prefer_a = should_prefer(&a.package_id());
             let prefer_b = should_prefer(&b.package_id());

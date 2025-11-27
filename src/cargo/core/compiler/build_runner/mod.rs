@@ -392,9 +392,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         let files = self.files.as_ref().unwrap();
         for &kind in self.bcx.all_kinds.iter() {
             let layout = files.layout(kind);
-            self.compilation
-                .root_output
-                .insert(kind, layout.artifact_dir().dest().to_path_buf());
+            if let Some(artifact_dir) = layout.artifact_dir() {
+                self.compilation
+                    .root_output
+                    .insert(kind, artifact_dir.dest().to_path_buf());
+            }
             if self.bcx.gctx.cli_unstable().build_dir_new_layout {
                 for (unit, _) in self.bcx.unit_graph.iter() {
                     let dep_dir = self.files().deps_dir(unit);

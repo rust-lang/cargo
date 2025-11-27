@@ -69,6 +69,7 @@ mod cfg;
 mod check;
 mod check_cfg;
 mod clean;
+mod clean_new_layout;
 mod collisions;
 mod compile_time_deps;
 mod concurrent;

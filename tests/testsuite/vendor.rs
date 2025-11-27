@@ -7,6 +7,7 @@
 use std::fs;
 
 use crate::prelude::*;
+use cargo_test_support::assert_deterministic_mtime;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
@@ -2118,4 +2119,36 @@ fn vendor_rename_fallback() {
         .run();
 
     assert!(p.root().join("vendor/log/Cargo.toml").exists());
+}
+
+#[cargo_test]
+fn deterministic_mtime() {
+    Package::new("foo", "0.1.0")
+        // content doesn't matter, we just want to check mtime
+        .file("Cargo.lock", "")
+        .file(".cargo_vcs_info.json", "")
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                edition = "2015"
+
+                [dependencies]
+                foo = '0.1.0'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+
+    // Generated files should have deterministic mtime after unpacking.
+    assert_deterministic_mtime(p.root().join("vendor/foo/Cargo.lock"));
+    assert_deterministic_mtime(p.root().join("vendor/foo/Cargo.toml"));
+    assert_deterministic_mtime(p.root().join("vendor/foo/.cargo_vcs_info.json"));
 }

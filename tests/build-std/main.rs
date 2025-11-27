@@ -188,6 +188,37 @@ fn basic() {
 }
 
 #[cargo_test(build_std_real)]
+fn lto() {
+    // Checks that `-Zbuild-std` can work with `lto = "thin"`.
+    // This regression is from https://github.com/rust-lang/rust/issues/146109.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [profile.dev]
+                lto = "thin"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .build_std_arg("std")
+        .env("RUSTFLAGS", "-C linker-features=-lld")
+        .run();
+}
+
+#[cargo_test(build_std_real)]
 fn host_proc_macro() {
     let p = project()
         .file(

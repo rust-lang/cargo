@@ -2,6 +2,7 @@ use std::fmt;
 use std::io::IsTerminal;
 use std::io::prelude::*;
 
+use annotate_snippets::renderer::DecorStyle;
 use annotate_snippets::{Renderer, Report};
 use anstream::AutoStream;
 use anstyle::Style;
@@ -57,6 +58,7 @@ impl Shell {
                 stdout_unicode: supports_unicode(&std::io::stdout()),
                 stderr_unicode: supports_unicode(&std::io::stderr()),
                 stderr_term_integration: supports_term_integration(&std::io::stderr()),
+                unstable_flags_rustc_unicode: false,
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -364,7 +366,7 @@ impl Shell {
     fn file_hyperlink(&mut self, path: &std::path::Path) -> Option<url::Url> {
         let mut url = url::Url::from_file_path(path).ok()?;
         // Do a best-effort of setting the host in the URL to avoid issues with opening a link
-        // scoped to the computer you've SSHed into
+        // scoped to the computer you've SSH'ed into
         let hostname = if cfg!(windows) {
             // Not supported correctly on windows
             None
@@ -378,6 +380,27 @@ impl Shell {
         };
         let _ = url.set_host(hostname);
         Some(url)
+    }
+
+    fn unstable_flags_rustc_unicode(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream {
+                unstable_flags_rustc_unicode,
+                ..
+            } => *unstable_flags_rustc_unicode,
+        }
+    }
+
+    pub(crate) fn set_unstable_flags_rustc_unicode(&mut self, yes: bool) -> CargoResult<()> {
+        if let ShellOut::Stream {
+            unstable_flags_rustc_unicode,
+            ..
+        } = &mut self.output
+        {
+            *unstable_flags_rustc_unicode = yes;
+        }
+        Ok(())
     }
 
     /// Prints a message to stderr and translates ANSI escape code into console colors.
@@ -419,7 +442,15 @@ impl Shell {
             .err_width()
             .diagnostic_terminal_width()
             .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
-        let rendered = Renderer::styled().term_width(term_width).render(report);
+        let decor_style = if self.err_unicode() && self.unstable_flags_rustc_unicode() {
+            DecorStyle::Unicode
+        } else {
+            DecorStyle::Ascii
+        };
+        let rendered = Renderer::styled()
+            .term_width(term_width)
+            .decor_style(decor_style)
+            .render(report);
         self.err().write_all(rendered.as_bytes())?;
         self.err().write_all(b"\n")?;
         Ok(())
@@ -446,6 +477,7 @@ enum ShellOut {
         stdout_unicode: bool,
         stderr_unicode: bool,
         stderr_term_integration: bool,
+        unstable_flags_rustc_unicode: bool,
     },
 }
 

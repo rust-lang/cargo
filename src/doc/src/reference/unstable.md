@@ -78,6 +78,7 @@ Each new feature described below should explain how to use it.
     * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
+    * [lockfile-publish-time] --- Limit resolver to packages older than the specified time
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
@@ -116,6 +117,7 @@ Each new feature described below should explain how to use it.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
     * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
+    * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages 
 * Configuration
     * [config-include](#config-include) --- Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
@@ -644,7 +646,7 @@ For example:
 
 ```toml
 # .cargo/config.toml
-include = "other-config.toml"
+include = ["other-config.toml"]
 
 [build]
 jobs = 4
@@ -658,40 +660,47 @@ rustflags = ["-W", "unsafe-code"]
 
 ### Documentation updates
 
-#### `include`
+> put this after `## Command-line overrides` before `## Config-relative paths`
+> to emphasize its special nature than other config keys.
 
-* Type: string, array of strings, or array of tables
+#### Including extra configuration files
+
+Configuration can include other configuration files using the top-level `include` key.
+This allows sharing configuration across multiple projects
+or splitting complex configurations into multiple files.
+
+##### `include`
+
+* Type: array of strings or tables
 * Default: none
+* Environment: not supported
 
-Loads additional config files. Paths are relative to the config file that
-includes them. Only paths ending with `.toml` are accepted.
+Loads additional configuration files.
+Paths are relative to the configuration file that includes them.
+Only paths ending with `.toml` are accepted.
 
 Supports the following formats:
 
 ```toml
-# single path
-include = "path/to/mordor.toml"
-
 # array of paths
-include = ["frodo.toml", "samwise.toml"]
-
-# inline tables
 include = [
-    "simple.toml",
-    { path = "optional.toml", optional = true }
+    "frodo.toml",
+    "samwise.toml",
 ]
 
-# array of tables
-[[include]]
-path = "required.toml"
-
-[[include]]
-path = "optional.toml"
-optional = true
+# inline tables for more control
+include = [
+    { path = "required.toml" },
+    { path = "optional.toml", optional = true },
+]
 ```
 
-When using table syntax (inline tables or array of tables), the following
-fields are supported:
+> **Note:** For better readability and to avoid confusion, it is recommended to:
+> - Place `include` at the top of the configuration file
+> - Put one include per line for clearer version control diffs
+> - Use inline table syntax when optional includes are needed
+
+When using table syntax, the following fields are supported:
 
 * `path` (string, required): Path to the config file to include.
 * `optional` (boolean, default: false): If `true`, missing files are silently
@@ -699,11 +708,12 @@ fields are supported:
 
 The merge behavior of `include` is different from other config values:
 
-1. Config values are first loaded from the `include` path.
-    * If `include` is an array, config values are loaded and merged from left
-      to right for each path.
+1. Config values are first loaded from the `include` paths.
+    * Included files are loaded left to right,
+      with values from later files taking precedence over earlier ones.
     * This step recurses if included config files also contain `include` keys.
-2. Then, the config file's own values are merged on top of the included config.
+2. Then, the config file's own values are merged on top of the included config,
+   taking highest precedence.
 
 ## target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
@@ -1912,6 +1922,22 @@ Specify which packages participate in [feature unification](../reference/feature
 * `package`: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
 
+## pubtime
+
+* Original Issue: [#15491](https://github.com/rust-lang/cargo/issues/15491)
+* Tracking Issue: [#16270](https://github.com/rust-lang/cargo/issues/16270)
+
+Documentation updates:
+- Add `pubtime` field to the Index Summary description
+
+## lockfile-publish-time
+
+* Original Issue: [#5221](https://github.com/rust-lang/cargo/issues/5221)
+* Tracking Issue: [#16271](https://github.com/rust-lang/cargo/issues/16271)
+
+With `cargo generate-lockfile -Zunstable-options --publish-time <time>`,
+package resolution will not consider any package newer than the specified time.
+
 ## Package message format
 
 * Original Issue: [#11666](https://github.com/rust-lang/cargo/issues/11666)
@@ -2027,6 +2053,12 @@ Example:
 cargo +nightly build --compile-time-deps -Z unstable-options
 cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
 ```
+
+# `rustc-unicode`
+* Tracking Issue: [rust#148607](https://github.com/rust-lang/rust/issues/148607)
+
+Enable `rustc`'s unicode error format in Cargo's error messages
+
 
 # Stabilized and removed features
 

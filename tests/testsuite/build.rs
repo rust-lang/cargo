@@ -5887,7 +5887,7 @@ fn user_specific_cfgs_are_filtered_out() {
             r#"
             fn main() {
                 assert!(std::env::var_os("CARGO_CFG_PROC_MACRO").is_none());
-                assert!(std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_none());
+                assert!(std::env::var_os("CARGO_CFG_DEBUG_ASSERTIONS").is_some());
             }
             "#,
         )

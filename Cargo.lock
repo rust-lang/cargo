@@ -244,7 +244,7 @@ dependencies = [
 
 [[package]]
 name = "build-rs"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "unicode-ident",
 ]
@@ -337,6 +337,7 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "memchr",
+ "memfd",
  "opener",
  "openssl",
  "os_info",
@@ -497,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "schemars",
  "semver",
@@ -514,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_metadata"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "981a6f317983eec002839b90fae7411a85621410ae591a9cab2ecf5cb5744873"
+checksum = "ef987d17b0a113becdd19d3d0022d04d7ef41f9efe4f3fb63ac44ba61df3ade9"
 dependencies = [
  "camino",
  "cargo-platform 0.3.1",
@@ -2895,6 +2896,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
+name = "memfd"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad38eb12aea514a0466ea40a80fd8cc83637065948eb4a426e4aa46261175227"
+dependencies = [
+ "rustix",
+]
+
+[[package]]
 name = "memmap2"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5209,6 +5219,17 @@ dependencies = [
  "cargo",
  "clap",
  "itertools 0.14.0",
+]
+
+[[package]]
+name = "xtask-spellcheck"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "cargo-util",
+ "cargo_metadata",
+ "clap",
+ "semver",
 ]
 
 [[package]]
