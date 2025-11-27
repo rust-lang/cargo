@@ -467,14 +467,23 @@ impl<'a> GitCheckout<'a> {
                     init(&path, false)?
                 }
             };
-            // Fetch data from origin and reset to the head commit
+            // Fetch data using git database
             let mut source = GitSource::new(
                 SourceId::from_url(&format!("git+{child_remote_url}#{head}"))?,
                 gctx,
-            )?;
+            )
+            .with_context(|| {
+                let name = child.name().unwrap_or("");
+                format!("failed to fetch submodule `{name}` from {child_remote_url}",)
+            })?;
             source.set_quiet(quiet);
 
-            let (db, actual_rev) = source.update_db(true)?;
+            let (db, actual_rev) = source.update_db(true).with_context(|| {
+                let name = child.name().unwrap_or("");
+                format!("failed to fetch submodule `{name}` from {child_remote_url}",)
+            })?;
+
+            // Clone and reset to the head commmit
             let (_, guard) = GitCheckout::clone_into(&repo.path(), &db, actual_rev, gctx)
                 .with_context(|| {
                     let name = child.name().unwrap_or("");

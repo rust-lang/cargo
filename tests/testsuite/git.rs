@@ -1060,6 +1060,9 @@ Caused by:
   failed to update submodule `src`
 
 Caused by:
+  failed to fetch submodule `src` from [ROOTURL]/dep2
+
+Caused by:
   revspec '[..]' not found; class=Reference (4); code=NotFound (-3)
 
 "#]];
