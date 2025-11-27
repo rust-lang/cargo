@@ -475,14 +475,16 @@ impl<'a> GitCheckout<'a> {
             source.set_quiet(quiet);
 
             let (db, actual_rev) = source.update_db(true)?;
-            db.copy_to(actual_rev, &repo.path(), gctx, quiet)
+            let (_, guard) = GitCheckout::clone_into(&repo.path(), &db, actual_rev, gctx)
                 .with_context(|| {
                     let name = child.name().unwrap_or("");
                     format!("failed to fetch submodule `{name}` from {child_remote_url}",)
                 })?;
+            guard.mark_ok()?;
 
             let obj = repo.find_object(head, None)?;
-            reset(&repo, &obj, gctx)
+            reset(&repo, &obj, gctx)?;
+            update_submodules(&repo, gctx, quiet, &child_remote_url)
         }
     }
 }
