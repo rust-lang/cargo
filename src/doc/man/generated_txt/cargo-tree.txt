@@ -166,6 +166,8 @@ OPTIONS
            o  {lib} — The name, as used in a use statement, of the
               package’s library.
 
+           o  {ver-req} — The version requirement resolved for the package.
+
        --prefix prefix
            Sets how each line is displayed. The prefix value can be one of:
 
