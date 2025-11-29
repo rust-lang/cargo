@@ -1705,17 +1705,107 @@ fn check_build_should_not_output_files_to_artifact_dir() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
-[ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);
 }
 
 #[cargo_test]
-fn check_build_should_lock_artifact_dir() {
+fn check_build_should_not_lock_artifact_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
     p.cargo("check").enable_mac_dsym().run();
-    assert!(p.root().join("target/debug/.cargo-lock").exists());
+    assert!(!p.root().join("target/debug/.cargo-lock").exists());
+}
+
+// Regression test for #16305
+#[cargo_test]
+fn check_build_should_not_uplift_proc_macro_dylib_deps() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar", "baz"]
+            "#,
+        )
+        // Bin
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "../bar" }
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        // Proc macro
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                baz = { path = "../baz" }
+            "#,
+        )
+        .file(
+            "bar/src/lib.rs",
+            r#"
+            extern crate proc_macro;
+
+            use proc_macro::TokenStream;
+
+            #[proc_macro_derive(B)]
+            pub fn derive(input: TokenStream) -> TokenStream {
+                input
+            }
+            "#,
+        )
+        // Dylib
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+
+                [dependencies]
+            "#,
+        )
+        .file("baz/src/lib.rs", "pub fn baz() { }")
+        .build();
+
+    p.cargo("check").enable_mac_dsym().run();
+
+    p.root()
+        .join("target-dir")
+        .assert_build_dir_layout(str![[r#"
+[ROOT]/foo/target-dir/CACHEDIR.TAG
+
+"#]]);
 }

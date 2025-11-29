@@ -455,18 +455,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let uplift_path = if unit.target.is_example() {
             // Examples live in their own little world.
             self.layout(unit.kind)
-                .artifact_dir()
-                .expect("artifact-dir was not locked")
+                .artifact_dir()?
                 .examples()
                 .join(filename)
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit).join(filename)
         } else {
-            self.layout(unit.kind)
-                .artifact_dir()
-                .expect("artifact-dir was not locked")
-                .dest()
-                .join(filename)
+            self.layout(unit.kind).artifact_dir()?.dest().join(filename)
         };
         if from_path == uplift_path {
             // This can happen with things like examples that reside in the
