@@ -1,9 +1,17 @@
-use crate::core::compiler::{Compilation, CompileKind};
+use crate::core::compiler::Compilation;
+use crate::core::compiler::CompileKind;
+use crate::core::compiler::DocMergeInfo;
 use crate::core::{Shell, Workspace, shell::Verbosity};
 use crate::ops;
+use crate::util;
 use crate::util::CargoResult;
-use crate::util::context::{GlobalContext, PathAndArgs};
+use crate::util::context::GlobalContext;
+use crate::util::context::PathAndArgs;
+
 use anyhow::{Error, bail};
+use cargo_util::ProcessBuilder;
+
+use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -54,6 +62,60 @@ pub struct DocOptions {
 /// Main method for `cargo doc`.
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
+
+    if ws.gctx().cli_unstable().rustdoc_mergeable_info {
+        let now = std::time::Instant::now();
+        for (kind, doc_merge_info) in compilation.doc_merge_info.iter() {
+            let target_name = match kind {
+                CompileKind::Host => "host",
+                CompileKind::Target(t) => t.short_name(),
+            };
+            let (num_crates, parts_path, out_dir) = match doc_merge_info {
+                DocMergeInfo::None => continue,
+                DocMergeInfo::Fresh => {
+                    ws.gctx().shell().verbose(|shell| {
+                        shell.status("Fresh", format_args!("doc-merge for {target_name}"))
+                    })?;
+                    continue;
+                }
+                DocMergeInfo::Merge {
+                    num_crates,
+                    parts_dir,
+                    out_dir,
+                } => (num_crates, parts_dir, out_dir),
+            };
+
+            let mut cmd = ProcessBuilder::new(ws.gctx().rustdoc()?);
+            if ws.gctx().extra_verbose() {
+                cmd.display_env_vars();
+            }
+            cmd.retry_with_argfile(true);
+            // TODO: should we apply RUSTDOCFLAGS here?
+            cmd.arg("-o")
+                .arg(out_dir)
+                .arg("-Zunstable-options")
+                .arg("--merge=finalize");
+            let mut include_arg = OsString::from("--include-parts-dir=");
+            include_arg.push(parts_path);
+            cmd.arg(include_arg);
+
+            let plural = if *num_crates == 1 { "" } else { "s" };
+
+            ws.gctx().shell().status(
+                "Merging",
+                format_args!("{num_crates} doc{plural} for {target_name}"),
+            )?;
+            ws.gctx()
+                .shell()
+                .verbose(|shell| shell.status("Running", cmd.to_string()))?;
+            cmd.exec()?;
+        }
+        let time_elapsed = util::elapsed(now.elapsed());
+        ws.gctx().shell().status(
+            "Finished",
+            format_args!("documentation merge in {time_elapsed}"),
+        )?;
+    }
 
     if options.open_result {
         let name = &compilation.root_crate_names.get(0).ok_or_else(|| {

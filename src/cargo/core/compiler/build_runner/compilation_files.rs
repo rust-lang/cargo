@@ -328,6 +328,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .build_script(&dir)
     }
 
+    /// Returns the directory where mergeable cross crate info for docs is stored.
+    pub fn docdeps_dir(&self, unit: &Unit) -> &Path {
+        assert!(unit.mode.is_doc());
+        assert!(self.metas.contains_key(unit));
+        self.layout(unit.kind).build_dir().docdeps()
+    }
+
     /// Returns the directory for compiled artifacts files.
     /// `/path/to/target/{debug,release}/deps/artifact/KIND/PKG-HASH`
     fn artifact_dir(&self, unit: &Unit) -> PathBuf {
@@ -500,12 +507,26 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                         .join("index.html")
                 };
 
-                vec![OutputFile {
+                let mut outputs = vec![OutputFile {
                     path,
                     hardlink: None,
                     export_path: None,
                     flavor: FileFlavor::Normal,
-                }]
+                }];
+
+                if bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+                    outputs.push(OutputFile {
+                        path: self
+                            .docdeps_dir(unit)
+                            .join(unit.target.crate_name())
+                            .with_extension("json"),
+                        hardlink: None,
+                        export_path: None,
+                        flavor: FileFlavor::DocParts,
+                    })
+                }
+
+                outputs
             }
             CompileMode::RunCustomBuild => {
                 // At this time, this code path does not handle build script

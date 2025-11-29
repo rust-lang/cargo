@@ -192,6 +192,7 @@ impl Layout {
                 incremental: build_dest.join("incremental"),
                 fingerprint: build_dest.join(".fingerprint"),
                 examples: build_dest.join("examples"),
+                docdeps: build_dest.join("docdeps"),
                 tmp: build_root.join("tmp"),
                 _lock: build_dir_lock,
                 is_new_layout,
@@ -273,6 +274,8 @@ pub struct BuildDirLayout {
     fingerprint: PathBuf,
     /// The directory for pre-uplifted examples: `build-dir/debug/examples`
     examples: PathBuf,
+    /// The directory with intermediate artifacts from rustdoc.
+    docdeps: PathBuf,
     /// The directory for temporary data of integration tests and benches
     tmp: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
@@ -290,6 +293,7 @@ impl BuildDirLayout {
         if !self.is_new_layout {
             paths::create_dir_all(&self.deps)?;
             paths::create_dir_all(&self.fingerprint)?;
+            paths::create_dir_all(&self.docdeps)?;
         }
         paths::create_dir_all(&self.incremental)?;
         paths::create_dir_all(&self.examples)?;
@@ -343,6 +347,12 @@ impl BuildDirLayout {
         } else {
             self.build().join(pkg_dir)
         }
+    }
+    /// Fetch the path storing intermediate artifacts from rustdoc.
+    pub fn docdeps(&self) -> &Path {
+        // This doesn't need to consider new build-dir layout (yet?)
+        // because rustdoc artifacts must be appendable.
+        &self.docdeps
     }
     /// Fetch the build script execution path.
     pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
