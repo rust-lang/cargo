@@ -362,6 +362,7 @@ possible value.
 {{#option "`--filter-platform` _triple_" }}
 This filters the `resolve` output to only include dependencies for the
 given [target triple](../appendix/glossary.html#target).
+A literal `"host-tuple"` can be used, which will internally be substituted by the host's target.
 Without this flag, the resolve includes all targets.
 
 Note that the dependencies listed in the "packages" array still includes all
