@@ -8,8 +8,16 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo_test_support::paths::{home, root};
-use cargo_test_support::{process, project, str};
+use cargo_test_support::install::assert_has_installed_exe;
+use cargo_test_support::paths::{cargo_home, home, root};
+use cargo_test_support::registry::Package;
+use cargo_test_support::{execs, process, project, str};
+
+fn pkg(name: &str, vers: &str) {
+    Package::new(name, vers)
+        .file("src/main.rs", "fn main() {{}}")
+        .publish();
+}
 
 /// Helper to generate an executable.
 fn make_exe(dest: &Path, name: &str, contents: &str, env: &[(&str, PathBuf)]) -> PathBuf {
@@ -55,6 +63,13 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
     // The toolchain rustc needs to call the real rustc. In order to do that,
     // it needs to restore or clear the RUSTUP environment variables so that
     // if rustup is installed, it will call the correct rustc.
+    let rustup_toolchain_source_setup = match std::env::var_os("RUSTUP_TOOLCHAIN_SOURCE") {
+        Some(t) => format!(
+            ".env(\"RUSTUP_TOOLCHAIN_SOURCE\", \"{}\")",
+            t.into_string().unwrap()
+        ),
+        None => format!(".env_remove(\"RUSTUP_TOOLCHAIN_SOURCE\")"),
+    };
     let rustup_toolchain_setup = match std::env::var_os("RUSTUP_TOOLCHAIN") {
         Some(t) => format!(
             ".env(\"RUSTUP_TOOLCHAIN\", \"{}\")",
@@ -78,6 +93,7 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
                 eprintln!("{message}");
                 let r = std::process::Command::new(env!("CARGO_RUSTUP_TEST_real_rustc"))
                     .args(std::env::args_os().skip(1))
+                    {rustup_toolchain_source_setup}
                     {rustup_toolchain_setup}
                     {rustup_home_setup}
                     .status();
@@ -91,7 +107,13 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
 /// Creates a simulation of a rustup environment with `~/.cargo/bin` and
 /// `~/.rustup` directories populated with some executables that simulate
 /// rustup.
-fn simulated_rustup_environment() -> RustupEnvironment {
+///
+/// Arguments
+///
+/// - `proxy_calls_cargo`: if true, the cargo proxy calls the cargo under test;
+///    otherwise, the cargo proxy calls an executable that panics immediately
+/// - `env_setup`: environment variable setup the proxy should perform
+fn simulated_rustup_environment(proxy_calls_cargo: bool, env_setup: &str) -> RustupEnvironment {
     // Set up ~/.rustup/toolchains/test-toolchain/bin with a custom rustc and cargo.
     let rustup_home = home().join(".rustup");
     let toolchain_bin = rustup_home
@@ -100,42 +122,58 @@ fn simulated_rustup_environment() -> RustupEnvironment {
         .join("bin");
     toolchain_bin.mkdir_p();
     let rustc_toolchain_exe = real_rustc_wrapper(&toolchain_bin, "real rustc running");
-    let cargo_toolchain_exe = make_exe(
-        &toolchain_bin,
-        "cargo",
-        r#"panic!("cargo toolchain should not be called");"#,
-        &[],
-    );
+    let cargo_toolchain_exe = if proxy_calls_cargo {
+        crate::utils::cargo_exe()
+    } else {
+        make_exe(
+            &toolchain_bin,
+            "cargo",
+            r#"panic!("cargo toolchain should not be called");"#,
+            &[],
+        )
+    };
 
     // Set up ~/.cargo/bin with a typical set of rustup proxies.
     let cargo_bin = home().join(".cargo").join("bin");
     cargo_bin.mkdir_p();
 
-    let rustc_proxy = make_exe(
+    let proxy = make_exe(
         &cargo_bin,
         "rustc",
         &format!(
             r#"
-                match std::env::args().next().unwrap().as_ref() {{
-                    "rustc" => {{}}
-                    arg => panic!("proxy only supports rustc, got {{arg:?}}"),
-                }}
-                eprintln!("rustc proxy running");
-                let r = std::process::Command::new(env!("CARGO_RUSTUP_TEST_rustc_toolchain_exe"))
+                let file_stem = std::path::PathBuf::from(std::env::args().next().unwrap())
+                    .file_stem()
+                    .map(ToOwned::to_owned)
+                    .unwrap();
+                let program = match file_stem.to_str().unwrap() {{
+                    "cargo" => env!("CARGO_RUSTUP_TEST_cargo_toolchain_exe"),
+                    "rustc" => env!("CARGO_RUSTUP_TEST_rustc_toolchain_exe"),
+                    arg => panic!("proxy only supports cargo and rustc, got {{arg:?}}"),
+                }};
+                eprintln!("`{{program}}` proxy running");
+                let r = std::process::Command::new(program)
                     .args(std::env::args_os().skip(1))
+                    {env_setup}
                     .status();
                 std::process::exit(r.unwrap().code().unwrap_or(2));
             "#
         ),
-        &[("CARGO_RUSTUP_TEST_rustc_toolchain_exe", rustc_toolchain_exe)],
+        &[
+            ("CARGO_RUSTUP_TEST_rustc_toolchain_exe", rustc_toolchain_exe),
+            (
+                "CARGO_RUSTUP_TEST_cargo_toolchain_exe",
+                cargo_toolchain_exe.clone(),
+            ),
+        ],
     );
     fs::hard_link(
-        &rustc_proxy,
+        &proxy,
         cargo_bin.join("cargo").with_extension(EXE_EXTENSION),
     )
     .unwrap();
     fs::hard_link(
-        &rustc_proxy,
+        &proxy,
         cargo_bin.join("rustup").with_extension(EXE_EXTENSION),
     )
     .unwrap();
@@ -154,7 +192,7 @@ fn typical_rustup() {
         cargo_bin,
         rustup_home,
         cargo_toolchain_exe,
-    } = simulated_rustup_environment();
+    } = simulated_rustup_environment(false, "");
 
     // Set up a project and run a normal cargo build.
     let p = project().file("src/lib.rs", "").build();
@@ -162,6 +200,7 @@ fn typical_rustup() {
     // `~/.cargo/bin/rustc to use our custom rustup proxies.
     let path = prepend_path(&cargo_bin);
     p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
@@ -179,6 +218,7 @@ real rustc running
     p.build_dir().rm_rf();
 
     p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
@@ -202,7 +242,7 @@ fn custom_calls_other_cargo() {
         cargo_bin,
         rustup_home,
         cargo_toolchain_exe: _,
-    } = simulated_rustup_environment();
+    } = simulated_rustup_environment(false, "");
 
     // Create a directory with a custom toolchain (outside of the rustup universe).
     let custom_bin = root().join("custom-bin");
@@ -249,6 +289,7 @@ fn custom_calls_other_cargo() {
         // Set these to simulate what would happen when running under rustup.
         // We want to make sure that cargo-custom does not try to use the
         // rustup proxies.
+        .env("RUSTUP_TOOLCHAIN_SOURCE", "default")
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .with_stderr_data(str![[r#"
@@ -259,4 +300,44 @@ custom toolchain rustc running
 
 "#]])
         .run();
+}
+
+/// Performs a `cargo install` with a non-default toolchain in a simulated
+/// rustup environment. The purpose is to verify the warning that is emitted.
+#[cargo_test]
+fn cargo_install_with_non_default_toolchain() {
+    let RustupEnvironment {
+        cargo_bin,
+        rustup_home: _,
+        cargo_toolchain_exe: _,
+    } = simulated_rustup_environment(
+        true,
+        ".env(\"RUSTUP_TOOLCHAIN_SOURCE\", \"env\")
+         .env(\"RUSTUP_TOOLCHAIN\", \"test-toolchain\")",
+    );
+
+    pkg("foo", "0.0.1");
+
+    let mut p = process(cargo_bin.join("cargo"));
+    p.arg_line("install foo");
+    execs()
+        .with_process_builder(p)
+        .with_stderr_data(str![[r#"
+`[..]/cargo[EXE]` proxy running
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[WARNING] using non-default toolchain `test-toolchain` overridden by env
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain.
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
 }
