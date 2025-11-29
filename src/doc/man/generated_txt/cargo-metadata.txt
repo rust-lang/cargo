@@ -354,8 +354,10 @@ OPTIONS
        --filter-platform triple
            This filters the resolve output to only include dependencies for the
            given target triple
-           <https://doc.rust-lang.org/cargo/appendix/glossary.html#target>.
-           Without this flag, the resolve includes all targets.
+           <https://doc.rust-lang.org/cargo/appendix/glossary.html#target>. A
+           literal "host-tuple" can be used, which will internally be
+           substituted by the host’s target. Without this flag, the resolve
+           includes all targets.
 
            Note that the dependencies listed in the “packages” array still
            includes all dependencies. Each package definition is intended to be

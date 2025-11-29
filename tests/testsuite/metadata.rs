@@ -3842,21 +3842,15 @@ fn filter_platform() {
         .run();
     clear();
 
-    // Filter on host, removes alt and cfg.
-    p.cargo("metadata --filter-platform")
-        .arg(&host_target)
-        .with_stderr_data(
-            str![[r#"
+    let host_filtered_stderr = str![[r#"
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
 [DOWNLOADING] crates ...
 [DOWNLOADED] normal-dep v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] host-dep v0.0.1 (registry `dummy-registry`)
 
-"#]]
-            .unordered(),
-        )
-        .with_stdout_data(
-            str![[r#"
+"#]];
+
+    let host_filtered_stdout = str![[r#"
 {
   "packages": [
     {
@@ -3945,10 +3939,21 @@ fn filter_platform() {
   },
   "...": "{...}"
 }
-"#]]
-            .is_json()
-            .unordered(),
-        )
+"#]];
+
+    // Filter on host, removes alt and cfg.
+    p.cargo("metadata --filter-platform")
+        .arg(&host_target)
+        .with_stderr_data(host_filtered_stderr.clone().unordered())
+        .with_stdout_data(host_filtered_stdout.clone().is_json().unordered())
+        .run();
+    clear();
+
+    // Filter on host-tuple, should produce same result as explicit host target.
+    p.cargo("metadata --filter-platform")
+        .arg("host-tuple")
+        .with_stderr_data(host_filtered_stderr.unordered())
+        .with_stdout_data(host_filtered_stdout.is_json().unordered())
         .run();
     clear();
 

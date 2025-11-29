@@ -364,6 +364,7 @@ possible value.</p>
 <dt class="option-term" id="option-cargo-metadata---filter-platform"><a class="option-anchor" href="#option-cargo-metadata---filter-platform"><code>--filter-platform</code> <em>triple</em></a></dt>
 <dd class="option-desc"><p>This filters the <code>resolve</code> output to only include dependencies for the
 given <a href="../appendix/glossary.html#target">target triple</a>.
+A literal <code>"host-tuple"</code> can be used, which will internally be substituted by the host’s target.
 Without this flag, the resolve includes all targets.</p>
 <p>Note that the dependencies listed in the “packages” array still includes all
 dependencies. Each package definition is intended to be an unaltered
