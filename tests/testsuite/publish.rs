@@ -4595,3 +4595,48 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn registry_index_not_allowed_in_publish() {
+    let registry = registry::init();
+    Package::new("bar", "0.1.0").publish();
+    let _registry = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                bar = {{ version = "0.1.0", registry-index = "{}" }}
+            "#,
+                registry.index_url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) specification uses `registry-index` which is for internal use only
+  [HELP] use `registry = "<name>"` and configure the registry in `.cargo/config.toml`
+
+"#]])
+        .run();
+}
