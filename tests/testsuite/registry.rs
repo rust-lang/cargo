@@ -3575,8 +3575,8 @@ fn sparse_blocking_count() {
    [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
    [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 500
-body:
-internal server error
+         body:
+         internal server error
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -3625,11 +3625,11 @@ fn sparse_retry_single() {
     p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 500
-body:
-internal server error
+         body:
+         internal server error
 [WARNING] spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 500
-body:
-internal server error
+         body:
+         internal server error
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -3772,11 +3772,11 @@ fn dl_retry_single() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
-body:
-internal server error
+         body:
+         internal server error
 [WARNING] spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
-body:
-internal server error
+         body:
+         internal server error
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 
 "#]]).run();
@@ -3921,8 +3921,8 @@ fn retry_too_many_requests() {
     .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 429
-body:
-too many requests, try again in 1 seconds
+         body:
+         too many requests, try again in 1 seconds
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -4269,14 +4269,14 @@ fn debug_header_message_index() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [WARNING] spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [WARNING] spurious network error (1 try remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
@@ -4334,14 +4334,14 @@ fn debug_header_message_dl() {
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [WARNING] spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [WARNING] spurious network error (1 try remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
-body:
-Please slow down
+         body:
+         Please slow down
 [ERROR] failed to download from `http://127.0.0.1:[..]/dl/bar/1.0.0/download`
 
 Caused by:

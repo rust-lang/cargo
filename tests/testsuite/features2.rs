@@ -1520,8 +1520,8 @@ fn resolver_ws_member() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] resolver for the non root package will be ignored, specify resolver at the workspace root:
-package:   [ROOT]/foo/a/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
+         package:   [ROOT]/foo/a/Cargo.toml
+         workspace: [ROOT]/foo/Cargo.toml
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
