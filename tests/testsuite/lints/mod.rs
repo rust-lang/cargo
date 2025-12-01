@@ -83,6 +83,7 @@ test_dummy_unstable = { level = "forbid", priority = -1 }
   | ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
+[ERROR] encountered 1 error while running lints
 
 "#]])
         .run();
@@ -125,6 +126,7 @@ workspace = true
    | ^^^^^^^^^^^^^^^^^^
    |
    = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
+[ERROR] encountered 1 error while running lints
 
 "#]])
         .run();
