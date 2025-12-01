@@ -167,6 +167,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
                 .into());
             }
         }
+
+        if crate_name != "."
+            && let Err(e) = package_name
+        {
+            return Err(anyhow::format_err!("{e}").into());
+        }
     }
 
     let mut from_cwd = false;

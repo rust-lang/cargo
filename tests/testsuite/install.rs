@@ -3076,10 +3076,7 @@ fn emoji_name() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-
-thread 'main' (939065) panicked at crates/cargo-util/src/registry.rs:24:44:
-byte index 2 is not a char boundary; it is inside '🦀' (bytes 0..4) of `🦀`
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[ERROR] invalid character `🦀` in package name: `🦀`, the first character must be a Unicode XID start character (most letters or `_`)
 
 "#]])
         .run();
@@ -3092,8 +3089,7 @@ fn starts_with_number_case() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[ERROR] could not find `23898932983` in registry `crates-io` with version `*`
+[ERROR] invalid character `2` in package name: `23898932983`, the name cannot start with a digit
 
 "#]])
         .run();
@@ -3106,10 +3102,7 @@ fn mistaken_flag_case() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-
-thread 'main' (939643) panicked at crates/cargo-util/src/registry.rs:24:44:
-byte index 2 is not a char boundary; it is inside '–' (bytes 0..3) of `––path`
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[ERROR] invalid character `–` in package name: `––path`, the first character must be a Unicode XID start character (most letters or `_`)
 
 "#]])
         .run();
