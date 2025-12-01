@@ -1678,13 +1678,17 @@ impl GlobalContext {
             if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
             }
-            seen_dir.insert(config_root);
+
+            let canonical_root = config_root.canonicalize().unwrap_or(config_root);
+            seen_dir.insert(canonical_root);
         }
+
+        let canonical_home = home.canonicalize().unwrap_or(home.to_path_buf());
 
         // Once we're done, also be sure to walk the home directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
-        if !seen_dir.contains(home) {
+        if !seen_dir.contains(&canonical_home) && !seen_dir.contains(home) {
             if let Some(path) = self.get_file_path(home, "config", true)? {
                 walk(&path)?;
             }
