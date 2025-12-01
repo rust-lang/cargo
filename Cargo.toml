@@ -52,7 +52,7 @@ git2-curl = "0.21.0"
 gix = { version = "0.74.1", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
 glob = "0.3.3"
 # Pinned due to https://github.com/sunng87/handlebars-rust/issues/711
-handlebars = { version = "=6.3.1", features = ["dir_source"] }
+handlebars = { version = "=6.3.2", features = ["dir_source"] }
 hex = "0.4.3"
 hmac = "0.12.1"
 home = "0.5.12"
