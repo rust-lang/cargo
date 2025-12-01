@@ -25,6 +25,8 @@ extend-ignore-words-re = [
 [default.extend-identifiers]
 # This comes from `windows_sys`
 ERROR_FILENAME_EXCED_RANGE = "ERROR_FILENAME_EXCED_RANGE"
+# `-Wwarnings`
+Wwarnings = "Wwarnings"
 
 # Name of a dependency
 flate2 = "flate2"

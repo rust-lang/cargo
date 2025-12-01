@@ -316,4 +316,4 @@ jobs:
     - name: Checkout Actions Repository
       uses: actions/checkout@v5
     - name: Spell Check Repo
-      uses: crate-ci/typos@v1.38.1
+      uses: crate-ci/typos@v1.40.0
