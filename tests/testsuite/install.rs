@@ -3068,3 +3068,42 @@ For more information, try '--help'.
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn emoji_name() {
+    pkg("foo", "0.0.1");
+    cargo_process("install 🦀")
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid character `🦀` in package name: `🦀`, the first character must be a Unicode XID start character (most letters or `_`)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn starts_with_number_case() {
+    pkg("foo", "0.0.1");
+    cargo_process("install 23898932983")
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid character `2` in package name: `23898932983`, the name cannot start with a digit
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mistaken_flag_case() {
+    pkg("foo", "0.0.1");
+    cargo_process("install ––path .") // en dashes
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid character `–` in package name: `––path`, the first character must be a Unicode XID start character (most letters or `_`)
+
+"#]])
+        .run();
+}
