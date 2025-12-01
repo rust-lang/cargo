@@ -1299,10 +1299,7 @@ impl<'gctx> Workspace<'gctx> {
         }
 
         if error_count > 0 {
-            Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
-                "encountered {error_count} errors(s) while running lints"
-            ))
-            .into())
+            bail!("encountered {error_count} errors(s) while running lints")
         } else {
             Ok(())
         }
