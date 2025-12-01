@@ -3068,3 +3068,49 @@ For more information, try '--help'.
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn emoji_name() {
+    pkg("foo", "0.0.1");
+    cargo_process("install 🦀")
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+
+thread 'main' (939065) panicked at crates/cargo-util/src/registry.rs:24:44:
+byte index 2 is not a char boundary; it is inside '🦀' (bytes 0..4) of `🦀`
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn starts_with_number_case() {
+    pkg("foo", "0.0.1");
+    cargo_process("install 23898932983")
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] could not find `23898932983` in registry `crates-io` with version `*`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mistaken_flag_case() {
+    pkg("foo", "0.0.1");
+    cargo_process("install ––path .") // en dashes
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+
+thread 'main' (939643) panicked at crates/cargo-util/src/registry.rs:24:44:
+byte index 2 is not a char boundary; it is inside '–' (bytes 0..3) of `––path`
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+"#]])
+        .run();
+}
