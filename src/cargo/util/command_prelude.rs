@@ -327,6 +327,14 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_target_triple(self, target: &'static str) -> Self {
+        self.arg_target_triple_with_candidates(target, ArgValueCandidates::new(get_target_triples))
+    }
+
+    fn arg_target_triple_with_candidates(
+        self,
+        target: &'static str,
+        target_completion: ArgValueCandidates,
+    ) -> Self {
         let unsupported_short_arg = {
             let value_parser = UnknownArgumentValueParser::suggest_arg("--target");
             Arg::new("unsupported-short-target-flag")
@@ -339,7 +347,7 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
                 .help_heading(heading::COMPILATION_OPTIONS)
-                .add(clap_complete::ArgValueCandidates::new(get_target_triples)),
+                .add(target_completion),
         )
         ._arg(unsupported_short_arg)
     }
@@ -1280,6 +1288,14 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
         )),
     );
 
+    candidates
+}
+
+pub fn get_target_triples_with_all() -> Vec<clap_complete::CompletionCandidate> {
+    let mut candidates = vec![
+        clap_complete::CompletionCandidate::new("all").help(Some("Include all targets".into())),
+    ];
+    candidates.extend(get_target_triples());
     candidates
 }
 
