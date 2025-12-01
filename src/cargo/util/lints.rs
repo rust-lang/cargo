@@ -1,15 +1,31 @@
 use crate::core::{Edition, Feature, Features, Manifest, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
+
 use annotate_snippets::{AnnotationKind, Group, Level, Patch, Snippet};
-use cargo_util_schemas::manifest::{ProfilePackageSpec, TomlLintLevel, TomlToolLints};
+use cargo_util_schemas::manifest::ProfilePackageSpec;
+use cargo_util_schemas::manifest::TomlLintLevel;
+use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
+
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[BLANKET_HINT_MOSTLY_UNUSED, IM_A_TEAPOT, UNKNOWN_LINTS];
+
+pub const LINTS: &[Lint] = &[
+    BLANKET_HINT_MOSTLY_UNUSED,
+    IMPRECISE_VERSION_REQUIREMENTS,
+    IM_A_TEAPOT,
+    UNKNOWN_LINTS,
+];
+
+enum SpanOrigin {
+    Specified(core::ops::Range<usize>),
+    Inherited(core::ops::Range<usize>),
+}
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
@@ -738,6 +754,189 @@ fn output_unknown_lints(
         }
 
         gctx.shell().print_report(&report, lint_level.force())?;
+    }
+
+    Ok(())
+}
+
+const IMPRECISE_VERSION_REQUIREMENTS: Lint = Lint {
+    name: "imprecise_version_requirements",
+    desc: "dependency version requirement lacks full precision",
+    groups: &[],
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+    docs: Some(
+        r#"
+### What it does
+
+Checks for dependency version requirements that lack full `major.minor.patch` precision,
+such as `serde = "1"` or `serde = "1.0"`.
+
+### Why it is bad
+
+Imprecise version requirements can be misleading about the actual minimum supported version.
+For example,
+`serde = "1"` suggests that any version from `1.0.0` onwards is acceptable,
+but if your code actually requires features from `1.0.219`,
+the imprecise requirement gives a false impression about compatibility.
+
+Specifying the full version helps with:
+
+- Accurate minimum version documentation
+- Better compatibility with `-Z minimal-versions`
+- Clearer dependency constraints for consumers
+
+### Drawbacks
+
+Even with fully specified versions,
+the minimum bound might still be incorrect if untested.
+This lint helps improve precision but doesn't guarantee correctness.
+
+### Example
+
+```toml
+[dependencies]
+serde = "1"
+```
+
+Should be written as a full specific version:
+
+```toml
+[dependencies]
+serde = "1.0.219"
+```
+"#,
+    ),
+};
+
+pub fn imprecise_version_requirements(
+    pkg: &Package,
+    path: &Path,
+    pkg_lints: &TomlToolLints,
+    ws_contents: &str,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
+    ws_path: &Path,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+    let (lint_level, reason) = IMPRECISE_VERSION_REQUIREMENTS.level(
+        pkg_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+    );
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+
+    let platform_map: HashMap<cargo_platform::Platform, String> = manifest
+        .normalized_toml()
+        .target
+        .as_ref()
+        .map(|map| {
+            map.keys()
+                .map(|k| (k.parse().expect("already parsed"), k.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    for dep in manifest.dependencies().iter() {
+        let crate::util::OptVersionReq::Req(req) = dep.version_req() else {
+            continue;
+        };
+        let [cmp] = req.comparators.as_slice() else {
+            continue;
+        };
+        if cmp.op != semver::Op::Caret {
+            continue;
+        }
+        if cmp.minor.is_some() && cmp.patch.is_some() {
+            continue;
+        }
+
+        // Only focus on single caret requirement that has only `major` or `major.minor`
+        let name_in_toml = dep.name_in_toml().as_str();
+
+        let key_path = if let Some(cfg) = dep.platform().and_then(|p| platform_map.get(p)) {
+            &["target", &cfg, dep.kind().kind_table(), name_in_toml][..]
+        } else {
+            &[dep.kind().kind_table(), name_in_toml][..]
+        };
+
+        let Some((_key, value)) = get_key_value(manifest.document(), key_path) else {
+            continue;
+        };
+
+        let span = match value.as_ref() {
+            toml::de::DeValue::String(_) => SpanOrigin::Specified(value.span()),
+            toml::de::DeValue::Table(map) => {
+                if let Some(v) = map.get("version").filter(|v| v.as_ref().is_str()) {
+                    SpanOrigin::Specified(v.span())
+                } else if let Some((k, v)) = map
+                    .get_key_value("workspace")
+                    .filter(|(_, v)| v.as_ref().is_bool())
+                {
+                    SpanOrigin::Inherited(k.span().start..v.span().end)
+                } else {
+                    panic!("version must be specified or workspace-inherited");
+                }
+            }
+            _ => unreachable!("dependency must be string or table"),
+        };
+
+        let level = lint_level.to_diagnostic_level();
+        let title = IMPRECISE_VERSION_REQUIREMENTS.desc;
+        let emitted_source = IMPRECISE_VERSION_REQUIREMENTS.emitted_source(lint_level, reason);
+        let report = match span {
+            SpanOrigin::Specified(span) => &[Group::with_title(level.clone().primary_title(title))
+                .element(
+                    Snippet::source(manifest.contents())
+                        .path(&manifest_path)
+                        .annotation(AnnotationKind::Primary.span(span)),
+                )
+                .element(Level::NOTE.message(emitted_source))][..],
+            SpanOrigin::Inherited(inherit_span) => {
+                let key_path = &["workspace", "dependencies", name_in_toml];
+                let (_, value) =
+                    get_key_value(ws_document, key_path).expect("must have workspace dep");
+                let ws_span = match value.as_ref() {
+                    toml::de::DeValue::String(_) => value.span(),
+                    toml::de::DeValue::Table(map) => map
+                        .get("version")
+                        .filter(|v| v.as_ref().is_str())
+                        .map(|v| v.span())
+                        .expect("must have a version field"),
+                    _ => unreachable!("dependency must be string or table"),
+                };
+
+                let ws_path = rel_cwd_manifest_path(ws_path, gctx);
+                let second_title = format!("dependency `{name_in_toml}` was inherited");
+
+                &[
+                    Group::with_title(level.clone().primary_title(title)).element(
+                        Snippet::source(ws_contents)
+                            .path(ws_path)
+                            .annotation(AnnotationKind::Primary.span(ws_span)),
+                    ),
+                    Group::with_title(Level::NOTE.secondary_title(second_title))
+                        .element(
+                            Snippet::source(manifest.contents())
+                                .path(&manifest_path)
+                                .annotation(AnnotationKind::Context.span(inherit_span)),
+                        )
+                        .element(Level::NOTE.message(emitted_source)),
+                ][..]
+            }
+        };
+
+        if lint_level.is_error() {
+            *error_count += 1;
+        }
+        gctx.shell().print_report(report, lint_level.force())?;
     }
 
     Ok(())

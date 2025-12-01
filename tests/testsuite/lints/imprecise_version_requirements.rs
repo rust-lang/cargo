@@ -31,6 +31,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -68,6 +75,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1.0"
+  |       ^^^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -142,6 +156,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:19
+  |
+7 | dep = { version = "1" }
+  |                   ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -378,6 +399,13 @@ edition = "2021"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:33
+  |
+7 | bar = { path = "bar", version = "0.1" }
+  |                                 ^^^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -461,6 +489,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:[..]
+  |
+7 | bar = { git = '[ROOTURL]/bar', version = "0.1" }
+  |                                      [..]^^^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
@@ -496,6 +531,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -531,6 +573,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1.0"
+  |       ^^^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -569,6 +618,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:8:7
+  |
+8 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -607,6 +663,13 @@ imprecise_version_requirements = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:8:7
+  |
+8 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -644,6 +707,20 @@ imprecise_version_requirements = "warn"
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:8:9
+  |
+8 | regex = "1.0"
+  |         ^^^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -700,6 +777,18 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^
+  |
+[NOTE] dependency `dep` was inherited
+ --> member/Cargo.toml:8:5
+  |
+8 | dep.workspace = true
+  |     ----------------
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -736,14 +825,16 @@ imprecise_version_requirements = "deny"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] dependency version requirement lacks full precision
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^
+  |
+  = [NOTE] `cargo::imprecise_version_requirements` is set to `deny` in `[lints]`
+[ERROR] encountered 1 error while running lints
 
 "#]])
         .run();
