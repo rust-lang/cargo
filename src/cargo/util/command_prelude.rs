@@ -1282,7 +1282,8 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
     }
 
     // Allow tab-completion for `host-tuple` as the desired target.
-    candidates.push(
+    candidates.insert(
+        0,
         clap_complete::CompletionCandidate::new("host-tuple").help(Some(
             concat!("alias for: ", env!("RUST_HOST_TARGET")).into(),
         )),
