@@ -565,6 +565,8 @@ fn clean_remove_rlib_rmeta() {
     assert!(!rmeta.exists());
 }
 
+// Regression test for #16302
+#[should_panic]
 #[cargo_test]
 fn package_cleans_all_the_things() {
     // -p cleans everything
@@ -598,7 +600,7 @@ fn package_cleans_all_the_things() {
             .arg("-Zbuild-dir-new-layout")
             .masquerade_as_nightly_cargo(&["new build-dir layout"])
             .run();
-        //assert_all_clean(&p.build_dir());  // FIXME
+        assert_all_clean(&p.build_dir());
     }
     let p = project()
         .file(
@@ -657,7 +659,7 @@ fn package_cleans_all_the_things() {
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    //assert_all_clean(&p.build_dir());  // FIXME
+    assert_all_clean(&p.build_dir());
 
     // Try some targets.
     p.cargo("build --all-targets --target")
@@ -670,7 +672,43 @@ fn package_cleans_all_the_things() {
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    //assert_all_clean(&p.build_dir());  // FIXME
+    assert_all_clean(&p.build_dir());
+}
+
+// Ensures that all files for the package have been deleted.
+#[track_caller]
+fn assert_all_clean(build_dir: &Path) {
+    let walker = walkdir::WalkDir::new(build_dir).into_iter();
+    for entry in walker.filter_entry(|e| {
+        let path = e.path();
+        // This is a known limitation, clean can't differentiate between
+        // the different build scripts from different packages.
+        !(path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("build_script_build")
+            && path
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == "incremental")
+    }) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if let ".rustc_info.json" | ".cargo-lock" | "CACHEDIR.TAG" =
+            path.file_name().unwrap().to_str().unwrap()
+        {
+            continue;
+        }
+        if path.is_symlink() || path.is_file() {
+            panic!("{:?} was not cleaned", path);
+        }
+    }
 }
 
 #[cargo_test]
