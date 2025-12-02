@@ -1348,10 +1348,8 @@ impl<'gctx> Workspace<'gctx> {
         }
 
         if error_count > 0 {
-            Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
-                "encountered {error_count} errors(s) while running lints"
-            ))
-            .into())
+            let plural = if error_count == 1 { "" } else { "s" };
+            bail!("encountered {error_count} error{plural} while running lints")
         } else {
             Ok(())
         }
