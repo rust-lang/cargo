@@ -565,8 +565,6 @@ fn clean_remove_rlib_rmeta() {
     assert!(!rmeta.exists());
 }
 
-// Regression test for #16302
-#[should_panic]
 #[cargo_test]
 fn package_cleans_all_the_things() {
     // -p cleans everything
