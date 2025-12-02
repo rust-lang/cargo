@@ -165,3 +165,45 @@ authors = []
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "-Zhint-mostly-unused is unstable")]
+fn deny() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+
+[profile.dev]
+hint-mostly-unused = true
+
+[lints.cargo]
+blanket_hint_mostly_unused = "deny"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check -Zprofile-hint-mostly-unused -v -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `hint-mostly-unused` is being blanket applied to all dependencies
+ --> Cargo.toml:7:10
+  |
+7 | [profile.dev]
+  |          ^^^
+8 | hint-mostly-unused = true
+  | -------------------------
+  |
+  = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `deny` in `[lints]`
+[HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
+  |
+7 | [profile.dev.package.<pkg_name>]
+  |             +++++++++++++++++++
+
+"#]])
+        .run();
+}
