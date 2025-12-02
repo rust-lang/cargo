@@ -385,17 +385,33 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// This is called periodically to mark the concurrency of internal structures.
-    pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
+    pub fn mark_concurrency(
+        &mut self,
+        build_runner: &BuildRunner<'_, '_>,
+        active: usize,
+        waiting: usize,
+        inactive: usize,
+    ) {
         if !self.enabled {
             return;
         }
+        let elapsed = self.start.elapsed().as_secs_f64();
         let c = Concurrency {
-            t: self.start.elapsed().as_secs_f64(),
+            t: elapsed,
             active,
             waiting,
             inactive,
         };
         self.concurrency.push(c);
+
+        if let Some(logger) = build_runner.bcx.logger {
+            logger.log(LogMessage::ConcurrencySample {
+                elapsed,
+                active,
+                waiting,
+                inactive,
+            });
+        }
     }
 
     /// Mark that a fresh unit was encountered. (No re-compile needed)
@@ -409,7 +425,7 @@ impl<'gctx> Timings<'gctx> {
     }
 
     /// Take a sample of CPU usage
-    pub fn record_cpu(&mut self) {
+    pub fn record_cpu(&mut self, build_runner: &BuildRunner<'_, '_>) {
         if !self.enabled {
             return;
         }
@@ -431,8 +447,16 @@ impl<'gctx> Timings<'gctx> {
         let pct_idle = current.idle_since(prev);
         *prev = current;
         self.last_cpu_recording = now;
-        let dur = now.duration_since(self.start).as_secs_f64();
-        self.cpu_usage.push((dur, 100.0 - pct_idle));
+        let elapsed = now.duration_since(self.start).as_secs_f64();
+        let percentage = 100.0 - pct_idle;
+        self.cpu_usage.push((elapsed, percentage));
+
+        if let Some(logger) = build_runner.bcx.logger {
+            logger.log(LogMessage::CpuSample {
+                elapsed,
+                percentage,
+            });
+        }
     }
 
     /// Call this when all units are finished.
@@ -444,7 +468,7 @@ impl<'gctx> Timings<'gctx> {
         if !self.enabled {
             return Ok(());
         }
-        self.mark_concurrency(0, 0, 0);
+        self.mark_concurrency(build_runner, 0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {

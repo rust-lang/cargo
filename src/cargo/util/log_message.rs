@@ -101,6 +101,24 @@ pub enum LogMessage {
         /// Reason why the unit is dirty and needs rebuilding.
         cause: DirtyReason,
     },
+    /// Emitted periodically to track concurrency state.
+    ConcurrencySample {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// Number of units currently running.
+        active: usize,
+        /// Number of units waiting for jobserver token.
+        waiting: usize,
+        /// Number of units waiting for dependencies.
+        inactive: usize,
+    },
+    /// Emitted periodically to track CPU usage.
+    CpuSample {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// CPU usage percentage (0.0 to 100.0).
+        percentage: f64,
+    },
 }
 
 /// Cargo target information.

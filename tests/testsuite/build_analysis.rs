@@ -7,6 +7,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::str;
+use itertools::Itertools as _;
 
 #[cargo_test]
 fn gated() {
@@ -508,8 +509,67 @@ fn log_rebuild_reason_no_rebuild() {
     );
 }
 
+#[cargo_test]
+fn log_msg_concurrency_sample() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    assert_e2e().eq(
+        get_unfiltered_log(0),
+        str![[r#"
+[
+  "{...}",
+  {
+    "active": 1,
+    "elapsed": "{...}",
+    "inactive": 0,
+    "reason": "concurrency-sample",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z",
+    "waiting": 0
+  },
+  "{...}",
+  {
+    "active": 0,
+    "elapsed": "{...}",
+    "inactive": 0,
+    "reason": "concurrency-sample",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z",
+    "waiting": 0
+  },
+  "{...}"
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
 /// This also asserts the number of log files is exactly the same as `idx + 1`.
 fn get_log(idx: usize) -> String {
+    // Concurrency and CPU sampling introduce non-deterministic log content,
+    // so filter them out.
+    // We should find a way to make the filter configurable on user side.
+    get_unfiltered_log(idx)
+        .lines()
+        .filter(|l| {
+            let json = serde_json::from_str::<serde_json::Value>(l).unwrap();
+            let reason = &json["reason"];
+            reason != "cpu-sample" && reason != "concurrency-sample"
+        })
+        .join("\n")
+}
+
+/// This also asserts the number of log files is exactly the same as `idx + 1`.
+fn get_unfiltered_log(idx: usize) -> String {
     let cargo_home = paths::cargo_home();
     let log_dir = cargo_home.join("log");
 
