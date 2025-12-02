@@ -2548,6 +2548,7 @@ LLVM version: 9.0
 
 #[cargo_test]
 fn doc_fingerprint_respects_target_paths() {
+    let host = rustc_host();
     // Random rustc verbose version
     let old_rustc_verbose_version = format!(
         "\
@@ -2555,88 +2556,66 @@ rustc 1.41.1 (f3e1a954d 2020-02-24)
 binary: rustc
 commit-hash: f3e1a954d2ead4e2fc197c7da7d71e6c61bad196
 commit-date: 2020-02-24
-host: {}
+host: {host}
 release: 1.41.1
 LLVM version: 9.0
 ",
-        rustc_host()
     );
 
-    // Create the dummy project.
-    let dummy_project = project()
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
             [package]
             name = "foo"
-            version = "1.2.4"
-            edition = "2015"
-            authors = []
+            edition = "2021"
         "#,
         )
         .file("src/lib.rs", "//! These are the docs!")
         .build();
 
-    dummy_project.cargo("doc --target").arg(rustc_host()).run();
+    // generate `target/doc` and `target/<host>/doc
+    p.cargo("doc --target").arg(host).run();
+    p.cargo("doc").run();
 
-    let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
+    let host_fingerprint_path = p.build_dir().join(".rustdoc_fingerprint.json");
+
+    let target_fingerprint_path = p.build_dir().join(host).join(".rustdoc_fingerprint.json");
+
+    let host_fingerprint: RustDocFingerprint =
+        serde_json::from_str(&fs::read_to_string(&host_fingerprint_path).unwrap())
             .expect("JSON Serde fail");
+
+    assert!(!target_fingerprint_path.exists());
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
-    let output = std::process::Command::new("rustc")
-        .arg("-vV")
-        .output()
-        .expect("Failed to get actual rustc verbose version");
-    assert_eq!(
-        fingerprint.rustc_vv,
-        (String::from_utf8_lossy(&output.stdout).as_ref())
-    );
-
-    // As the test shows above. Now we have generated the `doc/` folder and inside
-    // the rustdoc fingerprint file is located with the correct rustc version.
-    // So we will remove it and create a new fingerprint with an old rustc version
-    // inside it. We will also place a bogus file inside of the `doc/` folder to ensure
-    // it gets removed as we expect on the next doc compilation.
-    dummy_project.change_file(
-        "target/.rustdoc_fingerprint.json",
-        &old_rustc_verbose_version,
-    );
-
-    fs::write(
-        dummy_project
-            .build_dir()
-            .join(rustc_host())
-            .join("doc/bogus_file"),
-        String::from("This is a bogus file and should be removed!"),
+    let current_rustc_version = String::from_utf8(
+        std::process::Command::new("rustc")
+            .arg("-vV")
+            .output()
+            .unwrap()
+            .stdout,
     )
-    .expect("Error writing test bogus file");
+    .unwrap();
+    assert_eq!(&host_fingerprint.rustc_vv, &current_rustc_version);
 
-    // Now if we trigger another compilation, since the fingerprint contains an old version
-    // of rustc, cargo should remove the entire `/doc` folder (including the fingerprint)
-    // and generating another one with the actual version.
-    // It should also remove the bogus file we created above.
-    dummy_project.cargo("doc --target").arg(rustc_host()).run();
+    // Write random `rustc -vV` output and bogus file for host
+    fs::write(&host_fingerprint_path, &old_rustc_verbose_version).unwrap();
+    fs::write(
+        p.build_dir().join("doc/bogus_file"),
+        "This is a bogus file and should be removed!",
+    )
+    .unwrap();
 
-    assert!(
-        !dummy_project
-            .build_dir()
-            .join(rustc_host())
-            .join("doc/bogus_file")
-            .exists()
-    );
+    // ...but run only target
+    p.cargo("doc --target").arg(host).run();
 
+    // host doc dir got cleaned
+    assert!(!p.build_dir().join("doc/bogus_file").exists());
     let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
-            .expect("JSON Serde fail");
-
-    // Check that the fingerprint contains the actual rustc version
-    // which has been used to compile the docs.
-    assert_eq!(
-        fingerprint.rustc_vv,
-        (String::from_utf8_lossy(&output.stdout).as_ref())
-    );
+        serde_json::from_str(&fs::read_to_string(&host_fingerprint_path).unwrap()).unwrap();
+    assert_eq!(&fingerprint.rustc_vv, &current_rustc_version);
 }
 
 #[cargo_test]
