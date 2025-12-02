@@ -3786,6 +3786,11 @@ path = "examples/fuzz"
         .build();
     p.cargo("check --example fuzz")
         .with_status(101)
-        .with_stderr_contains("[ERROR] couldn't read `examples/fuzz`: Is a directory (os error 21)")
-        .run();
+        .with_stderr_data(str![[r#"[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  path `[ROOT]/foo/examples/fuzz` for example `fuzz` is a directory, but a source file was expected.
+  Consider setting the path to the intended entrypoint file instead: `[ROOT]/foo/examples/fuzz/.../main.rs`
+
+"#]]).run();
 }

@@ -445,13 +445,17 @@ fn to_example_targets(
     let mut result = Vec::new();
     for toml in targets {
         let path = package_root.join(&toml.path.as_ref().expect("previously normalized").0);
+        let target_name = name_or_panic(&toml);
+
+        validate_target_path_as_source_file(&path, target_name, TARGET_KIND_HUMAN_EXAMPLE)?;
+
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
         };
 
         let mut target = Target::example_target(
-            name_or_panic(&toml),
+            target_name,
             crate_types,
             path,
             toml.required_features.clone(),
@@ -924,6 +928,54 @@ fn validate_unique_build_scripts(scripts: &[String]) -> CargoResult<()> {
     }
     if conflict_file_stem {
         anyhow::bail!(err_msg);
+    }
+    Ok(())
+}
+
+// Will check if `path` specified for a target is a valid source file
+fn validate_target_path_as_source_file(
+    path: &Path,
+    target_name: &str,
+    target_kind: &str,
+) -> CargoResult<()> {
+    if !path.exists() {
+        anyhow::bail!(
+            "can't find {} `{}` at path `{}`",
+            target_kind,
+            target_name,
+            path.display()
+        );
+    }
+
+    // If the path is likely a crate, then suggest setting the path to the entrypoint
+    if path.is_dir() {
+        anyhow::bail!(
+            "path `{}` for {} `{}` is a directory, but a source file was expected.\n\
+Consider setting the path to the intended entrypoint file instead: `{}/.../main.rs`",
+            path.display(),
+            target_kind,
+            target_name,
+            path.display(),
+        );
+    }
+
+    // Validate if the path has a .rs extension
+    if let Some(extension) = path.extension() {
+        if extension != "rs" {
+            anyhow::bail!(
+                "{} `{}` has path `{}` which does not have a `.rs` extension",
+                target_kind,
+                target_name,
+                path.display()
+            );
+        }
+    } else {
+        anyhow::bail!(
+            "{} `{}` has path `{}` which has no file extension (expected `.rs`)",
+            target_kind,
+            target_name,
+            path.display()
+        );
     }
     Ok(())
 }
