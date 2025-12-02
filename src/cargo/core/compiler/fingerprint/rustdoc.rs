@@ -1,0 +1,119 @@
+use std::path::Path;
+
+use anyhow::Context as _;
+use cargo_util::paths;
+use serde::Deserialize;
+use serde::Serialize;
+
+use crate::CargoResult;
+use crate::core::compiler::BuildRunner;
+
+/// Structure used to deal with Rustdoc fingerprinting
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RustDocFingerprint {
+    pub rustc_vv: String,
+}
+
+impl RustDocFingerprint {
+    /// This function checks whether the latest version of `Rustc` used to compile this
+    /// `Workspace`'s docs was the same as the one is currently being used in this `cargo doc`
+    /// call.
+    ///
+    /// In case it's not, it takes care of removing the `doc/` folder as well as overwriting
+    /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
+    /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
+    /// any versioning.
+    pub fn check_rustdoc_fingerprint(build_runner: &BuildRunner<'_, '_>) -> CargoResult<()> {
+        if build_runner
+            .bcx
+            .gctx
+            .cli_unstable()
+            .skip_rustdoc_fingerprint
+        {
+            return Ok(());
+        }
+        let actual_rustdoc_target_data = RustDocFingerprint {
+            rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
+        };
+
+        let fingerprint_path = build_runner
+            .files()
+            .host_build_root()
+            .join(".rustdoc_fingerprint.json");
+        let write_fingerprint = || -> CargoResult<()> {
+            paths::write(
+                &fingerprint_path,
+                serde_json::to_string(&actual_rustdoc_target_data)?,
+            )
+        };
+        let Ok(rustdoc_data) = paths::read(&fingerprint_path) else {
+            // If the fingerprint does not exist, do not clear out the doc
+            // directories. Otherwise this ran into problems where projects
+            // like bootstrap were creating the doc directory before running
+            // `cargo doc` in a way that deleting it would break it.
+            return write_fingerprint();
+        };
+        match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+            Ok(fingerprint) => {
+                if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
+                    return Ok(());
+                } else {
+                    tracing::debug!(
+                        "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
+                        fingerprint.rustc_vv,
+                        actual_rustdoc_target_data.rustc_vv
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+            }
+        };
+        // Fingerprint does not match, delete the doc directories and write a new fingerprint.
+        tracing::debug!(
+            "fingerprint {:?} mismatch, clearing doc directories",
+            fingerprint_path
+        );
+        build_runner
+            .bcx
+            .all_kinds
+            .iter()
+            .map(|kind| {
+                build_runner
+                    .files()
+                    .layout(*kind)
+                    .artifact_dir()
+                    .expect("artifact-dir was not locked")
+                    .doc()
+            })
+            .filter(|path| path.exists())
+            .try_for_each(|path| clean_doc(path))?;
+        write_fingerprint()?;
+        return Ok(());
+
+        fn clean_doc(path: &Path) -> CargoResult<()> {
+            let entries = path
+                .read_dir()
+                .with_context(|| format!("failed to read directory `{}`", path.display()))?;
+            for entry in entries {
+                let entry = entry?;
+                // Don't remove hidden files. Rustdoc does not create them,
+                // but the user might have.
+                if entry
+                    .file_name()
+                    .to_str()
+                    .map_or(false, |name| name.starts_with('.'))
+                {
+                    continue;
+                }
+                let path = entry.path();
+                if entry.file_type()?.is_dir() {
+                    paths::remove_dir_all(path)?;
+                } else {
+                    paths::remove_file(path)?;
+                }
+            }
+            Ok(())
+        }
+    }
+}

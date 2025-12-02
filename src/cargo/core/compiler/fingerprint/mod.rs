@@ -371,6 +371,7 @@
 
 mod dep_info;
 mod dirty_reason;
+mod rustdoc;
 
 use std::collections::hash_map::{Entry, HashMap};
 use std::env;
@@ -409,6 +410,7 @@ pub use self::dep_info::parse_dep_info;
 pub use self::dep_info::parse_rustc_dep_info;
 pub use self::dep_info::translate_dep_info;
 pub use self::dirty_reason::DirtyReason;
+pub use self::rustdoc::RustDocFingerprint;
 
 /// Determines if a [`Unit`] is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.

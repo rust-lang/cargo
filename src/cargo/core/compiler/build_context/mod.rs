@@ -13,9 +13,10 @@ use crate::util::logger::BuildLogger;
 use std::collections::{HashMap, HashSet};
 
 mod target_info;
-pub use self::target_info::{
-    FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
-};
+pub use self::target_info::FileFlavor;
+pub use self::target_info::FileType;
+pub use self::target_info::RustcTargetData;
+pub use self::target_info::TargetInfo;
 
 /// The build context, containing complete information needed for a build task
 /// before it gets started.
