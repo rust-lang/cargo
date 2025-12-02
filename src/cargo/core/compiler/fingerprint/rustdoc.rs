@@ -100,31 +100,32 @@ impl RustDocFingerprint {
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;
-        return Ok(());
 
-        fn clean_doc(path: &Path) -> CargoResult<()> {
-            let entries = path
-                .read_dir()
-                .with_context(|| format!("failed to read directory `{}`", path.display()))?;
-            for entry in entries {
-                let entry = entry?;
-                // Don't remove hidden files. Rustdoc does not create them,
-                // but the user might have.
-                if entry
-                    .file_name()
-                    .to_str()
-                    .map_or(false, |name| name.starts_with('.'))
-                {
-                    continue;
-                }
-                let path = entry.path();
-                if entry.file_type()?.is_dir() {
-                    paths::remove_dir_all(path)?;
-                } else {
-                    paths::remove_file(path)?;
-                }
-            }
-            Ok(())
+        Ok(())
+    }
+}
+
+fn clean_doc(path: &Path) -> CargoResult<()> {
+    let entries = path
+        .read_dir()
+        .with_context(|| format!("failed to read directory `{}`", path.display()))?;
+    for entry in entries {
+        let entry = entry?;
+        // Don't remove hidden files. Rustdoc does not create them,
+        // but the user might have.
+        if entry
+            .file_name()
+            .to_str()
+            .map_or(false, |name| name.starts_with('.'))
+        {
+            continue;
+        }
+        let path = entry.path();
+        if entry.file_type()?.is_dir() {
+            paths::remove_dir_all(path)?;
+        } else {
+            paths::remove_file(path)?;
         }
     }
+    Ok(())
 }
