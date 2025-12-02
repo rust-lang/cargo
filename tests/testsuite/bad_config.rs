@@ -3755,3 +3755,37 @@ please set bin.path in Cargo.toml
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn example_target_path_validation() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2024"
+
+[[example]]
+name = "fuzz"
+path = "examples/fuzz"
+"#,
+        )
+        .file("src/main.rs", "")
+        .file("examples/fuzz/src/main.rs", "")
+        .file(
+            "examples/fuzz/Cargo.toml",
+            r#"
+          [package]
+          name = "fuzz"
+          version = "0.1.0"
+          edition = "2024"
+          "#,
+        )
+        .build();
+    p.cargo("check --example fuzz")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] couldn't read `examples/fuzz`: Is a directory (os error 21)")
+        .run();
+}
