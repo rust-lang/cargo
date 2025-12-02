@@ -117,7 +117,7 @@ unicode-width = "0.2.2"
 url = "2.5.7"
 varisat = "0.2.2"
 walkdir = "2.5.0"
-windows-sys = "0.61"
+windows-sys = ">=0.59, <=0.61"
 winnow = "0.7.14"
 
 [workspace.lints.rust]
