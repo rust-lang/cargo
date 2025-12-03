@@ -28,7 +28,7 @@ pub fn resolve(workspace: &[Package], policy: Policy) -> Option<ResolveGraph> {
 }
 
 fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Option<ResolveGraph> {
-    let Some(dep_spec) = policy.pick_next_dep(dep_queue) else {
+    let Some(dep_spec) = policy.pick_next_dep(&dep_queue) else {
         // Done
         return Some(resolved);
     };
@@ -40,15 +40,15 @@ fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Opt
     let dep_versions = dep_spec.lookup_versions()?;
     let mut dep_versions = policy.filter_versions(dep_spec, dep_versions);
     while let Some(dep_version) = policy.pick_next_version(&mut dep_versions) {
-        if policy.needs_version_unification(dep_version, &resolved) {
+        if policy.needs_version_unification(&dep_version, &resolved) {
             continue;
         }
 
         let mut dep_queue = dep_queue.clone();
-        dep_queue.enqueue(dep_version.dependencies);
+        dep_queue.enqueue(&dep_version.dependencies);
         let mut resolved = resolved.clone();
         resolved.register(dep_version);
-        if let Some(resolved) = resolve_next(dep_queue, resolved) {
+        if let Some(resolved) = resolve_next(dep_queue, resolved, policy) {
             return Some(resolved);
         }
     }
