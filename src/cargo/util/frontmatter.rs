@@ -75,6 +75,14 @@ impl<'s> ScriptSource<'s> {
                     raw.len()..raw.len(),
                 ).push_visible_span(open_start..open_end));
             }
+            _ if u8::try_from(fence_length).is_err() => {
+                return Err(FrontmatterError::new(
+                    format!(
+                        "too many `-` symbols: frontmatter openings may be delimited by up to 255 `-` symbols, but found {fence_length}"
+                    ),
+                    open_start..open_end,
+                ));
+            }
             _ => {}
         }
         source.open = Some(open_start..open_end);

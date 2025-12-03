@@ -274,8 +274,8 @@ fn fence_mismatch_2() {
 #[rustfmt::skip]  // code-generated
 fn fence_too_many_dashes() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-too-many-dashes.rs";
-    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-too-many-dashes.stdout";
-    assert_success(fixture_path, assertion_path);
+    let assertion_path = "tests/testsuite/script/rustc_fixtures/fence-too-many-dashes.stderr";
+    assert_failure(fixture_path, assertion_path);
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
