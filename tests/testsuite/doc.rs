@@ -5,7 +5,8 @@ use std::str;
 
 use crate::prelude::*;
 use crate::utils::tools;
-use cargo::core::compiler::RustDocFingerprint;
+
+use cargo::core::compiler::RustdocFingerprint;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
@@ -2495,7 +2496,7 @@ LLVM version: 9.0
 
     dummy_project.cargo("doc").run();
 
-    let fingerprint: RustDocFingerprint =
+    let fingerprint: RustdocFingerprint =
         serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
             .expect("JSON Serde fail");
 
@@ -2534,7 +2535,7 @@ LLVM version: 9.0
 
     assert!(!dummy_project.build_dir().join("doc/bogus_file").exists());
 
-    let fingerprint: RustDocFingerprint =
+    let fingerprint: RustdocFingerprint =
         serde_json::from_str(&dummy_project.read_file("target/.rustdoc_fingerprint.json"))
             .expect("JSON Serde fail");
 
@@ -2582,11 +2583,11 @@ LLVM version: 9.0
 
     let target_fingerprint_path = p.build_dir().join(host).join(".rustdoc_fingerprint.json");
 
-    let host_fingerprint: RustDocFingerprint =
+    let host_fingerprint: RustdocFingerprint =
         serde_json::from_str(&fs::read_to_string(&host_fingerprint_path).unwrap())
             .expect("JSON Serde fail");
 
-    let target_fingerprint: RustDocFingerprint =
+    let target_fingerprint: RustdocFingerprint =
         serde_json::from_str(&fs::read_to_string(&target_fingerprint_path).unwrap())
             .expect("JSON Serde fail");
 
@@ -2630,7 +2631,7 @@ LLVM version: 9.0
 
     // target doc dir got cleaned
     assert!(!p.build_dir().join(host).join("doc/bogus_file").exists());
-    let fingerprint: RustDocFingerprint =
+    let fingerprint: RustdocFingerprint =
         serde_json::from_str(&fs::read_to_string(&target_fingerprint_path).unwrap()).unwrap();
     assert_eq!(&fingerprint.rustc_vv, &current_rustc_version);
 }

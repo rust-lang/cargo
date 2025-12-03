@@ -84,7 +84,7 @@ pub use self::crate_type::CrateType;
 pub use self::custom_build::LinkArgTarget;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts, LibraryPath};
 pub(crate) use self::fingerprint::DirtyReason;
-pub use self::fingerprint::RustDocFingerprint;
+pub use self::fingerprint::RustdocFingerprint;
 pub use self::job_queue::Freshness;
 use self::job_queue::{Job, JobQueue, JobState, Work};
 pub(crate) use self::layout::Layout;

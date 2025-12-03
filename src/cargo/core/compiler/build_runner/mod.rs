@@ -16,15 +16,14 @@ use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
 
+use super::RustdocFingerprint;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
 use super::fingerprint::{Checksum, Fingerprint};
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
 use super::unit_graph::UnitDep;
-use super::{
-    BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor, RustDocFingerprint,
-};
+use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
@@ -178,7 +177,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // they were compiled with the same Rustc version that we're currently using.
         // See the function doc comment for more.
         if self.bcx.build_config.intent.is_doc() {
-            RustDocFingerprint::check_rustdoc_fingerprint(&self)?
+            RustdocFingerprint::check_rustdoc_fingerprint(&self)?
         }
 
         for unit in &self.bcx.roots {

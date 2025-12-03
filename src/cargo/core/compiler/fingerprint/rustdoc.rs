@@ -21,12 +21,12 @@ use crate::core::compiler::CompileKind;
 /// they were compiled with the same Rustc version that we're currently using.
 /// Otherwise we must remove the `doc/` folder and compile again forcing a rebuild.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RustDocFingerprint {
+pub struct RustdocFingerprint {
     /// `rustc -vV` verbose version output.
     pub rustc_vv: String,
 }
 
-impl RustDocFingerprint {
+impl RustdocFingerprint {
     /// Checks whether the latest version of rustc used to compile this workspace's docs
     /// was the same as the one is currently being used in this `cargo doc` call.
     ///
@@ -51,7 +51,7 @@ impl RustDocFingerprint {
         {
             return Ok(());
         }
-        let new_fingerprint = RustDocFingerprint {
+        let new_fingerprint = RustdocFingerprint {
             rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
         };
 
@@ -66,7 +66,7 @@ impl RustDocFingerprint {
 /// Checks rustdoc fingerprint file for a given [`CompileKind`].
 fn check_fingerprint(
     build_runner: &BuildRunner<'_, '_>,
-    new_fingerprint: &RustDocFingerprint,
+    new_fingerprint: &RustdocFingerprint,
     kind: CompileKind,
 ) -> CargoResult<()> {
     let fingerprint_path = build_runner
@@ -88,7 +88,7 @@ fn check_fingerprint(
         return write_fingerprint();
     };
 
-    match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+    match serde_json::from_str::<RustdocFingerprint>(&rustdoc_data) {
         Ok(on_disk_fingerprint) => {
             if on_disk_fingerprint.rustc_vv == new_fingerprint.rustc_vv {
                 return Ok(());
