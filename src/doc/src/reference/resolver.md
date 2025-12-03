@@ -28,7 +28,7 @@ pub fn resolve(workspace: &[Package], policy: Policy) -> Option<ResolveGraph> {
 }
 
 fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Option<ResolveGraph> {
-    let Some(dep_spec) = policy.pick_next_dep(&dep_queue) else {
+    let Some(dep_spec) = policy.pick_next_dep(&mut dep_queue) else {
         // Done
         return Some(resolved);
     };
