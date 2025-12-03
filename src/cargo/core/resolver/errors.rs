@@ -14,43 +14,88 @@ use anyhow::Error;
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
 
-fn debug_source_path() {
-    let path = Path::new("/home/ibilalkayy/Documents/rust/testing/fourth");
-    let gctx = GlobalContext::default().unwrap();
-    let sid = SourceId::for_path(path).unwrap();
-
+fn debug_source_path(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
     let mut ps = PathSource::new(path, sid, &gctx);
 
     match ps.root_package() {
-        Ok(pkg) => println!("Found package: {}", pkg.name()),
-        Err(e) => eprintln!("Err: {e:?}"),
+        Ok(pkg) => {
+            msg.push_str("Found package: ");
+            msg.push_str(pkg.name().as_str());
+            msg.push('\n');
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
     }
 
-    let loading = ps.load().expect("Err: failed to load");
-    println!("Loading data: {:?}", loading);
+    match ps.load() {
+        Ok(_) => {
+            msg.push_str("Loaded package information\n");
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
 
-    let read_package = ps.read_package().expect("Err: failed to read the package");
-    println!("Read package: {:?}", read_package);
+    match ps.read_package() {
+        Ok(pkg) => {
+            msg.push_str("Read package: ");
+            msg.push_str(pkg.name().as_str());
+            msg.push('\n');
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
 }
 
-fn debug_recursive_source() {
-    let path = Path::new("/home/ibilalkayy/Documents/rust/testing/fourth");
-    let gctx = GlobalContext::default().unwrap();
-    let sid = SourceId::for_path(path).unwrap();
-
+fn debug_recursive_source(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
     let mut rps = RecursivePathSource::new(path, sid, &gctx);
 
-    rps.load().expect("Err: failed to load");
+    match rps.load() {
+        Ok(_) => msg.push_str("Loaded package information\n"),
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+
     match rps.read_packages() {
         Ok(pkgs) => {
             for p in pkgs {
-                println!("found pkg: {}", p.name());
-                let files = rps.list_files(&p);
-                println!("files: {:?}", files.unwrap());
+                msg.push_str("found package: ");
+                msg.push_str(&p.name());
+                msg.push('\n');
+
+                match rps.list_files(&p) {
+                    Ok(files) => {
+                        for f in files {
+                            msg.push_str("    ");
+                            msg.push_str(&f.to_string_lossy());
+                            msg.push('\n');
+                        }
+                    }
+                    Err(e) => {
+                        msg.push_str("Err: ");
+                        msg.push_str(&e.to_string());
+                        msg.push('\n');
+                    }
+                }
             }
         }
-        Err(e) => eprintln!("err: {e:?}"),
-    };
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
 }
 
 /// Error during resolution providing a path of `PackageId`s.
@@ -425,8 +470,14 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
-        debug_source_path();
-        debug_recursive_source();
+        let sid = dep.source_id();
+        let path = dep.source_id().url().to_file_path().unwrap();
+
+        if let Some(gctx) = gctx {
+            debug_source_path(&mut msg, &path.as_path(), &gctx, sid);
+            debug_recursive_source(&mut msg, &path.as_path(), &gctx, sid);
+        }
+
         let _ = writeln!(
             &mut msg,
             "no matching package named `{}` found",
