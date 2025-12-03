@@ -2586,7 +2586,11 @@ LLVM version: 9.0
         serde_json::from_str(&fs::read_to_string(&host_fingerprint_path).unwrap())
             .expect("JSON Serde fail");
 
-    assert!(!target_fingerprint_path.exists());
+    let target_fingerprint: RustDocFingerprint =
+        serde_json::from_str(&fs::read_to_string(&target_fingerprint_path).unwrap())
+            .expect("JSON Serde fail");
+
+    assert_eq!(host_fingerprint.rustc_vv, target_fingerprint.rustc_vv);
 
     // Check that the fingerprint contains the actual rustc version
     // which has been used to compile the docs.
@@ -2600,8 +2604,14 @@ LLVM version: 9.0
     .unwrap();
     assert_eq!(&host_fingerprint.rustc_vv, &current_rustc_version);
 
-    // Write random `rustc -vV` output and bogus file for host
+    // Write random `rustc -vV` output and bogus file for both host and target
     fs::write(&host_fingerprint_path, &old_rustc_verbose_version).unwrap();
+    fs::write(&target_fingerprint_path, &old_rustc_verbose_version).unwrap();
+    fs::write(
+        p.build_dir().join(host).join("doc/bogus_file"),
+        "This is a bogus file and should be removed!",
+    )
+    .unwrap();
     fs::write(
         p.build_dir().join("doc/bogus_file"),
         "This is a bogus file and should be removed!",
@@ -2611,10 +2621,17 @@ LLVM version: 9.0
     // ...but run only target
     p.cargo("doc --target").arg(host).run();
 
-    // host doc dir got cleaned
-    assert!(!p.build_dir().join("doc/bogus_file").exists());
+    // host doc dir stays the same, and the fingerprint is still the old random one
+    assert!(p.build_dir().join("doc/bogus_file").exists());
+    assert_eq!(
+        &fs::read_to_string(&host_fingerprint_path).unwrap(),
+        &old_rustc_verbose_version,
+    );
+
+    // target doc dir got cleaned
+    assert!(!p.build_dir().join(host).join("doc/bogus_file").exists());
     let fingerprint: RustDocFingerprint =
-        serde_json::from_str(&fs::read_to_string(&host_fingerprint_path).unwrap()).unwrap();
+        serde_json::from_str(&fs::read_to_string(&target_fingerprint_path).unwrap()).unwrap();
     assert_eq!(&fingerprint.rustc_vv, &current_rustc_version);
 }
 
