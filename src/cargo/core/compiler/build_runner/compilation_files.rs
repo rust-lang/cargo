@@ -220,7 +220,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             panic!("doc tests do not have an out dir");
         } else if unit.target.is_custom_build() {
             self.build_script_dir(unit)
-        } else if unit.target.is_example() {
+        } else if unit.target.is_example() && !self.ws.gctx().cli_unstable().build_dir_new_layout {
             self.layout(unit.kind).build_dir().examples().to_path_buf()
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
