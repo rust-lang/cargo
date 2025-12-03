@@ -6,11 +6,15 @@ use std::str;
 use crate::prelude::*;
 use crate::utils::tools;
 
-use cargo::core::compiler::RustdocFingerprint;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
 use cargo_test_support::{rustc_host, symlink_supported};
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct RustdocFingerprint {
+    rustc_vv: String,
+}
 
 #[cargo_test]
 fn simple() {

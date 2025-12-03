@@ -10,6 +10,13 @@ use crate::CargoResult;
 use crate::core::compiler::BuildRunner;
 use crate::core::compiler::CompileKind;
 
+/// JSON Schema of the [`RustdocFingerprint`] file.
+#[derive(Debug, Serialize, Deserialize)]
+struct RustdocFingerprintJson {
+    /// `rustc -vV` verbose version output.
+    pub rustc_vv: String,
+}
+
 /// Structure used to deal with Rustdoc fingerprinting
 ///
 /// This is important because the `.js`/`.html` & `.css` files
@@ -21,11 +28,8 @@ use crate::core::compiler::CompileKind;
 /// We need to make sure that if there were any previous docs already compiled,
 /// they were compiled with the same Rustc version that we're currently using.
 /// Otherwise we must remove the `doc/` folder and compile again forcing a rebuild.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RustdocFingerprint {
-    /// `rustc -vV` verbose version output.
-    pub rustc_vv: String,
-}
+#[derive(Debug)]
+pub struct RustdocFingerprint {}
 
 impl RustdocFingerprint {
     /// Checks whether the latest version of rustc used to compile this workspace's docs
@@ -52,7 +56,7 @@ impl RustdocFingerprint {
         {
             return Ok(());
         }
-        let new_fingerprint = RustdocFingerprint {
+        let new_fingerprint = RustdocFingerprintJson {
             rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
         };
 
@@ -77,7 +81,7 @@ fn fingerprint_path(build_runner: &BuildRunner<'_, '_>, kind: CompileKind) -> Pa
 /// Checks rustdoc fingerprint file for a given [`CompileKind`].
 fn check_fingerprint(
     build_runner: &BuildRunner<'_, '_>,
-    new_fingerprint: &RustdocFingerprint,
+    new_fingerprint: &RustdocFingerprintJson,
     kind: CompileKind,
 ) -> CargoResult<()> {
     let fingerprint_path = fingerprint_path(build_runner, kind);
@@ -94,7 +98,7 @@ fn check_fingerprint(
         return write_fingerprint();
     };
 
-    match serde_json::from_str::<RustdocFingerprint>(&rustdoc_data) {
+    match serde_json::from_str::<RustdocFingerprintJson>(&rustdoc_data) {
         Ok(on_disk_fingerprint) => {
             if on_disk_fingerprint.rustc_vv == new_fingerprint.rustc_vv {
                 return Ok(());
