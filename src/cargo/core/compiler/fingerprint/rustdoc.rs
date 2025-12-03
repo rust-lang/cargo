@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -63,18 +64,23 @@ impl RustdocFingerprint {
     }
 }
 
+/// Returns the path to rustdoc fingerprint file for a given [`CompileKind`].
+fn fingerprint_path(build_runner: &BuildRunner<'_, '_>, kind: CompileKind) -> PathBuf {
+    build_runner
+        .files()
+        .layout(kind)
+        .build_dir()
+        .root()
+        .join(".rustdoc_fingerprint.json")
+}
+
 /// Checks rustdoc fingerprint file for a given [`CompileKind`].
 fn check_fingerprint(
     build_runner: &BuildRunner<'_, '_>,
     new_fingerprint: &RustdocFingerprint,
     kind: CompileKind,
 ) -> CargoResult<()> {
-    let fingerprint_path = build_runner
-        .files()
-        .layout(kind)
-        .build_dir()
-        .root()
-        .join(".rustdoc_fingerprint.json");
+    let fingerprint_path = fingerprint_path(build_runner, kind);
 
     let write_fingerprint = || -> CargoResult<()> {
         paths::write(&fingerprint_path, serde_json::to_string(new_fingerprint)?)
