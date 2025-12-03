@@ -47,62 +47,72 @@ impl RustDocFingerprint {
             rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
         };
 
-        let fingerprint_path = build_runner
-            .files()
-            .host_build_root()
-            .join(".rustdoc_fingerprint.json");
-        let write_fingerprint = || -> CargoResult<()> {
-            paths::write(
-                &fingerprint_path,
-                serde_json::to_string(&actual_rustdoc_target_data)?,
-            )
-        };
-        let Ok(rustdoc_data) = paths::read(&fingerprint_path) else {
-            // If the fingerprint does not exist, do not clear out the doc
-            // directories. Otherwise this ran into problems where projects
-            // like bootstrap were creating the doc directory before running
-            // `cargo doc` in a way that deleting it would break it.
-            return write_fingerprint();
-        };
-        match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
-            Ok(fingerprint) => {
-                if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
-                    return Ok(());
-                } else {
-                    tracing::debug!(
-                        "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
-                        fingerprint.rustc_vv,
-                        actual_rustdoc_target_data.rustc_vv
-                    );
-                }
-            }
-            Err(e) => {
-                tracing::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
-            }
-        };
-        // Fingerprint does not match, delete the doc directories and write a new fingerprint.
-        tracing::debug!(
-            "fingerprint {:?} mismatch, clearing doc directories",
-            fingerprint_path
-        );
-        build_runner
-            .bcx
-            .all_kinds
-            .iter()
-            .map(|kind| {
-                build_runner
-                    .files()
-                    .layout(*kind)
-                    .artifact_dir()
-                    .expect("artifact-dir was not locked")
-                    .doc()
-            })
-            .filter(|path| path.exists())
-            .try_for_each(|path| clean_doc(path))?;
-        write_fingerprint()?;
+        check_fingerprint(build_runner, &actual_rustdoc_target_data)?;
 
         Ok(())
     }
+}
+
+/// Checks rustdoc fingerprint file.
+fn check_fingerprint(
+    build_runner: &BuildRunner<'_, '_>,
+    actual_rustdoc_target_data: &RustDocFingerprint,
+) -> CargoResult<()> {
+    let fingerprint_path = build_runner
+        .files()
+        .host_build_root()
+        .join(".rustdoc_fingerprint.json");
+    let write_fingerprint = || -> CargoResult<()> {
+        paths::write(
+            &fingerprint_path,
+            serde_json::to_string(&actual_rustdoc_target_data)?,
+        )
+    };
+    let Ok(rustdoc_data) = paths::read(&fingerprint_path) else {
+        // If the fingerprint does not exist, do not clear out the doc
+        // directories. Otherwise this ran into problems where projects
+        // like bootstrap were creating the doc directory before running
+        // `cargo doc` in a way that deleting it would break it.
+        return write_fingerprint();
+    };
+    match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+        Ok(fingerprint) => {
+            if fingerprint.rustc_vv == actual_rustdoc_target_data.rustc_vv {
+                return Ok(());
+            } else {
+                tracing::debug!(
+                    "doc fingerprint changed:\noriginal:\n{}\nnew:\n{}",
+                    fingerprint.rustc_vv,
+                    actual_rustdoc_target_data.rustc_vv
+                );
+            }
+        }
+        Err(e) => {
+            tracing::debug!("could not deserialize {:?}: {}", fingerprint_path, e);
+        }
+    };
+    // Fingerprint does not match, delete the doc directories and write a new fingerprint.
+    tracing::debug!(
+        "fingerprint {:?} mismatch, clearing doc directories",
+        fingerprint_path
+    );
+    build_runner
+        .bcx
+        .all_kinds
+        .iter()
+        .map(|kind| {
+            build_runner
+                .files()
+                .layout(*kind)
+                .artifact_dir()
+                .expect("artifact-dir was not locked")
+                .doc()
+        })
+        .filter(|path| path.exists())
+        .try_for_each(|path| clean_doc(path))?;
+    write_fingerprint()?;
+
+    Ok(())
 }
 
 fn clean_doc(path: &Path) -> CargoResult<()> {
