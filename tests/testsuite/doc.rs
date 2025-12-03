@@ -3201,3 +3201,20 @@ fn rebuild_tracks_checksum() {
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("depinfo-after"));
 }
+
+#[cargo_test(nightly, reason = "rustdoc mergeable crate info is unstable")]
+fn mergeable_info_gated() {
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zrustdoc-mergeable-info")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+
+"#]])
+        .run();
+}
