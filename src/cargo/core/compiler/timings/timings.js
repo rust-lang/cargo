@@ -22,6 +22,7 @@ let UNIT_COORDS = {};
 // Map of unit index to the index it was unlocked by.
 let REVERSE_UNIT_DEPS = {};
 let REVERSE_UNIT_RMETA_DEPS = {};
+let UNIT_BY_INDEX = {};
 
 const MIN_GRAPH_WIDTH = 200;
 const MAX_GRAPH_WIDTH = 4096;
@@ -76,13 +77,13 @@ const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
 const DEP_LINE_HIGHLIGHTED_COLOR = getCssColor('--canvas-dep-line-highlighted');
 const CPU_COLOR = getCssColor('--canvas-cpu');
 
-for (let n=0; n<UNIT_DATA.length; n++) {
-  let unit = UNIT_DATA[n];
+for (const unit of UNIT_DATA) {
+  UNIT_BY_INDEX[unit.i] = unit;
   for (let unblocked of unit.unblocked_units) {
-    REVERSE_UNIT_DEPS[unblocked] = n;
+    REVERSE_UNIT_DEPS[unblocked] = unit.i;
   }
   for (let unblocked of unit.unblocked_rmeta_units) {
-    REVERSE_UNIT_RMETA_DEPS[unblocked] = n;
+    REVERSE_UNIT_RMETA_DEPS[unblocked] = unit.i;
   }
 }
 
@@ -150,14 +151,7 @@ function render_pipeline_graph() {
             });
         }
     }
-    else if (unit.rmeta_time != null) {
-        // We only know the rmeta time
-        sections.push({
-            name: "codegen",
-            start: x + px_per_sec * unit.rmeta_time,
-            width: (unit.duration - unit.rmeta_time) * px_per_sec
-        });
-    }
+
     let width = Math.max(px_per_sec * unit.duration, 1.0);
     UNIT_COORDS[unit.i] = {x, y, width, sections};
 
@@ -205,8 +199,13 @@ function render_pipeline_graph() {
   ctx.save();
   ctx.translate(canvas_width - 200, MARGIN);
 
+  let frontend_name = "Frontend/rest";
+  if (presentSections.has("other")) {
+    frontend_name = "Frontend";
+  }
+
   const legend_entries = [{
-    name: "Frontend/rest",
+    name: frontend_name,
     color: NOT_CUSTOM_BUILD_COLOR,
     line: false
   }];
@@ -320,7 +319,7 @@ function get_codegen_section_x(sections) {
 
 // Draws lines from the given unit to the units it unlocks.
 function draw_dep_lines(ctx, unit_idx, highlighted) {
-  const unit = UNIT_DATA[unit_idx];
+  const unit = UNIT_BY_INDEX[unit_idx];
   const {x, y, sections} = UNIT_COORDS[unit_idx];
   ctx.save();
   for (const unblocked of unit.unblocked_units) {
@@ -550,14 +549,6 @@ function split_ticks(max_value, px_per_v, max_px) {
   const tick_dist = px_per_v * step;
   const num_ticks = Math.floor(max_value / step);
   return {step, tick_dist, num_ticks};
-}
-
-function codegen_time(unit) {
-  if (unit.rmeta_time == null) {
-    return null;
-  }
-  let ctime = unit.duration - unit.rmeta_time;
-  return [unit.rmeta_time, ctime];
 }
 
 function roundedRect(ctx, x, y, width, height, r) {
