@@ -5,7 +5,6 @@ use itertools::Itertools;
 use walkdir::WalkDir;
 
 use std::cell::RefCell;
-use std::env;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
@@ -21,28 +20,13 @@ static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 
 static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 
-/// This is used when running cargo is pre-CARGO_TARGET_TMPDIR
-/// TODO: Remove when `CARGO_TARGET_TMPDIR` grows old enough.
-fn global_root_legacy() -> PathBuf {
-    let mut path = t!(env::current_exe());
-    path.pop(); // chop off exe name
-    path.pop(); // chop off "deps"
-    path.push("tmp");
-    path.mkdir_p();
-    path
-}
-
-fn set_global_root(tmp_dir: Option<&'static str>) {
+fn set_global_root(tmp_dir: &'static str) {
     let mut lock = GLOBAL_ROOT
         .get_or_init(|| Default::default())
         .lock()
         .unwrap();
     if lock.is_none() {
-        let mut root = match tmp_dir {
-            Some(tmp_dir) => PathBuf::from(tmp_dir),
-            None => global_root_legacy(),
-        };
-
+        let mut root = PathBuf::from(tmp_dir);
         root.push(CARGO_INTEGRATION_TEST_DIR);
         *lock = Some(root);
     }
@@ -80,7 +64,7 @@ pub struct TestIdGuard {
 }
 
 /// For test harnesses like [`crate::cargo_test`]
-pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
+pub fn init_root(tmp_dir: &'static str) -> TestIdGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);

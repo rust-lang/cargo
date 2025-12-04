@@ -219,7 +219,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         let mut new_body = to_token_stream(
             r#"let _test_guard = {
-                let tmp_dir = option_env!("CARGO_TARGET_TMPDIR");
+                let tmp_dir = env!("CARGO_TARGET_TMPDIR");
                 cargo_test_support::paths::init_root(tmp_dir)
             };"#,
         );
