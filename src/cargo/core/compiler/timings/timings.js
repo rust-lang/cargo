@@ -78,11 +78,11 @@ const CPU_COLOR = getCssColor('--canvas-cpu');
 
 for (let n=0; n<UNIT_DATA.length; n++) {
   let unit = UNIT_DATA[n];
-  for (let unlocked of unit.unlocked_units) {
-    REVERSE_UNIT_DEPS[unlocked] = n;
+  for (let unblocked of unit.unblocked_units) {
+    REVERSE_UNIT_DEPS[unblocked] = n;
   }
-  for (let unlocked of unit.unlocked_rmeta_units) {
-    REVERSE_UNIT_RMETA_DEPS[unlocked] = n;
+  for (let unblocked of unit.unblocked_rmeta_units) {
+    REVERSE_UNIT_RMETA_DEPS[unblocked] = n;
   }
 }
 
@@ -323,12 +323,12 @@ function draw_dep_lines(ctx, unit_idx, highlighted) {
   const unit = UNIT_DATA[unit_idx];
   const {x, y, sections} = UNIT_COORDS[unit_idx];
   ctx.save();
-  for (const unlocked of unit.unlocked_units) {
-    draw_one_dep_line(ctx, x, y, unlocked, highlighted);
+  for (const unblocked of unit.unblocked_units) {
+    draw_one_dep_line(ctx, x, y, unblocked, highlighted);
   }
-  for (const unlocked of unit.unlocked_rmeta_units) {
+  for (const unblocked of unit.unblocked_rmeta_units) {
     const codegen_x = get_codegen_section_x(sections);
-    draw_one_dep_line(ctx, codegen_x, y, unlocked, highlighted);
+    draw_one_dep_line(ctx, codegen_x, y, unblocked, highlighted);
   }
   ctx.restore();
 }
