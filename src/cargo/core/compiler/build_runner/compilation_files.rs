@@ -275,6 +275,15 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.layout(unit.kind).build_dir().deps(&dir)
     }
 
+    /// Returns the directories where Rust crate dependencies are found for the
+    /// specified unit. (new layout)
+    ///
+    /// New features should consider using this so we can avoid their migrations.
+    pub fn deps_dir_new_layout(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build_dir().deps_new_layout(&dir)
+    }
+
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
@@ -495,12 +504,27 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                         .join("index.html")
                 };
 
-                vec![OutputFile {
+                let mut outputs = vec![OutputFile {
                     path,
                     hardlink: None,
                     export_path: None,
                     flavor: FileFlavor::Normal,
-                }]
+                }];
+
+                if bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+                    // `-Zrustdoc-mergeable-info` always uses the new layout.
+                    outputs.push(OutputFile {
+                        path: self
+                            .deps_dir_new_layout(unit)
+                            .join(unit.target.crate_name())
+                            .with_extension("json"),
+                        hardlink: None,
+                        export_path: None,
+                        flavor: FileFlavor::DocParts,
+                    })
+                }
+
+                outputs
             }
             CompileMode::RunCustomBuild => {
                 // At this time, this code path does not handle build script

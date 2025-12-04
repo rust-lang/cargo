@@ -103,6 +103,7 @@ Each new feature described below should explain how to use it.
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
     * [output-format](#output-format-for-rustdoc) --- Allows documentation to also be emitted in the experimental [JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
     * [rustdoc-depinfo](#rustdoc-depinfo) --- Use dep-info files in rustdoc rebuild detection.
+    * [rustdoc-mergeable-info](#rustdoc-mergeable-info) --- Use rustdoc mergeable cross-crate-info files.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [Profile `hint-mostly-unused` option](#profile-hint-mostly-unused-option) --- Hint that a dependency is mostly unused, to optimize compilation time.
@@ -2059,6 +2060,17 @@ cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
 
 Enable `rustc`'s unicode error format in Cargo's error messages
 
+## rustdoc mergeable info
+
+* Original Pull Request: [#16309](https://github.com/rust-lang/cargo/pull/16309)
+* Tracking issue: [#16306](https://github.com/rust-lang/cargo/issues/16306)
+* Tracking rustc issue: [rust-lang/rust#130676](https://github.com/rust-lang/rust/issues/130676)
+
+The `-Z rustdoc-mergeable-info` leverage rustdoc's mergeable crate info,
+so that `cargo doc` can merge cross-crate information
+(like the search index, source files index, etc.)
+from separate output directories,
+and run `rustdoc` in parallel.
 
 # Stabilized and removed features
 

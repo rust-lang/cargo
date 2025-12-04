@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -8,6 +10,17 @@ use serde::Serialize;
 use crate::CargoResult;
 use crate::core::compiler::BuildRunner;
 use crate::core::compiler::CompileKind;
+
+/// JSON Schema of the [`RustdocFingerprint`] file.
+#[derive(Debug, Serialize, Deserialize)]
+struct RustdocFingerprintJson {
+    /// `rustc -vV` verbose version output.
+    pub rustc_vv: String,
+
+    /// Relative paths to cross crate info JSON files from previous `cargo doc` invocations.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub doc_parts: Vec<PathBuf>,
+}
 
 /// Structure used to deal with Rustdoc fingerprinting
 ///
@@ -20,13 +33,19 @@ use crate::core::compiler::CompileKind;
 /// We need to make sure that if there were any previous docs already compiled,
 /// they were compiled with the same Rustc version that we're currently using.
 /// Otherwise we must remove the `doc/` folder and compile again forcing a rebuild.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RustDocFingerprint {
-    /// `rustc -vV` verbose version output.
-    pub rustc_vv: String,
+#[derive(Debug)]
+pub struct RustdocFingerprint {
+    /// Path to the fingerprint file.
+    path: PathBuf,
+    /// `rustc -vV` verbose version output for the current session.
+    rustc_vv: String,
+    /// Absolute paths to new cross crate info JSON files generated in the current session.
+    doc_parts: Vec<PathBuf>,
+    /// The fingerprint file on disk.
+    on_disk: Option<RustdocFingerprintJson>,
 }
 
-impl RustDocFingerprint {
+impl RustdocFingerprint {
     /// Checks whether the latest version of rustc used to compile this workspace's docs
     /// was the same as the one is currently being used in this `cargo doc` call.
     ///
@@ -51,8 +70,9 @@ impl RustDocFingerprint {
         {
             return Ok(());
         }
-        let new_fingerprint = RustDocFingerprint {
+        let new_fingerprint = RustdocFingerprintJson {
             rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
+            doc_parts: Vec::new(),
         };
 
         for kind in &build_runner.bcx.build_config.requested_kinds {
@@ -61,20 +81,130 @@ impl RustDocFingerprint {
 
         Ok(())
     }
+
+    /// Creates a new fingerprint with given doc parts paths.
+    pub fn new(
+        build_runner: &BuildRunner<'_, '_>,
+        kind: CompileKind,
+        doc_parts: Vec<PathBuf>,
+    ) -> Self {
+        let path = fingerprint_path(build_runner, kind);
+        let rustc_vv = build_runner.bcx.rustc().verbose_version.clone();
+        let on_disk = load_on_disk(&path);
+        Self {
+            path,
+            rustc_vv,
+            doc_parts,
+            on_disk,
+        }
+    }
+
+    /// Persists the fingerprint.
+    ///
+    /// The closure will run before persisting the fingerprint,
+    /// and will be given a list of doc parts directories for passing to
+    /// `rustdoc --include-parts-dir`.
+    pub fn persist<F>(&self, exec: F) -> CargoResult<()>
+    where
+        // 1. paths for `--include-parts-dir`
+        F: Fn(&[&Path]) -> CargoResult<()>,
+    {
+        // Dedupe crate with the same name by file stem (which is effectively crate name),
+        // since rustdoc doesn't distinguish different crate versions.
+        //
+        // Rules applied here:
+        //
+        // * If name collides, favor the one selected via CLI over cached ones
+        //   (done by the insertion order)
+        let base = self.path.parent().unwrap();
+        let on_disk_doc_parts: Vec<_> = self
+            .on_disk
+            .iter()
+            .flat_map(|on_disk| {
+                on_disk
+                    .doc_parts
+                    .iter()
+                    // Make absolute so that we can pass to rustdoc
+                    .map(|p| base.join(p))
+                    // Doc parts may be selectively cleaned by `cargo clean -p <doc>`.
+                    // We should stop caching those no-exist.
+                    .filter(|p| p.exists())
+            })
+            .collect();
+        let dedup_map = on_disk_doc_parts
+            .iter()
+            .chain(self.doc_parts.iter())
+            .map(|p| (p.file_stem(), p))
+            .collect::<HashMap<_, _>>();
+        let mut doc_parts: Vec<_> = dedup_map.into_values().collect();
+        doc_parts.sort_unstable();
+
+        // Prepare args for `rustdoc --include-parts-dir`
+        let doc_parts_dirs: Vec<_> = doc_parts.iter().map(|p| p.parent().unwrap()).collect();
+        exec(&doc_parts_dirs)?;
+
+        // Persist with relative paths to the directory where fingerprint file is at.
+        let json = RustdocFingerprintJson {
+            rustc_vv: self.rustc_vv.clone(),
+            doc_parts: doc_parts
+                .iter()
+                .map(|p| p.strip_prefix(base).unwrap_or(p).to_owned())
+                .collect(),
+        };
+        paths::write(&self.path, serde_json::to_string(&json)?)?;
+
+        Ok(())
+    }
+
+    /// Checks if the fingerprint is outdated comparing against given doc parts file paths.
+    pub fn is_dirty(&self) -> bool {
+        let Some(on_disk) = self.on_disk.as_ref() else {
+            return true;
+        };
+
+        let Some(fingerprint_mtime) = paths::mtime(&self.path).ok() else {
+            return true;
+        };
+
+        if self.rustc_vv != on_disk.rustc_vv {
+            return true;
+        }
+
+        for path in &self.doc_parts {
+            let parts_mtime = match paths::mtime(&path) {
+                Ok(mtime) => mtime,
+                Err(e) => {
+                    tracing::debug!("failed to read mtime of {}: {e}", path.display());
+                    return true;
+                }
+            };
+
+            if parts_mtime > fingerprint_mtime {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+/// Returns the path to rustdoc fingerprint file for a given [`CompileKind`].
+fn fingerprint_path(build_runner: &BuildRunner<'_, '_>, kind: CompileKind) -> PathBuf {
+    build_runner
+        .files()
+        .layout(kind)
+        .build_dir()
+        .root()
+        .join(".rustdoc_fingerprint.json")
 }
 
 /// Checks rustdoc fingerprint file for a given [`CompileKind`].
 fn check_fingerprint(
     build_runner: &BuildRunner<'_, '_>,
-    new_fingerprint: &RustDocFingerprint,
+    new_fingerprint: &RustdocFingerprintJson,
     kind: CompileKind,
 ) -> CargoResult<()> {
-    let fingerprint_path = build_runner
-        .files()
-        .layout(kind)
-        .build_dir()
-        .root()
-        .join(".rustdoc_fingerprint.json");
+    let fingerprint_path = fingerprint_path(build_runner, kind);
 
     let write_fingerprint = || -> CargoResult<()> {
         paths::write(&fingerprint_path, serde_json::to_string(new_fingerprint)?)
@@ -88,7 +218,7 @@ fn check_fingerprint(
         return write_fingerprint();
     };
 
-    match serde_json::from_str::<RustDocFingerprint>(&rustdoc_data) {
+    match serde_json::from_str::<RustdocFingerprintJson>(&rustdoc_data) {
         Ok(on_disk_fingerprint) => {
             if on_disk_fingerprint.rustc_vv == new_fingerprint.rustc_vv {
                 return Ok(());
@@ -122,6 +252,25 @@ fn check_fingerprint(
     write_fingerprint()?;
 
     Ok(())
+}
+
+/// Loads an on-disk fingerprint JSON file.
+fn load_on_disk(path: &Path) -> Option<RustdocFingerprintJson> {
+    let on_disk = match paths::read(path) {
+        Ok(data) => data,
+        Err(e) => {
+            tracing::debug!("failed to read rustdoc fingerprint at {path:?}: {e}");
+            return None;
+        }
+    };
+
+    match serde_json::from_str::<RustdocFingerprintJson>(&on_disk) {
+        Ok(on_disk) => Some(on_disk),
+        Err(e) => {
+            tracing::debug!("could not deserialize {path:?}: {e}");
+            None
+        }
+    }
 }
 
 fn clean_doc(path: &Path) -> CargoResult<()> {

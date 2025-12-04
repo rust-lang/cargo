@@ -9,6 +9,7 @@ use cargo_util::{ProcessBuilder, paths};
 
 use crate::core::Package;
 use crate::core::compiler::BuildContext;
+use crate::core::compiler::RustdocFingerprint;
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::util::{CargoResult, GlobalContext, context};
@@ -106,6 +107,11 @@ pub struct Compilation<'gctx> {
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
 
+    /// Rustdoc fingerprint files to determine whether we need to run `rustdoc --merge=finalize`.
+    ///
+    /// See `-Zrustdoc-mergeable-info` for more.
+    pub rustdoc_fingerprints: Option<HashMap<CompileKind, RustdocFingerprint>>,
+
     /// The target host triple.
     pub host: String,
 
@@ -143,6 +149,7 @@ impl<'gctx> Compilation<'gctx> {
             root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
+            rustdoc_fingerprints: None,
             gctx: bcx.gctx,
             host: bcx.host_triple().to_string(),
             rustc_process,
