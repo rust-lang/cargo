@@ -93,6 +93,7 @@ pub struct Metadata {
     unit_id: UnitHash,
     c_metadata: UnitHash,
     c_extra_filename: bool,
+    pkg_dir: bool,
 }
 
 impl Metadata {
@@ -109,6 +110,11 @@ impl Metadata {
     /// A hash to add to file names through `-C extra-filename`
     pub fn c_extra_filename(&self) -> Option<UnitHash> {
         self.c_extra_filename.then_some(self.unit_id)
+    }
+
+    /// A hash to add to Cargo directory names
+    pub fn pkg_dir(&self) -> Option<UnitHash> {
+        self.pkg_dir.then_some(self.unit_id)
     }
 }
 
@@ -246,7 +252,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
         let hash = meta
-            .c_extra_filename()
+            .pkg_dir()
             .map(|h| h.to_string())
             .unwrap_or_else(|| self.target_short_hash(unit));
         format!("{name}{separator}{hash}")
@@ -682,6 +688,7 @@ fn compute_metadata(
         .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
         .collect::<Vec<_>>();
     let c_extra_filename = use_extra_filename(bcx, unit);
+    let pkg_dir = c_extra_filename;
 
     let mut shared_hasher = StableHasher::new();
 
@@ -814,6 +821,7 @@ fn compute_metadata(
         unit_id,
         c_metadata,
         c_extra_filename,
+        pkg_dir,
     }
 }
 
