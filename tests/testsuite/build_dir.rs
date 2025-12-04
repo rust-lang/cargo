@@ -524,8 +524,8 @@ fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
 [ROOT]/foo/build-dir/package/foo-0.0.1/Cargo.toml
 [ROOT]/foo/build-dir/package/foo-0.0.1/Cargo.toml.orig
 [ROOT]/foo/build-dir/package/foo-0.0.1/src/main.rs
-[ROOT]/foo/build-dir/package/foo-0.0.1.crate
 [ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/package/tmp-crate/foo-0.0.1.crate
 
 "#]]);
 
