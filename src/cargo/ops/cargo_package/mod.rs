@@ -273,18 +273,17 @@ fn do_package<'a>(
         // resolved,
         // so only try to get one if we need it. If they explicitly passed a
         // registry on the CLI, we check it no matter what.
-        let sid = if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
+        if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
             || opts.reg_or_index.is_some()
         {
             let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
             debug!("packaging for registry {}", sid);
-            Some(sid)
+            let reg_dir = ws.build_dir().join("package").join("tmp-registry");
+            let local_reg = TmpRegistry::new(ws.gctx(), reg_dir, sid)?;
+            Some(local_reg)
         } else {
             None
-        };
-        let reg_dir = ws.build_dir().join("package").join("tmp-registry");
-        sid.map(|sid| TmpRegistry::new(ws.gctx(), reg_dir, sid))
-            .transpose()?
+        }
     };
 
     // Packages need to be created in dependency order, because dependencies must
