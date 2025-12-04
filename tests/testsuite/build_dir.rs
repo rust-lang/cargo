@@ -336,10 +336,10 @@ fn cargo_tmpdir_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/CACHEDIR.TAG
 [ROOT]/foo/build-dir/debug/.cargo-lock
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo-[HASH].d
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo-[HASH].d
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo.d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo-[HASH][EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo-[HASH][EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-test-bin-foo

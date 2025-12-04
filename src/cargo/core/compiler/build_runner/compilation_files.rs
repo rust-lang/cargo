@@ -887,7 +887,29 @@ fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         // Doc tests do not have metadata.
         return false;
     }
-    {
+    if bcx.gctx.cli_unstable().build_dir_new_layout {
+        if unit.mode.is_any_test() || unit.mode.is_check() {
+            // These always use metadata.
+            return true;
+        }
+        // No metadata in these cases:
+        //
+        // - dylib, cdylib, executable: `pkg_dir` avoids collisions for us and rustc isn't looking these
+        //   up by `-Cextra-filename`
+        //
+        // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
+        // force metadata in the hash. This is only used for building libstd. For
+        // example, if libstd is placed in a common location, we don't want a file
+        // named /usr/lib/libstd.so which could conflict with other rustc
+        // installs. In addition it prevents accidentally loading a libstd of a
+        // different compiler at runtime.
+        // See https://github.com/rust-lang/cargo/issues/3005
+        if (unit.target.is_dylib() || unit.target.is_cdylib() || unit.target.is_executable())
+            && bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
+        {
+            return false;
+        }
+    } else {
         if unit.mode.is_any_test() || unit.mode.is_check() {
             // These always use metadata.
             return true;
