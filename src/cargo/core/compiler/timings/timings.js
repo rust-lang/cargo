@@ -205,8 +205,13 @@ function render_pipeline_graph() {
   ctx.save();
   ctx.translate(canvas_width - 200, MARGIN);
 
+  let frontend_name = "Frontend/rest";
+  if (presentSections.has("other")) {
+    frontend_name = "Frontend";
+  }
+
   const legend_entries = [{
-    name: "Frontend/rest",
+    name: frontend_name,
     color: NOT_CUSTOM_BUILD_COLOR,
     line: false
   }];
