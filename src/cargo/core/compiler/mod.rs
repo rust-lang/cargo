@@ -95,6 +95,7 @@ use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::is_new_build_dir_layout_enabled;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
@@ -1682,7 +1683,7 @@ fn build_deps_args(
     unit: &Unit,
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
-    if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+    if is_new_build_dir_layout_enabled(build_runner.bcx.gctx) {
         let mut map = BTreeMap::new();
 
         // Recursively add all dependency args to rustc process

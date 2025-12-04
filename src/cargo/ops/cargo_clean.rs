@@ -1,4 +1,5 @@
 use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
+use crate::core::features::is_new_build_dir_layout_enabled;
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use crate::ops;
@@ -194,7 +195,7 @@ fn clean_specs(
 
     clean_ctx.progress = Box::new(CleaningPackagesBar::new(clean_ctx.gctx, packages.len()));
 
-    if clean_ctx.gctx.cli_unstable().build_dir_new_layout {
+    if is_new_build_dir_layout_enabled(clean_ctx.gctx) {
         for pkg in packages {
             clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
