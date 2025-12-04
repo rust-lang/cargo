@@ -64,7 +64,17 @@ jobs:
 
   # Ensure there are no clippy warnings
   clippy:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+        - name: Linux x86_64
+          os: ubuntu-latest
+        - name: macOS aarch64
+          os: macos-14
+        - name: Windows x86_64 MSVC
+          os: windows-latest
+    name: Clippy ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - run: rustup update stable && rustup default stable

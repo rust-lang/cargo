@@ -1,5 +1,4 @@
 use std::fs;
-use std::io::Write;
 
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
@@ -2179,6 +2178,7 @@ args: []
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
 #[cfg(target_os = "linux")]
 fn memfd_script() {
+    use std::io::Write;
     use std::os::fd::AsRawFd;
 
     let fd = memfd::MemfdOptions::new()
