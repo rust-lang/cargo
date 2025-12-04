@@ -64,6 +64,7 @@ mod once;
 mod progress;
 mod queue;
 pub mod restricted_names;
+pub mod rlimit;
 pub mod rustc;
 mod semver_eval_ext;
 mod semver_ext;

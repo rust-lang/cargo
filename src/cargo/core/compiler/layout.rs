@@ -103,6 +103,7 @@
 
 use crate::core::Workspace;
 use crate::core::compiler::CompileTarget;
+use crate::core::compiler::locking::LockingMode;
 use crate::util::flock::is_on_nfs_mount;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
@@ -128,6 +129,7 @@ impl Layout {
         target: Option<CompileTarget>,
         dest: &str,
         must_take_artifact_dir_lock: bool,
+        build_dir_locking_mode: &LockingMode,
     ) -> CargoResult<Layout> {
         let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
         let mut root = ws.target_dir();
@@ -155,11 +157,18 @@ impl Layout {
         {
             None
         } else {
-            Some(build_dest.open_rw_exclusive_create(
-                ".cargo-lock",
-                ws.gctx(),
-                "build directory",
-            )?)
+            match build_dir_locking_mode {
+                LockingMode::Fine => Some(build_dest.open_ro_shared_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+                LockingMode::Coarse => Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?),
+            }
         };
         let build_root = build_root.into_path_unlocked();
         let build_dest = build_dest.as_path_unlocked();
@@ -361,6 +370,14 @@ impl BuildDirLayout {
             self.build().join(pkg_dir)
         }
     }
+    /// Fetch the lock paths for a build unit
+    pub fn build_unit_lock(&self, pkg_dir: &str) -> BuildUnitLockLocation {
+        let dir = self.build_unit(pkg_dir);
+        BuildUnitLockLocation {
+            partial: dir.join("partial.lock"),
+            full: dir.join("full.lock"),
+        }
+    }
     /// Fetch the artifact path.
     pub fn artifact(&self) -> &Path {
         &self.artifact
@@ -374,4 +391,11 @@ impl BuildDirLayout {
         paths::create_dir_all(&self.tmp)?;
         Ok(&self.tmp)
     }
+}
+
+/// See [crate::core::compiler::locking] module docs for details about build system locking
+/// structure.
+pub struct BuildUnitLockLocation {
+    pub partial: PathBuf,
+    pub full: PathBuf,
 }

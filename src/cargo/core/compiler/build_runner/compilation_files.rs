@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
+use crate::core::compiler::layout::BuildUnitLockLocation;
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
@@ -279,6 +280,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).build_dir().fingerprint(&dir)
+    }
+
+    /// The path of the partial and full locks for a given build unit
+    /// when fine grain locking is enabled.
+    pub fn build_unit_lock(&self, unit: &Unit) -> BuildUnitLockLocation {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build_dir().build_unit_lock(&dir)
     }
 
     /// Directory where incremental output for the given unit should go.
