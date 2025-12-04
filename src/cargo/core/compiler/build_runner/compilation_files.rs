@@ -784,35 +784,32 @@ fn compute_metadata(
     dep_c_metadata_hashes.sort();
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
-    let mut c_extra_filename_hasher = shared_hasher.clone();
+    let mut unit_id_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut dep_c_extra_filename_hashes = deps_metadata
-        .iter()
-        .map(|m| m.c_extra_filename)
-        .collect::<Vec<_>>();
-    dep_c_extra_filename_hashes.sort();
-    dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
-    // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
+    let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
+    dep_unit_id_hashes.sort();
+    dep_unit_id_hashes.hash(&mut unit_id_hasher);
+    // Avoid trashing the caches on RUSTFLAGS changing via `unit_id`
     //
-    // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
+    // Limited to `unit_id` to help with reproducible build / PGO issues.
     let default = Vec::new();
     let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
     if !has_remap_path_prefix(&extra_args) {
-        extra_args.hash(&mut c_extra_filename_hasher);
+        extra_args.hash(&mut unit_id_hasher);
     }
     if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
         if !has_remap_path_prefix(&unit.rustdocflags) {
-            unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+            unit.rustdocflags.hash(&mut unit_id_hasher);
         }
     } else {
         if !has_remap_path_prefix(&unit.rustflags) {
-            unit.rustflags.hash(&mut c_extra_filename_hasher);
+            unit.rustflags.hash(&mut unit_id_hasher);
         }
     }
 
     let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
-    let c_extra_filename = UnitHash(Hasher::finish(&c_extra_filename_hasher));
-    let unit_id = c_extra_filename;
+    let unit_id = UnitHash(Hasher::finish(&unit_id_hasher));
+    let c_extra_filename = unit_id;
 
     let c_extra_filename = use_extra_filename.then_some(c_extra_filename);
 
