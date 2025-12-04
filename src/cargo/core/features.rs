@@ -1558,6 +1558,11 @@ pub fn cargo_docs_link(path: &str) -> String {
 }
 
 /// Returns true of the new build dir layout is enabled.
+#[allow(clippy::disallowed_methods)]
 pub fn is_new_build_dir_layout_enabled(gctx: &GlobalContext) -> bool {
-    gctx.cli_unstable().build_dir_new_layout
+    match std::env::var("CARGO_BUILD_DIR_LAYOUT_V2").as_deref() {
+        Ok("true") => true,
+        Ok("false") => false,
+        Ok(_) | Err(_) => gctx.cli_unstable().build_dir_new_layout,
+    }
 }
