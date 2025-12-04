@@ -147,6 +147,13 @@ impl FileType {
             should_replace_hyphens: true,
         }
     }
+
+    pub fn output_prefix_suffix(&self, target: &Target) -> (String, String) {
+        (
+            format!("{}{}-", self.prefix, target.crate_name()),
+            self.suffix.clone(),
+        )
+    }
 }
 
 impl TargetInfo {
