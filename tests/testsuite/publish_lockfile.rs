@@ -242,7 +242,7 @@ fn note_resolve_changes() {
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[WARNING] found (git) Cargo.toml ignored at `[..]/foo/Cargo.toml` in workdir `[..]`
+...
 
 "#]].unordered())
         .run();
