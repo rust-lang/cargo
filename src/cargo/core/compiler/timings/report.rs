@@ -19,11 +19,6 @@ use super::UnitTime;
 enum AggregatedSections {
     /// We know the names and durations of individual compilation sections
     Sections(Vec<(SectionName, SectionData)>),
-    /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
-    OnlyMetadataTime {
-        frontend: SectionData,
-        codegen: SectionData,
-    },
     /// We know only the total duration
     OnlyTotalDuration,
 }
@@ -267,11 +262,6 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     let mut units: Vec<&UnitTime> = ctx.unit_times.iter().collect();
     units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
-    // We can have a bunch of situations here.
-    // - -Zsection-timings is enabled, and we received some custom sections, in which
-    // case we use them to determine the headers.
-    // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
-    // - We only have total durations, so we don't add any additional headers.
     let aggregated: Vec<AggregatedSections> = units.iter().map(|u| aggregate_sections(u)).collect();
 
     let headers: Vec<_> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
@@ -279,11 +269,6 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         _ => None,
     }) {
         sections.iter().map(|s| s.0.clone()).collect()
-    } else if aggregated
-        .iter()
-        .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
-    {
-        vec![SectionName::Frontend, SectionName::Codegen]
     } else {
         vec![]
     };
@@ -330,10 +315,6 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
                 for (name, data) in sections {
                     cells.insert(name, data);
                 }
-            }
-            AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
-                cells.insert(&SectionName::Frontend, frontend);
-                cells.insert(&SectionName::Codegen, codegen);
             }
             AggregatedSections::OnlyTotalDuration => {}
         };
@@ -418,8 +399,7 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
 
                     Some(sections)
                 }
-                AggregatedSections::OnlyMetadataTime { .. }
-                | AggregatedSections::OnlyTotalDuration => None,
+                AggregatedSections::OnlyTotalDuration => None,
             };
 
             UnitData {
@@ -440,6 +420,13 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
 }
 
 /// Aggregates section timing information from individual compilation sections.
+///
+/// We can have a bunch of situations here.
+///
+/// - `-Zsection-timings` is enabled, and we received some custom sections,
+///   in which case we use them to determine the headers.
+/// - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
+/// - We only have total durations, so we don't add any additional headers.
 fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
     let end = unit_time.duration;
 
@@ -485,13 +472,16 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
         AggregatedSections::Sections(sections)
     } else if let Some(rmeta) = unit_time.rmeta_time {
         // We only know when the rmeta time was generated
-        AggregatedSections::OnlyMetadataTime {
-            frontend: SectionData {
-                start: 0.0,
-                end: rmeta,
-            },
-            codegen: SectionData { start: rmeta, end },
-        }
+        AggregatedSections::Sections(vec![
+            (
+                SectionName::Frontend,
+                SectionData {
+                    start: 0.0,
+                    end: rmeta,
+                },
+            ),
+            (SectionName::Codegen, SectionData { start: rmeta, end }),
+        ])
     } else {
         // We only know the total duration
         AggregatedSections::OnlyTotalDuration
