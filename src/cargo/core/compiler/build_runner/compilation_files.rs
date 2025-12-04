@@ -931,6 +931,10 @@ fn use_pkg_dir(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         // Doc tests do not have metadata.
         return false;
     }
+    if bcx.gctx.cli_unstable().build_dir_new_layout {
+        // These always use metadata.
+        return true;
+    }
     if unit.mode.is_any_test() || unit.mode.is_check() {
         // These always use metadata.
         return true;
