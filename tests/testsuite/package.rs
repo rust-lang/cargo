@@ -6795,10 +6795,11 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
         .run();
 
     p.cargo("package --registry alternative --list")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] `foo` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+        .with_stdout_data(str![[r#"
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
 
 "#]])
         .run();
