@@ -209,6 +209,7 @@ fn clean_specs(
                 if target.is_custom_build() {
                     continue;
                 }
+                let crate_name: Rc<str> = target.crate_name().into();
                 for &mode in &[
                     CompileMode::Build,
                     CompileMode::Test,
@@ -240,6 +241,10 @@ fn clean_specs(
                                 clean_ctx.rm_rf(&dep_info)?;
                             }
                         }
+
+                        let dir = escape_glob_path(layout.build_dir().incremental())?;
+                        let incremental = Path::new(&dir).join(format!("{}-*", crate_name));
+                        clean_ctx.rm_rf_glob(&incremental)?;
                     }
                 }
             }
