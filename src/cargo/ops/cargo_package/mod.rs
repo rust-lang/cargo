@@ -272,7 +272,8 @@ fn do_package<'a>(
     // resolved,
     // so only try to get one if we need it.
     //
-    // If they explicitly passed a registry on the CLI, we check it no matter what.
+    // If they explicitly passed a registry on the CLI, we check it no matter what to verify
+    // `package.publish`.
     let mut local_reg = if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
         || opts.reg_or_index.is_some()
     {
