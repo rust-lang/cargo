@@ -8,7 +8,6 @@ use std::time::Instant;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
-use crate::core::compiler::CompilationSection;
 use crate::core::compiler::Unit;
 
 use super::Concurrency;
@@ -436,38 +435,27 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
         // section, we need to iterate them and if an end is missing, we assign the end of
         // the section to the start of the following section.
 
-        let mut sections = vec![];
+        let sections = unit_time.sections.clone().into_iter().fold(
+            // The frontend section is currently implicit in rustc.
+            // It is assumed to start at compilation start and end when codegen starts,
+            // So we hard-code it here.
+            vec![(SectionName::Frontend, SectionData { start: 0.0, end })],
+            |mut sections, (name, section)| {
+                let previous = sections.last_mut().unwrap();
+                // Setting the end of previous to the start of the current.
+                previous.1.end = section.start;
 
-        // The frontend section is currently implicit in rustc, it is assumed to start at
-        // compilation start and end when codegen starts. So we hard-code it here.
-        let mut previous_section = (
-            SectionName::Frontend,
-            CompilationSection {
-                start: 0.0,
-                end: None,
+                sections.push((
+                    SectionName::Named(name),
+                    SectionData {
+                        start: section.start,
+                        end: section.end.unwrap_or(end),
+                    },
+                ));
+
+                sections
             },
         );
-        for (name, section) in unit_time.sections.clone() {
-            // Store the previous section, potentially setting its end to the start of the
-            // current section.
-            sections.push((
-                previous_section.0,
-                SectionData {
-                    start: previous_section.1.start,
-                    end: previous_section.1.end.unwrap_or(section.start),
-                },
-            ));
-            previous_section = (SectionName::Named(name), section);
-        }
-        // Store the last section, potentially setting its end to the end of the whole
-        // compilation.
-        sections.push((
-            previous_section.0,
-            SectionData {
-                start: previous_section.1.start,
-                end: previous_section.1.end.unwrap_or(end),
-            },
-        ));
 
         AggregatedSections::Sections(sections)
     } else if let Some(rmeta) = unit_time.rmeta_time {
