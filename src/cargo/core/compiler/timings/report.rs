@@ -1,5 +1,6 @@
 //! Render HTML report from timing tracking data.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Write;
 use std::time::Instant;
@@ -14,13 +15,10 @@ use super::Concurrency;
 use super::UnitData;
 use super::UnitTime;
 
-const FRONTEND_SECTION_NAME: &str = "Frontend";
-const CODEGEN_SECTION_NAME: &str = "Codegen";
-
 /// Contains post-processed data of individual compilation sections.
 enum AggregatedSections {
     /// We know the names and durations of individual compilation sections
-    Sections(Vec<(String, SectionData)>),
+    Sections(Vec<(SectionName, SectionData)>),
     /// We only know when .rmeta was generated, so we can distill frontend and codegen time.
     OnlyMetadataTime {
         frontend: SectionData,
@@ -28,6 +26,50 @@ enum AggregatedSections {
     },
     /// We know only the total duration
     OnlyTotalDuration,
+}
+
+/// Name of an individual compilation section.
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub(super) enum SectionName {
+    Frontend,
+    Codegen,
+    Named(String),
+    Other,
+}
+
+impl SectionName {
+    /// Lower case name.
+    fn name(&self) -> Cow<'static, str> {
+        match self {
+            SectionName::Frontend => "frontend".into(),
+            SectionName::Codegen => "codegen".into(),
+            SectionName::Named(n) => n.to_lowercase().into(),
+            SectionName::Other => "other".into(),
+        }
+    }
+
+    fn capitalized_name(&self) -> String {
+        // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
+        // should be Unicode compatible.
+        fn capitalize(s: &str) -> String {
+            let first_char = s
+                .chars()
+                .next()
+                .map(|c| c.to_uppercase().to_string())
+                .unwrap_or_default();
+            format!("{first_char}{}", s.chars().skip(1).collect::<String>())
+        }
+        capitalize(&self.name())
+    }
+}
+
+impl serde::ser::Serialize for SectionName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.name().serialize(serializer)
+    }
 }
 
 /// Postprocessed section data that has both start and an end.
@@ -225,51 +267,23 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     let mut units: Vec<&UnitTime> = ctx.unit_times.iter().collect();
     units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
-    // Make the first "letter" uppercase. We could probably just assume ASCII here, but this
-    // should be Unicode compatible.
-    fn capitalize(s: &str) -> String {
-        let first_char = s
-            .chars()
-            .next()
-            .map(|c| c.to_uppercase().to_string())
-            .unwrap_or_default();
-        format!("{first_char}{}", s.chars().skip(1).collect::<String>())
-    }
-
     // We can have a bunch of situations here.
     // - -Zsection-timings is enabled, and we received some custom sections, in which
     // case we use them to determine the headers.
     // - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
     // - We only have total durations, so we don't add any additional headers.
-    let aggregated: Vec<AggregatedSections> = units
-        .iter()
-        .map(|u|
-            // Normalize the section names so that they are capitalized, so that we can later
-            // refer to them with the capitalized name both when computing headers and when
-            // looking up cells.
-            match aggregate_sections(u) {
-                AggregatedSections::Sections(sections) => AggregatedSections::Sections(
-                    sections.into_iter()
-                        .map(|(name, data)| (capitalize(&name), data))
-                        .collect()
-                ),
-                s => s
-            })
-        .collect();
+    let aggregated: Vec<AggregatedSections> = units.iter().map(|u| aggregate_sections(u)).collect();
 
-    let headers: Vec<String> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
+    let headers: Vec<_> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
         AggregatedSections::Sections(sections) => Some(sections),
         _ => None,
     }) {
-        sections.into_iter().map(|s| s.0.clone()).collect()
+        sections.iter().map(|s| s.0.clone()).collect()
     } else if aggregated
         .iter()
         .any(|s| matches!(s, AggregatedSections::OnlyMetadataTime { .. }))
     {
-        vec![
-            FRONTEND_SECTION_NAME.to_string(),
-            CODEGEN_SECTION_NAME.to_string(),
-        ]
+        vec![SectionName::Frontend, SectionName::Codegen]
     } else {
         vec![]
     };
@@ -289,11 +303,14 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 </thead>
 <tbody>
 "#,
-        headers = headers.iter().map(|h| format!("<th>{h}</th>")).join("\n")
+        headers = headers
+            .iter()
+            .map(|h| format!("<th>{}</th>", h.capitalized_name()))
+            .join("\n")
     )?;
 
     for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
-        let format_duration = |section: Option<SectionData>| match section {
+        let format_duration = |section: Option<&SectionData>| match section {
             Some(section) => {
                 let duration = section.duration();
                 let pct = (duration / unit.duration) * 100.0;
@@ -306,28 +323,23 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
         // initiate the cells to be empty, and then try to find a corresponding column for which
         // we might have data.
-        let mut cells: HashMap<&str, SectionData> = Default::default();
+        let mut cells = HashMap::new();
 
         match &aggregated_sections {
             AggregatedSections::Sections(sections) => {
                 for (name, data) in sections {
-                    cells.insert(&name, *data);
+                    cells.insert(name, data);
                 }
             }
             AggregatedSections::OnlyMetadataTime { frontend, codegen } => {
-                cells.insert(FRONTEND_SECTION_NAME, *frontend);
-                cells.insert(CODEGEN_SECTION_NAME, *codegen);
+                cells.insert(&SectionName::Frontend, frontend);
+                cells.insert(&SectionName::Codegen, codegen);
             }
             AggregatedSections::OnlyTotalDuration => {}
         };
         let cells = headers
             .iter()
-            .map(|header| {
-                format!(
-                    "<td>{}</td>",
-                    format_duration(cells.remove(header.as_str()))
-                )
-            })
+            .map(|header| format!("<td>{}</td>", format_duration(cells.remove(header))))
             .join("\n");
 
         let features = unit.unit.features.join(", ");
@@ -396,7 +408,7 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                         && section.end < ut.duration
                     {
                         sections.push((
-                            "other".to_string(),
+                            SectionName::Other,
                             SectionData {
                                 start: section.end,
                                 end: ut.duration,
@@ -442,7 +454,7 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
         // The frontend section is currently implicit in rustc, it is assumed to start at
         // compilation start and end when codegen starts. So we hard-code it here.
         let mut previous_section = (
-            FRONTEND_SECTION_NAME.to_string(),
+            SectionName::Frontend,
             CompilationSection {
                 start: 0.0,
                 end: None,
@@ -452,18 +464,18 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             // Store the previous section, potentially setting its end to the start of the
             // current section.
             sections.push((
-                previous_section.0.clone(),
+                previous_section.0,
                 SectionData {
                     start: previous_section.1.start,
                     end: previous_section.1.end.unwrap_or(section.start),
                 },
             ));
-            previous_section = (name, section);
+            previous_section = (SectionName::Named(name), section);
         }
         // Store the last section, potentially setting its end to the end of the whole
         // compilation.
         sections.push((
-            previous_section.0.clone(),
+            previous_section.0,
             SectionData {
                 start: previous_section.1.start,
                 end: previous_section.1.end.unwrap_or(end),

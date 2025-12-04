@@ -135,7 +135,7 @@ struct UnitData {
     rmeta_time: Option<f64>,
     unblocked_units: Vec<usize>,
     unblocked_rmeta_units: Vec<usize>,
-    sections: Option<Vec<(String, report::SectionData)>>,
+    sections: Option<Vec<(report::SectionName, report::SectionData)>>,
 }
 
 impl<'gctx> Timings<'gctx> {
