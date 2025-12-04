@@ -263,14 +263,22 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
     let aggregated: Vec<AggregatedSections> = units.iter().map(|u| aggregate_sections(u)).collect();
 
-    let headers: Vec<_> = if let Some(sections) = aggregated.iter().find_map(|s| match s {
-        AggregatedSections::Sections(sections) => Some(sections),
-        _ => None,
-    }) {
-        sections.iter().map(|s| s.0.clone()).collect()
-    } else {
-        vec![]
-    };
+    let headers: Vec<_> = aggregated
+        .iter()
+        .find_map(|s| match s {
+            AggregatedSections::Sections(sections) => Some(sections),
+            _ => None,
+        })
+        .map(|sections| {
+            sections
+                .iter()
+                // We don't want to show the "Other" section in the table,
+                // as it is usually a tiny portion out of the entire unit.
+                .filter(|(name, _)| matches!(name, SectionName::Other))
+                .map(|s| s.0.clone())
+                .collect()
+        })
+        .unwrap_or_default();
 
     write!(
         f,
@@ -375,29 +383,8 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let aggregated = aggregate_sections(ut);
-            let sections = match aggregated {
-                AggregatedSections::Sections(mut sections) => {
-                    // We draw the sections in the pipeline graph in a way where the frontend
-                    // section has the "default" build color, and then additional sections
-                    // (codegen, link) are overlaid on top with a different color.
-                    // However, there might be some time after the final (usually link) section,
-                    // which definitely shouldn't be classified as "Frontend". We thus try to
-                    // detect this situation and add a final "Other" section.
-                    if let Some((_, section)) = sections.last()
-                        && section.end < ut.duration
-                    {
-                        sections.push((
-                            SectionName::Other,
-                            SectionData {
-                                start: section.end,
-                                end: ut.duration,
-                            },
-                        ));
-                    }
-
-                    Some(sections)
-                }
+            let sections = match aggregate_sections(ut) {
+                AggregatedSections::Sections(sections) => Some(sections),
                 AggregatedSections::OnlyTotalDuration => None,
             };
 
@@ -435,7 +422,7 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
         // section, we need to iterate them and if an end is missing, we assign the end of
         // the section to the start of the following section.
 
-        let sections = unit_time.sections.clone().into_iter().fold(
+        let mut sections = unit_time.sections.clone().into_iter().fold(
             // The frontend section is currently implicit in rustc.
             // It is assumed to start at compilation start and end when codegen starts,
             // So we hard-code it here.
@@ -456,6 +443,24 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 sections
             },
         );
+
+        // We draw the sections in the pipeline graph in a way where the frontend
+        // section has the "default" build color, and then additional sections
+        // (codegen, link) are overlaid on top with a different color.
+        // However, there might be some time after the final (usually link) section,
+        // which definitely shouldn't be classified as "Frontend". We thus try to
+        // detect this situation and add a final "Other" section.
+        if let Some((_, section)) = sections.last()
+            && section.end < end
+        {
+            sections.push((
+                SectionName::Other,
+                SectionData {
+                    start: section.end,
+                    end,
+                },
+            ));
+        }
 
         AggregatedSections::Sections(sections)
     } else if let Some(rmeta) = unit_time.rmeta_time {
