@@ -246,7 +246,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
         let hash = meta
-            .c_extra_filename
+            .c_extra_filename()
             .map(|h| h.to_string())
             .unwrap_or_else(|| self.target_short_hash(unit));
         format!("{name}{separator}{hash}")
