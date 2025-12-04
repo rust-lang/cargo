@@ -270,8 +270,9 @@ fn do_package<'a>(
 
     // The publish registry doesn't matter unless there are local dependencies that will be
     // resolved,
-    // so only try to get one if we need it. If they explicitly passed a
-    // registry on the CLI, we check it no matter what.
+    // so only try to get one if we need it.
+    //
+    // If they explicitly passed a registry on the CLI, we check it no matter what.
     let mut local_reg = if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
         || opts.reg_or_index.is_some()
     {
