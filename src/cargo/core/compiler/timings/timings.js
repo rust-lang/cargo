@@ -150,14 +150,7 @@ function render_pipeline_graph() {
             });
         }
     }
-    else if (unit.rmeta_time != null) {
-        // We only know the rmeta time
-        sections.push({
-            name: "codegen",
-            start: x + px_per_sec * unit.rmeta_time,
-            width: (unit.duration - unit.rmeta_time) * px_per_sec
-        });
-    }
+
     let width = Math.max(px_per_sec * unit.duration, 1.0);
     UNIT_COORDS[unit.i] = {x, y, width, sections};
 

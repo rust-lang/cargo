@@ -132,7 +132,6 @@ struct UnitData {
     target: String,
     start: f64,
     duration: f64,
-    rmeta_time: Option<f64>,
     unblocked_units: Vec<usize>,
     unblocked_rmeta_units: Vec<usize>,
     sections: Option<Vec<(report::SectionName, report::SectionData)>>,

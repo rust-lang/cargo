@@ -396,7 +396,6 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                 target: ut.target.clone(),
                 start: round(ut.start),
                 duration: round(ut.duration),
-                rmeta_time: ut.rmeta_time.map(round),
                 unblocked_units,
                 unblocked_rmeta_units,
                 sections,
