@@ -688,7 +688,7 @@ fn compute_metadata(
         .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
         .collect::<Vec<_>>();
     let c_extra_filename = use_extra_filename(bcx, unit);
-    let pkg_dir = c_extra_filename;
+    let pkg_dir = use_pkg_dir(bcx, unit);
 
     let mut shared_hasher = StableHasher::new();
 
@@ -883,6 +883,50 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, uni
 
 /// Returns whether or not this unit should use a hash in the filename to make it unique.
 fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+    if unit.mode.is_doc_test() || unit.mode.is_doc() {
+        // Doc tests do not have metadata.
+        return false;
+    }
+    if unit.mode.is_any_test() || unit.mode.is_check() {
+        // These always use metadata.
+        return true;
+    }
+    // No metadata in these cases:
+    //
+    // - dylibs:
+    //   - if any dylib names are encoded in executables, so they can't be renamed.
+    //   - TODO: Maybe use `-install-name` on macOS or `-soname` on other UNIX systems
+    //     to specify the dylib name to be used by the linker instead of the filename.
+    // - Windows MSVC executables: The path to the PDB is embedded in the
+    //   executable, and we don't want the PDB path to include the hash in it.
+    // - wasm32-unknown-emscripten executables: When using emscripten, the path to the
+    //   .wasm file is embedded in the .js file, so we don't want the hash in there.
+    //
+    // This is only done for local packages, as we don't expect to export
+    // dependencies.
+    //
+    // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
+    // force metadata in the hash. This is only used for building libstd. For
+    // example, if libstd is placed in a common location, we don't want a file
+    // named /usr/lib/libstd.so which could conflict with other rustc
+    // installs. In addition it prevents accidentally loading a libstd of a
+    // different compiler at runtime.
+    // See https://github.com/rust-lang/cargo/issues/3005
+    let short_name = bcx.target_data.short_name(&unit.kind);
+    if (unit.target.is_dylib()
+        || unit.target.is_cdylib()
+        || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
+        || (unit.target.is_executable() && short_name.contains("msvc")))
+        && unit.pkg.package_id().source_id().is_path()
+        && bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
+    {
+        return false;
+    }
+    true
+}
+
+/// Returns whether or not this unit should use a hash in the pkg_dir to make it unique.
+fn use_pkg_dir(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;
