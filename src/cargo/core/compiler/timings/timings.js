@@ -557,14 +557,6 @@ function split_ticks(max_value, px_per_v, max_px) {
   return {step, tick_dist, num_ticks};
 }
 
-function codegen_time(unit) {
-  if (unit.rmeta_time == null) {
-    return null;
-  }
-  let ctime = unit.duration - unit.rmeta_time;
-  return [unit.rmeta_time, ctime];
-}
-
 function roundedRect(ctx, x, y, width, height, r) {
   r = Math.min(r, width, height);
   ctx.beginPath();
