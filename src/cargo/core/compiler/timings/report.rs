@@ -97,7 +97,7 @@ pub struct RenderContext<'a> {
     /// Total number of dirty units.
     pub total_dirty: u32,
     /// Time tracking for each individual unit.
-    pub unit_times: &'a [UnitTime],
+    pub unit_data: Vec<UnitData>,
     /// Concurrency-tracking information. This is periodically updated while
     /// compilation progresses.
     pub concurrency: &'a [Concurrency],
@@ -236,12 +236,10 @@ fn write_summary_table(
 /// Write timing data in JavaScript. Primarily for `timings.js` to put data
 /// in a `<script>` HTML element to draw graphs.
 fn write_js_data(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let unit_data = to_unit_data(&ctx.unit_times);
-
     writeln!(
         f,
         "const UNIT_DATA = {};",
-        serde_json::to_string_pretty(&unit_data)?
+        serde_json::to_string_pretty(&ctx.unit_data)?
     )?;
     writeln!(
         f,
@@ -258,17 +256,14 @@ fn write_js_data(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()>
 
 /// Render the table of all units.
 fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let mut units: Vec<&UnitTime> = ctx.unit_times.iter().collect();
+    let mut units: Vec<_> = ctx.unit_data.iter().collect();
     units.sort_unstable_by(|a, b| b.duration.partial_cmp(&a.duration).unwrap());
 
-    let aggregated: Vec<AggregatedSections> = units.iter().map(|u| aggregate_sections(u)).collect();
+    let aggregated: Vec<Option<_>> = units.iter().map(|u| u.sections.as_ref()).collect();
 
     let headers: Vec<_> = aggregated
         .iter()
-        .find_map(|s| match s {
-            AggregatedSections::Sections(sections) => Some(sections),
-            _ => None,
-        })
+        .find_map(|s| s.as_ref())
         .map(|sections| {
             sections
                 .iter()
@@ -315,22 +310,17 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         // arbitrary set of headers, and an arbitrary set of sections per unit, so we always
         // initiate the cells to be empty, and then try to find a corresponding column for which
         // we might have data.
-        let mut cells = HashMap::new();
+        let mut cells: HashMap<_, _> = aggregated_sections
+            .iter()
+            .flat_map(|sections| sections.into_iter().map(|s| (&s.0, &s.1)))
+            .collect();
 
-        match &aggregated_sections {
-            AggregatedSections::Sections(sections) => {
-                for (name, data) in sections {
-                    cells.insert(name, data);
-                }
-            }
-            AggregatedSections::OnlyTotalDuration => {}
-        };
         let cells = headers
             .iter()
             .map(|header| format!("<td>{}</td>", format_duration(cells.remove(header))))
             .join("\n");
 
-        let features = unit.unit.features.join(", ");
+        let features = unit.features.join(", ");
         write!(
             f,
             r#"
@@ -343,7 +333,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 </tr>
 "#,
             i + 1,
-            unit.name_ver(),
+            format_args!("{} v{}", unit.name, unit.version),
             unit.target,
             unit.duration,
         )?;
@@ -352,17 +342,14 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     Ok(())
 }
 
-fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
-    // Create a map to link indices of unlocked units.
-    let unit_map: HashMap<Unit, usize> = unit_times
-        .iter()
-        .enumerate()
-        .map(|(i, ut)| (ut.unit.clone(), i))
-        .collect();
+pub(super) fn to_unit_data(
+    unit_times: &[UnitTime],
+    unit_map: &HashMap<Unit, u64>,
+) -> Vec<UnitData> {
     let round = |x: f64| (x * 100.0).round() / 100.0;
     unit_times
         .iter()
-        .enumerate()
+        .map(|ut| (unit_map[&ut.unit], ut))
         .map(|(i, ut)| {
             let mode = if ut.unit.mode.is_run_custom_build() {
                 "run-custom-build"
@@ -373,12 +360,12 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
             // These filter on the unlocked units because not all unlocked
             // units are actually "built". For example, Doctest mode units
             // don't actually generate artifacts.
-            let unblocked_units: Vec<usize> = ut
+            let unblocked_units = ut
                 .unblocked_units
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let unblocked_rmeta_units: Vec<usize> = ut
+            let unblocked_rmeta_units = ut
                 .unblocked_rmeta_units
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
@@ -394,6 +381,7 @@ fn to_unit_data(unit_times: &[UnitTime]) -> Vec<UnitData> {
                 version: ut.unit.pkg.version().to_string(),
                 mode,
                 target: ut.target.clone(),
+                features: ut.unit.features.iter().map(|f| f.to_string()).collect(),
                 start: round(ut.start),
                 duration: round(ut.duration),
                 unblocked_units,

@@ -125,15 +125,16 @@ struct Concurrency {
 /// This is used by the HTML report's JavaScript to render the pipeline graph.
 #[derive(serde::Serialize)]
 struct UnitData {
-    i: usize,
+    i: u64,
     name: String,
     version: String,
     mode: String,
     target: String,
+    features: Vec<String>,
     start: f64,
     duration: f64,
-    unblocked_units: Vec<usize>,
-    unblocked_rmeta_units: Vec<usize>,
+    unblocked_units: Vec<u64>,
+    unblocked_rmeta_units: Vec<u64>,
     sections: Option<Vec<(report::SectionName, report::SectionData)>>,
 }
 
@@ -471,6 +472,8 @@ impl<'gctx> Timings<'gctx> {
                 .map(|kind| build_runner.bcx.target_data.short_name(kind))
                 .collect::<Vec<_>>();
 
+            let unit_data = report::to_unit_data(&self.unit_times, &self.unit_to_index);
+
             let ctx = report::RenderContext {
                 start: self.start,
                 start_str: &self.start_str,
@@ -478,7 +481,7 @@ impl<'gctx> Timings<'gctx> {
                 profile: &self.profile,
                 total_fresh: self.total_fresh,
                 total_dirty: self.total_dirty,
-                unit_times: &self.unit_times,
+                unit_data,
                 concurrency: &self.concurrency,
                 cpu_usage: &self.cpu_usage,
                 rustc_version,
@@ -503,10 +506,6 @@ impl<'gctx> Timings<'gctx> {
 }
 
 impl UnitTime {
-    fn name_ver(&self) -> String {
-        format!("{} v{}", self.unit.pkg.name(), self.unit.pkg.version())
-    }
-
     fn start_section(&mut self, name: &str, now: f64) {
         if self
             .sections
