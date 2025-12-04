@@ -92,7 +92,7 @@ impl fmt::Debug for UnitHash {
 pub struct Metadata {
     unit_id: UnitHash,
     c_metadata: UnitHash,
-    c_extra_filename: Option<UnitHash>,
+    c_extra_filename: bool,
 }
 
 impl Metadata {
@@ -108,7 +108,7 @@ impl Metadata {
 
     /// A hash to add to file names through `-C extra-filename`
     pub fn c_extra_filename(&self) -> Option<UnitHash> {
-        self.c_extra_filename
+        self.c_extra_filename.then_some(self.unit_id)
     }
 }
 
@@ -681,7 +681,7 @@ fn compute_metadata(
         .iter()
         .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
         .collect::<Vec<_>>();
-    let use_extra_filename = use_extra_filename(bcx, unit);
+    let c_extra_filename = use_extra_filename(bcx, unit);
 
     let mut shared_hasher = StableHasher::new();
 
@@ -809,9 +809,6 @@ fn compute_metadata(
 
     let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
     let unit_id = UnitHash(Hasher::finish(&unit_id_hasher));
-    let c_extra_filename = unit_id;
-
-    let c_extra_filename = use_extra_filename.then_some(c_extra_filename);
 
     Metadata {
         unit_id,
