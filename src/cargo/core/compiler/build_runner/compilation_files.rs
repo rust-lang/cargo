@@ -245,11 +245,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         };
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
-        if let Some(c_extra_filename) = meta.c_extra_filename() {
-            format!("{}{}{}", name, separator, c_extra_filename)
-        } else {
-            format!("{}{}{}", name, separator, self.target_short_hash(unit))
-        }
+        let hash = meta
+            .c_extra_filename
+            .map(|h| h.to_string())
+            .unwrap_or_else(|| self.target_short_hash(unit));
+        format!("{name}{separator}{hash}")
     }
 
     /// Returns the final artifact path for the host (`/…/target/debug`)
