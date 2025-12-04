@@ -1063,54 +1063,55 @@ fn features() {
             "#,
         )
         .file(
-            "bar/build.rs",
-            r#"
-                fn main() {
-                    println!("cargo::rustc-cfg=bar");
-                }
-            "#,
-        )
-        .file(
             "bar/src/lib.rs",
             r#"#[cfg(feature = "bar")] pub fn bar() {}"#,
         )
         .build();
     p.cargo("doc --features foo")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 1 package to latest compatible version
-[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
     assert!(p.root().join("target/doc").is_dir());
     assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
     // Check that turning the feature off will remove the files.
     p.cargo("doc")
-        .with_stderr_data(str![[r#"
-[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
     assert!(!p.root().join("target/doc/foo/fn.foo.html").is_file());
     assert!(!p.root().join("target/doc/bar/fn.bar.html").is_file());
     // And switching back will rebuild and bring them back.
     p.cargo("doc --features foo")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
     assert!(p.root().join("target/doc/foo/fn.foo.html").is_file());
     assert!(p.root().join("target/doc/bar/fn.bar.html").is_file());
