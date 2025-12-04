@@ -274,9 +274,9 @@ fn do_package<'a>(
     //
     // If they explicitly passed a registry on the CLI, we check it no matter what to verify
     // `package.publish`.
-    let mut local_reg = if (deps.has_dependencies() && (opts.include_lockfile || opts.verify))
-        || opts.reg_or_index.is_some()
-    {
+    let needs_local_reg = deps.has_dependencies() && (opts.include_lockfile || opts.verify);
+    let verify_registry_allow_list = opts.reg_or_index.is_some();
+    let mut local_reg = if needs_local_reg || verify_registry_allow_list {
         let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
         debug!("packaging for registry {}", sid);
         let reg_dir = ws.build_dir().join("package").join("tmp-registry");
