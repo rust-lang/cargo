@@ -1700,6 +1700,8 @@ fn build_deps_args(
     unit: &Unit,
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
+
+    let mut lib_search_paths = Vec::new();
     if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
         let mut map = BTreeMap::new();
 
@@ -1709,28 +1711,26 @@ fn build_deps_args(
         let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
 
         for path in paths {
-            cmd.arg("-L").arg(&{
-                let mut deps = OsString::from("dependency=");
-                deps.push(path);
-                deps
-            });
+            let mut deps = OsString::from("dependency=");
+            deps.push(path);
+            lib_search_paths.extend(["-L".into(), deps]);
         }
     } else {
-        cmd.arg("-L").arg(&{
-            let mut deps = OsString::from("dependency=");
-            deps.push(build_runner.files().deps_dir(unit));
-            deps
-        });
+        let mut deps = OsString::from("dependency=");
+        deps.push(build_runner.files().deps_dir(unit));
+        lib_search_paths.extend(["-L".into(), deps]);
     }
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
     if !unit.kind.is_host() {
-        cmd.arg("-L").arg(&{
-            let mut deps = OsString::from("dependency=");
-            deps.push(build_runner.files().host_deps(unit));
-            deps
-        });
+        let mut deps = OsString::from("dependency=");
+        deps.push(build_runner.files().host_deps(unit));
+        lib_search_paths.extend(["-L".into(), deps]);
+    }
+
+    for arg in lib_search_paths {
+        cmd.arg(arg);
     }
 
     let deps = build_runner.unit_deps(unit);
