@@ -1701,35 +1701,7 @@ fn build_deps_args(
 ) -> CargoResult<()> {
     let bcx = build_runner.bcx;
 
-    let mut lib_search_paths = Vec::new();
-    if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
-        let mut map = BTreeMap::new();
-
-        // Recursively add all dependency args to rustc process
-        add_dep_arg(&mut map, build_runner, unit);
-
-        let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
-
-        for path in paths {
-            let mut deps = OsString::from("dependency=");
-            deps.push(path);
-            lib_search_paths.extend(["-L".into(), deps]);
-        }
-    } else {
-        let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().deps_dir(unit));
-        lib_search_paths.extend(["-L".into(), deps]);
-    }
-
-    // Be sure that the host path is also listed. This'll ensure that proc macro
-    // dependencies are correctly found (for reexported macros).
-    if !unit.kind.is_host() {
-        let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().host_deps(unit));
-        lib_search_paths.extend(["-L".into(), deps]);
-    }
-
-    for arg in lib_search_paths {
+    for arg in lib_search_paths(build_runner, unit)? {
         cmd.arg(arg);
     }
 
@@ -1845,6 +1817,42 @@ fn add_custom_flags(
     }
 
     Ok(())
+}
+
+/// Generate a list of `-L` arguments
+fn lib_search_paths(
+    build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
+) -> CargoResult<Vec<OsString>> {
+    let mut lib_search_paths = Vec::new();
+    if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+        let mut map = BTreeMap::new();
+
+        // Recursively add all dependency args to rustc process
+        add_dep_arg(&mut map, build_runner, unit);
+
+        let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
+
+        for path in paths {
+            let mut deps = OsString::from("dependency=");
+            deps.push(path);
+            lib_search_paths.extend(["-L".into(), deps]);
+        }
+    } else {
+        let mut deps = OsString::from("dependency=");
+        deps.push(build_runner.files().deps_dir(unit));
+        lib_search_paths.extend(["-L".into(), deps]);
+    }
+
+    // Be sure that the host path is also listed. This'll ensure that proc macro
+    // dependencies are correctly found (for reexported macros).
+    if !unit.kind.is_host() {
+        let mut deps = OsString::from("dependency=");
+        deps.push(build_runner.files().host_deps(unit));
+        lib_search_paths.extend(["-L".into(), deps]);
+    }
+
+    Ok(lib_search_paths)
 }
 
 /// Generates a list of `--extern` arguments.
