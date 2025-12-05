@@ -126,7 +126,7 @@ fn clean_multiple_packages_in_glob_char_path() {
     let foo_path = &p.build_dir().join("debug").join("build");
 
     #[cfg(not(target_env = "msvc"))]
-    let file_glob = "foo/*/deps/foo-*";
+    let file_glob = "foo/*/deps/foo*";
 
     #[cfg(target_env = "msvc")]
     let file_glob = "foo/*/deps/foo.pdb";
