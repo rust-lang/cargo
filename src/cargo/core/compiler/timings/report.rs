@@ -381,8 +381,8 @@ pub(super) fn to_unit_data(
                 mode,
                 target: ut.target.clone(),
                 features: ut.unit.features.iter().map(|f| f.to_string()).collect(),
-                start: round(ut.start),
-                duration: round(ut.duration),
+                start: round_to_centisecond(ut.start),
+                duration: round_to_centisecond(ut.duration),
                 unblocked_units,
                 unblocked_rmeta_units,
                 sections,
@@ -468,7 +468,7 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
 }
 
 /// Rounds seconds to 0.01s precision.
-fn round(x: f64) -> f64 {
+fn round_to_centisecond(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
 }
 
