@@ -1820,7 +1820,7 @@ fn add_custom_flags(
 }
 
 /// Generate a list of `-L` arguments
-fn lib_search_paths(
+pub fn lib_search_paths(
     build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
 ) -> CargoResult<Vec<OsString>> {
