@@ -2597,6 +2597,40 @@ fn doctest_dep() {
 }
 
 #[cargo_test]
+fn doctest_dep_new_layout() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                b = { path = "b" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                /// ```
+                /// foo::foo();
+                /// ```
+                pub fn foo() {
+                    b::bar();
+                }
+            "#,
+        )
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("test -v").run();
+}
+
+#[cargo_test]
 fn filter_no_doc_tests() {
     let p = project()
         .file(
