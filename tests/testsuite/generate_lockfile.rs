@@ -418,3 +418,109 @@ required by package `foo v0.0.0 ([ROOT]/foo)`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cooldown_minutes_filters_recent_packages() {
+    Package::new("pkg", "1.0.0")
+        .pubtime("2025-01-01T12:00:00Z")
+        .publish();
+    Package::new("pkg", "2.0.0")
+        .pubtime("2025-01-01T12:30:00Z")
+        .publish();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [resolver]
+                cooldown-minutes = 60
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pkg = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version as of [..]
+[ADDING] pkg v1.0.0 (available: v2.0.0)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cooldown_minutes_zero_allowed() {
+    Package::new("pkg", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [resolver]
+                cooldown-minutes = 0
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                pkg = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+}
+
+#[cargo_test]
+fn cooldown_with_path_dependencies() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [resolver]
+                cooldown-minutes = 60
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                local = { path = "local" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "local/Cargo.toml",
+            r#"
+                [package]
+                name = "local"
+                version = "1.0.0"
+            "#,
+        )
+        .file("local/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+}

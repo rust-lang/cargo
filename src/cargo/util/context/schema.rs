@@ -307,12 +307,14 @@ impl BuildTargetConfig {
 /// [resolver]
 /// incompatible-rust-versions = "fallback"
 /// feature-unification = "workspace"
+/// cooldown-minutes = 1440
 /// ```
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
     pub feature_unification: Option<FeatureUnification>,
+    pub cooldown_minutes: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]

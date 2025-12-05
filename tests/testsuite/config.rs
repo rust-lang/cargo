@@ -2589,3 +2589,30 @@ fn mixed_type_array() {
         }
     );
 }
+
+#[cargo_test]
+fn cooldown_minutes_negative_rejected() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [resolver]
+                cooldown-minutes = -10
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] `resolver.cooldown-minutes` must be non-negative, found: -10")
+        .run();
+}

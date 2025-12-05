@@ -351,6 +351,20 @@ impl<'gctx> Workspace<'gctx> {
                 .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
         };
 
+        if let Some(cooldown_minutes) = config.cooldown_minutes {
+            if cooldown_minutes < 0 {
+                bail!(
+                    "`resolver.cooldown-minutes` must be non-negative, found: {}",
+                    cooldown_minutes
+                );
+            }
+
+            let now = jiff::Timestamp::now();
+            let duration = jiff::SignedDuration::from_mins(cooldown_minutes);
+            let cutoff_time = now.checked_sub(duration)?;
+            self.set_resolve_publish_time(cutoff_time);
+        }
+
         Ok(())
     }
 
