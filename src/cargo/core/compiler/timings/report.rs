@@ -346,7 +346,6 @@ pub(super) fn to_unit_data(
     unit_times: &[UnitTime],
     unit_map: &HashMap<Unit, u64>,
 ) -> Vec<UnitData> {
-    let round = |x: f64| (x * 100.0).round() / 100.0;
     unit_times
         .iter()
         .map(|ut| (unit_map[&ut.unit], ut))
@@ -466,6 +465,11 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
         // We only know the total duration
         AggregatedSections::OnlyTotalDuration
     }
+}
+
+/// Rounds seconds to 0.01s precision.
+fn round(x: f64) -> f64 {
+    (x * 100.0).round() / 100.0
 }
 
 static HTML_TMPL: &str = r#"
