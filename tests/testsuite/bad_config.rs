@@ -3755,3 +3755,436 @@ please set bin.path in Cargo.toml
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn nonexistent_example_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[example]]
+                name = "bar"
+                path = "examples/null.rs"
+            "#,
+        )
+        .build();
+    p.cargo("check --examples")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] can't find example `bar` at path `[ROOT]/foo/examples/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn nonexistent_library_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [lib]
+                path = "src/null.rs"
+            "#,
+        )
+        .file("src/lib.rs", "fn bar() {}")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] can't find lib `foo` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn nonexistent_binary_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bin]]
+                name = "null"
+                path = "src/null.rs"
+            "#,
+        )
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] can't find bin `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn nonexistent_test_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[test]]
+                name = "null"
+                path = "src/null.rs"
+            "#,
+        )
+        .build();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] can't find integration-test `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn nonexistent_bench_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bench]]
+                name = "null"
+                path = "src/null.rs"
+            "#,
+        )
+        .build();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] can't find bench `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_example_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[example]]
+                name = "bar"
+                path = "examples/bar"
+            "#,
+        )
+        .file("examples/bar/.temp", "")
+        .build();
+    p.cargo("check --example bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/examples/bar` for example `bar` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_library_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [lib]
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/.temp", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for lib `foo` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_binary_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bin]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/.temp", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for bin `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_test_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[test]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/.temp", "")
+        .build();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for integration-test `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_bench_target_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bench]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/.temp", "")
+        .build();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for bench `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_example_target_path_with_entrypoint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[example]]
+                name = "bar"
+                path = "examples/bar"
+            "#,
+        )
+        .file("examples/bar/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check --example bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/examples/bar` for example `bar` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/examples/bar/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_library_target_path_with_entrypoint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [lib]
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/lib.rs", "fn foo() {}")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for lib `foo` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/lib.rs`
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_binary_target_path_with_entrypoint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bin]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for bin `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_test_target_path_with_entrypoint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[test]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/main.rs", "fn main() {}")
+        .build();
+    p.cargo("test")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for integration-test `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_as_bench_target_path_with_entrypoint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2024"
+
+                [[bench]]
+                name = "null"
+                path = "src/null"
+            "#,
+        )
+        .file("src/null/main.rs", "fn main() {}")
+        .build();
+    p.cargo("bench")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] path `[ROOT]/foo/src/null` for bench `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
+
+"#]])
+        .run();
+}
