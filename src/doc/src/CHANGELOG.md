@@ -2964,7 +2964,7 @@
   - These settings can be configured in `[registry]` and `[registries]` tables.
 - 🎉 `--keep-going` flag has been stabilized and is now available in each build command
   (except `bench` and `test`, which have `--no-fail-fast` instead).
-  ([docs](https://doc.rust-lang.org/cargo/commands/cargo-build.html#option-cargo-build---keep-going))
+  ([docs](commands/cargo-build.md#option-cargo-build---keep-going))
   [#12568](https://github.com/rust-lang/cargo/pull/12568)
 - Added `--dry-run` flag and summary line at the end for `cargo clean`.
   [#12638](https://github.com/rust-lang/cargo/pull/12638)
@@ -4130,7 +4130,7 @@
 ### Fixed
 - 🚨 [CVE-2022-46176](https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j):
   Added validation of SSH host keys for git URLs.
-  See [the docs](https://doc.rust-lang.org/cargo/appendix/git-authentication.html#ssh-known-hosts) for more information on how to configure the known host keys.
+  See [the docs](appendix/git-authentication.md#ssh-known-hosts) for more information on how to configure the known host keys.
 
 ## Cargo 1.66 (2022-12-15)
 [08250398...rust-1.66.0](https://github.com/rust-lang/cargo/compare/08250398...rust-1.66.0)
@@ -6912,7 +6912,7 @@
 ### Added
 - Registries may now display warnings after a successful publish.
   [#6303](https://github.com/rust-lang/cargo/pull/6303)
-- Added a [glossary](https://doc.rust-lang.org/cargo/appendix/glossary.html)
+- Added a [glossary](appendix/glossary.md)
   to the documentation. [#6321](https://github.com/rust-lang/cargo/pull/6321)
 - Added the alias `c` for `cargo check`.
   [#6218](https://github.com/rust-lang/cargo/pull/6218)

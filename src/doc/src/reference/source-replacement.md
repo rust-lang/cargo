@@ -110,7 +110,7 @@ registry = "https://example.com/path/to/index"
 
 [protocols]: registries.md#registry-protocols
 
-[crates.io index]: https://doc.rust-lang.org/cargo/reference/registry-index.html
+[crates.io index]: registry-index.md
 
 ## Local Registry Sources
 
