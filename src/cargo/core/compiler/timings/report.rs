@@ -412,7 +412,13 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             // The frontend section is currently implicit in rustc.
             // It is assumed to start at compilation start and end when codegen starts,
             // So we hard-code it here.
-            vec![(SectionName::Frontend, SectionData { start: 0.0, end })],
+            vec![(
+                SectionName::Frontend,
+                SectionData {
+                    start: 0.0,
+                    end: round_to_centisecond(end),
+                },
+            )],
             |mut sections, (name, section)| {
                 let previous = sections.last_mut().unwrap();
                 // Setting the end of previous to the start of the current.
@@ -421,8 +427,8 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 sections.push((
                     SectionName::Named(name),
                     SectionData {
-                        start: section.start,
-                        end: section.end.unwrap_or(end),
+                        start: round_to_centisecond(section.start),
+                        end: round_to_centisecond(section.end.unwrap_or(end)),
                     },
                 ));
 
@@ -442,8 +448,8 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             sections.push((
                 SectionName::Other,
                 SectionData {
-                    start: section.end,
-                    end,
+                    start: round_to_centisecond(section.end),
+                    end: round_to_centisecond(end),
                 },
             ));
         }
@@ -456,10 +462,16 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 SectionName::Frontend,
                 SectionData {
                     start: 0.0,
-                    end: rmeta,
+                    end: round_to_centisecond(rmeta),
                 },
             ),
-            (SectionName::Codegen, SectionData { start: rmeta, end }),
+            (
+                SectionName::Codegen,
+                SectionData {
+                    start: round_to_centisecond(rmeta),
+                    end: round_to_centisecond(end),
+                },
+            ),
         ])
     } else {
         // We only know the total duration
