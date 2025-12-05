@@ -887,11 +887,6 @@ impl<'gctx> DrainState<'gctx> {
         // Record some timing information if `--timings` is enabled, and
         // this'll end up being a noop if we're not recording this
         // information.
-        self.timings.mark_concurrency(
-            self.active.len(),
-            self.pending_queue.len(),
-            self.queue.len(),
-        );
         self.timings.record_cpu();
 
         let active_names = self

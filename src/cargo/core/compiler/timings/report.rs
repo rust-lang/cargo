@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::Write;
 use std::time::Instant;
 
@@ -10,7 +11,6 @@ use itertools::Itertools as _;
 use crate::CargoResult;
 use crate::core::compiler::Unit;
 
-use super::Concurrency;
 use super::UnitData;
 use super::UnitTime;
 
@@ -81,6 +81,20 @@ impl SectionData {
     }
 }
 
+/// Concurrency tracking information.
+#[derive(serde::Serialize)]
+pub struct Concurrency {
+    /// Time as an offset in seconds from `Timings::start`.
+    t: f64,
+    /// Number of units currently running.
+    active: usize,
+    /// Number of units that could run, but are waiting for a jobserver token.
+    waiting: usize,
+    /// Number of units that are not yet ready, because they are waiting for
+    /// dependencies to finish.
+    inactive: usize,
+}
+
 pub struct RenderContext<'a> {
     /// When Cargo started.
     pub start: Instant,
@@ -100,7 +114,7 @@ pub struct RenderContext<'a> {
     pub unit_data: Vec<UnitData>,
     /// Concurrency-tracking information. This is periodically updated while
     /// compilation progresses.
-    pub concurrency: &'a [Concurrency],
+    pub concurrency: Vec<Concurrency>,
     /// Recorded CPU states, stored as tuples. First element is when the
     /// recording was taken and second element is percentage usage of the
     /// system.
@@ -346,7 +360,6 @@ pub(super) fn to_unit_data(
     unit_times: &[UnitTime],
     unit_map: &HashMap<Unit, u64>,
 ) -> Vec<UnitData> {
-    let round = |x: f64| (x * 100.0).round() / 100.0;
     unit_times
         .iter()
         .map(|ut| (unit_map[&ut.unit], ut))
@@ -382,14 +395,139 @@ pub(super) fn to_unit_data(
                 mode,
                 target: ut.target.clone(),
                 features: ut.unit.features.iter().map(|f| f.to_string()).collect(),
-                start: round(ut.start),
-                duration: round(ut.duration),
+                start: round_to_centisecond(ut.start),
+                duration: round_to_centisecond(ut.duration),
                 unblocked_units,
                 unblocked_rmeta_units,
                 sections,
             }
         })
         .collect()
+}
+
+/// Derives concurrency information from unit timing data.
+pub(super) fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
+    if unit_data.is_empty() {
+        return Vec::new();
+    }
+
+    let unit_by_index: HashMap<_, _> = unit_data.iter().map(|u| (u.i, u)).collect();
+
+    enum UnblockedBy {
+        Rmeta(u64),
+        Full(u64),
+    }
+
+    // unit_id -> unit that unblocks it.
+    let mut unblocked_by: HashMap<_, _> = HashMap::new();
+    for unit in unit_data {
+        for id in unit.unblocked_rmeta_units.iter() {
+            assert!(
+                unblocked_by
+                    .insert(*id, UnblockedBy::Rmeta(unit.i))
+                    .is_none()
+            );
+        }
+
+        for id in unit.unblocked_units.iter() {
+            assert!(
+                unblocked_by
+                    .insert(*id, UnblockedBy::Full(unit.i))
+                    .is_none()
+            );
+        }
+    }
+
+    let ready_time = |unit: &UnitData| -> Option<f64> {
+        let dep = unblocked_by.get(&unit.i)?;
+        match dep {
+            UnblockedBy::Rmeta(id) => {
+                let dep = unit_by_index.get(id)?;
+                let duration = dep.sections.iter().flatten().find_map(|(name, section)| {
+                    matches!(name, SectionName::Frontend).then_some(section.end)
+                });
+
+                Some(dep.start + duration.unwrap_or(dep.duration))
+            }
+            UnblockedBy::Full(id) => {
+                let dep = unit_by_index.get(id)?;
+                Some(dep.start + dep.duration)
+            }
+        }
+    };
+
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+    enum State {
+        Ready,
+        Start,
+        End,
+    }
+
+    let mut events: Vec<_> = unit_data
+        .iter()
+        .flat_map(|unit| {
+            // Adding rounded numbers may cause ready > start,
+            // so cap with unit.start here to be defensive.
+            let ready = ready_time(unit).unwrap_or(unit.start).min(unit.start);
+
+            [
+                (ready, State::Ready, unit.i),
+                (unit.start, State::Start, unit.i),
+                (unit.start + unit.duration, State::End, unit.i),
+            ]
+        })
+        .collect();
+
+    events.sort_by(|a, b| {
+        a.0.partial_cmp(&b.0)
+            .unwrap()
+            .then_with(|| a.1.cmp(&b.1))
+            .then_with(|| a.2.cmp(&b.2))
+    });
+
+    let mut concurrency: Vec<Concurrency> = Vec::new();
+    let mut inactive: HashSet<u64> = unit_data.iter().map(|unit| unit.i).collect();
+    let mut waiting: HashSet<u64> = HashSet::new();
+    let mut active: HashSet<u64> = HashSet::new();
+
+    for (t, state, unit_id) in events {
+        match state {
+            State::Ready => {
+                inactive.remove(&unit_id);
+                waiting.insert(unit_id);
+                active.remove(&unit_id);
+            }
+            State::Start => {
+                inactive.remove(&unit_id);
+                waiting.remove(&unit_id);
+                active.insert(unit_id);
+            }
+            State::End => {
+                inactive.remove(&unit_id);
+                waiting.remove(&unit_id);
+                active.remove(&unit_id);
+            }
+        }
+
+        let record = Concurrency {
+            t,
+            active: active.len(),
+            waiting: waiting.len(),
+            inactive: inactive.len(),
+        };
+
+        if let Some(last) = concurrency.last_mut()
+            && last.t == t
+        {
+            // We don't want to draw long vertical lines at the same timestamp,
+            // so we keep only the latest state.
+            *last = record;
+        } else {
+            concurrency.push(record);
+        }
+    }
+
+    concurrency
 }
 
 /// Aggregates section timing information from individual compilation sections.
@@ -413,7 +551,13 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             // The frontend section is currently implicit in rustc.
             // It is assumed to start at compilation start and end when codegen starts,
             // So we hard-code it here.
-            vec![(SectionName::Frontend, SectionData { start: 0.0, end })],
+            vec![(
+                SectionName::Frontend,
+                SectionData {
+                    start: 0.0,
+                    end: round_to_centisecond(end),
+                },
+            )],
             |mut sections, (name, section)| {
                 let previous = sections.last_mut().unwrap();
                 // Setting the end of previous to the start of the current.
@@ -422,8 +566,8 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 sections.push((
                     SectionName::Named(name),
                     SectionData {
-                        start: section.start,
-                        end: section.end.unwrap_or(end),
+                        start: round_to_centisecond(section.start),
+                        end: round_to_centisecond(section.end.unwrap_or(end)),
                     },
                 ));
 
@@ -443,8 +587,8 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             sections.push((
                 SectionName::Other,
                 SectionData {
-                    start: section.end,
-                    end,
+                    start: round_to_centisecond(section.end),
+                    end: round_to_centisecond(end),
                 },
             ));
         }
@@ -457,15 +601,26 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 SectionName::Frontend,
                 SectionData {
                     start: 0.0,
-                    end: rmeta,
+                    end: round_to_centisecond(rmeta),
                 },
             ),
-            (SectionName::Codegen, SectionData { start: rmeta, end }),
+            (
+                SectionName::Codegen,
+                SectionData {
+                    start: round_to_centisecond(rmeta),
+                    end: round_to_centisecond(end),
+                },
+            ),
         ])
     } else {
         // We only know the total duration
         AggregatedSections::OnlyTotalDuration
     }
+}
+
+/// Rounds seconds to 0.01s precision.
+fn round_to_centisecond(x: f64) -> f64 {
+    (x * 100.0).round() / 100.0
 }
 
 static HTML_TMPL: &str = r#"
