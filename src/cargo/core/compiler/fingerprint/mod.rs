@@ -64,30 +64,30 @@
 //! recompile, but it is desired to reuse the same filenames. A comparison
 //! of what is tracked:
 //!
-//! Value                                      | Fingerprint | `Metadata::unit_id` | `Metadata::c_metadata` | `Metadata::c_extra_filename`
-//! -------------------------------------------|-------------|---------------------|------------------------|----------
-//! rustc                                      | ✓           | ✓                   | ✓                      | ✓
-//! [`Profile`]                                | ✓           | ✓                   | ✓                      | ✓
-//! `cargo rustc` extra args                   | ✓           | ✓[^7]               |                        | ✓[^7]
-//! [`CompileMode`]                            | ✓           | ✓                   | ✓                      | ✓
-//! Target Name                                | ✓           | ✓                   | ✓                      | ✓
-//! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                   | ✓                      | ✓
-//! Enabled Features                           | ✓           | ✓                   | ✓                      | ✓
-//! Declared Features                          | ✓           |                     |                        |
-//! Immediate dependency’s hashes              | ✓[^1]       | ✓                   | ✓                      | ✓
-//! [`CompileKind`] (host/target)              | ✓           | ✓                   | ✓                      | ✓
-//! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                   | ✓                      | ✓
-//! `package_id`                               |             | ✓                   | ✓                      | ✓
-//! Target src path relative to ws             | ✓           |                     |                        |
-//! Target flags (test/bench/for_host/edition) | ✓           |                     |                        |
-//! -C incremental=… flag                      | ✓           |                     |                        |
-//! mtime of sources                           | ✓[^3]       |                     |                        |
-//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓[^7]               |                        | ✓[^7]
-//! [`Lto`] flags                              | ✓           | ✓                   | ✓                      | ✓
-//! config settings[^5]                        | ✓           |                     |                        |
-//! `is_std`                                   |             | ✓                   | ✓                      | ✓
-//! `[lints]` table[^6]                        | ✓           |                     |                        |
-//! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                     |                        |
+//! Value                                      | Fingerprint | `Metadata::unit_id` [^8] | `Metadata::c_metadata`
+//! -------------------------------------------|-------------|--------------------------|-----------------------
+//! rustc                                      | ✓           | ✓                        | ✓
+//! [`Profile`]                                | ✓           | ✓                        | ✓
+//! `cargo rustc` extra args                   | ✓           | ✓[^7]                    |
+//! [`CompileMode`]                            | ✓           | ✓                        | ✓
+//! Target Name                                | ✓           | ✓                        | ✓
+//! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                        | ✓
+//! Enabled Features                           | ✓           | ✓                        | ✓
+//! Declared Features                          | ✓           |                          |
+//! Immediate dependency’s hashes              | ✓[^1]       | ✓                        | ✓
+//! [`CompileKind`] (host/target)              | ✓           | ✓                        | ✓
+//! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                        | ✓
+//! `package_id`                               |             | ✓                        | ✓
+//! Target src path relative to ws             | ✓           |                          |
+//! Target flags (test/bench/for_host/edition) | ✓           |                          |
+//! -C incremental=… flag                      | ✓           |                          |
+//! mtime of sources                           | ✓[^3]       |                          |
+//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓[^7]                    |
+//! [`Lto`] flags                              | ✓           | ✓                        | ✓
+//! config settings[^5]                        | ✓           |                          |
+//! `is_std`                                   |             | ✓                        | ✓
+//! `[lints]` table[^6]                        | ✓           |                          |
+//! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                          |
 //!
 //! [^1]: Bin dependencies are not included.
 //!
@@ -103,6 +103,8 @@
 //!
 //! [^7]: extra-flags and RUSTFLAGS are conditionally excluded when `--remap-path-prefix` is
 //!       present to avoid breaking build reproducibility while we wait for trim-paths
+//!
+//! [^8]: including `-Cextra-filename`
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,

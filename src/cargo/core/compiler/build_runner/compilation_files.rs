@@ -92,7 +92,8 @@ impl fmt::Debug for UnitHash {
 pub struct Metadata {
     unit_id: UnitHash,
     c_metadata: UnitHash,
-    c_extra_filename: Option<UnitHash>,
+    c_extra_filename: bool,
+    pkg_dir: bool,
 }
 
 impl Metadata {
@@ -108,7 +109,12 @@ impl Metadata {
 
     /// A hash to add to file names through `-C extra-filename`
     pub fn c_extra_filename(&self) -> Option<UnitHash> {
-        self.c_extra_filename
+        self.c_extra_filename.then_some(self.unit_id)
+    }
+
+    /// A hash to add to Cargo directory names
+    pub fn pkg_dir(&self) -> Option<UnitHash> {
+        self.pkg_dir.then_some(self.unit_id)
     }
 }
 
@@ -245,11 +251,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         };
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
-        if let Some(c_extra_filename) = meta.c_extra_filename() {
-            format!("{}{}{}", name, separator, c_extra_filename)
-        } else {
-            format!("{}{}{}", name, separator, self.target_short_hash(unit))
-        }
+        let hash = meta
+            .pkg_dir()
+            .map(|h| h.to_string())
+            .unwrap_or_else(|| self.target_short_hash(unit));
+        format!("{name}{separator}{hash}")
     }
 
     /// Returns the final artifact path for the host (`/…/target/debug`)
@@ -681,7 +687,8 @@ fn compute_metadata(
         .iter()
         .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
         .collect::<Vec<_>>();
-    let use_extra_filename = use_extra_filename(bcx, unit);
+    let c_extra_filename = use_extra_filename(bcx, unit);
+    let pkg_dir = use_pkg_dir(bcx, unit);
 
     let mut shared_hasher = StableHasher::new();
 
@@ -784,42 +791,37 @@ fn compute_metadata(
     dep_c_metadata_hashes.sort();
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
-    let mut c_extra_filename_hasher = shared_hasher.clone();
+    let mut unit_id_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut dep_c_extra_filename_hashes = deps_metadata
-        .iter()
-        .map(|m| m.c_extra_filename)
-        .collect::<Vec<_>>();
-    dep_c_extra_filename_hashes.sort();
-    dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
-    // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
+    let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
+    dep_unit_id_hashes.sort();
+    dep_unit_id_hashes.hash(&mut unit_id_hasher);
+    // Avoid trashing the caches on RUSTFLAGS changing via `unit_id`
     //
-    // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
+    // Limited to `unit_id` to help with reproducible build / PGO issues.
     let default = Vec::new();
     let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
     if !has_remap_path_prefix(&extra_args) {
-        extra_args.hash(&mut c_extra_filename_hasher);
+        extra_args.hash(&mut unit_id_hasher);
     }
     if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
         if !has_remap_path_prefix(&unit.rustdocflags) {
-            unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+            unit.rustdocflags.hash(&mut unit_id_hasher);
         }
     } else {
         if !has_remap_path_prefix(&unit.rustflags) {
-            unit.rustflags.hash(&mut c_extra_filename_hasher);
+            unit.rustflags.hash(&mut unit_id_hasher);
         }
     }
 
     let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
-    let c_extra_filename = UnitHash(Hasher::finish(&c_extra_filename_hasher));
-    let unit_id = c_extra_filename;
-
-    let c_extra_filename = use_extra_filename.then_some(c_extra_filename);
+    let unit_id = UnitHash(Hasher::finish(&unit_id_hasher));
 
     Metadata {
         unit_id,
         c_metadata,
         c_extra_filename,
+        pkg_dir,
     }
 }
 
@@ -884,6 +886,54 @@ fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;
+    }
+    if unit.mode.is_any_test() || unit.mode.is_check() {
+        // These always use metadata.
+        return true;
+    }
+    // No metadata in these cases:
+    //
+    // - dylibs:
+    //   - if any dylib names are encoded in executables, so they can't be renamed.
+    //   - TODO: Maybe use `-install-name` on macOS or `-soname` on other UNIX systems
+    //     to specify the dylib name to be used by the linker instead of the filename.
+    // - Windows MSVC executables: The path to the PDB is embedded in the
+    //   executable, and we don't want the PDB path to include the hash in it.
+    // - wasm32-unknown-emscripten executables: When using emscripten, the path to the
+    //   .wasm file is embedded in the .js file, so we don't want the hash in there.
+    //
+    // This is only done for local packages, as we don't expect to export
+    // dependencies.
+    //
+    // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
+    // force metadata in the hash. This is only used for building libstd. For
+    // example, if libstd is placed in a common location, we don't want a file
+    // named /usr/lib/libstd.so which could conflict with other rustc
+    // installs. In addition it prevents accidentally loading a libstd of a
+    // different compiler at runtime.
+    // See https://github.com/rust-lang/cargo/issues/3005
+    let short_name = bcx.target_data.short_name(&unit.kind);
+    if (unit.target.is_dylib()
+        || unit.target.is_cdylib()
+        || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
+        || (unit.target.is_executable() && short_name.contains("msvc")))
+        && unit.pkg.package_id().source_id().is_path()
+        && bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
+    {
+        return false;
+    }
+    true
+}
+
+/// Returns whether or not this unit should use a hash in the pkg_dir to make it unique.
+fn use_pkg_dir(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+    if unit.mode.is_doc_test() || unit.mode.is_doc() {
+        // Doc tests do not have metadata.
+        return false;
+    }
+    if bcx.gctx.cli_unstable().build_dir_new_layout {
+        // These always use metadata.
+        return true;
     }
     if unit.mode.is_any_test() || unit.mode.is_check() {
         // These always use metadata.
