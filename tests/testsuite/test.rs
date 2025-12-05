@@ -2627,7 +2627,26 @@ fn doctest_dep_new_layout() {
         .file("b/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("test -v").run();
+    p.cargo("-Zbuild-dir-new-layout test")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .with_status(101)
+        .with_stdout_data(str![[r#"
+...
+error[E0463]: can't find crate for `b` which `foo` depends on
+...
+
+"#]])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] b v0.0.1 ([ROOT]/foo/b)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[DOCTEST] foo
+[ERROR] doctest failed, to rerun pass `--doc`
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
