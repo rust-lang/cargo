@@ -60,7 +60,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
-use annotate_snippets::Level;
+use annotate_snippets::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 pub(super) mod unit_generator;
@@ -535,6 +535,27 @@ pub fn create_bcx<'a, 'gctx>(
             .extend(args);
     }
 
+    // Validate target src path for each root unit
+    let mut error_count: usize = 0;
+    for unit in &units {
+        if let Some(target_src_path) = unit.target.src_path().path() {
+            validate_target_path_as_source_file(
+                gctx,
+                target_src_path,
+                unit.target.name(),
+                unit.target.kind(),
+                unit.pkg.manifest_path(),
+                &mut error_count,
+            )?
+        }
+    }
+    if error_count > 0 {
+        let plural: &str = if error_count > 1 { "s" } else { "" };
+        anyhow::bail!(
+            "could not compile due to {error_count} previous target resolution error{plural}"
+        );
+    }
+
     if honor_rust_version.unwrap_or(true) {
         let rustc_version = target_data.rustc.version.clone().into();
 
@@ -600,6 +621,105 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
     )?;
 
     Ok(bcx)
+}
+
+// Checks if a target path exists and is a source file, not a directory
+fn validate_target_path_as_source_file(
+    gctx: &GlobalContext,
+    target_path: &std::path::Path,
+    target_name: &str,
+    target_kind: &TargetKind,
+    unit_manifest_path: &std::path::Path,
+    error_count: &mut usize,
+) -> CargoResult<()> {
+    if !target_path.exists() {
+        *error_count += 1;
+
+        let err_msg = format!(
+            "can't find {} `{}` at path `{}`",
+            target_kind.description(),
+            target_name,
+            target_path.display()
+        );
+
+        let group = Group::with_title(Level::ERROR.primary_title(err_msg)).element(Origin::path(
+            unit_manifest_path.to_str().unwrap_or_default(),
+        ));
+
+        gctx.shell().print_report(&[group], true)?;
+    } else if target_path.is_dir() {
+        *error_count += 1;
+
+        // suggest setting the path to a likely entrypoint
+        let main_rs = target_path.join("main.rs");
+        let lib_rs = target_path.join("lib.rs");
+
+        let suggested_files_opt = match target_kind {
+            TargetKind::Lib(_) => {
+                if lib_rs.exists() {
+                    Some(format!("`{}`", lib_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::Bin => {
+                if main_rs.exists() {
+                    Some(format!("`{}`", main_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::Test => {
+                if main_rs.exists() {
+                    Some(format!("`{}`", main_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::ExampleBin => {
+                if main_rs.exists() {
+                    Some(format!("`{}`", main_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::Bench => {
+                if main_rs.exists() {
+                    Some(format!("`{}`", main_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::ExampleLib(_) => {
+                if lib_rs.exists() {
+                    Some(format!("`{}`", lib_rs.display()))
+                } else {
+                    None
+                }
+            }
+            TargetKind::CustomBuild => None,
+        };
+
+        let err_msg = format!(
+            "path `{}` for {} `{}` is a directory, but a source file was expected.",
+            target_path.display(),
+            target_kind.description(),
+            target_name,
+        );
+        let mut group = Group::with_title(Level::ERROR.primary_title(err_msg)).element(
+            Origin::path(unit_manifest_path.to_str().unwrap_or_default()),
+        );
+
+        if let Some(suggested_files) = suggested_files_opt {
+            group = group.element(
+                Level::HELP.message(format!("an entry point exists at {}", suggested_files)),
+            );
+        }
+
+        gctx.shell().print_report(&[group], true)?;
+    }
+
+    Ok(())
 }
 
 /// This is used to rebuild the unit graph, sharing host dependencies if possible,

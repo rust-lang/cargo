@@ -3776,10 +3776,9 @@ fn nonexistent_example_target_path() {
     p.cargo("check --examples")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `examples/null.rs`: [NOT_FOUND]
-
-[ERROR] could not compile `foo` (example "bar") due to 1 previous error
+[ERROR] can't find example `bar` at path `[ROOT]/foo/examples/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3805,10 +3804,9 @@ fn nonexistent_library_target_path() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null.rs`: [NOT_FOUND]
-
-[ERROR] could not compile `foo` (lib) due to 1 previous error
+[ERROR] can't find lib `foo` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3834,10 +3832,9 @@ fn nonexistent_binary_target_path() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null.rs`: [NOT_FOUND]
-
-[ERROR] could not compile `foo` (bin "null") due to 1 previous error
+[ERROR] can't find bin `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3863,10 +3860,9 @@ fn nonexistent_test_target_path() {
     p.cargo("test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null.rs`: [NOT_FOUND]
-
-[ERROR] could not compile `foo` (test "null") due to 1 previous error
+[ERROR] can't find integration-test `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3892,10 +3888,9 @@ fn nonexistent_bench_target_path() {
     p.cargo("bench")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null.rs`: [NOT_FOUND]
-
-[ERROR] could not compile `foo` (bench "null") due to 1 previous error
+[ERROR] can't find bench `null` at path `[ROOT]/foo/src/null.rs`
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3922,10 +3917,9 @@ fn directory_as_example_target_path() {
     p.cargo("check --example bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `examples/bar`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (example "bar") due to 1 previous error
+[ERROR] path `[ROOT]/foo/examples/bar` for example `bar` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3951,10 +3945,9 @@ fn directory_as_library_target_path() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (lib) due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for lib `foo` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -3981,10 +3974,9 @@ fn directory_as_binary_target_path() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (bin "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for bin `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4011,10 +4003,9 @@ fn directory_as_test_target_path() {
     p.cargo("test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (test "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for integration-test `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4041,10 +4032,9 @@ fn directory_as_bench_target_path() {
     p.cargo("bench")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (bench "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for bench `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4071,10 +4061,10 @@ fn directory_as_example_target_path_with_entrypoint() {
     p.cargo("check --example bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `examples/bar`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (example "bar") due to 1 previous error
+[ERROR] path `[ROOT]/foo/examples/bar` for example `bar` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/examples/bar/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4100,10 +4090,10 @@ fn directory_as_library_target_path_with_entrypoint() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (lib) due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for lib `foo` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/lib.rs`
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4130,10 +4120,10 @@ fn directory_as_binary_target_path_with_entrypoint() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (bin "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for bin `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4160,10 +4150,10 @@ fn directory_as_test_target_path_with_entrypoint() {
     p.cargo("test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (test "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for integration-test `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
@@ -4190,10 +4180,10 @@ fn directory_as_bench_target_path_with_entrypoint() {
     p.cargo("bench")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v1.0.0 ([ROOT]/foo)
-[ERROR] couldn't read `src/null`: Is a directory (os error 21)
-
-[ERROR] could not compile `foo` (bench "null") due to 1 previous error
+[ERROR] path `[ROOT]/foo/src/null` for bench `null` is a directory, but a source file was expected.
+ --> [ROOT]/foo/Cargo.toml
+  = [HELP] an entry point exists at `[ROOT]/foo/src/null/main.rs`
+[ERROR] could not compile due to 1 previous target resolution error
 
 "#]])
         .run();
