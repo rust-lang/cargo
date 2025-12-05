@@ -2613,6 +2613,8 @@ fn cooldown_minutes_negative_rejected() {
 
     p.cargo("generate-lockfile")
         .with_status(101)
-        .with_stderr_contains("[ERROR] `resolver.cooldown-minutes` must be non-negative, found: -10")
+        .with_stderr_contains(
+            "[ERROR] `resolver.cooldown-minutes` must be non-negative, found: -10",
+        )
         .run();
 }
