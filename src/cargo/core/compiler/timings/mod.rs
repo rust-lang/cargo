@@ -62,9 +62,6 @@ pub struct Timings<'gctx> {
     /// Units that are in the process of being built.
     /// When they finished, they are moved to `unit_times`.
     active: HashMap<JobId, UnitTime>,
-    /// Concurrency-tracking information. This is periodically updated while
-    /// compilation progresses.
-    concurrency: Vec<Concurrency>,
     /// Last recorded state of the system's CPUs and when it happened
     last_cpu_state: Option<State>,
     last_cpu_recording: Instant,
@@ -161,7 +158,6 @@ impl<'gctx> Timings<'gctx> {
                 unit_to_index: HashMap::new(),
                 unit_times: Vec::new(),
                 active: HashMap::new(),
-                concurrency: Vec::new(),
                 last_cpu_state: None,
                 last_cpu_recording: Instant::now(),
                 cpu_usage: Vec::new(),
@@ -214,7 +210,6 @@ impl<'gctx> Timings<'gctx> {
             unit_to_index,
             unit_times: Vec::new(),
             active: HashMap::new(),
-            concurrency: Vec::new(),
             last_cpu_state,
             last_cpu_recording: Instant::now(),
             cpu_usage: Vec::new(),
@@ -384,20 +379,6 @@ impl<'gctx> Timings<'gctx> {
         }
     }
 
-    /// This is called periodically to mark the concurrency of internal structures.
-    pub fn mark_concurrency(&mut self, active: usize, waiting: usize, inactive: usize) {
-        if !self.enabled {
-            return;
-        }
-        let c = Concurrency {
-            t: self.start.elapsed().as_secs_f64(),
-            active,
-            waiting,
-            inactive,
-        };
-        self.concurrency.push(c);
-    }
-
     /// Mark that a fresh unit was encountered. (No re-compile needed)
     pub fn add_fresh(&mut self) {
         self.total_fresh += 1;
@@ -444,7 +425,6 @@ impl<'gctx> Timings<'gctx> {
         if !self.enabled {
             return Ok(());
         }
-        self.mark_concurrency(0, 0, 0);
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
@@ -473,6 +453,7 @@ impl<'gctx> Timings<'gctx> {
                 .collect::<Vec<_>>();
 
             let unit_data = report::to_unit_data(&self.unit_times, &self.unit_to_index);
+            let concurrency = report::compute_concurrency(&unit_data);
 
             let ctx = report::RenderContext {
                 start: self.start,
@@ -482,7 +463,7 @@ impl<'gctx> Timings<'gctx> {
                 total_fresh: self.total_fresh,
                 total_dirty: self.total_dirty,
                 unit_data,
-                concurrency: &self.concurrency,
+                concurrency,
                 cpu_usage: &self.cpu_usage,
                 rustc_version,
                 host: &build_runner.bcx.rustc().host,
