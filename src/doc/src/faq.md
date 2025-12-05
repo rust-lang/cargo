@@ -294,3 +294,16 @@ causes and provide diagnostic techniques to help you out there:
 [conventions in place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
 [`direct-minimal-versions`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
 [custom merge tool]: https://github.com/rust-lang/cargo/issues/1818
+
+## Why does my build take up so much space?
+
+Cargo trades off disk space for faster builds including:
+- Maintaining a [cache] of intermediate build artifacts to avoid rebuilding everything when making changes to one package
+- Maintaining distinct [cache] entries for different combinations of toolchain versions, package versions, features, etc to avoid rebuilding packages when switching back and forth between configurations
+- Enabling [incremental compilation] for local packages for faster rebuilds for the package that changed
+- Enabling [debuginfo] in the [`dev` profile] in case you use a debugger
+
+[incremental compilation]: reference/profiles.md#incremental
+[debuginfo]: reference/profiles.md#debug
+[`dev` profile]: reference/profiles.md#dev
+[cache]: reference/build-cache.md
