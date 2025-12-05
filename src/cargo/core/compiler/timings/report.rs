@@ -11,7 +11,6 @@ use itertools::Itertools as _;
 use crate::CargoResult;
 use crate::core::compiler::Unit;
 
-use super::Concurrency;
 use super::UnitData;
 use super::UnitTime;
 
@@ -80,6 +79,20 @@ impl SectionData {
     fn duration(&self) -> f64 {
         (self.end - self.start).max(0.0)
     }
+}
+
+/// Concurrency tracking information.
+#[derive(serde::Serialize)]
+pub struct Concurrency {
+    /// Time as an offset in seconds from `Timings::start`.
+    t: f64,
+    /// Number of units currently running.
+    active: usize,
+    /// Number of units that could run, but are waiting for a jobserver token.
+    waiting: usize,
+    /// Number of units that are not yet ready, because they are waiting for
+    /// dependencies to finish.
+    inactive: usize,
 }
 
 pub struct RenderContext<'a> {
