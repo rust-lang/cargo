@@ -2033,8 +2033,8 @@ Mitigation strategies:
   mechanism for new features. These are currently unstable and only available
   in the nightly channel.
 
-[select older versions of your package]: https://doc.rust-lang.org/cargo/reference/resolver.html#rust-version
-[support expectations]: https://doc.rust-lang.org/cargo/reference/rust-version.html#support-expectations
+[select older versions of your package]: resolver.md#rust-version
+[support expectations]: rust-version.md#support-expectations
 
 ### Possibly-breaking: changing the platform and environment requirements {#env-change-requirements}
 
@@ -2303,7 +2303,7 @@ document what your commitments are.
 
 [`cfg` attribute]: ../../reference/conditional-compilation.md#the-cfg-attribute
 [`no_std`]: ../../reference/names/preludes.html#the-no_std-attribute
-[`package.rust-version`]: https://doc.rust-lang.org/cargo/reference/rust-version.html
+[`package.rust-version`]: rust-version.md
 [`pub use`]: ../../reference/items/use-declarations.html
 [Cargo feature]: features.md
 [Cargo features]: features.md

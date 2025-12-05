@@ -290,8 +290,8 @@ causes and provide diagnostic techniques to help you out there:
   and `Cargo.toml` using a [custom merge tool].
 
 
-[links]: https://doc.rust-lang.org/cargo/reference/resolver.html#links
-[conventions in place]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
+[links]: reference/resolver.md#links
+[conventions in place]: reference/build-scripts.md#-sys-packages
 [`direct-minimal-versions`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#direct-minimal-versions
 [custom merge tool]: https://github.com/rust-lang/cargo/issues/1818
 
