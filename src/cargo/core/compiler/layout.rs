@@ -103,6 +103,7 @@
 
 use crate::core::Workspace;
 use crate::core::compiler::CompileTarget;
+use crate::core::features::is_new_build_dir_layout_enabled;
 use crate::util::flock::is_on_nfs_mount;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;
@@ -129,7 +130,7 @@ impl Layout {
         dest: &str,
         must_take_artifact_dir_lock: bool,
     ) -> CargoResult<Layout> {
-        let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
+        let is_new_layout = is_new_build_dir_layout_enabled(ws.gctx());
         let mut root = ws.target_dir();
         let mut build_root = ws.build_dir();
         if let Some(target) = target {
