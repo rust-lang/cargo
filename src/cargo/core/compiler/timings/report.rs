@@ -283,7 +283,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
                 .iter()
                 // We don't want to show the "Other" section in the table,
                 // as it is usually a tiny portion out of the entire unit.
-                .filter(|(name, _)| matches!(name, SectionName::Other))
+                .filter(|(name, _)| !matches!(name, SectionName::Other))
                 .map(|s| s.0.clone())
                 .collect()
         })
