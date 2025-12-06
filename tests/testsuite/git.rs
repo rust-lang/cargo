@@ -1184,9 +1184,9 @@ fn ambiguous_published_deps() {
     p.cargo("run")
         .with_stderr_data(str![[r#"
 [WARNING] skipping duplicate package `duplicate v0.5.0 ([ROOTURL]/dep#[..])`:
-  [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate2/Cargo.toml
-in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.toml
-
+           [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/0156666/duplicate2/Cargo.toml
+         in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/0156666/duplicate1/Cargo.toml
+         
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
