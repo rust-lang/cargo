@@ -8,8 +8,16 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
+mod implicit_minimum_version_req;
+pub use implicit_minimum_version_req::implicit_minimum_version_req;
+
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[BLANKET_HINT_MOSTLY_UNUSED, IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[
+    BLANKET_HINT_MOSTLY_UNUSED,
+    implicit_minimum_version_req::LINT,
+    IM_A_TEAPOT,
+    UNKNOWN_LINTS,
+];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
