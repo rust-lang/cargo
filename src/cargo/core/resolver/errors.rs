@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::Write as _;
+use std::path::Path;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::IndexSummary;
+use crate::core::{Dependency, PackageId, Registry, SourceId, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -12,6 +13,90 @@ use anyhow::Error;
 
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
+
+fn debug_source_path(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut ps = PathSource::new(path, sid, &gctx);
+
+    match ps.root_package() {
+        Ok(pkg) => {
+            msg.push_str("Found package: ");
+            msg.push_str(pkg.name().as_str());
+            msg.push('\n');
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+
+    match ps.load() {
+        Ok(_) => {
+            msg.push_str("Loaded package information\n");
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+
+    match ps.read_package() {
+        Ok(pkg) => {
+            msg.push_str("Read package: ");
+            msg.push_str(pkg.name().as_str());
+            msg.push('\n');
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+}
+
+fn debug_recursive_source(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut rps = RecursivePathSource::new(path, sid, &gctx);
+
+    match rps.load() {
+        Ok(_) => msg.push_str("Loaded package information\n"),
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+
+    match rps.read_packages() {
+        Ok(pkgs) => {
+            for p in pkgs {
+                msg.push_str("found package: ");
+                msg.push_str(&p.name());
+                msg.push('\n');
+
+                match rps.list_files(&p) {
+                    Ok(files) => {
+                        for f in files {
+                            msg.push_str("    ");
+                            msg.push_str(&f.to_string_lossy());
+                            msg.push('\n');
+                        }
+                    }
+                    Err(e) => {
+                        msg.push_str("Err: ");
+                        msg.push_str(&e.to_string());
+                        msg.push('\n');
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            msg.push_str("Err: ");
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
+}
 
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
@@ -385,6 +470,14 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
+        let sid = dep.source_id();
+        let path = dep.source_id().url().to_file_path().unwrap();
+
+        if let Some(gctx) = gctx {
+            debug_source_path(&mut msg, &path.as_path(), &gctx, sid);
+            debug_recursive_source(&mut msg, &path.as_path(), &gctx, sid);
+        }
+
         let _ = writeln!(
             &mut msg,
             "no matching package named `{}` found",
