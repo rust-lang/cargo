@@ -575,6 +575,13 @@ pub fn cargo_pkg_description() -> Option<String> {
     to_opt(var_or_panic("CARGO_PKG_DESCRIPTION")).map(to_string)
 }
 
+/// The Rust language edition from the manifest of your package.
+#[doc = requires_msrv!("1.91")]
+#[track_caller]
+pub fn cargo_pkg_edition() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_EDITION")).map(to_string)
+}
+
 /// The home page from the manifest of your package.
 #[track_caller]
 pub fn cargo_pkg_homepage() -> Option<String> {
