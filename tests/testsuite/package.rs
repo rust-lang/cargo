@@ -6793,6 +6793,16 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 
 "#]])
         .run();
+
+    p.cargo("package --registry alternative --list")
+        .with_stdout_data(str![[r#"
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
