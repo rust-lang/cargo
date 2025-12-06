@@ -120,7 +120,6 @@ Each new feature described below should explain how to use it.
     * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
     * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages 
 * Configuration
-    * [config-include](#config-include) --- Adds the ability for config files to include other files.
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
     * [publish-timeout](#publish-timeout) --- Controls the timeout between uploading the crate and being available in the index
@@ -636,85 +635,6 @@ It's currently unclear how this feature will be stabilized in Cargo, but we'd
 like to stabilize it somehow!
 
 [rust-lang/rust#64158]: https://github.com/rust-lang/rust/pull/64158
-
-## config-include
-* Tracking Issue: [#7723](https://github.com/rust-lang/cargo/issues/7723)
-
-This feature requires the `-Zconfig-include` command-line option.
-
-The `include` key in a config file can be used to load another config file.
-For example:
-
-```toml
-# .cargo/config.toml
-include = ["other-config.toml"]
-
-[build]
-jobs = 4
-```
-
-```toml
-# .cargo/other-config.toml
-[build]
-rustflags = ["-W", "unsafe-code"]
-```
-
-### Documentation updates
-
-> put this after `## Command-line overrides` before `## Config-relative paths`
-> to emphasize its special nature than other config keys.
-
-#### Including extra configuration files
-
-Configuration can include other configuration files using the top-level `include` key.
-This allows sharing configuration across multiple projects
-or splitting complex configurations into multiple files.
-
-##### `include`
-
-* Type: array of strings or tables
-* Default: none
-* Environment: not supported
-
-Loads additional configuration files.
-Paths are relative to the configuration file that includes them.
-Only paths ending with `.toml` are accepted.
-
-Supports the following formats:
-
-```toml
-# array of paths
-include = [
-    "frodo.toml",
-    "samwise.toml",
-]
-
-# inline tables for more control
-include = [
-    { path = "required.toml" },
-    { path = "optional.toml", optional = true },
-]
-```
-
-> **Note:** For better readability and to avoid confusion, it is recommended to:
-> - Place `include` at the top of the configuration file
-> - Put one include per line for clearer version control diffs
-> - Use inline table syntax when optional includes are needed
-
-When using table syntax, the following fields are supported:
-
-* `path` (string, required): Path to the config file to include.
-* `optional` (boolean, default: false): If `true`, missing files are silently
-  skipped instead of causing an error.
-
-The merge behavior of `include` is different from other config values:
-
-1. Config values are first loaded from the `include` paths.
-    * Included files are loaded left to right,
-      with values from later files taking precedence over earlier ones.
-    * This step recurses if included config files also contain `include` keys.
-2. Then, the config file's own values are merged on top of the included config,
-   taking highest precedence.
 
 ## target-applies-to-host
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
@@ -2347,3 +2267,9 @@ See the [config documentation](config.md#buildbuild-dir) for information about c
 
 The `--build-plan` argument for the `build` command has been removed in 1.93.0-nightly.
 See <https://github.com/rust-lang/cargo/issues/7614> for the reason for its removal.
+
+## config-include
+
+Support for including extra configuration files via the `include` config key
+has been stabilized in 1.93.0.
+See the [`include` config documentation](config.md#include) for more.

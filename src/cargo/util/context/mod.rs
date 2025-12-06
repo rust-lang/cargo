@@ -187,10 +187,8 @@ pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
 enum WhyLoad {
     /// Loaded due to a request from the global cli arg `--config`
     ///
-    /// Indirect configs loaded via [`config-include`] are also seen as from cli args,
+    /// Indirect configs loaded via [`ConfigInclude`] are also seen as from cli args,
     /// if the initial config is being loaded from cli.
-    ///
-    /// [`config-include`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#config-include
     Cli,
     /// Loaded due to config file discovery.
     FileDiscovery,
@@ -1139,19 +1137,7 @@ impl GlobalContext {
             self.merge_cli_args()?;
         }
 
-        // Load the unstable flags from config file here first, as the config
-        // file itself may enable inclusion of other configs. In that case, we
-        // want to re-load configs with includes enabled:
         self.load_unstable_flags_from_config()?;
-        if self.unstable_flags.config_include {
-            // If the config was already loaded (like when fetching the
-            // `[alias]` table), it was loaded with includes disabled because
-            // the `unstable_flags` hadn't been set up, yet. Any values
-            // fetched before this step will not process includes, but that
-            // should be fine (`[alias]` is one of the only things loaded
-            // before configure). This can be removed when stabilized.
-            self.reload_rooted_at(self.cwd.clone())?;
-        }
 
         // Ignore errors in the configuration files. We don't want basic
         // commands like `cargo version` to error out due to config file
@@ -1278,9 +1264,7 @@ impl GlobalContext {
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
             let mut cv = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
-            if self.cli_unstable().config_include {
-                self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
-            }
+            self.load_unmerged_include(&mut cv, &mut seen, &mut result)?;
             result.push(cv);
             Ok(())
         })
@@ -1351,11 +1335,9 @@ impl GlobalContext {
     ///
     /// This is actual implementation of loading a config value from a path.
     ///
-    /// * `includes` determines whether to load configs from [`config-include`].
+    /// * `includes` determines whether to load configs from [`ConfigInclude`].
     /// * `seen` is used to check for cyclic includes.
     /// * `why_load` tells why a config is being loaded.
-    ///
-    /// [`config-include`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#config-include
     fn _load_file(
         &self,
         path: &Path,
@@ -1407,10 +1389,7 @@ impl GlobalContext {
     ) -> CargoResult<CV> {
         // Get the list of files to load.
         let includes = self.include_paths(&mut value, true)?;
-        // Check unstable.
-        if !self.cli_unstable().config_include {
-            return Ok(value);
-        }
+
         // Accumulate all values here.
         let mut root = CV::Table(HashMap::new(), value.definition().clone());
         for include in includes {
