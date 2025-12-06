@@ -234,6 +234,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             if unit.mode.is_doc_test() {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
+                args.extend(compiler::lib_search_paths(&self, unit)?);
                 args.extend(compiler::lto_args(&self, unit));
                 args.extend(compiler::features_args(unit));
                 args.extend(compiler::check_cfg_args(unit));

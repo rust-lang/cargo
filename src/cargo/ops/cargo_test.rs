@@ -229,15 +229,6 @@ fn run_doc_tests(
             p.arg("-C").arg(format!("panic={}", unit.profile.panic));
         }
 
-        for &rust_dep in &[
-            &compilation.deps_output[&unit.kind],
-            &compilation.deps_output[&CompileKind::Host],
-        ] {
-            let mut arg = OsString::from("dependency=");
-            arg.push(rust_dep);
-            p.arg("-L").arg(arg);
-        }
-
         for native_dep in compilation.native_dirs.iter() {
             p.arg("-L").arg(native_dep);
         }
