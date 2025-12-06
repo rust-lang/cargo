@@ -63,13 +63,16 @@ pub fn run_verify(
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
     let mut src = PathSource::new(&dst, id, ws.gctx());
-    let new_pkg = src.root_package()?;
+    let new_pkg = src.root_cargo_generated_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
 
     // When packaging we use an ephemeral workspace but reuse the build cache to reduce
     // verification time if the user has already compiled the dependencies and the fingerprint
     // is unchanged.
     let mut ws = Workspace::ephemeral(new_pkg, gctx, Some(ws.build_dir()), true)?;
+    // Mark this as a verification workspace so that the package gets preloaded
+    // with the cargo_generated flag set
+    ws.set_verifying_package(true);
     if let Some(local_reg) = local_reg {
         ws.add_local_overlay(
             local_reg.upstream,

@@ -387,6 +387,11 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    /// Returns `true` if this source is from a directory.
+    pub fn is_directory(self) -> bool {
+        self.inner.kind == SourceKind::Directory
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.

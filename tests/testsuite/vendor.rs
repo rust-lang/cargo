@@ -107,6 +107,63 @@ directory = "vendor"
 }
 
 #[cargo_test]
+fn vendor_registry_package_with_registry_index() {
+    let registry = registry::alt_init();
+
+    Package::new("base", "0.1.0").alternative(true).publish();
+
+    Package::new("intermediate", "0.1.0")
+        .registry_dep("base", "0.1.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                intermediate = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config").run();
+
+    let vendored_manifest = p.read_file("vendor/intermediate/Cargo.toml");
+    assert!(vendored_manifest.contains("registry-index"));
+
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+                [source."{0}"]
+                registry = "{0}"
+                replace-with = "vendored-sources"
+
+                [source.vendored-sources]
+                directory = "vendor"
+            "#,
+            registry.index_url()
+        ),
+    );
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2024
+[CHECKING] base v0.1.0 (registry `[ROOTURL]/alternative-registry`)
+[CHECKING] intermediate v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn vendor_path_specified() {
     let p = project()
         .file(
