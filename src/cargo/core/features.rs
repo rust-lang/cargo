@@ -1556,3 +1556,8 @@ pub fn cargo_docs_link(path: &str) -> String {
     };
     format!("https://doc.rust-lang.org/{url_channel}cargo/{path}")
 }
+
+/// Returns true of the new build dir layout is enabled.
+pub fn is_new_build_dir_layout_enabled(gctx: &GlobalContext) -> bool {
+    gctx.cli_unstable().build_dir_new_layout
+}
