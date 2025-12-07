@@ -17,6 +17,7 @@ mod specify_version_within_ws_and_conflict_with_lockfile;
 mod specify_version_within_ws_and_match_with_lockfile;
 mod transitive_dependency_within_ws;
 mod verbose;
+mod with_default_registry_configured;
 mod with_frozen_outside_ws;
 mod with_frozen_within_ws;
 mod with_locked_outside_ws;
