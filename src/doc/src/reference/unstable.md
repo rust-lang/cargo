@@ -98,6 +98,7 @@ Each new feature described below should explain how to use it.
     * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
     * [panic-immediate-abort](#panic-immediate-abort) --- Passes `-Cpanic=immediate-abort` to the compiler.
     * [compile-time-deps](#compile-time-deps) --- Perma-unstable feature for rust-analyzer
+    * [fine-grain-locking](#fine-grain-locking) --- Use fine grain locking instead of locking the entire build cache
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -1663,6 +1664,14 @@ panic-immediate-abort = true
 [profile.release]
 panic = "immediate-abort"
 ```
+
+## fine-grain-locking
+
+* Tracking Issue: [#4282](https://github.com/rust-lang/cargo/issues/4282)
+
+Use fine grain locking instead of locking the entire build cache.
+
+Note: Fine grain locking implicitly enables [build-dir-new-layout](#build-dir-new-layout) as fine grain locking builds on that directory reoganization.
 
 ## `[lints.cargo]`
 
