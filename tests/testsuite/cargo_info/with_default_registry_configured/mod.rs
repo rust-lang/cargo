@@ -16,9 +16,9 @@ fn case() {
         .arg_line("--verbose foo")
         .current_dir(cwd)
         .assert()
-        .failure()
-        .stdout_eq("")
-        .stderr_eq(file!["stderr.term.svg"]);
+        .success()
+        .stdout_eq(file!["stdout.term.svg"])
+        .stderr_eq("");
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

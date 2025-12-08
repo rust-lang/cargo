@@ -20,6 +20,7 @@ pub fn info(
     spec: &PackageIdSpec,
     gctx: &GlobalContext,
     reg_or_index: Option<RegistryOrIndex>,
+    explicit_registry: bool,
 ) -> CargoResult<()> {
     let source_config = SourceConfigMap::new(gctx)?;
     let mut registry = PackageRegistry::new_with_source_config(gctx, source_config)?;
@@ -39,8 +40,17 @@ pub fn info(
             .and_then(|path| ws.members().find(|p| p.manifest_path() == path))
     });
     let (mut package_id, is_member) = find_pkgid_in_ws(nearest_package, ws.as_ref(), spec);
+
+    // If a local package exists and no explicit registry/index was provided,
+    // prefer the local package over the default registry
+    let reg_or_index_to_use = if package_id.is_some() && !explicit_registry {
+        None
+    } else {
+        reg_or_index.as_ref()
+    };
+
     let (use_package_source_id, source_ids) =
-        get_source_id_with_package_id(gctx, package_id, reg_or_index.as_ref())?;
+        get_source_id_with_package_id(gctx, package_id, reg_or_index_to_use)?;
     // If we don't use the package's source, we need to query the package ID from the specified registry.
     if !use_package_source_id {
         package_id = None;
