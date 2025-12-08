@@ -5,6 +5,7 @@ use cargo_test_support::str;
 
 mod blanket_hint_mostly_unused;
 mod error;
+mod implicit_minimum_version_req;
 mod inherited;
 mod unknown_lints;
 mod warning;

@@ -8,8 +8,49 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
+mod implicit_minimum_version_req;
+pub use implicit_minimum_version_req::implicit_minimum_version_req;
+
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[BLANKET_HINT_MOSTLY_UNUSED, IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[
+    BLANKET_HINT_MOSTLY_UNUSED,
+    implicit_minimum_version_req::LINT,
+    IM_A_TEAPOT,
+    UNKNOWN_LINTS,
+];
+
+/// Scope at which a lint runs: package-level or workspace-level.
+pub enum ManifestFor<'a> {
+    /// Lint runs for a specific package.
+    Package(&'a Package),
+    /// Lint runs for workspace-level config.
+    Workspace(&'a MaybePackage),
+}
+
+impl ManifestFor<'_> {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
+        match self {
+            ManifestFor::Package(p) => lint.level(
+                pkg_lints,
+                p.manifest().edition(),
+                p.manifest().unstable_features(),
+            ),
+            ManifestFor::Workspace(p) => lint.level(pkg_lints, p.edition(), p.unstable_features()),
+        }
+    }
+}
+
+impl<'a> From<&'a Package> for ManifestFor<'a> {
+    fn from(value: &'a Package) -> ManifestFor<'a> {
+        ManifestFor::Package(value)
+    }
+}
+
+impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
+    fn from(value: &'a MaybePackage) -> ManifestFor<'a> {
+        ManifestFor::Workspace(value)
+    }
+}
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
