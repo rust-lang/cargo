@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-vendor --- Vendor all dependencies locally
+cargo-vendor --- Vendor all dependencies locally by copying their source code into your project repository.
 
 ## SYNOPSIS
 
@@ -10,11 +10,13 @@ cargo-vendor --- Vendor all dependencies locally
 
 ## DESCRIPTION
 
-This cargo subcommand will vendor all crates.io and git dependencies for a
-project into the specified directory at `<path>`. After this command completes
-the vendor directory specified by `<path>` will contain all remote sources from
-dependencies specified. Additional manifests beyond the default one can be
-specified with the `-s` option.
+This cargo subcommand will vendor all crates.io and git dependencies for a project 
+into the specified directory at `<path>`.  This enables building the project in offline
+or restricted network environments.
+
+After this command completes the vendor directory specified by `<path>` will contain all 
+remote sources from dependencies specified. Additional manifests beyond the default one 
+can be specified with the `-s` option.
 
 The configuration necessary to use the vendored sources would be printed to
 stdout after `cargo vendor` completes the vendoring process.
