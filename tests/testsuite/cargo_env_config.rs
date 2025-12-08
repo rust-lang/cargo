@@ -441,3 +441,176 @@ two
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn env_cfg_target() {
+    // Test that [env.'cfg(...)'] works for target-specific environment variables.
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!("ENV_CFG_TEST:{}", env!("ENV_CFG_TEST"));
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env.'cfg(target_os = "linux")']
+                ENV_CFG_TEST = "linux-value"
+
+                [env.'cfg(target_os = "macos")']
+                ENV_CFG_TEST = "macos-value"
+
+                [env.'cfg(target_os = "windows")']
+                ENV_CFG_TEST = "windows-value"
+            "#,
+        )
+        .build();
+
+    let expected = if cfg!(target_os = "linux") {
+        "linux-value"
+    } else if cfg!(target_os = "macos") {
+        "macos-value"
+    } else if cfg!(target_os = "windows") {
+        "windows-value"
+    } else {
+        panic!("unsupported target_os for this test");
+    };
+
+    p.cargo("run")
+        .with_stdout_data(format!(
+            "\
+ENV_CFG_TEST:{expected}
+"
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn env_cfg_with_base_env() {
+    // Test that [env] and [env.'cfg(...)'] work together.
+    // Base [env] should be applied first, then cfg-specific.
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!("BASE_VAR:{}", env!("BASE_VAR"));
+            println!("CFG_VAR:{}", env!("CFG_VAR"));
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                BASE_VAR = "base-value"
+
+                [env.'cfg(unix)']
+                CFG_VAR = "unix-value"
+
+                [env.'cfg(windows)']
+                CFG_VAR = "windows-value"
+            "#,
+        )
+        .build();
+
+    let expected_cfg = if cfg!(unix) {
+        "unix-value"
+    } else {
+        "windows-value"
+    };
+
+    p.cargo("run")
+        .with_stdout_data(format!(
+            "\
+BASE_VAR:base-value
+CFG_VAR:{expected_cfg}
+"
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn env_cfg_no_override_base() {
+    // Test that [env.'cfg(...)'] does not override [env] values.
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!("SHARED_VAR:{}", env!("SHARED_VAR"));
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                SHARED_VAR = "base-value"
+
+                [env.'cfg(unix)']
+                SHARED_VAR = "unix-value"
+
+                [env.'cfg(windows)']
+                SHARED_VAR = "windows-value"
+            "#,
+        )
+        .build();
+
+    // Base [env] should take precedence over [env.'cfg(...)']
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+SHARED_VAR:base-value
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn env_cfg_force() {
+    // Test that force flag works with [env.'cfg(...)'].
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!("FORCED:{}", env!("FORCED_VAR"));
+            println!("UNFORCED:{}", env!("UNFORCED_VAR"));
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env.'cfg(unix)']
+                FORCED_VAR = { value = "from-config", force = true }
+                UNFORCED_VAR = "from-config"
+
+                [env.'cfg(windows)']
+                FORCED_VAR = { value = "from-config", force = true }
+                UNFORCED_VAR = "from-config"
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .env("FORCED_VAR", "from-env")
+        .env("UNFORCED_VAR", "from-env")
+        .with_stdout_data(str![[r#"
+FORCED:from-config
+UNFORCED:from-env
+
+"#]])
+        .run();
+}

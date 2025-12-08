@@ -10,7 +10,7 @@ use cargo_util::{ProcessBuilder, paths};
 use crate::core::Package;
 use crate::core::compiler::BuildContext;
 use crate::core::compiler::RustdocFingerprint;
-use crate::core::compiler::apply_env_config;
+use crate::core::compiler::apply_env_config_with_target_cfg;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::util::{CargoResult, GlobalContext, context};
 
@@ -128,6 +128,8 @@ pub struct Compilation<'gctx> {
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
     /// The linker to use for each host or target.
     target_linkers: HashMap<CompileKind, Option<PathBuf>>,
+    /// The target cfg for each compile kind, used for [env.'cfg(...)'] config.
+    target_cfgs: HashMap<CompileKind, Vec<cargo_platform::Cfg>>,
 
     /// The total number of lint warnings emitted by the compilation.
     pub lint_warning_count: usize,
@@ -169,6 +171,17 @@ impl<'gctx> Compilation<'gctx> {
                 .chain(Some(&CompileKind::Host))
                 .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
+            target_cfgs: bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .chain(Some(&CompileKind::Host))
+                .filter_map(|kind| {
+                    bcx.target_data
+                        .get_info(*kind)
+                        .map(|info| (*kind, info.cfg().to_vec()))
+                })
+                .collect(),
             lint_warning_count: 0,
         })
     }
@@ -384,7 +397,8 @@ impl<'gctx> Compilation<'gctx> {
 
         cmd.cwd(pkg.root());
 
-        apply_env_config(self.gctx, &mut cmd)?;
+        let target_cfg = self.target_cfgs.get(&kind).map(|v| v.as_slice());
+        apply_env_config_with_target_cfg(self.gctx, &mut cmd, target_cfg)?;
 
         Ok(cmd)
     }

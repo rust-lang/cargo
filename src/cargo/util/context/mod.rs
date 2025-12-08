@@ -273,6 +273,7 @@ pub struct GlobalContext {
     doc_extern_map: OnceLock<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: OnceLock<Arc<HashMap<String, OsString>>>,
+    env_cfgs: OnceLock<Vec<(String, EnvConfig)>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -367,6 +368,7 @@ impl GlobalContext {
             doc_extern_map: Default::default(),
             progress_config: ProgressConfig::default(),
             env_config: Default::default(),
+            env_cfgs: Default::default(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
             ws_roots: Default::default(),
             global_cache_tracker: Default::default(),
@@ -1940,42 +1942,29 @@ impl GlobalContext {
     /// are `force = true` or don't exist in the env snapshot [`GlobalContext::get_env`].
     pub fn env_config(&self) -> CargoResult<&Arc<HashMap<String, OsString>>> {
         let env_config = self.env_config.try_borrow_with(|| {
-            CargoResult::Ok(Arc::new({
-                let env_config = self.get::<EnvConfig>("env")?;
-                // Reasons for disallowing these values:
-                //
-                // - CARGO_HOME: The initial call to cargo does not honor this value
-                //   from the [env] table. Recursive calls to cargo would use the new
-                //   value, possibly behaving differently from the outer cargo.
-                //
-                // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
-                //   this will have no effect because the rustup proxy sets
-                //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
-                //   [env] table. If the outer cargo is executed directly
-                //   circumventing the rustup proxy, then this would affect calls to
-                //   rustc (assuming that is a proxy), which could potentially cause
-                //   problems with cargo and rustc being from different toolchains. We
-                //   consider this to be not a use case we would like to support,
-                //   since it will likely cause problems or lead to confusion.
-                for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
-                    if env_config.contains_key(*disallowed) {
-                        bail!(
-                            "setting the `{disallowed}` environment variable is not supported \
-                            in the `[env]` configuration table"
-                        );
-                    }
+            let env_key = ConfigKey::from_str("env");
+            let Some(env_table) = self.get_table(&env_key)? else {
+                return CargoResult::Ok(Arc::new(HashMap::new()));
+            };
+
+            let mut result = HashMap::new();
+            for (key, _value) in &env_table.val {
+                // Skip cfg-specific tables
+                if key.starts_with("cfg(") {
+                    continue;
                 }
-                env_config
-                    .into_iter()
-                    .filter_map(|(k, v)| {
-                        if v.is_force() || self.get_env_os(&k).is_none() {
-                            Some((k, v.resolve(self.cwd()).to_os_string()))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            }))
+
+                check_disallowed_env_var(key)?;
+
+                // Load the individual env var
+                let var_key = format!("env.{}", key);
+                let env_value: EnvConfigValue = self.get(&var_key)?;
+
+                if env_value.is_force() || self.get_env_os(key).is_none() {
+                    result.insert(key.clone(), env_value.resolve(self.cwd()).to_os_string());
+                }
+            }
+            Ok(Arc::new(result))
         })?;
 
         Ok(env_config)
@@ -1997,6 +1986,13 @@ impl GlobalContext {
     pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
         self.target_cfgs
             .try_borrow_with(|| target::load_target_cfgs(self))
+    }
+
+    /// Returns a list of `env.'cfg()'` tables.
+    ///
+    /// The list is sorted by the table name.
+    pub fn env_cfgs(&self) -> CargoResult<&Vec<(String, EnvConfig)>> {
+        self.env_cfgs.try_borrow_with(|| load_env_cfgs(self))
     }
 
     pub fn doc_extern_map(&self) -> CargoResult<&RustdocExternMap> {
@@ -2138,6 +2134,73 @@ impl GlobalContext {
     pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
         self.ws_roots.lock().unwrap()
     }
+}
+
+/// Checks if an environment variable name is disallowed in the `[env]` config table.
+///
+/// Reasons for disallowing these values:
+///
+/// - `CARGO_HOME`: The initial call to cargo does not honor this value
+///   from the `[env]` table. Recursive calls to cargo would use the new
+///   value, possibly behaving differently from the outer cargo.
+///
+/// - `RUSTUP_HOME` and `RUSTUP_TOOLCHAIN`: Under normal usage with rustup,
+///   this will have no effect because the rustup proxy sets
+///   `RUSTUP_HOME` and `RUSTUP_TOOLCHAIN`, and that would override the
+///   `[env]` table. If the outer cargo is executed directly
+///   circumventing the rustup proxy, then this would affect calls to
+///   rustc (assuming that is a proxy), which could potentially cause
+///   problems with cargo and rustc being from different toolchains. We
+///   consider this to be not a use case we would like to support,
+///   since it will likely cause problems or lead to confusion.
+fn check_disallowed_env_var(var_name: &str) -> CargoResult<()> {
+    if matches!(var_name, "CARGO_HOME" | "RUSTUP_HOME" | "RUSTUP_TOOLCHAIN") {
+        bail!(
+            "setting the `{var_name}` environment variable is not supported \
+            in the `[env]` configuration table"
+        );
+    }
+    Ok(())
+}
+
+/// Loads all of the `env.'cfg()'` tables.
+fn load_env_cfgs(gctx: &GlobalContext) -> CargoResult<Vec<(String, EnvConfig)>> {
+    let mut result = Vec::new();
+    let env_key = ConfigKey::from_str("env");
+
+    // Get the raw [env] table
+    let Some(env_table) = gctx.get_table(&env_key)? else {
+        return Ok(result);
+    };
+
+    for (key, value) in env_table.val {
+        if key.starts_with("cfg(") {
+            // This is a cfg-specific table, parse it as EnvConfig
+            let CV::Table(inner_table, _def) = value else {
+                bail!(
+                    "`[env.'{key}']` should be a table of environment variables, \
+                     not a single value (defined in {})",
+                    env_table.definition
+                );
+            };
+
+            // Parse each entry in the inner table as an EnvConfigValue
+            let mut env_config = HashMap::new();
+            for (var_name, _var_value) in inner_table {
+                check_disallowed_env_var(&var_name)?;
+
+                // Build the full key path for this env var
+                let full_key = format!("env.{}.{}", key, var_name);
+                let env_value: EnvConfigValue = gctx.get(&full_key)?;
+                env_config.insert(var_name, env_value);
+            }
+            result.push((key, env_config));
+        }
+    }
+
+    // Sort by key for deterministic ordering
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(result)
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {

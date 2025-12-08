@@ -2532,16 +2532,49 @@ fn descriptive_pkg_name(name: &str, target: &Target, mode: &CompileMode) -> Stri
 }
 
 /// Applies environment variables from config `[env]` to [`ProcessBuilder`].
+///
+/// If `target_cfg` is provided, also applies `[env.'cfg(...)']` tables
+/// that match the target configuration.
 pub(crate) fn apply_env_config(
     gctx: &crate::GlobalContext,
     cmd: &mut ProcessBuilder,
 ) -> CargoResult<()> {
+    apply_env_config_with_target_cfg(gctx, cmd, None)
+}
+
+/// Applies environment variables from config `[env]` and `[env.'cfg(...)']` to [`ProcessBuilder`].
+pub(crate) fn apply_env_config_with_target_cfg(
+    gctx: &crate::GlobalContext,
+    cmd: &mut ProcessBuilder,
+    target_cfg: Option<&[cargo_platform::Cfg]>,
+) -> CargoResult<()> {
+    // Apply base [env] config
     for (key, value) in gctx.env_config()?.iter() {
         // never override a value that has already been set by cargo
         if cmd.get_envs().contains_key(key) {
             continue;
         }
         cmd.env(key, value);
+    }
+
+    // Apply [env.'cfg(...)'] config if target_cfg is provided
+    if let Some(target_cfg) = target_cfg {
+        for (cfg_key, env_config) in gctx.env_cfgs()?.iter() {
+            if cargo_platform::CfgExpr::matches_key(cfg_key, target_cfg) {
+                for (key, value) in env_config.iter() {
+                    // never override a value that has already been set by cargo or base [env]
+                    if cmd.get_envs().contains_key(key) {
+                        continue;
+                    }
+                    // Respect force flag: only set if force=true or env var doesn't exist
+                    if !value.is_force() && gctx.get_env_os(key).is_some() {
+                        continue;
+                    }
+                    let resolved = value.resolve(gctx.cwd());
+                    cmd.env(key, resolved);
+                }
+            }
+        }
     }
     Ok(())
 }
