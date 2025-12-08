@@ -506,40 +506,34 @@ mod tests {
 
     #[test]
     fn ensure_updated_lints() {
-        let path = snapbox::utils::current_rs!();
-        let expected = std::fs::read_to_string(&path).unwrap();
-        let expected = expected
-            .lines()
-            .filter_map(|l| {
-                if l.ends_with(": Lint = Lint {") {
-                    Some(
-                        l.chars()
-                            .skip(6)
-                            .take_while(|c| *c != ':')
-                            .collect::<String>(),
-                    )
-                } else {
-                    None
-                }
-            })
-            .collect::<HashSet<_>>();
+        let dir = snapbox::utils::current_dir!();
+        let mut expected = HashSet::new();
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.ends_with("mod.rs") {
+                continue;
+            }
+            let lint_name = path.file_stem().unwrap().to_string_lossy();
+            assert!(expected.insert(lint_name.into()), "duplicate lint found");
+        }
+
         let actual = super::LINTS
             .iter()
-            .map(|l| l.name.to_uppercase())
+            .map(|l| l.name.to_string())
             .collect::<HashSet<_>>();
         let diff = expected.difference(&actual).sorted().collect::<Vec<_>>();
 
         let mut need_added = String::new();
         for name in &diff {
-            need_added.push_str(&format!("{}\n", name));
+            need_added.push_str(&format!("{name}\n"));
         }
         assert!(
             diff.is_empty(),
             "\n`LINTS` did not contain all `Lint`s found in {}\n\
             Please add the following to `LINTS`:\n\
-            {}",
-            path.display(),
-            need_added
+            {need_added}",
+            dir.display(),
         );
     }
 
