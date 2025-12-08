@@ -29,7 +29,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let spec = PackageIdSpec::parse(package)
         .with_context(|| format!("invalid package ID specification: `{package}`"))?;
 
+    // Check if --registry or --index was explicitly provided
+    let explicit_registry = args._contains("registry") || args._contains("index");
     let reg_or_index = args.registry_or_index(gctx)?;
-    info(&spec, gctx, reg_or_index)?;
+    info(&spec, gctx, reg_or_index, explicit_registry)?;
     Ok(())
 }

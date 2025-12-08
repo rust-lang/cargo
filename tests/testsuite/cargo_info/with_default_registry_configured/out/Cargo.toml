@@ -1,0 +1,9 @@
+[workspace]
+members = ["crates/*"]
+
+[package]
+name = "foo"
+version = "0.0.0"
+
+[dependencies]
+crate1 = { path = "./crates/crate1" }
