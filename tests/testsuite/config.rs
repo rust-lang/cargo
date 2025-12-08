@@ -2591,7 +2591,7 @@ fn mixed_type_array() {
 }
 
 #[cargo_test]
-fn config_symlink_home_duplicate_load_bug() {
+fn config_symlink_home_duplicate_load() {
     // Test that when CARGO_HOME is accessed via a symlink that points to a directory
     // already in the config search path, the config file is not loaded twice.
 
@@ -2647,13 +2647,5 @@ rustdocflags = ["--default-theme=dark"]
     p.cargo("doc")
         .cwd(&project_in_b)
         .env("CARGO_HOME", &cargo_home)
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[DOCUMENTING] foo v0.1.0 ([ROOT]/foo/a/b/foo)
-[ERROR] Option 'default-theme' given more than once
-
-[ERROR] could not document `foo`
-
-"#]])
         .run();
 }
