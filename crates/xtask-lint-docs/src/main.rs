@@ -1,6 +1,8 @@
+use anyhow::Context as _;
 use cargo::util::command_prelude::{ArgMatchesExt, flag};
 use cargo::util::lints::{Lint, LintLevel};
 use itertools::Itertools;
+
 use std::fmt::Write;
 use std::path::PathBuf;
 
@@ -22,7 +24,7 @@ fn main() -> anyhow::Result<()> {
         .iter()
         .sorted_by_key(|lint| lint.name)
     {
-        if lint.docs.is_some() {
+        if !lint.hidden {
             let sectipn = match lint.default_level {
                 LintLevel::Allow => &mut allow,
                 LintLevel::Warn => &mut warn,
@@ -71,10 +73,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
+fn add_lint(lint: &Lint, buf: &mut String) -> anyhow::Result<()> {
     writeln!(buf, "## `{}`", lint.name)?;
-    writeln!(buf, "Set to `{}` by default", lint.default_level)?;
-    writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
+    writeln!(buf, "Set to `{}` by default\n", lint.default_level)?;
+
+    let src_path = lint_docs_src_path(lint);
+    let docs = std::fs::read_to_string(&src_path)
+        .with_context(|| format!("failed to read {}", src_path.display()))?;
+    writeln!(buf, "{docs}\n",)?;
+
+    Ok(())
 }
 
 fn add_level_section(level: LintLevel, lint_names: &[&str], buf: &mut String) -> std::fmt::Result {
@@ -103,6 +111,20 @@ fn lint_docs_output_path() -> PathBuf {
     let ws_root = PathBuf::from(format!("{pkg_root}/../.."));
     let path = {
         let path = ws_root.join("src/doc/src/reference/lints.md");
+        path.canonicalize().unwrap_or(path)
+    };
+    path
+}
+
+/// Gets the markdown source of the lint documentation.
+fn lint_docs_src_path(lint: &Lint) -> PathBuf {
+    let pkg_root = env!("CARGO_MANIFEST_DIR");
+    let ws_root = PathBuf::from(format!("{pkg_root}/../.."));
+    let path = {
+        let path = ws_root
+            .join("src/cargo/util/lints")
+            .join(lint.name)
+            .with_extension("md");
         path.canonicalize().unwrap_or(path)
     };
     path

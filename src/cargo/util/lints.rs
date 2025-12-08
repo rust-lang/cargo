@@ -259,10 +259,8 @@ pub struct Lint {
     pub default_level: LintLevel,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
-    /// This is a markdown formatted string that will be used when generating
-    /// the lint documentation. If docs is `None`, the lint will not be
-    /// documented.
-    pub docs: Option<&'static str>,
+    /// Whether the lint should be hidden or documented.
+    pub hidden: bool,
 }
 
 impl Lint {
@@ -436,7 +434,7 @@ const IM_A_TEAPOT: Lint = Lint {
     default_level: LintLevel::Allow,
     edition_lint_opts: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
-    docs: None,
+    hidden: true,
 };
 
 pub fn check_im_a_teapot(
@@ -488,33 +486,7 @@ const BLANKET_HINT_MOSTLY_UNUSED: Lint = Lint {
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
-    docs: Some(
-        r#"
-### What it does
-Checks if `hint-mostly-unused` being applied to all dependencies.
-
-### Why it is bad
-`hint-mostly-unused` indicates that most of a crate's API surface will go
-unused by anything depending on it; this hint can speed up the build by
-attempting to minimize compilation time for items that aren't used at all.
-Misapplication to crates that don't fit that criteria will slow down the build
-rather than speeding it up. It should be selectively applied to dependencies
-that meet these criteria. Applying it globally is always a misapplication and
-will likely slow down the build.
-
-### Example
-```toml
-[profile.dev.package."*"]
-hint-mostly-unused = true
-```
-
-Should instead be:
-```toml
-[profile.dev.package.huge-mostly-unused-dependency]
-hint-mostly-unused = true
-```
-"#,
-    ),
+    hidden: false,
 };
 
 pub fn blanket_hint_mostly_unused(
@@ -640,24 +612,7 @@ const UNKNOWN_LINTS: Lint = Lint {
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
-    docs: Some(
-        r#"
-### What it does
-Checks for unknown lints in the `[lints.cargo]` table
-
-### Why it is bad
-- The lint name could be misspelled, leading to confusion as to why it is
-  not working as expected
-- The unknown lint could end up causing an error if `cargo` decides to make
-  a lint with the same name in the future
-
-### Example
-```toml
-[lints.cargo]
-this-lint-does-not-exist = "warn"
-```
-"#,
-    ),
+    hidden: false,
 };
 
 fn output_unknown_lints(
