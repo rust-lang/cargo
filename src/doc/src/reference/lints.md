@@ -9,6 +9,7 @@ These lints are all set to the 'warn' level by default.
 - [`unknown_lints`](#unknown_lints)
 
 ## `blanket_hint_mostly_unused`
+
 Set to `warn` by default
 
 ### What it does
@@ -41,6 +42,7 @@ hint-mostly-unused = true
 
 
 ## `unknown_lints`
+
 Set to `warn` by default
 
 ### What it does

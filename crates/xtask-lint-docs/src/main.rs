@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn add_lint(lint: &Lint, buf: &mut String) -> anyhow::Result<()> {
-    writeln!(buf, "## `{}`", lint.name)?;
+    writeln!(buf, "## `{}`\n", lint.name)?;
     writeln!(buf, "Set to `{}` by default\n", lint.default_level)?;
 
     let src_path = lint_docs_src_path(lint);
