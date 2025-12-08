@@ -19,6 +19,30 @@ pub const LINTS: &[Lint] = &[
     UNKNOWN_LINTS,
 ];
 
+/// Scope at which a lint runs: package-level or workspace-level.
+pub enum ManifestFor<'a> {
+    /// Lint runs for a specific package.
+    Package(&'a Package),
+}
+
+impl ManifestFor<'_> {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
+        match self {
+            ManifestFor::Package(p) => lint.level(
+                pkg_lints,
+                p.manifest().edition(),
+                p.manifest().unstable_features(),
+            ),
+        }
+    }
+}
+
+impl<'a> From<&'a Package> for ManifestFor<'a> {
+    fn from(value: &'a Package) -> ManifestFor<'a> {
+        ManifestFor::Package(value)
+    }
+}
+
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
     path: &Path,

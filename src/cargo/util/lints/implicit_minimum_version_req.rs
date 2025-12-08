@@ -18,6 +18,7 @@ use crate::util::OptVersionReq;
 use crate::util::lints::Lint;
 use crate::util::lints::LintLevel;
 use crate::util::lints::LintLevelReason;
+use crate::util::lints::ManifestFor;
 use crate::util::lints::get_key_value;
 use crate::util::lints::rel_cwd_manifest_path;
 
@@ -79,26 +80,39 @@ serde = "1.0.219"
 };
 
 pub fn implicit_minimum_version_req(
-    pkg: &Package,
+    manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let manifest = pkg.manifest();
-    let (lint_level, reason) = LINT.level(
-        cargo_lints,
-        manifest.edition(),
-        manifest.unstable_features(),
-    );
+    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT);
 
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
 
+    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+
+    match manifest {
+        ManifestFor::Package(pkg) => {
+            lint_package(pkg, manifest_path, lint_level, reason, error_count, gctx)
+        }
+    }
+}
+
+pub fn lint_package(
+    pkg: &Package,
+    manifest_path: String,
+    lint_level: LintLevel,
+    reason: LintLevelReason,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+
     let document = manifest.document();
     let contents = manifest.contents();
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let target_key_for_platform = target_key_for_platform(&manifest);
 
     for dep in manifest.dependencies().iter() {

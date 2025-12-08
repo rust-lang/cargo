@@ -1297,7 +1297,13 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
             check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
-            implicit_minimum_version_req(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+            implicit_minimum_version_req(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut error_count,
+                self.gctx,
+            )?;
         }
 
         if error_count > 0 {
