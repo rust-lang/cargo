@@ -57,15 +57,16 @@ fn main() -> anyhow::Result<()> {
 
     buf.push_str(&lint_docs);
 
+    let docs_output_path = lint_docs_output_path();
     if check {
-        let old = std::fs::read_to_string(lint_docs_path())?;
+        let old = std::fs::read_to_string(docs_output_path)?;
         if old != buf {
             anyhow::bail!(
                 "The lints documentation is out-of-date. Run `cargo lint-docs` to update it."
             );
         }
     } else {
-        std::fs::write(lint_docs_path(), buf)?;
+        std::fs::write(docs_output_path, buf)?;
     }
     Ok(())
 }
@@ -97,7 +98,7 @@ fn add_level_section(level: LintLevel, lint_names: &[&str], buf: &mut String) ->
     Ok(())
 }
 
-fn lint_docs_path() -> PathBuf {
+fn lint_docs_output_path() -> PathBuf {
     let pkg_root = env!("CARGO_MANIFEST_DIR");
     let ws_root = PathBuf::from(format!("{pkg_root}/../.."));
     let path = {
