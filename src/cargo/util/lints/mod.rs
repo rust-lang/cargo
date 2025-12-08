@@ -23,6 +23,8 @@ pub const LINTS: &[Lint] = &[
 pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.
     Package(&'a Package),
+    /// Lint runs for workspace-level config.
+    Workspace(&'a MaybePackage),
 }
 
 impl ManifestFor<'_> {
@@ -33,6 +35,7 @@ impl ManifestFor<'_> {
                 p.manifest().edition(),
                 p.manifest().unstable_features(),
             ),
+            ManifestFor::Workspace(p) => lint.level(pkg_lints, p.edition(), p.unstable_features()),
         }
     }
 }
@@ -40,6 +43,12 @@ impl ManifestFor<'_> {
 impl<'a> From<&'a Package> for ManifestFor<'a> {
     fn from(value: &'a Package) -> ManifestFor<'a> {
         ManifestFor::Package(value)
+    }
+}
+
+impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
+    fn from(value: &'a MaybePackage) -> ManifestFor<'a> {
+        ManifestFor::Workspace(value)
     }
 }
 

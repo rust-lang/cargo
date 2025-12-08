@@ -1340,6 +1340,13 @@ impl<'gctx> Workspace<'gctx> {
 
         if self.gctx.cli_unstable().cargo_lints {
             // Calls to lint functions go in here
+            implicit_minimum_version_req(
+                self.root_maybe().into(),
+                self.root_manifest(),
+                &cargo_lints,
+                &mut error_count,
+                self.gctx,
+            )?;
         }
 
         // This is a short term hack to allow `blanket_hint_mostly_unused`

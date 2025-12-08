@@ -1029,6 +1029,17 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement without an explicit minimum version
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^ missing full version components
+  |
+[HELP] consider specifying full `major.minor.patch` version components
+  |
+7 | dep = "1.0.0"
+  |         ++++
+  = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1075,6 +1086,17 @@ edition = "2021"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement without an explicit minimum version
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^ missing full version components
+  |
+[HELP] consider specifying full `major.minor.patch` version components
+  |
+7 | dep = "1.0.0"
+  |         ++++
+  = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
 [CHECKING] member v0.0.0 ([ROOT]/foo/member)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1122,6 +1144,17 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] dependency version requirement without an explicit minimum version
+ --> Cargo.toml:7:7
+  |
+7 | dep = "1"
+  |       ^^^ missing full version components
+  |
+[HELP] consider specifying full `major.minor.patch` version components
+  |
+7 | dep = "1.0.0"
+  |         ++++
+  = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
 [WARNING] dependency version requirement without an explicit minimum version
  --> member/Cargo.toml:7:7
   |

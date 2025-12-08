@@ -7,12 +7,14 @@ use annotate_snippets::Level;
 use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
 use cargo_platform::Platform;
+use cargo_util_schemas::manifest::TomlDependency;
 use cargo_util_schemas::manifest::TomlToolLints;
 use toml::de::DeValue;
 
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Manifest;
+use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::util::OptVersionReq;
 use crate::util::lints::Lint;
@@ -98,6 +100,14 @@ pub fn implicit_minimum_version_req(
         ManifestFor::Package(pkg) => {
             lint_package(pkg, manifest_path, lint_level, reason, error_count, gctx)
         }
+        ManifestFor::Workspace(maybe_pkg) => lint_workspace(
+            maybe_pkg,
+            manifest_path,
+            lint_level,
+            reason,
+            error_count,
+            gctx,
+        ),
     }
 }
 
@@ -130,6 +140,72 @@ pub fn lint_package(
             };
 
         let Some(span) = span_of_version_req(document, key_path) else {
+            continue;
+        };
+
+        let report = report(
+            lint_level,
+            reason,
+            span,
+            contents,
+            &manifest_path,
+            &suggested_req,
+        );
+
+        if lint_level.is_error() {
+            *error_count += 1;
+        }
+        gctx.shell().print_report(&report, lint_level.force())?;
+    }
+
+    Ok(())
+}
+
+pub fn lint_workspace(
+    maybe_pkg: &MaybePackage,
+    manifest_path: String,
+    lint_level: LintLevel,
+    reason: LintLevelReason,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let document = maybe_pkg.document();
+    let contents = maybe_pkg.contents();
+    let toml = match maybe_pkg {
+        MaybePackage::Package(p) => p.manifest().normalized_toml(),
+        MaybePackage::Virtual(vm) => vm.normalized_toml(),
+    };
+    let dep_iter = toml
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.dependencies.as_ref())
+        .into_iter()
+        .flat_map(|deps| deps.iter())
+        .map(|(name, dep)| {
+            let name = name.as_str();
+            let ver = match dep {
+                TomlDependency::Simple(ver) => ver,
+                TomlDependency::Detailed(detailed) => {
+                    let Some(ver) = detailed.version.as_ref() else {
+                        return (name, OptVersionReq::Any);
+                    };
+                    ver
+                }
+            };
+            let req = semver::VersionReq::parse(ver)
+                .map(Into::into)
+                .unwrap_or(OptVersionReq::Any);
+            (name, req)
+        });
+
+    for (name_in_toml, version_req) in dep_iter {
+        let Some(suggested_req) = get_suggested_version_req(&version_req) else {
+            continue;
+        };
+
+        let key_path = ["workspace", "dependencies", name_in_toml];
+
+        let Some(span) = span_of_version_req(document, &key_path) else {
             continue;
         };
 
