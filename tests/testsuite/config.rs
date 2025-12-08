@@ -2589,3 +2589,63 @@ fn mixed_type_array() {
         }
     );
 }
+
+#[cargo_test]
+fn config_symlink_home_duplicate_load() {
+    // Test that when CARGO_HOME is accessed via a symlink that points to a directory
+    // already in the config search path, the config file is not loaded twice.
+
+    use cargo_test_support::basic_manifest;
+
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Create directory structure a/b/ and symlink c -> a
+    let a_dir = p.root().join("a");
+    let b_dir = a_dir.join("b");
+    let c_symlink = p.root().join("c");
+
+    fs::create_dir_all(&b_dir).unwrap();
+    symlink(&a_dir, &c_symlink).unwrap();
+
+    // Create config file in a/.cargo/
+    let cargo_config_dir = a_dir.join(".cargo");
+    fs::create_dir(&cargo_config_dir).unwrap();
+    let config_path = cargo_config_dir.join("config.toml");
+    fs::write(
+        &config_path,
+        r#"
+[build]
+rustdocflags = ["--default-theme=dark"]
+"#,
+    )
+    .unwrap();
+
+    // Move the project into a/b/
+    let project_in_b = b_dir.join("foo");
+    fs::create_dir(&project_in_b).unwrap();
+    fs::write(
+        project_in_b.join("Cargo.toml"),
+        &basic_manifest("foo", "0.1.0"),
+    )
+    .unwrap();
+    fs::create_dir(project_in_b.join("src")).unwrap();
+    fs::write(project_in_b.join("src/lib.rs"), "").unwrap();
+
+    // Set CARGO_HOME to ../../c/.cargo (which is really a/.cargo via symlink)
+    let cargo_home = c_symlink.join(".cargo");
+
+    // If config is loaded twice, rustdocflags will be duplicated and cause an error
+    p.cargo("doc")
+        .cwd(&project_in_b)
+        .env("CARGO_HOME", &cargo_home)
+        .run();
+}
