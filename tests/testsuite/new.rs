@@ -93,7 +93,7 @@ fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] can't specify both lib and binary outputs
+[ERROR] can't specify both binary and library outputs
 
 "#]])
         .run();

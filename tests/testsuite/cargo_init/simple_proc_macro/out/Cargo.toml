@@ -1,0 +1,9 @@
+[package]
+name = "case"
+version = "0.1.0"
+edition = "2015"
+
+[dependencies]
+
+[lib]
+proc-macro = true

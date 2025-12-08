@@ -7,7 +7,6 @@ mod bin_already_exists_implicit;
 mod bin_already_exists_implicit_namenosrc;
 mod bin_already_exists_implicit_namesrc;
 mod bin_already_exists_implicit_nosrc;
-mod both_lib_and_bin;
 mod cant_create_library_when_both_binlib_present;
 mod confused_by_multiple_lib_files;
 mod creates_binary_when_both_binlib_present;
@@ -28,6 +27,7 @@ mod lib_already_exists_nosrc;
 mod lib_already_exists_src;
 mod mercurial_autodetect;
 mod multibin_project_name_clash;
+mod mutually_exclusive_flags;
 #[cfg(not(windows))]
 mod no_filename;
 #[cfg(unix)]
@@ -40,6 +40,7 @@ mod simple_git_ignore_exists;
 mod simple_hg;
 mod simple_hg_ignore_exists;
 mod simple_lib;
+mod simple_proc_macro;
 mod unknown_flags;
 mod with_argument;
 mod workspace_add_member;
