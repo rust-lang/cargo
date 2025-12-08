@@ -18,12 +18,14 @@ mod blanket_hint_mostly_unused;
 pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 mod implicit_minimum_version_req;
 pub use implicit_minimum_version_req::implicit_minimum_version_req;
+mod im_a_teapot;
+pub use im_a_teapot::check_im_a_teapot;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[
     blanket_hint_mostly_unused::BLANKET_HINT_MOSTLY_UNUSED,
     implicit_minimum_version_req::LINT,
-    IM_A_TEAPOT,
+    im_a_teapot::IM_A_TEAPOT,
     UNKNOWN_LINTS,
 ];
 
@@ -459,59 +461,6 @@ fn level_priority(
     } else {
         (unspecified_level, reason, 0)
     }
-}
-
-/// This lint is only to be used for testing purposes
-const IM_A_TEAPOT: Lint = Lint {
-    name: "im_a_teapot",
-    desc: "`im_a_teapot` is specified",
-    groups: &[TEST_DUMMY_UNSTABLE],
-    default_level: LintLevel::Allow,
-    edition_lint_opts: None,
-    feature_gate: Some(Feature::test_dummy_unstable()),
-    docs: None,
-};
-
-pub fn check_im_a_teapot(
-    pkg: &Package,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let manifest = pkg.manifest();
-    let (lint_level, reason) =
-        IM_A_TEAPOT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
-
-    if manifest
-        .normalized_toml()
-        .package()
-        .is_some_and(|p| p.im_a_teapot.is_some())
-    {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
-        let level = lint_level.to_diagnostic_level();
-        let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
-
-        let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
-
-        let report = &[Group::with_title(level.primary_title(IM_A_TEAPOT.desc))
-            .element(
-                Snippet::source(manifest.contents())
-                    .path(&manifest_path)
-                    .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
-            )
-            .element(Level::NOTE.message(&emitted_reason))];
-
-        gctx.shell().print_report(report, lint_level.force())?;
-    }
-    Ok(())
 }
 
 const UNKNOWN_LINTS: Lint = Lint {
