@@ -413,3 +413,33 @@ required by package `foo v0.0.0 ([ROOT]/foo)`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn publish_time_invalid() {
+    Package::new("has_time", "2025.6.1")
+        .pubtime("2025-06-01T06:00:00")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                has_time = "2025.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["publish-time"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version as of 2025-03-01T06:00:00Z
+
+"#]])
+        .run();
+}
