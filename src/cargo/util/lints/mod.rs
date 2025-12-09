@@ -54,8 +54,8 @@ impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
+    manifest_path: &Path,
+    cargo_lints: &TomlToolLints,
     ws_contents: &str,
     ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &Path,
@@ -63,10 +63,10 @@ pub fn analyze_cargo_lints_table(
 ) -> CargoResult<()> {
     let mut error_count = 0;
     let manifest = pkg.manifest();
-    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let ws_path = rel_cwd_manifest_path(ws_path, gctx);
     let mut unknown_lints = Vec::new();
-    for lint_name in pkg_lints.keys().map(|name| name) {
+    for lint_name in cargo_lints.keys().map(|name| name) {
         let Some((name, default_level, edition_lint_opts, feature_gate)) =
             find_lint_or_group(lint_name)
         else {
@@ -78,7 +78,7 @@ pub fn analyze_cargo_lints_table(
             name,
             *default_level,
             *edition_lint_opts,
-            pkg_lints,
+            cargo_lints,
             manifest.edition(),
         );
 
@@ -107,7 +107,7 @@ pub fn analyze_cargo_lints_table(
         unknown_lints,
         manifest,
         &manifest_path,
-        pkg_lints,
+        cargo_lints,
         ws_contents,
         ws_document,
         &ws_path,
@@ -705,15 +705,18 @@ fn output_unknown_lints(
     unknown_lints: Vec<&String>,
     manifest: &Manifest,
     manifest_path: &str,
-    pkg_lints: &TomlToolLints,
+    cargo_lints: &TomlToolLints,
     ws_contents: &str,
     ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) =
-        UNKNOWN_LINTS.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = UNKNOWN_LINTS.level(
+        cargo_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+    );
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
