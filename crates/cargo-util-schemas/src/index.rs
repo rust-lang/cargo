@@ -162,3 +162,41 @@ fn dump_index_schema() {
     let dump = serde_json::to_string_pretty(&schema).unwrap();
     snapbox::assert_data_eq!(dump, snapbox::file!("../index.schema.json").raw());
 }
+
+#[test]
+fn pubtime_format() {
+    use snapbox::str;
+
+    let input = [
+        ("2025-11-12T19:30:12Z", Some(str!["2025-11-12T19:30:12Z"])),
+        // Padded values
+        ("2025-01-02T09:03:02Z", Some(str!["2025-01-02T09:03:02Z"])),
+        // Alt timezone format
+        ("2025-11-12T19:30:12-04", Some(str!["2025-11-12T23:30:12Z"])),
+        // Alt date/time separator
+        ("2025-11-12 19:30:12Z", Some(str!["2025-11-12T19:30:12Z"])),
+        // Non-padded values
+        ("2025-11-12T19:30:12+4", None),
+        ("2025-1-12T19:30:12+4", None),
+        ("2025-11-2T19:30:12+4", None),
+        ("2025-11-12T9:30:12Z", None),
+        ("2025-11-12T19:3:12Z", None),
+        ("2025-11-12T19:30:2Z", None),
+    ];
+    for (input, expected) in input {
+        let (parsed, expected) = match (input.parse::<jiff::Timestamp>(), expected) {
+            (Ok(_), None) => {
+                panic!("`{input}` did not error");
+            }
+            (Ok(parsed), Some(expected)) => (parsed, expected),
+            (Err(err), Some(_)) => {
+                panic!("`{input}` did not parse successfully: {err}");
+            }
+            _ => {
+                continue;
+            }
+        };
+        let output = parsed.to_string();
+        snapbox::assert_data_eq!(output, expected);
+    }
+}
