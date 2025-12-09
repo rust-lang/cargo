@@ -1269,7 +1269,6 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_pkg_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
-        let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
             .normalized_toml()
@@ -1282,40 +1281,44 @@ impl<'gctx> Workspace<'gctx> {
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
 
-        let ws_contents = self.root_maybe().contents();
-
-        let ws_document = self.root_maybe().document();
-
         if self.gctx.cli_unstable().cargo_lints {
+            let mut verify_error_count = 0;
+
             analyze_cargo_lints_table(
-                pkg,
+                pkg.into(),
                 &path,
                 &cargo_lints,
-                ws_contents,
-                ws_document,
-                self.root_manifest(),
+                &mut verify_error_count,
                 self.gctx,
             )?;
-            check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+
+            if verify_error_count > 0 {
+                let plural = if verify_error_count == 1 { "" } else { "s" };
+                bail!("encountered {verify_error_count} error{plural} while verifying lints")
+            }
+
+            let mut run_error_count = 0;
+
+            check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             implicit_minimum_version_req(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut error_count,
+                &mut run_error_count,
                 self.gctx,
             )?;
+
+            if run_error_count > 0 {
+                let plural = if run_error_count == 1 { "" } else { "s" };
+                bail!("encountered {run_error_count} error{plural} while running lints")
+            }
         }
 
-        if error_count > 0 {
-            let plural = if error_count == 1 { "" } else { "s" };
-            bail!("encountered {error_count} error{plural} while running lints")
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     pub fn emit_ws_lints(&self) -> CargoResult<()> {
-        let mut error_count = 0;
+        let mut run_error_count = 0;
 
         let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {
@@ -1339,12 +1342,26 @@ impl<'gctx> Workspace<'gctx> {
         .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            // Calls to lint functions go in here
+            let mut verify_error_count = 0;
+
+            analyze_cargo_lints_table(
+                self.root_maybe().into(),
+                self.root_manifest(),
+                &cargo_lints,
+                &mut verify_error_count,
+                self.gctx,
+            )?;
+
+            if verify_error_count > 0 {
+                let plural = if verify_error_count == 1 { "" } else { "s" };
+                bail!("encountered {verify_error_count} error{plural} while verifying lints")
+            }
+
             implicit_minimum_version_req(
                 self.root_maybe().into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut error_count,
+                &mut run_error_count,
                 self.gctx,
             )?;
         }
@@ -1357,14 +1374,14 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut error_count,
+                &mut run_error_count,
                 self.gctx,
             )?;
         }
 
-        if error_count > 0 {
-            let plural = if error_count == 1 { "" } else { "s" };
-            bail!("encountered {error_count} error{plural} while running lints")
+        if run_error_count > 0 {
+            let plural = if run_error_count == 1 { "" } else { "s" };
+            bail!("encountered {run_error_count} error{plural} while running lints")
         } else {
             Ok(())
         }

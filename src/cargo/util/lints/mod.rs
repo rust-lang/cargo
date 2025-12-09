@@ -1,8 +1,10 @@
-use crate::core::{Edition, Feature, Features, Manifest, MaybePackage, Package};
+use crate::core::{Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
+
 use annotate_snippets::{AnnotationKind, Group, Level, Patch, Snippet};
 use cargo_util_schemas::manifest::{ProfilePackageSpec, TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
+
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Range;
@@ -29,13 +31,34 @@ pub enum ManifestFor<'a> {
 
 impl ManifestFor<'_> {
     fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
+        lint.level(pkg_lints, self.edition(), self.unstable_features())
+    }
+
+    pub fn contents(&self) -> &str {
         match self {
-            ManifestFor::Package(p) => lint.level(
-                pkg_lints,
-                p.manifest().edition(),
-                p.manifest().unstable_features(),
-            ),
-            ManifestFor::Workspace(p) => lint.level(pkg_lints, p.edition(), p.unstable_features()),
+            ManifestFor::Package(p) => p.manifest().contents(),
+            ManifestFor::Workspace(p) => p.contents(),
+        }
+    }
+
+    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
+        match self {
+            ManifestFor::Package(p) => p.manifest().document(),
+            ManifestFor::Workspace(p) => p.document(),
+        }
+    }
+
+    pub fn edition(&self) -> Edition {
+        match self {
+            ManifestFor::Package(p) => p.manifest().edition(),
+            ManifestFor::Workspace(p) => p.edition(),
+        }
+    }
+
+    pub fn unstable_features(&self) -> &Features {
+        match self {
+            ManifestFor::Package(p) => p.manifest().unstable_features(),
+            ManifestFor::Workspace(p) => p.unstable_features(),
         }
     }
 }
@@ -53,20 +76,15 @@ impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
 }
 
 pub fn analyze_cargo_lints_table(
-    pkg: &Package,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &Path,
+    manifest: ManifestFor<'_>,
+    manifest_path: &Path,
+    cargo_lints: &TomlToolLints,
+    error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let mut error_count = 0;
-    let manifest = pkg.manifest();
-    let manifest_path = rel_cwd_manifest_path(path, gctx);
-    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
+    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut unknown_lints = Vec::new();
-    for lint_name in pkg_lints.keys().map(|name| name) {
+    for lint_name in cargo_lints.keys().map(|name| name) {
         let Some((name, default_level, edition_lint_opts, feature_gate)) =
             find_lint_or_group(lint_name)
         else {
@@ -78,7 +96,7 @@ pub fn analyze_cargo_lints_table(
             name,
             *default_level,
             *edition_lint_opts,
-            pkg_lints,
+            cargo_lints,
             manifest.edition(),
         );
 
@@ -88,16 +106,15 @@ pub fn analyze_cargo_lints_table(
         }
 
         // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate {
-            verify_feature_enabled(
+        if let Some(feature_gate) = feature_gate
+            && !manifest.unstable_features().is_enabled(feature_gate)
+        {
+            report_feature_not_enabled(
                 name,
                 feature_gate,
-                manifest,
+                &manifest,
                 &manifest_path,
-                ws_contents,
-                ws_document,
-                &ws_path,
-                &mut error_count,
+                error_count,
                 gctx,
             )?;
         }
@@ -105,23 +122,14 @@ pub fn analyze_cargo_lints_table(
 
     output_unknown_lints(
         unknown_lints,
-        manifest,
+        &manifest,
         &manifest_path,
-        pkg_lints,
-        ws_contents,
-        ws_document,
-        &ws_path,
-        &mut error_count,
+        cargo_lints,
+        error_count,
         gctx,
     )?;
 
-    if error_count > 0 {
-        Err(anyhow::anyhow!(
-            "encountered {error_count} errors(s) while verifying lints",
-        ))
-    } else {
-        Ok(())
-    }
+    Ok(())
 }
 
 fn find_lint_or_group<'a>(
@@ -151,70 +159,48 @@ fn find_lint_or_group<'a>(
     }
 }
 
-fn verify_feature_enabled(
+fn report_feature_not_enabled(
     lint_name: &str,
     feature_gate: &Feature,
-    manifest: &Manifest,
+    manifest: &ManifestFor<'_>,
     manifest_path: &str,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    if !manifest.unstable_features().is_enabled(feature_gate) {
-        let dash_feature_name = feature_gate.name().replace("_", "-");
-        let title = format!("use of unstable lint `{}`", lint_name);
-        let label = format!(
-            "this is behind `{}`, which is not enabled",
-            dash_feature_name
-        );
-        let second_title = format!("`cargo::{}` was inherited", lint_name);
-        let help = format!(
-            "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
-            dash_feature_name
-        );
+    let document = manifest.document();
+    let contents = manifest.contents();
+    let dash_feature_name = feature_gate.name().replace("_", "-");
+    let title = format!("use of unstable lint `{}`", lint_name);
+    let label = format!(
+        "this is behind `{}`, which is not enabled",
+        dash_feature_name
+    );
+    let help = format!(
+        "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
+        dash_feature_name
+    );
 
-        let (contents, path, span) = if let Some(span) =
-            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
-        {
-            (manifest.contents(), manifest_path, span)
-        } else if let Some(lint_span) =
-            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
-        {
-            (ws_contents, ws_path, lint_span)
-        } else {
-            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-        };
+    let key_path = match manifest {
+        ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
+        ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+    };
+    let Some(span) = get_key_value_span(document, key_path) else {
+        // This lint is handled by either package or workspace lint.
+        return Ok(());
+    };
 
-        let mut report = Vec::new();
-        report.push(
-            Group::with_title(Level::ERROR.primary_title(title))
-                .element(
-                    Snippet::source(contents)
-                        .path(path)
-                        .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-                )
-                .element(Level::HELP.message(help)),
-        );
+    let report = [Level::ERROR
+        .primary_title(title)
+        .element(
+            Snippet::source(contents)
+                .path(manifest_path)
+                .annotation(AnnotationKind::Primary.span(span.key).label(label)),
+        )
+        .element(Level::HELP.message(help))];
 
-        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
-        {
-            report.push(
-                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
-                    Snippet::source(manifest.contents())
-                        .path(manifest_path)
-                        .annotation(
-                            AnnotationKind::Context
-                                .span(inherit_span.key.start..inherit_span.value.end),
-                        ),
-                ),
-            );
-        }
+    *error_count += 1;
+    gctx.shell().print_report(&report, true)?;
 
-        *error_count += 1;
-        gctx.shell().print_report(&report, true)?;
-    }
     Ok(())
 }
 
@@ -703,20 +689,19 @@ this-lint-does-not-exist = "warn"
 
 fn output_unknown_lints(
     unknown_lints: Vec<&String>,
-    manifest: &Manifest,
+    manifest: &ManifestFor<'_>,
     manifest_path: &str,
-    pkg_lints: &TomlToolLints,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &str,
+    cargo_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) =
-        UNKNOWN_LINTS.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = manifest.lint_level(cargo_lints, UNKNOWN_LINTS);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
+
+    let document = manifest.document();
+    let contents = manifest.contents();
 
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
@@ -725,7 +710,6 @@ fn output_unknown_lints(
             *error_count += 1;
         }
         let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
-        let second_title = format!("`cargo::{}` was inherited", lint_name);
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
             Some((lint.name, "lint"))
@@ -737,22 +721,19 @@ fn output_unknown_lints(
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
 
-        let (contents, path, span) = if let Some(span) =
-            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
-        {
-            (manifest.contents(), manifest_path, span)
-        } else if let Some(lint_span) =
-            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
-        {
-            (ws_contents, ws_path, lint_span)
-        } else {
-            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        let key_path = match manifest {
+            ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
+            ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+        };
+        let Some(span) = get_key_value_span(document, key_path) else {
+            // This lint is handled by either package or workspace lint.
+            return Ok(());
         };
 
         let mut report = Vec::new();
         let mut group = Group::with_title(level.clone().primary_title(title)).element(
             Snippet::source(contents)
-                .path(path)
+                .path(manifest_path)
                 .annotation(AnnotationKind::Primary.span(span.key)),
         );
         if emitted_source.is_none() {
@@ -763,20 +744,6 @@ fn output_unknown_lints(
             group = group.element(Level::HELP.message(help));
         }
         report.push(group);
-
-        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
-        {
-            report.push(
-                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
-                    Snippet::source(manifest.contents())
-                        .path(manifest_path)
-                        .annotation(
-                            AnnotationKind::Context
-                                .span(inherit_span.key.start..inherit_span.value.end),
-                        ),
-                ),
-            );
-        }
 
         gctx.shell().print_report(&report, lint_level.force())?;
     }
