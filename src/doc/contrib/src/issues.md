@@ -1,4 +1,5 @@
 # Issue Tracker
+quansat775@gmail.com
 
 Cargo's issue tracker is located at
 <https://github.com/rust-lang/cargo/issues/>. This is the primary spot where
