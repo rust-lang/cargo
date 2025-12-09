@@ -25,7 +25,24 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
     // In general, try to avoid loading config values unless necessary (like
     // the [alias] table).
 
-    let args = cli(gctx).try_get_matches()?;
+    let args = match cli(gctx).try_get_matches() {
+        Ok(args) => args,
+        Err(e) => {
+            // When --help is requested, clap returns DisplayHelp error.
+            // If --list was also provided, show the list instead since users
+            // may interpret "See all commands with --list" as meaning they
+            // should run `cargo --help --list`.
+            if e.kind() == clap::error::ErrorKind::DisplayHelp {
+                let raw_args: Vec<String> = std::env::args().collect();
+                if raw_args.iter().any(|arg| arg == "--list") {
+                    let is_verbose = raw_args.iter().any(|arg| arg == "-v" || arg == "--verbose");
+                    print_list(gctx, is_verbose);
+                    return Ok(());
+                }
+            }
+            return Err(e.into());
+        }
+    };
 
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {

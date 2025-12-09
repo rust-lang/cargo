@@ -654,3 +654,44 @@ fn overwrite_cargo_environment_variable() {
         .with_stderr_contains(stderr_other_cargo)
         .run();
 }
+
+#[cargo_test]
+fn help_list_combination() {
+    // Test that `--help --list` is treated as `--list`.
+    // When the help output says "See all commands with --list", users may
+    // naturally try `cargo --help --list`. This should show the list.
+    cargo_process("--help --list")
+        .with_stdout_data(str![[r#"
+Installed Commands:
+...
+    build                Compile a local package and all of its dependencies
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn help_list_reverse_order() {
+    // Test that `--list --help` is treated as `--list` (order shouldn't matter).
+    cargo_process("--list --help")
+        .with_stdout_data(str![[r#"
+Installed Commands:
+...
+    build                Compile a local package and all of its dependencies
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn help_short_flag_with_list() {
+    // Test that `-h --list` is treated as `--list`.
+    cargo_process("-h --list")
+        .with_stdout_data(str![[r#"
+Installed Commands:
+...
+    build                Compile a local package and all of its dependencies
+...
+"#]])
+        .run();
+}
