@@ -139,6 +139,8 @@ fn dont_always_inherit_workspace_lints() {
         .file(
             "Cargo.toml",
             r#"
+cargo-features = ["test-dummy-unstable"]
+
 [workspace]
 members = ["foo"]
 
@@ -295,9 +297,23 @@ workspace = true
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] use of unstable lint `im_a_teapot`
+ --> Cargo.toml:6:1
+  |
+6 | im_a_teapot = { level = "warn", priority = 10 }
+  | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] use of unstable lint `test_dummy_unstable`
+ --> Cargo.toml:7:1
+  |
+7 | test_dummy_unstable = { level = "forbid", priority = -1 }
+  | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] encountered 2 errors while verifying lints
 
 "#]])
         .run();
@@ -332,9 +348,23 @@ authors = []
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] use of unstable lint `im_a_teapot`
+ --> Cargo.toml:6:1
+  |
+6 | im_a_teapot = { level = "warn", priority = 10 }
+  | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] use of unstable lint `test_dummy_unstable`
+ --> Cargo.toml:7:1
+  |
+7 | test_dummy_unstable = { level = "forbid", priority = -1 }
+  | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] encountered 2 errors while verifying lints
 
 "#]])
         .run();
