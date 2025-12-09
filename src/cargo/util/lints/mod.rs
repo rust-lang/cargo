@@ -84,8 +84,10 @@ pub fn analyze_cargo_lints_table(
         }
 
         // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate {
-            verify_feature_enabled(
+        if let Some(feature_gate) = feature_gate
+            && !manifest.unstable_features().is_enabled(feature_gate)
+        {
+            report_feature_not_enabled(
                 name,
                 feature_gate,
                 manifest,
@@ -135,7 +137,7 @@ fn find_lint_or_group<'a>(
     }
 }
 
-fn verify_feature_enabled(
+fn report_feature_not_enabled(
     lint_name: &str,
     feature_gate: &Feature,
     manifest: &Manifest,
@@ -145,38 +147,36 @@ fn verify_feature_enabled(
 ) -> CargoResult<()> {
     let document = manifest.document();
     let contents = manifest.contents();
+    let dash_feature_name = feature_gate.name().replace("_", "-");
+    let title = format!("use of unstable lint `{}`", lint_name);
+    let label = format!(
+        "this is behind `{}`, which is not enabled",
+        dash_feature_name
+    );
+    let help = format!(
+        "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
+        dash_feature_name
+    );
 
-    if !manifest.unstable_features().is_enabled(feature_gate) {
-        let dash_feature_name = feature_gate.name().replace("_", "-");
-        let title = format!("use of unstable lint `{}`", lint_name);
-        let label = format!(
-            "this is behind `{}`, which is not enabled",
-            dash_feature_name
-        );
-        let help = format!(
-            "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
-            dash_feature_name
-        );
+    let key_path = &["lints", "cargo", lint_name];
+    let Some(span) = get_key_value_span(document, key_path) else {
+        // This lint must be inherited from workspace.
+        // Will be handle separately at workspace level.
+        return Ok(());
+    };
 
-        let key_path = &["lints", "cargo", lint_name];
-        let Some(span) = get_key_value_span(document, key_path) else {
-            // This lint must be inherited from workspace.
-            // Will be handle separately at workspace level.
-            return Ok(());
-        };
+    let report = [Level::ERROR
+        .primary_title(title)
+        .element(
+            Snippet::source(contents)
+                .path(manifest_path)
+                .annotation(AnnotationKind::Primary.span(span.key).label(label)),
+        )
+        .element(Level::HELP.message(help))];
 
-        let report = [Level::ERROR
-            .primary_title(title)
-            .element(
-                Snippet::source(contents)
-                    .path(manifest_path)
-                    .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-            )
-            .element(Level::HELP.message(help))];
+    *error_count += 1;
+    gctx.shell().print_report(&report, true)?;
 
-        *error_count += 1;
-        gctx.shell().print_report(&report, true)?;
-    }
     Ok(())
 }
 
