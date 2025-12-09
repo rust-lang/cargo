@@ -327,6 +327,43 @@ workspace = true
         .run();
 }
 
+#[cargo_test]
+fn check_feature_gated_workspace_not_inherited() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["foo"]
+
+[workspace.lints.cargo]
+im_a_teapot = { level = "warn", priority = 10 }
+test_dummy_unstable = { level = "forbid", priority = -1 }
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "-Zrustc-unicode is unstable")]
 fn unicode_report() {
     let p = project()
