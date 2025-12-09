@@ -49,6 +49,9 @@ pub struct IndexPackage<'a> {
     /// The publish time for the package.  Unstable.
     ///
     /// In ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
+    ///
+    /// This should be the original publish time and not changed on any status changes,
+    /// like [`IndexPackage::yanked`].
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     #[serde(with = "serde_pubtime")]
     #[serde(default)]

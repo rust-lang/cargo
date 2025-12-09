@@ -69,7 +69,7 @@
       ]
     },
     "pubtime": {
-      "description": "The publish time for the package.  Unstable.\n\nIn ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)",
+      "description": "The publish time for the package.  Unstable.\n\nIn ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)\n\nThis should be the original publish time and not changed on any status changes,\nlike [`IndexPackage::yanked`].",
       "type": [
         "string",
         "null"
