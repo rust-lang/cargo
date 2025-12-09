@@ -73,7 +73,8 @@
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
     },
     "v": {
       "description": "The schema version for this entry.\n\nIf this is None, it defaults to version `1`. Entries with unknown\nversions are ignored.\n\nVersion `2` schema adds the `features2` field.\n\nVersion `3` schema adds `artifact`, `bindep_targes`, and `lib` for\nartifact dependencies support.\n\nThis provides a method to safely introduce changes to index entries\nand allow older versions of cargo to ignore newer entries it doesn't\nunderstand. This is honored as of 1.51, so unfortunately older\nversions will ignore it, and potentially misinterpret version 2 and\nnewer entries.\n\nThe intent is that versions older than 1.51 will work with a\npre-existing `Cargo.lock`, but they may not correctly process `cargo\nupdate` or build a lock from scratch. In that case, cargo may\nincorrectly select a new package that uses a new index schema. A\nworkaround is to downgrade any packages that are incompatible with the\n`--precise` flag of `cargo update`.",

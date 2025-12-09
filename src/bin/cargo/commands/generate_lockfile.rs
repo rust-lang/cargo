@@ -50,7 +50,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if let Some(publish_time) = publish_time {
         gctx.cli_unstable()
             .fail_if_stable_opt("--publish-time", 5221)?;
-        ws.set_resolve_publish_time(publish_time.parse().map_err(anyhow::Error::from)?);
+        let publish_time =
+            cargo_util_schemas::index::parse_pubtime(publish_time).map_err(anyhow::Error::from)?;
+        ws.set_resolve_publish_time(publish_time);
     }
     ops::generate_lockfile(&ws)?;
     Ok(())

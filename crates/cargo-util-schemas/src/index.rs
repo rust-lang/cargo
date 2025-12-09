@@ -50,6 +50,8 @@ pub struct IndexPackage<'a> {
     ///
     /// In ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
+    #[serde(with = "serde_pubtime")]
+    #[serde(default)]
     pub pubtime: Option<jiff::Timestamp>,
     /// The schema version for this entry.
     ///
@@ -118,6 +120,76 @@ pub struct RegistryDependency<'a> {
     pub lib: bool,
 }
 
+pub fn parse_pubtime(s: &str) -> Result<jiff::Timestamp, jiff::Error> {
+    let dt = jiff::civil::DateTime::strptime("%Y-%m-%dT%H:%M:%SZ", s)?;
+    if s.len() == 20 {
+        let zoned = dt.to_zoned(jiff::tz::TimeZone::UTC)?;
+        let timestamp = zoned.timestamp();
+        Ok(timestamp)
+    } else {
+        Err(jiff::Error::from_args(format_args!(
+            "padding required for `{s}`"
+        )))
+    }
+}
+
+pub fn format_pubtime(t: jiff::Timestamp) -> String {
+    t.strftime("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
+mod serde_pubtime {
+    #[inline]
+    pub(super) fn serialize<S: serde::Serializer>(
+        timestamp: &Option<jiff::Timestamp>,
+        se: S,
+    ) -> Result<S::Ok, S::Error> {
+        match *timestamp {
+            None => se.serialize_none(),
+            Some(ref ts) => {
+                let s = super::format_pubtime(*ts);
+                se.serialize_str(&s)
+            }
+        }
+    }
+
+    #[inline]
+    pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
+        de: D,
+    ) -> Result<Option<jiff::Timestamp>, D::Error> {
+        de.deserialize_option(OptionalVisitor(
+            serde_untagged::UntaggedEnumVisitor::new()
+                .expecting("date time")
+                .string(|value| super::parse_pubtime(&value).map_err(serde::de::Error::custom)),
+        ))
+    }
+
+    /// A generic visitor for `Option<DateTime>`.
+    struct OptionalVisitor<V>(V);
+
+    impl<'de, V: serde::de::Visitor<'de, Value = jiff::Timestamp>> serde::de::Visitor<'de>
+        for OptionalVisitor<V>
+    {
+        type Value = Option<jiff::Timestamp>;
+
+        fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            f.write_str("date time")
+        }
+
+        #[inline]
+        fn visit_some<D: serde::de::Deserializer<'de>>(
+            self,
+            de: D,
+        ) -> Result<Option<jiff::Timestamp>, D::Error> {
+            de.deserialize_str(self.0).map(Some)
+        }
+
+        #[inline]
+        fn visit_none<E: serde::de::Error>(self) -> Result<Option<jiff::Timestamp>, E> {
+            Ok(None)
+        }
+    }
+}
+
 fn default_true() -> bool {
     true
 }
@@ -172,9 +244,9 @@ fn pubtime_format() {
         // Padded values
         ("2025-01-02T09:03:02Z", Some(str!["2025-01-02T09:03:02Z"])),
         // Alt timezone format
-        ("2025-11-12T19:30:12-04", Some(str!["2025-11-12T23:30:12Z"])),
+        ("2025-11-12T19:30:12-04", None),
         // Alt date/time separator
-        ("2025-11-12 19:30:12Z", Some(str!["2025-11-12T19:30:12Z"])),
+        ("2025-11-12 19:30:12Z", None),
         // Non-padded values
         ("2025-11-12T19:30:12+4", None),
         ("2025-1-12T19:30:12+4", None),
@@ -184,7 +256,7 @@ fn pubtime_format() {
         ("2025-11-12T19:30:2Z", None),
     ];
     for (input, expected) in input {
-        let (parsed, expected) = match (input.parse::<jiff::Timestamp>(), expected) {
+        let (parsed, expected) = match (parse_pubtime(input), expected) {
             (Ok(_), None) => {
                 panic!("`{input}` did not error");
             }
@@ -196,7 +268,7 @@ fn pubtime_format() {
                 continue;
             }
         };
-        let output = parsed.to_string();
+        let output = format_pubtime(parsed);
         snapbox::assert_data_eq!(output, expected);
     }
 }
