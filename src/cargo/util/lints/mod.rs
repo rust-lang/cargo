@@ -59,9 +59,9 @@ pub fn analyze_cargo_lints_table(
     ws_contents: &str,
     ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
     ws_path: &Path,
+    error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let mut error_count = 0;
     let manifest = pkg.manifest();
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let ws_path = rel_cwd_manifest_path(ws_path, gctx);
@@ -97,7 +97,7 @@ pub fn analyze_cargo_lints_table(
                 ws_contents,
                 ws_document,
                 &ws_path,
-                &mut error_count,
+                error_count,
                 gctx,
             )?;
         }
@@ -111,17 +111,11 @@ pub fn analyze_cargo_lints_table(
         ws_contents,
         ws_document,
         &ws_path,
-        &mut error_count,
+        error_count,
         gctx,
     )?;
 
-    if error_count > 0 {
-        Err(anyhow::anyhow!(
-            "encountered {error_count} errors(s) while verifying lints",
-        ))
-    } else {
-        Ok(())
-    }
+    Ok(())
 }
 
 fn find_lint_or_group<'a>(

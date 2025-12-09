@@ -257,7 +257,7 @@ im_a_teapot = "warn"
   | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
   = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
-[ERROR] encountered 1 errors(s) while verifying lints
+[ERROR] encountered 1 error while verifying lints
 
 "#]])
         .run();
@@ -321,7 +321,7 @@ workspace = true
   |
 9 | workspace = true
   | ----------------
-[ERROR] encountered 2 errors(s) while verifying lints
+[ERROR] encountered 2 errors while verifying lints
 
 "#]])
         .run();
