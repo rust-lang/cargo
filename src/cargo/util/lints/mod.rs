@@ -24,10 +24,10 @@ use unknown_lints::output_unknown_lints;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[
-    blanket_hint_mostly_unused::BLANKET_HINT_MOSTLY_UNUSED,
+    blanket_hint_mostly_unused::LINT,
     implicit_minimum_version_req::LINT,
-    im_a_teapot::IM_A_TEAPOT,
-    unknown_lints::UNKNOWN_LINTS,
+    im_a_teapot::LINT,
+    unknown_lints::LINT,
 ];
 
 /// Scope at which a lint runs: package-level or workspace-level.

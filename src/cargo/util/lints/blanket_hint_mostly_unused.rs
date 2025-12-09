@@ -15,7 +15,7 @@ use crate::util::lints::LintLevel;
 use crate::util::lints::get_key_value_span;
 use crate::util::lints::rel_cwd_manifest_path;
 
-pub const BLANKET_HINT_MOSTLY_UNUSED: Lint = Lint {
+pub const LINT: Lint = Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
     groups: &[],
@@ -58,7 +58,7 @@ pub fn blanket_hint_mostly_unused(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = BLANKET_HINT_MOSTLY_UNUSED.level(
+    let (lint_level, reason) = LINT.level(
         pkg_lints,
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
@@ -150,11 +150,8 @@ pub fn blanket_hint_mostly_unused(
             }
 
             if i == 0 {
-                primary_group =
-                    primary_group
-                        .element(Level::NOTE.message(
-                            BLANKET_HINT_MOSTLY_UNUSED.emitted_source(lint_level, reason),
-                        ));
+                primary_group = primary_group
+                    .element(Level::NOTE.message(LINT.emitted_source(lint_level, reason)));
             }
 
             // The primary group should always be first

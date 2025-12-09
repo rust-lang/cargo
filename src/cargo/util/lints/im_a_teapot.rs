@@ -17,7 +17,7 @@ use crate::util::lints::get_key_value_span;
 use crate::util::lints::rel_cwd_manifest_path;
 
 /// This lint is only to be used for testing purposes
-pub const IM_A_TEAPOT: Lint = Lint {
+pub const LINT: Lint = Lint {
     name: "im_a_teapot",
     desc: "`im_a_teapot` is specified",
     groups: &[TEST_DUMMY_UNSTABLE],
@@ -36,7 +36,7 @@ pub fn check_im_a_teapot(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
     let (lint_level, reason) =
-        IM_A_TEAPOT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+        LINT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
 
     if lint_level == LintLevel::Allow {
         return Ok(());
@@ -52,11 +52,11 @@ pub fn check_im_a_teapot(
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
+        let emitted_reason = LINT.emitted_source(lint_level, reason);
 
         let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
 
-        let report = &[Group::with_title(level.primary_title(IM_A_TEAPOT.desc))
+        let report = &[Group::with_title(level.primary_title(LINT.desc))
             .element(
                 Snippet::source(manifest.contents())
                     .path(&manifest_path)

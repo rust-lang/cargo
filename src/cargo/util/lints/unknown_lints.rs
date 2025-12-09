@@ -13,7 +13,7 @@ use crate::util::lints::LintLevel;
 use crate::util::lints::ManifestFor;
 use crate::util::lints::get_key_value_span;
 
-pub const UNKNOWN_LINTS: Lint = Lint {
+pub const LINT: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     groups: &[],
@@ -48,7 +48,7 @@ pub fn output_unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = manifest.lint_level(cargo_lints, UNKNOWN_LINTS);
+    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
@@ -62,7 +62,7 @@ pub fn output_unknown_lints(
         if lint_level.is_error() {
             *error_count += 1;
         }
-        let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
+        let title = format!("{}: `{lint_name}`", LINT.desc);
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
             Some((lint.name, "lint"))
@@ -90,7 +90,7 @@ pub fn output_unknown_lints(
                 .annotation(AnnotationKind::Primary.span(span.key)),
         );
         if emitted_source.is_none() {
-            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
+            emitted_source = Some(LINT.emitted_source(lint_level, reason));
             group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
         if let Some(help) = help.as_ref() {
