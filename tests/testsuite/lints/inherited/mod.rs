@@ -37,7 +37,7 @@ workspace = true
         .arg("check")
         .arg("-Zcargo-lints")
         .assert()
-        .code(101)
+        .success()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 }

@@ -1281,10 +1281,6 @@ impl<'gctx> Workspace<'gctx> {
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
 
-        let ws_contents = self.root_maybe().contents();
-
-        let ws_document = self.root_maybe().document();
-
         if self.gctx.cli_unstable().cargo_lints {
             let mut verify_error_count = 0;
 
@@ -1292,9 +1288,6 @@ impl<'gctx> Workspace<'gctx> {
                 pkg,
                 &path,
                 &cargo_lints,
-                ws_contents,
-                ws_document,
-                self.root_manifest(),
                 &mut verify_error_count,
                 self.gctx,
             )?;

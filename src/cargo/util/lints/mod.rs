@@ -56,15 +56,11 @@ pub fn analyze_cargo_lints_table(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &Path,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
-    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
     let mut unknown_lints = Vec::new();
     for lint_name in cargo_lints.keys().map(|name| name) {
         let Some((name, default_level, edition_lint_opts, feature_gate)) =
@@ -94,9 +90,6 @@ pub fn analyze_cargo_lints_table(
                 feature_gate,
                 manifest,
                 &manifest_path,
-                ws_contents,
-                ws_document,
-                &ws_path,
                 error_count,
                 gctx,
             )?;
@@ -108,9 +101,6 @@ pub fn analyze_cargo_lints_table(
         manifest,
         &manifest_path,
         cargo_lints,
-        ws_contents,
-        ws_document,
-        &ws_path,
         error_count,
         gctx,
     )?;
@@ -150,12 +140,12 @@ fn verify_feature_enabled(
     feature_gate: &Feature,
     manifest: &Manifest,
     manifest_path: &str,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    let document = manifest.document();
+    let contents = manifest.contents();
+
     if !manifest.unstable_features().is_enabled(feature_gate) {
         let dash_feature_name = feature_gate.name().replace("_", "-");
         let title = format!("use of unstable lint `{}`", lint_name);
@@ -163,48 +153,26 @@ fn verify_feature_enabled(
             "this is behind `{}`, which is not enabled",
             dash_feature_name
         );
-        let second_title = format!("`cargo::{}` was inherited", lint_name);
         let help = format!(
             "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
             dash_feature_name
         );
 
-        let (contents, path, span) = if let Some(span) =
-            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
-        {
-            (manifest.contents(), manifest_path, span)
-        } else if let Some(lint_span) =
-            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
-        {
-            (ws_contents, ws_path, lint_span)
-        } else {
-            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        let key_path = &["lints", "cargo", lint_name];
+        let Some(span) = get_key_value_span(document, key_path) else {
+            // This lint must be inherited from workspace.
+            // Will be handle separately at workspace level.
+            return Ok(());
         };
 
-        let mut report = Vec::new();
-        report.push(
-            Group::with_title(Level::ERROR.primary_title(title))
-                .element(
-                    Snippet::source(contents)
-                        .path(path)
-                        .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-                )
-                .element(Level::HELP.message(help)),
-        );
-
-        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
-        {
-            report.push(
-                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
-                    Snippet::source(manifest.contents())
-                        .path(manifest_path)
-                        .annotation(
-                            AnnotationKind::Context
-                                .span(inherit_span.key.start..inherit_span.value.end),
-                        ),
-                ),
-            );
-        }
+        let report = [Level::ERROR
+            .primary_title(title)
+            .element(
+                Snippet::source(contents)
+                    .path(manifest_path)
+                    .annotation(AnnotationKind::Primary.span(span.key).label(label)),
+            )
+            .element(Level::HELP.message(help))];
 
         *error_count += 1;
         gctx.shell().print_report(&report, true)?;
@@ -700,9 +668,6 @@ fn output_unknown_lints(
     manifest: &Manifest,
     manifest_path: &str,
     cargo_lints: &TomlToolLints,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &str,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -715,6 +680,9 @@ fn output_unknown_lints(
         return Ok(());
     }
 
+    let document = manifest.document();
+    let contents = manifest.contents();
+
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
@@ -722,7 +690,6 @@ fn output_unknown_lints(
             *error_count += 1;
         }
         let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
-        let second_title = format!("`cargo::{}` was inherited", lint_name);
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
             Some((lint.name, "lint"))
@@ -734,22 +701,17 @@ fn output_unknown_lints(
         let help =
             matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
 
-        let (contents, path, span) = if let Some(span) =
-            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
-        {
-            (manifest.contents(), manifest_path, span)
-        } else if let Some(lint_span) =
-            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
-        {
-            (ws_contents, ws_path, lint_span)
-        } else {
-            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        let key_path = &["lints", "cargo", lint_name];
+        let Some(span) = get_key_value_span(document, key_path) else {
+            // This lint must be inherited from workspace.
+            // Will be handle separately at workspace level.
+            return Ok(());
         };
 
         let mut report = Vec::new();
         let mut group = Group::with_title(level.clone().primary_title(title)).element(
             Snippet::source(contents)
-                .path(path)
+                .path(manifest_path)
                 .annotation(AnnotationKind::Primary.span(span.key)),
         );
         if emitted_source.is_none() {
@@ -760,20 +722,6 @@ fn output_unknown_lints(
             group = group.element(Level::HELP.message(help));
         }
         report.push(group);
-
-        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
-        {
-            report.push(
-                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
-                    Snippet::source(manifest.contents())
-                        .path(manifest_path)
-                        .annotation(
-                            AnnotationKind::Context
-                                .span(inherit_span.key.start..inherit_span.value.end),
-                        ),
-                ),
-            );
-        }
 
         gctx.shell().print_report(&report, lint_level.force())?;
     }
