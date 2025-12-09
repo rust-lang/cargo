@@ -436,9 +436,13 @@ fn publish_time_invalid() {
 
     p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
         .masquerade_as_nightly_cargo(&["publish-time"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version as of 2025-03-01T06:00:00Z
+[ERROR] failed to select a version for the requirement `has_time = "^2025.0"`
+  version 2025.6.1's index entry is invalid
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();

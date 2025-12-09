@@ -49,7 +49,8 @@ pub struct IndexPackage<'a> {
     /// The publish time for the package.  Unstable.
     ///
     /// In ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
-    pub pubtime: Option<String>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
+    pub pubtime: Option<jiff::Timestamp>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version `1`. Entries with unknown

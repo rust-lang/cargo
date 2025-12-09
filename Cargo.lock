@@ -518,6 +518,7 @@ dependencies = [
 name = "cargo-util-schemas"
 version = "0.11.0"
 dependencies = [
+ "jiff",
  "schemars",
  "semver",
  "serde",

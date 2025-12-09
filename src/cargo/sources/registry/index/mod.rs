@@ -217,7 +217,7 @@ fn index_package_to_summary(pkg: &IndexPackage<'_>, source_id: SourceId) -> Carg
     let links: Option<InternedString> = pkg.links.as_ref().map(|l| l.as_ref().into());
     let mut summary = Summary::new(pkgid, deps, &features, links, pkg.rust_version.clone())?;
     summary.set_checksum(pkg.cksum.clone());
-    if let Some(pubtime) = pkg.pubtime.as_ref().and_then(|p| p.parse().ok()) {
+    if let Some(pubtime) = pkg.pubtime {
         summary.set_pubtime(pubtime);
     }
     Ok(summary)
