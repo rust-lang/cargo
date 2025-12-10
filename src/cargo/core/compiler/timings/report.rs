@@ -186,7 +186,7 @@ fn write_summary_table(
     };
     let total_time = format!("{:.1}s{}", duration, time_human);
 
-    let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap();
+    let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap_or(0);
     let num_cpus = std::thread::available_parallelism()
         .map(|x| x.get().to_string())
         .unwrap_or_else(|_| "n/a".into());
