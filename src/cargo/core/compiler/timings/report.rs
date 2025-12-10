@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
-use std::time::Instant;
 
 use itertools::Itertools as _;
 
@@ -96,8 +95,6 @@ pub struct Concurrency {
 }
 
 pub struct RenderContext<'a> {
-    /// When Cargo started.
-    pub start: Instant,
     /// A rendered string of when compilation started.
     pub start_str: &'a str,
     /// A summary of the root units.
@@ -133,7 +130,8 @@ pub struct RenderContext<'a> {
 
 /// Writes an HTML report.
 pub(super) fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let duration = ctx.start.elapsed().as_secs_f64();
+    // The last concurrency record should equal to the last unit finished time.
+    let duration = ctx.concurrency.last().map(|c| c.t).unwrap_or(0.0);
     let roots: Vec<&str> = ctx
         .root_units
         .iter()

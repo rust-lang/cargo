@@ -442,7 +442,6 @@ impl<'gctx> Timings<'gctx> {
             let concurrency = report::compute_concurrency(&unit_data);
 
             let ctx = report::RenderContext {
-                start: self.start,
                 start_str: &self.start_str,
                 root_units: &self.root_targets,
                 profile: &self.profile,
