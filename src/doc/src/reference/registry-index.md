@@ -218,7 +218,20 @@ explaining the format of the entry.
     }
     // The minimal supported Rust version (optional)
     // This must be a valid version requirement without an operator (e.g. no `=`)
-    "rust_version": "1.60"
+    "rust_version": "1.60",
+    // The publish time of this package version (optional).
+    //
+    // The format is a subset of ISO8601:
+    // - `yyyy-mm-ddThh:mm:ssZ`
+    // - no fractional seconds
+    // - always `Z` for UTC timezone, no timezone offsets supported
+    // - fields are 0-padded
+    //
+    // Example: 2025-11-12T19:30:12Z
+    //
+    // This should be the original publish time and not changed on any status changes,
+    // like `yanked`.
+    "pubtime": "2025-11-12T19:30:12Z"
 }
 ```
 
