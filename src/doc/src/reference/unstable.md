@@ -1843,14 +1843,6 @@ Specify which packages participate in [feature unification](../reference/feature
 * `package`: Dependency features are considered on a package-by-package basis,
   preferring duplicate builds of dependencies when different sets of features are activated by the packages.
 
-## pubtime
-
-* Original Issue: [#15491](https://github.com/rust-lang/cargo/issues/15491)
-* Tracking Issue: [#16270](https://github.com/rust-lang/cargo/issues/16270)
-
-Documentation updates:
-- Add `pubtime` field to the Index Summary description
-
 ## lockfile-publish-time
 
 * Original Issue: [#5221](https://github.com/rust-lang/cargo/issues/5221)
@@ -2273,3 +2265,7 @@ See <https://github.com/rust-lang/cargo/issues/7614> for the reason for its remo
 Support for including extra configuration files via the `include` config key
 has been stabilized in 1.93.0.
 See the [`include` config documentation](config.md#include) for more.
+
+## pubtime
+
+The `pubtime` index field  has been stabilized in Rust 1.94.0.

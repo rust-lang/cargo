@@ -46,9 +46,15 @@ pub struct IndexPackage<'a> {
     /// can be `None` if published before then or if not set in the manifest.
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<RustVersion>,
-    /// The publish time for the package.  Unstable.
+    /// The publish time of this package version (optional).
     ///
-    /// In ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)
+    /// The format is a subset of ISO8601:
+    /// - `yyyy-mm-ddThh:mm:ssZ`
+    /// - no fractional seconds
+    /// - always `Z` for UTC timezone, no timezone offsets supported
+    /// - fields are 0-padded
+    ///
+    /// Example: 2025-11-12T19:30:12Z
     ///
     /// This should be the original publish time and not changed on any status changes,
     /// like [`IndexPackage::yanked`].

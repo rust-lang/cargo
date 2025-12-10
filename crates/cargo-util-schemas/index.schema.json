@@ -69,7 +69,7 @@
       ]
     },
     "pubtime": {
-      "description": "The publish time for the package.  Unstable.\n\nIn ISO8601 with UTC timezone (e.g. 2025-11-12T19:30:12Z)\n\nThis should be the original publish time and not changed on any status changes,\nlike [`IndexPackage::yanked`].",
+      "description": "The publish time of this package version (optional).\n\nThe format is a subset of ISO8601:\n- `yyyy-mm-ddThh:mm:ssZ`\n- no fractional seconds\n- always `Z` for UTC timezone, no timezone offsets supported\n- fields are 0-padded\n\nExample: 2025-11-12T19:30:12Z\n\nThis should be the original publish time and not changed on any status changes,\nlike [`IndexPackage::yanked`].",
       "type": [
         "string",
         "null"
