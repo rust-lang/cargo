@@ -320,12 +320,8 @@ fn publish_time() {
     Package::new("has_time", "2025.6.1")
         .pubtime("2025-06-01T06:00:00Z")
         .publish();
-    Package::new("no_time", "2025.1.1")
-        .pubtime("2025-01-01T06:00:00Z")
-        .publish();
-    Package::new("no_time", "2025.6.1")
-        .pubtime("2025-06-01T06:00:00Z")
-        .publish();
+    Package::new("no_time", "2025.1.1").publish();
+    Package::new("no_time", "2025.6.1").publish();
 
     let p = project()
         .file(
@@ -348,7 +344,6 @@ fn publish_time() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions as of 2025-03-01T06:00:00Z
 [ADDING] has_time v2025.1.1 (available: v2025.6.1)
-[ADDING] no_time v2025.1.1 (available: v2025.6.1)
 
 "#]])
         .run();
@@ -377,9 +372,9 @@ checksum = "105ca3acbc796da3e728ff310cafc6961cebc48d0106285edb8341015b5cc2d7"
 
 [[package]]
 name = "no_time"
-version = "2025.1.1"
+version = "2025.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd3832e543b832e9270f27f9a56a3f3170aeaf32debe355b2fa4e61ede80a39f"
+checksum = "01e688c07975f1e85f526c033322273181a4d8fe97800543d813d0a0adc134e3"
 
 "##]],
     );
@@ -412,6 +407,40 @@ fn publish_time_no_candidates() {
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `has_time = "^2025.0"`
   version 2025.6.1 is unavailable
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn publish_time_invalid() {
+    Package::new("has_time", "2025.6.1")
+        .pubtime("2025-06-01T06:00:00")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                has_time = "2025.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["publish-time"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `has_time = "^2025.0"`
+  version 2025.6.1's index entry is invalid
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
 

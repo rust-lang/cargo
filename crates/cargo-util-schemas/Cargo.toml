@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util-schemas"
-version = "0.11.0"
+version = "0.12.0"
 rust-version = "1.91"  # MSRV:1
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,7 @@ repository.workspace = true
 description = "Deserialization schemas for Cargo"
 
 [dependencies]
+jiff = { workspace = true, features = ["std", "serde"] }
 schemars = { workspace = true, features = ["preserve_order", "semver1"], optional = true }
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
