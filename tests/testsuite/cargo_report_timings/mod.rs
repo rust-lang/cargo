@@ -50,7 +50,13 @@ See https://github.com/rust-lang/cargo/issues/15844 for more information about t
 fn no_log() {
     cargo_process("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no build log files found
+  |
+  = [NOTE] run command with `-Z build-analysis` to generate log files
+
+"#]])
         .run();
 }
 
@@ -78,7 +84,13 @@ fn no_log_for_the_current_workspace() {
 
     bar.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no build log files found for workspace at `[ROOT]/bar`
+  |
+  = [NOTE] run command with `-Z build-analysis` to generate log files
+
+"#]])
         .run();
 }
 

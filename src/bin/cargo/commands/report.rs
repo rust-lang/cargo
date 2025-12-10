@@ -1,8 +1,10 @@
 use crate::command_prelude::*;
 
+use cargo::CargoResult;
 use cargo::core::compiler::future_incompat::OnDiskReports;
 use cargo::core::compiler::future_incompat::REPORT_PREAMBLE;
 use cargo::drop_println;
+use cargo::ops;
 
 pub fn cli() -> Command {
     subcommand("report")
@@ -43,7 +45,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
                 "build-analysis",
                 gctx.cli_unstable().build_analysis,
             )?;
-            report_timings(gctx, args)
+            let opts = timings_opts(gctx, args)?;
+            ops::report_timings(gctx, opts)?;
+            Ok(())
         }
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
@@ -67,6 +71,11 @@ fn report_future_incompatibilities(gctx: &GlobalContext, args: &ArgMatches) -> C
     Ok(())
 }
 
-fn report_timings(_gctx: &GlobalContext, _args: &ArgMatches) -> CliResult {
-    Ok(())
+fn timings_opts<'a>(
+    gctx: &'a GlobalContext,
+    args: &ArgMatches,
+) -> CargoResult<ops::ReportTimingsOptions<'a>> {
+    let open_result = args.get_flag("open");
+
+    Ok(ops::ReportTimingsOptions { open_result, gctx })
 }
