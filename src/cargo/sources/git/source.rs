@@ -162,7 +162,7 @@ impl<'gctx> GitSource<'gctx> {
     ///
     /// This won't fetch anything if the required revision is
     /// already available locally.
-    pub(crate) fn fetch_db(&self) -> CargoResult<(GitDatabase, git2::Oid)> {
+    pub(crate) fn fetch_db(&self, is_submodule: bool) -> CargoResult<(GitDatabase, git2::Oid)> {
         let db_path = self.gctx.git_db_path().join(&self.ident);
         let db_path = db_path.into_path_unlocked();
 
@@ -203,10 +203,16 @@ impl<'gctx> GitSource<'gctx> {
                 }
 
                 if !self.quiet {
-                    self.gctx.shell().status(
-                        "Updating",
-                        format!("git repository `{}`", self.remote.url()),
-                    )?;
+                    if !is_submodule {
+                        self.gctx.shell().status(
+                            "Updating",
+                            format!("git repository `{}`", self.remote.url()),
+                        )?;
+                    } else {
+                        self.gctx
+                            .shell()
+                            .status("Updating", format!("git submodule `{}`", self.remote.url()))?;
+                    }
                 }
 
                 trace!("updating git source `{:?}`", self.remote);
@@ -348,7 +354,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         // exists.
         exclude_from_backups_and_indexing(&git_path);
 
-        let (db, actual_rev) = self.fetch_db()?;
+        let (db, actual_rev) = self.fetch_db(false)?;
 
         // Don’t use the full hash, in order to contribute less to reaching the
         // path length limit on Windows. See
@@ -364,7 +370,7 @@ impl<'gctx> Source for GitSource<'gctx> {
             .join(&self.ident)
             .join(short_id.as_str());
         let checkout_path = checkout_path.into_path_unlocked();
-        db.copy_to(actual_rev, &checkout_path, self.gctx)?;
+        db.copy_to(actual_rev, &checkout_path, self.gctx, self.quiet)?;
 
         let source_id = self
             .source_id
