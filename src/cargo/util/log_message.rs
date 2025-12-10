@@ -1,10 +1,12 @@
 //! Messages for logging.
 
+use std::borrow::Cow;
 use std::io::Write;
 use std::path::PathBuf;
 
 use cargo_util_schemas::core::PackageIdSpec;
 use jiff::Timestamp;
+use serde::Deserialize;
 use serde::Serialize;
 
 use crate::core::compiler::CompileMode;
@@ -13,7 +15,7 @@ use crate::core::compiler::fingerprint::DirtyReason;
 /// A log message.
 ///
 /// Each variant represents a different type of event.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(tag = "reason", rename_all = "kebab-case")]
 pub enum LogMessage {
     /// Emitted when a build starts.
@@ -57,7 +59,7 @@ pub enum LogMessage {
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Unit indices that were unblocked by this rmeta completion.
-        #[serde(skip_serializing_if = "Vec::is_empty")]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         unblocked: Vec<u64>,
     },
     /// Emitted when a section (e.g., rmeta, link) of the compilation unit starts.
@@ -89,7 +91,7 @@ pub enum LogMessage {
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Unit indices that were unblocked by this completion.
-        #[serde(skip_serializing_if = "Vec::is_empty")]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         unblocked: Vec<u64>,
     },
     /// Emitted when a unit needs to be rebuilt.
@@ -101,17 +103,18 @@ pub enum LogMessage {
         /// The compilation action this unit is for (check, build, test, etc.).
         mode: CompileMode,
         /// Reason why the unit is dirty and needs rebuilding.
+        #[serde(skip_deserializing, default = "default_reason")]
         cause: DirtyReason,
     },
 }
 
 /// Cargo target information.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Target {
     /// Target name.
-    name: String,
+    pub name: String,
     /// Target kind (lib, bin, test, bench, example, build-script).
-    kind: &'static str,
+    pub kind: Cow<'static, str>,
 }
 
 impl From<&crate::core::Target> for Target {
@@ -126,7 +129,8 @@ impl From<&crate::core::Target> for Target {
                 TargetKind::Bench => "bench",
                 TargetKind::ExampleLib(..) | TargetKind::ExampleBin => "example",
                 TargetKind::CustomBuild => "build-script",
-            },
+            }
+            .into(),
         }
     }
 }
@@ -152,4 +156,8 @@ impl LogMessage {
         writer.write_all(b"\n")?;
         Ok(())
     }
+}
+
+fn default_reason() -> DirtyReason {
+    DirtyReason::NothingObvious
 }
