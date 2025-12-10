@@ -1,8 +1,11 @@
 use crate::core::{Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 
-use annotate_snippets::{AnnotationKind, Group, Level, Patch, Snippet};
-use cargo_util_schemas::manifest::{ProfilePackageSpec, TomlLintLevel, TomlToolLints};
+use annotate_snippets::AnnotationKind;
+use annotate_snippets::Level;
+use annotate_snippets::Snippet;
+use cargo_util_schemas::manifest::TomlLintLevel;
+use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
 use std::borrow::Cow;
@@ -10,15 +13,21 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
+mod blanket_hint_mostly_unused;
+pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 mod implicit_minimum_version_req;
 pub use implicit_minimum_version_req::implicit_minimum_version_req;
+mod im_a_teapot;
+pub use im_a_teapot::check_im_a_teapot;
+mod unknown_lints;
+use unknown_lints::output_unknown_lints;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[
-    BLANKET_HINT_MOSTLY_UNUSED,
+    blanket_hint_mostly_unused::LINT,
     implicit_minimum_version_req::LINT,
-    IM_A_TEAPOT,
-    UNKNOWN_LINTS,
+    im_a_teapot::LINT,
+    unknown_lints::LINT,
 ];
 
 /// Scope at which a lint runs: package-level or workspace-level.
@@ -455,302 +464,6 @@ fn level_priority(
     }
 }
 
-/// This lint is only to be used for testing purposes
-const IM_A_TEAPOT: Lint = Lint {
-    name: "im_a_teapot",
-    desc: "`im_a_teapot` is specified",
-    groups: &[TEST_DUMMY_UNSTABLE],
-    default_level: LintLevel::Allow,
-    edition_lint_opts: None,
-    feature_gate: Some(Feature::test_dummy_unstable()),
-    docs: None,
-};
-
-pub fn check_im_a_teapot(
-    pkg: &Package,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let manifest = pkg.manifest();
-    let (lint_level, reason) =
-        IM_A_TEAPOT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
-
-    if manifest
-        .normalized_toml()
-        .package()
-        .is_some_and(|p| p.im_a_teapot.is_some())
-    {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
-        let level = lint_level.to_diagnostic_level();
-        let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = IM_A_TEAPOT.emitted_source(lint_level, reason);
-
-        let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
-
-        let report = &[Group::with_title(level.primary_title(IM_A_TEAPOT.desc))
-            .element(
-                Snippet::source(manifest.contents())
-                    .path(&manifest_path)
-                    .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
-            )
-            .element(Level::NOTE.message(&emitted_reason))];
-
-        gctx.shell().print_report(report, lint_level.force())?;
-    }
-    Ok(())
-}
-
-const BLANKET_HINT_MOSTLY_UNUSED: Lint = Lint {
-    name: "blanket_hint_mostly_unused",
-    desc: "blanket_hint_mostly_unused lint",
-    groups: &[],
-    default_level: LintLevel::Warn,
-    edition_lint_opts: None,
-    feature_gate: None,
-    docs: Some(
-        r#"
-### What it does
-Checks if `hint-mostly-unused` being applied to all dependencies.
-
-### Why it is bad
-`hint-mostly-unused` indicates that most of a crate's API surface will go
-unused by anything depending on it; this hint can speed up the build by
-attempting to minimize compilation time for items that aren't used at all.
-Misapplication to crates that don't fit that criteria will slow down the build
-rather than speeding it up. It should be selectively applied to dependencies
-that meet these criteria. Applying it globally is always a misapplication and
-will likely slow down the build.
-
-### Example
-```toml
-[profile.dev.package."*"]
-hint-mostly-unused = true
-```
-
-Should instead be:
-```toml
-[profile.dev.package.huge-mostly-unused-dependency]
-hint-mostly-unused = true
-```
-"#,
-    ),
-};
-
-pub fn blanket_hint_mostly_unused(
-    maybe_pkg: &MaybePackage,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let (lint_level, reason) = BLANKET_HINT_MOSTLY_UNUSED.level(
-        pkg_lints,
-        maybe_pkg.edition(),
-        maybe_pkg.unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
-
-    let level = lint_level.to_diagnostic_level();
-    let manifest_path = rel_cwd_manifest_path(path, gctx);
-    let mut paths = Vec::new();
-
-    if let Some(profiles) = maybe_pkg.profiles() {
-        for (profile_name, top_level_profile) in &profiles.0 {
-            if let Some(true) = top_level_profile.hint_mostly_unused {
-                paths.push((
-                    vec!["profile", profile_name.as_str(), "hint-mostly-unused"],
-                    true,
-                ));
-            }
-
-            if let Some(build_override) = &top_level_profile.build_override
-                && let Some(true) = build_override.hint_mostly_unused
-            {
-                paths.push((
-                    vec![
-                        "profile",
-                        profile_name.as_str(),
-                        "build-override",
-                        "hint-mostly-unused",
-                    ],
-                    false,
-                ));
-            }
-
-            if let Some(packages) = &top_level_profile.package
-                && let Some(profile) = packages.get(&ProfilePackageSpec::All)
-                && let Some(true) = profile.hint_mostly_unused
-            {
-                paths.push((
-                    vec![
-                        "profile",
-                        profile_name.as_str(),
-                        "package",
-                        "*",
-                        "hint-mostly-unused",
-                    ],
-                    false,
-                ));
-            }
-        }
-    }
-
-    for (i, (path, show_per_pkg_suggestion)) in paths.iter().enumerate() {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
-        let title = "`hint-mostly-unused` is being blanket applied to all dependencies";
-        let help_txt =
-            "scope `hint-mostly-unused` to specific packages with a lot of unused object code";
-        if let (Some(span), Some(table_span)) = (
-            get_key_value_span(maybe_pkg.document(), &path),
-            get_key_value_span(maybe_pkg.document(), &path[..path.len() - 1]),
-        ) {
-            let mut report = Vec::new();
-            let mut primary_group = level.clone().primary_title(title).element(
-                Snippet::source(maybe_pkg.contents())
-                    .path(&manifest_path)
-                    .annotation(
-                        AnnotationKind::Primary.span(table_span.key.start..table_span.key.end),
-                    )
-                    .annotation(AnnotationKind::Context.span(span.key.start..span.value.end)),
-            );
-
-            if *show_per_pkg_suggestion {
-                report.push(
-                    Level::HELP.secondary_title(help_txt).element(
-                        Snippet::source(maybe_pkg.contents())
-                            .path(&manifest_path)
-                            .patch(Patch::new(
-                                table_span.key.end..table_span.key.end,
-                                ".package.<pkg_name>",
-                            )),
-                    ),
-                );
-            } else {
-                primary_group = primary_group.element(Level::HELP.message(help_txt));
-            }
-
-            if i == 0 {
-                primary_group =
-                    primary_group
-                        .element(Level::NOTE.message(
-                            BLANKET_HINT_MOSTLY_UNUSED.emitted_source(lint_level, reason),
-                        ));
-            }
-
-            // The primary group should always be first
-            report.insert(0, primary_group);
-
-            gctx.shell().print_report(&report, lint_level.force())?;
-        }
-    }
-
-    Ok(())
-}
-
-const UNKNOWN_LINTS: Lint = Lint {
-    name: "unknown_lints",
-    desc: "unknown lint",
-    groups: &[],
-    default_level: LintLevel::Warn,
-    edition_lint_opts: None,
-    feature_gate: None,
-    docs: Some(
-        r#"
-### What it does
-Checks for unknown lints in the `[lints.cargo]` table
-
-### Why it is bad
-- The lint name could be misspelled, leading to confusion as to why it is
-  not working as expected
-- The unknown lint could end up causing an error if `cargo` decides to make
-  a lint with the same name in the future
-
-### Example
-```toml
-[lints.cargo]
-this-lint-does-not-exist = "warn"
-```
-"#,
-    ),
-};
-
-fn output_unknown_lints(
-    unknown_lints: Vec<&String>,
-    manifest: &ManifestFor<'_>,
-    manifest_path: &str,
-    cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let (lint_level, reason) = manifest.lint_level(cargo_lints, UNKNOWN_LINTS);
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
-
-    let document = manifest.document();
-    let contents = manifest.contents();
-
-    let level = lint_level.to_diagnostic_level();
-    let mut emitted_source = None;
-    for lint_name in unknown_lints {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
-        let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
-        let underscore_lint_name = lint_name.replace("-", "_");
-        let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
-            Some((lint.name, "lint"))
-        } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == underscore_lint_name) {
-            Some((group.name, "group"))
-        } else {
-            None
-        };
-        let help =
-            matching.map(|(name, kind)| format!("there is a {kind} with a similar name: `{name}`"));
-
-        let key_path = match manifest {
-            ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-            ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
-        };
-        let Some(span) = get_key_value_span(document, key_path) else {
-            // This lint is handled by either package or workspace lint.
-            return Ok(());
-        };
-
-        let mut report = Vec::new();
-        let mut group = Group::with_title(level.clone().primary_title(title)).element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .annotation(AnnotationKind::Primary.span(span.key)),
-        );
-        if emitted_source.is_none() {
-            emitted_source = Some(UNKNOWN_LINTS.emitted_source(lint_level, reason));
-            group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
-        }
-        if let Some(help) = help.as_ref() {
-            group = group.element(Level::HELP.message(help));
-        }
-        report.push(group);
-
-        gctx.shell().print_report(&report, lint_level.force())?;
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
@@ -793,40 +506,34 @@ mod tests {
 
     #[test]
     fn ensure_updated_lints() {
-        let path = snapbox::utils::current_rs!();
-        let expected = std::fs::read_to_string(&path).unwrap();
-        let expected = expected
-            .lines()
-            .filter_map(|l| {
-                if l.ends_with(": Lint = Lint {") {
-                    Some(
-                        l.chars()
-                            .skip(6)
-                            .take_while(|c| *c != ':')
-                            .collect::<String>(),
-                    )
-                } else {
-                    None
-                }
-            })
-            .collect::<HashSet<_>>();
+        let dir = snapbox::utils::current_dir!();
+        let mut expected = HashSet::new();
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.ends_with("mod.rs") {
+                continue;
+            }
+            let lint_name = path.file_stem().unwrap().to_string_lossy();
+            assert!(expected.insert(lint_name.into()), "duplicate lint found");
+        }
+
         let actual = super::LINTS
             .iter()
-            .map(|l| l.name.to_uppercase())
+            .map(|l| l.name.to_string())
             .collect::<HashSet<_>>();
         let diff = expected.difference(&actual).sorted().collect::<Vec<_>>();
 
         let mut need_added = String::new();
         for name in &diff {
-            need_added.push_str(&format!("{}\n", name));
+            need_added.push_str(&format!("{name}\n"));
         }
         assert!(
             diff.is_empty(),
             "\n`LINTS` did not contain all `Lint`s found in {}\n\
             Please add the following to `LINTS`:\n\
-            {}",
-            path.display(),
-            need_added
+            {need_added}",
+            dir.display(),
         );
     }
 
