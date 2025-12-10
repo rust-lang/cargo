@@ -49,7 +49,7 @@ hello
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -109,8 +109,8 @@ fn cargo_test_release() {
 [RUNNING] `rustc [..]-C opt-level=3 [..]`
 [RUNNING] `rustc [..]-C opt-level=3 [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/test-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/test-[HASH]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test src/lib.rs[..]`
 
@@ -329,7 +329,7 @@ fn cargo_test_verbose() {
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE] hello`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH] hello`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -417,7 +417,7 @@ hello
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [ERROR] test failed, to rerun pass `--bin foo`
 
 "#]])
@@ -451,8 +451,8 @@ hello
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/footest.rs (target/debug/deps/footest-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/footest.rs (target/debug/build/foo/[HASH]/deps/footest-[HASH])
 [ERROR] test failed, to rerun pass `--test footest`
 
 "#]])
@@ -488,7 +488,7 @@ fn cargo_test_failing_test_in_lib() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [ERROR] test failed, to rerun pass `--lib`
 
 "#]])
@@ -553,8 +553,8 @@ fn test_with_lib_dep() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/baz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/baz-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -615,7 +615,7 @@ fn test_with_deep_lib_dep() {
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -671,8 +671,8 @@ fn external_test_explicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] src/test.rs (target/debug/deps/test-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] src/test.rs (target/debug/build/foo/[HASH]/deps/test-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -738,8 +738,8 @@ fn external_test_implicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/external.rs (target/debug/deps/external-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/external.rs (target/debug/build/foo/[HASH]/deps/external-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -803,7 +803,7 @@ fn pass_through_escaped() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -818,7 +818,7 @@ test test_bar ... ok
     p.cargo("test -- foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -833,7 +833,7 @@ test test_foo ... ok
     p.cargo("test -- foo bar")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -884,7 +884,7 @@ fn pass_through_testname() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -898,7 +898,7 @@ test test_bar ... ok
     p.cargo("test foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -912,7 +912,7 @@ test test_foo ... ok
     p.cargo("test foo -- bar")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(
@@ -984,8 +984,8 @@ fn lib_bin_same_name() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -1032,8 +1032,8 @@ fn lib_with_standard_name() {
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/syntax-[HASH][EXE])
-[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/syntax/[HASH]/deps/syntax-[HASH])
+[RUNNING] tests/test.rs (target/debug/build/syntax/[HASH]/deps/test-[HASH])
 [DOCTEST] syntax
 
 "#]])
@@ -1085,7 +1085,7 @@ fn lib_with_standard_name2() {
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/syntax-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/syntax/[HASH]/deps/syntax-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1131,7 +1131,7 @@ fn lib_without_name() {
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/syntax-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/syntax/[HASH]/deps/syntax-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1460,8 +1460,8 @@ fn test_dylib() {
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/test.rs (target/debug/build/foo/[HASH]/deps/test-[HASH])
 
 "#]])
         .with_stdout_data(
@@ -1478,8 +1478,8 @@ test foo ... ok
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/test.rs (target/debug/build/foo/[HASH]/deps/test-[HASH])
 
 "#]])
         .with_stdout_data(
@@ -1515,7 +1515,7 @@ fn test_twice_with_build_cmd() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -1532,7 +1532,7 @@ running 0 tests
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -1555,7 +1555,7 @@ fn test_then_build() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -1587,7 +1587,7 @@ fn test_no_run() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .run();
@@ -1637,7 +1637,7 @@ fn test_run_specific_bin_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/bin2.rs (target/debug/deps/bin2-[HASH][EXE])
+[RUNNING] unittests src/bin2.rs (target/debug/build/foo/[HASH]/deps/bin2-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1683,7 +1683,7 @@ fn test_run_implicit_bin_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
+[RUNNING] unittests src/mybin.rs (target/debug/build/foo/[HASH]/deps/mybin-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1707,7 +1707,7 @@ fn test_run_specific_test_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/b.rs (target/debug/deps/b-[HASH][EXE])
+[RUNNING] tests/b.rs (target/debug/build/foo/[HASH]/deps/b-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1752,8 +1752,8 @@ fn test_run_implicit_test_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
-[RUNNING] tests/mytest.rs (target/debug/deps/mytest-[HASH][EXE])
+[RUNNING] unittests src/mybin.rs (target/debug/build/foo/[HASH]/deps/mybin-[HASH])
+[RUNNING] tests/mytest.rs (target/debug/build/foo/[HASH]/deps/mytest-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1798,8 +1798,8 @@ fn test_run_implicit_bench_target() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
-[RUNNING] benches/mybench.rs (target/debug/deps/mybench-[HASH][EXE])
+[RUNNING] unittests src/mybin.rs (target/debug/build/foo/[HASH]/deps/mybin-[HASH])
+[RUNNING] benches/mybench.rs (target/debug/build/foo/[HASH]/deps/mybench-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1964,8 +1964,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 [RUNNING] `rustc --crate-name mybin --edition=2015 src/bin/mybin.rs [..] --crate-type bin [..]`
 [RUNNING] `rustc --crate-name mytest --edition=2015 tests/mytest.rs [..] --test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE] test_in_`
-[RUNNING] `[ROOT]/foo/target/debug/deps/mytest-[HASH][EXE] test_in_`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH] test_in_`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/mytest-[HASH] test_in_`
 
 "#]]
             .unordered(),
@@ -2005,7 +2005,7 @@ fn test_no_harness() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] foo.rs (target/debug/deps/bar-[HASH][EXE])
+[RUNNING] foo.rs (target/debug/build/foo/[HASH]/deps/bar-[HASH])
 
 "#]])
         .run();
@@ -2080,8 +2080,8 @@ fn selective_testing() {
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/d1-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/d1-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/[HASH]63/deps/d1-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/[HASH]d5/deps/d1-[HASH])
 
 "#]])
         .with_stdout_data(
@@ -2099,8 +2099,8 @@ running 0 tests
         .with_stderr_data(str![[r#"
 [COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/d2-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/d2-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/[HASH]e0/deps/d2-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/[HASH]3c/deps/d2-[HASH])
 
 "#]])
         .with_stdout_data(
@@ -2118,7 +2118,7 @@ running 0 tests
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -2310,7 +2310,7 @@ fn selective_testing_with_docs() {
 [LOCKING] 1 package to latest compatible version
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests d1.rs (target/debug/deps/d1-[HASH][EXE])
+[RUNNING] unittests d1.rs (target/debug/build/[HASH]63/deps/d1-[HASH])
 [DOCTEST] d1
 
 "#]])
@@ -2338,7 +2338,7 @@ fn example_bin_same_name() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]])
         .run();
@@ -2497,7 +2497,7 @@ fn doctest_feature() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -2651,7 +2651,7 @@ fn filter_no_doc_tests() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -2795,7 +2795,7 @@ fn cyclic_dev_dep_doc_test() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -2899,10 +2899,10 @@ fn no_fail_fast() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/test_add_one.rs (target/debug/deps/test_add_one-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/test_add_one.rs (target/debug/build/foo/[HASH]/deps/test_add_one-[HASH])
 [ERROR] test failed, to rerun pass `--test test_add_one`
-[RUNNING] tests/test_sub_one.rs (target/debug/deps/test_sub_one-[HASH][EXE])
+[RUNNING] tests/test_sub_one.rs (target/debug/build/foo/[HASH]/deps/test_sub_one-[HASH])
 [DOCTEST] foo
 [ERROR] 1 target failed:
     `--test test_add_one`
@@ -2976,10 +2976,13 @@ fn test_multiple_packages() {
 
     p.cargo("test -p d1 -p d2")
         .with_stderr_data(str![[r#"
-...
-[RUNNING] unittests src/lib.rs (target/debug/deps/d1-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/debug/deps/d2-[HASH][EXE])
-...
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
+[COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/build/[HASH]63/deps/d1-[HASH])
+[RUNNING] unittests src/lib.rs (target/debug/build/[HASH]e0/deps/d2-[HASH])
+
 "#]])
         .with_stdout_data(
             str![[r#"
@@ -3012,9 +3015,9 @@ fn bin_does_not_rebuild_tests() {
 [RUNNING] `rustc [..] src/main.rs [..]`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]])
         .run();
@@ -3075,7 +3078,7 @@ fn selective_test_optional_dep() {
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/a-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/a/[HASH]/deps/a-[HASH]`
 
 "#]])
         .run();
@@ -3230,7 +3233,7 @@ hello!
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]])
         .run();
@@ -4315,9 +4318,9 @@ fn test_hint_workspace_virtual() {
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/a-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/debug/deps/b-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p b --lib`
+[RUNNING] unittests src/lib.rs (target/debug/build/a/[HASH]/deps/a-[HASH])
+[RUNNING] unittests src/lib.rs (target/debug/build/b/[HASH]/deps/b-[HASH])
 
 "#]]
             .unordered(),
@@ -4328,7 +4331,7 @@ fn test_hint_workspace_virtual() {
         .cwd("b")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs ([ROOT]/foo/target/debug/deps/b-[HASH][EXE])
+[RUNNING] unittests src/lib.rs ([ROOT]/foo/target/debug/build/b/[HASH]/deps/b-[HASH])
 [ERROR] test failed, to rerun pass `--lib`
 
 "#]])
@@ -4337,13 +4340,13 @@ fn test_hint_workspace_virtual() {
     p.cargo("test --no-fail-fast")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/a-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/debug/deps/b-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/a/[HASH]/deps/a-[HASH])
+[RUNNING] unittests src/lib.rs (target/debug/build/b/[HASH]/deps/b-[HASH])
 [ERROR] test failed, to rerun pass `-p b --lib`
-[RUNNING] unittests src/lib.rs (target/debug/deps/c-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/c-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/c/[HASH]/deps/c-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/c/[HASH]/deps/c-[HASH])
 [ERROR] test failed, to rerun pass `-p c --bin c`
-[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[RUNNING] tests/t1.rs (target/debug/build/c/[HASH]/deps/t1-[HASH])
 [ERROR] test failed, to rerun pass `-p c --test t1`
 [DOCTEST] a
 [DOCTEST] b
@@ -4363,10 +4366,10 @@ fn test_hint_workspace_virtual() {
         .with_stderr_data(str![[r#"
 [COMPILING] c v0.1.0 ([ROOT]/foo/c)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/c-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/debug/deps/c-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/c/[HASH]/deps/c-[HASH])
+[RUNNING] unittests src/main.rs (target/debug/build/c/[HASH]/deps/c-[HASH])
 [ERROR] test failed, to rerun pass `-p c --bin c`
-[RUNNING] benches/b1.rs (target/debug/deps/b1-[HASH][EXE])
+[RUNNING] benches/b1.rs (target/debug/build/c/[HASH]/deps/b1-[HASH])
 [ERROR] test failed, to rerun pass `-p c --bench b1`
 [RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --example ex1`
@@ -4443,7 +4446,7 @@ fn json_artifact_includes_test_flag() {
             str![[r#"
 [
   {
-    "executable": "[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]",
+    "executable": "[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]",
     "features": [],
     "filenames": "{...}",
     "fresh": false,
@@ -4490,7 +4493,7 @@ fn json_artifact_includes_executable_for_library_tests() {
             str![[r#"
 [
   {
-    "executable": "[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]",
+    "executable": "[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]",
     "features": [],
     "filenames": "{...}",
     "fresh": false,
@@ -4580,7 +4583,7 @@ fn json_artifact_includes_executable_for_integration_tests() {
             str![[r#"
 [
   {
-    "executable": "[ROOT]/foo/target/debug/deps/integration_test-[HASH][EXE]",
+    "executable": "[ROOT]/foo/target/debug/build/foo/[HASH]/deps/integration_test-[HASH]",
     "features": [],
     "filenames": "{...}",
     "fresh": false,
@@ -4676,7 +4679,7 @@ fn doctest_skip_staticlib() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .run();
@@ -4704,7 +4707,7 @@ pub fn foo() -> u8 { 1 }
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -4728,7 +4731,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     p.cargo("test --lib")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -4805,7 +4808,7 @@ fn test_all_targets_lib() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .run();
@@ -5450,11 +5453,11 @@ fn execution_error() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[RUNNING] tests/t1.rs (target/debug/build/foo/[HASH]/deps/t1-[HASH])
 [ERROR] test failed, to rerun pass `--test t1`
 
 Caused by:
-  could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1-[HASH][EXE]` (never executed)
+  could not execute process `does_not_exist [ROOT]/foo/target/debug/build/foo/[HASH]/deps/t1-[HASH]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -5488,7 +5491,7 @@ fn nonzero_exit_status() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[RUNNING] tests/t1.rs (target/debug/build/foo/[HASH]/deps/t1-[HASH])
 [ERROR] test failed, to rerun pass `--test t1`
 
 "#]])
@@ -5504,11 +5507,11 @@ this is a normal error
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[RUNNING] tests/t2.rs (target/debug/build/foo/[HASH]/deps/t2-[HASH])
 [ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/t2-[HASH]` ([EXIT_STATUS]: 4)
 [NOTE] test exited abnormally; to see the full output pass --no-capture to the harness.
 
 "#]])
@@ -5518,11 +5521,11 @@ Caused by:
     p.cargo("test --test t2 -- --no-capture")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[RUNNING] tests/t2.rs (target/debug/build/foo/[HASH]/deps/t2-[HASH])
 [ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --no-capture` ([EXIT_STATUS]: 4)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/t2-[HASH] --no-capture` ([EXIT_STATUS]: 4)
 
 "#]])
         .with_status(4)
@@ -5532,13 +5535,13 @@ Caused by:
     p.cargo("test --no-fail-fast")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[RUNNING] tests/t1.rs (target/debug/build/foo/[HASH]/deps/t1-[HASH])
 [ERROR] test failed, to rerun pass `--test t1`
-[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[RUNNING] tests/t2.rs (target/debug/build/foo/[HASH]/deps/t2-[HASH])
 [ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/t2-[HASH]` ([EXIT_STATUS]: 4)
 [NOTE] test exited abnormally; to see the full output pass --no-capture to the harness.
 [ERROR] 2 targets failed:
     `--test t1`
@@ -5552,13 +5555,15 @@ Caused by:
         .with_stderr_does_not_contain(
             "test exited abnormally; to see the full output pass --no-capture to the harness.",
         )
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [..]thread [..]panicked [..] tests/t1.rs[..]
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --no-capture` ([EXIT_STATUS]: 4)
 ...
-"#]].unordered())
+"#]]
+            .unordered(),
+        )
         .with_status(101)
         .run();
 }
@@ -5575,7 +5580,7 @@ fn cargo_test_print_env_verbose() {
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc --crate-name foo[..]`
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc --crate-name foo[..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `CARGO=/home/epage/src/personal/cargo/target/debug/cargo CARGO_MANIFEST_DIR=[ROOT]/foo CARGO_MANIFEST_PATH=[ROOT]/foo/Cargo.toml CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=foo CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.0.1 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=0 CARGO_PKG_VERSION_PATCH=1 CARGO_PKG_VERSION_PRE='' LD_LIBRARY_PATH='[ROOT]/foo/target/debug:[ROOT]/foo/target/debug/build/foo/[HASH]/deps:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib/rustlib/[HOST_TARGET]/lib:/home/epage/src/personal/cargo/target/debug:/home/epage/.cargo/build/[HASH]/debug/deps:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib/rustlib/[HOST_TARGET]/lib:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib' [ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 [DOCTEST] foo
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustdoc --edition=2015 --crate-type lib --color auto --crate-name foo[..]`
 

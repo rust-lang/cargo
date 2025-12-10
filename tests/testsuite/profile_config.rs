@@ -262,7 +262,7 @@ fn profile_config_all_options() {
         .env_remove("CARGO_INCREMENTAL")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] -C opt-level=1 -C panic=abort -C lto[..]-C codegen-units=2 -C debuginfo=2 [..]-C debug-assertions=on -C overflow-checks=off [..]-C rpath --out-dir [ROOT]/foo/target/release/deps -C incremental=[ROOT]/foo/target/release/incremental[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C opt-level=1 -C panic=abort -C lto -C codegen-units=2 -C debuginfo=2 -C debug-assertions=on -C overflow-checks=off --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=10f9e92ac323988c -C extra-filename=-dd29b71f8d9a0013 -C rpath --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/deps -C incremental=[ROOT]/foo/target/release/incremental -L dependency=[ROOT]/foo/target/release/build/foo/[HASH]/deps`
 [FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -517,7 +517,7 @@ fn test_with_dev_profile() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `test` profile [unoptimized] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]])
         .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")

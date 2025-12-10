@@ -397,7 +397,7 @@ fn build_script_doc() {
             "\
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 {running_rustdoc}
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

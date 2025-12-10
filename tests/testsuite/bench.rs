@@ -44,7 +44,7 @@ hello
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -94,8 +94,8 @@ fn bench_bench_implicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/mybench-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] benches/mybench.rs (target/release/build/foo/[HASH]/deps/mybench-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -151,7 +151,7 @@ fn bench_bin_implicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -191,7 +191,7 @@ fn bench_tarname() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/bin2-[HASH][EXE])
+[RUNNING] benches/bin2.rs (target/release/build/foo/[HASH]/deps/bin2-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -240,8 +240,8 @@ fn bench_multiple_targets() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] benches/bin1.rs (target/release/deps/bin1-[HASH][EXE])
-[RUNNING] benches/bin2.rs (target/release/deps/bin2-[HASH][EXE])
+[RUNNING] benches/bin1.rs (target/release/build/foo/[HASH]/deps/bin1-[HASH])
+[RUNNING] benches/bin2.rs (target/release/build/foo/[HASH]/deps/bin2-[HASH])
 
 "#]])
         .run();
@@ -268,7 +268,7 @@ fn cargo_bench_verbose() {
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] hello --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH] hello --bench`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -385,7 +385,7 @@ hello
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 [ERROR] bench failed, to rerun pass `--bin foo`
 
 "#]])
@@ -450,8 +450,8 @@ fn bench_with_lib_dep() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/baz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/baz-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -526,7 +526,7 @@ fn bench_with_deep_lib_dep() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/bar-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -588,8 +588,8 @@ fn external_bench_explicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/bench-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] src/bench.rs (target/release/build/foo/[HASH]/deps/bench-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -644,8 +644,8 @@ fn external_bench_implicit() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/external-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] benches/external.rs (target/release/build/foo/[HASH]/deps/external-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -732,7 +732,7 @@ For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .run();
@@ -770,7 +770,7 @@ fn pass_through_command_line() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -787,7 +787,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 1 filtered out; fini
     p.cargo("bench foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -873,8 +873,8 @@ fn lib_bin_same_name() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -932,8 +932,8 @@ fn lib_with_standard_name() {
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/syntax-[HASH][EXE])
-[RUNNING] [..] (target/release/deps/bench-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/syntax/[HASH]/deps/syntax-[HASH])
+[RUNNING] benches/bench.rs (target/release/build/syntax/[HASH]/deps/bench-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -994,7 +994,7 @@ fn lib_with_standard_name2() {
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/syntax-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/syntax/[HASH]/deps/syntax-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1081,8 +1081,8 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] --bench`
-[RUNNING] `[..]target/release/deps/bench-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/bench-[HASH] --bench`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1108,8 +1108,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[..]target/release/deps/foo-[HASH][EXE] --bench`
-[RUNNING] `[..]target/release/deps/bench-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/bench-[HASH] --bench`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1161,7 +1161,7 @@ fn bench_twice_with_build_cmd() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1178,7 +1178,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
     p.cargo("bench")
         .with_stderr_data(str![[r#"
 [FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1268,8 +1268,8 @@ fn bench_with_examples() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE] --bench`
-[RUNNING] `[ROOT]/foo/target/release/deps/testb1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/testb1-[HASH] --bench`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1320,7 +1320,7 @@ fn test_a_bench() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] [..] (target/debug/deps/b-[HASH][EXE])
+[RUNNING] benches/b.rs (target/debug/build/foo/[HASH]/deps/b-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1358,8 +1358,8 @@ fn test_bench_no_run() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[EXECUTABLE] benches src/lib.rs (target/release/deps/foo-[HASH][EXE])
-[EXECUTABLE] benches/bbaz.rs (target/release/deps/bbaz-[HASH][EXE])
+[EXECUTABLE] benches src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[EXECUTABLE] benches/bbaz.rs (target/release/build/foo/[HASH]/deps/bbaz-[HASH])
 
 "#]])
         .run();
@@ -1438,9 +1438,9 @@ fn test_bench_no_fail_fast() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 [ERROR] bench failed, to rerun pass `--bin foo`
-[RUNNING] benches/b1.rs (target/release/deps/b1-[HASH][EXE])
+[RUNNING] benches/b1.rs (target/release/build/foo/[HASH]/deps/b1-[HASH])
 [ERROR] bench failed, to rerun pass `--bench b1`
 [ERROR] 2 targets failed:
     `--bin foo`
@@ -1555,10 +1555,10 @@ fn test_bench_multiple_packages() {
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] benches/bbar.rs (target/release/deps/bbar-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
-[RUNNING] benches/bbaz.rs (target/release/deps/bbaz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] benches/bbar.rs (target/release/build/bar/[HASH]/deps/bbar-[HASH])
+[RUNNING] unittests src/lib.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
+[RUNNING] benches/bbaz.rs (target/release/build/baz/[HASH]/deps/bbaz-[HASH])
 
 "#]]
             .unordered(),
@@ -1617,10 +1617,10 @@ fn bench_all_workspace() {
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
-[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] benches/bar.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] unittests src/main.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] benches/foo.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1808,10 +1808,10 @@ fn bench_all_virtual_manifest() {
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
-[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] benches/bar.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] unittests src/lib.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
+[RUNNING] benches/baz.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
 
 "#]]
             .unordered(),
@@ -1889,8 +1889,8 @@ fn bench_virtual_manifest_glob() {
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
-[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
+[RUNNING] benches/baz.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1947,8 +1947,8 @@ fn legacy_bench_name() {
 please set bench.path in Cargo.toml
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/foo-[HASH][EXE])
-[RUNNING] src/bench.rs (target/release/deps/bench-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] src/bench.rs (target/release/build/foo/[HASH]/deps/bench-[HASH])
 
 "#]])
         .run();
@@ -1998,10 +1998,10 @@ fn bench_virtual_manifest_all_implied() {
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] benches/bar.rs (target/release/deps/bar-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
-[RUNNING] benches/baz.rs (target/release/deps/baz-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] benches/bar.rs (target/release/build/bar/[HASH]/deps/bar-[HASH])
+[RUNNING] unittests src/lib.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
+[RUNNING] benches/baz.rs (target/release/build/baz/[HASH]/deps/baz-[HASH])
 
 "#]]
             .unordered(),
@@ -2122,7 +2122,7 @@ fn cargo_bench_print_env_verbose() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc[..]`
 [FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] [ROOT]/foo/target/release/deps/foo-[HASH][EXE] --bench`
+[RUNNING] `CARGO=/home/epage/src/personal/cargo/target/debug/cargo CARGO_MANIFEST_DIR=[ROOT]/foo CARGO_MANIFEST_PATH=[ROOT]/foo/Cargo.toml CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=foo CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.0.1 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=0 CARGO_PKG_VERSION_PATCH=1 CARGO_PKG_VERSION_PRE='' LD_LIBRARY_PATH='[ROOT]/foo/target/release:[ROOT]/foo/target/release/build/foo/[HASH]/deps:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib/rustlib/[HOST_TARGET]/lib:/home/epage/src/personal/cargo/target/debug:/home/epage/.cargo/build/[HASH]/debug/deps:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib/rustlib/[HOST_TARGET]/lib:/home/epage/.rustup/toolchains/nightly-[HOST_TARGET]/lib' [ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH] --bench`
 
 "#]])
         .run();

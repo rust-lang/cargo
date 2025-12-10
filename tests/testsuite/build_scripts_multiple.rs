@@ -441,7 +441,7 @@ fn custom_build_script_first_index_script_failed() {
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1` ([EXIT_STATUS]: 101)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build1` ([EXIT_STATUS]: 101)
 ...
 "#]])
         .run();
@@ -479,7 +479,7 @@ fn custom_build_script_second_index_script_failed() {
 [ERROR] failed to run custom build command for `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build2` ([EXIT_STATUS]: 101)
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build2` ([EXIT_STATUS]: 101)
 ...
 "#]])
         .run();
@@ -741,7 +741,7 @@ fn bar() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.1.0 ([ROOT]/foo): the [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build1`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build1`
 [RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -756,8 +756,8 @@ fn bar() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.1.0 ([ROOT]/foo): the [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build2`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build1`
 [RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

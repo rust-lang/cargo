@@ -220,7 +220,7 @@ this is a runner
         .arg("-j2")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/cargo-jobserver-check/[HASH]/deps/cargo_jobserver_check-[HASH])
 this is a runner
 
 "#]])
@@ -264,7 +264,7 @@ this is a runner
         .with_status(101)
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/cargo-jobserver-check/[HASH]/deps/cargo_jobserver_check-[HASH])
 this is a runner
 ...
 

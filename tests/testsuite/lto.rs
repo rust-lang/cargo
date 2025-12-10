@@ -80,9 +80,9 @@ fn shared_deps() {
 [RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no [..]`
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
-[RUNNING] `[ROOT]/foo/target/release/build/test-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name test [..]-C lto [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/release/build/test/[HASH]/build-script/build-script-build`
 
 "#]]
             .unordered(),
@@ -123,7 +123,7 @@ fn build_dep_not_ltod() {
 [RUNNING] `rustc --crate-name bar [..]-C embed-bitcode=no [..]`
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
-[RUNNING] `[ROOT]/foo/target/release/build/test-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/release/build/test/[HASH]/build-script/build-script-build`
 [RUNNING] `rustc --crate-name test [..]-C lto [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
@@ -375,9 +375,9 @@ fn test_all() {
 [RUNNING] `rustc --crate-name foo [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]-C lto [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/b-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/a-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/b-[HASH]`
 
 "#]]
             .unordered(),
@@ -415,9 +415,9 @@ fn test_all_and_bench() {
 [RUNNING] `rustc --crate-name foo [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]-C lto [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/b-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/a-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/b-[HASH]`
 
 "#]]
             .unordered(),
@@ -587,8 +587,8 @@ fn cdylib_and_rlib() {
 [RUNNING] `rustc --crate-name foo [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name a [..]-C lto [..]--test [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/a-[HASH]`
 
 "#]]
             .unordered(),
@@ -614,10 +614,10 @@ fn cdylib_and_rlib() {
 [RUNNING] `rustc --crate-name bar [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name b [..]-C lto [..]--test [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bar-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/b-[HASH][EXE]`
 [DOCTEST] bar
 [RUNNING] `rustdoc --edition=2015 --crate-type cdylib --crate-type rlib --color auto --crate-name bar --test [..]-C lto [..]
+[RUNNING] `[ROOT]/foo/target/release/build/bar/[HASH]/deps/bar-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/bar/[HASH]/deps/b-[HASH]`
 
 "#]].unordered())
         .run();
@@ -654,8 +654,8 @@ fn dylib() {
 [RUNNING] `rustc --crate-name foo [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name a [..]-C lto [..]--test [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/a-[HASH]`
 
 "#]]
             .unordered(),
@@ -698,8 +698,8 @@ fn dylib() {
 [RUNNING] `rustc --crate-name bar [..]-C lto [..]--test [..]`
 [RUNNING] `rustc --crate-name b [..]-C lto [..]--test [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bar-[HASH][EXE]`
-[RUNNING] `[ROOT]/foo/target/release/deps/b-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/build/bar/[HASH]/deps/bar-[HASH]`
+[RUNNING] `[ROOT]/foo/target/release/build/bar/[HASH]/deps/b-[HASH]`
 
 "#]]
             .unordered(),
@@ -758,9 +758,9 @@ fn test_profile() {
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto [..]`
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]].unordered())
         .run();
@@ -916,9 +916,9 @@ fn fresh_swapping_commands() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C lto [..]--test [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]-C lto [..]`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]]
             .unordered(),
@@ -938,7 +938,7 @@ fn fresh_swapping_commands() {
 [FRESH] bar v1.0.0
 [FRESH] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/foo-[HASH]`
 
 "#]])
         .run();

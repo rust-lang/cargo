@@ -75,8 +75,6 @@ fn simple_test() {
         .arg(&t2)
         .with_stderr_data(
             str![[r#"
-[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
-[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE])
 ...
 
 "#]]
