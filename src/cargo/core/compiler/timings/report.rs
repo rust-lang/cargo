@@ -5,21 +5,15 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 
+use indexmap::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
 use crate::core::compiler::Unit;
 
+use super::CompilationSection;
 use super::UnitData;
 use super::UnitTime;
-
-/// Contains post-processed data of individual compilation sections.
-enum AggregatedSections {
-    /// We know the names and durations of individual compilation sections
-    Sections(Vec<(SectionName, SectionData)>),
-    /// We know only the total duration
-    OnlyTotalDuration,
-}
 
 /// Name of an individual compilation section.
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -384,10 +378,7 @@ pub(super) fn to_unit_data(
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let sections = match aggregate_sections(ut) {
-                AggregatedSections::Sections(sections) => Some(sections),
-                AggregatedSections::OnlyTotalDuration => None,
-            };
+            let sections = aggregate_sections(ut.sections.clone(), ut.duration, ut.rmeta_time);
 
             UnitData {
                 i,
@@ -539,16 +530,17 @@ pub(super) fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
 ///   in which case we use them to determine the headers.
 /// - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
 /// - We only have total durations, so we don't add any additional headers.
-fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
-    let end = unit_time.duration;
-
-    if !unit_time.sections.is_empty() {
+pub fn aggregate_sections(
+    sections: IndexMap<String, CompilationSection>,
+    end: f64,
+    rmeta_time: Option<f64>,
+) -> Option<Vec<(SectionName, SectionData)>> {
+    if !sections.is_empty() {
         // We have some detailed compilation section timings, so we postprocess them
         // Since it is possible that we do not have an end timestamp for a given compilation
         // section, we need to iterate them and if an end is missing, we assign the end of
         // the section to the start of the following section.
-
-        let mut sections = unit_time.sections.clone().into_iter().fold(
+        let mut sections = sections.into_iter().fold(
             // The frontend section is currently implicit in rustc.
             // It is assumed to start at compilation start and end when codegen starts,
             // So we hard-code it here.
@@ -593,11 +585,10 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 },
             ));
         }
-
-        AggregatedSections::Sections(sections)
-    } else if let Some(rmeta) = unit_time.rmeta_time {
+        Some(sections)
+    } else if let Some(rmeta) = rmeta_time {
         // We only know when the rmeta time was generated
-        AggregatedSections::Sections(vec![
+        Some(vec![
             (
                 SectionName::Frontend,
                 SectionData {
@@ -614,8 +605,8 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             ),
         ])
     } else {
-        // We only know the total duration
-        AggregatedSections::OnlyTotalDuration
+        // No section data provided. We only know the total duration.
+        None
     }
 }
 
