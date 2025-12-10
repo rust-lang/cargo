@@ -17,7 +17,7 @@ use super::UnitTime;
 
 /// Name of an individual compilation section.
 #[derive(Clone, Hash, Eq, PartialEq)]
-pub(super) enum SectionName {
+pub enum SectionName {
     Frontend,
     Codegen,
     Named(String),
@@ -61,11 +61,11 @@ impl serde::ser::Serialize for SectionName {
 
 /// Postprocessed section data that has both start and an end.
 #[derive(Copy, Clone, serde::Serialize)]
-pub(super) struct SectionData {
+pub struct SectionData {
     /// Start (relative to the start of the unit)
-    start: f64,
+    pub start: f64,
     /// End (relative to the start of the unit)
-    end: f64,
+    pub end: f64,
 }
 
 impl SectionData {
@@ -90,13 +90,13 @@ pub struct Concurrency {
 
 pub struct RenderContext<'a> {
     /// A rendered string of when compilation started.
-    pub start_str: &'a str,
+    pub start_str: String,
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descriptions)`.
     pub root_units: &'a [(String, Vec<String>)],
     /// The build profile.
-    pub profile: &'a str,
+    pub profile: String,
     /// Total number of fresh units.
     pub total_fresh: u32,
     /// Total number of dirty units.
@@ -111,9 +111,9 @@ pub struct RenderContext<'a> {
     /// system.
     pub cpu_usage: &'a [(f64, f64)],
     /// Compiler version info, i.e., `rustc 1.92.0-beta.2 (0a411606e 2025-10-31)`.
-    pub rustc_version: &'a str,
+    pub rustc_version: String,
     /// The host triple (arch-platform-OS).
-    pub host: &'a str,
+    pub host: String,
     /// The requested target platforms of compilation for this build.
     pub requested_targets: &'a [&'a str],
     /// The number of jobs specified for this build.
@@ -125,7 +125,7 @@ pub struct RenderContext<'a> {
 }
 
 /// Writes an HTML report.
-pub(super) fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
+pub fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     // The last concurrency record should equal to the last unit finished time.
     let duration = ctx.concurrency.last().map(|c| c.t).unwrap_or(0.0);
     let roots: Vec<&str> = ctx
@@ -398,7 +398,7 @@ pub(super) fn to_unit_data(
 }
 
 /// Derives concurrency information from unit timing data.
-pub(super) fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
+pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
     if unit_data.is_empty() {
         return Vec::new();
     }
@@ -611,7 +611,7 @@ pub fn aggregate_sections(
 }
 
 /// Rounds seconds to 0.01s precision.
-fn round_to_centisecond(x: f64) -> f64 {
+pub fn round_to_centisecond(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
 }
 

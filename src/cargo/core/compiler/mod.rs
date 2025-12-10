@@ -46,7 +46,7 @@ mod output_depinfo;
 mod output_sbom;
 pub mod rustdoc;
 pub mod standard_lib;
-mod timings;
+pub mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
