@@ -8,6 +8,9 @@
   ignorePaths: [
     '**/tests/**',
   ],
+  // Ignore curl-sys, for now
+  // https://github.com/rust-lang/cargo/issues/16357
+  ignoreDeps: ['curl-sys'],
   customManagers: [
     {
       customType: 'regex',
