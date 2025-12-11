@@ -108,7 +108,7 @@ pub struct RunId {
 }
 
 impl RunId {
-    const FORMAT: &str = "%Y-%m-%dT%H%M%S%3fZ";
+    const FORMAT: &str = "%Y%m%dT%H%M%S%3fZ";
 
     pub fn new<H: Hash>(h: &H) -> RunId {
         RunId {
@@ -140,7 +140,7 @@ impl std::str::FromStr for RunId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let msg =
-            || format!("expect run ID in format `2006-07-24T012128000Z-<16-char-hex>`, got `{s}`");
+            || format!("expect run ID in format `20060724T012128000Z-<16-char-hex>`, got `{s}`");
         let Some((timestamp, hash)) = s.rsplit_once('-') else {
             anyhow::bail!(msg());
         };
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn run_id_round_trip() {
-        let id = "2006-07-24T012128000Z-b0fd440798ab3cfb";
+        let id = "20060724T012128000Z-b0fd440798ab3cfb";
         assert_eq!(id, &id.parse::<RunId>().unwrap().to_string());
     }
 }
