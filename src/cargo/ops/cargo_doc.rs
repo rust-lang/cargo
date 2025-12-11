@@ -1,5 +1,6 @@
+use crate::core::Workspace;
 use crate::core::compiler::{Compilation, CompileKind};
-use crate::core::{Shell, Workspace, shell::Verbosity};
+use crate::core::shell::Verbosity;
 use crate::ops;
 use crate::util;
 use crate::util::CargoResult;
@@ -75,14 +76,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         let path = path_by_output_format(&compilation, &kind, &name, &options.output_format);
 
         if path.exists() {
-            let config_browser = {
-                let cfg: Option<PathAndArgs> = ws.gctx().get("doc.browser")?;
-                cfg.map(|path_args| (path_args.path.resolve_program(ws.gctx()), path_args.args))
-            };
-            let mut shell = ws.gctx().shell();
-            let link = shell.err_file_hyperlink(&path);
-            shell.status("Opening", format!("{link}{}{link:#}", path.display()))?;
-            open_docs(&path, &mut shell, config_browser, ws.gctx())?;
+            open(&path, ws.gctx())?;
         }
     } else if ws.gctx().shell().verbosity() == Verbosity::Verbose {
         for name in &compilation.root_crate_names {
@@ -217,12 +211,16 @@ fn path_by_output_format(
     }
 }
 
-fn open_docs(
-    path: &Path,
-    shell: &mut Shell,
-    config_browser: Option<(PathBuf, Vec<String>)>,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
+fn open(path: &Path, gctx: &GlobalContext) -> CargoResult<()> {
+    let config_browser = {
+        let cfg: Option<PathAndArgs> = gctx.get("doc.browser")?;
+        cfg.map(|path_args| (path_args.path.resolve_program(gctx), path_args.args))
+    };
+
+    let mut shell = gctx.shell();
+    let link = shell.err_file_hyperlink(&path);
+    shell.status("Opening", format!("{link}{}{link:#}", path.display()))?;
+
     let browser =
         config_browser.or_else(|| Some((PathBuf::from(gctx.get_env_os("BROWSER")?), Vec::new())));
 
@@ -239,7 +237,7 @@ fn open_docs(
         None => {
             if let Err(e) = opener::open(&path) {
                 let e = e.into();
-                crate::display_warning_with_error("couldn't open docs", &e, shell);
+                crate::display_warning_with_error("couldn't open docs", &e, &mut shell);
             }
         }
     };
