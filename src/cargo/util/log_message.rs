@@ -24,6 +24,8 @@ pub enum LogMessage {
         host: String,
         /// Number of parallel jobs.
         jobs: u32,
+        /// Available parallelism of the compilation environment.
+        num_cpus: Option<u64>,
         /// Build profile name (e.g., "dev", "release").
         profile: String,
         /// The rustc version (`1.23.4-beta.2`).

@@ -124,6 +124,8 @@ pub struct RenderContext<'a> {
     pub requested_targets: &'a [&'a str],
     /// The number of jobs specified for this build.
     pub jobs: u32,
+    /// Available parallelism of the compilation environment.
+    pub num_cpus: Option<u64>,
     /// Fatal error during the build.
     pub error: &'a Option<anyhow::Error>,
 }
@@ -185,9 +187,10 @@ fn write_summary_table(
     let total_time = format!("{:.1}s{}", duration, time_human);
 
     let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap_or(0);
-    let num_cpus = std::thread::available_parallelism()
-        .map(|x| x.get().to_string())
-        .unwrap_or_else(|_| "n/a".into());
+    let num_cpus = ctx
+        .num_cpus
+        .map(|x| x.to_string())
+        .unwrap_or_else(|| "n/a".into());
 
     let requested_targets = ctx.requested_targets.join(", ");
 
