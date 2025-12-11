@@ -4,15 +4,12 @@ use crate::core::shell::Verbosity;
 use crate::ops;
 use crate::util;
 use crate::util::CargoResult;
-use crate::util::context::{GlobalContext, PathAndArgs};
 
 use anyhow::{Error, bail};
 use cargo_util::ProcessBuilder;
 
 use std::ffi::OsString;
-use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
 use std::str::FromStr;
 
 /// Format of rustdoc [`--output-format`][1].
@@ -76,7 +73,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
         let path = path_by_output_format(&compilation, &kind, &name, &options.output_format);
 
         if path.exists() {
-            open(&path, ws.gctx())?;
+            util::open::open(&path, ws.gctx())?;
         }
     } else if ws.gctx().shell().verbosity() == Verbosity::Verbose {
         for name in &compilation.root_crate_names {
@@ -209,38 +206,4 @@ fn path_by_output_format(
             .join(name)
             .join("index.html")
     }
-}
-
-fn open(path: &Path, gctx: &GlobalContext) -> CargoResult<()> {
-    let config_browser = {
-        let cfg: Option<PathAndArgs> = gctx.get("doc.browser")?;
-        cfg.map(|path_args| (path_args.path.resolve_program(gctx), path_args.args))
-    };
-
-    let mut shell = gctx.shell();
-    let link = shell.err_file_hyperlink(&path);
-    shell.status("Opening", format!("{link}{}{link:#}", path.display()))?;
-
-    let browser =
-        config_browser.or_else(|| Some((PathBuf::from(gctx.get_env_os("BROWSER")?), Vec::new())));
-
-    match browser {
-        Some((browser, initial_args)) => {
-            if let Err(e) = Command::new(&browser).args(initial_args).arg(path).status() {
-                shell.warn(format!(
-                    "Couldn't open docs with {}: {}",
-                    browser.to_string_lossy(),
-                    e
-                ))?;
-            }
-        }
-        None => {
-            if let Err(e) = opener::open(&path) {
-                let e = e.into();
-                crate::display_warning_with_error("couldn't open docs", &e, &mut shell);
-            }
-        }
-    };
-
-    Ok(())
 }
