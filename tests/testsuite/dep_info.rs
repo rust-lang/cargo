@@ -588,7 +588,7 @@ fn no_trailing_separator_after_package_root_build_script() {
     );
 }
 
-#[cargo_test(nightly, reason = "proc_macro::tracked_path is unstable")]
+#[cargo_test(nightly, reason = "proc_macro::tracked::path is unstable")]
 fn no_trailing_separator_after_package_root_proc_macro() {
     let p = project()
         .file(
@@ -626,13 +626,13 @@ fn no_trailing_separator_after_package_root_proc_macro() {
         .file(
             "pm/src/lib.rs",
             r#"
-            #![feature(track_path)]
+            #![feature(proc_macro_tracked_path)]
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
             #[proc_macro]
             pub fn noop(_item: TokenStream) -> TokenStream {
-                proc_macro::tracked_path::path(
+                proc_macro::tracked::path(
                     std::env::current_dir().unwrap().to_str().unwrap()
                 );
                 "".parse().unwrap()
