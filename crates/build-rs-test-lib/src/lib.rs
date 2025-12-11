@@ -1,4 +1,4 @@
 #[test]
 fn test() {
-    assert!(cfg!(did_run_build_script));
+    const { assert!(cfg!(did_run_build_script)) };
 }
