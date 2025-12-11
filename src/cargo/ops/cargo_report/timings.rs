@@ -77,6 +77,8 @@ pub fn report_timings(gctx: &GlobalContext, opts: ReportTimingsOptions<'_>) -> C
         let timings_dir = target_dir.join("cargo-timings");
         paths::create_dir_all(&timings_dir)?;
         timings_dir
+    } else if let Ok(path) = gctx.get_env("__CARGO_TEST_REPORT_TIMINGS_TEMPDIR") {
+        PathBuf::from(path.to_owned())
     } else {
         TempDir::with_prefix("cargo-timings-")?.keep()
     };

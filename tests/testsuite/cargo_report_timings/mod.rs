@@ -1,6 +1,7 @@
 //! Tests for `cargo report timings`.
 
 mod help;
+mod html_snapshot;
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
