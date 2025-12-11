@@ -80,6 +80,7 @@ fn log_msg_build_started() {
     "cwd": "[ROOT]/foo",
     "host": "[HOST_TARGET]",
     "jobs": "{...}",
+    "num_cpus": "{...}",
     "profile": "dev",
     "reason": "build-started",
     "run_id": "[..]T[..]Z-[..]",

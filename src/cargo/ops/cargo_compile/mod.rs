@@ -162,10 +162,14 @@ pub fn compile_ws<'a>(
 
     if let Some(ref logger) = logger {
         let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+        let num_cpus = std::thread::available_parallelism()
+            .ok()
+            .map(|x| x.get() as u64);
         logger.log(LogMessage::BuildStarted {
             cwd: ws.gctx().cwd().to_path_buf(),
             host: rustc.host.to_string(),
             jobs: options.build_config.jobs,
+            num_cpus,
             profile: options.build_config.requested_profile.to_string(),
             rustc_version: rustc.version.to_string(),
             rustc_version_verbose: rustc.verbose_version.clone(),

@@ -437,12 +437,14 @@ impl<'gctx> Timings<'gctx> {
                 .iter()
                 .map(|kind| build_runner.bcx.target_data.short_name(kind))
                 .collect::<Vec<_>>();
+            let num_cpus = std::thread::available_parallelism()
+                .ok()
+                .map(|x| x.get() as u64);
 
             let unit_data = report::to_unit_data(&self.unit_times, &self.unit_to_index);
             let concurrency = report::compute_concurrency(&unit_data);
 
             let ctx = report::RenderContext {
-                start: self.start,
                 start_str: &self.start_str,
                 root_units: &self.root_targets,
                 profile: &self.profile,
@@ -455,6 +457,7 @@ impl<'gctx> Timings<'gctx> {
                 host: &build_runner.bcx.rustc().host,
                 requested_targets,
                 jobs: build_runner.bcx.jobs(),
+                num_cpus,
                 error,
             };
             report::write_html(ctx, &mut f)?;

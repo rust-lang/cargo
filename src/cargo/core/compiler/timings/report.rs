@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
-use std::time::Instant;
 
 use itertools::Itertools as _;
 
@@ -96,8 +95,6 @@ pub struct Concurrency {
 }
 
 pub struct RenderContext<'a> {
-    /// When Cargo started.
-    pub start: Instant,
     /// A rendered string of when compilation started.
     pub start_str: &'a str,
     /// A summary of the root units.
@@ -127,13 +124,16 @@ pub struct RenderContext<'a> {
     pub requested_targets: &'a [&'a str],
     /// The number of jobs specified for this build.
     pub jobs: u32,
+    /// Available parallelism of the compilation environment.
+    pub num_cpus: Option<u64>,
     /// Fatal error during the build.
     pub error: &'a Option<anyhow::Error>,
 }
 
 /// Writes an HTML report.
 pub(super) fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let duration = ctx.start.elapsed().as_secs_f64();
+    // The last concurrency record should equal to the last unit finished time.
+    let duration = ctx.concurrency.last().map(|c| c.t).unwrap_or(0.0);
     let roots: Vec<&str> = ctx
         .root_units
         .iter()
@@ -186,10 +186,11 @@ fn write_summary_table(
     };
     let total_time = format!("{:.1}s{}", duration, time_human);
 
-    let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap();
-    let num_cpus = std::thread::available_parallelism()
-        .map(|x| x.get().to_string())
-        .unwrap_or_else(|_| "n/a".into());
+    let max_concurrency = ctx.concurrency.iter().map(|c| c.active).max().unwrap_or(0);
+    let num_cpus = ctx
+        .num_cpus
+        .map(|x| x.to_string())
+        .unwrap_or_else(|| "n/a".into());
 
     let requested_targets = ctx.requested_targets.join(", ");
 
