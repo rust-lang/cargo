@@ -213,6 +213,18 @@ impl Shell {
         }
     }
 
+    // Runs the callback if unless the verbosity is `QuietIfUnchanged` and
+    // `unchanged` is true.
+    pub fn if_unchanged<F>(&mut self, unchanged: bool, mut callback: F) -> CargoResult<()>
+    where
+        F: FnMut(&mut Shell) -> CargoResult<()>,
+    {
+        match (self.verbosity, unchanged) {
+            (Verbosity::QuietIfUnchanged, true) => Ok(()),
+            _ => callback(self),
+        }
+    }
+
     /// Prints a red 'error' message.
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         if self.needs_clear {
@@ -558,6 +570,8 @@ impl TtyWidth {
 pub enum Verbosity {
     Verbose,
     Normal,
+    /// No output if it's a no-change build with no warnings.
+    QuietIfUnchanged,
     Quiet,
 }
 

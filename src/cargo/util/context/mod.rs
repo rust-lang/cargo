@@ -1115,6 +1115,7 @@ impl GlobalContext {
         &mut self,
         verbose: u32,
         quiet: bool,
+        is_manifest: bool,
         color: Option<&str>,
         frozen: bool,
         locked: bool,
@@ -1163,15 +1164,21 @@ impl GlobalContext {
         let verbose = verbose != 0;
         let verbosity = match (verbose, quiet) {
             (true, true) => bail!("cannot set both --verbose and --quiet"),
-            (true, false) => Verbosity::Verbose,
-            (false, true) => Verbosity::Quiet,
+            (true, _) => Verbosity::Verbose,
+            (_, true) => Verbosity::Quiet,
             (false, false) => match (term.verbose, term.quiet) {
                 (Some(true), Some(true)) => {
                     bail!("cannot set both `term.verbose` and `term.quiet`")
                 }
                 (Some(true), _) => Verbosity::Verbose,
                 (_, Some(true)) => Verbosity::Quiet,
-                _ => Verbosity::Normal,
+                _ => {
+                    if is_manifest {
+                        Verbosity::QuietIfUnchanged
+                    } else {
+                        Verbosity::Normal
+                    }
+                }
             },
         };
         self.shell().set_verbosity(verbosity);

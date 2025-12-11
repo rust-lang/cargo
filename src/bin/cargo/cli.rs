@@ -417,7 +417,10 @@ fn configure_gctx(
     let mut quiet = args.flag("quiet")
         || subcommand_args.map(|a| a.flag("quiet")).unwrap_or_default()
         || global_args.quiet;
-    if matches!(exec, Some(Exec::Manifest(_))) && !quiet {
+
+    let is_manifest = matches!(exec, Some(Exec::Manifest(_)));
+
+    if is_manifest && !quiet {
         // Verbosity is shifted quieter for `Exec::Manifest` as it is can be used as if you ran
         // `cargo install` and we especially shouldn't pollute programmatic output.
         //
@@ -449,6 +452,7 @@ fn configure_gctx(
     gctx.configure(
         verbose,
         quiet,
+        is_manifest,
         color,
         frozen,
         locked,

@@ -122,7 +122,11 @@ pub fn run(
         process.display_env_vars();
     }
 
-    gctx.shell().status("Running", process.to_string())?;
+    let process_string = process.to_string();
+
+    gctx.shell().if_unchanged(compile.unchanged, move |shell| {
+        shell.status("Running", &process_string)
+    })?;
 
     process.exec_replace()
 }

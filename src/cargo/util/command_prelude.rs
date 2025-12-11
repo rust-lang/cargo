@@ -1559,6 +1559,7 @@ pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
 
     let verbose = 0;
     let quiet = true;
+    let is_manifest = false;
     let color = None;
     let frozen = false;
     let locked = true;
@@ -1570,6 +1571,7 @@ pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
     gctx.configure(
         verbose,
         quiet,
+        is_manifest,
         color,
         frozen,
         locked,

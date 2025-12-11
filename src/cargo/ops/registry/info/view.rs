@@ -181,7 +181,7 @@ fn pretty_deps(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     match verbosity {
-        Verbosity::Quiet | Verbosity::Normal => {
+        Verbosity::Quiet | Verbosity::Normal | Verbosity::QuietIfUnchanged => {
             return Ok(());
         }
         Verbosity::Verbose => {}
@@ -345,7 +345,7 @@ fn pretty_features(
         .filter(|(_, s)| s.is_disabled())
         .count();
     let show_all = match verbosity {
-        Verbosity::Quiet | Verbosity::Normal => false,
+        Verbosity::Quiet | Verbosity::Normal | Verbosity::QuietIfUnchanged => false,
         Verbosity::Verbose => true,
     };
     let show_activated = total_activated <= MAX_FEATURE_PRINTS || show_all;

@@ -170,6 +170,11 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         self.dep_map.len()
     }
 
+    /// Return an iterator over the values in the queue.
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.dep_map.values().map(|(_, v)| v)
+    }
+
     /// Indicate that something has finished.
     ///
     /// Calling this function indicates that the `node` has produced `edge`. All

@@ -848,7 +848,13 @@ impl<'gctx> DrainState<'gctx> {
                 "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target(s) in {time_elapsed}",
             );
             // It doesn't really matter if this fails.
-            let _ = build_runner.bcx.gctx.shell().status("Finished", message);
+            let _ = build_runner
+                .bcx
+                .gctx
+                .shell()
+                .if_unchanged(build_runner.compilation.unchanged, move |shell| {
+                    shell.status("Finished", &message)
+                });
             future_incompat::save_and_display_report(
                 build_runner.bcx,
                 &self.per_package_future_incompat_reports,

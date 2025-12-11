@@ -1095,7 +1095,7 @@ fn fetch_with_cli(
         cmd.arg(format!("--depth={depth}"));
     }
     match gctx.shell().verbosity() {
-        Verbosity::Normal => {}
+        Verbosity::Normal | Verbosity::QuietIfUnchanged => {}
         Verbosity::Verbose => {
             cmd.arg("--verbose");
         }

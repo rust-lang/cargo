@@ -82,6 +82,7 @@ fn global_context_configure(gctx: &mut GlobalContext, args: &ArgMatches) -> CliR
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
     let quiet = args.flag("quiet");
+    let is_manifest = false; // TODO
     let color = args.get_one::<String>("color").map(String::as_str);
     let frozen = args.flag("frozen");
     let locked = args.flag("locked");
@@ -97,6 +98,7 @@ fn global_context_configure(gctx: &mut GlobalContext, args: &ArgMatches) -> CliR
     gctx.configure(
         verbose,
         quiet,
+        is_manifest,
         color,
         frozen,
         locked,

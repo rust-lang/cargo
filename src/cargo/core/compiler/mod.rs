@@ -202,6 +202,9 @@ fn compile<'gctx>(
             let force = exec.force_rebuild(unit) || force_rebuild;
             let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
             job.before(if job.freshness().is_dirty() {
+                // Mark the compilation as having done some work.
+                build_runner.compilation.unchanged = false;
+
                 let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
                     rustdoc(build_runner, unit)?
                 } else {

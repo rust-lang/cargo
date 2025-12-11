@@ -131,6 +131,12 @@ pub struct Compilation<'gctx> {
 
     /// The total number of lint warnings emitted by the compilation.
     pub lint_warning_count: usize,
+
+    /// Were all compiled units up to date? This is initialised to true
+    /// and then set to false if we have to actually compile anything, instead
+    /// of using cached artifacts. This is used by `cargo script` to suppress
+    /// cargo messages when the script is already built.
+    pub unchanged: bool,
 }
 
 impl<'gctx> Compilation<'gctx> {
@@ -170,6 +176,7 @@ impl<'gctx> Compilation<'gctx> {
                 .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
             lint_warning_count: 0,
+            unchanged: true,
         })
     }
 
