@@ -204,6 +204,36 @@ impl ser::Serialize for CompileMode {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for CompileMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "test" => Ok(CompileMode::Test),
+            "build" => Ok(CompileMode::Build),
+            "check" => Ok(CompileMode::Check { test: false }),
+            "doc" => Ok(CompileMode::Doc),
+            "doctest" => Ok(CompileMode::Doctest),
+            "docscrape" => Ok(CompileMode::Docscrape),
+            "run-custom-build" => Ok(CompileMode::RunCustomBuild),
+            other => Err(serde::de::Error::unknown_variant(
+                other,
+                &[
+                    "test",
+                    "build",
+                    "check",
+                    "doc",
+                    "doctest",
+                    "docscrape",
+                    "run-custom-build",
+                ],
+            )),
+        }
+    }
+}
+
 impl CompileMode {
     /// Returns `true` if the unit is being checked.
     pub fn is_check(self) -> bool {

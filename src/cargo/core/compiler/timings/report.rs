@@ -5,25 +5,19 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 
+use indexmap::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
 use crate::core::compiler::Unit;
 
+use super::CompilationSection;
 use super::UnitData;
 use super::UnitTime;
 
-/// Contains post-processed data of individual compilation sections.
-enum AggregatedSections {
-    /// We know the names and durations of individual compilation sections
-    Sections(Vec<(SectionName, SectionData)>),
-    /// We know only the total duration
-    OnlyTotalDuration,
-}
-
 /// Name of an individual compilation section.
 #[derive(Clone, Hash, Eq, PartialEq)]
-pub(super) enum SectionName {
+pub enum SectionName {
     Frontend,
     Codegen,
     Named(String),
@@ -67,11 +61,11 @@ impl serde::ser::Serialize for SectionName {
 
 /// Postprocessed section data that has both start and an end.
 #[derive(Copy, Clone, serde::Serialize)]
-pub(super) struct SectionData {
+pub struct SectionData {
     /// Start (relative to the start of the unit)
-    start: f64,
+    pub start: f64,
     /// End (relative to the start of the unit)
-    end: f64,
+    pub end: f64,
 }
 
 impl SectionData {
@@ -96,13 +90,13 @@ pub struct Concurrency {
 
 pub struct RenderContext<'a> {
     /// A rendered string of when compilation started.
-    pub start_str: &'a str,
+    pub start_str: String,
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descriptions)`.
     pub root_units: &'a [(String, Vec<String>)],
     /// The build profile.
-    pub profile: &'a str,
+    pub profile: String,
     /// Total number of fresh units.
     pub total_fresh: u32,
     /// Total number of dirty units.
@@ -117,9 +111,9 @@ pub struct RenderContext<'a> {
     /// system.
     pub cpu_usage: &'a [(f64, f64)],
     /// Compiler version info, i.e., `rustc 1.92.0-beta.2 (0a411606e 2025-10-31)`.
-    pub rustc_version: &'a str,
+    pub rustc_version: String,
     /// The host triple (arch-platform-OS).
-    pub host: &'a str,
+    pub host: String,
     /// The requested target platforms of compilation for this build.
     pub requested_targets: &'a [&'a str],
     /// The number of jobs specified for this build.
@@ -131,7 +125,7 @@ pub struct RenderContext<'a> {
 }
 
 /// Writes an HTML report.
-pub(super) fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
+pub fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     // The last concurrency record should equal to the last unit finished time.
     let duration = ctx.concurrency.last().map(|c| c.t).unwrap_or(0.0);
     let roots: Vec<&str> = ctx
@@ -384,10 +378,7 @@ pub(super) fn to_unit_data(
                 .iter()
                 .filter_map(|unit| unit_map.get(unit).copied())
                 .collect();
-            let sections = match aggregate_sections(ut) {
-                AggregatedSections::Sections(sections) => Some(sections),
-                AggregatedSections::OnlyTotalDuration => None,
-            };
+            let sections = aggregate_sections(ut.sections.clone(), ut.duration, ut.rmeta_time);
 
             UnitData {
                 i,
@@ -407,7 +398,7 @@ pub(super) fn to_unit_data(
 }
 
 /// Derives concurrency information from unit timing data.
-pub(super) fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
+pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
     if unit_data.is_empty() {
         return Vec::new();
     }
@@ -539,16 +530,17 @@ pub(super) fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
 ///   in which case we use them to determine the headers.
 /// - We have at least one rmeta time, so we hard-code Frontend and Codegen headers.
 /// - We only have total durations, so we don't add any additional headers.
-fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
-    let end = unit_time.duration;
-
-    if !unit_time.sections.is_empty() {
+pub fn aggregate_sections(
+    sections: IndexMap<String, CompilationSection>,
+    end: f64,
+    rmeta_time: Option<f64>,
+) -> Option<Vec<(SectionName, SectionData)>> {
+    if !sections.is_empty() {
         // We have some detailed compilation section timings, so we postprocess them
         // Since it is possible that we do not have an end timestamp for a given compilation
         // section, we need to iterate them and if an end is missing, we assign the end of
         // the section to the start of the following section.
-
-        let mut sections = unit_time.sections.clone().into_iter().fold(
+        let mut sections = sections.into_iter().fold(
             // The frontend section is currently implicit in rustc.
             // It is assumed to start at compilation start and end when codegen starts,
             // So we hard-code it here.
@@ -593,11 +585,10 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
                 },
             ));
         }
-
-        AggregatedSections::Sections(sections)
-    } else if let Some(rmeta) = unit_time.rmeta_time {
+        Some(sections)
+    } else if let Some(rmeta) = rmeta_time {
         // We only know when the rmeta time was generated
-        AggregatedSections::Sections(vec![
+        Some(vec![
             (
                 SectionName::Frontend,
                 SectionData {
@@ -614,13 +605,13 @@ fn aggregate_sections(unit_time: &UnitTime) -> AggregatedSections {
             ),
         ])
     } else {
-        // We only know the total duration
-        AggregatedSections::OnlyTotalDuration
+        // No section data provided. We only know the total duration.
+        None
     }
 }
 
 /// Rounds seconds to 0.01s precision.
-fn round_to_centisecond(x: f64) -> f64 {
+pub fn round_to_centisecond(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
 }
 
