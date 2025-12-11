@@ -111,7 +111,14 @@ fn invalid_log() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to analyze log at `[ROOT]/home/.cargo/log/[..]T[..]Z-[..].jsonl`
+
+Caused by:
+  no timing data found in log
+
+"#]])
         .run();
 }
 
@@ -133,7 +140,14 @@ fn empty_log() {
     // If the make-up log file was picked, the command would have failed.
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to analyze log at `[ROOT]/home/.cargo/log/[..]T[..]Z-[..].jsonl`
+
+Caused by:
+  no timing data found in log
+
+"#]])
         .run();
 }
 
@@ -164,10 +178,13 @@ fn prefer_latest() {
     // if it had picked the corrupted first log file, it would have failed.
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
         .run();
 
-    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
+    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 1);
 }
 
 #[cargo_test]
@@ -203,10 +220,13 @@ fn prefer_workspace() {
     // Back to foo, if it had picked the corrupted log file, it would have failed.
     foo.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
         .run();
 
-    assert_eq!(foo.glob("**/cargo-timing-*.html").count(), 0);
+    assert_eq!(foo.glob("**/cargo-timing-*.html").count(), 1);
 }
 
 #[cargo_test]
@@ -226,7 +246,10 @@ fn outside_workspace() {
     // * save the report in a temp directory
     cargo_process("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [..]/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
         .run();
 
     // Have no timing HTML under target directory
@@ -247,10 +270,13 @@ fn with_section_timings() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
         .run();
 
-    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
+    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 1);
 }
 
 #[cargo_test]
@@ -278,8 +304,11 @@ fn with_multiple_targets() {
 
     p.cargo("report timings -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
         .run();
 
-    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
+    assert_eq!(p.glob("**/cargo-timing-*.html").count(), 1);
 }
