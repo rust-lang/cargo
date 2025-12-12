@@ -39,6 +39,16 @@ pub enum LogMessage {
         /// Workspace root directory.
         workspace_root: PathBuf,
     },
+    /// Emitted when resolving dependencies starts.
+    ResolutionStarted {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when resolving dependencies finishes.
+    ResolutionFinished {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
     /// Emitted when unit graph generation starts.
     UnitGraphStarted {
         /// Seconds elapsed from build start.

@@ -549,6 +549,57 @@ fn log_msg_unit_graph() {
     );
 }
 
+#[cargo_test]
+fn log_msg_resolution_events() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
+        .run();
+
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  "{...}",
+  {
+    "elapsed": "{...}",
+    "reason": "resolution-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "reason": "resolution-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  "{...}"
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
 fn get_log(idx: usize) -> String {
     std::fs::read_to_string(log_file(idx)).unwrap()
 }

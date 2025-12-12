@@ -304,6 +304,11 @@ pub fn create_bcx<'a, 'gctx>(
         }
     };
     let dry_run = false;
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::ResolutionStarted { elapsed });
+    }
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -320,6 +325,11 @@ pub fn create_bcx<'a, 'gctx>(
         targeted_resolve: resolve,
         specs_and_features,
     } = resolve;
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::ResolutionFinished { elapsed });
+    }
 
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
         let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
