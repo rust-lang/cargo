@@ -4,7 +4,7 @@ use crate::prelude::*;
 
 use cargo_test_support::basic_manifest;
 use cargo_test_support::compare::assert_e2e;
-use cargo_test_support::paths;
+use cargo_test_support::paths::log_file;
 use cargo_test_support::project;
 use cargo_test_support::str;
 
@@ -509,27 +509,6 @@ fn log_rebuild_reason_no_rebuild() {
     );
 }
 
-/// This also asserts the number of log files is exactly the same as `idx + 1`.
 fn get_log(idx: usize) -> String {
-    let cargo_home = paths::cargo_home();
-    let log_dir = cargo_home.join("log");
-
-    let entries = std::fs::read_dir(&log_dir).unwrap();
-    let mut log_files: Vec<_> = entries
-        .filter_map(Result::ok)
-        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-        .collect();
-
-    // Sort them to get chronological order
-    log_files.sort_unstable_by(|a, b| a.file_name().to_str().cmp(&b.file_name().to_str()));
-
-    assert_eq!(
-        idx + 1,
-        log_files.len(),
-        "unexpected number of log files: {}, expected {}",
-        log_files.len(),
-        idx + 1
-    );
-
-    std::fs::read_to_string(log_files[idx].path()).unwrap()
+    std::fs::read_to_string(log_file(idx)).unwrap()
 }

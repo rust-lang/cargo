@@ -52,6 +52,7 @@ mod cargo_publish;
 mod cargo_read_manifest;
 mod cargo_remove;
 mod cargo_report;
+mod cargo_report_timings;
 mod cargo_run;
 mod cargo_rustc;
 mod cargo_rustdoc;

@@ -119,6 +119,41 @@ pub fn cargo_home() -> PathBuf {
     home().join(".cargo")
 }
 
+/// Path to the current test's `$CARGO_LOG`
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/home/.cargo/log`
+pub fn log_dir() -> PathBuf {
+    cargo_home().join("log")
+}
+
+/// Path to the current test's `$CARGO_LOG` file
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/home/.cargo/log/<id>.jsonl`
+///
+/// This also asserts the number of log files is exactly the same as `idx + 1`.
+pub fn log_file(idx: usize) -> PathBuf {
+    let log_dir = log_dir();
+
+    let entries = std::fs::read_dir(&log_dir).unwrap();
+    let mut log_files: Vec<_> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+        .collect();
+
+    // Sort them to get chronological order
+    log_files.sort_unstable_by(|a, b| a.file_name().to_str().cmp(&b.file_name().to_str()));
+
+    assert_eq!(
+        idx + 1,
+        log_files.len(),
+        "unexpected number of log files: {}, expected {}",
+        log_files.len(),
+        idx + 1
+    );
+
+    log_files[idx].path()
+}
+
 /// Common path and file operations
 pub trait CargoPathExt {
     fn to_url(&self) -> url::Url;

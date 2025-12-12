@@ -1,6 +1,10 @@
 use crate::command_prelude::*;
-use cargo::core::compiler::future_incompat::{OnDiskReports, REPORT_PREAMBLE};
+
+use cargo::CargoResult;
+use cargo::core::compiler::future_incompat::OnDiskReports;
+use cargo::core::compiler::future_incompat::REPORT_PREAMBLE;
 use cargo::drop_println;
+use cargo::ops;
 
 pub fn cli() -> Command {
     subcommand("report")
@@ -23,11 +27,28 @@ pub fn cli() -> Command {
                 )
                 .arg_package("Package to display a report for"),
         )
+        .subcommand(
+            subcommand("timings")
+                .about("Reports the build timings of previous builds (unstable)")
+                .arg(flag("open", "Opens the timing report in a browser")),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
         Some(("future-incompatibilities", args)) => report_future_incompatibilities(gctx, args),
+        Some(("timings", args)) => {
+            gctx.cli_unstable().fail_if_stable_command(
+                gctx,
+                "report timings",
+                15844,
+                "build-analysis",
+                gctx.cli_unstable().build_analysis,
+            )?;
+            let opts = timings_opts(gctx, args)?;
+            ops::report_timings(gctx, opts)?;
+            Ok(())
+        }
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
         }
@@ -48,4 +69,13 @@ fn report_future_incompatibilities(gctx: &GlobalContext, args: &ArgMatches) -> C
     drop_println!(gctx, "{}", REPORT_PREAMBLE);
     drop(gctx.shell().print_ansi_stdout(report.as_bytes()));
     Ok(())
+}
+
+fn timings_opts<'a>(
+    gctx: &'a GlobalContext,
+    args: &ArgMatches,
+) -> CargoResult<ops::ReportTimingsOptions<'a>> {
+    let open_result = args.get_flag("open");
+
+    Ok(ops::ReportTimingsOptions { open_result, gctx })
 }
