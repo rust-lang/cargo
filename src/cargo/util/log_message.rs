@@ -39,6 +39,16 @@ pub enum LogMessage {
         /// Workspace root directory.
         workspace_root: PathBuf,
     },
+    /// Emitted when unit graph generation starts.
+    UnitGraphStarted {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when unit graph generation finishes.
+    UnitGraphFinished {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
     /// Emitted when a compilation unit starts.
     UnitStarted {
         /// Package ID specification.

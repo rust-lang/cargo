@@ -401,6 +401,11 @@ pub fn create_bcx<'a, 'gctx>(
     let mut unit_graph = HashMap::new();
     let mut scrape_units = Vec::new();
 
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::UnitGraphStarted { elapsed });
+    }
+
     for SpecsAndResolvedFeatures {
         specs,
         resolved_features,
@@ -504,6 +509,11 @@ pub fn create_bcx<'a, 'gctx>(
         host_kind_requested.then_some(explicit_host_kind),
         build_config.compile_time_deps_only,
     );
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::UnitGraphFinished { elapsed });
+    }
 
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {

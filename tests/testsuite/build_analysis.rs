@@ -127,10 +127,7 @@ fn log_msg_timing_info() {
         &get_log(0),
         str![[r#"
 [
-  {
-    "...": "{...}",
-    "reason": "build-started"
-  },
+  "{...}",
   {
     "elapsed": "{...}",
     "index": 0,
@@ -224,10 +221,7 @@ fn log_msg_timing_info_section_timings() {
         &get_log(0),
         str![[r#"
 [
-  {
-    "...": "{...}",
-    "reason": "build-started"
-  },
+  "{...}",
   {
     "elapsed": "{...}",
     "index": 0,
@@ -373,28 +367,22 @@ fn log_rebuild_reason_fresh_build() {
 "#]])
         .run();
 
-    // Fresh builds do NOT log rebuild-reason
-    // Only build-started and timing-info are logged
+    // Fresh builds do NOT log rebuild-reason,
+    // which is emitted between unit-graph-finished and unit-started
     assert_e2e().eq(
         &get_log(0),
         str![[r#"
 [
+  "{...}",
   {
     "...": "{...}",
-    "reason": "build-started"
+    "reason": "unit-graph-finished"
   },
   {
     "...": "{...}",
     "reason": "unit-started"
   },
-  {
-    "...": "{...}",
-    "reason": "unit-rmeta-finished"
-  },
-  {
-    "...": "{...}",
-    "reason": "unit-finished"
-  }
+  "{...}"
 ]
 "#]]
         .is_json()
@@ -430,9 +418,10 @@ fn log_rebuild_reason_file_changed() {
         &get_log(0),
         str![[r#"
 [
+  "{...}",
   {
     "...": "{...}",
-    "reason": "build-started"
+    "reason": "unit-graph-finished"
   },
   {
     "cause": {
@@ -458,14 +447,7 @@ fn log_rebuild_reason_file_changed() {
     "...": "{...}",
     "reason": "unit-started"
   },
-  {
-    "...": "{...}",
-    "reason": "unit-rmeta-finished"
-  },
-  {
-    "...": "{...}",
-    "reason": "unit-finished"
-  }
+  "{...}"
 ]
 "#]]
         .is_json()
@@ -498,10 +480,68 @@ fn log_rebuild_reason_no_rebuild() {
         &get_log(0),
         str![[r#"
 [
+  "{...}",
   {
-    "reason": "build-started",
-    "...": "{...}"
+    "...": "{...}",
+    "reason": "unit-graph-finished"
   }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
+fn log_msg_unit_graph() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // `cargo doc` generates more units than `cargo check`
+    // * check bar
+    // * build foo build.rs
+    // * run foo build.rs
+    // * doc foo
+    // * doc bar
+    p.cargo("doc -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
+        .run();
+
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  "{...}",
+  {
+    "elapsed": "{...}",
+    "reason": "unit-graph-started",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "elapsed": "{...}",
+    "reason": "unit-graph-finished",
+    "run_id": "[..]T[..]Z-[..]",
+    "timestamp": "[..]T[..]Z"
+  },
+  "{...}"
 ]
 "#]]
         .is_json()
