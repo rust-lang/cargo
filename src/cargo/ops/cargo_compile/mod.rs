@@ -64,6 +64,7 @@ use annotate_snippets::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 pub(super) mod unit_generator;
+use itertools::Itertools as _;
 use unit_generator::UnitGenerator;
 
 mod packages;
@@ -520,7 +521,23 @@ pub fn create_bcx<'a, 'gctx>(
         build_config.compile_time_deps_only,
     );
 
+    // unit_graph must be immutable after this point.
+    let unit_graph = unit_graph;
+    let units: Vec<_> = unit_graph.keys().sorted().collect();
+    let unit_to_index: HashMap<_, _> = units
+        .iter()
+        .enumerate()
+        .map(|(i, &unit)| (unit.clone(), i as u64))
+        .collect();
     if let Some(logger) = logger {
+        for (i, unit) in units.into_iter().enumerate() {
+            logger.log(LogMessage::UnitRegistered {
+                package_id: unit.pkg.package_id().to_spec(),
+                target: (&unit.target).into(),
+                mode: unit.mode,
+                index: i as u64,
+            });
+        }
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
         logger.log(LogMessage::UnitGraphFinished { elapsed });
     }
@@ -641,6 +658,7 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         target_data,
         root_units,
         unit_graph,
+        unit_to_index,
         scrape_units,
     )?;
 

@@ -59,6 +59,19 @@ pub enum LogMessage {
         /// Seconds elapsed from build start.
         elapsed: f64,
     },
+    /// Emitted when a compilation unit is registered in the unit graph,
+    /// right before [`LogMessage::UnitGraphFinished`] that Cargo finalizes
+    /// the unit graph.
+    UnitRegistered {
+        /// Package ID specification.
+        package_id: PackageIdSpec,
+        /// Cargo target (lib, bin, example, etc.).
+        target: Target,
+        /// The compilation action this unit is for (check, build, test, etc.).
+        mode: CompileMode,
+        /// Unit index for compact reference in subsequent events.
+        index: u64,
+    },
     /// Emitted when a compilation unit starts.
     UnitStarted {
         /// Package ID specification.

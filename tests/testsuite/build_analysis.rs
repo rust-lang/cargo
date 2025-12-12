@@ -536,6 +536,66 @@ fn log_msg_unit_graph() {
     "timestamp": "[..]T[..]Z"
   },
   {
+    "index": 0,
+    "mode": "check",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "unit-registered",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "bar"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "index": 1,
+    "mode": "doc",
+    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "reason": "unit-registered",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "bar"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "index": 2,
+    "mode": "doc",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "unit-registered",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "lib",
+      "name": "foo"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "index": 3,
+    "mode": "build",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "unit-registered",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "build-script",
+      "name": "build-script-build"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
+    "index": 4,
+    "mode": "run-custom-build",
+    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "reason": "unit-registered",
+    "run_id": "[..]T[..]Z-[..]",
+    "target": {
+      "kind": "build-script",
+      "name": "build-script-build"
+    },
+    "timestamp": "[..]T[..]Z"
+  },
+  {
     "elapsed": "{...}",
     "reason": "unit-graph-finished",
     "run_id": "[..]T[..]Z-[..]",
