@@ -269,6 +269,58 @@ cargo --config "target.'cfg(all(target_arch = \"arm\", target_os = \"none\"))'.r
 cargo --config profile.dev.package.image.opt-level=3 …
 ```
 
+## Including extra configuration files
+
+Configuration can include other configuration files using the top-level `include` key.
+This allows sharing configuration across multiple projects
+or splitting complex configurations into multiple files.
+
+### `include`
+
+* Type: array of strings or tables
+* Default: none
+* Environment: not supported
+
+Loads additional configuration files.
+Paths are relative to the configuration file that includes them.
+Only paths ending with `.toml` are accepted.
+
+Supports the following formats:
+
+```toml
+# array of paths
+include = [
+    "frodo.toml",
+    "samwise.toml",
+]
+
+# inline tables for more control
+include = [
+    { path = "required.toml" },
+    { path = "optional.toml", optional = true },
+]
+```
+
+> **Note:** For better readability and to avoid confusion, it is recommended to:
+> - Place `include` at the top of the configuration file
+> - Put one include per line for clearer version control diffs
+> - Use inline table syntax when optional includes are needed
+
+When using table syntax, the following fields are supported:
+
+* `path` (string, required): Path to the config file to include.
+* `optional` (boolean, default: false): If `true`, missing files are silently
+  skipped instead of causing an error.
+
+The merge behavior of `include` is different from other config values:
+
+1. Config values are first loaded from the `include` paths.
+    * Included files are loaded left to right,
+      with values from later files taking precedence over earlier ones.
+    * This step recurses if included config files also contain `include` keys.
+2. Then, the config file's own values are merged on top of the included config,
+   taking highest precedence.
+
 ## Config-relative paths
 
 Paths in config files may be absolute, relative, or a bare name without any path separators.
