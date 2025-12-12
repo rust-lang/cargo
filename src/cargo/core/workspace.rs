@@ -98,6 +98,11 @@ pub struct Workspace<'gctx> {
     /// `cargo install` or `cargo package` commands.
     is_ephemeral: bool,
 
+    /// `true` if this workspace is being used for package verification.
+    /// This is a special case of ephemeral workspace where we want to preload
+    /// cargo-generated manifests to avoid re-parsing them without the proper flags.
+    is_verifying_package: bool,
+
     /// `true` if this workspace should enforce optional dependencies even when
     /// not needed; false if this workspace should only enforce dependencies
     /// needed by the current configuration (such as in cargo install). In some
@@ -255,6 +260,7 @@ impl<'gctx> Workspace<'gctx> {
             member_ids: HashSet::new(),
             default_members: Vec::new(),
             is_ephemeral: false,
+            is_verifying_package: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
@@ -645,6 +651,15 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
+    }
+
+    pub fn is_verifying_package(&self) -> bool {
+        self.is_verifying_package
+    }
+
+    pub fn set_verifying_package(&mut self, verifying: bool) -> &mut Workspace<'gctx> {
+        self.is_verifying_package = verifying;
+        self
     }
 
     pub fn require_optional_deps(&self) -> bool {
@@ -1207,7 +1222,10 @@ impl<'gctx> Workspace<'gctx> {
         // `PathSource` with multiple entries in it, so the logic below is
         // mostly just an optimization for normal `cargo build` in workspaces
         // during development.
-        if self.is_ephemeral {
+        //
+        // However, for package verification workspaces, we do want to preload
+        // to avoid re-reading cargo-generated manifests without the proper flags.
+        if self.is_ephemeral && !self.is_verifying_package {
             return;
         }
 
