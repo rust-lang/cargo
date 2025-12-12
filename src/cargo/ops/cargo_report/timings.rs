@@ -1,5 +1,6 @@
 //! The `cargo report timings` command.
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
@@ -178,6 +179,8 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
     };
     let mut units: IndexMap<_, UnitEntry> = IndexMap::new();
 
+    let mut unit_by_index: HashMap<u64, _> = HashMap::new();
+
     for (log_index, result) in serde_json::Deserializer::from_reader(reader)
         .into_iter::<LogMessage>()
         .enumerate()
@@ -208,13 +211,17 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 ctx.profile = profile;
                 ctx.rustc_version = rustc_version;
             }
-            LogMessage::UnitStarted {
+            LogMessage::UnitRegistered {
                 package_id,
                 target,
                 mode,
                 index,
-                elapsed,
             } => {
+                unit_by_index.insert(index, (package_id, target, mode));
+            }
+            LogMessage::UnitStarted { index, elapsed } => {
+                let (package_id, target, mode) = unit_by_index.get(&index).unwrap();
+
                 let version = package_id
                     .version()
                     .map(|v| v.to_string())
@@ -223,7 +230,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 // This is pretty similar to how the current `core::compiler::timings`
                 // renders `core::manifest::Target`. However, our target is
                 // a simplified type so we cannot reuse the same logic here.
-                let mut target_str = if target.kind == "lib" && mode == CompileMode::Build {
+                let mut target_str = if target.kind == "lib" && mode == &CompileMode::Build {
                     // Special case for brevity, since most dependencies hit this path.
                     "".to_string()
                 } else if target.kind == "build-script" {

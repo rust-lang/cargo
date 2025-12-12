@@ -74,20 +74,14 @@ pub enum LogMessage {
     },
     /// Emitted when a compilation unit starts.
     UnitStarted {
-        /// Package ID specification.
-        package_id: PackageIdSpec,
-        /// Cargo target (lib, bin, example, etc.).
-        target: Target,
-        /// The compilation action this unit is for (check, build, test, etc.).
-        mode: CompileMode,
-        /// Unit index for compact reference in subsequent events.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
     },
     /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
     UnitRmetaFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -99,7 +93,7 @@ pub enum LogMessage {
     ///
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionStarted {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -110,7 +104,7 @@ pub enum LogMessage {
     ///
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -119,7 +113,7 @@ pub enum LogMessage {
     },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,

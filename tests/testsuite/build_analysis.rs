@@ -131,14 +131,8 @@ fn log_msg_timing_info() {
   {
     "elapsed": "{...}",
     "index": 0,
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
     "reason": "unit-started",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "bar"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -161,14 +155,8 @@ fn log_msg_timing_info() {
   {
     "elapsed": "{...}",
     "index": 1,
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo#0.0.0",
     "reason": "unit-started",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "foo"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -225,14 +213,8 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 0,
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
     "reason": "unit-started",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "bar"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -287,14 +269,8 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 1,
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo#0.0.0",
     "reason": "unit-started",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "bin",
-      "name": "foo"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {
