@@ -1710,13 +1710,35 @@ fn check_build_should_not_output_files_to_artifact_dir() {
 }
 
 #[cargo_test]
-fn check_build_should_not_lock_artifact_dir() {
+fn check_build_should_lock_target_dir_when_artifact_dir_is_same_as_build_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
     p.cargo("check").enable_mac_dsym().run();
-    assert!(!p.root().join("target/debug/.cargo-lock").exists());
+    assert!(p.root().join("target/debug/.cargo-lock").exists());
+}
+
+#[cargo_test]
+fn check_build_should_not_lock_artifact_dir_when_build_dir_is_not_same_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("check").enable_mac_dsym().run();
+
+    // Verify we did NOT take the build-dir lock
+    assert!(!p.root().join("target-dir/debug/.cargo-lock").exists());
+    // Verify we did take the build-dir lock
+    assert!(p.root().join("build-dir/debug/.cargo-lock").exists());
 }
 
 // Regression test for #16305
