@@ -716,20 +716,20 @@ fn bench_autodiscover_2015() {
     p.cargo("bench bench_basic")
         .with_stderr_data(str![[r#"
 [WARNING] An explicit [[bench]] section is specified in Cargo.toml which currently
-disables Cargo from automatically inferring other benchmark targets.
-This inference behavior will change in the Rust 2018 edition and the following
-files will be included as a benchmark target:
-
-* [..]bench_basic.rs
-
-This is likely to break cargo build or cargo test as these files may not be
-ready to be compiled as a benchmark target today. You can future-proof yourself
-and disable this warning by adding `autobenches = false` to your [package]
-section. You may also move the files to a location where Cargo would not
-automatically infer them to be a target, such as in subfolders.
-
-For more information on this warning you can consult
-https://github.com/rust-lang/cargo/issues/5330
+         disables Cargo from automatically inferring other benchmark targets.
+         This inference behavior will change in the Rust 2018 edition and the following
+         files will be included as a benchmark target:
+         
+         * benches/bench_basic.rs
+         
+         This is likely to break cargo build or cargo test as these files may not be
+         ready to be compiled as a benchmark target today. You can future-proof yourself
+         and disable this warning by adding `autobenches = false` to your [package]
+         section. You may also move the files to a location where Cargo would not
+         automatically infer them to be a target, such as in subfolders.
+         
+         For more information on this warning you can consult
+         https://github.com/rust-lang/cargo/issues/5330
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
@@ -1944,7 +1944,7 @@ fn legacy_bench_name() {
     p.cargo("bench")
         .with_stderr_data(str![[r#"
 [WARNING] path `src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
-please set bench.path in Cargo.toml
+         please set bench.path in Cargo.toml
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/release/deps/foo-[HASH][EXE])

@@ -448,20 +448,20 @@ fn no_fail_bad_lib() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] failed to check lib in package `foo` as a prerequisite for scraping examples from: example "ex", example "ex2"
-    Try running with `--verbose` to see the error message.
-    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (lib) generated 1 warning
 [WARNING] failed to scan example "ex" in package `foo` for example code usage
-    Try running with `--verbose` to see the error message.
-    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (example "ex") generated 1 warning
 [WARNING] failed to scan example "ex2" in package `foo` for example code usage
-    Try running with `--verbose` to see the error message.
-    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (example "ex2") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
+             Try running with `--verbose` to see the error message.
+             If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
+             Try running with `--verbose` to see the error message.
+             If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
+             Try running with `--verbose` to see the error message.
+             If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 
 "#]].unordered())
         .run();
@@ -531,8 +531,8 @@ fn no_fail_bad_example() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] failed to scan example "ex1" in package `foo` for example code usage
-    Try running with `--verbose` to see the error message.
-    If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
+             Try running with `--verbose` to see the error message.
+             If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (example "ex1") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -614,8 +614,8 @@ fn no_scrape_with_dev_deps() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [WARNING] Rustdoc did not scrape the following examples because they require dev-dependencies: ex
-    If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
-    to the [[example]] target configuration of at least one example.
+             If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
+             to the [[example]] target configuration of at least one example.
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
