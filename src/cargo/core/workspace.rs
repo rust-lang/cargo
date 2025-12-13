@@ -21,9 +21,9 @@ use crate::core::{
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::lints::analyze_cargo_lints_table;
-use crate::lints::blanket_hint_mostly_unused;
-use crate::lints::check_im_a_teapot;
-use crate::lints::implicit_minimum_version_req;
+use crate::lints::rules::blanket_hint_mostly_unused;
+use crate::lints::rules::check_im_a_teapot;
+use crate::lints::rules::implicit_minimum_version_req;
 use crate::ops;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
 use crate::util::context::FeatureUnification;

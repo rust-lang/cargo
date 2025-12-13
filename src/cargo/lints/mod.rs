@@ -13,22 +13,10 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
-mod blanket_hint_mostly_unused;
-pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
-mod implicit_minimum_version_req;
-pub use implicit_minimum_version_req::implicit_minimum_version_req;
-mod im_a_teapot;
-pub use im_a_teapot::check_im_a_teapot;
-mod unknown_lints;
-use unknown_lints::output_unknown_lints;
+pub mod rules;
+pub use rules::LINTS;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[
-    blanket_hint_mostly_unused::LINT,
-    implicit_minimum_version_req::LINT,
-    im_a_teapot::LINT,
-    unknown_lints::LINT,
-];
 
 /// Scope at which a lint runs: package-level or workspace-level.
 pub enum ManifestFor<'a> {
@@ -129,7 +117,7 @@ pub fn analyze_cargo_lints_table(
         }
     }
 
-    output_unknown_lints(
+    rules::output_unknown_lints(
         unknown_lints,
         &manifest,
         &manifest_path,
@@ -506,7 +494,7 @@ mod tests {
 
     #[test]
     fn ensure_updated_lints() {
-        let dir = snapbox::utils::current_dir!();
+        let dir = snapbox::utils::current_dir!().join("rules");
         let mut expected = HashSet::new();
         for entry in std::fs::read_dir(&dir).unwrap() {
             let entry = entry.unwrap();
