@@ -1,6 +1,8 @@
+use cargo::lints::Lint;
+use cargo::lints::LintLevel;
 use cargo::util::command_prelude::{ArgMatchesExt, flag};
-use cargo::util::lints::{Lint, LintLevel};
 use itertools::Itertools;
+
 use std::fmt::Write;
 use std::path::PathBuf;
 
@@ -18,10 +20,7 @@ fn main() -> anyhow::Result<()> {
     let mut forbid = Vec::new();
 
     let mut lint_docs = String::new();
-    for lint in cargo::util::lints::LINTS
-        .iter()
-        .sorted_by_key(|lint| lint.name)
-    {
+    for lint in cargo::lints::LINTS.iter().sorted_by_key(|lint| lint.name) {
         if lint.docs.is_some() {
             let sectipn = match lint.default_level {
                 LintLevel::Allow => &mut allow,

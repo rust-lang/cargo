@@ -92,19 +92,21 @@ pub use self::lto::Lto;
 use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
+
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
+use crate::lints::get_key_value;
 use crate::util::OnceExt;
 use crate::util::context::WarningHandling;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
-use crate::util::lints::get_key_value;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
+
 use cargo_util::{ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;

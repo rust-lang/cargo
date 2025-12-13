@@ -10,11 +10,11 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
-use crate::util::lints::Lint;
-use crate::util::lints::LintLevel;
-use crate::util::lints::TEST_DUMMY_UNSTABLE;
-use crate::util::lints::get_key_value_span;
-use crate::util::lints::rel_cwd_manifest_path;
+use crate::lints::Lint;
+use crate::lints::LintLevel;
+use crate::lints::TEST_DUMMY_UNSTABLE;
+use crate::lints::get_key_value_span;
+use crate::lints::rel_cwd_manifest_path;
 
 /// This lint is only to be used for testing purposes
 pub const LINT: Lint = Lint {
