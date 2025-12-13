@@ -415,6 +415,61 @@ Caused by:
 }
 
 #[cargo_test]
+fn patch_to_git_pull_request() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = { git = 'https://github.com/foo/bar/pull/123' }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] dependency (bar) git url https://github.com/foo/bar/pull/123 is not a repository. The path looks like a pull request. Try replacing the dependency with: `git = "https://github.com/foo/bar.git" rev = "refs/pull/123/head"` in the dependency declaration.
+[UPDATING] git repository `https://github.com/foo/bar/pull/123`
+[WARNING] spurious network error (3 tries remaining): unexpected http status code: 404; class=Http (34)
+[WARNING] spurious network error (2 tries remaining): unexpected http status code: 404; class=Http (34)
+[WARNING] spurious network error (1 tries remaining): unexpected http status code: 404; class=Http (34)
+[ERROR] failed to load source for dependency `bar`
+
+Caused by:
+  Unable to update https://github.com/foo/bar/pull/123
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
+
+Caused by:
+  network failure seems to have happened
+  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+Caused by:
+  unexpected http status code: 404; class=Http (34)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn unused() {
     Package::new("bar", "0.1.0").publish();
 
