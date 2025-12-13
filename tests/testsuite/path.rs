@@ -211,7 +211,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 [COMPILING] bar v0.5.0 ([ROOT]/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1466,7 +1466,7 @@ fn dev_deps_no_rebuild_lib() {
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"

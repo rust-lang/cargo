@@ -231,7 +231,7 @@ fn test_bin() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/bin1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/bin1-[HASH]`
 
 "#]])
         .run();
@@ -249,7 +249,7 @@ fn test_bench() {
 [RUNNING] `rustc --crate-name bench1 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/bench1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/bench1-[HASH]`
 
 "#]]
             .unordered(),
@@ -269,7 +269,7 @@ fn test_test() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/test1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/test1-[HASH]`
 
 "#]]
             .unordered(),
@@ -299,7 +299,7 @@ fn bench_bin() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bin1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/bin1-[HASH] --bench`
 
 "#]])
         .run();
@@ -317,7 +317,7 @@ fn bench_bench() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bench1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bench1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/bench1-[HASH] --bench`
 
 "#]]
             .unordered(),
@@ -337,7 +337,7 @@ fn bench_test() {
 [RUNNING] `rustc --crate-name test1 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/test1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/deps/test1-[HASH] --bench`
 
 "#]]
             .unordered(),

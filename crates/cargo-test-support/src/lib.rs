@@ -1427,6 +1427,7 @@ pub trait TestEnvCommandExt: Sized {
             // don't particularly need. Tests that specifically need to check
             // the incremental behavior should turn this back on.
             .env("CARGO_INCREMENTAL", "0")
+            .env("CARGO_BUILD_DIR_LAYOUT_V2", "true")
             // Don't read the system git config which is out of our control.
             .env("GIT_CONFIG_NOSYSTEM", "1")
             .env_remove("__CARGO_DEFAULT_LIB_METADATA")
