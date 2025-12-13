@@ -62,9 +62,9 @@ impl EitherManifest {
 #[derive(Clone, Debug)]
 pub struct Manifest {
     // alternate forms of manifests:
-    contents: Rc<String>,
-    document: Rc<toml::Spanned<toml::de::DeTable<'static>>>,
-    original_toml: Rc<TomlManifest>,
+    contents: Option<Rc<String>>,
+    document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+    original_toml: Option<Rc<TomlManifest>>,
     normalized_toml: Rc<TomlManifest>,
     summary: Summary,
 
@@ -109,9 +109,9 @@ pub struct Warnings(Vec<DelayedWarning>);
 #[derive(Clone, Debug)]
 pub struct VirtualManifest {
     // alternate forms of manifests:
-    contents: Rc<String>,
-    document: Rc<toml::Spanned<toml::de::DeTable<'static>>>,
-    original_toml: Rc<TomlManifest>,
+    contents: Option<Rc<String>>,
+    document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+    original_toml: Option<Rc<TomlManifest>>,
     normalized_toml: Rc<TomlManifest>,
 
     // this form of manifest:
@@ -526,9 +526,9 @@ impl Manifest {
         embedded: bool,
     ) -> Manifest {
         Manifest {
-            contents,
-            document,
-            original_toml,
+            contents: Some(contents),
+            document: Some(document),
+            original_toml: Some(original_toml),
             normalized_toml,
             summary,
 
@@ -560,7 +560,7 @@ impl Manifest {
 
     /// The raw contents of the original TOML
     pub fn contents(&self) -> &str {
-        self.contents.as_str()
+        self.contents.as_deref().unwrap()
     }
     /// See [`Manifest::normalized_toml`] for what "normalized" means
     pub fn to_normalized_contents(&self) -> CargoResult<String> {
@@ -569,11 +569,11 @@ impl Manifest {
     }
     /// Collection of spans for the original TOML
     pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
-        &self.document
+        self.document.as_deref().unwrap()
     }
     /// The [`TomlManifest`] as parsed from [`Manifest::document`]
     pub fn original_toml(&self) -> &TomlManifest {
-        &self.original_toml
+        self.original_toml.as_deref().unwrap()
     }
     /// The [`TomlManifest`] with all fields expanded
     ///
@@ -755,9 +755,9 @@ impl VirtualManifest {
         resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
         VirtualManifest {
-            contents,
-            document,
-            original_toml,
+            contents: Some(contents),
+            document: Some(document),
+            original_toml: Some(original_toml),
             normalized_toml,
             replace,
             patch,
@@ -770,15 +770,15 @@ impl VirtualManifest {
 
     /// The raw contents of the original TOML
     pub fn contents(&self) -> &str {
-        self.contents.as_str()
+        self.contents.as_deref().unwrap()
     }
     /// Collection of spans for the original TOML
     pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
-        &self.document
+        self.document.as_deref().unwrap()
     }
     /// The [`TomlManifest`] as parsed from [`VirtualManifest::document`]
     pub fn original_toml(&self) -> &TomlManifest {
-        &self.original_toml
+        self.original_toml.as_deref().unwrap()
     }
     /// The [`TomlManifest`] with all fields expanded
     pub fn normalized_toml(&self) -> &TomlManifest {
