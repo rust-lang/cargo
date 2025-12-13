@@ -16,13 +16,13 @@ use crate::GlobalContext;
 use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
+use crate::lints::Lint;
+use crate::lints::LintLevel;
+use crate::lints::LintLevelReason;
+use crate::lints::ManifestFor;
+use crate::lints::get_key_value;
+use crate::lints::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
-use crate::util::lints::Lint;
-use crate::util::lints::LintLevel;
-use crate::util::lints::LintLevelReason;
-use crate::util::lints::ManifestFor;
-use crate::util::lints::get_key_value;
-use crate::util::lints::rel_cwd_manifest_path;
 
 pub const LINT: Lint = Lint {
     name: "implicit_minimum_version_req",

@@ -6,12 +6,12 @@ use cargo_util_schemas::manifest::TomlToolLints;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::util::lints::LINT_GROUPS;
-use crate::util::lints::LINTS;
-use crate::util::lints::Lint;
-use crate::util::lints::LintLevel;
-use crate::util::lints::ManifestFor;
-use crate::util::lints::get_key_value_span;
+use crate::lints::LINT_GROUPS;
+use crate::lints::LINTS;
+use crate::lints::Lint;
+use crate::lints::LintLevel;
+use crate::lints::ManifestFor;
+use crate::lints::get_key_value_span;
 
 pub const LINT: Lint = Lint {
     name: "unknown_lints",
