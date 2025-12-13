@@ -39,8 +39,30 @@ pub enum LogMessage {
         /// Workspace root directory.
         workspace_root: PathBuf,
     },
-    /// Emitted when a compilation unit starts.
-    UnitStarted {
+    /// Emitted when resolving dependencies starts.
+    ResolutionStarted {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when resolving dependencies finishes.
+    ResolutionFinished {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when unit graph generation starts.
+    UnitGraphStarted {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when unit graph generation finishes.
+    UnitGraphFinished {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+    },
+    /// Emitted when a compilation unit is registered in the unit graph,
+    /// right before [`LogMessage::UnitGraphFinished`] that Cargo finalizes
+    /// the unit graph.
+    UnitRegistered {
         /// Package ID specification.
         package_id: PackageIdSpec,
         /// Cargo target (lib, bin, example, etc.).
@@ -49,12 +71,17 @@ pub enum LogMessage {
         mode: CompileMode,
         /// Unit index for compact reference in subsequent events.
         index: u64,
+    },
+    /// Emitted when a compilation unit starts.
+    UnitStarted {
+        /// Unit index from the associated unit-registered event.
+        index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
     },
     /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
     UnitRmetaFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -66,7 +93,7 @@ pub enum LogMessage {
     ///
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionStarted {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -77,7 +104,7 @@ pub enum LogMessage {
     ///
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,
@@ -86,7 +113,7 @@ pub enum LogMessage {
     },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
-        /// Unit index from the associated unit-started event.
+        /// Unit index from the associated unit-registered event.
         index: u64,
         /// Seconds elapsed from build start.
         elapsed: f64,

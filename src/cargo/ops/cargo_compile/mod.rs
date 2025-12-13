@@ -64,6 +64,7 @@ use annotate_snippets::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 pub(super) mod unit_generator;
+use itertools::Itertools as _;
 use unit_generator::UnitGenerator;
 
 mod packages;
@@ -304,6 +305,11 @@ pub fn create_bcx<'a, 'gctx>(
         }
     };
     let dry_run = false;
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::ResolutionStarted { elapsed });
+    }
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -320,6 +326,11 @@ pub fn create_bcx<'a, 'gctx>(
         targeted_resolve: resolve,
         specs_and_features,
     } = resolve;
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::ResolutionFinished { elapsed });
+    }
 
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
         let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
@@ -397,9 +408,14 @@ pub fn create_bcx<'a, 'gctx>(
         })
         .collect();
 
-    let mut units = Vec::new();
+    let mut root_units = Vec::new();
     let mut unit_graph = HashMap::new();
     let mut scrape_units = Vec::new();
+
+    if let Some(logger) = logger {
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::UnitGraphStarted { elapsed });
+    }
 
     for SpecsAndResolvedFeatures {
         specs,
@@ -479,14 +495,14 @@ pub fn create_bcx<'a, 'gctx>(
             &profiles,
             interner,
         )?);
-        units.extend(targeted_root_units);
+        root_units.extend(targeted_root_units);
         scrape_units.extend(targeted_scrape_units);
     }
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
     if build_config.intent.wants_deps_docs() {
-        remove_duplicate_doc(build_config, &units, &mut unit_graph);
+        remove_duplicate_doc(build_config, &root_units, &mut unit_graph);
     }
 
     let host_kind_requested = build_config
@@ -496,18 +512,39 @@ pub fn create_bcx<'a, 'gctx>(
     // Rebuild the unit graph, replacing the explicit host targets with
     // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
     // shared with build and artifact dependencies.
-    (units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
+    (root_units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
         interner,
         unit_graph,
-        &units,
+        &root_units,
         &scrape_units,
         host_kind_requested.then_some(explicit_host_kind),
         build_config.compile_time_deps_only,
     );
 
+    // unit_graph must be immutable after this point.
+    let unit_graph = unit_graph;
+    let units: Vec<_> = unit_graph.keys().sorted().collect();
+    let unit_to_index: HashMap<_, _> = units
+        .iter()
+        .enumerate()
+        .map(|(i, &unit)| (unit.clone(), i as u64))
+        .collect();
+    if let Some(logger) = logger {
+        for (i, unit) in units.into_iter().enumerate() {
+            logger.log(LogMessage::UnitRegistered {
+                package_id: unit.pkg.package_id().to_spec(),
+                target: (&unit.target).into(),
+                mode: unit.mode,
+                index: i as u64,
+            });
+        }
+        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        logger.log(LogMessage::UnitGraphFinished { elapsed });
+    }
+
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
-        if units.len() != 1 {
+        if root_units.len() != 1 {
             anyhow::bail!(
                 "extra arguments to `{}` can only be passed to one \
                  target, consider filtering\nthe package by passing, \
@@ -515,10 +552,10 @@ pub fn create_bcx<'a, 'gctx>(
                 extra_args_name
             );
         }
-        extra_compiler_args.insert(units[0].clone(), args);
+        extra_compiler_args.insert(root_units[0].clone(), args);
     }
 
-    for unit in units
+    for unit in root_units
         .iter()
         .filter(|unit| unit.mode.is_doc() || unit.mode.is_doc_test())
         .filter(|unit| rustdoc_document_private_items || unit.target.is_bin())
@@ -541,7 +578,7 @@ pub fn create_bcx<'a, 'gctx>(
 
     // Validate target src path for each root unit
     let mut error_count: usize = 0;
-    for unit in &units {
+    for unit in &root_units {
         if let Some(target_src_path) = unit.target.src_path().path() {
             validate_target_path_as_source_file(
                 gctx,
@@ -619,8 +656,9 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         profiles,
         extra_compiler_args,
         target_data,
-        units,
+        root_units,
         unit_graph,
+        unit_to_index,
         scrape_units,
     )?;
 
