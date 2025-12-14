@@ -924,7 +924,7 @@ fn dep_with_submodule() {
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
-    assert_eq!(db_paths.len(), 0, "submodule db created once");
+    assert_eq!(db_paths.len(), 1, "submodule db created once");
 }
 
 #[cargo_test]
@@ -1005,7 +1005,7 @@ fn dep_with_relative_submodule() {
     .unwrap()
     .map(Result::unwrap)
     .collect::<Vec<_>>();
-    assert_eq!(db_paths.len(), 0, "submodule db created once");
+    assert_eq!(db_paths.len(), 1, "submodule db created once");
 }
 
 #[cargo_test]
@@ -1077,7 +1077,10 @@ Caused by:
   failed to update submodule `src`
 
 Caused by:
-  object not found - no match for id ([..]); class=Odb (9); code=NotFound (-3)
+  failed to fetch submodule `src` from [ROOTURL]/dep2
+
+Caused by:
+  revspec '[..]' not found; class=Reference (4); code=NotFound (-3)
 
 "#]];
 
@@ -1539,7 +1542,7 @@ project2
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
-    assert_eq!(db_paths.len(), 0, "submodule db created once");
+    assert_eq!(db_paths.len(), 1, "submodule db created once");
 
     git_project.change_file(
         ".gitmodules",
@@ -1587,7 +1590,7 @@ project2
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
-    assert_eq!(db_paths.len(), 0, "submodule db created once");
+    assert_eq!(db_paths.len(), 1, "submodule db created once");
 
     println!("last run");
     p.cargo("run")
@@ -4372,5 +4375,5 @@ fn dep_with_cached_submodule() {
         .unwrap()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
-    assert_eq!(db_paths.len(), 0, "submodule db created once");
+    assert_eq!(db_paths.len(), 1, "submodule db created once");
 }

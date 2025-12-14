@@ -1,10 +1,12 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
-use crate::core::{GitReference, Verbosity};
+use crate::core::{GitReference, SourceId, Verbosity};
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
+use crate::sources::git::source::GitSource;
+use crate::sources::source::Source as _;
 use crate::util::HumanBytes;
 use crate::util::errors::{CargoResult, GitCliError};
 use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
@@ -447,7 +449,7 @@ impl<'a> GitCheckout<'a> {
                 let target = repo.head()?.target();
                 Ok((target, repo))
             });
-            let mut repo = match head_and_repo {
+            let repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
                         return update_submodules(&repo, gctx, &child_remote_url);
@@ -460,25 +462,25 @@ impl<'a> GitCheckout<'a> {
                     init(&path, false)?
                 }
             };
-            // Fetch data from origin and reset to the head commit
+            // Fetch submodule database and checkout to target revision
             let reference = GitReference::Rev(head.to_string());
             gctx.shell()
                 .status("Updating", format!("git submodule `{child_remote_url}`"))?;
-            fetch(
-                &mut repo,
-                &child_remote_url,
-                &reference,
-                gctx,
-                RemoteKind::GitDependency,
-            )
-            .with_context(|| {
+
+            // GitSource created from SourceId without git precise will result to
+            // locked_rev being Deferred and fetch_db always try to fetch if online
+            let source_id = SourceId::for_git(&child_remote_url.into_url()?, reference)?
+                .with_git_precise(Some(head.to_string()));
+
+            let mut source = GitSource::new(source_id, gctx)?;
+            source.set_quiet(true);
+
+            let (db, actual_rev) = source.fetch_db().with_context(|| {
                 let name = child.name().unwrap_or("");
                 format!("failed to fetch submodule `{name}` from {child_remote_url}",)
             })?;
-
-            let obj = repo.find_object(head, None)?;
-            reset(&repo, &obj, gctx)?;
-            update_submodules(&repo, gctx, &child_remote_url)
+            db.copy_to(actual_rev, repo.path(), gctx)?;
+            Ok(())
         }
     }
 }
