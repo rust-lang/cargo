@@ -919,6 +919,12 @@ fn dep_with_submodule() {
 
 "#]])
         .run();
+
+    let db_paths = glob::glob(paths::cargo_home().join("git/db/dep2-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(db_paths.len(), 0, "submodule db created once");
 }
 
 #[cargo_test]
@@ -989,6 +995,17 @@ fn dep_with_relative_submodule() {
 
 "#]])
         .run();
+
+    let db_paths = glob::glob(
+        paths::cargo_home()
+            .join("git/db/deployment-*")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap()
+    .map(Result::unwrap)
+    .collect::<Vec<_>>();
+    assert_eq!(db_paths.len(), 0, "submodule db created once");
 }
 
 #[cargo_test]
@@ -1518,6 +1535,12 @@ project2
 "#]])
         .run();
 
+    let db_paths = glob::glob(paths::cargo_home().join("git/db/dep2-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(db_paths.len(), 0, "submodule db created once");
+
     git_project.change_file(
         ".gitmodules",
         &format!(
@@ -1559,6 +1582,12 @@ project2
 
 "#]])
         .run();
+
+    let db_paths = glob::glob(paths::cargo_home().join("git/db/dep3-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(db_paths.len(), 0, "submodule db created once");
 
     println!("last run");
     p.cargo("run")
@@ -4268,4 +4297,80 @@ src/main.rs
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn dep_with_cached_submodule() {
+    let project = project();
+    let git_project = git::new("dep1", |project| {
+        project.file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+    });
+    let git_project2 = git::new("dep2", |project| {
+        project.file("Cargo.toml", &basic_manifest("dep2", "0.5.0"))
+    });
+    let git_project3 = git::new("dep3", |project| project.file("lib.rs", "pub fn dep() {}"));
+
+    let url = git_project3.root().to_url().to_string();
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    git::add_submodule(&repo, &url, Path::new("src"));
+    git::commit(&repo);
+
+    let repo2 = git2::Repository::open(&git_project2.root()).unwrap();
+    git::add_submodule(&repo2, &url, Path::new("src"));
+    git::commit(&repo2);
+
+    let project = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies.dep1]
+                    git = '{}'
+
+                    [dependencies.dep2]
+                    git = '{}'
+
+                "#,
+                git_project.url(),
+                git_project2.url(),
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate dep1; pub fn foo() { dep1::dep() }
+                extern crate dep2; pub fn bar() { dep2::dep() }
+            "#,
+        )
+        .build();
+
+    project
+        .cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+[UPDATING] git submodule `[ROOTURL]/dep3`
+[UPDATING] git repository `[ROOTURL]/dep2`
+[UPDATING] git submodule `[ROOTURL]/dep3`
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] dep[..] v0.5.0 ([ROOTURL]/dep[..]#[..])
+[CHECKING] dep[..] v0.5.0 ([ROOTURL]/dep[..]#[..])
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let db_paths = glob::glob(paths::cargo_home().join("git/db/dep3-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(db_paths.len(), 0, "submodule db created once");
 }
