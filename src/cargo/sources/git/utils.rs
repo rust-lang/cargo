@@ -171,6 +171,7 @@ impl GitDatabase {
         rev: git2::Oid,
         dest: &Path,
         gctx: &GlobalContext,
+        quiet: bool,
     ) -> CargoResult<GitCheckout<'_>> {
         // If the existing checkout exists, and it is fresh, use it.
         // A non-fresh checkout can happen if the checkout operation was
@@ -184,7 +185,7 @@ impl GitDatabase {
             Some(co) => co,
             None => {
                 let (checkout, guard) = GitCheckout::clone_into(dest, self, rev, gctx)?;
-                checkout.update_submodules(gctx)?;
+                checkout.update_submodules(gctx, quiet)?;
                 guard.mark_ok()?;
                 checkout
             }
@@ -386,24 +387,27 @@ impl<'a> GitCheckout<'a> {
     /// Submodules set to `none` won't be fetched.
     ///
     /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
-    fn update_submodules(&self, gctx: &GlobalContext) -> CargoResult<()> {
-        return update_submodules(&self.repo, gctx, self.remote_url().as_str());
+    fn update_submodules(&self, gctx: &GlobalContext, quiet: bool) -> CargoResult<()> {
+        return update_submodules(&self.repo, gctx, quiet, self.remote_url().as_str());
 
         /// Recursive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
             repo: &git2::Repository,
             gctx: &GlobalContext,
+            quiet: bool,
             parent_remote_url: &str,
         ) -> CargoResult<()> {
             debug!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()? {
-                update_submodule(repo, &mut child, gctx, parent_remote_url).with_context(|| {
-                    format!(
-                        "failed to update submodule `{}`",
-                        child.name().unwrap_or("")
-                    )
-                })?;
+                update_submodule(repo, &mut child, gctx, quiet, parent_remote_url).with_context(
+                    || {
+                        format!(
+                            "failed to update submodule `{}`",
+                            child.name().unwrap_or("")
+                        )
+                    },
+                )?;
             }
             Ok(())
         }
@@ -413,6 +417,7 @@ impl<'a> GitCheckout<'a> {
             parent: &git2::Repository,
             child: &mut git2::Submodule<'_>,
             gctx: &GlobalContext,
+            quiet: bool,
             parent_remote_url: &str,
         ) -> CargoResult<()> {
             child.init(false)?;
@@ -452,7 +457,7 @@ impl<'a> GitCheckout<'a> {
             let repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
-                        return update_submodules(&repo, gctx, &child_remote_url);
+                        return update_submodules(&repo, gctx, quiet, &child_remote_url);
                     }
                     repo
                 }
@@ -464,8 +469,6 @@ impl<'a> GitCheckout<'a> {
             };
             // Fetch submodule database and checkout to target revision
             let reference = GitReference::Rev(head.to_string());
-            gctx.shell()
-                .status("Updating", format!("git submodule `{child_remote_url}`"))?;
 
             // GitSource created from SourceId without git precise will result to
             // locked_rev being Deferred and fetch_db always try to fetch if online
@@ -473,13 +476,13 @@ impl<'a> GitCheckout<'a> {
                 .with_git_precise(Some(head.to_string()));
 
             let mut source = GitSource::new(source_id, gctx)?;
-            source.set_quiet(true);
+            source.set_quiet(quiet);
 
-            let (db, actual_rev) = source.fetch_db().with_context(|| {
+            let (db, actual_rev) = source.fetch_db(true).with_context(|| {
                 let name = child.name().unwrap_or("");
                 format!("failed to fetch submodule `{name}` from {child_remote_url}",)
             })?;
-            db.copy_to(actual_rev, repo.path(), gctx)?;
+            db.copy_to(actual_rev, repo.path(), gctx, quiet)?;
             Ok(())
         }
     }

@@ -4361,7 +4361,6 @@ fn dep_with_cached_submodule() {
 [UPDATING] git repository `[ROOTURL]/dep1`
 [UPDATING] git submodule `[ROOTURL]/dep3`
 [UPDATING] git repository `[ROOTURL]/dep2`
-[UPDATING] git submodule `[ROOTURL]/dep3`
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] dep[..] v0.5.0 ([ROOTURL]/dep[..]#[..])
 [CHECKING] dep[..] v0.5.0 ([ROOTURL]/dep[..]#[..])
