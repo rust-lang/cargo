@@ -6,6 +6,7 @@ use crate::core::global_cache_tracker;
 use crate::core::{Dependency, Package, PackageId};
 use crate::sources::IndexSummary;
 use crate::sources::RecursivePathSource;
+use crate::sources::git::utils::GitDatabase;
 use crate::sources::git::utils::GitRemote;
 use crate::sources::git::utils::rev_to_oid;
 use crate::sources::source::MaybePackage;
@@ -155,6 +156,67 @@ impl<'gctx> GitSource<'gctx> {
             });
         Ok(())
     }
+
+    /// Fetch and return a [`GitDatabase`] with the resolved revision
+    /// for this source,
+    ///
+    /// This won't fetch anything if the required revision is
+    /// already available locally.
+    pub(crate) fn fetch_db(&self) -> CargoResult<(GitDatabase, git2::Oid)> {
+        let db_path = self.gctx.git_db_path().join(&self.ident);
+        let db_path = db_path.into_path_unlocked();
+
+        let db = self.remote.db_at(&db_path).ok();
+
+        let (db, actual_rev) = match (&self.locked_rev, db) {
+            // If we have a locked revision, and we have a preexisting database
+            // which has that revision, then no update needs to happen.
+            (Revision::Locked(oid), Some(db)) if db.contains(*oid) => (db, *oid),
+
+            // If we're in offline mode, we're not locked, and we have a
+            // database, then try to resolve our reference with the preexisting
+            // repository.
+            (Revision::Deferred(git_ref), Some(db)) if !self.gctx.network_allowed() => {
+                let offline_flag = self
+                    .gctx
+                    .offline_flag()
+                    .expect("always present when `!network_allowed`");
+                let rev = db.resolve(&git_ref).with_context(|| {
+                    format!(
+                        "failed to lookup reference in preexisting repository, and \
+                         can't check for updates in offline mode ({offline_flag})"
+                    )
+                })?;
+                (db, rev)
+            }
+
+            // ... otherwise we use this state to update the git database. Note
+            // that we still check for being offline here, for example in the
+            // situation that we have a locked revision but the database
+            // doesn't have it.
+            (locked_rev, db) => {
+                if let Some(offline_flag) = self.gctx.offline_flag() {
+                    anyhow::bail!(
+                        "can't checkout from '{}': you are in the offline mode ({offline_flag})",
+                        self.remote.url()
+                    );
+                }
+
+                if !self.quiet {
+                    self.gctx.shell().status(
+                        "Updating",
+                        format!("git repository `{}`", self.remote.url()),
+                    )?;
+                }
+
+                trace!("updating git source `{:?}`", self.remote);
+
+                let locked_rev = locked_rev.clone().into();
+                self.remote.checkout(&db_path, db, &locked_rev, self.gctx)?
+            }
+        };
+        Ok((db, actual_rev))
+    }
 }
 
 /// Indicates a [Git revision] that might be locked or deferred to be resolved.
@@ -286,58 +348,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         // exists.
         exclude_from_backups_and_indexing(&git_path);
 
-        let db_path = self.gctx.git_db_path().join(&self.ident);
-        let db_path = db_path.into_path_unlocked();
-
-        let db = self.remote.db_at(&db_path).ok();
-
-        let (db, actual_rev) = match (&self.locked_rev, db) {
-            // If we have a locked revision, and we have a preexisting database
-            // which has that revision, then no update needs to happen.
-            (Revision::Locked(oid), Some(db)) if db.contains(*oid) => (db, *oid),
-
-            // If we're in offline mode, we're not locked, and we have a
-            // database, then try to resolve our reference with the preexisting
-            // repository.
-            (Revision::Deferred(git_ref), Some(db)) if !self.gctx.network_allowed() => {
-                let offline_flag = self
-                    .gctx
-                    .offline_flag()
-                    .expect("always present when `!network_allowed`");
-                let rev = db.resolve(&git_ref).with_context(|| {
-                    format!(
-                        "failed to lookup reference in preexisting repository, and \
-                         can't check for updates in offline mode ({offline_flag})"
-                    )
-                })?;
-                (db, rev)
-            }
-
-            // ... otherwise we use this state to update the git database. Note
-            // that we still check for being offline here, for example in the
-            // situation that we have a locked revision but the database
-            // doesn't have it.
-            (locked_rev, db) => {
-                if let Some(offline_flag) = self.gctx.offline_flag() {
-                    anyhow::bail!(
-                        "can't checkout from '{}': you are in the offline mode ({offline_flag})",
-                        self.remote.url()
-                    );
-                }
-
-                if !self.quiet {
-                    self.gctx.shell().status(
-                        "Updating",
-                        format!("git repository `{}`", self.remote.url()),
-                    )?;
-                }
-
-                trace!("updating git source `{:?}`", self.remote);
-
-                let locked_rev = locked_rev.clone().into();
-                self.remote.checkout(&db_path, db, &locked_rev, self.gctx)?
-            }
-        };
+        let (db, actual_rev) = self.fetch_db()?;
 
         // Don’t use the full hash, in order to contribute less to reaching the
         // path length limit on Windows. See
