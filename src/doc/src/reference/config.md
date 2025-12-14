@@ -1,3 +1,8 @@
+[registry]
+token = "…"   # Access token for crates.io
+
+[registries.<name>]
+token = "…"   # Access token for the named registry
 # Configuration
 
 This document explains how Cargo’s configuration system works, as well as
