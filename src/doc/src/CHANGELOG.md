@@ -1,5 +1,77 @@
 # Changelog
 
+## Cargo 1.94 (2026-03-05)
+
+[2c283a9a...HEAD](https://github.com/rust-lang/cargo/compare/2c283a9a...HEAD)
+
+### Added
+
+- 🎉 Stabilize the config `include` key.
+  The top-level `include` config key allows loading additional config files,
+  enabling better organization, sharing, and management of Cargo configurations
+  across projects and environments.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#including-extra-configuration-files)
+  [#16284](https://github.com/rust-lang/cargo/pull/16284)
+- perf: Optimize `cargo clean` with multiple `--package` specifiers.
+  [#16264](https://github.com/rust-lang/cargo/pull/16264)
+
+### Changed
+
+- Improve error message when Cargo build target source files are missing.
+  [#16338](https://github.com/rust-lang/cargo/pull/16338)
+
+### Fixed
+
+- Don't read config file twice when `$CARGO_HOME` is a symlinked directory
+  [#16325](https://github.com/rust-lang/cargo/pull/16325)
+- cargo-info: default to inspecting local package when no registry is explicitly specified
+  [#16358](https://github.com/rust-lang/cargo/pull/16358)
+- cargo-package: skip registry verification when using `--list`
+  [#16341](https://github.com/rust-lang/cargo/pull/16341)
+
+### Nightly only
+
+- `pubtime`: harden index `pubtime` implementation by treating parse errors as
+  invalid and limiting the time format more strictly.
+  [#16369](https://github.com/rust-lang/cargo/pull/16369)
+- 🔥 `-Zbuild-analysis`: new `cargo report timings` command for HTML replay
+  [#16377](https://github.com/rust-lang/cargo/pull/16377)
+  [#16378](https://github.com/rust-lang/cargo/pull/16378)
+  [#16382](https://github.com/rust-lang/cargo/pull/16382)
+  [#16352](https://github.com/rust-lang/cargo/pull/16352)
+  [#16350](https://github.com/rust-lang/cargo/pull/16350)
+  [#16346](https://github.com/rust-lang/cargo/pull/16346)
+- `-Zbuild-dir-new-layout`: Remove hashes from bins in new layout
+  [#16351](https://github.com/rust-lang/cargo/pull/16351)
+- `-Zbuild-dir-new-layout`: Use unit_id, not pkg hash, for bin/lib pkg_dirs for new layout
+  [#16345](https://github.com/rust-lang/cargo/pull/16345)
+- `-Zbuild-dir-new-layout`: Include all search paths with new build layout
+  [#16348](https://github.com/rust-lang/cargo/pull/16348)
+- 🔥 `-Zcargo-lints`: new `implicit_minimum_version_req` lint
+  [#16321](https://github.com/rust-lang/cargo/pull/16321)
+- `-Zcargo-lints`: move lints to separate modules
+  [#16392](https://github.com/rust-lang/cargo/pull/16392)
+  [#16364](https://github.com/rust-lang/cargo/pull/16364)
+- `-Zcargo-lints`: handle lints separately at ws pkg level
+  [#16367](https://github.com/rust-lang/cargo/pull/16367)
+
+### Documentation
+
+- FAQ: Include an entry on disk space
+  [#16349](https://github.com/rust-lang/cargo/pull/16349)
+
+### Internal
+
+- Remove `[no-mentions]` handler in our triagebot config
+  [#16361](https://github.com/rust-lang/cargo/pull/16361)
+- test: update to `proc_macro::tracked::path`
+  [#16380](https://github.com/rust-lang/cargo/pull/16380)
+- test: Remove unused build script
+  [#16344](https://github.com/rust-lang/cargo/pull/16344)
+- Update dependencies.
+  [#16379](https://github.com/rust-lang/cargo/pull/16379)
+  [#16381](https://github.com/rust-lang/cargo/pull/16381)
+
 ## Cargo 1.93 (2026-01-22)
 [344c4567...rust-1.93.0](https://github.com/rust-lang/cargo/compare/344c4567...rust-1.93.0)
 
