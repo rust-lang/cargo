@@ -717,8 +717,8 @@ implicit_minimum_version_req = "warn"
 [WARNING] dependency version requirement without an explicit minimum version
  --> Cargo.toml:7:[..]
   |
-7 | [..]/bar', version = "0.1" }
-  |                  [..]^^^^^ missing full version components
+7 | bar = { git = '[ROOTURL]/bar', version = "0.1" }
+  |                                      [..]^^^^^ missing full version components
   |
 [HELP] consider specifying full `major.minor.patch` version components
   |
