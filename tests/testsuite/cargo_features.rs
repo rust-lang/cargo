@@ -263,7 +263,7 @@ fn stable_feature_warns() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] the cargo feature `test-dummy-stable` has been stabilized in the 1.0 release and is no longer necessary to be listed in the manifest
-  See https://doc.rust-lang.org/cargo/ for more information about using this feature.
+           See https://doc.rust-lang.org/cargo/ for more information about using this feature.
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -753,8 +753,8 @@ fn z_stabilized() {
         .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr_data(str![[r#"
 [WARNING] flag `-Z cache-messages` has been stabilized in the 1.40 release, and is no longer necessary
-  Message caching is now always enabled.
-
+           Message caching is now always enabled.
+         
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

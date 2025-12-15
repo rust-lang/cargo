@@ -145,7 +145,7 @@ fn rustc_bootstrap() {
         .with_stderr_data(str![[r#"
 [COMPILING] has-dashes v0.0.1 ([ROOT]/foo)
 [WARNING] has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
-[NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
+         [NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -155,7 +155,7 @@ fn rustc_bootstrap() {
         .env("RUSTC_BOOTSTRAP", "has_dashes")
         .with_stderr_data(str![[r#"
 [WARNING] has-dashes@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
-[NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
+         [NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -190,7 +190,7 @@ fn rustc_bootstrap() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: Cannot set `RUSTC_BOOTSTRAP=1` from build script of `foo v0.0.1 ([ROOT]/foo)`.
-[NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
+         [NOTE] Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

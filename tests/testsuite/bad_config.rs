@@ -983,7 +983,7 @@ fn dev_dependencies2() {
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
-(in the `foo` package)
+         (in the `foo` package)
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1098,7 +1098,7 @@ fn build_dependencies2() {
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
-(in the `foo` package)
+         (in the `foo` package)
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1206,7 +1206,7 @@ fn lib_crate_type2() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `foo` library target)
+         (in the `foo` library target)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1297,7 +1297,7 @@ fn bin_crate_type2() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `foo` binary target)
+         (in the `foo` binary target)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1406,9 +1406,9 @@ fn examples_crate_type2() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `ex` example target)
+         (in the `ex` example target)
 [WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `goodbye` example target)
+         (in the `goodbye` example target)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1545,7 +1545,7 @@ fn cargo_platform_build_dependencies2() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
-(in the `[HOST_TARGET]` platform target)
+         (in the `[HOST_TARGET]` platform target)
 [LOCKING] 1 package to latest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -1676,7 +1676,7 @@ fn cargo_platform_dev_dependencies2() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
-(in the `[HOST_TARGET]` platform target)
+         (in the `[HOST_TARGET]` platform target)
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1805,7 +1805,7 @@ fn default_features2() {
 
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `a` dependency)
+         (in the `a` dependency)
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -1980,7 +1980,7 @@ fn workspace_default_features2() {
 [CHECKING] workspace_only v0.1.0 ([ROOT]/foo/workspace_only)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] [ROOT]/foo/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `dep_workspace_only` dependency)
+         (in the `dep_workspace_only` dependency)
 
 "#]]
             .unordered(),
@@ -2091,7 +2091,7 @@ fn lib_proc_macro2() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
-(in the `foo` library target)
+         (in the `foo` library target)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2179,7 +2179,7 @@ fn bin_proc_macro2() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
-(in the `foo` binary target)
+         (in the `foo` binary target)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3658,22 +3658,22 @@ fn legacy_binary_paths_warnings() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
-disables Cargo from automatically inferring other binary targets.
-This inference behavior will change in the Rust 2018 edition and the following
-files will be included as a binary target:
-
-* src/main.rs
-
-This is likely to break cargo build or cargo test as these files may not be
-ready to be compiled as a binary target today. You can future-proof yourself
-and disable this warning by adding `autobins = false` to your [package]
-section. You may also move the files to a location where Cargo would not
-automatically infer them to be a target, such as in subfolders.
-
-For more information on this warning you can consult
-https://github.com/rust-lang/cargo/issues/5330
+         disables Cargo from automatically inferring other binary targets.
+         This inference behavior will change in the Rust 2018 edition and the following
+         files will be included as a binary target:
+         
+         * src/main.rs
+         
+         This is likely to break cargo build or cargo test as these files may not be
+         ready to be compiled as a binary target today. You can future-proof yourself
+         and disable this warning by adding `autobins = false` to your [package]
+         section. You may also move the files to a location where Cargo would not
+         automatically infer them to be a target, such as in subfolders.
+         
+         For more information on this warning you can consult
+         https://github.com/rust-lang/cargo/issues/5330
 [WARNING] path `src/main.rs` was erroneously implicitly accepted for binary `bar`,
-please set bin.path in Cargo.toml
+         please set bin.path in Cargo.toml
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -3703,22 +3703,22 @@ please set bin.path in Cargo.toml
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
-disables Cargo from automatically inferring other binary targets.
-This inference behavior will change in the Rust 2018 edition and the following
-files will be included as a binary target:
-
-* src/bin/main.rs
-
-This is likely to break cargo build or cargo test as these files may not be
-ready to be compiled as a binary target today. You can future-proof yourself
-and disable this warning by adding `autobins = false` to your [package]
-section. You may also move the files to a location where Cargo would not
-automatically infer them to be a target, such as in subfolders.
-
-For more information on this warning you can consult
-https://github.com/rust-lang/cargo/issues/5330
+         disables Cargo from automatically inferring other binary targets.
+         This inference behavior will change in the Rust 2018 edition and the following
+         files will be included as a binary target:
+         
+         * src/bin/main.rs
+         
+         This is likely to break cargo build or cargo test as these files may not be
+         ready to be compiled as a binary target today. You can future-proof yourself
+         and disable this warning by adding `autobins = false` to your [package]
+         section. You may also move the files to a location where Cargo would not
+         automatically infer them to be a target, such as in subfolders.
+         
+         For more information on this warning you can consult
+         https://github.com/rust-lang/cargo/issues/5330
 [WARNING] path `src/bin/main.rs` was erroneously implicitly accepted for binary `bar`,
-please set bin.path in Cargo.toml
+         please set bin.path in Cargo.toml
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -3747,7 +3747,7 @@ please set bin.path in Cargo.toml
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [WARNING] path `src/bar.rs` was erroneously implicitly accepted for binary `bar`,
-please set bin.path in Cargo.toml
+         please set bin.path in Cargo.toml
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

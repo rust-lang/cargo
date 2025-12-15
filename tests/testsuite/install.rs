@@ -2411,8 +2411,8 @@ fn install_cargo_package_in_a_patched_workspace() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] patch for the non root package will be ignored, specify patch at the workspace root:
-package:   [ROOT]/foo/baz/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
+         package:   [ROOT]/foo/baz/Cargo.toml
+         workspace: [ROOT]/foo/Cargo.toml
 ...
 "#]])
         .run();

@@ -258,8 +258,8 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
         .cwd("bar")
         .with_stderr_data(str![[r#"
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   [ROOT]/foo/bar/Cargo.toml
-workspace: [ROOT]/foo/Cargo.toml
+         package:   [ROOT]/foo/bar/Cargo.toml
+         workspace: [ROOT]/foo/Cargo.toml
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
