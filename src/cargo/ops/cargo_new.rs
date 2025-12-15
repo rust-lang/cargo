@@ -181,7 +181,8 @@ fn check_name(
     };
     let bin_help = || {
         let mut help = String::from(name_help);
-        if has_bin && !name.is_empty() {
+        // Only suggest `bin.name` for valid crate names because it is used for `--crate`
+        if has_bin && validate_crate_name(name) {
             help.push_str(&format!(
                 "\n\
                 help: to name the binary \"{name}\", use a valid package \
@@ -272,6 +273,23 @@ fn check_name(
     }
 
     Ok(())
+}
+
+// Taken from <https://github.com/rust-lang/rust/blob/693f365667a97b24cb40173bc2801eb66ea53020/compiler/rustc_session/src/output.rs#L49-L79>
+fn validate_crate_name(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+
+    for c in name.chars() {
+        if c.is_alphanumeric() || c == '-' || c == '_' {
+            continue;
+        } else {
+            return false;
+        }
+    }
+
+    true
 }
 
 /// Checks if the path contains any invalid PATH env characters.

@@ -170,12 +170,6 @@ fn invalid_characters() {
 [ERROR] invalid character `.` in package name: `foo.rs`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 [NOTE] the directory name is used as the package name
 [HELP] to override the package name, pass `--name <pkgname>`
-[HELP] to name the binary "foo.rs", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.rs.rs` or change the name in Cargo.toml with:
-
-    [[bin]]
-    name = "foo.rs"
-    path = "src/main.rs"
-
 
 "#]])
         .run();
