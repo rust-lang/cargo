@@ -174,7 +174,8 @@ fn check_name(
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = if show_name_help {
-        "\nIf you need a package name to not match the directory name, consider using --name flag."
+        "\nnote: the directory name is used as the package name\
+        \nhelp: to override the package name, pass `--name <pkgname>`"
     } else {
         ""
     };
@@ -183,7 +184,7 @@ fn check_name(
         if has_bin && !name.is_empty() {
             help.push_str(&format!(
                 "\n\
-                If you need a binary with the name \"{name}\", use a valid package \
+                help: to name the binary \"{name}\", use a valid package \
                 name, and set the binary name to be different from the package. \
                 This can be done by setting the binary filename to `src/bin/{name}.rs` \
                 or change the name in Cargo.toml with:\n\
