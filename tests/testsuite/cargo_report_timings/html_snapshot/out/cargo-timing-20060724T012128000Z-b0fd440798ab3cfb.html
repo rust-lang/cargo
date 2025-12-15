@@ -186,13 +186,13 @@ See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Doc
 <td>Total units:</td><td>0</td>
 </tr>
 <tr>
-<td>Max concurrency:</td><td>11 (jobs=10 ncpu=10)</td>
+<td>Max concurrency:</td><td>10 (jobs=10 ncpu=10)</td>
 </tr>
 <tr>
 <td>Build start:</td><td>2006-07-24T01:21:28Z</td>
 </tr>
 <tr>
-<td>Total time:</td><td>10.1s</td>
+<td>Total time:</td><td>5.6s</td>
 </tr>
 <tr>
 <td>rustc:</td><td>1.94.0-nightly<br>Host: [..]<br>Target: [..]</td>
@@ -246,158 +246,158 @@ See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Doc
 
 <tr>
 <td>1.</td>
-<td>jiff v0.2.16</td>
-<td>2.6s</td>
-<td>1.9s (74%)</td>
-<td>0.5s (21%)</td>
-<td>0.1s (4%)</td>
+<td>serde_derive v1.0.228</td>
+<td>1.4s</td>
+<td>0.8s (54%)</td>
+<td>0.3s (19%)</td>
+<td>0.4s (27%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>2.</td>
-<td>serde_derive v1.0.228</td>
-<td>1.7s</td>
-<td>1.0s (59%)</td>
-<td>0.3s (18%)</td>
-<td>0.4s (22%)</td>
+<td>serde_core v1.0.228</td>
+<td>1.1s</td>
+<td>1.0s (89%)</td>
+<td>0.1s (9%)</td>
+<td>0.0s (1%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>3.</td>
-<td>thiserror-impl v2.0.17</td>
-<td>1.4s</td>
-<td>0.4s (27%)</td>
-<td>0.3s (20%)</td>
-<td>0.8s (53%)</td>
+<td>quote v1.0.42 build-script</td>
+<td>1.1s</td>
+<td>0.1s (13%)</td>
+<td>0.1s (7%)</td>
+<td>0.9s (79%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>4.</td>
-<td>serde_core v1.0.228 build-script</td>
-<td>1.4s</td>
-<td>0.1s (7%)</td>
-<td>0.1s (7%)</td>
-<td>1.2s (86%)</td>
+<td>thiserror v2.0.17 build-script</td>
+<td>1.1s</td>
+<td>0.2s (14%)</td>
+<td>0.1s (11%)</td>
+<td>0.9s (76%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>5.</td>
-<td>proc-macro2 v1.0.103 build-script</td>
-<td>1.4s</td>
-<td>0.1s (8%)</td>
-<td>0.1s (7%)</td>
-<td>1.2s (85%)</td>
+<td>serde_json v1.0.145 build-script</td>
+<td>1.1s</td>
+<td>0.1s (12%)</td>
+<td>0.0s (4%)</td>
+<td>0.9s (83%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>6.</td>
-<td>serde_core v1.0.228 build-script (run)</td>
-<td>1.3s</td>
-<td></td>
-<td></td>
-<td></td>
+<td>proc-macro2 v1.0.103 build-script</td>
+<td>1.0s</td>
+<td>0.2s (15%)</td>
+<td>0.1s (11%)</td>
+<td>0.7s (72%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>7.</td>
-<td>quote v1.0.42 build-script</td>
-<td>1.3s</td>
-<td>0.1s (8%)</td>
-<td>0.1s (7%)</td>
-<td>1.1s (84%)</td>
+<td>serde_core v1.0.228 build-script</td>
+<td>1.0s</td>
+<td>0.2s (15%)</td>
+<td>0.1s (10%)</td>
+<td>0.7s (74%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>8.</td>
-<td>icu_properties_data v2.1.1 build-script</td>
-<td>1.3s</td>
-<td>0.1s (6%)</td>
-<td>0.0s (1%)</td>
-<td>1.2s (91%)</td>
+<td>serde v1.0.228 build-script</td>
+<td>1.0s</td>
+<td>0.2s (16%)</td>
+<td>0.1s (10%)</td>
+<td>0.7s (74%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>9.</td>
-<td>icu_normalizer_data v2.1.1 build-script</td>
-<td>1.3s</td>
-<td>0.1s (7%)</td>
-<td>0.0s (1%)</td>
-<td>1.1s (90%)</td>
+<td>quote v1.0.42 build-script (run)</td>
+<td>0.9s</td>
+<td></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 
 <tr>
 <td>10.</td>
-<td>thiserror v2.0.17 build-script (run)</td>
-<td>1.3s</td>
-<td></td>
-<td></td>
-<td></td>
+<td>syn v2.0.111</td>
+<td>0.9s</td>
+<td>0.6s (71%)</td>
+<td>0.2s (26%)</td>
+<td>0.0s (1%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>11.</td>
-<td>zerofrom-derive v0.1.6</td>
-<td>1.2s</td>
-<td>0.2s (15%)</td>
-<td>0.2s (20%)</td>
-<td>0.8s (63%)</td>
+<td>thiserror v2.0.17 build-script (run)</td>
+<td>0.8s</td>
+<td></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 
 <tr>
 <td>12.</td>
-<td>syn v2.0.111</td>
-<td>1.2s</td>
-<td>0.9s (73%)</td>
-<td>0.3s (24%)</td>
-<td>0.0s (2%)</td>
+<td>thiserror-impl v2.0.17</td>
+<td>0.8s</td>
+<td>0.2s (32%)</td>
+<td>0.1s (18%)</td>
+<td>0.4s (49%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>13.</td>
-<td>typeid v1.0.3 build-script</td>
-<td>1.2s</td>
-<td>0.1s (6%)</td>
-<td>0.1s (4%)</td>
-<td>1.1s (89%)</td>
+<td>serde_json v1.0.145 build-script (run)</td>
+<td>0.7s</td>
+<td></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 
 <tr>
 <td>14.</td>
-<td>zerovec-derive v0.11.2</td>
-<td>1.2s</td>
-<td>0.3s (29%)</td>
-<td>0.3s (21%)</td>
-<td>0.6s (50%)</td>
+<td>serde_json v1.0.145</td>
+<td>0.6s</td>
+<td>0.4s (70%)</td>
+<td>0.1s (26%)</td>
+<td>0.0s (2%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>15.</td>
-<td>num-traits v0.2.19 build-script (run)</td>
-<td>1.2s</td>
-<td></td>
-<td></td>
-<td></td>
+<td>serde v1.0.228</td>
+<td>0.5s</td>
+<td>0.4s (87%)</td>
+<td>0.0s (10%)</td>
+<td>0.0s (2%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>16.</td>
-<td>typeid v1.0.3 build-script (run)</td>
-<td>1.2s</td>
+<td>proc-macro2 v1.0.103 build-script (run)</td>
+<td>0.5s</td>
 <td></td>
 <td></td>
 <td></td>
@@ -406,559 +406,159 @@ See <a href="https://doc.rust-lang.org/nightly/cargo/reference/timings.html">Doc
 
 <tr>
 <td>17.</td>
-<td>serde v1.0.228 build-script</td>
-<td>1.2s</td>
-<td>0.1s (6%)</td>
-<td>0.1s (6%)</td>
-<td>1.0s (87%)</td>
+<td>memchr v2.7.6</td>
+<td>0.4s</td>
+<td>0.3s (74%)</td>
+<td>0.1s (24%)</td>
+<td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>18.</td>
-<td>serde_core v1.0.228</td>
-<td>1.2s</td>
-<td>1.0s (86%)</td>
-<td>0.1s (12%)</td>
-<td>0.0s (1%)</td>
+<td>tracing-core v0.1.35</td>
+<td>0.4s</td>
+<td>0.3s (65%)</td>
+<td>0.1s (32%)</td>
+<td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>19.</td>
-<td>cargo-util-schemas v0.12.0</td>
-<td>1.1s</td>
-<td>0.8s (74%)</td>
-<td>0.3s (24%)</td>
-<td>0.0s (3%)</td>
+<td>once_cell v1.21.3</td>
+<td>0.3s</td>
+<td>0.3s (85%)</td>
+<td>0.0s (12%)</td>
+<td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>20.</td>
-<td>erased-serde v0.4.9 build-script</td>
-<td>1.0s</td>
-<td>0.1s (7%)</td>
-<td>0.1s (5%)</td>
-<td>0.9s (88%)</td>
+<td>serde_core v1.0.228 build-script (run)</td>
+<td>0.3s</td>
+<td></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 
 <tr>
 <td>21.</td>
-<td>displaydoc v0.2.5</td>
-<td>1.0s</td>
-<td>0.2s (17%)</td>
-<td>0.2s (21%)</td>
-<td>0.6s (62%)</td>
+<td>ryu v1.0.20</td>
+<td>0.3s</td>
+<td>0.2s (66%)</td>
+<td>0.1s (23%)</td>
+<td>0.0s (11%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>22.</td>
-<td>yoke-derive v0.8.1</td>
-<td>1.0s</td>
-<td>0.2s (18%)</td>
-<td>0.2s (19%)</td>
-<td>0.6s (62%)</td>
+<td>proc-macro2 v1.0.103</td>
+<td>0.3s</td>
+<td>0.2s (66%)</td>
+<td>0.1s (27%)</td>
+<td>0.0s (4%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>23.</td>
-<td>proc-macro2 v1.0.103 build-script (run)</td>
-<td>1.0s</td>
-<td></td>
-<td></td>
-<td></td>
+<td>rustfix v0.9.4</td>
+<td>0.3s</td>
+<td>0.2s (70%)</td>
+<td>0.1s (26%)</td>
+<td>0.0s (4%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>24.</td>
-<td>icu_properties_data v2.1.1 build-script (run)</td>
-<td>0.9s</td>
-<td></td>
-<td></td>
-<td></td>
+<td>thiserror v2.0.17</td>
+<td>0.2s</td>
+<td>0.2s (90%)</td>
+<td>0.0s (2%)</td>
+<td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>25.</td>
-<td>num-traits v0.2.19 build-script</td>
-<td>0.9s</td>
-<td>0.0s (5%)</td>
-<td>0.0s (1%)</td>
-<td>0.8s (93%)</td>
+<td>serde v1.0.228 build-script (run)</td>
+<td>0.2s</td>
+<td></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 
 <tr>
 <td>26.</td>
-<td>thiserror v2.0.17 build-script</td>
-<td>0.9s</td>
+<td>unicode-ident v1.0.22</td>
+<td>0.2s</td>
+<td>0.1s (78%)</td>
+<td>0.0s (17%)</td>
 <td>0.0s (6%)</td>
-<td>0.1s (7%)</td>
-<td>0.8s (87%)</td>
 <td></td>
 </tr>
 
 <tr>
 <td>27.</td>
-<td>zerovec v0.11.5</td>
-<td>0.7s</td>
-<td>0.6s (93%)</td>
-<td>0.0s (3%)</td>
-<td>0.0s (1%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>28.</td>
-<td>erased-serde v0.4.9 build-script (run)</td>
-<td>0.7s</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-
-<tr>
-<td>29.</td>
-<td>serde v1.0.228</td>
-<td>0.7s</td>
-<td>0.6s (88%)</td>
-<td>0.1s (10%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>30.</td>
-<td>icu_properties v2.1.1</td>
-<td>0.6s</td>
-<td>0.5s (78%)</td>
-<td>0.1s (20%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>31.</td>
-<td>quote v1.0.42 build-script (run)</td>
-<td>0.6s</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-
-<tr>
-<td>32.</td>
-<td>serde v1.0.228 build-script (run)</td>
-<td>0.5s</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-
-<tr>
-<td>33.</td>
-<td>autocfg v1.5.0</td>
-<td>0.5s</td>
-<td>0.2s (44%)</td>
-<td>0.3s (54%)</td>
-<td>0.0s (4%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>34.</td>
-<td>icu_locale_core v2.1.1</td>
-<td>0.5s</td>
-<td>0.3s (72%)</td>
-<td>0.1s (26%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>35.</td>
-<td>num-traits v0.2.19</td>
-<td>0.4s</td>
-<td>0.4s (86%)</td>
-<td>0.1s (12%)</td>
-<td>0.0s (2%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>36.</td>
-<td>toml v0.9.8</td>
-<td>0.4s</td>
-<td>0.2s (54%)</td>
-<td>0.2s (41%)</td>
-<td>0.0s (5%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>37.</td>
-<td>zerotrie v0.2.3</td>
-<td>0.4s</td>
-<td>0.4s (88%)</td>
-<td>0.0s (9%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>38.</td>
-<td>erased-serde v0.4.9</td>
-<td>0.4s</td>
-<td>0.3s (70%)</td>
-<td>0.1s (22%)</td>
-<td>0.0s (5%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>39.</td>
-<td>url v2.5.7</td>
-<td>0.4s</td>
-<td>0.3s (69%)</td>
-<td>0.1s (27%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>40.</td>
-<td>synstructure v0.13.2</td>
-<td>0.4s</td>
-<td>0.2s (45%)</td>
-<td>0.2s (49%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>41.</td>
-<td>thiserror v2.0.17</td>
-<td>0.4s</td>
-<td>0.3s (97%)</td>
-<td>0.0s (1%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>42.</td>
-<td>icu_normalizer_data v2.1.1 build-script (run)</td>
-<td>0.3s</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-
-<tr>
-<td>43.</td>
-<td>yoke v0.8.1</td>
-<td>0.3s</td>
-<td>0.3s (96%)</td>
-<td>0.0s (1%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>44.</td>
-<td>semver v1.0.27</td>
-<td>0.3s</td>
-<td>0.2s (51%)</td>
-<td>0.1s (43%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>45.</td>
-<td>proc-macro2 v1.0.103</td>
-<td>0.3s</td>
-<td>0.2s (66%)</td>
-<td>0.1s (31%)</td>
-<td>0.0s (3%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>46.</td>
-<td>icu_normalizer v2.1.1</td>
-<td>0.3s</td>
-<td>0.2s (64%)</td>
-<td>0.1s (34%)</td>
-<td>0.0s (4%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>47.</td>
-<td>idna v1.1.0</td>
-<td>0.3s</td>
-<td>0.1s (50%)</td>
-<td>0.1s (46%)</td>
-<td>0.0s (4%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>48.</td>
-<td>serde-untagged v0.1.9</td>
-<td>0.3s</td>
-<td>0.2s (77%)</td>
-<td>0.0s (17%)</td>
-<td>0.0s (4%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>49.</td>
-<td>toml_datetime v0.7.3</td>
-<td>0.3s</td>
-<td>0.2s (59%)</td>
-<td>0.1s (37%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>50.</td>
-<td>zerofrom v0.1.6</td>
-<td>0.3s</td>
-<td>0.2s (89%)</td>
-<td>0.0s (7%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>51.</td>
-<td>icu_collections v2.1.1</td>
-<td>0.2s</td>
-<td>0.2s (69%)</td>
-<td>0.1s (31%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>52.</td>
-<td>writeable v0.6.2</td>
-<td>0.2s</td>
-<td>0.2s (80%)</td>
-<td>0.0s (16%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>53.</td>
-<td>percent-encoding v2.3.2</td>
-<td>0.2s</td>
-<td>0.1s (71%)</td>
-<td>0.0s (24%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>54.</td>
-<td>serde-value v0.7.0</td>
-<td>0.2s</td>
-<td>0.1s (63%)</td>
-<td>0.1s (34%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>55.</td>
-<td>litemap v0.8.1</td>
-<td>0.2s</td>
-<td>0.2s (78%)</td>
-<td>0.0s (10%)</td>
-<td>0.0s (5%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>56.</td>
-<td>icu_provider v2.1.1</td>
-<td>0.2s</td>
-<td>0.1s (72%)</td>
-<td>0.0s (20%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>57.</td>
-<td>smallvec v1.15.1</td>
-<td>0.2s</td>
-<td>0.1s (79%)</td>
-<td>0.0s (12%)</td>
-<td>0.0s (6%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>58.</td>
-<td>quote v1.0.42</td>
-<td>0.2s</td>
-<td>0.1s (62%)</td>
+<td>tracing v0.1.43</td>
+<td>0.1s</td>
+<td>0.1s (68%)</td>
 <td>0.0s (27%)</td>
 <td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
-<td>59.</td>
-<td>unicode-ident v1.0.22</td>
+<td>28.</td>
+<td>quote v1.0.42</td>
 <td>0.1s</td>
-<td>0.1s (70%)</td>
-<td>0.0s (20%)</td>
-<td>0.0s (7%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>60.</td>
-<td>serde_spanned v1.0.3</td>
-<td>0.1s</td>
-<td>0.1s (69%)</td>
-<td>0.0s (17%)</td>
-<td>0.0s (7%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>61.</td>
-<td>ordered-float v2.10.1</td>
-<td>0.1s</td>
-<td>0.1s (81%)</td>
-<td>0.0s (11%)</td>
+<td>0.1s (60%)</td>
+<td>0.0s (32%)</td>
 <td>0.0s (0%)</td>
 <td></td>
 </tr>
 
 <tr>
-<td>62.</td>
-<td>icu_properties_data v2.1.1</td>
+<td>29.</td>
+<td>pin-project-lite v0.2.16</td>
 <td>0.1s</td>
-<td>0.1s (83%)</td>
-<td>0.0s (6%)</td>
-<td>0.0s (0%)</td>
+<td>0.1s (88%)</td>
+<td>0.0s (3%)</td>
+<td>0.0s (8%)</td>
 <td></td>
 </tr>
 
 <tr>
-<td>63.</td>
-<td>tinystr v0.8.2</td>
+<td>30.</td>
+<td>itoa v1.0.15</td>
 <td>0.1s</td>
-<td>0.1s (79%)</td>
-<td>0.0s (12%)</td>
-<td>0.0s (9%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>64.</td>
-<td>form_urlencoded v1.2.2</td>
-<td>0.1s</td>
-<td>0.1s (63%)</td>
-<td>0.0s (33%)</td>
-<td>0.0s (10%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>65.</td>
-<td>stable_deref_trait v1.2.1</td>
-<td>0.1s</td>
-<td>0.1s (77%)</td>
+<td>0.1s (82%)</td>
 <td>0.0s (5%)</td>
-<td>0.0s (10%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>66.</td>
-<td>potential_utf v0.1.4</td>
-<td>0.1s</td>
-<td>0.1s (69%)</td>
-<td>0.0s (23%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>67.</td>
-<td>utf8_iter v1.0.4</td>
-<td>0.1s</td>
-<td>0.1s (71%)</td>
-<td>0.0s (12%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>68.</td>
-<td>idna_adapter v1.2.1</td>
-<td>0.1s</td>
-<td>0.1s (75%)</td>
-<td>0.0s (17%)</td>
-<td>0.0s (0%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>69.</td>
-<td>typeid v1.0.3</td>
-<td>0.1s</td>
-<td>0.0s (73%)</td>
-<td>0.0s (24%)</td>
-<td>0.0s (17%)</td>
-<td></td>
-</tr>
-
-<tr>
-<td>70.</td>
-<td>icu_normalizer_data v2.1.1</td>
-<td>0.1s</td>
-<td>0.0s (70%)</td>
-<td>0.0s (19%)</td>
-<td>0.0s (0%)</td>
+<td>0.0s (8%)</td>
 <td></td>
 </tr>
 </tbody>
 </table>
 <script>
-DURATION = 11;
+DURATION = 6;
 const UNIT_DATA = [
   {
-    "i": 30,
+    "i": 6,
     "name": "proc-macro2",
     "version": "1.0.103",
     "mode": "todo",
     "target": " build-script",
     "features": [],
-    "start": 0.77,
-    "duration": 1.37,
+    "start": 0.41,
+    "duration": 1.03,
     "unblocked_units": [
-      29
+      5
     ],
     "unblocked_rmeta_units": [],
     "sections": [
@@ -966,472 +566,40 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.10939120899999999
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.11,
-          "end": 0.20333870899999995
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.2,
-          "end": 1.36
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.36,
-          "end": 1.37
-        }
-      ]
-    ]
-  },
-  {
-    "i": 33,
-    "name": "quote",
-    "version": "1.0.42",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 0.77,
-    "duration": 1.28,
-    "unblocked_units": [
-      32
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.10260841600000004
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.1,
-          "end": 0.18487587500000002
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.18,
-          "end": 1.26
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.26,
-          "end": 1.28
-        }
-      ]
-    ]
-  },
-  {
-    "i": 59,
-    "name": "unicode-ident",
-    "version": "1.0.22",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 0.77,
-    "duration": 0.15,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.10489595900000004
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.1,
-          "end": 0.12998891700000004
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.13,
-          "end": 0.14
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.14,
-          "end": 0.15
-        }
-      ]
-    ]
-  },
-  {
-    "i": 46,
-    "name": "stable_deref_trait",
-    "version": "1.2.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 0.77,
-    "duration": 0.1,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.077256667
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.08,
-          "end": 0.08477091699999995
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.08,
-          "end": 0.09
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.09,
-          "end": 0.1
-        }
-      ]
-    ]
-  },
-  {
-    "i": 62,
-    "name": "writeable",
-    "version": "0.6.2",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 0.77,
-    "duration": 0.23,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.18310358300000007
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.18,
-          "end": 0.217499
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.22,
-          "end": 0.22
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.22,
-          "end": 0.23
-        }
-      ]
-    ]
-  },
-  {
-    "i": 41,
-    "name": "serde_core",
-    "version": "1.0.228",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 0.77,
-    "duration": 1.41,
-    "unblocked_units": [
-      42
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.10329224999999997
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.1,
-          "end": 0.20063658399999995
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.2,
-          "end": 1.41
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.41,
-          "end": 1.41
-        }
-      ]
-    ]
-  },
-  {
-    "i": 21,
-    "name": "litemap",
-    "version": "0.8.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 0.77,
-    "duration": 0.2,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.15638104199999991
+          "end": 0.15890499999999996
         }
       ],
       [
         "codegen",
         {
           "start": 0.16,
-          "end": 0.180000375
+          "end": 0.26961295799999996
         }
       ],
       [
         "link",
         {
-          "start": 0.18,
-          "end": 0.19
+          "start": 0.27,
+          "end": 1.01
         }
       ],
       [
         "other",
         {
-          "start": 0.19,
-          "end": 0.2
+          "start": 1.01,
+          "end": 1.03
         }
       ]
     ]
   },
   {
-    "i": 0,
-    "name": "autocfg",
-    "version": "1.5.0",
+    "i": 29,
+    "name": "unicode-ident",
+    "version": "1.0.22",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 0.77,
-    "duration": 0.51,
-    "unblocked_units": [
-      23
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.22443812500000004
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.22,
-          "end": 0.494822459
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.49,
-          "end": 0.51
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.51,
-          "end": 0.51
-        }
-      ]
-    ]
-  },
-  {
-    "i": 15,
-    "name": "icu_properties_data",
-    "version": "2.1.1",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 0.77,
-    "duration": 1.27,
-    "unblocked_units": [
-      16
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.07715020900000003
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.08,
-          "end": 0.09563850000000007
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.1,
-          "end": 1.26
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.26,
-          "end": 1.27
-        }
-      ]
-    ]
-  },
-  {
-    "i": 11,
-    "name": "icu_normalizer_data",
-    "version": "2.1.1",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 0.77,
-    "duration": 1.26,
-    "unblocked_units": [
-      12
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.09358962500000001
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.09,
-          "end": 0.10879983299999996
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.11,
-          "end": 1.24
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.24,
-          "end": 1.26
-        }
-      ]
-    ]
-  },
-  {
-    "i": 36,
-    "name": "serde",
-    "version": "1.0.228",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 0.86,
-    "duration": 1.17,
-    "unblocked_units": [
-      37
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.07063320900000003
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.07,
-          "end": 0.1391848750000001
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.14,
-          "end": 1.16
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.16,
-          "end": 1.17
-        }
-      ]
-    ]
-  },
-  {
-    "i": 45,
-    "name": "smallvec",
-    "version": "1.15.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 0.92,
+    "start": 0.41,
     "duration": 0.17,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
@@ -1440,14 +608,14 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.13514912499999987
+          "end": 0.13301662499999994
         }
       ],
       [
         "codegen",
         {
-          "start": 0.14,
-          "end": 0.16020299999999987
+          "start": 0.13,
+          "end": 0.15967133299999997
         }
       ],
       [
@@ -1467,16 +635,16 @@ const UNIT_DATA = [
     ]
   },
   {
-    "i": 57,
-    "name": "typeid",
-    "version": "1.0.3",
+    "i": 9,
+    "name": "quote",
+    "version": "1.0.42",
     "mode": "todo",
     "target": " build-script",
     "features": [],
-    "start": 0.96,
-    "duration": 1.21,
+    "start": 0.41,
+    "duration": 1.13,
     "unblocked_units": [
-      58
+      8
     ],
     "unblocked_rmeta_units": [],
     "sections": [
@@ -1484,401 +652,210 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.07145695799999996
+          "end": 0.14991712499999998
         }
       ],
       [
         "codegen",
         {
-          "start": 0.07,
-          "end": 0.12082141699999993
+          "start": 0.15,
+          "end": 0.22679854200000005
         }
       ],
       [
         "link",
         {
-          "start": 0.12,
-          "end": 1.2
+          "start": 0.23,
+          "end": 1.12
         }
       ],
       [
         "other",
         {
-          "start": 1.2,
-          "end": 1.21
+          "start": 1.12,
+          "end": 1.13
         }
       ]
     ]
   },
   {
-    "i": 4,
-    "name": "erased-serde",
-    "version": "0.4.9",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 1.0,
-    "duration": 1.04,
-    "unblocked_units": [
-      5
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.07218862500000012
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.07,
-          "end": 0.12123229199999996
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.12,
-          "end": 1.03
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.03,
-          "end": 1.04
-        }
-      ]
-    ]
-  },
-  {
-    "i": 26,
-    "name": "percent-encoding",
-    "version": "2.3.2",
+    "i": 2,
+    "name": "once_cell",
+    "version": "1.21.3",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 1.09,
-    "duration": 0.2,
+    "start": 0.41,
+    "duration": 0.31,
     "unblocked_units": [],
     "unblocked_rmeta_units": [
-      6
+      28
     ],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.1414748749999999
+          "end": 0.26467712499999996
         }
       ],
       [
         "codegen",
         {
-          "start": 0.14,
-          "end": 0.18830654199999985
+          "start": 0.26,
+          "end": 0.29815099999999994
         }
       ],
       [
         "link",
         {
-          "start": 0.19,
-          "end": 0.19
+          "start": 0.3,
+          "end": 0.3
         }
       ],
       [
         "other",
         {
-          "start": 0.19,
-          "end": 0.2
+          "start": 0.3,
+          "end": 0.31
         }
       ]
     ]
-  },
-  {
-    "i": 23,
-    "name": "num-traits",
-    "version": "0.2.19",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 1.28,
-    "duration": 0.88,
-    "unblocked_units": [
-      24
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.041670541000000005
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.04,
-          "end": 0.04989995799999991
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.05,
-          "end": 0.87
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.87,
-          "end": 0.88
-        }
-      ]
-    ]
-  },
-  {
-    "i": 50,
-    "name": "thiserror",
-    "version": "2.0.17",
-    "mode": "todo",
-    "target": " build-script",
-    "features": [],
-    "start": 1.29,
-    "duration": 0.86,
-    "unblocked_units": [
-      51
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.04737137499999999
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.05,
-          "end": 0.10921416699999997
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.11,
-          "end": 0.86
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.86,
-          "end": 0.86
-        }
-      ]
-    ]
-  },
-  {
-    "i": 12,
-    "name": "icu_normalizer_data",
-    "version": "2.1.1",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.02,
-    "duration": 0.35,
-    "unblocked_units": [
-      10
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 5,
-    "name": "erased-serde",
-    "version": "0.4.9",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.04,
-    "duration": 0.65,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 37,
-    "name": "serde",
-    "version": "1.0.228",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.04,
-    "duration": 0.54,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": null
   },
   {
     "i": 16,
-    "name": "icu_properties_data",
-    "version": "2.1.1",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
+    "name": "serde_core",
+    "version": "1.0.228",
+    "mode": "todo",
+    "target": " build-script",
     "features": [],
-    "start": 2.04,
-    "duration": 0.92,
+    "start": 0.41,
+    "duration": 0.99,
+    "unblocked_units": [
+      17
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.15027975000000005
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.15,
+          "end": 0.24846662500000005
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.25,
+          "end": 0.98
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.98,
+          "end": 0.99
+        }
+      ]
+    ]
+  },
+  {
+    "i": 13,
+    "name": "serde",
+    "version": "1.0.228",
+    "mode": "todo",
+    "target": " build-script",
+    "features": [],
+    "start": 0.41,
+    "duration": 0.96,
     "unblocked_units": [
       14
     ],
     "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 32,
-    "name": "quote",
-    "version": "1.0.42",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.04,
-    "duration": 0.59,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 29,
-    "name": "proc-macro2",
-    "version": "1.0.103",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.13,
-    "duration": 1.0,
-    "unblocked_units": [
-      28
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 61,
-    "name": "utf8_iter",
-    "version": "1.0.4",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 2.15,
-    "duration": 0.08,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.05656383300000023
+          "end": 0.15026220799999995
         }
       ],
       [
         "codegen",
         {
-          "start": 0.06,
-          "end": 0.06997487500000021
+          "start": 0.15,
+          "end": 0.24701999999999996
         }
       ],
       [
         "link",
         {
-          "start": 0.07,
-          "end": 0.07
+          "start": 0.25,
+          "end": 0.96
         }
       ],
       [
         "other",
         {
-          "start": 0.07,
-          "end": 0.08
+          "start": 0.96,
+          "end": 0.96
         }
       ]
     ]
   },
   {
     "i": 24,
-    "name": "num-traits",
-    "version": "0.2.19",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.16,
-    "duration": 1.19,
-    "unblocked_units": [
-      22
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 58,
-    "name": "typeid",
-    "version": "1.0.3",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.17,
-    "duration": 1.18,
-    "unblocked_units": [
-      56
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 42,
-    "name": "serde_core",
-    "version": "1.0.228",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
-    "features": [],
-    "start": 2.18,
-    "duration": 1.33,
-    "unblocked_units": [
-      40
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": null
-  },
-  {
-    "i": 51,
     "name": "thiserror",
     "version": "2.0.17",
-    "mode": "run-custom-build",
-    "target": " build-script (run)",
+    "mode": "todo",
+    "target": " build-script",
     "features": [],
-    "start": 2.23,
-    "duration": 1.26,
-    "unblocked_units": [],
+    "start": 0.41,
+    "duration": 1.12,
+    "unblocked_units": [
+      25
+    ],
     "unblocked_rmeta_units": [],
-    "sections": null
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.15371875000000002
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.15,
+          "end": 0.26807020800000003
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.27,
+          "end": 1.12
+        }
+      ]
+    ]
   },
   {
-    "i": 10,
-    "name": "icu_normalizer_data",
-    "version": "2.1.1",
+    "i": 11,
+    "name": "ryu",
+    "version": "1.0.20",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 2.38,
-    "duration": 0.05,
+    "start": 0.41,
+    "duration": 0.28,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
     "sections": [
@@ -1886,75 +863,40 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.034957374999999846
+          "end": 0.18604624999999997
         }
       ],
       [
         "codegen",
         {
-          "start": 0.03,
-          "end": 0.03973862500000003
+          "start": 0.19,
+          "end": 0.254290667
         }
       ],
       [
         "link",
         {
-          "start": 0.04,
-          "end": 0.04
+          "start": 0.25,
+          "end": 0.28
         }
       ],
       [
         "other",
         {
-          "start": 0.04,
-          "end": 0.05
+          "start": 0.28,
+          "end": 0.28
         }
       ]
     ]
   },
   {
-    "i": 6,
-    "name": "form_urlencoded",
-    "version": "1.2.2",
+    "i": 3,
+    "name": "pin-project-lite",
+    "version": "0.2.16",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 2.42,
-    "duration": 0.1,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.06328616700000023
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.06,
-          "end": 0.09339650000000033
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.09,
-          "end": 0.1
-        }
-      ]
-    ]
-  },
-  {
-    "i": 14,
-    "name": "icu_properties_data",
-    "version": "2.1.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 2.96,
+    "start": 0.41,
     "duration": 0.12,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
@@ -1963,108 +905,106 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.09961337499999967
+          "end": 0.10578433300000001
         }
       ],
       [
         "codegen",
         {
-          "start": 0.1,
-          "end": 0.10686570799999995
+          "start": 0.11,
+          "end": 0.11415404100000004
         }
       ],
       [
         "link",
         {
           "start": 0.11,
-          "end": 0.11
+          "end": 0.12
         }
       ],
       [
         "other",
         {
-          "start": 0.11,
+          "start": 0.12,
           "end": 0.12
         }
       ]
     ]
   },
   {
-    "i": 28,
-    "name": "proc-macro2",
-    "version": "1.0.103",
+    "i": 20,
+    "name": "serde_json",
+    "version": "1.0.145",
     "mode": "todo",
-    "target": "",
+    "target": " build-script",
     "features": [],
-    "start": 3.14,
-    "duration": 0.29,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      31
+    "start": 0.41,
+    "duration": 1.11,
+    "unblocked_units": [
+      21
     ],
+    "unblocked_rmeta_units": [],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.19046658400000016
+          "end": 0.12811516700000003
         }
       ],
       [
         "codegen",
         {
-          "start": 0.19,
-          "end": 0.27908516699999986
+          "start": 0.13,
+          "end": 0.17953833399999997
         }
       ],
       [
         "link",
         {
-          "start": 0.28,
-          "end": 0.29
+          "start": 0.18,
+          "end": 1.1
         }
       ],
       [
         "other",
         {
-          "start": 0.29,
-          "end": 0.29
+          "start": 1.1,
+          "end": 1.11
         }
       ]
     ]
   },
   {
-    "i": 22,
-    "name": "num-traits",
-    "version": "0.2.19",
+    "i": 1,
+    "name": "memchr",
+    "version": "2.7.6",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 3.35,
+    "start": 0.53,
     "duration": 0.43,
     "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      25
-    ],
+    "unblocked_rmeta_units": [],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.3702156670000001
+          "end": 0.320280542
         }
       ],
       [
         "codegen",
         {
-          "start": 0.37,
-          "end": 0.422638375
+          "start": 0.32,
+          "end": 0.425061292
         }
       ],
       [
         "link",
         {
-          "start": 0.42,
+          "start": 0.43,
           "end": 0.43
         }
       ],
@@ -2078,14 +1018,14 @@ const UNIT_DATA = [
     ]
   },
   {
-    "i": 56,
-    "name": "typeid",
-    "version": "1.0.3",
+    "i": 0,
+    "name": "itoa",
+    "version": "1.0.15",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 3.35,
-    "duration": 0.06,
+    "start": 0.58,
+    "duration": 0.12,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
     "sections": [
@@ -2093,155 +1033,221 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.04370354200000026
+          "end": 0.09827345900000006
         }
       ],
       [
         "codegen",
         {
-          "start": 0.04,
-          "end": 0.054275667000000194
+          "start": 0.1,
+          "end": 0.1057586250000001
         }
       ],
       [
         "link",
-        {
-          "start": 0.05,
-          "end": 0.06
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.06,
-          "end": 0.06
-        }
-      ]
-    ]
-  },
-  {
-    "i": 31,
-    "name": "quote",
-    "version": "1.0.42",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 3.37,
-    "duration": 0.17,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      47
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.10500979200000016
-        }
-      ],
-      [
-        "codegen",
         {
           "start": 0.11,
-          "end": 0.15671445799999972
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.16,
-          "end": 0.16
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.16,
-          "end": 0.17
+          "end": 0.12
         }
       ]
     ]
   },
   {
-    "i": 47,
-    "name": "syn",
-    "version": "2.0.111",
+    "i": 28,
+    "name": "tracing-core",
+    "version": "0.1.35",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 3.49,
-    "duration": 1.22,
-    "unblocked_units": [
-      69,
-      2,
-      43,
-      52
-    ],
+    "start": 0.69,
+    "duration": 0.39,
+    "unblocked_units": [],
     "unblocked_rmeta_units": [
-      48
+      27
     ],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.8863335000000001
+          "end": 0.25249945799999995
         }
       ],
       [
         "codegen",
         {
-          "start": 0.89,
-          "end": 1.1818076250000003
+          "start": 0.25,
+          "end": 0.376303458
         }
       ],
       [
         "link",
         {
-          "start": 1.18,
-          "end": 1.21
+          "start": 0.38,
+          "end": 0.38
         }
       ],
       [
         "other",
         {
-          "start": 1.21,
-          "end": 1.22
+          "start": 0.38,
+          "end": 0.39
         }
       ]
     ]
   },
   {
-    "i": 40,
+    "i": 27,
+    "name": "tracing",
+    "version": "0.1.43",
+    "mode": "todo",
+    "target": "",
+    "features": [],
+    "start": 0.98,
+    "duration": 0.15,
+    "unblocked_units": [],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.10128649999999995
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.1,
+          "end": 0.13994362500000002
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.14,
+          "end": 0.14
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.14,
+          "end": 0.15
+        }
+      ]
+    ]
+  },
+  {
+    "i": 14,
+    "name": "serde",
+    "version": "1.0.228",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.37,
+    "duration": 0.21,
+    "unblocked_units": [],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 17,
+    "name": "serde_core",
+    "version": "1.0.228",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.39,
+    "duration": 0.31,
+    "unblocked_units": [
+      15
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 5,
+    "name": "proc-macro2",
+    "version": "1.0.103",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.43,
+    "duration": 0.45,
+    "unblocked_units": [
+      4
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 21,
+    "name": "serde_json",
+    "version": "1.0.145",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.51,
+    "duration": 0.65,
+    "unblocked_units": [],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 25,
+    "name": "thiserror",
+    "version": "2.0.17",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.53,
+    "duration": 0.82,
+    "unblocked_units": [],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 8,
+    "name": "quote",
+    "version": "1.0.42",
+    "mode": "run-custom-build",
+    "target": " build-script (run)",
+    "features": [],
+    "start": 1.53,
+    "duration": 0.93,
+    "unblocked_units": [
+      7
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": null
+  },
+  {
+    "i": 15,
     "name": "serde_core",
     "version": "1.0.228",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 3.51,
-    "duration": 1.16,
+    "start": 1.71,
+    "duration": 1.15,
     "unblocked_units": [],
     "unblocked_rmeta_units": [
-      3,
-      55,
-      34,
-      44,
-      20
+      19
     ],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 1.001651625
+          "end": 1.0259865000000001
         }
       ],
       [
         "codegen",
         {
-          "start": 1.0,
-          "end": 1.1367692910000002
+          "start": 1.03,
+          "end": 1.1375637500000004
         }
       ],
       [
@@ -2255,620 +1261,19 @@ const UNIT_DATA = [
         "other",
         {
           "start": 1.15,
-          "end": 1.16
+          "end": 1.15
         }
       ]
     ]
   },
   {
-    "i": 25,
-    "name": "ordered-float",
-    "version": "2.10.1",
+    "i": 4,
+    "name": "proc-macro2",
+    "version": "1.0.103",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 3.75,
-    "duration": 0.15,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.12224554199999993
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.12,
-          "end": 0.13588370799999971
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.14,
-          "end": 0.14
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.14,
-          "end": 0.15
-        }
-      ]
-    ]
-  },
-  {
-    "i": 48,
-    "name": "synstructure",
-    "version": "0.13.2",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.53,
-    "duration": 0.38,
-    "unblocked_units": [
-      64,
-      66
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.17174712500000044
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.17,
-          "end": 0.35673266700000017
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.36,
-          "end": 0.37
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.37,
-          "end": 0.38
-        }
-      ]
-    ]
-  },
-  {
-    "i": 3,
-    "name": "erased-serde",
-    "version": "0.4.9",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.61,
-    "duration": 0.4,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      38
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.28137299999999943
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.28,
-          "end": 0.36811049999999934
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.37,
-          "end": 0.39
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.39,
-          "end": 0.4
-        }
-      ]
-    ]
-  },
-  {
-    "i": 44,
-    "name": "serde_spanned",
-    "version": "1.0.3",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.62,
-    "duration": 0.15,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.1039577499999993
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.1,
-          "end": 0.12537924999999994
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.13,
-          "end": 0.14
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.14,
-          "end": 0.15
-        }
-      ]
-    ]
-  },
-  {
-    "i": 55,
-    "name": "toml_datetime",
-    "version": "0.7.3",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.62,
-    "duration": 0.26,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      54
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.15235929199999987
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.15,
-          "end": 0.24632033399999997
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.25,
-          "end": 0.25
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.25,
-          "end": 0.26
-        }
-      ]
-    ]
-  },
-  {
-    "i": 34,
-    "name": "semver",
-    "version": "1.0.27",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.64,
-    "duration": 0.3,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.15362058400000045
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.15,
-          "end": 0.27808633400000016
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.28,
-          "end": 0.29
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.29,
-          "end": 0.3
-        }
-      ]
-    ]
-  },
-  {
-    "i": 20,
-    "name": "jiff",
-    "version": "0.2.16",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.65,
-    "duration": 2.57,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 1.9021925
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 1.9,
-          "end": 2.4495294999999997
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 2.45,
-          "end": 2.55
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 2.55,
-          "end": 2.57
-        }
-      ]
-    ]
-  },
-  {
-    "i": 69,
-    "name": "zerovec-derive",
-    "version": "0.11.2",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.72,
-    "duration": 1.21,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.3469794999999998
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.35,
-          "end": 0.6067874580000003
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.61,
-          "end": 1.21
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.21,
-          "end": 1.21
-        }
-      ]
-    ]
-  },
-  {
-    "i": 2,
-    "name": "displaydoc",
-    "version": "0.2.5",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.72,
-    "duration": 1.01,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.17321804199999935
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.17,
-          "end": 0.38420295899999957
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.38,
-          "end": 1.01
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.01,
-          "end": 1.01
-        }
-      ]
-    ]
-  },
-  {
-    "i": 43,
-    "name": "serde_derive",
-    "version": "1.0.228",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.72,
-    "duration": 1.74,
-    "unblocked_units": [
-      35
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 1.0298221660000006
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 1.03,
-          "end": 1.3398188330000007
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 1.34,
-          "end": 1.73
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.73,
-          "end": 1.74
-        }
-      ]
-    ]
-  },
-  {
-    "i": 52,
-    "name": "thiserror-impl",
-    "version": "2.0.17",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.72,
-    "duration": 1.43,
-    "unblocked_units": [
-      49
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.38347774999999995
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.38,
-          "end": 0.6709387089999996
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.67,
-          "end": 1.43
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.43,
-          "end": 1.43
-        }
-      ]
-    ]
-  },
-  {
-    "i": 54,
-    "name": "toml",
-    "version": "0.9.8",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.79,
-    "duration": 0.42,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.22744395899999947
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.23,
-          "end": 0.403614417
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.4,
-          "end": 0.42
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.42,
-          "end": 0.42
-        }
-      ]
-    ]
-  },
-  {
-    "i": 64,
-    "name": "yoke-derive",
-    "version": "0.8.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.91,
-    "duration": 1.01,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.18060729100000028
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.18,
-          "end": 0.3735086249999995
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.37,
-          "end": 1.0
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.0,
-          "end": 1.01
-        }
-      ]
-    ]
-  },
-  {
-    "i": 66,
-    "name": "zerofrom-derive",
-    "version": "0.1.6",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.91,
-    "duration": 1.22,
-    "unblocked_units": [
-      65
-    ],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.18715395900000065
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.19,
-          "end": 0.4383651250000007
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.44,
-          "end": 1.21
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.21,
-          "end": 1.22
-        }
-      ]
-    ]
-  },
-  {
-    "i": 38,
-    "name": "serde-untagged",
-    "version": "0.1.9",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 4.94,
+    "start": 1.88,
     "duration": 0.26,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
@@ -2877,14 +1282,14 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.1998462080000003
+          "end": 0.17198979199999997
         }
       ],
       [
         "codegen",
         {
-          "start": 0.2,
-          "end": 0.24291474999999974
+          "start": 0.17,
+          "end": 0.2408717090000001
         }
       ],
       [
@@ -2904,405 +1309,232 @@ const UNIT_DATA = [
     ]
   },
   {
-    "i": 65,
-    "name": "zerofrom",
-    "version": "0.1.6",
+    "i": 7,
+    "name": "quote",
+    "version": "1.0.42",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 6.12,
-    "duration": 0.26,
+    "start": 2.46,
+    "duration": 0.15,
     "unblocked_units": [],
     "unblocked_rmeta_units": [
-      63
+      22
     ],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.23062800000000028
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.23,
-          "end": 0.24740329200000044
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.25,
-          "end": 0.25
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.25,
-          "end": 0.26
-        }
-      ]
-    ]
-  },
-  {
-    "i": 49,
-    "name": "thiserror",
-    "version": "2.0.17",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 6.15,
-    "duration": 0.36,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.34943712500000057
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.35,
-          "end": 0.35350929200000003
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.35,
-          "end": 0.36
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.36,
-          "end": 0.36
-        }
-      ]
-    ]
-  },
-  {
-    "i": 63,
-    "name": "yoke",
-    "version": "0.8.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 6.36,
-    "duration": 0.34,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      68,
-      67
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.32702224999999974
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.33,
-          "end": 0.33426012499999924
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.33,
-          "end": 0.34
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.34,
-          "end": 0.34
-        }
-      ]
-    ]
-  },
-  {
-    "i": 35,
-    "name": "serde",
-    "version": "1.0.228",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 6.46,
-    "duration": 0.65,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      39
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.572039416
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.57,
-          "end": 0.6368516250000003
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.64,
-          "end": 0.64
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.64,
-          "end": 0.65
-        }
-      ]
-    ]
-  },
-  {
-    "i": 68,
-    "name": "zerovec",
-    "version": "0.11.5",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 6.69,
-    "duration": 0.67,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      53,
-      27
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.625347916
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.63,
-          "end": 0.6517192080000003
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.65,
-          "end": 0.66
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.66,
-          "end": 0.67
-        }
-      ]
-    ]
-  },
-  {
-    "i": 67,
-    "name": "zerotrie",
-    "version": "0.2.3",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 6.69,
-    "duration": 0.41,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.361389333
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.36,
-          "end": 0.3981998329999996
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.4,
-          "end": 0.4
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.4,
-          "end": 0.41
-        }
-      ]
-    ]
-  },
-  {
-    "i": 39,
-    "name": "serde-value",
-    "version": "0.7.0",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 7.05,
-    "duration": 0.2,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.12533354099999983
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.13,
-          "end": 0.1980439580000004
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.2,
-          "end": 0.2
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.2,
-          "end": 0.2
-        }
-      ]
-    ]
-  },
-  {
-    "i": 27,
-    "name": "potential_utf",
-    "version": "0.1.4",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 7.33,
-    "duration": 0.09,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      7
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.06171341599999991
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.06,
-          "end": 0.08076383299999979
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.08,
-          "end": 0.08
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.08,
-          "end": 0.09
-        }
-      ]
-    ]
-  },
-  {
-    "i": 53,
-    "name": "tinystr",
-    "version": "0.8.2",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 7.33,
-    "duration": 0.11,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      8
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.08741075000000009
+          "end": 0.0896920419999998
         }
       ],
       [
         "codegen",
         {
           "start": 0.09,
-          "end": 0.10359516700000082
+          "end": 0.1380945419999997
         }
       ],
       [
         "link",
         {
-          "start": 0.1,
-          "end": 0.11
+          "start": 0.14,
+          "end": 0.14
         }
       ],
       [
         "other",
         {
-          "start": 0.11,
-          "end": 0.11
+          "start": 0.14,
+          "end": 0.15
         }
       ]
     ]
   },
   {
-    "i": 7,
-    "name": "icu_collections",
-    "version": "2.1.1",
+    "i": 22,
+    "name": "syn",
+    "version": "2.0.111",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 7.4,
+    "start": 2.57,
+    "duration": 0.89,
+    "unblocked_units": [
+      26,
+      18
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.6328581669999997
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.63,
+          "end": 0.8656851249999997
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.87,
+          "end": 0.88
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.88,
+          "end": 0.89
+        }
+      ]
+    ]
+  },
+  {
+    "i": 19,
+    "name": "serde_json",
+    "version": "1.0.145",
+    "mode": "todo",
+    "target": "",
+    "features": [],
+    "start": 2.81,
+    "duration": 0.55,
+    "unblocked_units": [],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.38703583399999975
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.39,
+          "end": 0.5349290419999999
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.53,
+          "end": 0.54
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.54,
+          "end": 0.55
+        }
+      ]
+    ]
+  },
+  {
+    "i": 26,
+    "name": "thiserror-impl",
+    "version": "2.0.17",
+    "mode": "todo",
+    "target": "",
+    "features": [],
+    "start": 3.46,
+    "duration": 0.75,
+    "unblocked_units": [
+      23
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.23800125000000039
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.24,
+          "end": 0.3766140410000003
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 0.38,
+          "end": 0.75
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.75,
+          "end": 0.75
+        }
+      ]
+    ]
+  },
+  {
+    "i": 18,
+    "name": "serde_derive",
+    "version": "1.0.228",
+    "mode": "todo",
+    "target": "",
+    "features": [],
+    "start": 3.46,
+    "duration": 1.42,
+    "unblocked_units": [
+      12
+    ],
+    "unblocked_rmeta_units": [],
+    "sections": [
+      [
+        "frontend",
+        {
+          "start": 0.0,
+          "end": 0.7732817090000004
+        }
+      ],
+      [
+        "codegen",
+        {
+          "start": 0.77,
+          "end": 1.0350799169999996
+        }
+      ],
+      [
+        "link",
+        {
+          "start": 1.04,
+          "end": 1.42
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 1.42,
+          "end": 1.42
+        }
+      ]
+    ]
+  },
+  {
+    "i": 23,
+    "name": "thiserror",
+    "version": "2.0.17",
+    "mode": "todo",
+    "target": "",
+    "features": [],
+    "start": 4.21,
     "duration": 0.24,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
@@ -3311,174 +1543,85 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.16462020899999974
+          "end": 0.21541641700000014
         }
       ],
       [
         "codegen",
         {
-          "start": 0.16,
-          "end": 0.2353319169999999
+          "start": 0.22,
+          "end": 0.2254801249999998
         }
       ],
       [
         "link",
         {
-          "start": 0.24,
+          "start": 0.23,
+          "end": 0.23
+        }
+      ],
+      [
+        "other",
+        {
+          "start": 0.23,
           "end": 0.24
         }
-      ],
-      [
-        "other",
-        {
-          "start": 0.24,
-          "end": 0.24
-        }
       ]
     ]
   },
   {
-    "i": 8,
-    "name": "icu_locale_core",
-    "version": "2.1.1",
+    "i": 12,
+    "name": "serde",
+    "version": "1.0.228",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 7.42,
-    "duration": 0.46,
+    "start": 4.88,
+    "duration": 0.49,
     "unblocked_units": [],
     "unblocked_rmeta_units": [
-      17
+      10
     ],
     "sections": [
       [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.33130987499999964
+          "end": 0.42761849999999946
         }
       ],
       [
         "codegen",
         {
-          "start": 0.33,
-          "end": 0.44880037499999936
+          "start": 0.43,
+          "end": 0.4783424580000002
         }
       ],
       [
         "link",
         {
-          "start": 0.45,
-          "end": 0.45
+          "start": 0.48,
+          "end": 0.49
         }
       ],
       [
         "other",
-        {
-          "start": 0.45,
-          "end": 0.46
-        }
-      ]
-    ]
-  },
-  {
-    "i": 17,
-    "name": "icu_provider",
-    "version": "2.1.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 7.79,
-    "duration": 0.18,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      9,
-      13
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.12907825000000006
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.13,
-          "end": 0.16667433299999956
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.17,
-          "end": 0.17
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.17,
-          "end": 0.18
-        }
-      ]
-    ]
-  },
-  {
-    "i": 13,
-    "name": "icu_properties",
-    "version": "2.1.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 7.93,
-    "duration": 0.63,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      19
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.49146487500000013
-        }
-      ],
-      [
-        "codegen",
         {
           "start": 0.49,
-          "end": 0.6177891669999998
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.62,
-          "end": 0.62
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.62,
-          "end": 0.63
+          "end": 0.49
         }
       ]
     ]
   },
   {
-    "i": 9,
-    "name": "icu_normalizer",
-    "version": "2.1.1",
+    "i": 10,
+    "name": "rustfix",
+    "version": "0.9.4",
     "mode": "todo",
     "target": "",
     "features": [],
-    "start": 7.93,
-    "duration": 0.27,
+    "start": 5.33,
+    "duration": 0.26,
     "unblocked_units": [],
     "unblocked_rmeta_units": [],
     "sections": [
@@ -3486,202 +1629,28 @@ const UNIT_DATA = [
         "frontend",
         {
           "start": 0.0,
-          "end": 0.17240195799999913
+          "end": 0.18097379200000052
         }
       ],
       [
         "codegen",
         {
-          "start": 0.17,
-          "end": 0.26163758299999973
+          "start": 0.18,
+          "end": 0.24756070799999996
         }
       ],
       [
         "link",
+        {
+          "start": 0.25,
+          "end": 0.26
+        }
+      ],
+      [
+        "other",
         {
           "start": 0.26,
-          "end": 0.27
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.27,
-          "end": 0.27
-        }
-      ]
-    ]
-  },
-  {
-    "i": 19,
-    "name": "idna_adapter",
-    "version": "1.2.1",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 8.46,
-    "duration": 0.07,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      18
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.05255120800000057
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.05,
-          "end": 0.062110667000000674
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.06,
-          "end": 0.06
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.06,
-          "end": 0.07
-        }
-      ]
-    ]
-  },
-  {
-    "i": 18,
-    "name": "idna",
-    "version": "1.1.0",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 8.52,
-    "duration": 0.27,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      60
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.13583137500000042
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.14,
-          "end": 0.2631415419999996
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.26,
-          "end": 0.27
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.27,
-          "end": 0.27
-        }
-      ]
-    ]
-  },
-  {
-    "i": 60,
-    "name": "url",
-    "version": "2.5.7",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 8.69,
-    "duration": 0.39,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [
-      1
-    ],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.2691390000000009
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.27,
-          "end": 0.3740821660000009
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 0.37,
-          "end": 0.38
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 0.38,
-          "end": 0.39
-        }
-      ]
-    ]
-  },
-  {
-    "i": 1,
-    "name": "cargo-util-schemas",
-    "version": "0.12.0",
-    "mode": "todo",
-    "target": "",
-    "features": [],
-    "start": 8.99,
-    "duration": 1.07,
-    "unblocked_units": [],
-    "unblocked_rmeta_units": [],
-    "sections": [
-      [
-        "frontend",
-        {
-          "start": 0.0,
-          "end": 0.7919164579999993
-        }
-      ],
-      [
-        "codegen",
-        {
-          "start": 0.79,
-          "end": 1.041686083
-        }
-      ],
-      [
-        "link",
-        {
-          "start": 1.04,
-          "end": 1.07
-        }
-      ],
-      [
-        "other",
-        {
-          "start": 1.07,
-          "end": 1.07
+          "end": 0.26
         }
       ]
     ]
@@ -3689,733 +1658,271 @@ const UNIT_DATA = [
 ];
 const CONCURRENCY_DATA = [
   {
-    "t": 0.77,
+    "t": 0.41,
     "active": 10,
     "waiting": 0,
-    "inactive": 60
-  },
-  {
-    "t": 0.86,
-    "active": 11,
-    "waiting": 0,
-    "inactive": 59
-  },
-  {
-    "t": 0.87,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 59
-  },
-  {
-    "t": 0.92,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 58
-  },
-  {
-    "t": 0.96,
-    "active": 11,
-    "waiting": 0,
-    "inactive": 57
-  },
-  {
-    "t": 0.97,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 57
-  },
-  {
-    "t": 1.0,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 56
-  },
-  {
-    "t": 1.09,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 55
-  },
-  {
-    "t": 1.231474875,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 54
-  },
-  {
-    "t": 1.28,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 53
-  },
-  {
-    "t": 1.29,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 52
-  },
-  {
-    "t": 2.02,
-    "active": 11,
-    "waiting": 1,
-    "inactive": 51
-  },
-  {
-    "t": 2.03,
-    "active": 10,
-    "waiting": 2,
-    "inactive": 50
-  },
-  {
-    "t": 2.0300000000000002,
-    "active": 9,
-    "waiting": 2,
-    "inactive": 50
-  },
-  {
-    "t": 2.04,
-    "active": 11,
-    "waiting": 1,
-    "inactive": 47
-  },
-  {
-    "t": 2.05,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 47
-  },
-  {
-    "t": 2.13,
-    "active": 11,
-    "waiting": 1,
-    "inactive": 46
-  },
-  {
-    "t": 2.14,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 46
-  },
-  {
-    "t": 2.15,
-    "active": 10,
-    "waiting": 2,
-    "inactive": 44
-  },
-  {
-    "t": 2.16,
-    "active": 10,
-    "waiting": 2,
-    "inactive": 43
-  },
-  {
-    "t": 2.17,
-    "active": 10,
-    "waiting": 2,
-    "inactive": 42
-  },
-  {
-    "t": 2.1799999999999997,
-    "active": 9,
-    "waiting": 3,
-    "inactive": 41
-  },
-  {
-    "t": 2.18,
-    "active": 10,
-    "waiting": 2,
-    "inactive": 41
-  },
-  {
-    "t": 2.23,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 41
-  },
-  {
-    "t": 2.37,
-    "active": 9,
-    "waiting": 2,
-    "inactive": 40
-  },
-  {
-    "t": 2.38,
-    "active": 10,
-    "waiting": 1,
-    "inactive": 40
-  },
-  {
-    "t": 2.42,
-    "active": 11,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.4299999999999997,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.52,
-    "active": 9,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.58,
-    "active": 8,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.63,
-    "active": 7,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.69,
-    "active": 6,
-    "waiting": 0,
-    "inactive": 40
-  },
-  {
-    "t": 2.96,
-    "active": 6,
-    "waiting": 0,
-    "inactive": 39
-  },
-  {
-    "t": 3.08,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 39
-  },
-  {
-    "t": 3.13,
-    "active": 4,
-    "waiting": 1,
-    "inactive": 38
-  },
-  {
-    "t": 3.14,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 38
-  },
-  {
-    "t": 3.3304665840000003,
-    "active": 5,
-    "waiting": 1,
-    "inactive": 37
-  },
-  {
-    "t": 3.3499999999999996,
-    "active": 4,
-    "waiting": 2,
-    "inactive": 36
-  },
-  {
-    "t": 3.35,
-    "active": 5,
-    "waiting": 1,
-    "inactive": 35
-  },
-  {
-    "t": 3.37,
-    "active": 6,
-    "waiting": 0,
-    "inactive": 35
-  },
-  {
-    "t": 3.41,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 35
-  },
-  {
-    "t": 3.43,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 35
-  },
-  {
-    "t": 3.4750097920000003,
-    "active": 4,
-    "waiting": 1,
-    "inactive": 34
-  },
-  {
-    "t": 3.49,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 34
-  },
-  {
-    "t": 3.51,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 33
-  },
-  {
-    "t": 3.5100000000000002,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 33
-  },
-  {
-    "t": 3.54,
-    "active": 3,
-    "waiting": 0,
-    "inactive": 33
-  },
-  {
-    "t": 3.720215667,
-    "active": 3,
-    "waiting": 1,
-    "inactive": 32
-  },
-  {
-    "t": 3.75,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 32
-  },
-  {
-    "t": 3.7800000000000002,
-    "active": 3,
-    "waiting": 0,
-    "inactive": 32
-  },
-  {
-    "t": 3.9,
-    "active": 2,
-    "waiting": 0,
-    "inactive": 32
-  },
-  {
-    "t": 4.3763335,
-    "active": 2,
-    "waiting": 1,
-    "inactive": 31
-  },
-  {
-    "t": 4.511651625,
-    "active": 2,
-    "waiting": 6,
-    "inactive": 26
-  },
-  {
-    "t": 4.53,
-    "active": 3,
-    "waiting": 5,
-    "inactive": 26
-  },
-  {
-    "t": 4.61,
-    "active": 4,
-    "waiting": 4,
-    "inactive": 26
-  },
-  {
-    "t": 4.62,
-    "active": 6,
-    "waiting": 2,
-    "inactive": 26
-  },
-  {
-    "t": 4.64,
-    "active": 7,
-    "waiting": 1,
-    "inactive": 26
-  },
-  {
-    "t": 4.65,
-    "active": 8,
-    "waiting": 0,
-    "inactive": 26
-  },
-  {
-    "t": 4.67,
-    "active": 7,
-    "waiting": 0,
-    "inactive": 26
-  },
-  {
-    "t": 4.71,
-    "active": 6,
-    "waiting": 4,
-    "inactive": 22
-  },
-  {
-    "t": 4.72,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 22
-  },
-  {
-    "t": 4.7700000000000005,
-    "active": 9,
-    "waiting": 0,
-    "inactive": 22
-  },
-  {
-    "t": 4.772359292,
-    "active": 9,
-    "waiting": 1,
-    "inactive": 21
-  },
-  {
-    "t": 4.79,
-    "active": 10,
-    "waiting": 0,
-    "inactive": 21
-  },
-  {
-    "t": 4.88,
-    "active": 9,
-    "waiting": 0,
-    "inactive": 21
-  },
-  {
-    "t": 4.891373,
-    "active": 9,
-    "waiting": 1,
     "inactive": 20
   },
   {
-    "t": 4.91,
+    "t": 0.53,
     "active": 10,
-    "waiting": 1,
-    "inactive": 18
+    "waiting": 0,
+    "inactive": 19
   },
   {
-    "t": 4.9399999999999995,
-    "active": 9,
-    "waiting": 1,
-    "inactive": 18
-  },
-  {
-    "t": 4.94,
+    "t": 0.58,
     "active": 10,
     "waiting": 0,
     "inactive": 18
   },
   {
-    "t": 5.010000000000001,
-    "active": 9,
-    "waiting": 0,
-    "inactive": 18
+    "t": 0.6746771249999999,
+    "active": 10,
+    "waiting": 1,
+    "inactive": 17
   },
   {
-    "t": 5.2,
+    "t": 0.69,
+    "active": 10,
+    "waiting": 0,
+    "inactive": 17
+  },
+  {
+    "t": 0.7,
+    "active": 9,
+    "waiting": 0,
+    "inactive": 17
+  },
+  {
+    "t": 0.72,
     "active": 8,
     "waiting": 0,
-    "inactive": 18
+    "inactive": 17
   },
   {
-    "t": 5.21,
+    "t": 0.9424994579999999,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 16
+  },
+  {
+    "t": 0.96,
+    "active": 7,
+    "waiting": 1,
+    "inactive": 16
+  },
+  {
+    "t": 0.98,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 16
+  },
+  {
+    "t": 1.08,
     "active": 7,
     "waiting": 0,
-    "inactive": 18
+    "inactive": 16
   },
   {
-    "t": 5.7299999999999995,
+    "t": 1.13,
     "active": 6,
     "waiting": 0,
-    "inactive": 18
-  },
-  {
-    "t": 5.92,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 18
-  },
-  {
-    "t": 5.93,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 18
-  },
-  {
-    "t": 6.12,
-    "active": 5,
-    "waiting": 0,
-    "inactive": 17
-  },
-  {
-    "t": 6.13,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 17
-  },
-  {
-    "t": 6.1499999999999995,
-    "active": 3,
-    "waiting": 1,
     "inactive": 16
   },
   {
-    "t": 6.15,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 16
-  },
-  {
-    "t": 6.350628,
-    "active": 4,
+    "t": 1.3699999999999999,
+    "active": 5,
     "waiting": 1,
     "inactive": 15
   },
   {
-    "t": 6.36,
-    "active": 5,
+    "t": 1.37,
+    "active": 6,
     "waiting": 0,
     "inactive": 15
   },
   {
-    "t": 6.38,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 15
-  },
-  {
-    "t": 6.46,
-    "active": 4,
+    "t": 1.39,
+    "active": 7,
     "waiting": 0,
     "inactive": 14
   },
   {
-    "t": 6.510000000000001,
-    "active": 3,
+    "t": 1.4,
+    "active": 6,
     "waiting": 0,
     "inactive": 14
   },
   {
-    "t": 6.68702225,
-    "active": 3,
-    "waiting": 2,
+    "t": 1.43,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13
+  },
+  {
+    "t": 1.44,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 13
+  },
+  {
+    "t": 1.51,
+    "active": 7,
+    "waiting": 0,
     "inactive": 12
   },
   {
-    "t": 6.69,
+    "t": 1.52,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 12
+  },
+  {
+    "t": 1.53,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 10
+  },
+  {
+    "t": 1.5399999999999998,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 10
+  },
+  {
+    "t": 1.58,
     "active": 5,
     "waiting": 0,
-    "inactive": 12
+    "inactive": 10
   },
   {
-    "t": 6.7,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 12
-  },
-  {
-    "t": 7.032039416,
+    "t": 1.7,
     "active": 4,
     "waiting": 1,
-    "inactive": 11
+    "inactive": 9
   },
   {
-    "t": 7.05,
+    "t": 1.71,
     "active": 5,
     "waiting": 0,
-    "inactive": 11
-  },
-  {
-    "t": 7.1000000000000005,
-    "active": 4,
-    "waiting": 0,
-    "inactive": 11
-  },
-  {
-    "t": 7.11,
-    "active": 3,
-    "waiting": 0,
-    "inactive": 11
-  },
-  {
-    "t": 7.220000000000001,
-    "active": 2,
-    "waiting": 0,
-    "inactive": 11
-  },
-  {
-    "t": 7.25,
-    "active": 1,
-    "waiting": 0,
-    "inactive": 11
-  },
-  {
-    "t": 7.315347916,
-    "active": 1,
-    "waiting": 2,
     "inactive": 9
   },
   {
-    "t": 7.33,
-    "active": 3,
+    "t": 1.88,
+    "active": 5,
     "waiting": 0,
-    "inactive": 9
-  },
-  {
-    "t": 7.36,
-    "active": 2,
-    "waiting": 0,
-    "inactive": 9
-  },
-  {
-    "t": 7.391713416,
-    "active": 2,
-    "waiting": 1,
     "inactive": 8
   },
   {
-    "t": 7.4,
+    "t": 2.1399999999999997,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 8
+  },
+  {
+    "t": 2.16,
     "active": 3,
     "waiting": 0,
     "inactive": 8
   },
   {
-    "t": 7.41741075,
-    "active": 3,
-    "waiting": 1,
-    "inactive": 7
-  },
-  {
-    "t": 7.42,
-    "active": 3,
+    "t": 2.35,
+    "active": 2,
     "waiting": 0,
-    "inactive": 7
+    "inactive": 8
   },
   {
-    "t": 7.44,
+    "t": 2.46,
     "active": 2,
     "waiting": 0,
     "inactive": 7
   },
   {
-    "t": 7.640000000000001,
-    "active": 1,
-    "waiting": 0,
-    "inactive": 7
-  },
-  {
-    "t": 7.751309875,
-    "active": 1,
+    "t": 2.5496920419999998,
+    "active": 2,
     "waiting": 1,
     "inactive": 6
   },
   {
-    "t": 7.79,
-    "active": 2,
-    "waiting": 0,
-    "inactive": 6
-  },
-  {
-    "t": 7.88,
-    "active": 1,
-    "waiting": 0,
-    "inactive": 6
-  },
-  {
-    "t": 7.91907825,
-    "active": 1,
-    "waiting": 2,
-    "inactive": 4
-  },
-  {
-    "t": 7.93,
+    "t": 2.57,
     "active": 3,
     "waiting": 0,
-    "inactive": 4
+    "inactive": 6
   },
   {
-    "t": 7.97,
+    "t": 2.61,
     "active": 2,
     "waiting": 0,
-    "inactive": 4
+    "inactive": 6
   },
   {
-    "t": 8.2,
+    "t": 2.7359865,
+    "active": 2,
+    "waiting": 1,
+    "inactive": 5
+  },
+  {
+    "t": 2.81,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 5
+  },
+  {
+    "t": 2.86,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 5
+  },
+  {
+    "t": 3.3600000000000003,
     "active": 1,
     "waiting": 0,
-    "inactive": 4
+    "inactive": 5
   },
   {
-    "t": 8.421464875,
-    "active": 1,
-    "waiting": 1,
-    "inactive": 3
-  },
-  {
-    "t": 8.46,
+    "t": 3.46,
     "active": 2,
     "waiting": 0,
     "inactive": 3
   },
   {
-    "t": 8.512551208000001,
-    "active": 2,
-    "waiting": 1,
-    "inactive": 2
-  },
-  {
-    "t": 8.52,
-    "active": 3,
-    "waiting": 0,
-    "inactive": 2
-  },
-  {
-    "t": 8.530000000000001,
+    "t": 4.21,
     "active": 2,
     "waiting": 0,
     "inactive": 2
   },
   {
-    "t": 8.56,
+    "t": 4.45,
     "active": 1,
     "waiting": 0,
     "inactive": 2
   },
   {
-    "t": 8.655831375,
-    "active": 1,
-    "waiting": 1,
-    "inactive": 1
-  },
-  {
-    "t": 8.69,
-    "active": 2,
-    "waiting": 0,
-    "inactive": 1
-  },
-  {
-    "t": 8.79,
+    "t": 4.88,
     "active": 1,
     "waiting": 0,
     "inactive": 1
   },
   {
-    "t": 8.959139,
+    "t": 5.307618499999999,
     "active": 1,
     "waiting": 1,
     "inactive": 0
   },
   {
-    "t": 8.99,
+    "t": 5.33,
     "active": 2,
     "waiting": 0,
     "inactive": 0
   },
   {
-    "t": 9.08,
+    "t": 5.37,
     "active": 1,
     "waiting": 0,
     "inactive": 0
   },
   {
-    "t": 10.06,
+    "t": 5.59,
     "active": 0,
     "waiting": 0,
     "inactive": 0

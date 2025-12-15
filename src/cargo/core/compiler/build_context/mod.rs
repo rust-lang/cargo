@@ -78,6 +78,9 @@ pub struct BuildContext<'a, 'gctx> {
     /// The dependency graph of units to compile.
     pub unit_graph: UnitGraph,
 
+    /// A map from unit to index.
+    pub unit_to_index: HashMap<Unit, u64>,
+
     /// Reverse-dependencies of documented units, used by the `rustdoc --scrape-examples` flag.
     pub scrape_units: Vec<Unit>,
 
@@ -96,6 +99,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         target_data: RustcTargetData<'gctx>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
+        unit_to_index: HashMap<Unit, u64>,
         scrape_units: Vec<Unit>,
     ) -> CargoResult<BuildContext<'a, 'gctx>> {
         let all_kinds = unit_graph
@@ -116,6 +120,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
             target_data,
             roots,
             unit_graph,
+            unit_to_index,
             scrape_units,
             all_kinds,
         })
