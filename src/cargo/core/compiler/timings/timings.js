@@ -87,6 +87,39 @@ for (const unit of UNIT_DATA) {
   }
 }
 
+// Compute x,y coordinate of each block.
+// We also populate a map with the count of each unit name to disambiguate if necessary
+function compute_unit_coords(units, px_per_sec) {
+  const unitCount = new Map();
+  UNIT_COORDS = {};
+  for (i = 0; i < units.length; i++) {
+    let unit = units[i];
+    let y = i * Y_TICK_DIST + 1;
+    let x = px_per_sec * unit.start;
+
+    const sections = [];
+    if (unit.sections !== null) {
+      // We have access to compilation sections
+      for (const section of unit.sections) {
+        const [name, { start, end }] = section;
+        sections.push({
+          name,
+          start: x + px_per_sec * start,
+          width: (end - start) * px_per_sec
+        });
+      }
+    }
+
+    let width = Math.max(px_per_sec * unit.duration, 1.0);
+    UNIT_COORDS[unit.i] = { x, y, width, sections };
+
+    const count = unitCount.get(unit.name) || 0;
+    unitCount.set(unit.name, count + 1);
+  }
+
+  return { UNIT_COORDS, unitCount }
+}
+
 function render_pipeline_graph() {
   if (UNIT_DATA.length == 0) {
     return;
@@ -130,35 +163,7 @@ function render_pipeline_graph() {
   ctx.save();
   ctx.translate(X_LINE, MARGIN);
 
-  // Compute x,y coordinate of each block.
-  // We also populate a map with the count of each unit name to disambiguate if necessary
-  const unitCount = new Map();
-  UNIT_COORDS = {};
-  for (i=0; i<units.length; i++) {
-    let unit = units[i];
-    let y = i * Y_TICK_DIST + 1;
-    let x = px_per_sec * unit.start;
-
-    const sections = [];
-    if (unit.sections !== null) {
-        // We have access to compilation sections
-        for (const section of unit.sections) {
-            const [name, {start, end}] = section;
-            sections.push({
-                name,
-                start: x + px_per_sec * start,
-                width: (end - start) * px_per_sec
-            });
-        }
-    }
-
-    let width = Math.max(px_per_sec * unit.duration, 1.0);
-    UNIT_COORDS[unit.i] = {x, y, width, sections};
-
-    const count = unitCount.get(unit.name) || 0;
-    unitCount.set(unit.name, count + 1);
-  }
-
+  const { UNIT_COORDS, unitCount } = compute_unit_coords(units, px_per_sec);
   const presentSections = new Set();
 
   // Draw the blocks.
@@ -466,12 +471,17 @@ function setup_canvas(id, width, height) {
   return ctx;
 }
 
-function draw_graph_axes(id, graph_height) {
+function graph_dimension(graph_height) {
   const scale = document.getElementById('scale').valueAsNumber;
   const graph_width = scale_to_graph_width(scale);
   const px_per_sec = graph_width / DURATION;
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;
+  return { canvas_height, canvas_width, graph_height, graph_width, px_per_sec, scale }
+}
+
+function draw_graph_axes(id, graph_height) {
+  let { canvas_height, canvas_width, graph_width, px_per_sec } = graph_dimension(graph_height);
   let ctx = setup_canvas(id, canvas_width, canvas_height);
   ctx.fillStyle = CANVAS_BG;
   ctx.fillRect(0, 0, canvas_width, canvas_height);
