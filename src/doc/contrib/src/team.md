@@ -61,7 +61,7 @@ Members are given privileges, such as:
 The primary focus of team meetings is for unblocking designs, including discussing
 - [RFCs][t-cargo-rfcs]
 - [FCPs][cargo-status-tracker]
-- [Items marked **I-nominated-to-discuss**][i-nominated]
+- [Items marked **I-nominated-to-discuss**][i-nominated] or [**I-cargo-nominated** on `rust-lang/rust`][i-cargo-nominated]
 - [Items marked **S-needs-team-input**][s-team-input]
 - Topics proposed on [Zulip][zulip-meeting], subject to availability
 
@@ -69,13 +69,14 @@ Generally, topics for the agenda should be posted a day in advance to give peopl
 
 The team meets on a weekly basis ([ics][meeting-ics]) on a video chat.
 Members of the community are welcome to attend.
-Minutes for all meetings are recorded on [HackMD][meeting-minutes].
+Minutes for all meetings are recorded on [HackMD][meeting-minutes]. After the meeting, meeting notes are permanently recorded in <https://github.com/rust-lang/cargo-team/tree/main/meetings/sync-meeting>.
 
 For discussing contributions, [Office Hours](process/index.md#mentorship) would be more appropriate venue.
 
 [t-cargo-rfcs]: https://github.com/rust-lang/rfcs/pulls?q=is%3Apr+is%3Aopen+label%3AT-cargo
 [cargo-status-tracker]: https://github.com/orgs/rust-lang/projects/47
 [i-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated-to-discuss
+[i-cargo-nominated]: https://github.com/rust-lang/rust/issues?q=label%3AI-cargo-nominated
 [s-team-input]: https://github.com/rust-lang/cargo/labels/S-needs-team-input
 [meeting-ics]: https://rust-lang.github.io/calendar/cargo/team-meeting.ics
 [meeting-minutes]: https://hackmd.io/@rust-cargo-team?tags=%5B%22meetings%22%5D
@@ -92,6 +93,20 @@ Contributors who wish to join the team should exhibit an interest in carrying th
 Members may leave at any time, preferably by letting the team know ahead of time.
 
 ## Team resources
+
+### GitHub
+
+The Cargo team has various permissions on GitHub:
+
+- [`rust-lang/cargo`](https://github.com/rust-lang/cargo) --- The primary repository for Cargo development.
+- [`rust-lang/cargo-team`](https://github.com/rust-lang/cargo-team) --- The repository for the Cargo team, primarily hosting meeting notes.
+- [`rust-lang/rust`](https://github.com/rust-lang/rust) --- The primary repository for Rust releases. The cargo team has "write" permission, and also permission to approve merges via [bors](https://bors.rust-lang.org/) (primarily for [submodule updates]).
+- [`rust-lang/annotate-snippets-rs`](https://github.com/rust-lang/annotate-snippets-rs) --- The diagnostic formatting library shared between `rustc` and `cargo`.
+- [`rust-lang/git2-rs`](https://github.com/rust-lang/annotate-snippets-rs) --- The bindings to the libgit2 library used by `cargo`.
+- [`rust-lang/jobserver-rs`](https://github.com/rust-lang/jobserver-rs) --- The jobserver library.
+- [`rust-lang/wg-cargo-std-aware`](https://github.com/rust-lang/wg-cargo-std-aware) --- Repository used to coordinate the efforts to support building `std` with cargo.
+
+[submodule updates]: process/release.md#submodule-updates
 
 ### Zulip
 
@@ -111,6 +126,21 @@ The following are private streams for the Cargo team. The team should avoid usin
 The Cargo team has a shared, public workspace on HackMD at <https://hackmd.io/@rust-cargo-team> for drafting documents and recording meeting minutes.
 
 Since this HackMD workspace is using the free service, it does not support private documents. If you need to draft a private document, create it in your personal workspace and use private channels to share the link.
+
+### Misc services
+
+The Cargo team has permissions and access to various services provided by the Rust organization:
+
+- Crater --- The Cargo team has permissions to do crater runs as needed. See [the Crater chapter](tests/crater.md) for more information.
+- Perf --- The Cargo team has permissions to do perf runs as needed. See [the compiler performance chapter][perf] for more information. Note that this generally only exercises the compiler, so its use may be limited.
+- Blog --- The Cargo team is welcome to post on [the Rust blog] (usually [Inside Rust]). See the [blogs policy] for more information.
+- Travel grants --- Travel grants are available for going to conferences. See the [travel policy] for more information.
+
+[perf]: https://rustc-dev-guide.rust-lang.org/tests/perf.html#manual-perf-runs
+[the Rust blog]: https://blog.rust-lang.org/
+[Inside Rust]: https://blog.rust-lang.org/inside-rust/
+[blogs policy]: https://forge.rust-lang.org/platforms/blogs.html
+[travel policy]: https://github.com/rust-lang/leadership-council/blob/main/policies/spending/travel.md
 
 ## Decision process
 
