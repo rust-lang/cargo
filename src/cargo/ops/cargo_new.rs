@@ -205,7 +205,7 @@ fn check_name(
 
     if restricted_names::is_keyword(name) {
         anyhow::bail!(
-            "the name `{}` cannot be used as a package name, it is a Rust keyword{}",
+            "invalid package name `{}`: it is a Rust keyword{}",
             name,
             bin_help()
         );
@@ -213,14 +213,14 @@ fn check_name(
     if restricted_names::is_conflicting_artifact_name(name) {
         if has_bin {
             anyhow::bail!(
-                "the name `{}` cannot be used as a package name, \
+                "invalid package name `{}`: \
                 it conflicts with cargo's build directory names{}",
                 name,
                 name_help
             );
         } else {
             shell.warn(format!(
-                "the name `{}` will not support binary \
+                "package `{}` will not support binary \
                 executables with that name, \
                 it conflicts with cargo's build directory names",
                 name
@@ -229,14 +229,14 @@ fn check_name(
     }
     if name == "test" {
         anyhow::bail!(
-            "the name `test` cannot be used as a package name, \
+            "invalid package name `test`: \
             it conflicts with Rust's built-in test library{}",
             bin_help()
         );
     }
     if ["core", "std", "alloc", "proc_macro", "proc-macro"].contains(&name) {
         shell.warn(format!(
-            "the name `{}` is part of Rust's standard library\n\
+            "package name `{}` may be confused with the package with that name in Rust's standard library\n\
             It is recommended to use a different name to avoid problems.{}",
             name,
             bin_help()
@@ -245,13 +245,13 @@ fn check_name(
     if restricted_names::is_windows_reserved(name) {
         if cfg!(windows) {
             anyhow::bail!(
-                "cannot use name `{}`, it is a reserved Windows filename{}",
+                "invalid package name `{}`: it is a reserved Windows filename{}",
                 name,
                 name_help
             );
         } else {
             shell.warn(format!(
-                "the name `{}` is a reserved Windows filename\n\
+                "package name `{}` is a reserved Windows filename\n\
                 This package will not work on Windows platforms.",
                 name
             ))?;
@@ -259,7 +259,7 @@ fn check_name(
     }
     if restricted_names::is_non_ascii_name(name) {
         shell.warn(format!(
-            "the name `{}` contains non-ASCII characters\n\
+            "invalid package name `{}`: contains non-ASCII characters\n\
             Non-ASCII crate names are not supported by Rust.",
             name
         ))?;
@@ -267,7 +267,7 @@ fn check_name(
     let name_in_lowercase = name.to_lowercase();
     if name != name_in_lowercase {
         shell.warn(format!(
-            "the name `{name}` is not snake_case or kebab-case which is recommended for package names, consider `{name_in_lowercase}`"
+            "package name `{name}` is not snake_case or kebab-case which is recommended for package names, consider `{name_in_lowercase}`"
         ))?;
     }
 

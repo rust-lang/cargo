@@ -21,7 +21,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Creating</tspan><tspan> binary (application) package</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the name `test` cannot be used as a package name, it conflicts with Rust's built-in test library</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: invalid package name `test`: it conflicts with Rust's built-in test library</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan>note: the directory name is used as the package name</tspan>
 </tspan>
