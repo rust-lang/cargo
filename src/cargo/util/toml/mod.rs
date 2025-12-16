@@ -25,7 +25,9 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{CliUnstable, FeatureValue, find_workspace_root, resolve_relative_path};
+use crate::core::{
+    CliUnstable, FeatureValue, Patch, PatchLocation, find_workspace_root, resolve_relative_path,
+};
 use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
@@ -2113,9 +2115,9 @@ fn replace(
 }
 
 fn patch(
-    me: &manifest::TomlManifest,
+    me: &TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
-) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+) -> CargoResult<HashMap<Url, Vec<Patch>>> {
     let mut patch = HashMap::new();
     for (toml_url, deps) in me.patch.iter().flatten() {
         let url = match &toml_url[..] {
@@ -2146,7 +2148,10 @@ fn patch(
                         dep.unused_keys(),
                         &mut manifest_ctx.warnings,
                     );
-                    dep_to_dependency(dep, name, manifest_ctx, None)
+
+                    let dep = dep_to_dependency(dep, name, manifest_ctx, None)?;
+                    let loc = PatchLocation::Manifest(manifest_ctx.file.to_path_buf());
+                    Ok(Patch { dep, loc })
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
         );

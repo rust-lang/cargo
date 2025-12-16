@@ -12,8 +12,7 @@
 use std::collections::{HashMap, HashSet};
 use std::task::{Poll, ready};
 
-use crate::core::PackageSet;
-use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::core::{Dependency, PackageId, PackageSet, Patch, SourceId, Summary};
 use crate::sources::IndexSummary;
 use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
@@ -177,7 +176,7 @@ enum Kind {
 ///   It is the patch locked to a specific version found in Cargo.lock.
 ///   This will be `None` if `Cargo.lock` doesn't exist,
 ///   or the patch did not match any existing entries in `Cargo.lock`.
-pub type PatchDependency<'a> = (&'a Dependency, Option<LockedPatchDependency>);
+pub type PatchDependency<'a> = (&'a Patch, Option<LockedPatchDependency>);
 
 /// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
@@ -342,7 +341,7 @@ impl<'gctx> PackageRegistry<'gctx> {
         &mut self,
         url: &Url,
         patch_deps: &[PatchDependency<'_>],
-    ) -> CargoResult<Vec<(Dependency, PackageId)>> {
+    ) -> CargoResult<Vec<(Patch, PackageId)>> {
         // NOTE: None of this code is aware of required features. If a patch
         // is missing a required feature, you end up with an "unused patch"
         // warning, which is very hard to understand. Ideally the warning
@@ -372,7 +371,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 // Use the locked patch if it exists, otherwise use the original.
                 let dep = match locked {
                     Some(lock) => &lock.dependency,
-                    None => *orig_patch,
+                    None => &orig_patch.dep,
                 };
                 debug!(
                     "registering a patch for `{}` with `{}`",
@@ -430,7 +429,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
 
                 let (summary, should_unlock) =
-                    match summary_for_patch(orig_patch, &locked, summaries, source) {
+                    match summary_for_patch(&orig_patch.dep, &locked, summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
                             patch_deps_pending.push(patch_dep_remaining);
@@ -440,7 +439,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                     .with_context(|| {
                         format!(
                             "patch for `{}` in `{}` failed to resolve",
-                            orig_patch.package_name(),
+                            orig_patch.dep.package_name(),
                             url,
                         )
                     })

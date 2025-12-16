@@ -903,7 +903,7 @@ fn register_patch_entries(
     let mut avoid_patch_ids = HashSet::new();
     for (url, patches) in ws.root_patch()?.iter() {
         for patch in patches {
-            version_prefs.prefer_dependency(patch.clone());
+            version_prefs.prefer_dependency(patch.dep.clone());
         }
         let Some(previous) = previous else {
             let patches: Vec<_> = patches.iter().map(|p| (p, None)).collect();
@@ -921,7 +921,8 @@ fn register_patch_entries(
         // previous resolve graph, which is primarily what's done here to
         // build the `registrations` list.
         let mut registrations = Vec::new();
-        for dep in patches {
+        for patch in patches {
+            let dep = &patch.dep;
             let candidates = || {
                 previous
                     .iter()
@@ -986,7 +987,7 @@ fn register_patch_entries(
                 }
             };
 
-            registrations.push((dep, lock));
+            registrations.push((patch, lock));
         }
 
         let canonical = CanonicalUrl::new(url)?;
@@ -995,7 +996,7 @@ fn register_patch_entries(
             avoid_patch_ids.insert(unlock_id);
             // Also avoid the thing it is patching.
             avoid_patch_ids.extend(previous.iter().filter(|id| {
-                orig_patch.matches_ignoring_source(*id)
+                orig_patch.dep.matches_ignoring_source(*id)
                     && *id.source_id().canonical_url() == canonical
             }));
         }

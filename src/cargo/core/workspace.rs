@@ -17,7 +17,8 @@ use crate::core::registry::PackageRegistry;
 use crate::core::resolver::ResolveBehavior;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::{
-    Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery,
+    Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
+    PatchLocation,
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::lints::analyze_cargo_lints_table;
@@ -26,7 +27,7 @@ use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
 use crate::ops;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
-use crate::util::context::FeatureUnification;
+use crate::util::context::{FeatureUnification, Value};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -483,9 +484,9 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    fn config_patch(&self) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+    fn config_patch(&self) -> CargoResult<HashMap<Url, Vec<Patch>>> {
         let config_patch: Option<
-            BTreeMap<String, BTreeMap<String, TomlDependency<ConfigRelativePath>>>,
+            BTreeMap<String, BTreeMap<String, Value<TomlDependency<ConfigRelativePath>>>>,
         > = self.gctx.get("patch")?;
 
         let source = SourceId::for_manifest_path(self.root_manifest())?;
@@ -507,9 +508,9 @@ impl<'gctx> Workspace<'gctx> {
             patch.insert(
                 url,
                 deps.iter()
-                    .map(|(name, dep)| {
+                    .map(|(name, dependency_cv)| {
                         crate::util::toml::to_dependency(
-                            dep,
+                            &dependency_cv.val,
                             name,
                             source,
                             self.gctx,
@@ -520,6 +521,10 @@ impl<'gctx> Workspace<'gctx> {
                             Path::new("unused-relative-path"),
                             /* kind */ None,
                         )
+                        .map(|dep| Patch {
+                            dep,
+                            loc: PatchLocation::Config(dependency_cv.definition.clone()),
+                        })
                     })
                     .collect::<CargoResult<Vec<_>>>()?,
             );
@@ -537,7 +542,7 @@ impl<'gctx> Workspace<'gctx> {
     /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
-    pub fn root_patch(&self) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+    pub fn root_patch(&self) -> CargoResult<HashMap<Url, Vec<Patch>>> {
         let from_manifest = match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().patch(),
             MaybePackage::Virtual(vm) => vm.patch(),
@@ -562,7 +567,7 @@ impl<'gctx> Workspace<'gctx> {
                 for dep_from_config in &mut *deps_from_config {
                     if let Some(i) = from_manifest_pruned.iter().position(|dep_from_manifest| {
                         // XXX: should this also take into account version numbers?
-                        dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
+                        dep_from_config.dep.name_in_toml() == dep_from_manifest.dep.name_in_toml()
                     }) {
                         from_manifest_pruned.swap_remove(i);
                     }
