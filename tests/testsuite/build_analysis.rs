@@ -409,14 +409,9 @@ fn log_rebuild_reason_file_changed() {
       "stale_item": "changed-file",
       "stale_mtime": "{...}"
     },
-    "mode": "check",
-    "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "index": 0,
     "reason": "rebuild",
     "run_id": "[..]T[..]Z-[..]",
-    "target": {
-      "kind": "lib",
-      "name": "foo"
-    },
     "timestamp": "[..]T[..]Z"
   },
   {

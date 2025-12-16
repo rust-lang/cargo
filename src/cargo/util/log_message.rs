@@ -123,12 +123,8 @@ pub enum LogMessage {
     },
     /// Emitted when a unit needs to be rebuilt.
     Rebuild {
-        /// Package ID specification.
-        package_id: PackageIdSpec,
-        /// Cargo target (lib, bin, example, etc.).
-        target: Target,
-        /// The compilation action this unit is for (check, build, test, etc.).
-        mode: CompileMode,
+        /// Unit index from the associated unit-registered event.
+        index: u64,
         /// Reason why the unit is dirty and needs rebuilding.
         #[serde(skip_deserializing, default = "default_reason")]
         cause: DirtyReason,

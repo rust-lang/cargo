@@ -456,10 +456,9 @@ pub fn prepare_target(
     if let Some(logger) = bcx.logger {
         // Dont log FreshBuild as it is noisy.
         if !dirty_reason.is_fresh_build() {
+            let index = bcx.unit_to_index[unit];
             logger.log(LogMessage::Rebuild {
-                package_id: unit.pkg.package_id().to_spec(),
-                target: (&unit.target).into(),
-                mode: unit.mode,
+                index,
                 cause: dirty_reason.clone(),
             });
         }
