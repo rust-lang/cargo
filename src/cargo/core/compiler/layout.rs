@@ -160,11 +160,19 @@ impl Layout {
         {
             None
         } else {
-            Some(build_dest.open_rw_exclusive_create(
-                ".cargo-lock",
-                ws.gctx(),
-                "build directory",
-            )?)
+            if ws.gctx().cli_unstable().fine_grain_locking {
+                Some(build_dest.open_ro_shared_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?)
+            } else {
+                Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?)
+            }
         };
         let build_root = build_root.into_path_unlocked();
         let build_dest = build_dest.as_path_unlocked();

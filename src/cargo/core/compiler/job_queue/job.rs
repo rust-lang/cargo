@@ -85,6 +85,12 @@ impl Job {
         let prev = mem::replace(&mut self.work, Work::noop());
         self.work = next.then(prev);
     }
+
+    /// Chains the given work by putting it after of our own unit of work.
+    pub fn after(&mut self, next: Work) {
+        let prev = mem::replace(&mut self.work, Work::noop());
+        self.work = prev.then(next);
+    }
 }
 
 impl fmt::Debug for Job {
