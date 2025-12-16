@@ -2316,6 +2316,45 @@ Caused by:
 }
 
 #[cargo_test]
+fn mismatched_version_from_cli_config() {
+    // A patch to a location that has an old version.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
+                 edition = "2015"
+
+                 [dependencies]
+                 bar = "0.1.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg_line("--config 'patch.crates-io.bar.path=\"bar\"'")
+        .arg_line("--config 'patch.crates-io.bar.version=\"0.1.1\"'")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+
+Caused by:
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
+
+Caused by:
+  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  Check that the version in the patch location is what you expect, and update the patch definition to match.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn patch_walks_backwards() {
     // Starting with a locked patch, change the patch so it points to an older version.
     Package::new("bar", "0.1.0").publish();
