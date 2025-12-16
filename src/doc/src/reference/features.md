@@ -495,7 +495,7 @@ control which features are enabled when the documentation is built. See
 
 > **Note**: Rustdoc has experimental support for annotating the documentation
 > to indicate which features are required to use certain APIs. See the
-> [`doc_cfg`] documentation for more details. An example is the [`syn`
+> `doc_cfg` documentation for more details. An example is the [`syn`
 > documentation], where you can see colored boxes which note which features
 > are required to use it.
 
@@ -506,7 +506,6 @@ control which features are enabled when the documentation is built. See
 [regex crate source]: https://github.com/rust-lang/regex/blob/1.4.2/src/lib.rs#L488-L583
 [regex-docs-rs]: https://docs.rs/regex/1.4.2/regex/#crate-features
 [sccache]: https://github.com/mozilla/sccache/blob/0.2.13/README.md#build-requirements
-[`doc_cfg`]: ../../unstable-book/language-features/doc-cfg.html
 [`syn` documentation]: https://docs.rs/syn/1.0.54/syn/#modules
 
 ### Discovering features
