@@ -1023,12 +1023,13 @@ fn summary_for_patch(
     } else {
         anyhow::anyhow!(
             "The patch location `{}` contains a `{}` package with {}, but the patch \
-            definition requires `{}`.\n\
+            definition in `{}` requires `{}`.\n\
             Check that the version in the patch location is what you expect, \
             and update the patch definition to match.",
             orig_patch.source_id(),
             orig_patch.package_name(),
             found,
+            original_patch.loc,
             orig_patch.version_req()
         )
     }))

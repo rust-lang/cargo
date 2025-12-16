@@ -2364,7 +2364,7 @@ Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/Cargo.toml` requires `^0.1.1`.
   Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
@@ -2403,7 +2403,7 @@ Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `--config cli option` requires `^0.1.1`.
   Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
@@ -2450,7 +2450,7 @@ Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/tmp/my-config.toml` requires `^0.1.1`.
   Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
@@ -2599,7 +2599,7 @@ Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
 
 Caused by:
-  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition requires `^0.1.1`.
+  The patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/Cargo.toml` requires `^0.1.1`.
   Check that the version in the patch location is what you expect, and update the patch definition to match.
 
 "#]])
