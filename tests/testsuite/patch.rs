@@ -1513,7 +1513,8 @@ fn replace_with_crates_io() {
 [ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
 
 Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
+  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources.
+  Check the patch definition in `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();
