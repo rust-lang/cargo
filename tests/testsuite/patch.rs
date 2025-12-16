@@ -1896,6 +1896,62 @@ fn patch_same_version() {
 }
 
 #[cargo_test]
+fn patch_same_version_different_patch_locations() {
+    let bar = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    registry::init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2015"
+                    [dependencies]
+                    bar = "0.1"
+                    [patch.crates-io]
+                    bar2 = {{ git = '{}', package = 'bar' }}
+                "#,
+                bar.url(),
+            ),
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [patch.crates-io]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/override`
+[ERROR] cannot have two `[patch]` entries which both resolve to `bar v0.1.0`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn two_semver_compatible() {
     let bar = git::repo(&paths::root().join("override"))
         .file("Cargo.toml", &basic_manifest("bar", "0.1.1"))
