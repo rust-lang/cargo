@@ -429,7 +429,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
 
                 let (summary, should_unlock) =
-                    match summary_for_patch(&orig_patch.dep, &locked, summaries, source) {
+                    match summary_for_patch(&orig_patch, &locked, summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
                             patch_deps_pending.push(patch_dep_remaining);
@@ -931,11 +931,12 @@ fn lock(
 /// happens when a match cannot be found with the `locked` one, but found one
 /// via the original patch, so we need to inform the resolver to "unlock" it.
 fn summary_for_patch(
-    orig_patch: &Dependency,
+    original_patch: &Patch,
     locked: &Option<LockedPatchDependency>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
 ) -> Poll<CargoResult<(Summary, Option<PackageId>)>> {
+    let orig_patch = &original_patch.dep;
     if summaries.len() == 1 {
         return Poll::Ready(Ok((summaries.pop().unwrap(), None)));
     }
@@ -953,12 +954,13 @@ fn summary_for_patch(
         return Poll::Ready(Err(anyhow::anyhow!(
             "patch for `{}` in `{}` resolved to more than one candidate\n\
             Found versions: {}\n\
-            Update the patch definition to select only one package.\n\
+            Update the patch definition in `{}` to select only one package.\n\
             For example, add an `=` version requirement to the patch definition, \
             such as `version = \"={}\"`.",
             orig_patch.package_name(),
             orig_patch.source_id(),
             versions.join(", "),
+            original_patch.loc,
             versions.last().unwrap()
         )));
     }
@@ -978,7 +980,12 @@ fn summary_for_patch(
 
         let orig_matches = orig_matches.into_iter().map(|s| s.into_summary()).collect();
 
-        let summary = ready!(summary_for_patch(orig_patch, &None, orig_matches, source))?;
+        let summary = ready!(summary_for_patch(
+            original_patch,
+            &None,
+            orig_matches,
+            source
+        ))?;
         return Poll::Ready(Ok((summary.0, Some(locked.package_id))));
     }
     // Try checking if there are *any* packages that match this by name.

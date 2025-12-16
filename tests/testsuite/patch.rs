@@ -2285,7 +2285,7 @@ Caused by:
 Caused by:
   patch for `bar` in `registry `alternative`` resolved to more than one candidate
   Found versions: 0.1.0, 0.1.1
-  Update the patch definition to select only one package.
+  Update the patch definition in `[ROOT]/foo/Cargo.toml` to select only one package.
   For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
 
 "#]])
