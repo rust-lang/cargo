@@ -2326,6 +2326,7 @@ Caused by:
 
 Caused by:
   The patch location `[ROOT]/foo/bar` does not appear to contain any packages matching the name `bar`.
+  Check the patch definition in `[ROOT]/foo/Cargo.toml`.
 
 "#]])
         .run();

@@ -1016,9 +1016,11 @@ fn summary_for_patch(
     Poll::Ready(Err(if found.is_empty() {
         anyhow::anyhow!(
             "The patch location `{}` does not appear to contain any packages \
-            matching the name `{}`.",
+            matching the name `{}`.\n\
+            Check the patch definition in `{}`.",
             orig_patch.source_id(),
-            orig_patch.package_name()
+            orig_patch.package_name(),
+            original_patch.loc
         )
     } else {
         anyhow::anyhow!(
