@@ -377,7 +377,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
   not need to run `make -j`, and instead can set the `MAKEFLAGS` env var to the
   content of `CARGO_MAKEFLAGS` to activate the use of Cargo's GNU Make compatible
   [jobserver] for sub-make invocations.
-* `OPT_LEVEL`, `DEBUG` --- values of the corresponding variables for the profile currently being built.
+* `DEBUG` --- `true` if any [`debug`] information will be generated and `false` otherwise.
+* `OPT_LEVEL` --- values of the corresponding [`opt-level`] variable for the profile currently being built.
 * `PROFILE` --- `release` for release builds, `debug` for other builds. This is
   determined based on if the [profile] inherits from the [`dev`] or
   [`release`] profile. Using this environment variable is not recommended.
@@ -422,6 +423,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [profile]: profiles.md
 [`dev`]: profiles.md#dev
 [`release`]: profiles.md#release
+[`debug`]: profiles.md#debug
+[`opt-level`]: profiles.md#opt-level
 
 ## Environment variables Cargo sets for 3rd party subcommands
 
