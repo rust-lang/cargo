@@ -22,7 +22,8 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
 use annotate_snippets::Level;
-use anyhow::{Context as _, bail};
+use anyhow::Context as _;
+use itertools::Itertools;
 use tracing::{debug, trace};
 use url::Url;
 
@@ -476,12 +477,21 @@ impl<'gctx> PackageRegistry<'gctx> {
             let name = summary.package_id().name();
             let version = summary.package_id().version();
             if !name_and_version.insert((name, version)) {
-                bail!(
-                    "cannot have two `[patch]` entries which both resolve \
-                     to `{} v{}`",
+                let duplicate_locations: Vec<_> = patch_deps
+                    .iter()
+                    .filter(|&p| p.0.dep.package_name() == name)
+                    .map(|p| p.0.loc.to_string())
+                    .unique()
+                    .collect();
+                return Err(anyhow::anyhow!(
+                    "cannot have two `[patch]` entries which both resolve to `{} v{}`.\n\
+                    Check patch definitions for `{}` in `{}`",
                     name,
-                    version
-                );
+                    version,
+                    name,
+                    duplicate_locations.join(", ")
+                ))
+                .context(format!("failed to resolve patches for `{}`", url));
             }
         }
 
