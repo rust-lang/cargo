@@ -414,6 +414,17 @@ pub use self::dep_info::translate_dep_info;
 pub use self::dirty_reason::DirtyReason;
 pub use self::rustdoc::RustdocFingerprint;
 
+/// Result of comparing fingerprints between the current and previous builds.
+enum FingerprintComparison {
+    /// The unit does not need rebuilding.
+    Fresh,
+    /// The unit needs rebuilding.
+    Dirty {
+        /// The reason why the unit is dirty.
+        reason: DirtyReason,
+    },
+}
+
 /// Determines if a [`Unit`] is up-to-date, and if not prepares necessary work to
 /// update the persisted fingerprint.
 ///
@@ -447,23 +458,33 @@ pub fn prepare_target(
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(build_runner, unit)?;
     let mtime_on_use = build_runner.bcx.gctx.cli_unstable().mtime_on_use;
-    let dirty_reason = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
+    let dirty_reason = match compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force)
+    {
+        FingerprintComparison::Fresh => None,
+        FingerprintComparison::Dirty { reason } => Some(reason),
+    };
+
+    if let Some(logger) = bcx.logger {
+        let index = bcx.unit_to_index[unit];
+        let mut cause = None;
+        let status = match dirty_reason.as_ref() {
+            Some(reason) if reason.is_fresh_build() => util::log_message::FingerprintStatus::New,
+            Some(reason) => {
+                cause = Some(reason.clone());
+                util::log_message::FingerprintStatus::Dirty
+            }
+            None => util::log_message::FingerprintStatus::Fresh,
+        };
+        logger.log(LogMessage::UnitFingerprint {
+            index,
+            status,
+            cause,
+        });
+    }
 
     let Some(dirty_reason) = dirty_reason else {
         return Ok(Job::new_fresh());
     };
-
-    if let Some(logger) = bcx.logger {
-        // Dont log FreshBuild as it is noisy.
-        if !dirty_reason.is_fresh_build() {
-            logger.log(LogMessage::Rebuild {
-                package_id: unit.pkg.package_id().to_spec(),
-                target: (&unit.target).into(),
-                mode: unit.mode,
-                cause: dirty_reason.clone(),
-            });
-        }
-    }
 
     // We're going to rebuild, so ensure the source of the crate passes all
     // verification checks before we build it.
@@ -1918,7 +1939,7 @@ fn compare_old_fingerprint(
     new_fingerprint: &Fingerprint,
     mtime_on_use: bool,
     forced: bool,
-) -> Option<DirtyReason> {
+) -> FingerprintComparison {
     if mtime_on_use {
         // update the mtime so other cleaners know we used it
         let t = FileTime::from_system_time(SystemTime::now());
@@ -1929,8 +1950,8 @@ fn compare_old_fingerprint(
     let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint);
 
     match compare.as_ref() {
-        Ok(None) => {}
-        Ok(Some(reason)) => {
+        Ok(FingerprintComparison::Fresh) => {}
+        Ok(FingerprintComparison::Dirty { reason }) => {
             info!(
                 "fingerprint dirty for {}/{:?}/{:?}",
                 unit.pkg, unit.mode, unit.target,
@@ -1947,22 +1968,26 @@ fn compare_old_fingerprint(
     }
 
     match compare {
-        Ok(None) if forced => Some(DirtyReason::Forced),
-        Ok(reason) => reason,
-        Err(_) => Some(DirtyReason::FreshBuild),
+        Ok(FingerprintComparison::Fresh) if forced => FingerprintComparison::Dirty {
+            reason: DirtyReason::Forced,
+        },
+        Ok(cmp) => cmp,
+        Err(_) => FingerprintComparison::Dirty {
+            reason: DirtyReason::FreshBuild,
+        },
     }
 }
 
 fn _compare_old_fingerprint(
     old_hash_path: &Path,
     new_fingerprint: &Fingerprint,
-) -> CargoResult<Option<DirtyReason>> {
+) -> CargoResult<FingerprintComparison> {
     let old_fingerprint_short = paths::read(old_hash_path)?;
 
     let new_hash = new_fingerprint.hash_u64();
 
     if util::to_hex(new_hash) == old_fingerprint_short && new_fingerprint.fs_status.up_to_date() {
-        return Ok(None);
+        return Ok(FingerprintComparison::Fresh);
     }
 
     let old_fingerprint_json = paths::read(&old_hash_path.with_extension("json"))?;
@@ -1976,7 +2001,8 @@ fn _compare_old_fingerprint(
         );
     }
 
-    Ok(Some(new_fingerprint.compare(&old_fingerprint)))
+    let reason = new_fingerprint.compare(&old_fingerprint);
+    Ok(FingerprintComparison::Dirty { reason })
 }
 
 /// Calculates the fingerprint of a unit thats contains no dep-info files.
