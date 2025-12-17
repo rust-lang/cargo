@@ -120,179 +120,427 @@ function compute_unit_coords(units, px_per_sec) {
   return { UNIT_COORDS, unitCount }
 }
 
-function render_pipeline_graph() {
-  if (UNIT_DATA.length == 0) {
-    return;
-  }
-  let g = document.getElementById('pipeline-graph');
-  HIT_BOXES.length = 0;
-  g.onmousemove = pipeline_mousemove;
-  const min_time = document.getElementById('min-unit-time').valueAsNumber;
+class CanvasRenderer {
+  constructor() {}
 
-  const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
+  render_pipeline_graph() {
+    if (UNIT_DATA.length == 0) {
+      return;
+    }
+    let g = document.getElementById('pipeline-graph');
+    HIT_BOXES.length = 0;
+    g.onmousemove = this._pipeline_mousemove.bind(this);
+    const min_time = document.getElementById('min-unit-time').valueAsNumber;
 
-  const graph_height = Y_TICK_DIST * units.length;
-  const {ctx, graph_width, canvas_width, canvas_height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
-  const container = document.getElementById('pipeline-container');
-  container.style.width = canvas_width;
-  container.style.height = canvas_height;
+    const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
 
-  // Canvas for hover highlights. This is a separate layer to improve performance.
-  const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
-  linectx.clearRect(0, 0, canvas_width, canvas_height);
-  ctx.strokeStyle = AXES_COLOR;
-  // Draw Y tick marks.
-  for (let n=1; n<units.length; n++) {
-    const y = MARGIN + Y_TICK_DIST * n;
-    ctx.beginPath();
-    ctx.moveTo(X_LINE, y);
-    ctx.lineTo(X_LINE-5, y);
-    ctx.stroke();
-  }
+    const graph_height = Y_TICK_DIST * units.length;
+    const { ctx, canvas_width, canvas_height, px_per_sec } = this._draw_graph_axes('pipeline-graph', graph_height);
+    const container = document.getElementById('pipeline-container');
+    container.style.width = canvas_width;
+    container.style.height = canvas_height;
 
-  // Draw Y labels.
-  ctx.textAlign = 'end';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = AXES_COLOR;
-  for (let n=0; n<units.length; n++) {
-    let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
-    ctx.fillText(n+1, X_LINE-4, y);
-  }
+    // Canvas for hover highlights. This is a separate layer to improve performance.
+    const linectx = this._setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
+    linectx.clearRect(0, 0, canvas_width, canvas_height);
+    ctx.strokeStyle = AXES_COLOR;
+    // Draw Y tick marks.
+    for (let n = 1; n < units.length; n++) {
+      const y = MARGIN + Y_TICK_DIST * n;
+      ctx.beginPath();
+      ctx.moveTo(X_LINE, y);
+      ctx.lineTo(X_LINE - 5, y);
+      ctx.stroke();
+    }
 
-  // Draw the graph.
-  ctx.save();
-  ctx.translate(X_LINE, MARGIN);
+    // Draw Y labels.
+    ctx.textAlign = 'end';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = AXES_COLOR;
+    for (let n = 0; n < units.length; n++) {
+      let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
+      ctx.fillText(n + 1, X_LINE - 4, y);
+    }
 
-  const { UNIT_COORDS, unitCount } = compute_unit_coords(units, px_per_sec);
-  const presentSections = new Set();
+    // Draw the graph.
+    ctx.save();
+    ctx.translate(X_LINE, MARGIN);
 
-  // Draw the blocks.
-  for (i=0; i<units.length; i++) {
-    let unit = units[i];
-    let {x, y, width, sections} = UNIT_COORDS[unit.i];
+    const { UNIT_COORDS, unitCount } = compute_unit_coords(units, px_per_sec);
+    const presentSections = new Set();
 
-    HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
+    // Draw the blocks.
+    for (let i = 0; i < units.length; i++) {
+      let unit = units[i];
+      let { x, y, width, sections } = UNIT_COORDS[unit.i];
 
-    ctx.beginPath();
-    ctx.fillStyle = unit.mode == 'run-custom-build' ? CUSTOM_BUILD_COLOR : NOT_CUSTOM_BUILD_COLOR;
-    roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
-    ctx.fill();
+      HIT_BOXES.push({ x: X_LINE + x, y: MARGIN + y, x2: X_LINE + x + width, y2: MARGIN + y + BOX_HEIGHT, i: unit.i });
 
-    for (const section of sections) {
+      ctx.beginPath();
+      ctx.fillStyle = unit.mode == 'run-custom-build' ? CUSTOM_BUILD_COLOR : NOT_CUSTOM_BUILD_COLOR;
+      this._roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
+      ctx.fill();
+
+      for (const section of sections) {
         ctx.beginPath();
         ctx.fillStyle = get_section_color(section.name);
-        roundedRect(ctx, section.start, y, section.width, BOX_HEIGHT, RADIUS);
+        this._roundedRect(ctx, section.start, y, section.width, BOX_HEIGHT, RADIUS);
         ctx.fill();
         presentSections.add(section.name);
+      }
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'middle';
+      ctx.font = '14px sans-serif';
+
+      const labelName = (unitCount.get(unit.name) || 0) > 1 ? `${unit.name} (v${unit.version})${unit.target}` : `${unit.name}${unit.target}`;
+      const label = `${labelName}: ${unit.duration}s`;
+
+      const text_info = ctx.measureText(label);
+      const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
+      ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
+      this._draw_dep_lines(ctx, unit.i, false);
     }
-    ctx.fillStyle = TEXT_COLOR;
-    ctx.textAlign = 'start';
+    ctx.restore();
+
+    // Draw a legend.
+    ctx.save();
+    ctx.translate(canvas_width - 200, MARGIN);
+
+    let frontend_name = "Frontend/rest";
+    if (presentSections.has("other")) {
+      frontend_name = "Frontend";
+    }
+
+    const legend_entries = [{
+      name: frontend_name,
+      color: NOT_CUSTOM_BUILD_COLOR,
+      line: false
+    }];
+    if (presentSections.has("codegen")) {
+      legend_entries.push({
+        name: "Codegen",
+        color: CODEGEN_COLOR,
+        line: false
+      });
+    }
+    if (presentSections.has("link")) {
+      legend_entries.push({
+        name: "Linking",
+        color: LINK_COLOR,
+        line: false
+      });
+    }
+    if (presentSections.has("other")) {
+      legend_entries.push({
+        name: "Other",
+        color: OTHER_COLOR,
+        line: false
+      });
+    }
+    this._draw_legend(ctx, 160, legend_entries);
+    ctx.restore();
+  }
+
+  // Draw a legend at the current position of the ctx.
+  // entries should be an array of objects with the following scheme:
+  // {
+  //   "name": <name of the legend entry> [string],
+  //   "color": <color of the legend entry> [string],
+  //   "line": <should the entry be a thin line or a rectangle> [bool]
+  // }
+  _draw_legend(ctx, width, entries) {
+    const entry_height = 20;
+
+    // Add a bit of margin to the bottom and top
+    const height = entries.length * entry_height + 4;
+
+    // Draw background
+    ctx.fillStyle = BG_COLOR;
+    ctx.strokeStyle = TEXT_COLOR;
+    ctx.lineWidth = 1;
     ctx.textBaseline = 'middle';
-    ctx.font = '14px sans-serif';
-
-    const labelName = (unitCount.get(unit.name) || 0) > 1 ? `${unit.name} (v${unit.version})${unit.target}` : `${unit.name}${unit.target}`;
-    const label = `${labelName}: ${unit.duration}s`;
-
-    const text_info = ctx.measureText(label);
-    const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
-    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
-    draw_dep_lines(ctx, unit.i, false);
-  }
-  ctx.restore();
-
-  // Draw a legend.
-  ctx.save();
-  ctx.translate(canvas_width - 200, MARGIN);
-
-  let frontend_name = "Frontend/rest";
-  if (presentSections.has("other")) {
-    frontend_name = "Frontend";
-  }
-
-  const legend_entries = [{
-    name: frontend_name,
-    color: NOT_CUSTOM_BUILD_COLOR,
-    line: false
-  }];
-  if (presentSections.has("codegen")) {
-    legend_entries.push({
-      name: "Codegen",
-      color: CODEGEN_COLOR,
-      line: false
-    });
-  }
-  if (presentSections.has("link")) {
-    legend_entries.push({
-      name: "Linking",
-      color: LINK_COLOR,
-      line: false
-    });
-  }
-  if (presentSections.has("other")) {
-    legend_entries.push({
-      name: "Other",
-      color: OTHER_COLOR,
-      line: false
-    });
-  }
-  draw_legend(ctx, 160, legend_entries);
-  ctx.restore();
-}
-
-// Draw a legend at the current position of the ctx.
-// entries should be an array of objects with the following scheme:
-// {
-//   "name": <name of the legend entry> [string],
-//   "color": <color of the legend entry> [string],
-//   "line": <should the entry be a thin line or a rectangle> [bool]
-// }
-function draw_legend(ctx, width, entries) {
-  const entry_height = 20;
-
-  // Add a bit of margin to the bottom and top
-  const height = entries.length * entry_height + 4;
-
-  // Draw background
-  ctx.fillStyle = BG_COLOR;
-  ctx.strokeStyle = TEXT_COLOR;
-  ctx.lineWidth = 1;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'start';
-  ctx.beginPath();
-  ctx.rect(0, 0, width, height);
-  ctx.stroke();
-  ctx.fill();
-
-  ctx.lineWidth = 2;
-
-  // Dimension of a block
-  const block_height = 15;
-  const block_width = 30;
-
-  // Margin from the left edge
-  const x_start = 5;
-  // Width of the "mark" section (line/block)
-  const mark_width = 45;
-
-  // Draw legend entries
-  let y = 12;
-  for (const entry of entries) {
+    ctx.textAlign = 'start';
     ctx.beginPath();
+    ctx.rect(0, 0, width, height);
+    ctx.stroke();
+    ctx.fill();
 
-    if (entry.line) {
-      ctx.strokeStyle = entry.color;
-      ctx.moveTo(x_start, y);
-      ctx.lineTo(x_start + mark_width, y);
+    ctx.lineWidth = 2;
+
+    // Dimension of a block
+    const block_height = 15;
+    const block_width = 30;
+
+    // Margin from the left edge
+    const x_start = 5;
+    // Width of the "mark" section (line/block)
+    const mark_width = 45;
+
+    // Draw legend entries
+    let y = 12;
+    for (const entry of entries) {
+      ctx.beginPath();
+
+      if (entry.line) {
+        ctx.strokeStyle = entry.color;
+        ctx.moveTo(x_start, y);
+        ctx.lineTo(x_start + mark_width, y);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = entry.color;
+        ctx.fillRect(x_start + (mark_width - block_width) / 2, y - (block_height / 2), block_width, block_height);
+      }
+
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.fillText(entry.name, x_start + mark_width + 4, y + 1);
+
+      y += entry_height;
+    }
+  }
+
+  // Draws lines from the given unit to the units it unlocks.
+  _draw_dep_lines(ctx, unit_idx, highlighted) {
+    const unit = UNIT_BY_INDEX[unit_idx];
+    const { x, y, sections } = UNIT_COORDS[unit_idx];
+    ctx.save();
+    for (const unblocked of unit.unblocked_units) {
+      this._draw_one_dep_line(ctx, x, y, unblocked, highlighted);
+    }
+    for (const unblocked of unit.unblocked_rmeta_units) {
+      const codegen_x = get_codegen_section_x(sections);
+      this._draw_one_dep_line(ctx, codegen_x, y, unblocked, highlighted);
+    }
+    ctx.restore();
+  }
+
+  _draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
+    if (to_unit in UNIT_COORDS) {
+      let { x: u_x, y: u_y } = UNIT_COORDS[to_unit];
+      ctx.strokeStyle = highlighted ? DEP_LINE_HIGHLIGHTED_COLOR : DEP_LINE_COLOR;
+      ctx.setLineDash([2]);
+      ctx.beginPath();
+      ctx.moveTo(from_x, from_y + BOX_HEIGHT / 2);
+      ctx.lineTo(from_x - 5, from_y + BOX_HEIGHT / 2);
+      ctx.lineTo(from_x - 5, u_y + BOX_HEIGHT / 2);
+      ctx.lineTo(u_x, u_y + BOX_HEIGHT / 2);
       ctx.stroke();
-    } else {
-      ctx.fillStyle = entry.color;
-      ctx.fillRect(x_start + (mark_width - block_width) / 2, y - (block_height / 2), block_width, block_height);
+    }
+  }
+
+  render_timing_graph() {
+    if (CONCURRENCY_DATA.length == 0) {
+      return;
+    }
+    const HEIGHT = 400;
+    const AXIS_HEIGHT = HEIGHT - MARGIN - Y_LINE;
+    const TOP_MARGIN = 10;
+    const GRAPH_HEIGHT = AXIS_HEIGHT - TOP_MARGIN;
+
+    const { canvas_width, graph_width, ctx } = this._draw_graph_axes('timing-graph', AXIS_HEIGHT);
+
+    // Draw Y tick marks and labels.
+    let max_v = 0;
+    for (let c of CONCURRENCY_DATA) {
+      max_v = Math.max(max_v, c.active, c.waiting, c.inactive);
+    }
+    const px_per_v = GRAPH_HEIGHT / max_v;
+    const { step, tick_dist, num_ticks } = split_ticks(max_v, px_per_v, GRAPH_HEIGHT);
+    ctx.textAlign = 'end';
+    for (let n = 0; n < num_ticks; n++) {
+      let y = HEIGHT - Y_LINE - ((n + 1) * tick_dist);
+      ctx.beginPath();
+      ctx.moveTo(X_LINE, y);
+      ctx.lineTo(X_LINE - 5, y);
+      ctx.stroke();
+      ctx.fillText((n + 1) * step, X_LINE - 10, y + 5);
     }
 
-    ctx.fillStyle = TEXT_COLOR;
-    ctx.fillText(entry.name, x_start + mark_width + 4, y + 1);
+    // Label the Y axis.
+    let label_y = (HEIGHT - Y_LINE) / 2;
+    ctx.save();
+    ctx.translate(15, label_y);
+    ctx.rotate(3 * Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('# Units', 0, 0);
+    ctx.restore();
 
-    y += entry_height;
+    // Draw the graph.
+    ctx.save();
+    ctx.translate(X_LINE, MARGIN);
+
+    function coord(t, v) {
+      return {
+        x: graph_width * (t / DURATION),
+        y: TOP_MARGIN + GRAPH_HEIGHT * (1.0 - (v / max_v))
+      };
+    }
+
+    const cpuFillStyle = CPU_COLOR;
+    if (CPU_USAGE.length > 1) {
+      ctx.beginPath();
+      ctx.fillStyle = cpuFillStyle;
+      let bottomLeft = coord(CPU_USAGE[0][0], 0);
+      ctx.moveTo(bottomLeft.x, bottomLeft.y);
+      for (let i = 0; i < CPU_USAGE.length; i++) {
+        let [time, usage] = CPU_USAGE[i];
+        let { x, y } = coord(time, usage / 100.0 * max_v);
+        ctx.lineTo(x, y);
+      }
+      let bottomRight = coord(CPU_USAGE[CPU_USAGE.length - 1][0], 0);
+      ctx.lineTo(bottomRight.x, bottomRight.y);
+      ctx.fill();
+    }
+
+    function draw_line(style, key) {
+      let first = CONCURRENCY_DATA[0];
+      let last = coord(first.t, key(first));
+      ctx.strokeStyle = style;
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      for (let i = 1; i < CONCURRENCY_DATA.length; i++) {
+        let c = CONCURRENCY_DATA[i];
+        let { x, y } = coord(c.t, key(c));
+        ctx.lineTo(x, last.y);
+        ctx.lineTo(x, y);
+        last = { x, y };
+      }
+      ctx.stroke();
+    }
+
+    draw_line('blue', function(c) { return c.inactive; });
+    draw_line('red', function(c) { return c.waiting; });
+    draw_line('green', function(c) { return c.active; });
+
+    // Draw a legend.
+    ctx.restore();
+    ctx.save();
+    ctx.translate(canvas_width - 200, MARGIN);
+    this._draw_legend(ctx, 150, [{
+      name: "Waiting",
+      color: "red",
+      line: true
+    }, {
+      name: "Inactive",
+      color: "blue",
+      line: true
+    }, {
+      name: "Active",
+      color: "green",
+      line: true
+    }, {
+      name: "CPU Usage",
+      color: cpuFillStyle,
+      line: false
+    }]);
+    ctx.restore();
+  }
+
+  _setup_canvas(id, width, height) {
+    let g = document.getElementById(id);
+    let dpr = window.devicePixelRatio || 1;
+    g.width = width * dpr;
+    g.height = height * dpr;
+    g.style.width = width;
+    g.style.height = height;
+    let ctx = g.getContext('2d');
+    ctx.scale(dpr, dpr);
+    return ctx;
+  }
+
+  _draw_graph_axes(id, graph_height) {
+    let { canvas_height, canvas_width, graph_width, px_per_sec } = graph_dimension(graph_height);
+    let ctx = this._setup_canvas(id, canvas_width, canvas_height);
+    ctx.fillStyle = CANVAS_BG;
+    ctx.fillRect(0, 0, canvas_width, canvas_height);
+
+    ctx.lineWidth = 2;
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = AXES_COLOR;
+
+    // Draw main axes.
+    ctx.beginPath();
+    ctx.moveTo(X_LINE, MARGIN);
+    ctx.lineTo(X_LINE, graph_height + MARGIN);
+    ctx.lineTo(X_LINE + graph_width + 20, graph_height + MARGIN);
+    ctx.stroke();
+
+    // Draw X tick marks.
+    const { step, tick_dist, num_ticks } = split_ticks(DURATION, px_per_sec, graph_width);
+    ctx.fillStyle = AXES_COLOR;
+    for (let n = 0; n < num_ticks; n++) {
+      const x = X_LINE + ((n + 1) * tick_dist);
+      ctx.beginPath();
+      ctx.moveTo(x, canvas_height - Y_LINE);
+      ctx.lineTo(x, canvas_height - Y_LINE + 5);
+      ctx.stroke();
+
+      ctx.fillText(`${(n + 1) * step}s`, x, canvas_height - Y_LINE + 20);
+    }
+
+    // Draw vertical lines.
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.setLineDash([2, 4]);
+    for (let n = 0; n < num_ticks; n++) {
+      const x = X_LINE + ((n + 1) * tick_dist);
+      ctx.beginPath();
+      ctx.moveTo(x, MARGIN);
+      ctx.lineTo(x, MARGIN + graph_height);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = TEXT_COLOR;
+    ctx.setLineDash([]);
+    return { canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec };
+  }
+
+  _roundedRect(ctx, x, y, width, height, r) {
+    r = Math.min(r, width, height);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.arc(x + width - r, y + r, r, 3 * Math.PI / 2, 0);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.arc(x + width - r, y + height - r, r, 0, Math.PI / 2);
+    ctx.lineTo(x + r, y + height);
+    ctx.arc(x + r, y + height - r, r, Math.PI / 2, Math.PI);
+    ctx.lineTo(x, y - r);
+    ctx.arc(x + r, y + r, r, Math.PI, 3 * Math.PI / 2);
+    ctx.closePath();
+  }
+
+  _pipeline_mousemove(event) {
+    // Highlight dependency lines on mouse hover.
+    let box = pipeline_mouse_hit(event);
+    if (box) {
+      if (box.i != LAST_HOVER) {
+        LAST_HOVER = box.i;
+        let g = document.getElementById('pipeline-graph-lines');
+        let ctx = g.getContext('2d');
+        ctx.clearRect(0, 0, g.width, g.height);
+        ctx.save();
+        ctx.translate(X_LINE, MARGIN);
+        ctx.lineWidth = 2;
+        this._draw_dep_lines(ctx, box.i, true);
+
+        if (box.i in REVERSE_UNIT_DEPS) {
+          const dep_unit = REVERSE_UNIT_DEPS[box.i];
+          if (dep_unit in UNIT_COORDS) {
+            const { x, y } = UNIT_COORDS[dep_unit];
+            this._draw_one_dep_line(ctx, x, y, box.i, true);
+          }
+        }
+        if (box.i in REVERSE_UNIT_RMETA_DEPS) {
+          const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
+          if (dep_unit in UNIT_COORDS) {
+            const { y, sections } = UNIT_COORDS[dep_unit];
+            const codegen_x = get_codegen_section_x(sections);
+            this._draw_one_dep_line(ctx, codegen_x, y, box.i, true);
+          }
+        }
+        ctx.restore();
+      }
+    }
   }
 }
 
@@ -322,155 +570,6 @@ function get_codegen_section_x(sections) {
     return codegen_section.start;
 }
 
-// Draws lines from the given unit to the units it unlocks.
-function draw_dep_lines(ctx, unit_idx, highlighted) {
-  const unit = UNIT_BY_INDEX[unit_idx];
-  const {x, y, sections} = UNIT_COORDS[unit_idx];
-  ctx.save();
-  for (const unblocked of unit.unblocked_units) {
-    draw_one_dep_line(ctx, x, y, unblocked, highlighted);
-  }
-  for (const unblocked of unit.unblocked_rmeta_units) {
-    const codegen_x = get_codegen_section_x(sections);
-    draw_one_dep_line(ctx, codegen_x, y, unblocked, highlighted);
-  }
-  ctx.restore();
-}
-
-function draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
-  if (to_unit in UNIT_COORDS) {
-    let {x: u_x, y: u_y} = UNIT_COORDS[to_unit];
-    ctx.strokeStyle = highlighted ? DEP_LINE_HIGHLIGHTED_COLOR: DEP_LINE_COLOR;
-    ctx.setLineDash([2]);
-    ctx.beginPath();
-    ctx.moveTo(from_x, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, from_y+BOX_HEIGHT/2);
-    ctx.lineTo(from_x-5, u_y+BOX_HEIGHT/2);
-    ctx.lineTo(u_x, u_y+BOX_HEIGHT/2);
-    ctx.stroke();
-  }
-}
-
-function render_timing_graph() {
-  if (CONCURRENCY_DATA.length == 0) {
-    return;
-  }
-  const HEIGHT = 400;
-  const AXIS_HEIGHT = HEIGHT - MARGIN - Y_LINE;
-  const TOP_MARGIN = 10;
-  const GRAPH_HEIGHT = AXIS_HEIGHT - TOP_MARGIN;
-
-  const {canvas_width, graph_width, ctx} = draw_graph_axes('timing-graph', AXIS_HEIGHT);
-
-  // Draw Y tick marks and labels.
-  let max_v = 0;
-  for (c of CONCURRENCY_DATA) {
-    max_v = Math.max(max_v, c.active, c.waiting, c.inactive);
-  }
-  const px_per_v = GRAPH_HEIGHT / max_v;
-  const {step, tick_dist, num_ticks} = split_ticks(max_v, px_per_v, GRAPH_HEIGHT);
-  ctx.textAlign = 'end';
-  for (n=0; n<num_ticks; n++) {
-    let y = HEIGHT - Y_LINE - ((n + 1) * tick_dist);
-    ctx.beginPath();
-    ctx.moveTo(X_LINE, y);
-    ctx.lineTo(X_LINE-5, y);
-    ctx.stroke();
-    ctx.fillText((n+1) * step, X_LINE-10, y+5);
-  }
-
-  // Label the Y axis.
-  let label_y = (HEIGHT - Y_LINE) / 2;
-  ctx.save();
-  ctx.translate(15, label_y);
-  ctx.rotate(3*Math.PI/2);
-  ctx.textAlign = 'center';
-  ctx.fillText('# Units', 0, 0);
-  ctx.restore();
-
-  // Draw the graph.
-  ctx.save();
-  ctx.translate(X_LINE, MARGIN);
-
-  function coord(t, v) {
-    return {
-      x: graph_width * (t/DURATION),
-      y: TOP_MARGIN + GRAPH_HEIGHT * (1.0 - (v / max_v))
-    };
-  }
-
-  const cpuFillStyle = CPU_COLOR;
-  if (CPU_USAGE.length > 1) {
-    ctx.beginPath();
-    ctx.fillStyle = cpuFillStyle;
-    let bottomLeft = coord(CPU_USAGE[0][0], 0);
-    ctx.moveTo(bottomLeft.x, bottomLeft.y);
-    for (let i=0; i < CPU_USAGE.length; i++) {
-      let [time, usage] = CPU_USAGE[i];
-      let {x, y} = coord(time, usage / 100.0 * max_v);
-      ctx.lineTo(x, y);
-    }
-    let bottomRight = coord(CPU_USAGE[CPU_USAGE.length - 1][0], 0);
-    ctx.lineTo(bottomRight.x, bottomRight.y);
-    ctx.fill();
-  }
-
-  function draw_line(style, key) {
-    let first = CONCURRENCY_DATA[0];
-    let last = coord(first.t, key(first));
-    ctx.strokeStyle = style;
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    for (let i=1; i<CONCURRENCY_DATA.length; i++) {
-      let c = CONCURRENCY_DATA[i];
-      let {x, y} = coord(c.t, key(c));
-      ctx.lineTo(x, last.y);
-      ctx.lineTo(x, y);
-      last = {x, y};
-    }
-    ctx.stroke();
-  }
-
-  draw_line('blue', function(c) {return c.inactive;});
-  draw_line('red', function(c) {return c.waiting;});
-  draw_line('green', function(c) {return c.active;});
-
-  // Draw a legend.
-  ctx.restore();
-  ctx.save();
-  ctx.translate(canvas_width-200, MARGIN);
-  draw_legend(ctx, 150, [{
-    name: "Waiting",
-    color: "red",
-    line: true
-  }, {
-    name: "Inactive",
-    color: "blue",
-    line: true
-  }, {
-    name: "Active",
-    color: "green",
-    line: true
-  }, {
-    name: "CPU Usage",
-    color: cpuFillStyle,
-    line: false
-  }]);
-  ctx.restore();
-}
-
-function setup_canvas(id, width, height) {
-  let g = document.getElementById(id);
-  let dpr = window.devicePixelRatio || 1;
-  g.width = width * dpr;
-  g.height = height * dpr;
-  g.style.width = width;
-  g.style.height = height;
-  let ctx = g.getContext('2d');
-  ctx.scale(dpr, dpr);
-  return ctx;
-}
-
 function graph_dimension(graph_height) {
   const scale = document.getElementById('scale').valueAsNumber;
   const graph_width = scale_to_graph_width(scale);
@@ -478,52 +577,6 @@ function graph_dimension(graph_height) {
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;
   return { canvas_height, canvas_width, graph_height, graph_width, px_per_sec, scale }
-}
-
-function draw_graph_axes(id, graph_height) {
-  let { canvas_height, canvas_width, graph_width, px_per_sec } = graph_dimension(graph_height);
-  let ctx = setup_canvas(id, canvas_width, canvas_height);
-  ctx.fillStyle = CANVAS_BG;
-  ctx.fillRect(0, 0, canvas_width, canvas_height);
-
-  ctx.lineWidth = 2;
-  ctx.font = '16px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.strokeStyle = AXES_COLOR;
-
-  // Draw main axes.
-  ctx.beginPath();
-  ctx.moveTo(X_LINE, MARGIN);
-  ctx.lineTo(X_LINE, graph_height + MARGIN);
-  ctx.lineTo(X_LINE+graph_width+20, graph_height + MARGIN);
-  ctx.stroke();
-
-  // Draw X tick marks.
-  const {step, tick_dist, num_ticks} = split_ticks(DURATION, px_per_sec, graph_width);
-  ctx.fillStyle = AXES_COLOR;
-  for (let n=0; n<num_ticks; n++) {
-    const x = X_LINE + ((n + 1) * tick_dist);
-    ctx.beginPath();
-    ctx.moveTo(x, canvas_height-Y_LINE);
-    ctx.lineTo(x, canvas_height-Y_LINE+5);
-    ctx.stroke();
-
-    ctx.fillText(`${(n+1) * step}s`, x, canvas_height - Y_LINE + 20);
-  }
-
-  // Draw vertical lines.
-  ctx.strokeStyle = GRID_COLOR;
-  ctx.setLineDash([2, 4]);
-  for (n=0; n<num_ticks; n++) {
-    const x = X_LINE + ((n + 1) * tick_dist);
-    ctx.beginPath();
-    ctx.moveTo(x, MARGIN);
-    ctx.lineTo(x, MARGIN+graph_height);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = TEXT_COLOR;
-  ctx.setLineDash([]);
-  return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
 }
 
 // Determine the spacing and number of ticks along an axis.
@@ -561,21 +614,6 @@ function split_ticks(max_value, px_per_v, max_px) {
   return {step, tick_dist, num_ticks};
 }
 
-function roundedRect(ctx, x, y, width, height, r) {
-  r = Math.min(r, width, height);
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+width-r, y);
-  ctx.arc(x+width-r, y+r, r, 3*Math.PI/2, 0);
-  ctx.lineTo(x+width, y+height-r);
-  ctx.arc(x+width-r, y+height-r, r, 0, Math.PI/2);
-  ctx.lineTo(x+r, y+height);
-  ctx.arc(x+r, y+height-r, r, Math.PI/2, Math.PI);
-  ctx.lineTo(x, y-r);
-  ctx.arc(x+r, y+r, r, Math.PI, 3*Math.PI/2);
-  ctx.closePath();
-}
-
 function pipeline_mouse_hit(event) {
   // This brute-force method can be optimized if needed.
   for (let box of HIT_BOXES) {
@@ -586,42 +624,9 @@ function pipeline_mouse_hit(event) {
   }
 }
 
-function pipeline_mousemove(event) {
-  // Highlight dependency lines on mouse hover.
-  let box = pipeline_mouse_hit(event);
-  if (box) {
-    if (box.i != LAST_HOVER) {
-      LAST_HOVER = box.i;
-      let g = document.getElementById('pipeline-graph-lines');
-      let ctx = g.getContext('2d');
-      ctx.clearRect(0, 0, g.width, g.height);
-      ctx.save();
-      ctx.translate(X_LINE, MARGIN);
-      ctx.lineWidth = 2;
-      draw_dep_lines(ctx, box.i, true);
-
-      if (box.i in REVERSE_UNIT_DEPS) {
-        const dep_unit = REVERSE_UNIT_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {x, y} = UNIT_COORDS[dep_unit];
-          draw_one_dep_line(ctx, x, y, box.i, true);
-        }
-      }
-      if (box.i in REVERSE_UNIT_RMETA_DEPS) {
-        const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
-        if (dep_unit in UNIT_COORDS) {
-          const {y, sections} = UNIT_COORDS[dep_unit];
-          const codegen_x = get_codegen_section_x(sections);
-          draw_one_dep_line(ctx, codegen_x, y, box.i, true);
-        }
-      }
-      ctx.restore();
-    }
-  }
-}
-
-render_pipeline_graph();
-render_timing_graph();
+let renderer = new CanvasRenderer();
+renderer.render_pipeline_graph();
+renderer.render_timing_graph();
 
 // Set up and handle controls.
 {
@@ -630,7 +635,7 @@ render_timing_graph();
   time_output.innerHTML = `${range.value}s`;
   range.oninput = event => {
     time_output.innerHTML = `${range.value}s`;
-    render_pipeline_graph();
+    renderer.render_pipeline_graph();
   };
 
   const scale = document.getElementById('scale');
@@ -638,7 +643,7 @@ render_timing_graph();
   scale_output.innerHTML = `${scale.value}`;
   scale.oninput = event => {
     scale_output.innerHTML = `${scale.value}`;
-    render_pipeline_graph();
-    render_timing_graph();
+    renderer.render_pipeline_graph();
+    renderer.render_timing_graph();
   };
 }
