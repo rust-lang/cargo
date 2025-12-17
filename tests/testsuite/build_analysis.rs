@@ -374,7 +374,30 @@ fn log_rebuild_reason_file_changed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check").run();
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  "{...}",
+  {
+    "...": "{...}",
+    "reason": "unit-graph-finished"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-started"
+  },
+  "{...}"
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
 
     // Change source file
     p.change_file("src/lib.rs", "//! comment");
@@ -391,7 +414,7 @@ fn log_rebuild_reason_file_changed() {
 
     // File changes SHOULD log rebuild-reason
     assert_e2e().eq(
-        &get_log(0),
+        &get_log(1),
         str![[r#"
 [
   "{...}",
@@ -434,7 +457,30 @@ fn log_rebuild_reason_no_rebuild() {
         .build();
 
     // First build
-    p.cargo("check").run();
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    assert_e2e().eq(
+        &get_log(0),
+        str![[r#"
+[
+  "{...}",
+  {
+    "...": "{...}",
+    "reason": "unit-graph-finished"
+  },
+  {
+    "...": "{...}",
+    "reason": "unit-started"
+  },
+  "{...}"
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
 
     // Second build without changes
     p.cargo("check -Zbuild-analysis")
@@ -448,7 +494,7 @@ fn log_rebuild_reason_no_rebuild() {
 
     // Should NOT contain any rebuild-reason messages since nothing rebuilt
     assert_e2e().eq(
-        &get_log(0),
+        &get_log(1),
         str![[r#"
 [
   "{...}",
