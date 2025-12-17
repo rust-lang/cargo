@@ -14,90 +14,6 @@ use anyhow::Error;
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
 
-fn debug_source_path(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
-    let mut ps = PathSource::new(path, sid, &gctx);
-
-    match ps.root_package() {
-        Ok(pkg) => {
-            msg.push_str("Found package: ");
-            msg.push_str(pkg.name().as_str());
-            msg.push('\n');
-        }
-        Err(e) => {
-            msg.push_str("Err: ");
-            msg.push_str(&e.to_string());
-            msg.push('\n');
-        }
-    }
-
-    match ps.load() {
-        Ok(_) => {
-            msg.push_str("Loaded package information\n");
-        }
-        Err(e) => {
-            msg.push_str("Err: ");
-            msg.push_str(&e.to_string());
-            msg.push('\n');
-        }
-    }
-
-    match ps.read_package() {
-        Ok(pkg) => {
-            msg.push_str("Read package: ");
-            msg.push_str(pkg.name().as_str());
-            msg.push('\n');
-        }
-        Err(e) => {
-            msg.push_str("Err: ");
-            msg.push_str(&e.to_string());
-            msg.push('\n');
-        }
-    }
-}
-
-fn debug_recursive_source(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
-    let mut rps = RecursivePathSource::new(path, sid, &gctx);
-
-    match rps.load() {
-        Ok(_) => msg.push_str("Loaded package information\n"),
-        Err(e) => {
-            msg.push_str("Err: ");
-            msg.push_str(&e.to_string());
-            msg.push('\n');
-        }
-    }
-
-    match rps.read_packages() {
-        Ok(pkgs) => {
-            for p in pkgs {
-                msg.push_str("found package: ");
-                msg.push_str(&p.name());
-                msg.push('\n');
-
-                match rps.list_files(&p) {
-                    Ok(files) => {
-                        for f in files {
-                            msg.push_str("    ");
-                            msg.push_str(&f.to_string_lossy());
-                            msg.push('\n');
-                        }
-                    }
-                    Err(e) => {
-                        msg.push_str("Err: ");
-                        msg.push_str(&e.to_string());
-                        msg.push('\n');
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            msg.push_str("Err: ");
-            msg.push_str(&e.to_string());
-            msg.push('\n');
-        }
-    }
-}
-
 /// Error during resolution providing a path of `PackageId`s.
 pub struct ResolveError {
     cause: Error,
@@ -660,4 +576,50 @@ pub(crate) fn describe_path<'a>(
     }
 
     String::new()
+}
+
+fn inspect_root_package(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut ps = PathSource::new(path, sid, gctx);
+
+    if let Err(e) = ps.root_package() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    if let Err(e) = ps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    if let Err(e) = ps.read_package() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+    }
+}
+
+fn inspect_recursive_packages(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut rps = RecursivePathSource::new(path, sid, gctx);
+
+    if let Err(e) = rps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    match rps.read_packages() {
+        Ok(pkgs) => {
+            for p in pkgs {
+                if let Err(e) = rps.list_files(&p) {
+                    msg.push_str(&e.to_string());
+                    msg.push('\n');
+                }
+            }
+        }
+        Err(e) => {
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
 }
