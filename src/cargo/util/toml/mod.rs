@@ -1815,9 +1815,9 @@ note: only a feature named `default` will be enabled by default"
     let default_run = normalized_package.default_run.clone();
     let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
     let manifest = Manifest::new(
-        Rc::new(contents),
-        Rc::new(document),
-        Rc::new(original_toml),
+        Some(Rc::new(contents)),
+        Some(Rc::new(document)),
+        Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         summary,
         default_kind,
@@ -1997,9 +1997,9 @@ fn to_virtual_manifest(
         bail!("virtual manifests must be configured with [workspace]");
     }
     let manifest = VirtualManifest::new(
-        Rc::new(contents),
-        Rc::new(document),
-        Rc::new(original_toml),
+        Some(Rc::new(contents)),
+        Some(Rc::new(document)),
+        Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         replace,
         patch,

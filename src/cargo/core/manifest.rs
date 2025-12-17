@@ -496,9 +496,9 @@ compact_debug! {
 
 impl Manifest {
     pub fn new(
-        contents: Rc<String>,
-        document: Rc<toml::Spanned<toml::de::DeTable<'static>>>,
-        original_toml: Rc<TomlManifest>,
+        contents: Option<Rc<String>>,
+        document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+        original_toml: Option<Rc<TomlManifest>>,
         normalized_toml: Rc<TomlManifest>,
         summary: Summary,
 
@@ -526,9 +526,9 @@ impl Manifest {
         embedded: bool,
     ) -> Manifest {
         Manifest {
-            contents: Some(contents),
-            document: Some(document),
-            original_toml: Some(original_toml),
+            contents,
+            document,
+            original_toml,
             normalized_toml,
             summary,
 
@@ -744,9 +744,9 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(
-        contents: Rc<String>,
-        document: Rc<toml::Spanned<toml::de::DeTable<'static>>>,
-        original_toml: Rc<TomlManifest>,
+        contents: Option<Rc<String>>,
+        document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+        original_toml: Option<Rc<TomlManifest>>,
         normalized_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
@@ -755,9 +755,9 @@ impl VirtualManifest {
         resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
         VirtualManifest {
-            contents: Some(contents),
-            document: Some(document),
-            original_toml: Some(original_toml),
+            contents,
+            document,
+            original_toml,
             normalized_toml,
             replace,
             patch,
