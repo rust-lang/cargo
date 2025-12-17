@@ -458,25 +458,33 @@ pub fn prepare_target(
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(build_runner, unit)?;
     let mtime_on_use = build_runner.bcx.gctx.cli_unstable().mtime_on_use;
-    let comparison = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
-
-    let FingerprintComparison::Dirty {
-        reason: dirty_reason,
-    } = comparison
-    else {
-        return Ok(Job::new_fresh());
+    let dirty_reason = match compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force)
+    {
+        FingerprintComparison::Fresh => None,
+        FingerprintComparison::Dirty { reason } => Some(reason),
     };
 
     if let Some(logger) = bcx.logger {
-        // Dont log FreshBuild as it is noisy.
-        if !dirty_reason.is_fresh_build() {
-            let index = bcx.unit_to_index[unit];
-            logger.log(LogMessage::Rebuild {
-                index,
-                cause: dirty_reason.clone(),
-            });
-        }
+        let index = bcx.unit_to_index[unit];
+        let mut cause = None;
+        let status = match dirty_reason.as_ref() {
+            Some(reason) if reason.is_fresh_build() => util::log_message::FingerprintStatus::New,
+            Some(reason) => {
+                cause = Some(reason.clone());
+                util::log_message::FingerprintStatus::Dirty
+            }
+            None => util::log_message::FingerprintStatus::Fresh,
+        };
+        logger.log(LogMessage::UnitFingerprint {
+            index,
+            status,
+            cause,
+        });
     }
+
+    let Some(dirty_reason) = dirty_reason else {
+        return Ok(Job::new_fresh());
+    };
 
     // We're going to rebuild, so ensure the source of the crate passes all
     // verification checks before we build it.

@@ -343,8 +343,6 @@ fn log_rebuild_reason_fresh_build() {
 "#]])
         .run();
 
-    // Fresh builds do NOT log rebuild-reason,
-    // which is emitted between unit-graph-finished and unit-started
     assert_e2e().eq(
         &get_log(0),
         str![[r#"
@@ -353,6 +351,13 @@ fn log_rebuild_reason_fresh_build() {
   {
     "...": "{...}",
     "reason": "unit-graph-finished"
+  },
+  {
+    "index": 0,
+    "reason": "unit-fingerprint",
+    "run_id": "[..]T[..]Z-[..]",
+    "status": "new",
+    "timestamp": "[..]T[..]Z"
   },
   {
     "...": "{...}",
@@ -387,6 +392,13 @@ fn log_rebuild_reason_file_changed() {
   {
     "...": "{...}",
     "reason": "unit-graph-finished"
+  },
+  {
+    "index": 0,
+    "reason": "unit-fingerprint",
+    "run_id": "[..]T[..]Z-[..]",
+    "status": "new",
+    "timestamp": "[..]T[..]Z"
   },
   {
     "...": "{...}",
@@ -433,8 +445,9 @@ fn log_rebuild_reason_file_changed() {
       "stale_mtime": "{...}"
     },
     "index": 0,
-    "reason": "rebuild",
+    "reason": "unit-fingerprint",
     "run_id": "[..]T[..]Z-[..]",
+    "status": "dirty",
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -472,6 +485,13 @@ fn log_rebuild_reason_no_rebuild() {
     "reason": "unit-graph-finished"
   },
   {
+    "index": 0,
+    "reason": "unit-fingerprint",
+    "run_id": "[..]T[..]Z-[..]",
+    "status": "new",
+    "timestamp": "[..]T[..]Z"
+  },
+  {
     "...": "{...}",
     "reason": "unit-started"
   },
@@ -501,6 +521,13 @@ fn log_rebuild_reason_no_rebuild() {
   {
     "...": "{...}",
     "reason": "unit-graph-finished"
+  },
+  {
+    "index": 0,
+    "reason": "unit-fingerprint",
+    "run_id": "[..]T[..]Z-[..]",
+    "status": "fresh",
+    "timestamp": "[..]T[..]Z"
   }
 ]
 "#]]
