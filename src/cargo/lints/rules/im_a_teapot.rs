@@ -54,11 +54,12 @@ pub fn check_im_a_teapot(
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let emitted_reason = LINT.emitted_source(lint_level, reason);
 
-        let span = get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
+        let span =
+            get_key_value_span(manifest.document().unwrap(), &["package", "im-a-teapot"]).unwrap();
 
         let report = &[Group::with_title(level.primary_title(LINT.desc))
             .element(
-                Snippet::source(manifest.contents())
+                Snippet::source(manifest.contents().unwrap())
                     .path(&manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
             )

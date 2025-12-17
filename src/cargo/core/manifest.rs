@@ -559,8 +559,8 @@ impl Manifest {
     }
 
     /// The raw contents of the original TOML
-    pub fn contents(&self) -> &str {
-        self.contents.as_deref().unwrap()
+    pub fn contents(&self) -> Option<&str> {
+        self.contents.as_deref().map(|c| c.as_str())
     }
     /// See [`Manifest::normalized_toml`] for what "normalized" means
     pub fn to_normalized_contents(&self) -> CargoResult<String> {
@@ -568,12 +568,12 @@ impl Manifest {
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
     /// Collection of spans for the original TOML
-    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
-        self.document.as_deref().unwrap()
+    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
+        self.document.as_deref()
     }
     /// The [`TomlManifest`] as parsed from [`Manifest::document`]
-    pub fn original_toml(&self) -> &TomlManifest {
-        self.original_toml.as_deref().unwrap()
+    pub fn original_toml(&self) -> Option<&TomlManifest> {
+        self.original_toml.as_deref()
     }
     /// The [`TomlManifest`] with all fields expanded
     ///
@@ -769,16 +769,16 @@ impl VirtualManifest {
     }
 
     /// The raw contents of the original TOML
-    pub fn contents(&self) -> &str {
-        self.contents.as_deref().unwrap()
+    pub fn contents(&self) -> Option<&str> {
+        self.contents.as_deref().map(|c| c.as_str())
     }
     /// Collection of spans for the original TOML
-    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
-        self.document.as_deref().unwrap()
+    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
+        self.document.as_deref()
     }
     /// The [`TomlManifest`] as parsed from [`VirtualManifest::document`]
-    pub fn original_toml(&self) -> &TomlManifest {
-        self.original_toml.as_deref().unwrap()
+    pub fn original_toml(&self) -> Option<&TomlManifest> {
+        self.original_toml.as_deref()
     }
     /// The [`TomlManifest`] with all fields expanded
     pub fn normalized_toml(&self) -> &TomlManifest {

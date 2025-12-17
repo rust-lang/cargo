@@ -31,14 +31,14 @@ impl ManifestFor<'_> {
         lint.level(pkg_lints, self.edition(), self.unstable_features())
     }
 
-    pub fn contents(&self) -> &str {
+    pub fn contents(&self) -> Option<&str> {
         match self {
             ManifestFor::Package(p) => p.manifest().contents(),
             ManifestFor::Workspace(p) => p.contents(),
         }
     }
 
-    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
+    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         match self {
             ManifestFor::Package(p) => p.manifest().document(),
             ManifestFor::Workspace(p) => p.document(),
@@ -164,8 +164,8 @@ fn report_feature_not_enabled(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let document = manifest.document();
-    let contents = manifest.contents();
+    let contents = manifest.contents().unwrap();
+    let document = manifest.document().unwrap();
     let dash_feature_name = feature_gate.name().replace("_", "-");
     let title = format!("use of unstable lint `{}`", lint_name);
     let label = format!(

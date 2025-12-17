@@ -372,7 +372,9 @@ fn migrate_manifests(
         let ws_original_toml = match ws.root_maybe() {
             MaybePackage::Package(package) => package.manifest().original_toml(),
             MaybePackage::Virtual(manifest) => manifest.original_toml(),
-        };
+        }
+        .unwrap();
+
         if Edition::Edition2024 <= prepare_for_edition {
             let root = document.as_table_mut();
 
