@@ -948,7 +948,6 @@ fn summary_for_patch(
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
 ) -> Poll<CargoResult<(Summary, Option<PackageId>)>> {
-    let orig_patch = &original_patch.dep;
     if summaries.len() == 1 {
         return Poll::Ready(Ok((summaries.pop().unwrap(), None)));
     }
@@ -969,8 +968,8 @@ fn summary_for_patch(
             Update the patch definition in `{}` to select only one package.\n\
             For example, add an `=` version requirement to the patch definition, \
             such as `version = \"={}\"`.",
-            orig_patch.package_name(),
-            orig_patch.source_id(),
+            &original_patch.dep.package_name(),
+            &original_patch.dep.source_id(),
             versions.join(", "),
             original_patch.loc,
             versions.last().unwrap()
@@ -980,11 +979,11 @@ fn summary_for_patch(
     // No summaries found, try to help the user figure out what is wrong.
     if let Some(locked) = locked {
         // Since the locked patch did not match anything, try the unlocked one.
-        let orig_matches =
-            ready!(source.query_vec(orig_patch, QueryKind::Exact)).unwrap_or_else(|e| {
+        let orig_matches = ready!(source.query_vec(&original_patch.dep, QueryKind::Exact))
+            .unwrap_or_else(|e| {
                 tracing::warn!(
                     "could not determine unlocked summaries for dep {:?}: {:?}",
-                    orig_patch,
+                    &original_patch.dep,
                     e
                 );
                 Vec::new()
@@ -1001,7 +1000,10 @@ fn summary_for_patch(
         return Poll::Ready(Ok((summary.0, Some(locked.package_id))));
     }
     // Try checking if there are *any* packages that match this by name.
-    let name_only_dep = Dependency::new_override(orig_patch.package_name(), orig_patch.source_id());
+    let name_only_dep = Dependency::new_override(
+        original_patch.dep.package_name(),
+        original_patch.dep.source_id(),
+    );
 
     let name_summaries =
         ready!(source.query_vec(&name_only_dep, QueryKind::Exact)).unwrap_or_else(|e| {
@@ -1030,8 +1032,8 @@ fn summary_for_patch(
             "The patch location `{}` does not appear to contain any packages \
             matching the name `{}`.\n\
             Check the patch definition in `{}`.",
-            orig_patch.source_id(),
-            orig_patch.package_name(),
+            &original_patch.dep.source_id(),
+            &original_patch.dep.package_name(),
             original_patch.loc
         )
     } else {
@@ -1040,11 +1042,11 @@ fn summary_for_patch(
             definition in `{}` requires `{}`.\n\
             Check that the version in the patch location is what you expect, \
             and update the patch definition to match.",
-            orig_patch.source_id(),
-            orig_patch.package_name(),
+            &original_patch.dep.source_id(),
+            &original_patch.dep.package_name(),
             found,
             original_patch.loc,
-            orig_patch.version_req()
+            &original_patch.dep.version_req()
         )
     }))
 }
