@@ -2355,6 +2355,45 @@ Caused by:
 }
 
 #[cargo_test]
+fn patch_from_env_config_is_ignored() {
+    Package::new("bar", "1.0.0").publish(); // original dependency
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                 [package]
+                 name = "foo"
+                 version = "0.1.0"
+                 edition = "2015"
+
+                 [dependencies]
+                 bar = "1.0.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // copy of the [mismatched_version_from_cli_config] cli options using conversion to env
+    // described in https://doc.rust-lang.org/cargo/reference/config.html#environment-variables
+    p.cargo("check")
+        .env("CARGO_PATCH_CRATES_IO_BAR_PATH", "bar")
+        .env("CARGO_PATCH_CRATES_IO_BAR_VERSION", "0.1.1")
+        .with_status(0)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn patch_walks_backwards() {
     // Starting with a locked patch, change the patch so it points to an older version.
     Package::new("bar", "0.1.0").publish();
