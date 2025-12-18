@@ -29,6 +29,7 @@ use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
 use crate::util::BuildLogger;
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
 use crate::util::logger::RunId;
 use crate::util::style;
@@ -282,6 +283,11 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                     },
                 );
             }
+            LogMessage::UnitFingerprint { status, .. } => match status {
+                FingerprintStatus::New => ctx.total_dirty += 1,
+                FingerprintStatus::Dirty => ctx.total_dirty += 1,
+                FingerprintStatus::Fresh => ctx.total_fresh += 1,
+            },
             LogMessage::UnitStarted { index, elapsed } => {
                 units
                     .entry(index)
