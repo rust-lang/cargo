@@ -537,6 +537,11 @@ pub fn create_bcx<'a, 'gctx>(
                 mode: unit.mode,
                 platform: target_data.short_name(&unit.kind).to_owned(),
                 index: i as u64,
+                features: unit
+                    .features
+                    .iter()
+                    .map(|s| s.as_str().to_owned())
+                    .collect(),
             });
         }
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();

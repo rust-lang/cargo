@@ -79,6 +79,9 @@ pub enum LogMessage {
         platform: String,
         /// Unit index for compact reference in subsequent events.
         index: u64,
+        /// Enabled features.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        features: Vec<String>,
     },
     /// Emitted when a compilation unit starts.
     UnitStarted {

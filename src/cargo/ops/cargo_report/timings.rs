@@ -223,6 +223,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 mode,
                 platform,
                 index,
+                features,
             } => {
                 platform_targets.insert(platform);
 
@@ -266,7 +267,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                     version,
                     mode: mode_str.to_owned(),
                     target: target_str,
-                    features: Vec::new(),
+                    features,
                     start: 0.0,
                     duration: 0.0,
                     unblocked_units: Vec::new(),
