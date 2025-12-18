@@ -207,37 +207,7 @@ class CanvasRenderer {
     ctx.save();
     ctx.translate(canvas_width - 200, MARGIN);
 
-    let frontend_name = "Frontend/rest";
-    if (presentSections.has("other")) {
-      frontend_name = "Frontend";
-    }
-
-    const legend_entries = [{
-      name: frontend_name,
-      color: NOT_CUSTOM_BUILD_COLOR,
-      line: false
-    }];
-    if (presentSections.has("codegen")) {
-      legend_entries.push({
-        name: "Codegen",
-        color: CODEGEN_COLOR,
-        line: false
-      });
-    }
-    if (presentSections.has("link")) {
-      legend_entries.push({
-        name: "Linking",
-        color: LINK_COLOR,
-        line: false
-      });
-    }
-    if (presentSections.has("other")) {
-      legend_entries.push({
-        name: "Other",
-        color: OTHER_COLOR,
-        line: false
-      });
-    }
+    const legend_entries = get_legend_entries(presentSections);
     this._draw_legend(ctx, 160, legend_entries);
     ctx.restore();
   }
@@ -568,6 +538,41 @@ function get_codegen_section_x(sections) {
         return null;
     }
     return codegen_section.start;
+}
+
+function get_legend_entries(presentSections) {
+    let frontend_name = "Frontend/rest";
+    if (presentSections.has("other")) {
+      frontend_name = "Frontend";
+    }
+
+    const legend_entries = [{
+      name: frontend_name,
+      color: NOT_CUSTOM_BUILD_COLOR,
+      line: false
+    }];
+    if (presentSections.has("codegen")) {
+      legend_entries.push({
+        name: "Codegen",
+        color: CODEGEN_COLOR,
+        line: false
+      });
+    }
+    if (presentSections.has("link")) {
+      legend_entries.push({
+        name: "Linking",
+        color: LINK_COLOR,
+        line: false
+      });
+    }
+    if (presentSections.has("other")) {
+      legend_entries.push({
+        name: "Other",
+        color: OTHER_COLOR,
+        line: false
+      });
+    }
+  return legend_entries
 }
 
 function graph_dimension(graph_height) {
