@@ -583,6 +583,7 @@ fn log_msg_unit_graph() {
     "index": 0,
     "mode": "check",
     "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
     "run_id": "[..]T[..]Z-[..]",
     "target": {
@@ -595,6 +596,7 @@ fn log_msg_unit_graph() {
     "index": 1,
     "mode": "doc",
     "package_id": "path+[ROOTURL]/foo/bar#0.0.0",
+    "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
     "run_id": "[..]T[..]Z-[..]",
     "target": {
@@ -607,7 +609,9 @@ fn log_msg_unit_graph() {
     "index": 2,
     "mode": "doc",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
+    "requested": true,
     "run_id": "[..]T[..]Z-[..]",
     "target": {
       "kind": "lib",
@@ -619,6 +623,7 @@ fn log_msg_unit_graph() {
     "index": 3,
     "mode": "build",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
     "run_id": "[..]T[..]Z-[..]",
     "target": {
@@ -631,6 +636,7 @@ fn log_msg_unit_graph() {
     "index": 4,
     "mode": "run-custom-build",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
+    "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
     "run_id": "[..]T[..]Z-[..]",
     "target": {

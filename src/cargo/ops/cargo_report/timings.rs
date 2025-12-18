@@ -1,6 +1,6 @@
 //! The `cargo report timings` command.
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
@@ -29,7 +29,9 @@ use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
 use crate::util::BuildLogger;
 use crate::util::important_paths::find_root_manifest_for_wd;
+use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
+use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 use crate::util::style;
 
@@ -41,6 +43,7 @@ pub struct ReportTimingsOptions<'gctx> {
 
 /// Collects sections data for later post-processing through [`aggregate_sections`].
 struct UnitEntry {
+    target: Target,
     data: UnitData,
     sections: IndexMap<String, CompilationSection>,
     rmeta_time: Option<f64>,
@@ -179,7 +182,9 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
     };
     let mut units: IndexMap<_, UnitEntry> = IndexMap::new();
 
-    let mut unit_by_index: HashMap<u64, _> = HashMap::new();
+    let mut platform_targets = HashSet::new();
+
+    let mut requested_units = HashSet::new();
 
     for (log_index, result) in serde_json::Deserializer::from_reader(reader)
         .into_iter::<LogMessage>()
@@ -201,10 +206,15 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 num_cpus,
                 profile,
                 rustc_version,
-                rustc_version_verbose: _,
+                rustc_version_verbose,
                 target_dir: _,
                 workspace_root: _,
             } => {
+                let rustc_version = rustc_version_verbose
+                    .lines()
+                    .next()
+                    .map(ToOwned::to_owned)
+                    .unwrap_or(rustc_version);
                 ctx.host = host;
                 ctx.jobs = jobs;
                 ctx.num_cpus = num_cpus;
@@ -215,12 +225,15 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 package_id,
                 target,
                 mode,
+                platform,
                 index,
+                features,
+                requested,
             } => {
-                unit_by_index.insert(index, (package_id, target, mode));
-            }
-            LogMessage::UnitStarted { index, elapsed } => {
-                let (package_id, target, mode) = unit_by_index.get(&index).unwrap();
+                if requested {
+                    requested_units.insert(index);
+                }
+                platform_targets.insert(platform);
 
                 let version = package_id
                     .version()
@@ -230,7 +243,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 // This is pretty similar to how the current `core::compiler::timings`
                 // renders `core::manifest::Target`. However, our target is
                 // a simplified type so we cannot reuse the same logic here.
-                let mut target_str = if target.kind == "lib" && mode == &CompileMode::Build {
+                let mut target_str = if target.kind == "lib" && mode == CompileMode::Build {
                     // Special case for brevity, since most dependencies hit this path.
                     "".to_string()
                 } else if target.kind == "build-script" {
@@ -262,8 +275,8 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                     version,
                     mode: mode_str.to_owned(),
                     target: target_str,
-                    features: Vec::new(),
-                    start: elapsed,
+                    features,
+                    start: 0.0,
                     duration: 0.0,
                     unblocked_units: Vec::new(),
                     unblocked_rmeta_units: Vec::new(),
@@ -273,11 +286,25 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 units.insert(
                     index,
                     UnitEntry {
+                        target,
                         data,
                         sections: IndexMap::new(),
                         rmeta_time: None,
                     },
                 );
+            }
+            LogMessage::UnitFingerprint { status, .. } => match status {
+                FingerprintStatus::New => ctx.total_dirty += 1,
+                FingerprintStatus::Dirty => ctx.total_dirty += 1,
+                FingerprintStatus::Fresh => ctx.total_fresh += 1,
+            },
+            LogMessage::UnitStarted { index, elapsed } => {
+                units
+                    .entry(index)
+                    .and_modify(|unit| unit.data.start = elapsed)
+                    .or_insert_with(|| {
+                        unreachable!("unit {index} must have been registered first")
+                    });
             }
             LogMessage::UnitRmetaFinished {
                 index,
@@ -364,10 +391,36 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
         }
     }
 
+    ctx.root_units = {
+        let mut root_map: IndexMap<_, Vec<_>> = IndexMap::new();
+        for index in requested_units {
+            let unit = &units[&index];
+            // Pretty much like `core::Target::description_named`
+            let target_desc = if unit.target.kind == "lib" {
+                "lib".to_owned()
+            } else if unit.target.kind == "build-script" {
+                "build script".to_owned()
+            } else {
+                format!(r#" {} "{}""#, unit.target.name, unit.target.kind)
+            };
+            root_map.entry(index).or_default().push(target_desc);
+        }
+        root_map
+            .into_iter()
+            .sorted_by_key(|(i, _)| *i)
+            .map(|(index, targets)| {
+                let unit = &units[&index];
+                let pkg_desc = format!("{} {}", unit.data.name, unit.data.version);
+                (pkg_desc, targets)
+            })
+            .collect()
+    };
+
     let unit_data: Vec<_> = units
         .into_values()
         .map(
             |UnitEntry {
+                 target: _,
                  mut data,
                  sections,
                  rmeta_time,
@@ -388,6 +441,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
 
     ctx.unit_data = unit_data;
     ctx.concurrency = compute_concurrency(&ctx.unit_data);
+    ctx.requested_targets = platform_targets.into_iter().sorted_unstable().collect();
 
     Ok(ctx)
 }

@@ -69,8 +69,23 @@ pub enum LogMessage {
         target: Target,
         /// The compilation action this unit is for (check, build, test, etc.).
         mode: CompileMode,
+        /// The target platform this unit builds for.
+        ///
+        /// It is either a [target triple] the compiler accepts,
+        /// or a file name with the `json` extension for a [custom target].
+        ///
+        /// [target triple]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
+        /// [custom target]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
+        platform: String,
         /// Unit index for compact reference in subsequent events.
         index: u64,
+        /// Enabled features.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        features: Vec<String>,
+        /// Whether this is requested to build by user directly,
+        /// like via the `-p` flag or the default workspace members.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        requested: bool,
     },
     /// Emitted when a compilation unit starts.
     UnitStarted {

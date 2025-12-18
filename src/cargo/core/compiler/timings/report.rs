@@ -94,7 +94,7 @@ pub struct RenderContext<'a> {
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descriptions)`.
-    pub root_units: &'a [(String, Vec<String>)],
+    pub root_units: Vec<(String, Vec<String>)>,
     /// The build profile.
     pub profile: String,
     /// Total number of fresh units.
@@ -115,7 +115,7 @@ pub struct RenderContext<'a> {
     /// The host triple (arch-platform-OS).
     pub host: String,
     /// The requested target platforms of compilation for this build.
-    pub requested_targets: &'a [&'a str],
+    pub requested_targets: Vec<String>,
     /// The number of jobs specified for this build.
     pub jobs: u32,
     /// Available parallelism of the compilation environment.

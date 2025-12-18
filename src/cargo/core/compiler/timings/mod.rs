@@ -416,12 +416,12 @@ impl<'gctx> Timings<'gctx> {
                 .lines()
                 .next()
                 .expect("rustc version");
-            let requested_targets = &build_runner
+            let requested_targets = build_runner
                 .bcx
                 .build_config
                 .requested_kinds
                 .iter()
-                .map(|kind| build_runner.bcx.target_data.short_name(kind))
+                .map(|kind| build_runner.bcx.target_data.short_name(kind).to_owned())
                 .collect::<Vec<_>>();
             let num_cpus = std::thread::available_parallelism()
                 .ok()
@@ -432,7 +432,7 @@ impl<'gctx> Timings<'gctx> {
 
             let ctx = report::RenderContext {
                 start_str: self.start_str.clone(),
-                root_units: &self.root_targets,
+                root_units: self.root_targets.clone(),
                 profile: self.profile.clone(),
                 total_fresh: self.total_fresh,
                 total_dirty: self.total_dirty,
