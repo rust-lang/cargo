@@ -535,6 +535,7 @@ pub fn create_bcx<'a, 'gctx>(
                 package_id: unit.pkg.package_id().to_spec(),
                 target: (&unit.target).into(),
                 mode: unit.mode,
+                platform: target_data.short_name(&unit.kind).to_owned(),
                 index: i as u64,
             });
         }

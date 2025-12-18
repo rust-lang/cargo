@@ -1,5 +1,6 @@
 //! The `cargo report timings` command.
 
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
@@ -178,6 +179,8 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
     };
     let mut units: IndexMap<_, UnitEntry> = IndexMap::new();
 
+    let mut platform_targets = HashSet::new();
+
     for (log_index, result) in serde_json::Deserializer::from_reader(reader)
         .into_iter::<LogMessage>()
         .enumerate()
@@ -217,8 +220,11 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 package_id,
                 target,
                 mode,
+                platform,
                 index,
             } => {
+                platform_targets.insert(platform);
+
                 let version = package_id
                     .version()
                     .map(|v| v.to_string())
@@ -393,6 +399,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
 
     ctx.unit_data = unit_data;
     ctx.concurrency = compute_concurrency(&ctx.unit_data);
+    ctx.requested_targets = platform_targets.into_iter().sorted_unstable().collect();
 
     Ok(ctx)
 }
