@@ -198,10 +198,15 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 num_cpus,
                 profile,
                 rustc_version,
-                rustc_version_verbose: _,
+                rustc_version_verbose,
                 target_dir: _,
                 workspace_root: _,
             } => {
+                let rustc_version = rustc_version_verbose
+                    .lines()
+                    .next()
+                    .map(ToOwned::to_owned)
+                    .unwrap_or(rustc_version);
                 ctx.host = host;
                 ctx.jobs = jobs;
                 ctx.num_cpus = num_cpus;
