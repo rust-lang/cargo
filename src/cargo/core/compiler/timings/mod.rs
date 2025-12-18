@@ -432,7 +432,7 @@ impl<'gctx> Timings<'gctx> {
 
             let ctx = report::RenderContext {
                 start_str: self.start_str.clone(),
-                root_units: &self.root_targets,
+                root_units: self.root_targets.clone(),
                 profile: self.profile.clone(),
                 total_fresh: self.total_fresh,
                 total_dirty: self.total_dirty,

@@ -611,6 +611,7 @@ fn log_msg_unit_graph() {
     "package_id": "path+[ROOTURL]/foo#0.0.0",
     "platform": "[HOST_TARGET]",
     "reason": "unit-registered",
+    "requested": true,
     "run_id": "[..]T[..]Z-[..]",
     "target": {
       "kind": "lib",

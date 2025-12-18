@@ -94,7 +94,7 @@ pub struct RenderContext<'a> {
     /// A summary of the root units.
     ///
     /// Tuples of `(package_description, target_descriptions)`.
-    pub root_units: &'a [(String, Vec<String>)],
+    pub root_units: Vec<(String, Vec<String>)>,
     /// The build profile.
     pub profile: String,
     /// Total number of fresh units.

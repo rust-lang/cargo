@@ -31,6 +31,7 @@ use crate::util::BuildLogger;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
+use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 use crate::util::style;
 
@@ -42,6 +43,7 @@ pub struct ReportTimingsOptions<'gctx> {
 
 /// Collects sections data for later post-processing through [`aggregate_sections`].
 struct UnitEntry {
+    target: Target,
     data: UnitData,
     sections: IndexMap<String, CompilationSection>,
     rmeta_time: Option<f64>,
@@ -182,6 +184,8 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
 
     let mut platform_targets = HashSet::new();
 
+    let mut requested_units = HashSet::new();
+
     for (log_index, result) in serde_json::Deserializer::from_reader(reader)
         .into_iter::<LogMessage>()
         .enumerate()
@@ -224,7 +228,11 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 platform,
                 index,
                 features,
+                requested,
             } => {
+                if requested {
+                    requested_units.insert(index);
+                }
                 platform_targets.insert(platform);
 
                 let version = package_id
@@ -278,6 +286,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 units.insert(
                     index,
                     UnitEntry {
+                        target,
                         data,
                         sections: IndexMap::new(),
                         rmeta_time: None,
@@ -382,10 +391,36 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
         }
     }
 
+    ctx.root_units = {
+        let mut root_map: IndexMap<_, Vec<_>> = IndexMap::new();
+        for index in requested_units {
+            let unit = &units[&index];
+            // Pretty much like `core::Target::description_named`
+            let target_desc = if unit.target.kind == "lib" {
+                "lib".to_owned()
+            } else if unit.target.kind == "build-script" {
+                "build script".to_owned()
+            } else {
+                format!(r#" {} "{}""#, unit.target.name, unit.target.kind)
+            };
+            root_map.entry(index).or_default().push(target_desc);
+        }
+        root_map
+            .into_iter()
+            .sorted_by_key(|(i, _)| *i)
+            .map(|(index, targets)| {
+                let unit = &units[&index];
+                let pkg_desc = format!("{} {}", unit.data.name, unit.data.version);
+                (pkg_desc, targets)
+            })
+            .collect()
+    };
+
     let unit_data: Vec<_> = units
         .into_values()
         .map(
             |UnitEntry {
+                 target: _,
                  mut data,
                  sections,
                  rmeta_time,

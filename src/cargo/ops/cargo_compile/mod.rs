@@ -512,7 +512,9 @@ pub fn create_bcx<'a, 'gctx>(
     // Rebuild the unit graph, replacing the explicit host targets with
     // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
     // shared with build and artifact dependencies.
-    (root_units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
+    //
+    // NOTE: after this point, all units and the unit graph must be immutable.
+    let (root_units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
         interner,
         unit_graph,
         &root_units,
@@ -521,8 +523,6 @@ pub fn create_bcx<'a, 'gctx>(
         build_config.compile_time_deps_only,
     );
 
-    // unit_graph must be immutable after this point.
-    let unit_graph = unit_graph;
     let units: Vec<_> = unit_graph.keys().sorted().collect();
     let unit_to_index: HashMap<_, _> = units
         .iter()
@@ -530,18 +530,23 @@ pub fn create_bcx<'a, 'gctx>(
         .map(|(i, &unit)| (unit.clone(), i as u64))
         .collect();
     if let Some(logger) = logger {
-        for (i, unit) in units.into_iter().enumerate() {
+        let root_unit_indexes: HashSet<_> =
+            root_units.iter().map(|unit| unit_to_index[&unit]).collect();
+
+        for (index, unit) in units.into_iter().enumerate() {
+            let index = index as u64;
             logger.log(LogMessage::UnitRegistered {
                 package_id: unit.pkg.package_id().to_spec(),
                 target: (&unit.target).into(),
                 mode: unit.mode,
                 platform: target_data.short_name(&unit.kind).to_owned(),
-                index: i as u64,
+                index,
                 features: unit
                     .features
                     .iter()
                     .map(|s| s.as_str().to_owned())
                     .collect(),
+                requested: root_unit_indexes.contains(&index),
             });
         }
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
