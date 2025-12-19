@@ -53,7 +53,6 @@ pub struct Doctest {
 }
 
 /// Information about the output of a unit.
-#[derive(Ord, PartialOrd, Eq, PartialEq)]
 pub struct UnitOutput {
     /// The unit that generated this output.
     pub unit: Unit,
