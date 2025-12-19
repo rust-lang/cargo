@@ -28,12 +28,12 @@ fn warn_without_passing_unstable_flag() {
     p.cargo("build")
         .env("CARGO_BUILD_SBOM", "true")
         .masquerade_as_nightly_cargo(&["sbom"])
-        .with_stderr_data(
-            "\
-            [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it\n\
-            [COMPILING] foo v0.5.0 ([..])\n\
-            [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
-        )
+        .with_stderr_data(snapbox::str![[r#"
+[WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let file = append_sbom_suffix(&p.bin("foo"));
