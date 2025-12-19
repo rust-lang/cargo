@@ -62,6 +62,9 @@ pub struct UnitOutput {
     ///
     /// This is used for indexing [`Compilation::extra_env`].
     pub script_metas: Option<Vec<UnitHash>>,
+
+    /// Environment variables to set in the unit's process.
+    pub env: HashMap<String, OsString>,
 }
 
 /// A structure returning the result of a compilation.

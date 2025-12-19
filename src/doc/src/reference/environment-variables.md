@@ -430,6 +430,23 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [`debug`]: profiles.md#debug
 [`opt-level`]: profiles.md#opt-level
 
+## Environment variables Cargo sets for `cargo test`
+
+Cargo sets several environment variables when tests are run.
+You can retrieve the values when the tests are run:
+
+```rust,ignore
+use std::env;
+let out_dir = env::var("CARGO_BIN_EXE_foo").unwrap();
+```
+
+* `CARGO_BIN_EXE_<name>` --- The absolute path to a binary target's executable.
+  This is only set when running an [integration test] or benchmark.
+  The `<name>` is the name of the binary target, exactly as-is. For
+  example, `CARGO_BIN_EXE_my-program` for a binary named `my-program`.
+  Binaries are automatically built when the test is built, unless the binary
+  has required features that are not enabled.
+
 ## Environment variables Cargo sets for 3rd party subcommands
 
 Cargo exposes this environment variable to 3rd party subcommands

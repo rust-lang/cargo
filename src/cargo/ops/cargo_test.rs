@@ -8,6 +8,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{CliError, CliResult, GlobalContext, add_path_args};
 use anyhow::format_err;
 use cargo_util::{ProcessBuilder, ProcessError};
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -126,6 +127,7 @@ fn run_unit_tests(
         unit,
         path,
         script_metas,
+        env,
     } in compilation.tests.iter()
     {
         let (exe_display, mut cmd) = cmd_builds(
@@ -134,6 +136,7 @@ fn run_unit_tests(
             unit,
             path,
             script_metas.as_ref(),
+            env,
             test_args,
             compilation,
             "unittests",
@@ -287,6 +290,7 @@ fn display_no_run_information(
         unit,
         path,
         script_metas,
+        env,
     } in compilation.tests.iter()
     {
         let (exe_display, cmd) = cmd_builds(
@@ -295,6 +299,7 @@ fn display_no_run_information(
             unit,
             path,
             script_metas.as_ref(),
+            env,
             test_args,
             compilation,
             exec_type,
@@ -319,6 +324,7 @@ fn cmd_builds(
     unit: &Unit,
     path: &PathBuf,
     script_metas: Option<&Vec<UnitHash>>,
+    env: &HashMap<String, OsString>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
     exec_type: &str,
@@ -347,6 +353,9 @@ fn cmd_builds(
     cmd.args(test_args);
     if unit.target.harness() && gctx.shell().verbosity() == Verbosity::Quiet {
         cmd.arg("--quiet");
+    }
+    for (key, val) in env.iter() {
+        cmd.env(key, val);
     }
 
     Ok((exe_display, cmd))

@@ -175,8 +175,9 @@ benchmark being selected to test. This allows an integration
 test to execute the binary to exercise and test its behavior.
 The \fBCARGO_BIN_EXE_<name>\fR
 \fIenvironment variable\fR <https://doc.rust\-lang.org/cargo/reference/environment\-variables.html#environment\-variables\-cargo\-sets\-for\-crates>
-is set when the integration test is built so that it can use the
-\fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> to locate the
+is set when the integration test is built and run so that it can use the
+\fI\f(BIenv\fI macro\fR <https://doc.rust\-lang.org/std/macro.env.html> or the
+\fI\f(BIvar\fI function\fR <https://doc.rust\-lang.org/std/env/fn.var.html> to locate the
 executable.
 .sp
 Passing target selection flags will test only the specified
