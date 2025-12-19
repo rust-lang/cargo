@@ -5216,6 +5216,9 @@ fn bin_env_for_test() {
                 assert_eq!(env!("CARGO_BIN_EXE_foo"), "<FOO_PATH>");
                 assert_eq!(env!("CARGO_BIN_EXE_with-dash"), "<WITH_DASH_PATH>");
                 assert_eq!(env!("CARGO_BIN_EXE_grüßen"), "<GRÜSSEN_PATH>");
+                assert_eq!(std::env::var("CARGO_BIN_EXE_foo").ok(), None);
+                assert_eq!(std::env::var("CARGO_BIN_EXE_with-dash").ok(), None);
+                assert_eq!(std::env::var("CARGO_BIN_EXE_grüßen").ok(), None);
             }
         "#
         .replace("<FOO_PATH>", &bin_path("foo"))
