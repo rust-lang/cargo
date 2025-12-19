@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 
+use annotate_snippets::Level;
 use anyhow::Context as _;
 use cargo_util::paths;
 
@@ -39,21 +40,28 @@ impl<'gctx> BuildLogger<'gctx> {
                 let to_file = analysis.file.unwrap_or(true);
 
                 if to_console && !emit_json_messages {
-                    ws.gctx().shell().warn(
-                        "ignoring `build.analysis.console` config, pass a JSON `--message-format` option to enable it"
+                    ws.gctx().shell().print_report(
+                        &[Level::WARNING
+                            .secondary_title("ignoring `build.analysis.console` config")
+                            .elements([Level::HELP
+                                .message("pass a JSON `--message-format` option to enable it")])],
+                        false,
                     )?;
                 }
                 let to_console = to_console && emit_json_messages;
 
-                if to_file || to_console{
+                if to_file || to_console {
                     Ok(Some(Self::new(ws, to_console, to_file)?))
                 } else {
                     Ok(None)
                 }
             }
             (Some(_), false) => {
-                ws.gctx().shell().warn(
-                    "ignoring 'build.analysis' config, pass `-Zbuild-analysis` to enable it",
+                ws.gctx().shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title("ignoring 'build.analysis' config")
+                        .elements([Level::HELP.message("pass `-Zbuild-analysis` to enable it")])],
+                    false,
                 )?;
                 Ok(None)
             }

@@ -20,7 +20,9 @@ fn gated() {
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
-[WARNING] ignoring 'build.analysis' config, pass `-Zbuild-analysis` to enable it
+[WARNING] ignoring 'build.analysis' config
+  |
+  = [HELP] pass `-Zbuild-analysis` to enable it
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -99,7 +101,9 @@ fn output_console_true_file_true_message_format_default() {
         .env("CARGO_BUILD_ANALYSIS_CONSOLE", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
-[WARNING] ignoring `build.analysis.console` config, pass a JSON `--message-format` option to enable it
+[WARNING] ignoring `build.analysis.console` config
+  |
+  = [HELP] pass a JSON `--message-format` option to enable it
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
