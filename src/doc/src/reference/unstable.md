@@ -1948,10 +1948,50 @@ The `-Zbuild-analysis` feature records and persists detailed build metrics
 ```toml
 # Example config.toml file.
 
-# Enable the build metric collection
 [build.analysis]
-enabled = true
+enabled = true  # Enable the build metric collection (default: false)
+console = false # Output to stdout (default: false)
+file = true     # Output to ~/.cargo/log/<log-file> (default: true)
 ```
+
+### Documentation updates
+
+*as a new [config option](config.html)*
+
+#### `[build.analysis]`
+
+##### `build.analysis.enabled`
+
+* Type: boolean
+* Default: false
+* Environment: `CARGO_BUILD_ANALYSIS_ENABLED`
+
+Controls whether build analysis metrics collection is enabled.
+
+##### `build.analysis.console`
+
+* Type: boolean
+* Default: false
+* Environment: `CARGO_BUILD_ANALYSIS_CONSOLE`
+
+Controls whether build analysis messages are written to stdout as JSON.
+Console output is only produced when both this option is `true`
+and `--message-format` is specified with a JSON-based option,
+for example `--message-format=json`.
+
+When enabled,
+build analysis messages are interleaved with compiler messages on stdout.
+Each message has a `reason` field to distinguish message types
+(e.g., `"reason":"build-started"`, `"reason":"unit-registered"`).
+
+##### `build.analysis.file`
+
+* Type: boolean
+* Default: true
+* Environment: `CARGO_BUILD_ANALYSIS_FILE`
+
+Controls whether build analysis messages are written to log files in `$CARGO_HOME/log/`.
+Log files are in JSON Lines format (`.jsonl`), with one file per build invocation.
 
 ## build-dir-new-layout
 
