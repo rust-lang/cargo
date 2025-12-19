@@ -22,16 +22,23 @@ fn append_sbom_suffix(link: &PathBuf) -> PathBuf {
 fn warn_without_passing_unstable_flag() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/main.rs", r#"fn main() {}"#)
+        .file(
+            "src/main.rs",
+            r#"fn main() {
+    eprintln!("{:?}", option_env!("CARGO_SBOM_PATH"));
+}"#,
+        )
         .build();
 
-    p.cargo("build")
+    p.cargo("run")
         .env("CARGO_BUILD_SBOM", "true")
         .masquerade_as_nightly_cargo(&["sbom"])
         .with_stderr_data(snapbox::str![[r#"
 [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+Some("")
 
 "#]])
         .run();
