@@ -86,6 +86,15 @@ impl BuildLogger {
     pub fn log(&self, msg: LogMessage) {
         let _ = self.tx.send(msg);
     }
+
+    /// Batch-Logs multiple messages.
+    ///
+    /// This should be used when logging many messages in a tight loop.
+    pub fn log_batch(&self, messages: impl IntoIterator<Item = LogMessage>) {
+        for msg in messages {
+            let _ = self.tx.send(msg);
+        }
+    }
 }
 
 impl Drop for BuildLogger {

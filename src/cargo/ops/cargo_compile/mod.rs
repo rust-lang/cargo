@@ -533,9 +533,9 @@ pub fn create_bcx<'a, 'gctx>(
         let root_unit_indexes: HashSet<_> =
             root_units.iter().map(|unit| unit_to_index[&unit]).collect();
 
-        for (index, unit) in units.into_iter().enumerate() {
+        logger.log_batch(units.into_iter().enumerate().map(|(index, unit)| {
             let index = index as u64;
-            logger.log(LogMessage::UnitRegistered {
+            LogMessage::UnitRegistered {
                 package_id: unit.pkg.package_id().to_spec(),
                 target: (&unit.target).into(),
                 mode: unit.mode,
@@ -547,8 +547,8 @@ pub fn create_bcx<'a, 'gctx>(
                     .map(|s| s.as_str().to_owned())
                     .collect(),
                 requested: root_unit_indexes.contains(&index),
-            });
-        }
+            }
+        }));
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
         logger.log(LogMessage::UnitGraphFinished { elapsed });
     }
