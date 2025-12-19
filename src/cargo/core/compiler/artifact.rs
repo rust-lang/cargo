@@ -12,9 +12,40 @@ use std::ffi::OsString;
 /// if artifacts are present.
 pub fn get_env(
     build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
     dependencies: &[UnitDep],
 ) -> CargoResult<HashMap<String, OsString>> {
     let mut env = HashMap::new();
+
+    // Add `CARGO_BIN_EXE_` environment variables for building tests.
+    //
+    // These aren't built for `cargo check`, so can't use `dependencies`
+    if unit.target.is_test() || unit.target.is_bench() {
+        for bin_target in unit
+            .pkg
+            .manifest()
+            .targets()
+            .iter()
+            .filter(|target| target.is_bin())
+        {
+            let name = bin_target
+                .binary_filename()
+                .unwrap_or_else(|| bin_target.name().to_string());
+
+            // For `cargo check` builds we do not uplift the CARGO_BIN_EXE_ artifacts to the
+            // artifact-dir. We do not want to provide a path to a non-existent binary but we still
+            // need to provide *something* so `env!("CARGO_BIN_EXE_...")` macros will compile.
+            let exe_path = build_runner
+                .files()
+                .bin_link_for_target(bin_target, unit.kind, build_runner.bcx)?
+                .map(|path| path.as_os_str().to_os_string())
+                .unwrap_or_else(|| OsString::from(format!("placeholder:{name}")));
+
+            let key = format!("CARGO_BIN_EXE_{name}");
+            env.insert(key, exe_path);
+        }
+    }
+
     for unit_dep in dependencies.iter().filter(|d| d.unit.artifact.is_true()) {
         for artifact_path in build_runner
             .outputs(&unit_dep.unit)?
