@@ -220,10 +220,10 @@ pub struct CargoBuildConfig {
 }
 
 /// Metrics collection for build analysis.
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildAnalysis {
-    pub enabled: bool,
+    pub enabled: Option<bool>,
 }
 
 /// Whether warnings should warn, be allowed, or cause an error.

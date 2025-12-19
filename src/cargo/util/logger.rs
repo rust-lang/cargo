@@ -28,7 +28,9 @@ impl BuildLogger {
     pub fn maybe_new(ws: &Workspace<'_>) -> CargoResult<Option<Self>> {
         let analysis = ws.gctx().build_config()?.analysis.as_ref();
         match (analysis, ws.gctx().cli_unstable().build_analysis) {
-            (Some(analysis), true) if analysis.enabled => Ok(Some(Self::new(ws)?)),
+            (Some(analysis), true) if analysis.enabled.unwrap_or_default() => {
+                Ok(Some(Self::new(ws)?))
+            }
             (Some(_), false) => {
                 ws.gctx().shell().warn(
                     "ignoring 'build.analysis' config, pass `-Zbuild-analysis` to enable it",
