@@ -780,8 +780,11 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
-        let file_list = std::env::join_paths(build_runner.sbom_output_files(unit)?)?;
-        base.env("CARGO_SBOM_PATH", file_list);
+        let file_list = build_runner.sbom_output_files(unit)?;
+        if !file_list.is_empty() {
+            let file_list = std::env::join_paths(file_list)?;
+            base.env("CARGO_SBOM_PATH", file_list);
+        }
     }
 
     if unit.target.is_test() || unit.target.is_bench() {
