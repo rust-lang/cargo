@@ -279,7 +279,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     unstable_opts,
                     linker: self.compilation.target_linker(unit.kind).clone(),
                     script_metas,
-                    env: artifact::get_env(&self, self.unit_deps(unit))?,
+                    env: artifact::get_env(&self, unit, self.unit_deps(unit))?,
                 });
             }
 
