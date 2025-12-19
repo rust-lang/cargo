@@ -1498,7 +1498,7 @@ fn build_base_args(
 
             let name = bin_target
                 .binary_filename()
-                .unwrap_or(bin_target.name().to_string());
+                .unwrap_or_else(|| bin_target.name().to_string());
             let key = format!("CARGO_BIN_EXE_{}", name);
             cmd.env(&key, exe_path);
         }
