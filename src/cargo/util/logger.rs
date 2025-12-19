@@ -1,7 +1,8 @@
 //! Build analysis logging infrastructure.
 
 use std::hash::Hash;
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
+use std::io::Write as _;
 use std::mem::ManuallyDrop;
 use std::path::Path;
 use std::sync::mpsc;
@@ -17,19 +18,38 @@ use crate::util::log_message::LogMessage;
 use crate::util::short_hash;
 
 /// Logger for `-Zbuild-analysis`.
-pub struct BuildLogger {
-    tx: ManuallyDrop<Sender<LogMessage>>,
+pub struct BuildLogger<'gctx> {
+    gctx: &'gctx crate::util::context::GlobalContext,
+    /// Whether to write to console.
+    to_console: bool,
+    /// Channel to background thread writing log file.
+    tx: Option<ManuallyDrop<Sender<LogMessage>>>,
     run_id: RunId,
+    run_id_str: String,
     handle: Option<JoinHandle<()>>,
 }
 
-impl BuildLogger {
+impl<'gctx> BuildLogger<'gctx> {
     /// Creates a logger if `-Zbuild-analysis` is enabled.
-    pub fn maybe_new(ws: &Workspace<'_>) -> CargoResult<Option<Self>> {
+    pub fn maybe_new(ws: &Workspace<'gctx>, emit_json_messages: bool) -> CargoResult<Option<Self>> {
         let analysis = ws.gctx().build_config()?.analysis.as_ref();
         match (analysis, ws.gctx().cli_unstable().build_analysis) {
             (Some(analysis), true) if analysis.enabled.unwrap_or_default() => {
-                Ok(Some(Self::new(ws)?))
+                let to_console = analysis.console.unwrap_or(false);
+                let to_file = analysis.file.unwrap_or(true);
+
+                if to_console && !emit_json_messages {
+                    ws.gctx().shell().warn(
+                        "ignoring `build.analysis.console` config, pass a JSON `--message-format` option to enable it"
+                    )?;
+                }
+                let to_console = to_console && emit_json_messages;
+
+                if to_file || to_console{
+                    Ok(Some(Self::new(ws, to_console, to_file)?))
+                } else {
+                    Ok(None)
+                }
             }
             (Some(_), false) => {
                 ws.gctx().shell().warn(
@@ -41,34 +61,45 @@ impl BuildLogger {
         }
     }
 
-    fn new(ws: &Workspace<'_>) -> CargoResult<Self> {
+    fn new(ws: &Workspace<'gctx>, to_console: bool, to_file: bool) -> CargoResult<Self> {
         let run_id = Self::generate_run_id(ws);
-
-        let log_dir = ws.gctx().home().join("log");
-        paths::create_dir_all(log_dir.as_path_unlocked())?;
-
-        let filename = format!("{run_id}.jsonl");
-        let log_file = log_dir.open_rw_exclusive_create(
-            Path::new(&filename),
-            ws.gctx(),
-            "build analysis log",
-        )?;
-
-        let (tx, rx) = mpsc::channel::<LogMessage>();
-
         let run_id_str = run_id.to_string();
-        let handle = std::thread::spawn(move || {
-            let mut writer = BufWriter::new(log_file);
-            for msg in rx {
-                let _ = msg.write_json_log(&mut writer, &run_id_str);
-            }
-            let _ = writer.flush();
-        });
+        let gctx = ws.gctx();
+
+        let (tx, handle) = if to_file {
+            let log_dir = gctx.home().join("log");
+            paths::create_dir_all(log_dir.as_path_unlocked())?;
+
+            let filename = format!("{run_id}.jsonl");
+            let log_file = log_dir.open_rw_exclusive_create(
+                Path::new(&filename),
+                gctx,
+                "build analysis log",
+            )?;
+
+            let (tx, rx) = mpsc::channel::<LogMessage>();
+
+            let run_id_str = run_id_str.clone();
+            let handle = std::thread::spawn(move || {
+                let mut writer = BufWriter::new(log_file);
+                for msg in rx {
+                    let _ = msg.write_json_log(&mut writer, &run_id_str);
+                }
+                let _ = writer.flush();
+            });
+
+            (Some(ManuallyDrop::new(tx)), Some(handle))
+        } else {
+            (None, None)
+        };
 
         Ok(Self {
-            tx: ManuallyDrop::new(tx),
+            gctx,
+            to_console,
+            tx,
             run_id,
-            handle: Some(handle),
+            run_id_str,
+            handle,
         })
     }
 
@@ -84,25 +115,50 @@ impl BuildLogger {
 
     /// Logs a message.
     pub fn log(&self, msg: LogMessage) {
-        let _ = self.tx.send(msg);
+        if self.to_console {
+            let mut shell = self.gctx.shell();
+            let _ = msg.write_json_log(&mut shell.out(), &self.run_id_str);
+        }
+        if let Some(tx) = &self.tx {
+            let _ = tx.send(msg);
+        }
     }
 
     /// Batch-Logs multiple messages.
     ///
     /// This should be used when logging many messages in a tight loop.
+    ///
+    /// Avoids allocation when only one output destination (console or file) is enabled.
     pub fn log_batch(&self, messages: impl IntoIterator<Item = LogMessage>) {
-        for msg in messages {
-            let _ = self.tx.send(msg);
+        if let Some(tx) = &self.tx {
+            if self.to_console {
+                let mut shell = self.gctx.shell();
+                for msg in messages {
+                    let _ = msg.write_json_log(&mut shell.out(), &self.run_id_str);
+                    let _ = tx.send(msg);
+                }
+            } else {
+                for msg in messages {
+                    let _ = tx.send(msg);
+                }
+            }
+        } else if self.to_console {
+            let mut shell = self.gctx.shell();
+            for msg in messages {
+                let _ = msg.write_json_log(&mut shell.out(), &self.run_id_str);
+            }
         }
     }
 }
 
-impl Drop for BuildLogger {
+impl Drop for BuildLogger<'_> {
     fn drop(&mut self) {
         // SAFETY: tx is dropped exactly once here to signal thread shutdown.
         // ManuallyDrop prevents automatic drop after this impl runs.
-        unsafe {
-            ManuallyDrop::drop(&mut self.tx);
+        if let Some(tx) = &mut self.tx {
+            unsafe {
+                ManuallyDrop::drop(tx);
+            }
         }
 
         if let Some(handle) = self.handle.take() {

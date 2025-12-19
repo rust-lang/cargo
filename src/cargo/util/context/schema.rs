@@ -224,6 +224,8 @@ pub struct CargoBuildConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildAnalysis {
     pub enabled: Option<bool>,
+    pub console: Option<bool>,
+    pub file: Option<bool>,
 }
 
 /// Whether warnings should warn, be allowed, or cause an error.

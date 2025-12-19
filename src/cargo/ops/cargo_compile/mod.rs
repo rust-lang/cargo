@@ -159,7 +159,7 @@ pub fn compile_ws<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let interner = UnitInterner::new();
-    let logger = BuildLogger::maybe_new(ws)?;
+    let logger = BuildLogger::maybe_new(ws, options.build_config.emit_json())?;
 
     if let Some(ref logger) = logger {
         let rustc = ws.gctx().load_global_rustc(Some(ws))?;
@@ -238,7 +238,7 @@ pub fn create_bcx<'a, 'gctx>(
     ws: &'a Workspace<'gctx>,
     options: &'a CompileOptions,
     interner: &'a UnitInterner,
-    logger: Option<&'a BuildLogger>,
+    logger: Option<&'a BuildLogger<'gctx>>,
 ) -> CargoResult<BuildContext<'a, 'gctx>> {
     let CompileOptions {
         ref build_config,

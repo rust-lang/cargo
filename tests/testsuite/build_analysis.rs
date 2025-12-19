@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 use cargo_test_support::basic_manifest;
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::paths::log_dir;
 use cargo_test_support::paths::log_file;
 use cargo_test_support::project;
 use cargo_test_support::str;
@@ -98,17 +99,12 @@ fn output_console_true_file_true_message_format_default() {
         .env("CARGO_BUILD_ANALYSIS_CONSOLE", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `build.analysis.console` config, pass a JSON `--message-format` option to enable it
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .with_stdout_data(
-            str![[r#"
-
-"#]]
-            .is_json()
-            .against_jsonlines(),
-        )
+        .with_stdout_data(str!["[]"].is_json().against_jsonlines())
         .run();
 
     assert!(!get_log(0).is_empty());
@@ -137,8 +133,14 @@ fn output_console_true_file_true_message_format_json() {
 [
   {
     "...": "{...}",
+    "reason": "build-started"
+  },
+  "{...}",
+  {
+    "...": "{...}",
     "reason": "compiler-artifact"
   },
+  "{...}",
   {
     "reason": "build-finished",
     "success": true
@@ -177,8 +179,14 @@ fn output_console_true_file_false_message_format_json() {
 [
   {
     "...": "{...}",
+    "reason": "build-started"
+  },
+  "{...}",
+  {
+    "...": "{...}",
     "reason": "compiler-artifact"
   },
+  "{...}",
   {
     "reason": "build-finished",
     "success": true
@@ -190,7 +198,7 @@ fn output_console_true_file_false_message_format_json() {
         )
         .run();
 
-    assert!(!get_log(0).is_empty());
+    assert!(!log_dir().exists());
 }
 
 #[cargo_test]
@@ -229,7 +237,7 @@ fn console_false_file_false_message_format_json() {
         )
         .run();
 
-    assert!(!get_log(0).is_empty());
+    assert!(!log_dir().exists());
 }
 
 #[cargo_test]
