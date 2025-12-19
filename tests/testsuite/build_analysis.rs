@@ -61,6 +61,178 @@ fn one_logfile_per_invocation() {
 }
 
 #[cargo_test]
+fn output_default() {
+    // Default: write the file only
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+"#]])
+        .run();
+
+    assert!(!get_log(0).is_empty());
+}
+
+#[cargo_test]
+fn output_console_true_file_true_message_format_default() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // console=true, file=true, default --message-format
+    // Should output to file ONLY
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .env("CARGO_BUILD_ANALYSIS_CONSOLE", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+
+    assert!(!get_log(0).is_empty());
+}
+
+#[cargo_test]
+fn output_console_true_file_true_message_format_json() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // console=true, file=true, --message-format=json
+    // Should output to BOTH console and file
+    p.cargo("check -Zbuild-analysis --message-format=json")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .env("CARGO_BUILD_ANALYSIS_CONSOLE", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "compiler-artifact"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+
+    assert!(!get_log(0).is_empty());
+}
+
+#[cargo_test]
+fn output_console_true_file_false_message_format_json() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // console=true, file=false, --message-format=json
+    // Should output to console ONLY
+    p.cargo("check -Zbuild-analysis --message-format=json")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .env("CARGO_BUILD_ANALYSIS_CONSOLE", "true")
+        .env("CARGO_BUILD_ANALYSIS_FILE", "false")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "compiler-artifact"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+
+    assert!(!get_log(0).is_empty());
+}
+
+#[cargo_test]
+fn console_false_file_false_message_format_json() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // console=false, file=false, --message-format=json
+    // Should have compiler messages ONLY
+    p.cargo("check -Zbuild-analysis --message-format=json")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .env("CARGO_BUILD_ANALYSIS_FILE", "false")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "...": "{...}",
+    "reason": "compiler-artifact"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+
+    assert!(!get_log(0).is_empty());
+}
+
+#[cargo_test]
 fn log_msg_build_started() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
