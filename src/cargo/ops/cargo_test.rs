@@ -103,7 +103,7 @@ pub fn run_benches(ws: &Workspace<'_>, options: &TestOptions, args: &[&str]) -> 
 
 fn compile_tests<'a>(ws: &Workspace<'a>, options: &TestOptions) -> CargoResult<Compilation<'a>> {
     let mut compilation = ops::compile(ws, &options.compile_opts)?;
-    compilation.tests.sort();
+    compilation.tests.sort_by_key(|u| u.unit.clone());
     Ok(compilation)
 }
 
