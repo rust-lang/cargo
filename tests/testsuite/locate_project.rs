@@ -126,3 +126,31 @@ fn workspace() {
         )
         .run();
 }
+
+#[cargo_test]
+fn workspace_missing_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "root"
+                version = "0.0.0"
+
+                [workspace]
+                members = ["missing_member"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // Current behavior: fails because args.workspace() loads all members
+    //FIXME: After fix, should succeed by only finding workspace root
+    p.cargo("locate-project --workspace")
+        .with_stderr_data(str![[r#"
+[ERROR] failed to load manifest for workspace member `[ROOT]/foo/missing_member`
+...
+"#]])
+        .with_status(101)
+        .run();
+}
