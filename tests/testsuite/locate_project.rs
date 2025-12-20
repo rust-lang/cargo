@@ -189,3 +189,44 @@ fn workspace_nested_with_explicit_pointer() {
         )
         .run();
 }
+
+#[cargo_test]
+fn workspace_not_a_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["member"]
+            "#,
+        )
+        .file(
+            "member/Cargo.toml",
+            r#"
+                [package]
+                name = "member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("member/src/lib.rs", "")
+        .file(
+            "not-member/Cargo.toml",
+            r#"
+                [package]
+                name = "not-member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("not-member/src/lib.rs", "")
+        .build();
+
+    //FIXME: After fix, will find workspace root without validating membership
+    p.cargo("locate-project --workspace")
+        .cwd("not-member")
+        .with_stderr_data(str![[r#"
+[ERROR] current package believes it's in a workspace when it's not:
+...
+"#]])
+        .with_status(101)
+        .run();
+}
