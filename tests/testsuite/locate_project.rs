@@ -154,3 +154,38 @@ fn workspace_missing_member() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn workspace_nested_with_explicit_pointer() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["nested"]
+            "#,
+        )
+        .file(
+            "nested/Cargo.toml",
+            r#"
+                [package]
+                name = "nested"
+                version = "0.0.0"
+                workspace = ".."
+            "#,
+        )
+        .file("nested/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("nested")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
