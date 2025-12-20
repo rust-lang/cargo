@@ -497,8 +497,8 @@ fn prepare_for_vendor(
     packaged_files: &[PathBuf],
     gctx: &GlobalContext,
 ) -> CargoResult<Package> {
-    let contents = me.manifest().contents().unwrap();
-    let document = me.manifest().document().unwrap();
+    let contents = me.manifest().contents();
+    let document = me.manifest().document();
     let original_toml = prepare_toml_for_vendor(
         me.manifest().normalized_toml().clone(),
         packaged_files,
@@ -511,8 +511,8 @@ fn prepare_for_vendor(
     let mut warnings = Default::default();
     let mut errors = Default::default();
     let manifest = crate::util::toml::to_real_manifest(
-        Some(contents.to_owned()),
-        Some(document.clone()),
+        contents.map(|c| c.to_owned()),
+        document.cloned(),
         original_toml,
         normalized_toml,
         features,
