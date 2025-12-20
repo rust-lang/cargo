@@ -27,15 +27,17 @@ pub struct ProjectLocation<'a> {
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let root_manifest;
-    let workspace;
+    let workspace_root;
     let root = match WhatToFind::parse(args) {
         WhatToFind::CurrentManifest => {
             root_manifest = args.root_manifest(gctx)?;
             &root_manifest
         }
         WhatToFind::Workspace => {
-            workspace = args.workspace(gctx)?;
-            workspace.root_manifest()
+            root_manifest = args.root_manifest(gctx)?;
+            workspace_root = cargo::core::find_workspace_root_with_metadata(&root_manifest, gctx)?
+                .unwrap_or(root_manifest);
+            &workspace_root
         }
     };
 

@@ -144,14 +144,15 @@ fn workspace_missing_member() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // Current behavior: fails because args.workspace() loads all members
-    //FIXME: After fix, should succeed by only finding workspace root
     p.cargo("locate-project --workspace")
-        .with_stderr_data(str![[r#"
-[ERROR] failed to load manifest for workspace member `[ROOT]/foo/missing_member`
-...
-"#]])
-        .with_status(101)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -220,13 +221,143 @@ fn workspace_not_a_member() {
         .file("not-member/src/lib.rs", "")
         .build();
 
-    //FIXME: After fix, will find workspace root without validating membership
     p.cargo("locate-project --workspace")
         .cwd("not-member")
-        .with_stderr_data(str![[r#"
-[ERROR] current package believes it's in a workspace when it's not:
-...
-"#]])
-        .with_status(101)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/not-member/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_pointer_to_sibling_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["outer-member"]
+            "#,
+        )
+        .file(
+            "outer-member/Cargo.toml",
+            r#"
+                [package]
+                name = "outer-member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("outer-member/src/lib.rs", "")
+        .file(
+            "sibling-workspace/Cargo.toml",
+            r#"
+                [workspace]
+                members = ["../pkg"]
+            "#,
+        )
+        .file(
+            "pkg/Cargo.toml",
+            r#"
+                [package]
+                name = "pkg"
+                version = "0.0.0"
+                workspace = "../sibling-workspace"
+            "#,
+        )
+        .file("pkg/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("pkg")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/sibling-workspace/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_nested_subdir_not_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["member"]
+            "#,
+        )
+        .file(
+            "member/Cargo.toml",
+            r#"
+                [package]
+                name = "member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("member/src/lib.rs", "")
+        .file(
+            "not-member/Cargo.toml",
+            r#"
+                [package]
+                name = "not-member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("not-member/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("not-member/src")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/not-member/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_glob_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["crates/*"]
+            "#,
+        )
+        .file(
+            "crates/foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+            "#,
+        )
+        .file("crates/foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("crates/foo")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
