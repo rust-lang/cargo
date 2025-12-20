@@ -126,3 +126,299 @@ fn workspace() {
         )
         .run();
 }
+#[cargo_test]
+fn workspace_missing_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "root"
+                version = "0.0.0"
+
+                [workspace]
+                members = ["missing_member"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to load manifest for workspace member `[ROOT]/foo/missing_member`
+referenced by workspace at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to read `[ROOT]/foo/missing_member/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_nested_with_explicit_pointer() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "root"
+                version = "0.0.0"
+
+                [workspace]
+                members = ["nested"]
+            "#,
+        )
+        .file(
+            "nested/Cargo.toml",
+            r#"
+                [package]
+                name = "nested"
+                version = "0.0.0"
+                workspace = ".."
+            "#,
+        )
+        .file("nested/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("nested")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_not_a_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["member"]
+            "#,
+        )
+        .file(
+            "member/Cargo.toml",
+            r#"
+                [package]
+                name = "member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("member/src/lib.rs", "")
+        .file(
+            "not-member/Cargo.toml",
+            r#"
+                [package]
+                name = "not-member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("not-member/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("not-member")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] current package believes it's in a workspace when it's not:
+current:   [ROOT]/foo/not-member/Cargo.toml
+workspace: [ROOT]/foo/Cargo.toml
+
+this may be fixable by adding `not-member` to the `workspace.members` array of the manifest located at: [ROOT]/foo/Cargo.toml
+Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
+
+"#]])
+        .run();
+
+    p.cargo("locate-project --workspace")
+        .cwd("not-member/src")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] current package believes it's in a workspace when it's not:
+current:   [ROOT]/foo/not-member/Cargo.toml
+workspace: [ROOT]/foo/Cargo.toml
+
+this may be fixable by adding `not-member` to the `workspace.members` array of the manifest located at: [ROOT]/foo/Cargo.toml
+Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_pointer_to_sibling_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["outer-member"]
+            "#,
+        )
+        .file(
+            "outer-member/Cargo.toml",
+            r#"
+                [package]
+                name = "outer-member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("outer-member/src/lib.rs", "")
+        .file("sibling-workspace/Cargo.toml", "")
+        .file(
+            "pkg/Cargo.toml",
+            r#"
+                [package]
+                name = "pkg"
+                version = "0.0.0"
+                workspace = "../sibling-workspace"
+            "#,
+        )
+        .file("pkg/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("pkg")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/sibling-workspace/Cargo.toml`
+
+Caused by:
+  manifest is missing either a `[package]` or a `[workspace]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_glob_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["crates/*"]
+            "#,
+        )
+        .file(
+            "crates/foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+            "#,
+        )
+        .file("crates/foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("crates/foo")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_path_dependency_member() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "root"
+                version = "0.0.0"
+
+                [workspace]
+
+                [dependencies]
+                path-dep = { path = "path-dep" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "path-dep/Cargo.toml",
+            r#"
+                [package]
+                name = "path-dep"
+                version = "0.0.0"
+            "#,
+        )
+        .file("path-dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("path-dep")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn nested_independent_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["member"]
+            "#,
+        )
+        .file(
+            "member/Cargo.toml",
+            r#"
+                [package]
+                name = "member"
+                version = "0.0.0"
+            "#,
+        )
+        .file("member/src/lib.rs", "")
+        .file(
+            "nested-ws/Cargo.toml",
+            r#"
+                [package]
+                name = "nested-ws"
+                version = "0.0.0"
+
+                [workspace]
+            "#,
+        )
+        .file("nested-ws/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("locate-project --workspace")
+        .cwd("nested-ws/src")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/nested-ws/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
