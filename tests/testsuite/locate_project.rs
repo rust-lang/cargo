@@ -144,18 +144,14 @@ fn workspace_missing_member() {
         .build();
 
     p.cargo("locate-project --workspace")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to load manifest for workspace member `[ROOT]/foo/missing_member`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to read `[ROOT]/foo/missing_member/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -187,15 +183,14 @@ fn workspace_nested_with_explicit_pointer() {
 
     p.cargo("locate-project --workspace")
         .cwd("nested")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -292,14 +287,14 @@ fn workspace_pointer_to_sibling_workspace() {
 
     p.cargo("locate-project --workspace")
         .cwd("pkg")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/sibling-workspace/Cargo.toml`
-
-Caused by:
-  manifest is missing either a `[package]` or a `[workspace]`
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/sibling-workspace/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
