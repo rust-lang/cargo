@@ -145,18 +145,14 @@ fn workspace_missing_member() {
         .build();
 
     p.cargo("locate-project --workspace")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to load manifest for workspace member `[ROOT]/foo/missing_member`
-referenced by workspace at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to read `[ROOT]/foo/missing_member/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
