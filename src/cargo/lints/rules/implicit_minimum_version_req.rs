@@ -29,7 +29,6 @@ pub const LINT: Lint = Lint {
     name: "implicit_minimum_version_req",
     desc: "dependency version requirement without an explicit minimum version",
     primary_group: &PEDANTIC,
-    default_level: LintLevel::Allow,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

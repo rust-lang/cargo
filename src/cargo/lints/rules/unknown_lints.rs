@@ -18,7 +18,6 @@ pub const LINT: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
-    default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

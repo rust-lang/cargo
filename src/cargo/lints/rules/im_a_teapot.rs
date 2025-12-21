@@ -21,7 +21,6 @@ pub const LINT: Lint = Lint {
     name: "im_a_teapot",
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
-    default_level: LintLevel::Allow,
     edition_lint_opts: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
     docs: None,

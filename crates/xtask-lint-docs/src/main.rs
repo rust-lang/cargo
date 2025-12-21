@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
     let mut lint_docs = String::new();
     for lint in cargo::lints::LINTS.iter().sorted_by_key(|lint| lint.name) {
         if lint.docs.is_some() {
-            let sectipn = match lint.default_level {
+            let sectipn = match lint.primary_group.default_level {
                 LintLevel::Allow => &mut allow,
                 LintLevel::Warn => &mut warn,
                 LintLevel::Deny => &mut deny,
@@ -71,7 +71,11 @@ fn main() -> anyhow::Result<()> {
 
 fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "## `{}`", lint.name)?;
-    writeln!(buf, "Set to `{}` by default", lint.default_level)?;
+    writeln!(
+        buf,
+        "Set to `{}` by default",
+        lint.primary_group.default_level
+    )?;
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
 }
 

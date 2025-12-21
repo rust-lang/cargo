@@ -20,7 +20,6 @@ pub const LINT: Lint = Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
     primary_group: &SUSPICIOUS,
-    default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
