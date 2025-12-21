@@ -16,7 +16,17 @@ use std::path::Path;
 pub mod rules;
 pub use rules::LINTS;
 
-const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
+const LINT_GROUPS: &[LintGroup] = &[
+    COMPLEXITY,
+    CORRECTNESS,
+    NURSERY,
+    PEDANTIC,
+    PERF,
+    RESTRICTION,
+    STYLE,
+    SUSPICIOUS,
+    TEST_DUMMY_UNSTABLE,
+];
 
 /// Scope at which a lint runs: package-level or workspace-level.
 pub enum ManifestFor<'a> {
@@ -265,6 +275,70 @@ pub struct LintGroup {
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
 }
+
+const COMPLEXITY: LintGroup = LintGroup {
+    name: "complexity",
+    desc: "code that does something simple but in a complex way",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const CORRECTNESS: LintGroup = LintGroup {
+    name: "correctness",
+    desc: "code that is outright wrong or useless",
+    default_level: LintLevel::Deny,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const NURSERY: LintGroup = LintGroup {
+    name: "nursery",
+    desc: "new lints that are still under development",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const PEDANTIC: LintGroup = LintGroup {
+    name: "pedantic",
+    desc: "lints which are rather strict or have occasional false positives",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const PERF: LintGroup = LintGroup {
+    name: "perf",
+    desc: "code that can be written to run faster",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const RESTRICTION: LintGroup = LintGroup {
+    name: "restriction",
+    desc: "lints which prevent the use of Cargo features",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const STYLE: LintGroup = LintGroup {
+    name: "style",
+    desc: "code that should be written in a more idiomatic way",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const SUSPICIOUS: LintGroup = LintGroup {
+    name: "suspicious",
+    desc: "code that is most likely wrong or useless",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
 
 /// This lint group is only to be used for testing purposes
 const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {

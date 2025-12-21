@@ -12,13 +12,14 @@ use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
+use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
 pub const LINT: Lint = Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
-    groups: &[],
+    groups: &[SUSPICIOUS],
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,

@@ -11,12 +11,13 @@ use crate::lints::LINTS;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::ManifestFor;
+use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 
 pub const LINT: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
-    groups: &[],
+    groups: &[SUSPICIOUS],
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
