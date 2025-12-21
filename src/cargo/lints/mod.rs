@@ -9,6 +9,7 @@ use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
 use std::borrow::Cow;
+use std::cmp::{Reverse, max_by_key};
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
@@ -353,7 +354,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
 pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,
-    pub groups: &'static [LintGroup],
+    pub primary_group: &'static LintGroup,
     pub default_level: LintLevel,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
@@ -379,33 +380,28 @@ impl Lint {
             return (LintLevel::Allow, LintLevelReason::Default);
         }
 
-        self.groups
-            .iter()
-            .map(|g| {
-                (
-                    g.name,
-                    level_priority(
-                        g.name,
-                        g.default_level,
-                        g.edition_lint_opts,
-                        pkg_lints,
-                        edition,
-                    ),
-                )
-            })
-            .chain(std::iter::once((
-                self.name,
-                level_priority(
-                    self.name,
-                    self.default_level,
-                    self.edition_lint_opts,
-                    pkg_lints,
-                    edition,
-                ),
-            )))
-            .max_by_key(|(n, (l, _, p))| (l == &LintLevel::Forbid, *p, std::cmp::Reverse(*n)))
-            .map(|(_, (l, r, _))| (l, r))
-            .unwrap()
+        let lint_level_priority = level_priority(
+            self.name,
+            self.default_level,
+            self.edition_lint_opts,
+            pkg_lints,
+            edition,
+        );
+
+        let group_level_priority = level_priority(
+            self.primary_group.name,
+            self.primary_group.default_level,
+            self.primary_group.edition_lint_opts,
+            pkg_lints,
+            edition,
+        );
+
+        let (_, (l, r, _)) = max_by_key(
+            (self.name, lint_level_priority),
+            (self.primary_group.name, group_level_priority),
+            |(n, (l, _, p))| (l == &LintLevel::Forbid, *p, Reverse(*n)),
+        );
+        (l, r)
     }
 
     fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {

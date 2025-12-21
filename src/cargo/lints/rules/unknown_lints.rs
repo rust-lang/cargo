@@ -17,7 +17,7 @@ use crate::lints::get_key_value_span;
 pub const LINT: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
-    groups: &[SUSPICIOUS],
+    primary_group: &SUSPICIOUS,
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,

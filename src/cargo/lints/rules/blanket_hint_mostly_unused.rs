@@ -19,7 +19,7 @@ use crate::lints::rel_cwd_manifest_path;
 pub const LINT: Lint = Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
-    groups: &[SUSPICIOUS],
+    primary_group: &SUSPICIOUS,
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
