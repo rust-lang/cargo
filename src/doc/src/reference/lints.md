@@ -2,6 +2,20 @@
 
 Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only be used on nightly toolchains
 
+
+
+| Group                | Description                                                      | Default level |
+|----------------------|------------------------------------------------------------------|---------------|
+| `cargo::complexity`  | code that does something simple but in a complex way             | warn          |
+| `cargo::correctness` | code that is outright wrong or useless                           | deny          |
+| `cargo::nursery`     | new lints that are still under development                       | allow         |
+| `cargo::pedantic`    | lints which are rather strict or have occasional false positives | allow         |
+| `cargo::perf`        | code that can be written to run faster                           | warn          |
+| `cargo::restriction` | lints which prevent the use of Cargo features                    | allow         |
+| `cargo::style`       | code that should be written in a more idiomatic way              | warn          |
+| `cargo::suspicious`  | code that is most likely wrong or useless                        | warn          |
+
+
 ## Allowed-by-default
 
 These lints are all set to the 'allow' level by default.
@@ -14,7 +28,9 @@ These lints are all set to the 'warn' level by default.
 - [`unknown_lints`](#unknown_lints)
 
 ## `blanket_hint_mostly_unused`
-Set to `warn` by default
+Group: `suspicious`
+
+Level: `warn`
 
 ### What it does
 Checks if `hint-mostly-unused` being applied to all dependencies.
@@ -42,7 +58,9 @@ hint-mostly-unused = true
 
 
 ## `implicit_minimum_version_req`
-Set to `allow` by default
+Group: `pedantic`
+
+Level: `allow`
 
 ### What it does
 
@@ -91,7 +109,9 @@ serde = "1.0.219"
 
 
 ## `unknown_lints`
-Set to `warn` by default
+Group: `suspicious`
+
+Level: `warn`
 
 ### What it does
 Checks for unknown lints in the `[lints.cargo]` table
