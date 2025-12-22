@@ -369,11 +369,10 @@ fn migrate_manifests(
         let document = &mut manifest_mut.data;
         let mut fixes = 0;
 
-        let ws_original_toml = match ws.root_maybe() {
-            MaybePackage::Package(package) => package.manifest().original_toml(),
-            MaybePackage::Virtual(manifest) => manifest.original_toml(),
-        }
-        .unwrap();
+        let ws_normalized_toml = match ws.root_maybe() {
+            MaybePackage::Package(package) => package.manifest().normalized_toml(),
+            MaybePackage::Virtual(manifest) => manifest.normalized_toml(),
+        };
 
         if Edition::Edition2024 <= prepare_for_edition {
             let root = document.as_table_mut();
@@ -396,15 +395,18 @@ fn migrate_manifests(
             fixes += rename_array_of_target_fields_2024(root, "test");
             fixes += rename_array_of_target_fields_2024(root, "bench");
             fixes += rename_dep_fields_2024(root, "dependencies");
-            fixes += remove_ignored_default_features_2024(root, "dependencies", ws_original_toml);
+            fixes += remove_ignored_default_features_2024(root, "dependencies", ws_normalized_toml);
             fixes += rename_table(root, "dev_dependencies", "dev-dependencies");
             fixes += rename_dep_fields_2024(root, "dev-dependencies");
             fixes +=
-                remove_ignored_default_features_2024(root, "dev-dependencies", ws_original_toml);
+                remove_ignored_default_features_2024(root, "dev-dependencies", ws_normalized_toml);
             fixes += rename_table(root, "build_dependencies", "build-dependencies");
             fixes += rename_dep_fields_2024(root, "build-dependencies");
-            fixes +=
-                remove_ignored_default_features_2024(root, "build-dependencies", ws_original_toml);
+            fixes += remove_ignored_default_features_2024(
+                root,
+                "build-dependencies",
+                ws_normalized_toml,
+            );
             for target in root
                 .get_mut("target")
                 .and_then(|t| t.as_table_like_mut())
@@ -413,21 +415,24 @@ fn migrate_manifests(
                 .filter_map(|(_k, t)| t.as_table_like_mut())
             {
                 fixes += rename_dep_fields_2024(target, "dependencies");
-                fixes +=
-                    remove_ignored_default_features_2024(target, "dependencies", ws_original_toml);
+                fixes += remove_ignored_default_features_2024(
+                    target,
+                    "dependencies",
+                    ws_normalized_toml,
+                );
                 fixes += rename_table(target, "dev_dependencies", "dev-dependencies");
                 fixes += rename_dep_fields_2024(target, "dev-dependencies");
                 fixes += remove_ignored_default_features_2024(
                     target,
                     "dev-dependencies",
-                    ws_original_toml,
+                    ws_normalized_toml,
                 );
                 fixes += rename_table(target, "build_dependencies", "build-dependencies");
                 fixes += rename_dep_fields_2024(target, "build-dependencies");
                 fixes += remove_ignored_default_features_2024(
                     target,
                     "build-dependencies",
-                    ws_original_toml,
+                    ws_normalized_toml,
                 );
             }
         }
@@ -461,7 +466,7 @@ fn rename_dep_fields_2024(parent: &mut dyn toml_edit::TableLike, dep_kind: &str)
 fn remove_ignored_default_features_2024(
     parent: &mut dyn toml_edit::TableLike,
     dep_kind: &str,
-    ws_original_toml: &TomlManifest,
+    ws_normalized_toml: &TomlManifest,
 ) -> usize {
     let mut fixes = 0;
     for (name_in_toml, target) in parent
@@ -472,7 +477,7 @@ fn remove_ignored_default_features_2024(
         .filter_map(|(k, t)| t.as_table_like_mut().map(|t| (k, t)))
     {
         let name_in_toml: &str = &name_in_toml;
-        let ws_deps = ws_original_toml
+        let ws_deps = ws_normalized_toml
             .workspace
             .as_ref()
             .and_then(|ws| ws.dependencies.as_ref());
