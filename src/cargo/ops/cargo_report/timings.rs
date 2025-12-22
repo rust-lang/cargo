@@ -53,7 +53,7 @@ pub fn report_timings(
     ws: Option<&Workspace<'_>>,
     opts: ReportTimingsOptions<'_>,
 ) -> CargoResult<()> {
-    let Some((log, run_id)) = select_log_file(gctx, ws)? else {
+    let Some((log, run_id)) = list_log_files(gctx, ws)?.next() else {
         let title_extra = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
@@ -110,23 +110,22 @@ pub fn report_timings(
     Ok(())
 }
 
-/// Selects the appropriate log file.
+/// Lists log files by calling a callback for each valid log file.
 ///
-/// Currently look at the newest log file for the workspace.
-/// If not in a workspace, pick the newest log file in the log directory.
-fn select_log_file(
+/// * Yield log files from new to old
+/// * If in a workspace, select only the log files associated with the workspace
+pub fn list_log_files(
     gctx: &GlobalContext,
     ws: Option<&Workspace<'_>>,
-) -> CargoResult<Option<(PathBuf, RunId)>> {
+) -> CargoResult<Box<dyn Iterator<Item = (PathBuf, RunId)>>> {
     let log_dir = gctx.home().join("log");
     let log_dir = log_dir.as_path_unlocked();
 
     if !log_dir.exists() {
-        return Ok(None);
+        return Ok(Box::new(std::iter::empty()));
     }
 
-    // Gets the latest log files in the log directory
-    let mut walk = walkdir::WalkDir::new(log_dir)
+    let walk = walkdir::WalkDir::new(log_dir)
         .follow_links(true)
         .sort_by(|a, b| a.file_name().cmp(b.file_name()).reverse())
         .min_depth(1)
@@ -146,19 +145,18 @@ fn select_log_file(
 
             // ...and the file name must follow RunId format
             let run_id = path.file_stem()?.to_str()?.parse::<RunId>().ok()?;
-            Some((entry, run_id))
+            Some((path.to_path_buf(), run_id))
         });
 
-    let item = if let Some(ws) = ws {
-        // If we are under a workspace, find only that workspace's log files.
-        let ws_run_id = BuildLogger::generate_run_id(ws);
-        walk.skip_while(|(_, run_id)| !run_id.same_workspace(&ws_run_id))
-            .next()
-    } else {
-        walk.next()
-    };
+    let ws_run_id = ws.map(BuildLogger::generate_run_id);
 
-    Ok(item.map(|(entry, run_id)| (entry.into_path(), run_id)))
+    let walk = walk.filter(move |(_, id)| {
+        ws_run_id
+            .as_ref()
+            .map_or(true, |ws_id| id.same_workspace(ws_id))
+    });
+
+    Ok(Box::new(walk))
 }
 
 fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'static>> {
