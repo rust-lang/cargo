@@ -666,3 +666,141 @@ optional = true
         )],
     );
 }
+
+#[cargo_test]
+fn disabled_weak_direct_dep() {
+    // A weak direct dependency should be included in Cargo.lock,
+    // even if disabled, and even if on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                f1 = ["bar?/feat"]
+            "#,
+        )
+        .file("src/lib.rs", &require(&["f1"], &[]))
+        .build();
+
+    // bar is inside lockfile.
+    p.cargo("check --features f1")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disabled_weak_optional_deps() {
+    // A weak dependency of a dependency should not be included in Cargo.lock,
+    // at least on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // bar is inside lockfile.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn weak_features() {
+    Package::new("foo", "0.1.0").feature("feat", &[]).publish();
+    Package::new("foo", "0.2.0").feature("feat", &[]).publish();
+    Package::new("bar", "0.1.0")
+        .add_dep(
+            &Dependency::new("foo1", "0.1.0")
+                .optional(true)
+                .package("foo"),
+        )
+        .add_dep(
+            &Dependency::new("foo2", "0.2.0")
+                .optional(true)
+                .package("foo"),
+        )
+        .feature("feat", &["foo1?/feat", "foo2?/feat"])
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = { version = "0.1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Both foo 0.1.0 and foo 0.2.0 are included
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
+[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[CHECKING] bar v0.1.0
+[CHECKING] test v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
