@@ -389,6 +389,20 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.build_script_run_dir(unit).join("out")
     }
 
+    /// Returns the directory which build scripts should use for temporary
+    /// files.
+    /// `/path/to/target/{debug,release}/build/PKG-HASH/tmp`
+    pub fn build_script_tmp_dir(&self, unit: &Unit) -> PathBuf {
+        self.build_script_run_dir(unit).join("tmp")
+    }
+
+    /// Returns the directory which `rustc` invocations should use for
+    /// temporary files, and which `CARGO_CFG_TMPDIR` should be set to.
+    /// `/path/to/target/tmp`
+    pub fn rustc_tmp_dir(&self, unit: &Unit) -> &Path {
+        self.layout(unit.kind).build_dir().tmp()
+    }
+
     /// Returns the path to the executable binary for the given bin target.
     ///
     /// This should only to be used when a `Unit` is not available.
