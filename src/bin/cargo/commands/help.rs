@@ -79,10 +79,14 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => return Ok(false),
     };
 
-    if resolve_executable(Path::new("man")).is_ok() {
-        let man = match extract_man(subcommand, "1") {
-            Some(man) => man,
-            None => return Ok(false),
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
+    if std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok() {
+        let txt = extract_man(subcommand, "txt").unwrap();
+        drop(std::io::stdout().write_all(&txt));
+    } else if resolve_executable(Path::new("man")).is_ok() {
+        let Some(man) = extract_man(subcommand, "1") else {
+            return Ok(false);
         };
         write_and_spawn(subcommand, &man, "man")?;
     } else {
