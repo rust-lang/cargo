@@ -8,6 +8,7 @@ fn case() {
         .args(["report", "sessions"])
         .arg("--help")
         .assert()
-        .code(1)
-        .stdout_eq(file!["stdout.term.svg"]);
+        .success()
+        .stdout_eq(file!["stdout.term.svg"])
+        .stderr_eq(str![[""]]);
 }
