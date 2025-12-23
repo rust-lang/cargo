@@ -9,7 +9,6 @@
 * [cargo fix](cargo-fix.md)
 * [cargo fmt](cargo-fmt.md)
 * [cargo miri](cargo-miri.md)
-* [cargo report](cargo-report.md)
 * [cargo run](cargo-run.md)
 * [cargo rustc](cargo-rustc.md)
 * [cargo rustdoc](cargo-rustdoc.md)
