@@ -12,13 +12,11 @@ use cargo_test_support::str;
 #[cargo_test]
 fn gated_stable_channel() {
     cargo_process("report sessions")
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report sessions` command is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report sessions` command.
 
 "#]])
         .run();
@@ -28,13 +26,10 @@ For more information, try '--help'.
 fn gated_unstable_options() {
     cargo_process("report sessions")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report sessions` command is unstable, pass `-Z build-analysis` to enable it
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report sessions` command.
 
 "#]])
         .run();
@@ -44,13 +39,11 @@ For more information, try '--help'.
 fn no_logs() {
     cargo_process("report sessions -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] no build log files found
+  |
+  = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -65,13 +58,11 @@ fn no_logs_in_workspace() {
 
     p.cargo("report sessions -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] no build log files found for workspace at `[ROOT]/foo`
+  |
+  = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -91,13 +82,10 @@ fn in_workspace() {
 
     p.cargo("report sessions -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs for `[ROOT]/foo` (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+ - [..]T[..]Z-[..]
 
 "#]])
         .run();
@@ -118,13 +106,10 @@ fn outside_workspace() {
     // cd to outside the workspace, should show all sessions
     cargo_process("report sessions -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+ - [..]T[..]Z-[..]
 
 "#]])
         .run();
@@ -148,13 +133,12 @@ fn with_limit_1_and_extra_logs() {
 
     p.cargo("report sessions --limit 1 -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs for `[ROOT]/foo` (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
+ - [..]T[..]Z-[..]
 
-For more information, try '--help'.
+... and more (use --limit N to see more)
 
 "#]])
         .run();
@@ -178,13 +162,11 @@ fn with_limit_5_but_not_enough_logs() {
 
     p.cargo("report sessions --limit 5 -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs for `[ROOT]/foo` (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+ - [..]T[..]Z-[..]
+ - [..]T[..]Z-[..]
 
 "#]])
         .run();
@@ -217,13 +199,10 @@ fn existing_logs_from_other_workspaces() {
     // In foo workspace, should only show foo sessions by default
     foo.cargo("report sessions -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs for `[ROOT]/foo` (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+ - [..]T[..]Z-[..]
 
 "#]])
         .run();
@@ -255,13 +234,10 @@ fn with_manifest_path() {
 
     foo.cargo("report sessions --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'sessions'
+Session IDs for `[ROOT]/bar` (most recent first):
 
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+ - [..]T[..]Z-[..]
 
 "#]])
         .run();

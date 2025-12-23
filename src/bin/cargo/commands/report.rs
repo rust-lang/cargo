@@ -33,6 +33,17 @@ pub fn cli() -> Command {
                 .arg_manifest_path()
                 .arg(flag("open", "Opens the timing report in a browser")),
         )
+        .subcommand(
+            subcommand("sessions")
+                .about("Reports the previous build sessions (unstable)")
+                .arg_manifest_path()
+                .arg(
+                    opt("limit", "Limit the number of results")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(u64).range(1..))
+                        .default_value("10"),
+                ),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
@@ -49,6 +60,19 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             let opts = timings_opts(gctx, args)?;
             let ws = args.workspace(gctx).ok();
             ops::report_timings(gctx, ws.as_ref(), opts)?;
+            Ok(())
+        }
+        Some(("sessions", args)) => {
+            gctx.cli_unstable().fail_if_stable_command(
+                gctx,
+                "report sessions",
+                15844,
+                "build-analysis",
+                gctx.cli_unstable().build_analysis,
+            )?;
+            let ws = args.workspace(gctx).ok();
+            let opts = sessions_opts(args)?;
+            ops::report_sessions(gctx, ws.as_ref(), opts)?;
             Ok(())
         }
         Some((cmd, _)) => {
@@ -80,4 +104,11 @@ fn timings_opts<'a>(
     let open_result = args.get_flag("open");
 
     Ok(ops::ReportTimingsOptions { open_result, gctx })
+}
+
+fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
+    let limit = *args.get_one::<u64>("limit").unwrap_or(&10);
+    let limit = limit.min(usize::MAX as u64) as usize;
+
+    Ok(ops::ReportSessionsOptions { limit })
 }
