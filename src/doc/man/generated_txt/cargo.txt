@@ -117,6 +117,10 @@ COMMANDS
        cargo-yank(1)
            Remove a pushed crate from the index.
 
+   Report Commands
+       cargo-report(1)
+           Generate and display various kinds of reports.
+
    General Commands
        cargo-help(1)
            Display help information about Cargo.
