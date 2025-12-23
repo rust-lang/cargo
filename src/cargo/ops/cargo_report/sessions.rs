@@ -36,7 +36,7 @@ pub fn report_sessions(
         } else {
             String::new()
         };
-        let title = format!("no build log files found{context}");
+        let title = format!("no sessions found{context}");
         let note = "run build commands with `-Z build-analysis` to generate log files";
 
         let report = [Level::ERROR

@@ -41,7 +41,7 @@ fn no_logs() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no build log files found
+[ERROR] no sessions found
   |
   = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
@@ -60,7 +60,7 @@ fn no_logs_in_workspace() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no build log files found for workspace at `[ROOT]/foo`
+[ERROR] no sessions found for workspace at `[ROOT]/foo`
   |
   = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
@@ -122,7 +122,7 @@ fn with_limit_1_and_extra_logs() {
         .file("src/lib.rs", "")
         .build();
 
-    // Generate 3 build sessions
+    // Generate 3 sessions
     for i in 0..3 {
         p.change_file("src/lib.rs", &format!("pub fn foo{i}() {{}}"));
         p.cargo("check -Zbuild-analysis")
@@ -151,7 +151,7 @@ fn with_limit_5_but_not_enough_logs() {
         .file("src/lib.rs", "")
         .build();
 
-    // Generate 2 build sessions
+    // Generate 2 sessions
     for i in 0..2 {
         p.change_file("src/lib.rs", &format!("pub fn foo{i}() {{}}"));
         p.cargo("check -Zbuild-analysis")

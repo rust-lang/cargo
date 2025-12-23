@@ -53,12 +53,12 @@ pub fn report_timings(
     opts: ReportTimingsOptions<'_>,
 ) -> CargoResult<()> {
     let Some((log, run_id)) = list_log_files(gctx, ws)?.next() else {
-        let title_extra = if let Some(ws) = ws {
+        let context = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
             String::new()
         };
-        let title = format!("no build log files found{title_extra}");
+        let title = format!("no sessions found{context}");
         let note = "run command with `-Z build-analysis` to generate log files";
         let report = [Level::ERROR
             .primary_title(title)

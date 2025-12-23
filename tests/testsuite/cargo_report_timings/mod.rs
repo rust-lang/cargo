@@ -52,7 +52,7 @@ fn no_log() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no build log files found
+[ERROR] no sessions found
   |
   = [NOTE] run command with `-Z build-analysis` to generate log files
 
@@ -86,7 +86,7 @@ fn no_log_for_the_current_workspace() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no build log files found for workspace at `[ROOT]/bar`
+[ERROR] no sessions found for workspace at `[ROOT]/bar`
   |
   = [NOTE] run command with `-Z build-analysis` to generate log files
 

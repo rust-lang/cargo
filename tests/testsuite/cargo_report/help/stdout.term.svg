@@ -32,9 +32,9 @@
 </tspan>
     <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">future-incompatibilities</tspan><tspan>  Reports any crates which will eventually stop compiling</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">timings</tspan><tspan>                   Reports the build timings of previous builds (unstable)</tspan>
+    <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">timings</tspan><tspan>                   Reports the build timings of previous sessions (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">sessions</tspan><tspan>                  Reports the previous build sessions (unstable)</tspan>
+    <tspan x="10px" y="154px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">sessions</tspan><tspan>                  Reports the previous sessions (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="172px">
 </tspan>

@@ -29,13 +29,13 @@ pub fn cli() -> Command {
         )
         .subcommand(
             subcommand("timings")
-                .about("Reports the build timings of previous builds (unstable)")
+                .about("Reports the build timings of previous sessions (unstable)")
                 .arg_manifest_path()
                 .arg(flag("open", "Opens the timing report in a browser")),
         )
         .subcommand(
             subcommand("sessions")
-                .about("Reports the previous build sessions (unstable)")
+                .about("Reports the previous sessions (unstable)")
                 .arg_manifest_path()
                 .arg(
                     opt("limit", "Limit the number of results")
