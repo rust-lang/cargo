@@ -50,12 +50,12 @@ struct UnitEntry {
 pub fn report_timings(gctx: &GlobalContext, opts: ReportTimingsOptions<'_>) -> CargoResult<()> {
     let ws = infer_workspace(gctx);
     let Some((log, run_id)) = list_log_files(gctx, ws.as_ref())?.next() else {
-        let title_extra = if let Some(ws) = ws {
+        let context = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
             String::new()
         };
-        let title = format!("no build log files found{title_extra}");
+        let title = format!("no build sessions found{context}");
         let note = "run command with `-Z build-analysis` to generate log files";
         let report = [Level::ERROR
             .primary_title(title)
