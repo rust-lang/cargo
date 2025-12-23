@@ -66,7 +66,6 @@
         * [cargo fix](commands/cargo-fix.md)
         * [cargo fmt](commands/cargo-fmt.md)
         * [cargo miri](commands/cargo-miri.md)
-        * [cargo report](commands/cargo-report.md)
         * [cargo run](commands/cargo-run.md)
         * [cargo rustc](commands/cargo-rustc.md)
         * [cargo rustdoc](commands/cargo-rustdoc.md)
@@ -95,6 +94,8 @@
         * [cargo package](commands/cargo-package.md)
         * [cargo publish](commands/cargo-publish.md)
         * [cargo yank](commands/cargo-yank.md)
+    * [Report Commands](commands/report-commands.md)
+        * [cargo report](commands/cargo-report.md)
     * [Deprecated and Removed](commands/deprecated-and-removed.md)
 
 * [FAQ](faq.md)
