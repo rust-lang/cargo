@@ -340,7 +340,7 @@ trigger_files = ["src/bin/cargo/commands/read_manifest.rs", "src/cargo/ops/cargo
 trigger_files = ["src/bin/cargo/commands/remove.rs", "src/cargo/ops/cargo_remove.rs"]
 
 [autolabel."Command-report"]
-trigger_files = ["src/bin/cargo/commands/report.rs"]
+trigger_files = ["src/bin/cargo/commands/report.rs", "src/cargo/ops/cargo_report/"]
 
 [autolabel."Command-run"]
 trigger_files = ["src/bin/cargo/commands/run.rs", "src/cargo/ops/cargo_run.rs"]
