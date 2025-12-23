@@ -31,28 +31,26 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let subcommand = args.get_one::<String>("COMMAND");
-    if let Some(subcommand) = subcommand {
-        if !try_help(gctx, subcommand)? {
-            match check_builtin(&subcommand) {
-                Some(s) => {
-                    crate::execute_internal_subcommand(
-                        gctx,
-                        &[OsStr::new(s), OsStr::new("--help")],
-                    )?;
-                }
-                None => {
-                    crate::execute_external_subcommand(
-                        gctx,
-                        subcommand,
-                        &[OsStr::new(subcommand), OsStr::new("--help")],
-                    )?;
-                }
-            }
+    let Some(subcommand) = args.get_one::<String>("COMMAND") else {
+        let _ = crate::cli::cli(gctx).print_help();
+        return Ok(());
+    };
+
+    if try_help(gctx, subcommand)? {
+        return Ok(());
+    }
+
+    match check_builtin(&subcommand) {
+        Some(s) => {
+            crate::execute_internal_subcommand(gctx, &[OsStr::new(s), OsStr::new("--help")])?;
         }
-    } else {
-        let mut cmd = crate::cli::cli(gctx);
-        let _ = cmd.print_help();
+        None => {
+            crate::execute_external_subcommand(
+                gctx,
+                subcommand,
+                &[OsStr::new(subcommand), OsStr::new("--help")],
+            )?;
+        }
     }
     Ok(())
 }
@@ -89,9 +87,8 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         };
         write_and_spawn(subcommand, &man, "man")?;
     } else {
-        let txt = match extract_man(subcommand, "txt") {
-            Some(txt) => txt,
-            None => return Ok(false),
+        let Some(txt) = extract_man(subcommand, "txt") else {
+            return Ok(false);
         };
         if force_help_text {
             drop(std::io::stdout().write_all(&txt));
