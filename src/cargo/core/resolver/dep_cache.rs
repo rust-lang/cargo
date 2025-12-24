@@ -13,8 +13,8 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -235,6 +235,7 @@ impl<'a> RegistryQueryer<'a> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_version: Option<VersionOrdering>,
+        version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -247,8 +248,13 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) =
-            resolve_features(parent, candidate, opts, &mut self.dep_with_weak_feats)?;
+        let (used_features, deps) = resolve_features(
+            parent,
+            candidate,
+            opts,
+            &mut self.dep_with_weak_feats,
+            version,
+        )?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -299,6 +305,7 @@ pub fn resolve_features<'b>(
     s: &'b Summary,
     opts: &'b ResolveOpts,
     dep_with_weak_feats: &mut HashMap<Dependency, Vec<InternedString>>,
+    version: ResolveVersion,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
@@ -309,7 +316,7 @@ pub fn resolve_features<'b>(
         .flat_map(|(_, feats)| feats.into_iter())
         .collect();
 
-    let reqs = build_requirements(parent, s, opts, extra_feats)?;
+    let reqs = build_requirements(parent, s, opts, extra_feats, version)?;
     // if we cannot handle it locally, leave it for matching deferiing later
     for (package, feats) in reqs.dep_with_weak_feats {
         if let Some(target) = deps.clone().find(|dep| {
@@ -366,8 +373,9 @@ fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
     opts: &'b ResolveOpts,
     extra_feats: Vec<InternedString>,
+    version: ResolveVersion,
 ) -> ActivateResult<Requirements<'a>> {
-    let mut reqs = Requirements::new(s, parent.is_none());
+    let mut reqs = Requirements::new(s, parent.is_none() || version < ResolveVersion::V5);
 
     let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
         if uses_default_features && s.features().contains_key("default") {
