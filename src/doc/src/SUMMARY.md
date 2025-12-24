@@ -96,6 +96,7 @@
         * [cargo yank](commands/cargo-yank.md)
     * [Report Commands](commands/report-commands.md)
         * [cargo report](commands/cargo-report.md)
+        * [cargo report future-incompatibilities](commands/cargo-report-future-incompatibilities.md)
     * [Deprecated and Removed](commands/deprecated-and-removed.md)
 
 * [FAQ](faq.md)

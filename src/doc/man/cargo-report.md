@@ -34,14 +34,10 @@ Displays a report of the given _type_ --- currently, only `future-incompat` is s
 
 ## EXAMPLES
 
-1. Display the latest future-incompat report:
+1. Display the available kinds of reports:
 
-       cargo report future-incompat
-
-2. Display the latest future-incompat report for a specific package:
-
-       cargo report future-incompat --package my-dep@0.0.1
+       cargo report --help
 
 ## SEE ALSO
 
-{{man "cargo" 1}}, [Future incompat report](../reference/future-incompat-report.html)
+{{man "cargo" 1}}, {{man "cargo-report-future-incompatibilities" 1}}

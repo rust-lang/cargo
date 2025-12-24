@@ -121,6 +121,9 @@ COMMANDS
        cargo-report(1)
            Generate and display various kinds of reports.
 
+       cargo-report-future-incompatibilities(1)
+           Reports any crates which will eventually stop compiling.
+
    General Commands
        cargo-help(1)
            Display help information about Cargo.
