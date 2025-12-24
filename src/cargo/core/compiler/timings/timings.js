@@ -740,13 +740,12 @@ ${legend}`;
   _draw_one_dep_line(from_x, from_y, to_unit, from_unit) {
     if (to_unit in UNIT_COORDS) {
       let { x: u_x, y: u_y } = UNIT_COORDS[to_unit];
+      // Use multiple path instead to avoid potential rendering issue while scrolling in Firefox.
       return `
-<path class="dep-line" data-unblocked="${to_unit}" data-unblocked-by="${from_unit}" d="
-  M ${from_x} ${from_y + BOX_HEIGHT / 2}
-  h -5
-  V ${u_y + BOX_HEIGHT / 2}
-  H ${u_x}
-"></path>`;
+<path class="dep-line" data-unblocked="${to_unit}" data-unblocked-by="${from_unit}" d="M ${from_x} ${from_y + BOX_HEIGHT / 2} h -5"></path>
+<path class="dep-line" data-unblocked="${to_unit}" data-unblocked-by="${from_unit}" d="M ${from_x - 5} ${from_y + BOX_HEIGHT / 2} V ${u_y + BOX_HEIGHT / 2}"></path>
+<path class="dep-line" data-unblocked="${to_unit}" data-unblocked-by="${from_unit}" d="M ${from_x - 5} ${u_y + BOX_HEIGHT / 2} H${u_x}"></path>
+`;
     }
   }
 
