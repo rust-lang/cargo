@@ -146,6 +146,7 @@ pub fn resolve(
             first_version,
             gctx,
             &mut past_conflicting_activations,
+            resolve_version,
         )?;
         if registry.wait()? {
             break resolver_ctx;
@@ -198,6 +199,7 @@ fn activate_deps_loop(
     first_version: Option<VersionOrdering>,
     gctx: &GlobalContext,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    version: ResolveVersion,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
@@ -213,6 +215,7 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            version,
         );
         match res {
             Ok(Some((frame, _, _))) => remaining_deps.push(frame),
@@ -415,6 +418,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -637,6 +641,7 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Option<(DepsFrame, Duration, Vec<DepsFrame>)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -681,41 +686,45 @@ fn activate(
     // Here we check if some weak dependency related packages are activated
     // NOTE: if one package is already activated before one weak dependency occurs,
     // `resolve_features` will treat it as strong one
-    let frames_todo: Vec<_> = {
-        let map = std::mem::take(&mut cx.weak_dep_with_feats);
-        let (matches, kept) = map
-            .into_iter()
-            .partition::<im_rc::HashMap<Dependency, Vec<_>, FxBuildHasher>, _>(|(dep, _)| {
-                dep.matches(&candidate, crate::util::VersionReqMatchMode::Default)
-            });
-        cx.weak_dep_with_feats = kept;
-        matches
-    }
-    .into_iter()
-    .flat_map(|(dep, extra)| {
-        extra
-            .into_iter()
-            .map(move |(features, candidates, parent)| {
-                ((dep.clone(), candidates, features), parent)
-            })
-    })
-    .inspect(|(pak, parent)| {
-        // Here we relink the package with its parent
-        cx.parents
-            .link(candidate_pid, parent.package_id())
-            .insert(pak.0.clone());
-        // Here we update its parent's used_features if necessary
-        if parent.features().contains_key(&pak.0.name_in_toml()) {
-            Rc::make_mut(cx.resolve_features.entry(parent.package_id()).or_default())
-                .insert(pak.0.name_in_toml());
+    let frames_todo: Vec<_> = if version >= ResolveVersion::V5 {
+        {
+            let map = std::mem::take(&mut cx.weak_dep_with_feats);
+            let (matches, kept) = map
+                .into_iter()
+                .partition::<im_rc::HashMap<Dependency, Vec<_>, FxBuildHasher>, _>(|(dep, _)| {
+                    dep.matches(&candidate, crate::util::VersionReqMatchMode::Default)
+                });
+            cx.weak_dep_with_feats = kept;
+            matches
         }
-    })
-    .map(|(pak, parent)| DepsFrame {
-        parent,
-        just_for_error_messages: false,
-        remaining_siblings: RcVecIter::new(Rc::new(vec![pak])),
-    })
-    .collect();
+        .into_iter()
+        .flat_map(|(dep, extra)| {
+            extra
+                .into_iter()
+                .map(move |(features, candidates, parent)| {
+                    ((dep.clone(), candidates, features), parent)
+                })
+        })
+        .inspect(|(pak, parent)| {
+            // Here we relink the package with its parent
+            cx.parents
+                .link(candidate_pid, parent.package_id())
+                .insert(pak.0.clone());
+            // Here we update its parent's used_features if necessary
+            if parent.features().contains_key(&pak.0.name_in_toml()) {
+                Rc::make_mut(cx.resolve_features.entry(parent.package_id()).or_default())
+                    .insert(pak.0.name_in_toml());
+            }
+        })
+        .map(|(pak, parent)| DepsFrame {
+            parent,
+            just_for_error_messages: false,
+            remaining_siblings: RcVecIter::new(Rc::new(vec![pak])),
+        })
+        .collect()
+    } else {
+        Vec::new()
+    };
     // Update registry.summary_cache seems unnecessary.
     // --
 
@@ -726,6 +735,7 @@ fn activate(
         &candidate,
         opts,
         first_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.
