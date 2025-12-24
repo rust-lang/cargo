@@ -206,7 +206,7 @@ pub fn resolve_with_global_context_raw(
         &[],
         &mut registry,
         &version_prefs,
-        ResolveVersion::with_rust_version(None),
+        ResolveVersion::V5,
         Some(gctx),
     );
 

@@ -13,8 +13,8 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -230,6 +230,7 @@ impl<'a> RegistryQueryer<'a> {
         opts: &ResolveOpts,
         weak_dep_feat_requires: Vec<InternedString>,
         first_version: Option<VersionOrdering>,
+        version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -244,8 +245,14 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps, generated_requires) =
-            resolve_features(cx, parent, candidate, opts, &weak_dep_feat_requires)?;
+        let (used_features, deps, generated_requires) = resolve_features(
+            cx,
+            parent,
+            candidate,
+            opts,
+            &weak_dep_feat_requires,
+            version,
+        )?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -309,6 +316,7 @@ pub fn resolve_features<'b>(
     s: &'b Summary,
     opts: &'b ResolveOpts,
     weak_dep_feat_requires: &Vec<InternedString>,
+    version: ResolveVersion,
 ) -> ActivateResult<(
     HashSet<InternedString>,
     Vec<(Dependency, FeaturesSet)>,
@@ -318,7 +326,7 @@ pub fn resolve_features<'b>(
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 
-    let mut reqs = build_requirements(parent, s, opts, weak_dep_feat_requires)?;
+    let mut reqs = build_requirements(parent, s, opts, weak_dep_feat_requires, version)?;
 
     let mut ret = Vec::new();
     let default_dep = BTreeSet::new();
@@ -393,8 +401,9 @@ fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
     opts: &'b ResolveOpts,
     weak_dep_feat_requires: &Vec<InternedString>,
+    version: ResolveVersion,
 ) -> ActivateResult<Requirements<'a>> {
-    let mut reqs = Requirements::new(s, parent.is_none());
+    let mut reqs = Requirements::new(s, parent.is_none() || version < ResolveVersion::V5);
 
     let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
         if uses_default_features && s.features().contains_key("default") {

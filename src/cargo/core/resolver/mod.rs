@@ -145,6 +145,7 @@ pub fn resolve(
             first_version,
             gctx,
             &mut past_conflicting_activations,
+            resolve_version,
         )?;
         if registry.reset_pending() {
             break resolver_ctx;
@@ -199,6 +200,7 @@ fn activate_deps_loop(
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    version: ResolveVersion,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
@@ -214,6 +216,7 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            version,
         );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
@@ -415,6 +418,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -627,6 +631,7 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -681,6 +686,7 @@ fn activate(
         opts,
         weak_dep_feat_requires,
         first_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.
