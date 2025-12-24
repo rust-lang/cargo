@@ -1106,9 +1106,31 @@ function pipeline_mouse_hit(event) {
   }
 }
 
-let renderer = new CanvasRenderer();
-renderer.render_pipeline_graph();
-renderer.render_timing_graph();
+const _RENDERER = { canvas: null, svg: null };
+
+function setupRenderer(name) {
+  // Get or init the selected renderer
+  const r = name === "canvas" ?
+    _RENDERER[name] || (_RENDERER[name] = new CanvasRenderer()) :
+    _RENDERER[name] || (_RENDERER[name] = new SvgRenderer());
+  // Toggle visibility
+  Array.from(document.querySelectorAll(`.canvas-container`))
+  .map(function(el) {
+    return { el, op: el.getAttribute("part") === name ? "remove" : "add" };
+  }).forEach(function(entry) {
+    const { el, op } = entry;
+    el.classList[op]("hidden");
+  })
+  return r
+}
+
+let renderer = setupRenderer(document.querySelector("input[name='renderer']:checked").value);
+try {
+  renderer.render_pipeline_graph();
+  renderer.render_timing_graph();
+} catch (err) {
+  console.error(err);
+}
 
 // Set up and handle controls.
 {
@@ -1117,7 +1139,11 @@ renderer.render_timing_graph();
   time_output.innerHTML = `${range.value}s`;
   range.oninput = event => {
     time_output.innerHTML = `${range.value}s`;
-    renderer.render_pipeline_graph();
+    try {
+      renderer.render_pipeline_graph();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const scale = document.getElementById('scale');
@@ -1125,7 +1151,23 @@ renderer.render_timing_graph();
   scale_output.innerHTML = `${scale.value}`;
   scale.oninput = event => {
     scale_output.innerHTML = `${scale.value}`;
-    renderer.render_pipeline_graph();
-    renderer.render_timing_graph();
+    try {
+      renderer.render_pipeline_graph();
+      renderer.render_timing_graph();
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  Array.from(document.querySelectorAll("input[name='renderer']")).forEach(function(el) {
+    el.addEventListener("change", function(event) {
+      renderer = setupRenderer(event.target.value);
+      try {
+        renderer.render_pipeline_graph();
+        renderer.render_timing_graph();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
 }
