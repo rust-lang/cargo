@@ -1,16 +1,34 @@
-CARGO-REPORT(1)
+CARGO-REPORT-FUTURE-INCOMPATIBILITIES(1)
 
 NAME
-       cargo-report — Generate and display various kinds of reports
+       cargo-report-future-incompatibilities — Reports any crates which will
+       eventually stop compiling
 
 SYNOPSIS
-       cargo report type [options]
+       cargo report future-incompatibilities [options]
 
 DESCRIPTION
-       Displays a report of the given type — currently, only future-incompat
-       is supported
+       Displays a report of future-incompatible warnings that were emitted
+       during previous builds. These are warnings for changes that may become
+       hard errors in the future, causing dependencies to stop building in a
+       future version of rustc.
+
+       For more, see the chapter on Future incompat report
+       <https://doc.rust-lang.org/cargo/reference/future-incompat-report.html>.
 
 OPTIONS
+       --id id
+           Show the report with the specified Cargo-generated id. If not
+           specified, shows the most recent report.
+
+   Package Selection
+       By default, the package in the current working directory is selected.
+       The -p flag can be used to choose a different package in a workspace.
+
+       -p spec, --package spec
+           The package to display a report for. See cargo-pkgid(1) for the SPEC
+           format.
+
    Display Options
        -v, --verbose
            Use verbose output. May be specified twice for “very verbose”
@@ -117,10 +135,14 @@ EXIT STATUS
        o  101: Cargo failed to complete.
 
 EXAMPLES
-       1. Display the available kinds of reports:
+       1. Display the latest future-incompat report:
 
-              cargo report --help
+              cargo report future-incompat
+
+       2. Display the latest future-incompat report for a specific package:
+
+              cargo report future-incompat --package my-dep@0.0.1
 
 SEE ALSO
-       cargo(1), cargo-report-future-incompatibilities(1)
+       cargo(1), cargo-report(1), cargo-build(1)
 

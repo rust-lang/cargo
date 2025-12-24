@@ -128,6 +128,9 @@ available at <https://rust-lang.org>.
 {{man "cargo-report" 1}}\
 &nbsp;&nbsp;&nbsp;&nbsp;Generate and display various kinds of reports.
 
+{{man "cargo-report-future-incompatibilities" 1}}\
+&nbsp;&nbsp;&nbsp;&nbsp;Reports any crates which will eventually stop compiling.
+
 ### General Commands
 
 {{man "cargo-help" 1}}\
