@@ -448,7 +448,7 @@ update to a newer version to see if the issue has been fixed{updated_versions}",
             format!(
                 "  - {package_spec}
   - repository: {url}
-  - detailed warning command: `cargo report future-incompatibilities --id {id} --package {package_spec}`",
+  - detailed warning command: `cargo report future-incompat --id {id} --package {package_spec}`",
                 package_spec = format!("{}@{}", package_id.name(), package_id.version()),
                 url = manifest
                     .metadata()
@@ -517,15 +517,13 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
             }
             report.push(Group::with_title(Level::NOTE.secondary_title(format!(
                 "this report can be shown with `cargo report \
-             future-incompatibilities --id {}`",
-                saved_report_id
+             future-incompat --id {saved_report_id}`",
             ))));
         } else if should_display_message {
             report.push(Group::with_title(Level::NOTE.secondary_title(format!(
                 "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
-             future-incompatibilities --id {}`",
-                saved_report_id
+             future-incompat --id {saved_report_id}`",
             ))));
         }
         drop(bcx.gctx.shell().print_report(&report, false))
