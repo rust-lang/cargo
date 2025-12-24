@@ -77,7 +77,7 @@ fn incompat_in_local_crate() {
 [WARNING] `foo` (lib) generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
-[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompat --id 1`
 
 "#]])
         .run();
@@ -91,7 +91,7 @@ fn incompat_in_local_crate() {
 [WARNING] `foo` (lib) generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+[NOTE] this report can be shown with `cargo report future-incompat --id 1`
 
 "#]])
     .run();
@@ -136,7 +136,7 @@ fn incompat_in_dependency() {
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
-[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompat --id 1`
 
 "#]])
         .run();
@@ -150,11 +150,11 @@ fn incompat_in_dependency() {
       or even helping with a fix (e.g. by creating a pull request)
         - bar@1.0.0
         - repository: https://example.com/
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package bar@1.0.0`
 [HELP] use your own version of the dependency with the `[patch]` section in `Cargo.toml`
       For more information, see:
       https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+[NOTE] this report can be shown with `cargo report future-incompat --id 1`
 
 "#]])
         .run();
@@ -177,7 +177,7 @@ to solve this problem, you can try the following approaches:
 or even helping with a fix (e.g. by creating a pull request)
   - bar@1.0.0
   - repository: https://example.com/
-  - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+  - detailed warning command: `cargo report future-incompat --id 1 --package bar@1.0.0`
 
 - use your own version of the dependency with the `[patch]` section in `Cargo.toml`
 For more information, see:
@@ -301,7 +301,7 @@ frequency = 'never'
 ...
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 ...
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id [..]`
+[NOTE] this report can be shown with `cargo report future-incompat --id [..]`
 ...
 ")
             .run();
@@ -596,19 +596,19 @@ fn suggestions_for_updates() {
       or even helping with a fix (e.g. by creating a pull request)
         - big_update@1.0.0
         - repository: <not found>
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package big_update@1.0.0`
       
         - with_updates@1.0.0
         - repository: <not found>
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package with_updates@1.0.0`
       
         - without_updates@1.0.0
         - repository: <not found>
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package without_updates@1.0.0`
 [HELP] use your own version of the dependency with the `[patch]` section in `Cargo.toml`
       For more information, see:
       https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+[NOTE] this report can be shown with `cargo report future-incompat --id 1`
 
 "#]])
         .run();
@@ -635,15 +635,15 @@ to solve this problem, you can try the following approaches:
 or even helping with a fix (e.g. by creating a pull request)
   - big_update@1.0.0
   - repository: <not found>
-  - detailed warning command: `cargo report future-incompatibilities --id 1 --package big_update@1.0.0`
+  - detailed warning command: `cargo report future-incompat --id 1 --package big_update@1.0.0`
 
   - with_updates@1.0.0
   - repository: <not found>
-  - detailed warning command: `cargo report future-incompatibilities --id 1 --package with_updates@1.0.0`
+  - detailed warning command: `cargo report future-incompat --id 1 --package with_updates@1.0.0`
 
   - without_updates@1.0.0
   - repository: <not found>
-  - detailed warning command: `cargo report future-incompatibilities --id 1 --package without_updates@1.0.0`
+  - detailed warning command: `cargo report future-incompat --id 1 --package without_updates@1.0.0`
 
 - use your own version of the dependency with the `[patch]` section in `Cargo.toml`
 For more information, see:
@@ -689,11 +689,11 @@ fn correct_report_id_when_cached() {
       or even helping with a fix (e.g. by creating a pull request)
         - bar@1.0.0
         - repository: https://example.com/
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package bar@1.0.0`
 [HELP] use your own version of the dependency with the `[patch]` section in `Cargo.toml`
       For more information, see:
       https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+[NOTE] this report can be shown with `cargo report future-incompat --id 1`
 
 "#]])
         .run();
@@ -707,11 +707,11 @@ fn correct_report_id_when_cached() {
       or even helping with a fix (e.g. by creating a pull request)
         - bar@1.0.0
         - repository: https://example.com/
-        - detailed warning command: `cargo report future-incompatibilities --id 1 --package bar@1.0.0`
+        - detailed warning command: `cargo report future-incompat --id 1 --package bar@1.0.0`
 [HELP] use your own version of the dependency with the `[patch]` section in `Cargo.toml`
       For more information, see:
       https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-[NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
+[NOTE] this report can be shown with `cargo report future-incompat --id 1`
 
 "#]])
         .run();
