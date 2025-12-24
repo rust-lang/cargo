@@ -36,32 +36,13 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         return Ok(());
     };
 
-    if try_help(gctx, subcommand)? {
-        return Ok(());
-    }
-
-    match check_builtin(&subcommand) {
-        Some(s) => {
-            crate::execute_internal_subcommand(gctx, &[OsStr::new(s), OsStr::new("--help")])?;
-        }
-        None => {
-            crate::execute_external_subcommand(
-                gctx,
-                subcommand,
-                &[OsStr::new(subcommand), OsStr::new("--help")],
-            )?;
-        }
-    }
-    Ok(())
-}
-
-fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = match check_alias(gctx, subcommand) {
+    // Expand alias first
+    let subcommand = match aliased_command(gctx, subcommand).ok().flatten() {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
-            drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
-            return Ok(true);
+            drop_println!(gctx, "`{subcommand}` is aliased to `{alias}`");
+            return Ok(());
         }
         // Otherwise, resolve the alias into its subcommand.
         Some(argv) => {
@@ -72,11 +53,25 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => subcommand.to_string(),
     };
 
-    let subcommand = match check_builtin(&subcommand) {
-        Some(s) => s,
-        None => return Ok(false),
+    if !super::builtin_exec(&subcommand).is_some() {
+        // If not built-in, try giving `--help` to external command.
+        crate::execute_external_subcommand(
+            gctx,
+            &subcommand,
+            &[OsStr::new(&subcommand), OsStr::new("--help")],
+        )?;
+        return Ok(());
     };
 
+    if try_help(&subcommand)? {
+        return Ok(());
+    }
+    crate::execute_internal_subcommand(gctx, &[OsStr::new(&subcommand), OsStr::new("--help")])?;
+
+    Ok(())
+}
+
+fn try_help(subcommand: &str) -> CargoResult<bool> {
     // ALLOWED: For testing cargo itself only.
     #[allow(clippy::disallowed_methods)]
     if std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok() {
@@ -100,20 +95,6 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         }
     }
     Ok(true)
-}
-
-/// Checks if the given subcommand is an alias.
-///
-/// Returns None if it is not an alias.
-fn check_alias(gctx: &GlobalContext, subcommand: &str) -> Option<Vec<String>> {
-    aliased_command(gctx, subcommand).ok().flatten()
-}
-
-/// Checks if the given subcommand is a built-in command (not via an alias).
-///
-/// Returns None if it is not a built-in command.
-fn check_builtin(subcommand: &str) -> Option<&str> {
-    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
