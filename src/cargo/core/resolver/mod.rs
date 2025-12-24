@@ -630,6 +630,12 @@ fn activate(
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
+    let weak_dep_feat_requires = cx
+        .weak_dep_with_feats
+        .iter()
+        .find_map(|(dep, v)| dep.matches(&candidate).then_some(v))
+        .cloned()
+        .unwrap_or_default();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
         // add an edge from candidate to parent in the parents graph
@@ -673,6 +679,7 @@ fn activate(
         parent.map(|p| p.0.package_id()),
         &candidate,
         opts,
+        weak_dep_feat_requires,
         first_version,
     )?;
 

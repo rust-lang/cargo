@@ -737,14 +737,13 @@ fn disabled_weak_optional_deps() {
         .file("src/lib.rs", "")
         .build();
 
-    // bar is inside lockfile.
+    // bar is gone
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -788,14 +787,12 @@ fn weak_features() {
         .file("src/lib.rs", "")
         .build();
 
-    // Both foo 0.1.0 and foo 0.2.0 are included
+    // Both foo 0.1.0 and foo 0.2.0 are gone
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
-[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
 [CHECKING] test v0.1.0 ([ROOT]/foo)
