@@ -149,6 +149,7 @@ pub fn resolve(
             first_version,
             gctx,
             &mut past_conflicting_activations,
+            resolve_version,
         )?;
         if registry.wait()? {
             break resolver_ctx;
@@ -201,6 +202,7 @@ fn activate_deps_loop(
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    version: ResolveVersion,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
@@ -216,6 +218,7 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            version,
         );
         match res {
             Ok(Some((frame, _, _))) => remaining_deps.push(frame),
@@ -418,6 +421,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -640,6 +644,7 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Option<(DepsFrame, Duration, Vec<DepsFrame>)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -684,7 +689,7 @@ fn activate(
     // Here we check if some weak dependency related packages are activated
     // NOTE: if one package is already activated before one weak dependency occurs,
     // `resolve_features` will treat it as strong one
-    let frames_todo: Vec<_> = {
+    let frames_todo: Vec<_> = if version >= ResolveVersion::V5 {
         // replace with `extract_if` if there is
         let matches: Vec<_> = cx
             .weak_dep_with_feats
@@ -721,6 +726,8 @@ fn activate(
                 remaining_siblings: RcVecIter::new(Rc::new(vec![pak])),
             })
             .collect()
+    } else {
+        Vec::new()
     };
     // Update registry.summary_cache seems unnecessary.
     // --
@@ -732,6 +739,7 @@ fn activate(
         &candidate,
         opts,
         first_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.

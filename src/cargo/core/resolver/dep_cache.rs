@@ -13,8 +13,8 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -296,6 +296,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_version: Option<VersionOrdering>,
+        version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -308,7 +309,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(cx, parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(cx, parent, candidate, opts, version)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -385,6 +386,7 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<(
     HashSet<InternedString>,
     Vec<(Dependency, bool, FeaturesSet)>,
@@ -393,7 +395,7 @@ pub fn resolve_features<'b>(
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 
-    let mut reqs = build_requirements(parent, s, opts)?;
+    let mut reqs = build_requirements(parent, s, opts, version)?;
     let mut ret = Vec::new();
     let default_dep = (true, BTreeSet::new());
     let mut valid_dep_names = HashSet::default();
@@ -450,8 +452,9 @@ fn build_requirements<'a, 'b: 'a>(
     parent: Option<PackageId>,
     s: &'a Summary,
     opts: &'b ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Requirements<'a>> {
-    let mut reqs = Requirements::new(s, parent.is_none());
+    let mut reqs = Requirements::new(s, parent.is_none() || version < ResolveVersion::V5);
 
     let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
         if uses_default_features && s.features().contains_key("default") {
