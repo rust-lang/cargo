@@ -10,7 +10,7 @@ fn case() {
         .arg("generate")
         .arg("lockfile")
         .assert()
-        .code(1)
+        .code(101)
         .stdout_eq(file!["stdout.term.txt"])
         .stderr_eq(file!["stderr.term.svg"]);
 }

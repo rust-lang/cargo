@@ -1,9 +1,12 @@
 use crate::aliased_command;
 use crate::command_prelude::*;
+
 use cargo::drop_println;
 use cargo::util::errors::CargoResult;
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
+
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Read;
@@ -15,45 +18,80 @@ const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"
 pub fn cli() -> Command {
     subcommand("help")
         .about("Displays help for a cargo command")
-        .arg(Arg::new("COMMAND").action(ArgAction::Set).add(
-            clap_complete::ArgValueCandidates::new(|| {
-                super::builtin()
-                    .iter()
-                    .map(|cmd| {
-                        let name = cmd.get_name();
-                        clap_complete::CompletionCandidate::new(name)
-                            .help(cmd.get_about().cloned())
-                            .hide(cmd.is_hide_set())
-                    })
-                    .collect()
-            }),
-        ))
+        .arg(
+            Arg::new("COMMAND")
+                .num_args(1..)
+                .action(ArgAction::Append)
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    super::builtin()
+                        .iter()
+                        .map(|cmd| {
+                            let name = cmd.get_name();
+                            clap_complete::CompletionCandidate::new(name)
+                                .help(cmd.get_about().cloned())
+                                .hide(cmd.is_hide_set())
+                        })
+                        .collect()
+                })),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let Some(subcommand) = args.get_one::<String>("COMMAND") else {
+    let args_command = args
+        .get_many::<String>("COMMAND")
+        .map(|vals| vals.map(String::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    if args_command.is_empty() {
         let _ = crate::cli::cli(gctx).print_help();
         return Ok(());
+    }
+
+    let subcommand = if args_command.len() == 1 {
+        // Expand alias first
+        let subcommand = args_command.first().unwrap();
+        match aliased_command(gctx, subcommand).ok().flatten() {
+            Some(argv) if argv.len() > 1 => {
+                // If this alias is more than a simple subcommand pass-through, show the alias.
+                let alias = argv.join(" ");
+                drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
+                return Ok(());
+            }
+            // Otherwise, resolve the alias into its subcommand.
+            Some(argv) => {
+                // An alias with an empty argv can be created via `"empty-alias" = ""`.
+                let first = argv.get(0).map(String::as_str).unwrap_or(subcommand);
+                first.to_string()
+            }
+            None => subcommand.to_string(),
+        }
+    } else {
+        match validate_builtin_command_path(&args_command) {
+            PathValidation::Valid => {}
+            PathValidation::UnknownCommand(invalid) => {
+                let err = anyhow::format_err!(
+                    "no such command: `{invalid}`\n\n\
+                     help: view all installed commands with `cargo --list`",
+                );
+                return Err(err.into());
+            }
+            PathValidation::UnknownSubcommand {
+                valid_prefix,
+                invalid,
+            } => {
+                let err = anyhow::format_err!(
+                    "no such subcommand: `{invalid}`\n\n\
+                     help: view available subcommands with `cargo {valid_prefix} --help`",
+                );
+                return Err(err.into());
+            }
+        }
+
+        args_command.join("-")
     };
 
-    // Expand alias first
-    let subcommand = match aliased_command(gctx, subcommand).ok().flatten() {
-        // If this alias is more than a simple subcommand pass-through, show the alias.
-        Some(argv) if argv.len() > 1 => {
-            let alias = argv.join(" ");
-            drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
-            return Ok(());
-        }
-        // Otherwise, resolve the alias into its subcommand.
-        Some(argv) => {
-            // An alias with an empty argv can be created via `"empty-alias" = ""`.
-            let first = argv.get(0).map(String::as_str).unwrap_or(subcommand);
-            first.to_string()
-        }
-        None => subcommand.to_string(),
-    };
-
-    if super::builtin_exec(&subcommand).is_some() {
+    let builtins = all_builtin_commands();
+    if let Some(subcommand) = builtins.get(&subcommand).cloned() {
         if try_help(&subcommand)? {
             return Ok(());
         }
@@ -140,4 +178,78 @@ fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()
         .spawn()?;
     drop(cmd.wait());
     Ok(())
+}
+
+/// Result of validating a multi-arg command path.
+enum PathValidation<'a> {
+    Valid,
+    UnknownCommand(&'a str),
+    UnknownSubcommand {
+        valid_prefix: String,
+        invalid: &'a str,
+    },
+}
+
+/// Validates that multi-arg paths represent actual nested commands.
+fn validate_builtin_command_path<'a>(parts: &[&'a str]) -> PathValidation<'a> {
+    let Some((first, remainings)) = parts.split_first() else {
+        return PathValidation::Valid;
+    };
+
+    let builtins = super::builtin();
+
+    let Some(mut current) = builtins.iter().find(|cmd| cmd.get_name() == *first) else {
+        return PathValidation::UnknownCommand(first);
+    };
+
+    let mut valid_prefix = first.to_string();
+
+    for &part in remainings {
+        let next = current
+            .get_subcommands()
+            .find(|cmd| cmd.get_name() == part || cmd.get_all_aliases().any(|a| a == part));
+        let Some(next) = next else {
+            return PathValidation::UnknownSubcommand {
+                valid_prefix,
+                invalid: part,
+            };
+        };
+        valid_prefix.push(' ');
+        valid_prefix.push_str(next.get_name());
+        current = next;
+    }
+
+    PathValidation::Valid
+}
+
+/// Builds a map of all command names (including nested and aliases) to their man page name.
+fn all_builtin_commands() -> HashMap<String, String> {
+    fn walk(cmd: Command, prefix: Option<&String>, map: &mut HashMap<String, String>) {
+        let name = cmd.get_name();
+        let man_page_name = match prefix {
+            Some(prefix) => format!("{prefix}-{name}"),
+            None => name.to_string(),
+        };
+
+        for cmd in cmd.get_subcommands() {
+            walk(cmd.clone(), Some(&man_page_name), map);
+        }
+
+        for alias in cmd.get_all_aliases() {
+            let alias_key = match prefix {
+                Some(prefix) => format!("{prefix}-{alias}"),
+                None => alias.to_string(),
+            };
+            map.insert(alias_key, man_page_name.clone());
+        }
+
+        map.insert(man_page_name.clone(), man_page_name);
+    }
+
+    let mut map = HashMap::new();
+    for cmd in super::builtin() {
+        walk(cmd, None, &mut map);
+    }
+
+    map
 }

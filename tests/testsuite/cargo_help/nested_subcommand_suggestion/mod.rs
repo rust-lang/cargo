@@ -9,7 +9,7 @@ fn case() {
         .arg("report")
         .arg("foo")
         .assert()
-        .code(1)
+        .code(101)
         .stdout_eq(file!["stdout.term.txt"])
         .stderr_eq(file!["stderr.term.svg"]);
 }
