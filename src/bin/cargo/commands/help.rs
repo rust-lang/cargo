@@ -1,9 +1,16 @@
 use crate::aliased_command;
 use crate::command_prelude::*;
+
+use annotate_snippets::Group;
+use annotate_snippets::Level;
+use cargo::AlreadyPrintedError;
 use cargo::drop_println;
+use cargo::util::edit_distance::closest;
 use cargo::util::errors::CargoResult;
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
+
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Read;
@@ -53,14 +60,38 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         None => subcommand.to_string(),
     };
 
-    if !super::builtin_exec(&subcommand).is_some() {
+    let builtins = all_builtin_commands();
+    let Some(cmd_kind) = builtins.get(&subcommand).cloned() else {
+        if let Some(suggestion) = closest(&subcommand, builtins.keys(), |c| c) {
+            let title = format!("no such command: `{subcommand}`");
+            let suggestion_help = format!("a command with a similar name exists: `{suggestion}`");
+            let list_help = "view all installed commands with `cargo --list`";
+            let search_help = format!(
+                "find a package to install `{subcommand}` with `cargo search cargo-{subcommand}`"
+            );
+            let report = [
+                Level::ERROR
+                    .primary_title(title)
+                    .element(Level::HELP.message(suggestion_help)),
+                Group::with_title(Level::HELP.secondary_title(list_help)),
+                Group::with_title(Level::HELP.secondary_title(search_help)),
+            ];
+            gctx.shell().print_report(&report, false)?;
+            return Err(anyhow::Error::from(AlreadyPrintedError::new(anyhow::anyhow!(""))).into());
+        }
         // If not built-in, try giving `--help` to external command.
         crate::execute_external_subcommand(
             gctx,
             &subcommand,
             &[OsStr::new(&subcommand), OsStr::new("--help")],
         )?;
+
         return Ok(());
+    };
+
+    let subcommand = match cmd_kind {
+        CommandKind::Primary => subcommand,
+        CommandKind::Alias(primary) => primary,
     };
 
     if try_help(&subcommand)? {
@@ -138,4 +169,42 @@ fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()
         .spawn()?;
     drop(cmd.wait());
     Ok(())
+}
+
+#[derive(Clone)]
+enum CommandKind {
+    Primary,
+    /// Contains the primary manpage name
+    Alias(String),
+}
+
+fn all_builtin_commands() -> HashMap<String, CommandKind> {
+    fn walk(cmd: Command, prefix: Option<&String>, map: &mut HashMap<String, CommandKind>) {
+        let name = cmd.get_name();
+        let key = match prefix {
+            Some(prefix) => format!("{prefix}-{name}"),
+            None => name.to_string(),
+        };
+
+        for cmd in cmd.get_subcommands() {
+            walk(cmd.clone(), Some(&key), map);
+        }
+
+        for alias in cmd.get_all_aliases() {
+            let alias_key = match prefix {
+                Some(prefix) => format!("{prefix}-{alias}"),
+                None => alias.to_string(),
+            };
+            map.insert(alias_key, CommandKind::Alias(key.clone()));
+        }
+
+        map.insert(key, CommandKind::Primary);
+    }
+
+    let mut map = HashMap::new();
+    for cmd in super::builtin() {
+        walk(cmd, None, &mut map);
+    }
+
+    map
 }
