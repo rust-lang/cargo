@@ -73,6 +73,15 @@ Build scripts may save any output files or intermediate artifacts in the
 directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
 should not modify any files outside of that directory.
 
+> **Note:** Cargo does not clean or reset `OUT_DIR` between builds. The contents
+> of this directory may persist across rebuilds, even if the build script is
+> re-run. This behavior is intentional to support incremental builds, such as
+> native code compilation.
+>
+> Build scripts should not assume that `OUT_DIR` is empty. If a script requires
+> a clean directory, it is responsible for removing or managing any files or
+> subdirectories it creates.
+
 Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo::` as an instruction that will
 influence compilation of the package. All other lines are ignored.
