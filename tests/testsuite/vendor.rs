@@ -2160,21 +2160,32 @@ fn vendor_local_registry() {
         .build();
 
     p.cargo("vendor --respect-source-config")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [UNPACKING] bar v0.0.0 (registry `[ROOT]/registry`)
    Vendoring bar v0.0.0 ([ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.0) to vendor/bar
-[ERROR] failed to sync
+To use vendored sources, add this to your .cargo/config.toml for this project:
 
-Caused by:
-  failed to open [ROOT]/home/.cargo/registry/cache/-[HASH]/bar-0.0.0.crate
-
-Caused by:
-  [NOT_FOUND]
 
 "#]])
         .run();
+
+    assert_e2e().eq(
+        p.read_file("vendor/bar/Cargo.toml"),
+        str![[r#"
+
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            authors = []
+        
+"#]],
+    );
+
+    assert_e2e().eq(
+        p.read_file("vendor/bar/src/lib.rs"),
+        str!["pub fn bar() {}"],
+    );
 }
 
 #[cargo_test]

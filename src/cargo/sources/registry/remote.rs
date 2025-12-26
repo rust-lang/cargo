@@ -233,6 +233,10 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         &self.index_path
     }
 
+    fn cache_path(&self) -> &Filesystem {
+        &self.cache_path
+    }
+
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
         self.gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, path)
