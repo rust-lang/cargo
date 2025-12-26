@@ -248,8 +248,6 @@ pub struct RegistrySource<'gctx> {
     source_id: SourceId,
     /// The path where crate files are extracted (`$CARGO_HOME/registry/src/$REG-HASH`).
     src_path: Filesystem,
-    /// Path to the cache of `.crate` files (`$CARGO_HOME/registry/cache/$REG-HASH`).
-    cache_path: Filesystem,
     /// Local reference to [`GlobalContext`] for convenience.
     gctx: &'gctx GlobalContext,
     /// Abstraction for interfacing to the different registry kinds.
@@ -354,6 +352,12 @@ pub trait RegistryData {
     /// Note that different registries store the index in different formats
     /// (remote = git, http & local = files).
     fn index_path(&self) -> &Filesystem;
+
+    /// Returns the path of the directory that stores the cache of `.crate` files.
+    ///
+    /// The directory is currently expected to contain a flat list of all `.crate` files,
+    /// named `<package-name>-<version>.crate`.
+    fn cache_path(&self) -> &Filesystem;
 
     /// Loads the JSON for a specific named package from the index.
     ///
@@ -534,7 +538,6 @@ impl<'gctx> RegistrySource<'gctx> {
         RegistrySource {
             name: name.into(),
             src_path: gctx.registry_source_path().join(name),
-            cache_path: gctx.registry_cache_path().join(name),
             gctx,
             source_id,
             index: index::RegistryIndex::new(source_id, ops.index_path(), gctx),
@@ -665,17 +668,20 @@ impl<'gctx> RegistrySource<'gctx> {
     /// Returns the path to the crate tarball directory,
     /// which is always `<unpack_dir>/<pkg>-<version>`.
     ///
-    /// This holds an assumption that the associated tarball already exists.
+    /// This holds some assumptions
+    ///
+    /// * The associated tarball already exists
+    /// * If this is a local registry,
+    ///   the package cache lock must be externally synchronized.
+    ///   Cargo does not take care of it being locked or not.
     pub fn unpack_package_in(
         &self,
         pkg: &PackageId,
         unpack_dir: &Path,
         include: &dyn Fn(&Path) -> bool,
     ) -> CargoResult<PathBuf> {
-        let path = self.cache_path.join(pkg.tarball_name());
-        let path = self
-            .gctx
-            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
+        let path = self.ops.cache_path().join(pkg.tarball_name());
+        let path = self.ops.assert_index_locked(&path);
         let dst = unpack_dir.join(format!("{}-{}", pkg.name(), pkg.version()));
         let tarball =
             File::open(path).with_context(|| format!("failed to open {}", path.display()))?;

@@ -95,6 +95,10 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         &self.index_path
     }
 
+    fn cache_path(&self) -> &Filesystem {
+        &self.root
+    }
+
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
         // Note that the `*_unlocked` variant is used here since we're not
         // modifying the index and it's required to be externally synchronized.
