@@ -1344,6 +1344,249 @@ fn links_passes_env_vars() {
 }
 
 #[cargo_test]
+fn links_passes_env_vars_with_any_build_script_unstable_feature() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+                [dependencies.a]
+                path = "a"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
+                }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                links = "foo"
+                build = "build.rs"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "a/build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    let lib = env::var("CARGO_MANIFEST_LINKS").unwrap();
+                    assert_eq!(lib, "foo");
+                    println!("cargo::metadata=foo=bar");
+                    println!("cargo::metadata=bar=baz");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn non_links_cannot_pass_env_vars() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+
+                [dependencies.a]
+                path = "a"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    assert!(env::var("DEP_FOO_FOO").is_err());
+                    assert!(env::var("DEP_FOO_BAR").is_err());
+                }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "a/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo=bar");
+                    println!("cargo::metadata=bar=baz");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn non_links_cannot_pass_env_vars_with_dep_renamed() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                my-renamed-package = { package = "a", path = "a" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    assert!(env::var("DEP_A_FOO").is_err());
+                    assert!(env::var("DEP_A_BAR").is_err());
+                    assert!(env::var("DEP_MY_RENAMED_PACKAGE_FOO").is_err());
+                    assert!(env::var("DEP_MY_RENAMED_PACKAGE_BAR").is_err());
+                }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "a/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo=bar");
+                    println!("cargo::metadata=bar=baz");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
+fn non_links_can_pass_env_vars_direct_deps_only() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                direct = { path = "direct" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                use std::env;
+                fn main() {
+                    assert!(env::var("DEP_DIRECT_FOO").is_err());
+                    assert!(env::var("DEP_TRANSITIVE_FOO").is_err());
+                }
+            "#,
+        )
+        .file(
+            "direct/Cargo.toml",
+            r#"
+                [package]
+                name = "direct"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+
+                [dependencies]
+                transitive = { path = "../transitive" }
+            "#,
+        )
+        .file("direct/src/lib.rs", "")
+        .file(
+            "direct/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo=direct");
+                }
+            "#,
+        )
+        .file(
+            "transitive/Cargo.toml",
+            r#"
+                [package]
+                name = "transitive"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+            "#,
+        )
+        .file("transitive/src/lib.rs", "")
+        .file(
+            "transitive/build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo=transitive");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+}
+
+#[cargo_test]
 fn only_rerun_build_script() {
     let p = project()
         .file(
