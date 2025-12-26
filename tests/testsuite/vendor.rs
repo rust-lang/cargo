@@ -2122,6 +2122,62 @@ fn vendor_rename_fallback() {
 }
 
 #[cargo_test]
+fn vendor_local_registry() {
+    // A regression test for rust-lang/cargo#16412
+    let root = paths::root();
+    fs::create_dir(root.join(".cargo")).unwrap();
+    fs::write(
+        root.join(".cargo/config.toml"),
+        r#"
+            [source.crates-io]
+            registry = 'https://wut'
+            replace-with = 'my-awesome-local-registry'
+
+            [source.my-awesome-local-registry]
+            local-registry = 'registry'
+        "#,
+    )
+    .unwrap();
+
+    Package::new("bar", "0.0.0")
+        .local(true)
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                bar = "0.0.0"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() { bar::bar(); }")
+        .build();
+
+    p.cargo("vendor --respect-source-config")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] bar v0.0.0 (registry `[ROOT]/registry`)
+   Vendoring bar v0.0.0 ([ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.0) to vendor/bar
+[ERROR] failed to sync
+
+Caused by:
+  failed to open [ROOT]/home/.cargo/registry/cache/-[HASH]/bar-0.0.0.crate
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn deterministic_mtime() {
     Package::new("foo", "0.1.0")
         // content doesn't matter, we just want to check mtime
