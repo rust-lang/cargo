@@ -639,16 +639,21 @@ fn copy_and_checksum<T: Read>(
 ///
 /// `relative` is a path relative to the package root.
 fn vendor_this(relative: &Path) -> bool {
+    // Skip git config files as they're not relevant to builds most of
+    // the time and if we respect them (e.g. in git) then it'll
+    // probably mess with the checksums when a vendor dir is checked
+    // into someone else's source control
+    for component in relative.components() {
+        if let Some(component_str) = component.as_os_str().to_str() {
+            if matches!(component_str, ".gitattributes" | ".gitignore" | ".git") {
+                return false;
+            }
+        }
+    }
+
+    // Temporary Cargo files - only filter at package root
     match relative.to_str() {
-        // Skip git config files as they're not relevant to builds most of
-        // the time and if we respect them (e.g.  in git) then it'll
-        // probably mess with the checksums when a vendor dir is checked
-        // into someone else's source control
-        Some(".gitattributes" | ".gitignore" | ".git") => false,
-
-        // Temporary Cargo files
         Some(".cargo-ok") => false,
-
         _ => true,
     }
 }
