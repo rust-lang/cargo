@@ -648,6 +648,7 @@ fn vendor_this(relative: &Path) -> bool {
             if matches!(component_str, ".gitattributes" | ".gitignore" | ".git") {
                 return false;
             }
+            // NO .cargo-ok check here!
         }
     }
 
