@@ -2180,15 +2180,15 @@ fn vendor_filters_git_files_recursively() {
 
     p.cargo("vendor --respect-source-config").run();
 
-// After fix: subdirectory git files ARE filtered
+    // After fix: subdirectory git files ARE filtered
     assert!(!p.root().join("vendor/bar/subdir/.gitattributes").exists());
     assert!(!p.root().join("vendor/bar/subdir/.gitignore").exists());
     assert!(!p.root().join("vendor/bar/deep/nested/.git").exists());
     assert!(!p.root().join("vendor/bar/tests/.gitattributes").exists());
-    
+
     // Root level already filtered correctly
     assert!(!p.root().join("vendor/bar/.gitattributes").exists());
-    
+
     // Normal files exist
     assert!(p.root().join("vendor/bar/src/lib.rs").exists());
 }
