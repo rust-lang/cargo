@@ -124,6 +124,94 @@ fn deferred() {
 }
 
 #[cargo_test]
+fn deferred_v5() {
+    // A modified version of the deferred test from above to enable
+    // an entire dependency in a deferred way.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &["feat_dep"])
+        .add_dep(Dependency::new("feat_dep", "1.0").optional(true))
+        .file("src/lib.rs", "extern crate feat_dep;")
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .publish();
+    Package::new("bar_activator", "1.0.0")
+        .feature_dep("dep", "1.0", &["bar"])
+        .publish();
+    Package::new("feat_dep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+                bar_activator = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] feat_dep v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // Previous behavior: feat_dep is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "feat_dep""#),
+        "feat_dep not found\n{lockfile}",
+    );
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // We should still compile feat_dep
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 5"#),
+        "lockfile version is not 5!\n{lockfile}",
+    );
+    // New behavior: feat_dep is still there.
+    assert!(
+        lockfile.contains(r#"name = "feat_dep""#),
+        "feat_dep not found\n{lockfile}",
+    );
+}
+
+#[cargo_test]
 fn not_optional_dep() {
     // Attempt to use dep_name?/feat where dep_name is not optional.
     Package::new("dep", "1.0.0").feature("feat", &[]).publish();
@@ -447,6 +535,85 @@ foo v0.1.0 ([ROOT]/foo) feats:f1,f2
 }
 
 #[cargo_test]
+fn weak_namespaced_v5() {
+    // Behavior with a dep: dependency.
+    Package::new("maybe_enabled", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("maybe_enabled", "1.0").optional(true))
+        .feature("f1", &["maybe_enabled?/feat"])
+        .feature("f2", &["dep:maybe_enabled"])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { version = "1.0", features = ["f2", "f1"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] maybe_enabled v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] maybe_enabled v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // Previous behavior: maybe_enabled is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "maybe_enabled""#),
+        "maybe_enabled not found\n{lockfile}",
+    );
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // We should still compile maybe_enabled
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 5"#),
+        "lockfile version is not 5!\n{lockfile}",
+    );
+    // New behavior: maybe_enabled is still there.
+    assert!(
+        lockfile.contains(r#"name = "maybe_enabled""#),
+        "maybe_enabled not found\n{lockfile}",
+    );
+}
+
+#[cargo_test]
 fn tree() {
     Package::new("bar", "1.0.0")
         .feature("feat", &[])
@@ -664,5 +831,183 @@ optional = true
 
 "##]],
         )],
+    );
+}
+
+#[cargo_test]
+fn disabled_weak_direct_dep() {
+    // Issue #10801
+    // A weak direct dependency should be included in Cargo.lock,
+    // even if disabled, and even if on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                f1 = ["bar?/feat"]
+            "#,
+        )
+        .file("src/lib.rs", &require(&["f1"], &[]))
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // Previous behavior: bar is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    p.cargo("check -Znext-lockfile-bump --features f1")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 5"#),
+        "lockfile version is not 5!\n{lockfile}",
+    );
+    // New behavior: bar is still there because it is a direct (optional) dependency.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    p.cargo("check -Znext-lockfile-bump --features f1,bar")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disabled_weak_optional_deps() {
+    // Issue #10801
+    // A weak dependency of a dependency should not be included in Cargo.lock,
+    // at least on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let lockfile = p.read_lockfile();
+
+    assert!(
+        lockfile.contains(r#"version = 4"#),
+        "lockfile version is not 4!\n{lockfile}",
+    );
+    // Previous behavior: bar is inside lockfile.
+    assert!(
+        lockfile.contains(r#"name = "bar""#),
+        "bar not found\n{lockfile}",
+    );
+
+    // Update to new lockfile version
+    let new_lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &new_lockfile);
+
+    // Note how we are not downloading bar here
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 5"#),
+        "lockfile version is not 5!\n{lockfile}",
+    );
+    // New behavior: bar is gone.
+    assert!(
+        !lockfile.contains(r#"name = "bar""#),
+        "bar inside lockfile!\n{lockfile}",
+    );
+
+    // Note how we are not downloading bar here
+    p.cargo("check -Znext-lockfile-bump --features dep/bar")
+        .masquerade_as_nightly_cargo(&["weak_namespaced_check"])
+        .with_stderr_data(str![[r#"
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(
+        lockfile.contains(r#"version = 5"#),
+        "lockfile version is not 5!\n{lockfile}",
+    );
+    // bar is still not there, even if dep/bar is enabled on the command line.
+    // This might be unintuitive, but it matches what happens on lock version 3
+    // if there was no optional feat = bar?/feat feature in bar.
+    assert!(
+        !lockfile.contains(r#"name = "bar""#),
+        "bar inside lockfile!\n{lockfile}",
     );
 }
