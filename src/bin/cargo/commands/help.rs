@@ -36,29 +36,13 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         return Ok(());
     };
 
-    if try_help(gctx, subcommand)? {
-        return Ok(());
-    }
-
-    if super::builtin_exec(subcommand).is_some() {
-        crate::execute_internal_subcommand(gctx, &[OsStr::new(subcommand), OsStr::new("--help")])?;
-    } else {
-        crate::execute_external_subcommand(
-            gctx,
-            subcommand,
-            &[OsStr::new(subcommand), OsStr::new("--help")],
-        )?;
-    }
-    Ok(())
-}
-
-fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = &match aliased_command(gctx, subcommand).ok().flatten() {
+    // Expand alias first
+    let subcommand = match aliased_command(gctx, subcommand).ok().flatten() {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
             drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
-            return Ok(true);
+            return Ok(());
         }
         // Otherwise, resolve the alias into its subcommand.
         Some(argv) => {
@@ -69,6 +53,23 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => subcommand.to_string(),
     };
 
+    if try_help(&subcommand)? {
+        return Ok(());
+    }
+
+    if super::builtin_exec(&subcommand).is_some() {
+        crate::execute_internal_subcommand(gctx, &[OsStr::new(&subcommand), OsStr::new("--help")])?;
+    } else {
+        crate::execute_external_subcommand(
+            gctx,
+            &subcommand,
+            &[OsStr::new(&subcommand), OsStr::new("--help")],
+        )?;
+    }
+    Ok(())
+}
+
+fn try_help(subcommand: &str) -> CargoResult<bool> {
     if super::builtin_exec(subcommand).is_none() {
         return Ok(false);
     }
