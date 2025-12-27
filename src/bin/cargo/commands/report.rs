@@ -30,6 +30,7 @@ pub fn cli() -> Command {
         .subcommand(
             subcommand("timings")
                 .about("Reports the build timings of previous builds (unstable)")
+                .arg_manifest_path()
                 .arg(flag("open", "Opens the timing report in a browser")),
         )
 }
@@ -46,7 +47,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
                 gctx.cli_unstable().build_analysis,
             )?;
             let opts = timings_opts(gctx, args)?;
-            ops::report_timings(gctx, opts)?;
+            let ws = args.workspace(gctx).ok();
+            ops::report_timings(gctx, ws.as_ref(), opts)?;
             Ok(())
         }
         Some((cmd, _)) => {

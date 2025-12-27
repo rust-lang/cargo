@@ -28,7 +28,6 @@ use crate::core::compiler::timings::report::compute_concurrency;
 use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
 use crate::util::BuildLogger;
-use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
@@ -49,11 +48,12 @@ struct UnitEntry {
     rmeta_time: Option<f64>,
 }
 
-pub fn report_timings(gctx: &GlobalContext, opts: ReportTimingsOptions<'_>) -> CargoResult<()> {
-    let ws = find_root_manifest_for_wd(gctx.cwd())
-        .ok()
-        .and_then(|manifest_path| Workspace::new(&manifest_path, gctx).ok());
-    let Some((log, run_id)) = select_log_file(gctx, ws.as_ref())? else {
+pub fn report_timings(
+    gctx: &GlobalContext,
+    ws: Option<&Workspace<'_>>,
+    opts: ReportTimingsOptions<'_>,
+) -> CargoResult<()> {
+    let Some((log, run_id)) = select_log_file(gctx, ws)? else {
         let title_extra = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {

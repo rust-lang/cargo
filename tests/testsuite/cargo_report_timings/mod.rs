@@ -68,7 +68,7 @@ fn no_log_for_the_current_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -Zbuild-analysis")
+    foo.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -101,7 +101,7 @@ fn invalid_log() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zbuild-analysis")
+    p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -129,7 +129,7 @@ fn empty_log() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zbuild-analysis")
+    p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -158,7 +158,7 @@ fn prefer_latest() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zbuild-analysis")
+    p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -167,7 +167,7 @@ fn prefer_latest() {
     std::fs::write(paths::log_file(0), "}|x| hello world").unwrap();
 
     p.change_file("src/lib.rs", "pub fn foo() {}");
-    p.cargo("build -Zbuild-analysis")
+    p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -195,7 +195,7 @@ fn prefer_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("build -Zbuild-analysis")
+    foo.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -209,7 +209,7 @@ fn prefer_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    bar.cargo("build -Zbuild-analysis")
+    bar.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -236,7 +236,7 @@ fn outside_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Zbuild-analysis")
+    p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
@@ -254,6 +254,39 @@ fn outside_workspace() {
 
     // Have no timing HTML under target directory
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
+}
+
+#[cargo_test]
+fn with_manifest_path() {
+    let foo = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    bar.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    foo.cargo("report timings --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/bar/target/cargo-timings/cargo-timing-[..]T[..]-[..].html
+
+"#]])
+        .run();
 }
 
 #[cargo_test(nightly, reason = "rustc --json=timings is unstable")]
@@ -297,7 +330,7 @@ fn with_multiple_targets() {
         .file("tests/t1.rs", "#[test] fn test1() {}")
         .build();
 
-    p.cargo("build --all-targets -Zbuild-analysis")
+    p.cargo("check --all-targets -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
