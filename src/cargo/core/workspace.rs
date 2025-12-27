@@ -2059,6 +2059,31 @@ impl WorkspaceRootConfig {
         !explicit_member && excluded
     }
 
+    /// Checks if the path could be a member of this workspace.
+    ///
+    /// Returns `true` if:
+    /// - The path is the workspace root manifest itself, or
+    /// - No explicit `members` list is specified (implicit membership), or
+    /// - The path matches one of the `members` patterns
+    fn is_path_member(&self, manifest_path: &Path) -> bool {
+        let root_manifest = self.root_dir.join("Cargo.toml");
+        if manifest_path == root_manifest {
+            return true;
+        }
+        match self.members {
+            Some(ref members) => {
+                // Use members_paths to properly expand glob patterns
+                let Ok(expanded_members) = self.members_paths(members) else {
+                    return false;
+                };
+                expanded_members
+                    .iter()
+                    .any(|(member_path, _)| manifest_path.starts_with(member_path))
+            }
+            None => true, // Implicit membership when no explicit list
+        }
+    }
+
     fn has_members_list(&self) -> bool {
         self.members.is_some()
     }
@@ -2155,6 +2180,73 @@ pub fn find_workspace_root(
             .workspace_config()
             .get_ws_root(self_path, manifest_path))
     })
+}
+
+/// Finds the workspace root for a manifest, with minimal verification.
+///
+/// This is similar to `find_workspace_root`, but additionally verifies that the
+/// package and workspace agree on each other:
+/// - If the package has an explicit `package.workspace` pointer, it is trusted
+/// - Otherwise, the workspace must include the package in its `members` list
+pub fn find_workspace_root_with_metadata(
+    manifest_path: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<PathBuf>> {
+    let source_id = SourceId::for_manifest_path(manifest_path)?;
+    let current_manifest = read_manifest(manifest_path, source_id, gctx)?;
+
+    match current_manifest.workspace_config() {
+        WorkspaceConfig::Root(_) => {
+            // This manifest is a workspace root itself
+            Ok(Some(manifest_path.to_path_buf()))
+        }
+        WorkspaceConfig::Member {
+            root: Some(path_to_root),
+        } => {
+            // Has explicit `package.workspace` pointer - trust it
+            Ok(Some(read_root_pointer(manifest_path, path_to_root)))
+        }
+        WorkspaceConfig::Member { root: None } => {
+            // No explicit pointer, walk up with membership validation
+            find_workspace_root_with_membership_check(manifest_path, gctx)
+        }
+    }
+}
+
+/// Walks up the directory tree looking for a workspace that includes
+/// this package as a member. Returns None if no valid workspace is found.
+fn find_workspace_root_with_membership_check(
+    manifest_path: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<PathBuf>> {
+    // Check cached workspace roots first
+    {
+        let roots = gctx.ws_roots();
+        for current in manifest_path.ancestors().skip(1) {
+            if let Some(ws_config) = roots.get(current) {
+                if ws_config.is_path_member(manifest_path) && !ws_config.is_excluded(manifest_path)
+                {
+                    return Ok(Some(current.join("Cargo.toml")));
+                }
+            }
+        }
+    }
+
+    // Walk up the directory tree
+    for ances_manifest_path in find_root_iter(manifest_path, gctx) {
+        let source_id = SourceId::for_manifest_path(&ances_manifest_path)?;
+        let manifest = read_manifest(&ances_manifest_path, source_id, gctx)?;
+
+        if let WorkspaceConfig::Root(ref root_config) = *manifest.workspace_config() {
+            if root_config.is_path_member(manifest_path) && !root_config.is_excluded(manifest_path)
+            {
+                return Ok(Some(ances_manifest_path));
+            }
+        }
+    }
+
+    // No valid workspace found
+    Ok(None)
 }
 
 /// Finds the path of the root of the workspace.
