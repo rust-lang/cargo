@@ -40,23 +40,20 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         return Ok(());
     }
 
-    match check_builtin(&subcommand) {
-        Some(s) => {
-            crate::execute_internal_subcommand(gctx, &[OsStr::new(s), OsStr::new("--help")])?;
-        }
-        None => {
-            crate::execute_external_subcommand(
-                gctx,
-                subcommand,
-                &[OsStr::new(subcommand), OsStr::new("--help")],
-            )?;
-        }
+    if super::builtin_exec(subcommand).is_some() {
+        crate::execute_internal_subcommand(gctx, &[OsStr::new(subcommand), OsStr::new("--help")])?;
+    } else {
+        crate::execute_external_subcommand(
+            gctx,
+            subcommand,
+            &[OsStr::new(subcommand), OsStr::new("--help")],
+        )?;
     }
     Ok(())
 }
 
 fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = match check_alias(gctx, subcommand) {
+    let subcommand = &match aliased_command(gctx, subcommand).ok().flatten() {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
@@ -72,10 +69,9 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => subcommand.to_string(),
     };
 
-    let subcommand = match check_builtin(&subcommand) {
-        Some(s) => s,
-        None => return Ok(false),
-    };
+    if super::builtin_exec(subcommand).is_none() {
+        return Ok(false);
+    }
 
     // ALLOWED: For testing cargo itself only.
     #[allow(clippy::disallowed_methods)]
@@ -101,20 +97,6 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         }
     }
     Ok(true)
-}
-
-/// Checks if the given subcommand is an alias.
-///
-/// Returns None if it is not an alias.
-fn check_alias(gctx: &GlobalContext, subcommand: &str) -> Option<Vec<String>> {
-    aliased_command(gctx, subcommand).ok().flatten()
-}
-
-/// Checks if the given subcommand is a built-in command (not via an alias).
-///
-/// Returns None if it is not a built-in command.
-fn check_builtin(subcommand: &str) -> Option<&str> {
-    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
