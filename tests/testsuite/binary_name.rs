@@ -195,7 +195,7 @@ fn binary_name2() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[..][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
 
 "#]])
         .with_stdout_data(str![[r#"

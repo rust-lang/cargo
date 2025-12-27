@@ -2292,7 +2292,7 @@ fn minimal_download() {
 [COMPILING] dev_dep_pm v1.0.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH])
 
 "#]]
             .unordered(),

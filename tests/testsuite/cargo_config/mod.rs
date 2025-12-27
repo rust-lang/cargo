@@ -135,6 +135,7 @@ profile.dev.package.foo.opt-level = 1
 target.'cfg(target_os = "linux")'.runner = "runme"
 # The following environment variables may affect the loaded values.
 # CARGO_ALIAS_BAR=[..]cat dog[..]
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_BUILD_JOBS=100
 # CARGO_HOME=[ROOT]/home/.cargo
 
@@ -231,6 +232,7 @@ nested_tables = [[{ x = "a" }, { x = "b" }], [{ x = "c" }, { x = "d" }]]
 strings = ["hello", "world", "test"]
 tables = [{ name = "first", value = 1 }, { name = "second", value = 2 }]
 # The following environment variables may affect the loaded values.
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_HOME=[ROOT]/home/.cargo
 
 "#]])
@@ -300,6 +302,7 @@ fn get_json() {
         .with_stderr_data(str![[r#"
 [NOTE] The following environment variables may affect the loaded values.
 CARGO_ALIAS_BAR=[..]cat dog[..]
+CARGO_BUILD_DIR_LAYOUT_V2=true
 CARGO_BUILD_JOBS=100
 CARGO_HOME=[ROOT]/home/.cargo
 
@@ -352,6 +355,7 @@ CARGO_HOME=[ROOT]/home/.cargo
         )
         .with_stderr_data(str![[r#"
 [NOTE] The following environment variables may affect the loaded values.
+CARGO_BUILD_DIR_LAYOUT_V2=true
 CARGO_HOME=[ROOT]/home/.cargo
 
 "#]])
@@ -493,6 +497,7 @@ fn get_json_with_array_any_types() {
         )
         .with_stderr_data(str![[r#"
 [NOTE] The following environment variables may affect the loaded values.
+CARGO_BUILD_DIR_LAYOUT_V2=true
 CARGO_HOME=[ROOT]/home/.cargo
 
 "#]])
@@ -545,6 +550,7 @@ profile.dev.opt-level = 3 # [ROOT]/home/.cargo/config.toml
 profile.dev.package.foo.opt-level = 1 # [ROOT]/home/.cargo/config.toml
 target.'cfg(target_os = "linux")'.runner = "runme" # [ROOT]/home/.cargo/config.toml
 # The following environment variables may affect the loaded values.
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_HOME=[ROOT]/home/.cargo
 
 "#]])
@@ -621,6 +627,7 @@ tables = [
     { name = "second", value = 2 }, # [ROOT]/home/.cargo/config.toml
 ]
 # The following environment variables may affect the loaded values.
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_HOME=[ROOT]/home/.cargo
 
 "#]])
@@ -702,6 +709,7 @@ fn unmerged_toml() {
 # Environment variables
 # CARGO=[..]
 # CARGO_ALIAS_BAR=[..]cat dog[..]
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_BUILD_JOBS=100
 # CARGO_HOME=[ROOT]/home/.cargo
 
@@ -852,6 +860,7 @@ build.rustflags = [
         .with_stdout_data(str![[r##"
 # Environment variables
 # CARGO=[..]
+# CARGO_BUILD_DIR_LAYOUT_V2=true
 # CARGO_HOME=[ROOT]/home/.cargo
 
 # [ROOT]/foo/.cargo/other.toml

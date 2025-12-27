@@ -559,9 +559,9 @@ fn proc_macro_built_once() {
 [RUNNING] `rustc --crate-name b [..]`
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name build_script_build [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/a-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name a [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/build/a/[HASH]/build-script/build-script-build`
 
 "#]]
             .unordered(),

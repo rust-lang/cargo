@@ -947,7 +947,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -1296,7 +1296,7 @@ fn cross_doctests_works_with_artifacts() {
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -1320,7 +1320,7 @@ fn cross_doctests_works_with_artifacts() {
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test src/lib.rs --test-run-directory [ROOT]/foo --target [ALT_TARGET] [..]
 
@@ -1426,7 +1426,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..] -C opt-level=1 [..]`
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..] -C opt-level=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=3 [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 
@@ -2210,8 +2210,8 @@ fn env_vars_and_build_products_for_various_build_targets() {
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/main.rs (target/debug/deps/main-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
+[RUNNING] tests/main.rs (target/debug/build/foo/[HASH]/deps/main-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -2825,7 +2825,7 @@ fn with_assumed_host_target_and_optional_build_dep() {
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [RUNNING] `rustc --crate-name build_script_build --edition=2021 [..]--crate-type bin[..]
 [RUNNING] `rustc --crate-name d1 --edition=2021 [..]--crate-type bin[..]
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [RUNNING] `rustc --crate-name foo --edition=2021 [..]--cfg[..]d1[..]
 [FINISHED] `dev` profile [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -3492,7 +3492,7 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
 
 "#]])
         .masquerade_as_nightly_cargo(&["bindeps"])
@@ -3584,7 +3584,7 @@ fn artifact_dep_target_does_not_propagate_to_proc_macro() {
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE])
 
 "#]])
         .masquerade_as_nightly_cargo(&["bindeps"])

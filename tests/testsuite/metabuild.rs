@@ -649,7 +649,7 @@ fn metabuild_json_artifact() {
     "env": [],
     "linked_libs": [],
     "linked_paths": [],
-    "out_dir": "[ROOT]/foo/target/debug/build/foo-[HASH]/out",
+    "out_dir": "[ROOT]/foo/target/debug/build/foo/[HASH]/build-script-execution/out",
     "package_id": "path+[ROOTURL]/foo#0.0.1",
     "reason": "build-script-executed"
   },
