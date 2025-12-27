@@ -4,10 +4,11 @@ use std::{cell::Cell, marker, sync::Arc};
 
 use cargo_util::ProcessBuilder;
 
-use crate::CargoResult;
 use crate::core::compiler::future_incompat::FutureBreakageItem;
+use crate::core::compiler::locking::LockKey;
 use crate::core::compiler::timings::SectionTiming;
 use crate::util::Queue;
+use crate::{CargoResult, core::compiler::locking::LockManager};
 
 use super::{Artifact, DiagDedupe, Job, JobId, Message};
 
@@ -47,6 +48,9 @@ pub struct JobState<'a, 'gctx> {
     /// sending a double message later on.
     rmeta_required: Cell<bool>,
 
+    /// Manages locks for build units when fine grain locking is enabled.
+    lock_manager: Arc<LockManager>,
+
     // Historical versions of Cargo made use of the `'a` argument here, so to
     // leave the door open to future refactorings keep it here.
     _marker: marker::PhantomData<&'a ()>,
@@ -58,12 +62,14 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         messages: Arc<Queue<Message>>,
         output: Option<&'a DiagDedupe<'gctx>>,
         rmeta_required: bool,
+        lock_manager: Arc<LockManager>,
     ) -> Self {
         Self {
             id,
             messages,
             output,
             rmeta_required: Cell::new(rmeta_required),
+            lock_manager,
             _marker: marker::PhantomData,
         }
     }
@@ -139,6 +145,14 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         self.rmeta_required.set(false);
         self.messages
             .push(Message::Finish(self.id, Artifact::Metadata, Ok(())));
+    }
+
+    pub fn lock_exclusive(&self, lock: &LockKey) -> CargoResult<()> {
+        self.lock_manager.lock(lock)
+    }
+
+    pub fn downgrade_to_shared(&self, lock: &LockKey) -> CargoResult<()> {
+        self.lock_manager.downgrade_to_shared(lock)
     }
 
     pub fn on_section_timing_emitted(&self, section: SectionTiming) {

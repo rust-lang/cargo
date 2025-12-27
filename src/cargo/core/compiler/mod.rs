@@ -41,6 +41,7 @@ pub mod future_incompat;
 pub(crate) mod job_queue;
 pub(crate) mod layout;
 mod links;
+mod locking;
 mod lto;
 mod output_depinfo;
 mod output_sbom;
@@ -94,6 +95,7 @@ use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 
 use crate::core::compiler::future_incompat::FutureIncompatReport;
+use crate::core::compiler::locking::LockKey;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
@@ -187,6 +189,12 @@ fn compile<'gctx>(
         return Ok(());
     }
 
+    let lock = if build_runner.bcx.gctx.cli_unstable().fine_grain_locking {
+        Some(build_runner.lock_manager.lock_shared(build_runner, unit)?)
+    } else {
+        None
+    };
+
     // If we are in `--compile-time-deps` and the given unit is not a compile time
     // dependency, skip compiling the unit and jumps to dependencies, which still
     // have chances to be compile time dependencies
@@ -227,6 +235,23 @@ fn compile<'gctx>(
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
             });
+
+            // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
+            // lock before starting, then downgrade to a shared lock after the job is finished.
+            if build_runner.bcx.gctx.cli_unstable().fine_grain_locking && job.freshness().is_dirty()
+            {
+                if let Some(lock) = lock {
+                    // Here we unlock the current shared lock to avoid deadlocking with other cargo
+                    // processes. Then we configure our compile job to take an exclusive lock
+                    // before starting. Once we are done compiling (including both rmeta and rlib)
+                    // we downgrade to a shared lock to allow other cargo's to read the build unit.
+                    // We will hold this shared lock for the remainder of compilation to prevent
+                    // other cargo from re-compiling while we are still using the unit.
+                    build_runner.lock_manager.unlock(&lock)?;
+                    job.before(prebuild_lock_exclusive(lock.clone()));
+                    job.after(downgrade_lock_to_shared(lock));
+                }
+            }
 
             job
         };
@@ -587,6 +612,20 @@ fn verbose_if_simple_exit_code(err: Error) -> Error {
         Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
         _ => err,
     }
+}
+
+fn prebuild_lock_exclusive(lock: LockKey) -> Work {
+    Work::new(move |state| {
+        state.lock_exclusive(&lock)?;
+        Ok(())
+    })
+}
+
+fn downgrade_lock_to_shared(lock: LockKey) -> Work {
+    Work::new(move |state| {
+        state.downgrade_to_shared(&lock)?;
+        Ok(())
+    })
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the

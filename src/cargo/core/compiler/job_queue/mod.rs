@@ -951,9 +951,10 @@ impl<'gctx> DrainState<'gctx> {
         let messages = self.messages.clone();
         let is_fresh = job.freshness().is_fresh();
         let rmeta_required = build_runner.rmeta_required(unit);
+        let lock_manager = build_runner.lock_manager.clone();
 
         let doit = move |diag_dedupe| {
-            let state = JobState::new(id, messages, diag_dedupe, rmeta_required);
+            let state = JobState::new(id, messages, diag_dedupe, rmeta_required, lock_manager);
             state.run_to_finish(job);
         };
 

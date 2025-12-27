@@ -127,6 +127,7 @@ use std::str::FromStr;
 use anyhow::{Error, bail};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::GlobalContext;
 use crate::core::resolver::ResolveBehavior;
@@ -860,6 +861,7 @@ unstable_cli_options!(
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
     features: Option<Vec<String>>,
+    fine_grain_locking: bool = ("Use fine grain locking instead of locking the entire build cache"),
     fix_edition: Option<FixEdition> = ("Permanently unstable edition migration helper"),
     gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
     #[serde(deserialize_with = "deserialize_git_features")]
@@ -1244,6 +1246,9 @@ impl CliUnstable {
         if self.gitoxide.is_none() && cargo_use_gitoxide_instead_of_git2() {
             self.gitoxide = GitoxideFeatures::safe().into();
         }
+
+        self.implicitly_enable_features_if_needed();
+
         Ok(warnings)
     }
 
@@ -1382,6 +1387,7 @@ impl CliUnstable {
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
+            "fine-grain-locking" => self.fine_grain_locking = parse_empty(k, v)?,
             "fix-edition" => {
                 let fe = v
                     .ok_or_else(|| anyhow::anyhow!("-Zfix-edition expected a value"))?
@@ -1513,6 +1519,13 @@ impl CliUnstable {
                 SEE_CHANNELS,
                 see
             );
+        }
+    }
+
+    fn implicitly_enable_features_if_needed(&mut self) {
+        if self.fine_grain_locking && !self.build_dir_new_layout {
+            debug!("-Zbuild-dir-new-layout implicitly enabled by -Zfine-grain-locking");
+            self.build_dir_new_layout = true;
         }
     }
 }
