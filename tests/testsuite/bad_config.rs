@@ -544,13 +544,11 @@ fn malformed_override() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] newlines are unsupported in inline tables, expected nothing
-  --> Cargo.toml:9:27
+[ERROR] missing assignment between key-value pairs, expected `=`
+  --> Cargo.toml:10:24
    |
- 9 |                   native = {
-   |  ___________________________^
-10 | |                   foo: "bar"
-   | |_^
+10 |                   foo: "bar"
+   |                        ^
 
 "#]])
         .run();
