@@ -256,6 +256,44 @@ fn outside_workspace() {
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 0);
 }
 
+#[cargo_test]
+fn with_manifest_path() {
+    let foo = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    bar.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    foo.cargo("report timings --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--manifest-path' found
+
+Usage: cargo report timings [OPTIONS]
+
+For more information, try '--help'.
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "rustc --json=timings is unstable")]
 fn with_section_timings() {
     let p = project()
