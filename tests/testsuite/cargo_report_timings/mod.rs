@@ -282,13 +282,8 @@ fn with_manifest_path() {
 
     foo.cargo("report timings --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--manifest-path' found
-
-Usage: cargo report timings [OPTIONS]
-
-For more information, try '--help'.
+      Timing report saved to [ROOT]/bar/target/cargo-timings/cargo-timing-[..]T[..]-[..].html
 
 "#]])
         .run();
