@@ -666,7 +666,7 @@ fn updates_last_use_various_commands() {
     // the tracking. Some of the commands are:
     //
     // - login, owner, yank, search
-    // - report future-incompatibilities
+    // - report future-incompat
     // - package --no-verify
     // - fetch --locked
     Package::new("bar", "1.0.0").publish();

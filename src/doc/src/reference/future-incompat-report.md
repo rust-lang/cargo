@@ -12,14 +12,13 @@ For example, you may see something like this at the end of a build:
 warning: the following packages contain code that will be rejected by a future
          version of Rust: rental v0.5.5
 note: to see what the problems were, use the option `--future-incompat-report`,
-      or run `cargo report future-incompatibilities --id 1`
+      or run `cargo report future-incompat --id 1`
 ```
 
-A full report can be displayed with the `cargo report future-incompatibilities
---id ID` command, or by running the build again with
-the `--future-incompat-report` flag. The developer should then update their
-dependencies to a version where the issue is fixed, or work with the
-developers of the dependencies to help resolve the issue.
+A full report can be displayed with the `cargo report future-incompat --id ID`
+command, or by running the build again with the `--future-incompat-report` flag.
+The developer should then update their dependencies to a version where the issue
+is fixed, or work with the developers of the dependencies to help resolve the issue.
 
 ## Configuration
 
