@@ -2151,7 +2151,7 @@ fn deterministic_mtime() {
     assert_deterministic_mtime(p.root().join("vendor/foo/Cargo.lock"));
     assert_deterministic_mtime(p.root().join("vendor/foo/Cargo.toml"));
     assert_deterministic_mtime(p.root().join("vendor/foo/.cargo_vcs_info.json"));
-} // <- ADD THIS CLOSING BRACE!
+}
 
 #[cargo_test]
 fn vendor_filters_git_files_recursively() {
@@ -2181,11 +2181,11 @@ fn vendor_filters_git_files_recursively() {
 
     p.cargo("vendor --respect-source-config").run();
 
-// Currently these files are NOT filtered (buggy behavior)
-    assert!(p.root().join("vendor/bar/subdir/.gitattributes").exists());
-    assert!(p.root().join("vendor/bar/subdir/.gitignore").exists());
-    assert!(p.root().join("vendor/bar/deep/nested/.git").exists());
-    assert!(p.root().join("vendor/bar/tests/.gitattributes").exists());
+    // After fix, these should be filtered
+    assert!(!p.root().join("vendor/bar/subdir/.gitattributes").exists());
+    assert!(!p.root().join("vendor/bar/subdir/.gitignore").exists());
+    assert!(!p.root().join("vendor/bar/deep/nested/.git").exists());
+    assert!(!p.root().join("vendor/bar/tests/.gitattributes").exists());
     assert!(!p.root().join("vendor/bar/.gitattributes").exists());
     assert!(p.root().join("vendor/bar/src/lib.rs").exists());
 }
