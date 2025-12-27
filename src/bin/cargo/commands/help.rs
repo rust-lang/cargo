@@ -53,27 +53,24 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         None => subcommand.to_string(),
     };
 
-    if try_help(&subcommand)? {
-        return Ok(());
-    }
-
     if super::builtin_exec(&subcommand).is_some() {
+        if try_help(&subcommand)? {
+            return Ok(());
+        }
         crate::execute_internal_subcommand(gctx, &[OsStr::new(&subcommand), OsStr::new("--help")])?;
     } else {
+        // If not built-in, try giving `--help` to external command.
         crate::execute_external_subcommand(
             gctx,
             &subcommand,
             &[OsStr::new(&subcommand), OsStr::new("--help")],
         )?;
     }
+
     Ok(())
 }
 
 fn try_help(subcommand: &str) -> CargoResult<bool> {
-    if super::builtin_exec(subcommand).is_none() {
-        return Ok(false);
-    }
-
     // ALLOWED: For testing cargo itself only.
     #[allow(clippy::disallowed_methods)]
     let force_help_text = std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok();
