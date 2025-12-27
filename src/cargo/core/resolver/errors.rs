@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::Write as _;
+use std::path::Path;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::IndexSummary;
+use crate::core::{Dependency, PackageId, Registry, SourceId, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -385,6 +386,14 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
+        let sid = dep.source_id();
+        let path = dep.source_id().url().to_file_path().unwrap();
+
+        if let Some(gctx) = gctx {
+            debug_source_path(&mut msg, &path.as_path(), &gctx, sid);
+            debug_recursive_source(&mut msg, &path.as_path(), &gctx, sid);
+        }
+
         let _ = writeln!(
             &mut msg,
             "no matching package named `{}` found",
@@ -567,4 +576,50 @@ pub(crate) fn describe_path<'a>(
     }
 
     String::new()
+}
+
+fn inspect_root_package(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut ps = PathSource::new(path, sid, gctx);
+
+    if let Err(e) = ps.root_package() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    if let Err(e) = ps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    if let Err(e) = ps.read_package() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+    }
+}
+
+fn inspect_recursive_packages(msg: &mut String, path: &Path, gctx: &GlobalContext, sid: SourceId) {
+    let mut rps = RecursivePathSource::new(path, sid, gctx);
+
+    if let Err(e) = rps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+        return;
+    }
+
+    match rps.read_packages() {
+        Ok(pkgs) => {
+            for p in pkgs {
+                if let Err(e) = rps.list_files(&p) {
+                    msg.push_str(&e.to_string());
+                    msg.push('\n');
+                }
+            }
+        }
+        Err(e) => {
+            msg.push_str(&e.to_string());
+            msg.push('\n');
+        }
+    }
 }
