@@ -970,11 +970,13 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                         .iter()
                         .map(move |a| (reverse_dep, a))
                 })
+                // Exclude ourself
+                .filter(|(_parent, other)| other.unit.pkg != unit.pkg)
                 // Only deps with `links`.
                 .filter(|(_parent, other)| {
-                    other.unit.pkg != unit.pkg
-                        && other.unit.target.is_linkable()
-                        && other.unit.pkg.manifest().links().is_some()
+                    state.gctx.cli_unstable().any_build_script_metadata
+                        || (other.unit.target.is_linkable()
+                            && other.unit.pkg.manifest().links().is_some())
                 })
                 // Avoid cycles when using the doc --scrape-examples feature:
                 // Say a workspace has crates A and B where A has a build-dependency on B.

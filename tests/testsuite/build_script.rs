@@ -1355,6 +1355,7 @@ fn links_passes_env_vars_with_any_build_script_unstable_feature() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
                 [dependencies.a]
                 path = "a"
             "#,
@@ -1367,6 +1368,8 @@ fn links_passes_env_vars_with_any_build_script_unstable_feature() {
                 fn main() {
                     assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
                     assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
+                    assert_eq!(env::var("CARGO_DEP_A_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_DEP_A_BAR").unwrap(), "baz");
                 }
             "#,
         )
@@ -1390,6 +1393,7 @@ fn links_passes_env_vars_with_any_build_script_unstable_feature() {
                 fn main() {
                     let lib = env::var("CARGO_MANIFEST_LINKS").unwrap();
                     assert_eq!(lib, "foo");
+
                     println!("cargo::metadata=foo=bar");
                     println!("cargo::metadata=bar=baz");
                 }
@@ -1397,11 +1401,13 @@ fn links_passes_env_vars_with_any_build_script_unstable_feature() {
         )
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("build -v -Zany-build-script-metadata")
+        .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
+        .run();
 }
 
 #[cargo_test]
-fn non_links_cannot_pass_env_vars() {
+fn non_links_can_pass_env_vars() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1423,8 +1429,16 @@ fn non_links_cannot_pass_env_vars() {
             r#"
                 use std::env;
                 fn main() {
+                    // DEP_<links>_<key> is only allowed for `links` crates
                     assert!(env::var("DEP_FOO_FOO").is_err());
                     assert!(env::var("DEP_FOO_BAR").is_err());
+                    // Make sure DEP_<name-in-toml>_<key> is not present.
+                    // This is not a valid scenario but verify these are not present just incase.
+                    assert!(env::var("DEP_A_FOO").is_err());
+                    assert!(env::var("DEP_A_BAR").is_err());
+
+                    assert_eq!(env::var("CARGO_DEP_A_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_DEP_A_BAR").unwrap(), "baz");
                 }
             "#,
         )
@@ -1451,11 +1465,13 @@ fn non_links_cannot_pass_env_vars() {
         )
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("build -v -Zany-build-script-metadata")
+        .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
+        .run();
 }
 
 #[cargo_test]
-fn non_links_cannot_pass_env_vars_with_dep_renamed() {
+fn non_links_can_pass_env_vars_with_dep_renamed() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1481,6 +1497,13 @@ fn non_links_cannot_pass_env_vars_with_dep_renamed() {
                     assert!(env::var("DEP_A_BAR").is_err());
                     assert!(env::var("DEP_MY_RENAMED_PACKAGE_FOO").is_err());
                     assert!(env::var("DEP_MY_RENAMED_PACKAGE_BAR").is_err());
+
+                    // If dep was renamed, we should not add env vars with the original name
+                    // and env vars with the renamed package should be added
+                    assert!(env::var("CARGO_DEP_A_FOO").is_err());
+                    assert!(env::var("CARGO_DEP_A_BAR").is_err());
+                    assert_eq!(env::var("CARGO_DEP_MY_RENAMED_PACKAGE_FOO").unwrap(), "bar");
+                    assert_eq!(env::var("CARGO_DEP_MY_RENAMED_PACKAGE_BAR").unwrap(), "baz");
                 }
             "#,
         )
@@ -1507,7 +1530,9 @@ fn non_links_cannot_pass_env_vars_with_dep_renamed() {
         )
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("build -v -Zany-build-script-metadata")
+        .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
+        .run();
 }
 
 #[cargo_test]
@@ -1535,6 +1560,9 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
                 fn main() {
                     assert!(env::var("DEP_DIRECT_FOO").is_err());
                     assert!(env::var("DEP_TRANSITIVE_FOO").is_err());
+
+                    assert_eq!(env::var("CARGO_DEP_DIRECT_FOO").unwrap(), "direct");
+                    assert!(env::var("CARGO_DEP_TRANSITIVE_FOO").is_err());
                 }
             "#,
         )
@@ -1556,8 +1584,11 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
         .file(
             "direct/build.rs",
             r#"
+                use std::env;
                 fn main() {
                     println!("cargo::metadata=foo=direct");
+
+                    assert_eq!(env::var("CARGO_DEP_TRANSITIVE_FOO").unwrap(), "transitive");
                 }
             "#,
         )
@@ -1583,7 +1614,9 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
         )
         .build();
 
-    p.cargo("build -v").run();
+    p.cargo("build -v -Zany-build-script-metadata")
+        .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
+        .run();
 }
 
 #[cargo_test]
