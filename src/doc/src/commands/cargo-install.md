@@ -271,21 +271,14 @@ See <a href="../reference/profiles.html">the reference</a> for more details on p
 </dd>
 
 
-<dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"><code>--timings=</code><em>fmts</em></a></dt>
+<dt class="option-term" id="option-cargo-install---timings"><a class="option-anchor" href="#option-cargo-install---timings"><code>--timings</code></a></dt>
 <dd class="option-desc"><p>Output information how long each compilation takes, and track concurrency
-information over time. Accepts an optional comma-separated list of output
-formats; <code>--timings</code> without an argument will default to <code>--timings=html</code>.
-Specifying an output format (rather than the default) is unstable and requires
-<code>-Zunstable-options</code>. Valid output formats:</p>
-<ul>
-<li><code>html</code> (unstable, requires <code>-Zunstable-options</code>): Write a human-readable file <code>cargo-timing.html</code> to the
-<code>target/cargo-timings</code> directory with a report of the compilation. Also write
-a report to the same directory with a timestamp in the filename if you want
-to look at older runs. HTML output is suitable for human consumption only,
-and does not provide machine-readable timing data.</li>
-<li><code>json</code> (unstable, requires <code>-Zunstable-options</code>): Emit machine-readable JSON
-information about timing information.</li>
-</ul>
+information over time.</p>
+<p>A file <code>cargo-timing.html</code> will be written to the <code>target/cargo-timings</code>
+directory at the end of the build. An additional report with a timestamp
+in its filename is also written if you want to look at a previous run.
+These reports are suitable for human consumption only, and do not provide
+machine-readable timing data.</p>
 </dd>
 
 

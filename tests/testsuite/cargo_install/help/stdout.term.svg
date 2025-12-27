@@ -1,7 +1,7 @@
 <svg width="827px" height="1136px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -136,7 +136,7 @@
 </tspan>
     <tspan x="10px" y="1054px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="1072px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan class="fg-cyan">[=</tspan><tspan class="fg-cyan">&lt;FMTS&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Timing output formats (unstable) (comma separated): html, json</tspan>
+    <tspan x="10px" y="1072px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan>                 Output a build timing report at the end of the build</tspan>
 </tspan>
     <tspan x="10px" y="1090px">
 </tspan>

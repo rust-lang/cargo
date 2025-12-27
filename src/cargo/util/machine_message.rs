@@ -6,7 +6,6 @@ use serde::ser;
 use serde_json::value::RawValue;
 
 use crate::core::Target;
-use crate::core::compiler::{CompilationSection, CompileMode};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -91,24 +90,6 @@ pub struct BuildScript<'a> {
 impl<'a> Message for BuildScript<'a> {
     fn reason(&self) -> &str {
         "build-script-executed"
-    }
-}
-
-#[derive(Serialize)]
-pub struct TimingInfo<'a> {
-    pub package_id: PackageIdSpec,
-    pub target: &'a Target,
-    pub mode: CompileMode,
-    pub duration: f64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rmeta_time: Option<f64>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub sections: Vec<(String, CompilationSection)>,
-}
-
-impl<'a> Message for TimingInfo<'a> {
-    fn reason(&self) -> &str {
-        "timing-info"
     }
 }
 

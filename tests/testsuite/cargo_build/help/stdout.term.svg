@@ -118,7 +118,7 @@
 </tspan>
     <tspan x="10px" y="892px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--unit-graph</tspan><tspan>              Output build graph in JSON (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="910px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan class="fg-cyan">[=</tspan><tspan class="fg-cyan">&lt;FMTS&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Timing output formats (unstable) (comma separated): html, json</tspan>
+    <tspan x="10px" y="910px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--timings</tspan><tspan>                 Output a build timing report at the end of the build</tspan>
 </tspan>
     <tspan x="10px" y="928px">
 </tspan>
