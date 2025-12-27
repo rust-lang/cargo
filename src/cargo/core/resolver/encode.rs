@@ -112,7 +112,7 @@
 //!   format.
 
 use super::{Resolve, ResolveVersion};
-use crate::core::{Dependency, GitReference, Package, PackageId, SourceId, Workspace};
+use crate::core::{Dependency, GitReference, Package, PackageId, Patch, SourceId, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
@@ -454,7 +454,7 @@ fn build_path_deps(
         build_pkg(member, ws, &mut ret, &mut visited);
     }
     for deps in ws.root_patch()?.values() {
-        for dep in deps {
+        for Patch { dep, loc: _ } in deps {
             build_dep(dep, ws, &mut ret, &mut visited);
         }
     }

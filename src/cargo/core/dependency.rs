@@ -4,13 +4,15 @@ use serde::Serialize;
 use serde::ser;
 use std::borrow::Cow;
 use std::fmt;
-use std::path::PathBuf;
+use std::fmt::{Display, Formatter};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::trace;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::OptVersionReq;
+use crate::util::context::Definition;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
@@ -662,5 +664,31 @@ impl ArtifactKind {
             );
         }
         Ok(kinds)
+    }
+}
+
+/// Patch is a dependency override that knows where it has been defined.
+/// See [PatchLocation] for possible locations.
+#[derive(Clone, Debug)]
+pub struct Patch {
+    pub dep: Dependency,
+    pub loc: PatchLocation,
+}
+
+/// Place where a patch has been defined.
+#[derive(Clone, Debug)]
+pub enum PatchLocation {
+    /// Defined in a manifest.
+    Manifest(PathBuf),
+    /// Defined in cargo configuration.
+    Config(Definition),
+}
+
+impl Display for PatchLocation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            PatchLocation::Manifest(p) => Path::display(p).fmt(f),
+            PatchLocation::Config(def) => def.fmt(f),
+        }
     }
 }
