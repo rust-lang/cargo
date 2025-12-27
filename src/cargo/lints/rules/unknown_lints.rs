@@ -53,9 +53,6 @@ pub fn output_unknown_lints(
         return Ok(());
     }
 
-    let document = manifest.document();
-    let contents = manifest.contents();
-
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
@@ -78,17 +75,24 @@ pub fn output_unknown_lints(
             ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
             ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
         };
-        let Some(span) = get_key_value_span(document, key_path) else {
-            // This lint is handled by either package or workspace lint.
-            return Ok(());
-        };
 
         let mut report = Vec::new();
-        let mut group = Group::with_title(level.clone().primary_title(title)).element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .annotation(AnnotationKind::Primary.span(span.key)),
-        );
+        let mut group = Group::with_title(level.clone().primary_title(title));
+
+        if let Some(document) = manifest.document()
+            && let Some(contents) = manifest.contents()
+        {
+            let Some(span) = get_key_value_span(document, key_path) else {
+                // This lint is handled by either package or workspace lint.
+                return Ok(());
+            };
+            group = group.element(
+                Snippet::source(contents)
+                    .path(manifest_path)
+                    .annotation(AnnotationKind::Primary.span(span.key)),
+            );
+        }
+
         if emitted_source.is_none() {
             emitted_source = Some(LINT.emitted_source(lint_level, reason));
             group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
