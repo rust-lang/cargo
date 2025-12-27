@@ -1,38 +1,35 @@
 '\" t
-.TH "CARGO\-REMOVE" "1"
+.TH "CARGO\-REPORT\-FUTURE\-INCOMPAT" "1"
 .nh
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-remove \[em] Remove dependencies from a Cargo.toml manifest file
+cargo\-report\-future\-incompat \[em] Reports any crates which will eventually stop compiling
 .SH "SYNOPSIS"
-\fBcargo remove\fR [\fIoptions\fR] \fIdependency\fR\[u2026]
+\fBcargo report future\-incompat\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-Remove one or more dependencies from a \fBCargo.toml\fR manifest.
+Displays a report of future\-incompatible warnings that were emitted during
+previous builds.
+These are warnings for changes that may become hard errors in the future,
+causing dependencies to stop building in a future version of rustc.
+.sp
+For more, see the chapter on \fIFuture incompat report\fR <https://doc.rust\-lang.org/cargo/reference/future\-incompat\-report.html>\&.
 .SH "OPTIONS"
-.SS "Section options"
 .sp
-\fB\-\-dev\fR
+\fB\-\-id\fR \fIid\fR
 .RS 4
-Remove as a \fIdevelopment dependency\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#development\-dependencies>\&.
+Show the report with the specified Cargo\-generated id.
+If not specified, shows the most recent report.
 .RE
+.SS "Package Selection"
+By default, the package in the current working directory is selected. The \fB\-p\fR
+flag can be used to choose a different package in a workspace.
 .sp
-\fB\-\-build\fR
+\fB\-p\fR \fIspec\fR, 
+\fB\-\-package\fR \fIspec\fR
 .RS 4
-Remove as a \fIbuild dependency\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#build\-dependencies>\&.
-.RE
-.sp
-\fB\-\-target\fR \fItarget\fR
-.RS 4
-Remove as a dependency to the \fIgiven target platform\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#platform\-specific\-dependencies>\&.
-.sp
-To avoid unexpected shell expansions, you may use quotes around each target, e.g., \fB\-\-target 'cfg(unix)'\fR\&.
-.RE
-.SS "Miscellaneous Options"
-.sp
-\fB\-\-dry\-run\fR
-.RS 4
-Don\[cq]t actually write to the manifest.
+The package to display a report for. See \fBcargo\-pkgid\fR(1) for the SPEC
+format.
 .RE
 .SS "Display Options"
 .sp
@@ -75,12 +72,6 @@ May also be specified with the \fBterm.color\fR
 .RE
 .SS "Manifest Options"
 .sp
-\fB\-\-manifest\-path\fR \fIpath\fR
-.RS 4
-Path to the \fBCargo.toml\fR file. By default, Cargo searches for the
-\fBCargo.toml\fR file in the current directory or any parent directory.
-.RE
-.sp
 \fB\-\-locked\fR
 .RS 4
 Asserts that the exact same dependencies and versions are used as when the
@@ -118,27 +109,6 @@ May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc
 \fB\-\-frozen\fR
 .RS 4
 Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
-.RE
-.sp
-\fB\-\-lockfile\-path\fR \fIPATH\fR
-.RS 4
-Changes the path of the lockfile from the default (\fB<workspace_root>/Cargo.lock\fR) to \fIPATH\fR\&. \fIPATH\fR must end with
-\fBCargo.lock\fR (e.g. \fB\-\-lockfile\-path /tmp/temporary\-lockfile/Cargo.lock\fR). Note that providing
-\fB\-\-lockfile\-path\fR will ignore existing lockfile at the default path, and instead will
-either use the lockfile from \fIPATH\fR, or write a new lockfile into the provided \fIPATH\fR if it doesn\[cq]t exist.
-This flag can be used to run most commands in read\-only directories, writing lockfile into the provided \fIPATH\fR\&.
-.sp
-This option is only available on the \fInightly
-channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html> and
-requires the \fB\-Z unstable\-options\fR flag to enable (see
-\fI#14421\fR <https://github.com/rust\-lang/cargo/issues/14421>).
-.RE
-.SS "Package Selection"
-.sp
-\fB\-p\fR \fIspec\fR\[u2026], 
-\fB\-\-package\fR \fIspec\fR\[u2026]
-.RS 4
-Package to remove from.
 .RE
 .SS "Common Options"
 .sp
@@ -196,33 +166,23 @@ details on environment variables that Cargo reads.
 .SH "EXAMPLES"
 .sp
 .RS 4
-\h'-04' 1.\h'+01'Remove \fBregex\fR as a dependency
+\h'-04' 1.\h'+01'Display the latest future\-incompat report:
 .sp
 .RS 4
 .nf
-cargo remove regex
+cargo report future\-incompat
 .fi
 .RE
 .RE
 .sp
 .RS 4
-\h'-04' 2.\h'+01'Remove \fBtrybuild\fR as a dev\-dependency
+\h'-04' 2.\h'+01'Display the latest future\-incompat report for a specific package:
 .sp
 .RS 4
 .nf
-cargo remove \-\-dev trybuild
-.fi
-.RE
-.RE
-.sp
-.RS 4
-\h'-04' 3.\h'+01'Remove \fBnom\fR from the \fBwasm32\-unknown\-unknown\fR dependencies table
-.sp
-.RS 4
-.nf
-cargo remove \-\-target wasm32\-unknown\-unknown nom
+cargo report future\-incompat \-\-package my\-dep@0.0.1
 .fi
 .RE
 .RE
 .SH "SEE ALSO"
-\fBcargo\fR(1), \fBcargo\-add\fR(1)
+\fBcargo\fR(1), \fBcargo\-report\fR(1), \fBcargo\-build\fR(1)

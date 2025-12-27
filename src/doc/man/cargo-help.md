@@ -12,13 +12,21 @@ cargo-help --- Get help for a Cargo command
 
 Prints a help message for the given command.
 
+For commands with subcommands, use dashes to separate the command levels.
+For example, `cargo help report-future-incompat` displays help for
+`cargo report future-incompat`.
+
 ## EXAMPLES
 
 1. Get help for a command:
 
        cargo help build
 
-2. Help is also available with the `--help` flag:
+2. Get help for a nested command:
+
+       cargo help report-future-incompat
+
+3. Help is also available with the `--help` flag:
 
        cargo build --help
 

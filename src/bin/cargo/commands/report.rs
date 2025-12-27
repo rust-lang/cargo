@@ -15,8 +15,8 @@ pub fn cli() -> Command {
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
-            subcommand("future-incompatibilities")
-                .alias("future-incompat")
+            subcommand("future-incompat")
+                .alias("future-incompatibilities")
                 .about("Reports any crates which will eventually stop compiling")
                 .arg(
                     opt(
@@ -25,7 +25,10 @@ pub fn cli() -> Command {
                     )
                     .value_name("id"),
                 )
-                .arg_package("Package to display a report for"),
+                .arg_package("Package to display a report for")
+                .after_help(color_print::cstr!(
+                    "Run `<bright-cyan,bold>cargo help report-future-incompat</>` for more detailed information.\n"
+                )),
         )
         .subcommand(
             subcommand("timings")
@@ -36,7 +39,7 @@ pub fn cli() -> Command {
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
-        Some(("future-incompatibilities", args)) => report_future_incompatibilities(gctx, args),
+        Some(("future-incompat", args)) => report_future_incompat(gctx, args),
         Some(("timings", args)) => {
             gctx.cli_unstable().fail_if_stable_command(
                 gctx,
@@ -58,7 +61,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     }
 }
 
-fn report_future_incompatibilities(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
+fn report_future_incompat(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(gctx)?;
     let reports = OnDiskReports::load(&ws)?;
     let id = args

@@ -1,9 +1,16 @@
 use crate::aliased_command;
 use crate::command_prelude::*;
+
+use annotate_snippets::Group;
+use annotate_snippets::Level;
+use cargo::AlreadyPrintedError;
 use cargo::drop_println;
+use cargo::util::edit_distance::closest;
 use cargo::util::errors::CargoResult;
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
+
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Read;
@@ -31,39 +38,18 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let subcommand = args.get_one::<String>("COMMAND");
-    if let Some(subcommand) = subcommand {
-        if !try_help(gctx, subcommand)? {
-            match check_builtin(&subcommand) {
-                Some(s) => {
-                    crate::execute_internal_subcommand(
-                        gctx,
-                        &[OsStr::new(s), OsStr::new("--help")],
-                    )?;
-                }
-                None => {
-                    crate::execute_external_subcommand(
-                        gctx,
-                        subcommand,
-                        &[OsStr::new(subcommand), OsStr::new("--help")],
-                    )?;
-                }
-            }
-        }
-    } else {
-        let mut cmd = crate::cli::cli(gctx);
-        let _ = cmd.print_help();
-    }
-    Ok(())
-}
+    let Some(subcommand) = args.get_one::<String>("COMMAND") else {
+        let _ = crate::cli::cli(gctx).print_help();
+        return Ok(());
+    };
 
-fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = match check_alias(gctx, subcommand) {
+    // Expand alias first
+    let subcommand = match aliased_command(gctx, subcommand).ok().flatten() {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
-            drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
-            return Ok(true);
+            drop_println!(gctx, "`{subcommand}` is aliased to `{alias}`");
+            return Ok(());
         }
         // Otherwise, resolve the alias into its subcommand.
         Some(argv) => {
@@ -74,21 +60,62 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => subcommand.to_string(),
     };
 
-    let subcommand = match check_builtin(&subcommand) {
-        Some(s) => s,
-        None => return Ok(false),
+    let builtins = all_builtin_commands();
+    let Some(cmd_kind) = builtins.get(&subcommand).cloned() else {
+        if let Some(suggestion) = closest(&subcommand, builtins.keys(), |c| c) {
+            let title = format!("no such command: `{subcommand}`");
+            let suggestion_help = format!("a command with a similar name exists: `{suggestion}`");
+            let list_help = "view all installed commands with `cargo --list`";
+            let search_help = format!(
+                "find a package to install `{subcommand}` with `cargo search cargo-{subcommand}`"
+            );
+            let report = [
+                Level::ERROR
+                    .primary_title(title)
+                    .element(Level::HELP.message(suggestion_help)),
+                Group::with_title(Level::HELP.secondary_title(list_help)),
+                Group::with_title(Level::HELP.secondary_title(search_help)),
+            ];
+            gctx.shell().print_report(&report, false)?;
+            return Err(anyhow::Error::from(AlreadyPrintedError::new(anyhow::anyhow!(""))).into());
+        }
+        // If not built-in, try giving `--help` to external command.
+        crate::execute_external_subcommand(
+            gctx,
+            &subcommand,
+            &[OsStr::new(&subcommand), OsStr::new("--help")],
+        )?;
+
+        return Ok(());
     };
 
-    if resolve_executable(Path::new("man")).is_ok() {
-        let man = match extract_man(subcommand, "1") {
-            Some(man) => man,
-            None => return Ok(false),
+    let subcommand = match cmd_kind {
+        CommandKind::Primary => subcommand,
+        CommandKind::Alias(primary) => primary,
+    };
+
+    if try_help(&subcommand)? {
+        return Ok(());
+    }
+    crate::execute_internal_subcommand(gctx, &[OsStr::new(&subcommand), OsStr::new("--help")])?;
+
+    Ok(())
+}
+
+fn try_help(subcommand: &str) -> CargoResult<bool> {
+    // ALLOWED: For testing cargo itself only.
+    #[allow(clippy::disallowed_methods)]
+    if std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok() {
+        let txt = extract_man(subcommand, "txt").unwrap();
+        drop(std::io::stdout().write_all(&txt));
+    } else if resolve_executable(Path::new("man")).is_ok() {
+        let Some(man) = extract_man(subcommand, "1") else {
+            return Ok(false);
         };
         write_and_spawn(subcommand, &man, "man")?;
     } else {
-        let txt = match extract_man(subcommand, "txt") {
-            Some(txt) => txt,
-            None => return Ok(false),
+        let Some(txt) = extract_man(subcommand, "txt") else {
+            return Ok(false);
         };
         if resolve_executable(Path::new("less")).is_ok() {
             write_and_spawn(subcommand, &txt, "less")?;
@@ -99,20 +126,6 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         }
     }
     Ok(true)
-}
-
-/// Checks if the given subcommand is an alias.
-///
-/// Returns None if it is not an alias.
-fn check_alias(gctx: &GlobalContext, subcommand: &str) -> Option<Vec<String>> {
-    aliased_command(gctx, subcommand).ok().flatten()
-}
-
-/// Checks if the given subcommand is a built-in command (not via an alias).
-///
-/// Returns None if it is not a built-in command.
-fn check_builtin(subcommand: &str) -> Option<&str> {
-    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
@@ -156,4 +169,42 @@ fn write_and_spawn(name: &str, contents: &[u8], command: &str) -> CargoResult<()
         .spawn()?;
     drop(cmd.wait());
     Ok(())
+}
+
+#[derive(Clone)]
+enum CommandKind {
+    Primary,
+    /// Contains the primary manpage name
+    Alias(String),
+}
+
+fn all_builtin_commands() -> HashMap<String, CommandKind> {
+    fn walk(cmd: Command, prefix: Option<&String>, map: &mut HashMap<String, CommandKind>) {
+        let name = cmd.get_name();
+        let key = match prefix {
+            Some(prefix) => format!("{prefix}-{name}"),
+            None => name.to_string(),
+        };
+
+        for cmd in cmd.get_subcommands() {
+            walk(cmd.clone(), Some(&key), map);
+        }
+
+        for alias in cmd.get_all_aliases() {
+            let alias_key = match prefix {
+                Some(prefix) => format!("{prefix}-{alias}"),
+                None => alias.to_string(),
+            };
+            map.insert(alias_key, CommandKind::Alias(key.clone()));
+        }
+
+        map.insert(key, CommandKind::Primary);
+    }
+
+    let mut map = HashMap::new();
+    for cmd in super::builtin() {
+        walk(cmd, None, &mut map);
+    }
+
+    map
 }
