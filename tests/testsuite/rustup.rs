@@ -51,25 +51,8 @@ struct RustupEnvironment {
 
 /// Creates an executable which prints a message and then runs the *real* rustc.
 fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
-    let real_rustc = cargo_util::paths::resolve_executable("rustc".as_ref()).unwrap();
-    // The toolchain rustc needs to call the real rustc. In order to do that,
-    // it needs to restore or clear the RUSTUP environment variables so that
-    // if rustup is installed, it will call the correct rustc.
-    let rustup_toolchain_setup = match std::env::var_os("RUSTUP_TOOLCHAIN") {
-        Some(t) => format!(
-            ".env(\"RUSTUP_TOOLCHAIN\", \"{}\")",
-            t.into_string().unwrap()
-        ),
-        None => format!(".env_remove(\"RUSTUP_TOOLCHAIN\")"),
-    };
-    let mut env = vec![("CARGO_RUSTUP_TEST_real_rustc", real_rustc)];
-    let rustup_home_setup = match std::env::var_os("RUSTUP_HOME") {
-        Some(h) => {
-            env.push(("CARGO_RUSTUP_TEST_RUSTUP_HOME", h.into()));
-            format!(".env(\"RUSTUP_HOME\", env!(\"CARGO_RUSTUP_TEST_RUSTUP_HOME\"))")
-        }
-        None => format!(".env_remove(\"RUSTUP_HOME\")"),
-    };
+    let real_rustc = PathBuf::from(env!("REAL_RUSTC"));
+    let env = vec![("CARGO_RUSTUP_TEST_real_rustc", real_rustc)];
     make_exe(
         bin_dir,
         "rustc",
@@ -78,8 +61,6 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
                 eprintln!("{message}");
                 let r = std::process::Command::new(env!("CARGO_RUSTUP_TEST_real_rustc"))
                     .args(std::env::args_os().skip(1))
-                    {rustup_toolchain_setup}
-                    {rustup_home_setup}
                     .status();
                 std::process::exit(r.unwrap().code().unwrap_or(2));
             "#
