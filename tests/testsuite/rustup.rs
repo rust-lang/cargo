@@ -1,8 +1,10 @@
 //! Tests for Cargo's behavior under Rustup.
 
+use std::collections::BTreeMap;
 use std::env;
 use std::env::consts::EXE_EXTENSION;
 use std::ffi::OsString;
+use std::fmt::Write;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -88,62 +90,115 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
     )
 }
 
-/// Creates a simulation of a rustup environment with `~/.cargo/bin` and
-/// `~/.rustup` directories populated with some executables that simulate
-/// rustup.
-fn simulated_rustup_environment() -> RustupEnvironment {
-    // Set up ~/.rustup/toolchains/test-toolchain/bin with a custom rustc and cargo.
-    let rustup_home = home().join(".rustup");
-    let toolchain_bin = rustup_home
-        .join("toolchains")
-        .join("test-toolchain")
-        .join("bin");
-    toolchain_bin.mkdir_p();
-    let rustc_toolchain_exe = real_rustc_wrapper(&toolchain_bin, "real rustc running");
-    let cargo_toolchain_exe = make_exe(
-        &toolchain_bin,
-        "cargo",
-        r#"panic!("cargo toolchain should not be called");"#,
-        &[],
-    );
+/// A builder for a simulated rustup environment.
+///
+/// The environment has `~/.cargo/bin` and `~/.rustup` directories populated
+/// with some executables that simulate rustup.
+struct RustupEnvironmentBuilder {
+    /// Whether the cargo proxy should call the cargo under test. By default,
+    /// the proxy calls an executable that panics immediately.
+    proxy_calls_cargo: bool,
+    /// Environment variable setup the proxy should perform.
+    env: BTreeMap<String, String>,
+}
 
-    // Set up ~/.cargo/bin with a typical set of rustup proxies.
-    let cargo_bin = home().join(".cargo").join("bin");
-    cargo_bin.mkdir_p();
+impl RustupEnvironmentBuilder {
+    /// Creates a new [`RustupEnvironmentBuilder`].
+    fn new() -> Self {
+        Self {
+            proxy_calls_cargo: false,
+            env: BTreeMap::new(),
+        }
+    }
 
-    let rustc_proxy = make_exe(
-        &cargo_bin,
-        "rustc",
-        &format!(
-            r#"
-                match std::env::args().next().unwrap().as_ref() {{
-                    "rustc" => {{}}
-                    arg => panic!("proxy only supports rustc, got {{arg:?}}"),
-                }}
-                eprintln!("rustc proxy running");
-                let r = std::process::Command::new(env!("CARGO_RUSTUP_TEST_rustc_toolchain_exe"))
-                    .args(std::env::args_os().skip(1))
-                    .status();
-                std::process::exit(r.unwrap().code().unwrap_or(2));
+    /// Call the cargo under test rather than an executable that panics
+    /// immediately.
+    pub fn call_cargo_under_test(&mut self) -> &mut Self {
+        self.proxy_calls_cargo = true;
+        self
+    }
+
+    /// (chainable) Sets an environment variable for the proxy.
+    pub fn env<T: AsRef<str>>(&mut self, key: &str, val: T) -> &mut Self {
+        self.env.insert(key.to_string(), val.as_ref().to_string());
+        self
+    }
+
+    pub fn build(&mut self) -> RustupEnvironment {
+        // Set up ~/.rustup/toolchains/test-toolchain/bin with a custom rustc and cargo.
+        let rustup_home = home().join(".rustup");
+        let toolchain_bin = rustup_home
+            .join("toolchains")
+            .join("test-toolchain")
+            .join("bin");
+        toolchain_bin.mkdir_p();
+        let rustc_toolchain_exe = real_rustc_wrapper(&toolchain_bin, "real rustc running");
+        let cargo_toolchain_exe = if self.proxy_calls_cargo {
+            crate::utils::cargo_exe()
+        } else {
+            make_exe(
+                &toolchain_bin,
+                "cargo",
+                r#"panic!("cargo toolchain should not be called");"#,
+                &[],
+            )
+        };
+
+        // Set up ~/.cargo/bin with a typical set of rustup proxies.
+        let cargo_bin = home().join(".cargo").join("bin");
+        cargo_bin.mkdir_p();
+
+        let mut env_setup = String::new();
+        for (k, v) in &self.env {
+            write!(env_setup, ".env(\"{k}\", \"{v}\")").unwrap();
+        }
+
+        let rustc_proxy = make_exe(
+            &cargo_bin,
+            "rustc",
+            &format!(
+                r#"
+                    let file_stem = std::path::PathBuf::from(std::env::args().next().unwrap())
+                        .file_stem()
+                        .map(ToOwned::to_owned)
+                        .unwrap();
+                    let program = match file_stem.to_str().unwrap() {{
+                        "cargo" => env!("CARGO_RUSTUP_TEST_cargo_toolchain_exe"),
+                        "rustc" => env!("CARGO_RUSTUP_TEST_rustc_toolchain_exe"),
+                        arg => panic!("proxy only supports cargo and rustc, got {{arg:?}}"),
+                    }};
+                    eprintln!("`{{program}}` proxy running");
+                    let r = std::process::Command::new(program)
+                        .args(std::env::args_os().skip(1))
+                        {env_setup}
+                        .status();
+                    std::process::exit(r.unwrap().code().unwrap_or(2));
             "#
-        ),
-        &[("CARGO_RUSTUP_TEST_rustc_toolchain_exe", rustc_toolchain_exe)],
-    );
-    fs::hard_link(
-        &rustc_proxy,
-        cargo_bin.join("cargo").with_extension(EXE_EXTENSION),
-    )
-    .unwrap();
-    fs::hard_link(
-        &rustc_proxy,
-        cargo_bin.join("rustup").with_extension(EXE_EXTENSION),
-    )
-    .unwrap();
+            ),
+            &[
+                ("CARGO_RUSTUP_TEST_rustc_toolchain_exe", rustc_toolchain_exe),
+                (
+                    "CARGO_RUSTUP_TEST_cargo_toolchain_exe",
+                    cargo_toolchain_exe.clone(),
+                ),
+            ],
+        );
+        fs::hard_link(
+            &rustc_proxy,
+            cargo_bin.join("cargo").with_extension(EXE_EXTENSION),
+        )
+        .unwrap();
+        fs::hard_link(
+            &rustc_proxy,
+            cargo_bin.join("rustup").with_extension(EXE_EXTENSION),
+        )
+        .unwrap();
 
-    RustupEnvironment {
-        cargo_bin,
-        rustup_home,
-        cargo_toolchain_exe,
+        RustupEnvironment {
+            cargo_bin,
+            rustup_home,
+            cargo_toolchain_exe,
+        }
     }
 }
 
@@ -154,7 +209,7 @@ fn typical_rustup() {
         cargo_bin,
         rustup_home,
         cargo_toolchain_exe,
-    } = simulated_rustup_environment();
+    } = RustupEnvironmentBuilder::new().build();
 
     // Set up a project and run a normal cargo build.
     let p = project().file("src/lib.rs", "").build();
@@ -202,7 +257,7 @@ fn custom_calls_other_cargo() {
         cargo_bin,
         rustup_home,
         cargo_toolchain_exe: _,
-    } = simulated_rustup_environment();
+    } = RustupEnvironmentBuilder::new().build();
 
     // Create a directory with a custom toolchain (outside of the rustup universe).
     let custom_bin = root().join("custom-bin");
