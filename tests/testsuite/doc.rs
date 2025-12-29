@@ -1914,32 +1914,6 @@ fn doc_json_artifacts() {
     "executable": null,
     "features": [],
     "filenames": [
-      "[ROOT]/foo/target/debug/deps/libfoo-[HASH].rmeta"
-    ],
-    "fresh": false,
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.0.1",
-    "profile": "{...}",
-    "reason": "compiler-artifact",
-    "target": {
-      "crate_types": [
-        "lib"
-      ],
-      "doc": true,
-      "doctest": true,
-      "edition": "2015",
-      "kind": [
-        "lib"
-      ],
-      "name": "foo",
-      "src_path": "[ROOT]/foo/src/lib.rs",
-      "test": true
-    }
-  },
-  {
-    "executable": null,
-    "features": [],
-    "filenames": [
       "[ROOT]/foo/target/doc/foo/index.html"
     ],
     "fresh": false,
@@ -1991,6 +1965,38 @@ fn doc_json_artifacts() {
   {
     "reason": "build-finished",
     "success": true
+  },
+  {
+    "executable": null,
+    "features": [],
+    "filenames": [
+      "[ROOT]/foo/target/debug/build/foo/[HASH]/deps/libfoo-[HASH].rmeta"
+    ],
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": {
+      "debug_assertions": true,
+      "debuginfo": 2,
+      "opt_level": "0",
+      "overflow_checks": true,
+      "test": false
+    },
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "lib"
+      ],
+      "doc": true,
+      "doctest": true,
+      "edition": "2015",
+      "kind": [
+        "lib"
+      ],
+      "name": "foo",
+      "src_path": "[ROOT]/foo/src/lib.rs",
+      "test": true
+    }
   }
 ]
 "#]]
@@ -3249,15 +3255,15 @@ fn mergeable_info_with_deps() {
 [LOCKING] 1 package to latest compatible version
 [DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
-[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps [..]`
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 2 docs for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name dep dep/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -C metadata=490974557c2b920a -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps --crate-version 0.0.0`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=b0d2a34f9957e913 -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern dep=[ROOT]/foo/target/debug/build/dep/[HASH]/deps/libdep-[HASH].rmeta --crate-version 0.0.0`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 
 "#]].unordered()
         )
@@ -3310,10 +3316,10 @@ fn mergeable_info_no_deps() {
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
 [RUNNING] `rustc --crate-name dep --edition=2015 [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=b3d350f47e153711 -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern dep=[ROOT]/foo/target/debug/build/dep/[HASH]/deps/libdep-[HASH].rmeta --crate-version 0.0.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -3376,18 +3382,18 @@ fn mergeable_info_workspace() {
 [DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
 [DOCUMENTING] bar v0.0.0 ([ROOT]/foo/bar)
-[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps [..]`
-[RUNNING] `rustdoc [..]--crate-name bar [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/bar-[HASH]/deps [..]`
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 3 docs for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/bar-[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 [GENERATED] [ROOT]/foo/target/doc/dep/index.html
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name dep dep/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -C metadata=490974557c2b920a -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps --crate-version 0.0.0`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name bar bar/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/bar/[HASH]/deps -C metadata=3d8178679190f702 -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps --crate-version 0.0.0`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo foo/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=989353e352d1c02d -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern dep=[ROOT]/foo/target/debug/build/dep/[HASH]/deps/libdep-[HASH].rmeta --crate-version 0.0.0`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/bar/[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 
 "#]].unordered()
         )
@@ -3515,10 +3521,10 @@ fn mergeable_info_rebuild_detection() {
         .with_stderr_data(
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=2d2b3c6c086047e5 -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --crate-version 0.0.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -3653,10 +3659,10 @@ fn mergeable_info_rebuild_with_depinfo() {
         .with_stderr_data(
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=invocation-specific,dep-info=[..] --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific,dep-info=[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/doc-lib-foo.d -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=2d2b3c6c086047e5 -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --crate-version 0.0.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -3805,10 +3811,10 @@ fn mergeable_info_additive() {
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo foo/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C metadata=fa8565d3f4595489 -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern dep=[ROOT]/foo/target/debug/build/dep/[HASH]/deps/libdep-[HASH].rmeta --crate-version 0.0.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/deps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -3954,10 +3960,10 @@ fn mergeable_info_dep_collision() {
 [DOWNLOADED] dep v0.2.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [DOCUMENTING] dep v0.1.0
-[RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps [..]--crate-version 0.1.0`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name dep [ROOT]/home/.cargo/registry/src/-[HASH]/dep-0.1.0/src/lib.rs --cap-lints allow -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=invocation-specific -Zunstable-options --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps -C metadata=cb9d3c5ae10a21bd -L dependency=[ROOT]/foo/target/debug/build/dep/[HASH]/deps --crate-version 0.1.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/deps`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/deps`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/dep/index.html
 

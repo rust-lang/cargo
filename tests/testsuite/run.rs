@@ -1104,9 +1104,9 @@ fn example_with_release_flag() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/deps -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/deps`
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C opt-level=3 -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=4b4c41484ba13dd7 -C extra-filename=-eb0b6d9cce2c8f14 --out-dir [ROOT]/foo/target/release/build/bar/[HASH]/deps -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/build/bar/[HASH]/deps`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/examples -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/deps --extern bar=[ROOT]/foo/target/release/deps/libbar-[HASH].rlib`
+[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C opt-level=3 -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a310b6002f34a2b4 -C extra-filename=-9a6ff14d1ab1cf39 --out-dir [ROOT]/foo/target/release/examples -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/release/build/foo/[HASH]/deps --extern bar=[ROOT]/foo/target/release/build/bar/[HASH]/deps/libbar-[HASH].rlib`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] `target/release/examples/a[EXE]`
 
@@ -1121,9 +1121,9 @@ fast2
     p.cargo("run -v --example a")
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=3d09d03f37f16b23 -C extra-filename=-f9efe902b82a1225 --out-dir [ROOT]/foo/target/debug/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/examples -L dependency=[ROOT]/foo/target/debug/deps --extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib`
+[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=d824871c888463da -C extra-filename=-9474d1c993490d29 --out-dir [ROOT]/foo/target/debug/examples -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/libbar-[HASH].rlib`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/examples/a[EXE]`
 

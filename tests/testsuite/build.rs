@@ -127,7 +127,7 @@ fn cargo_compile_incremental() {
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/foo-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1561,7 +1561,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/{dll_prefix}bar{dll_suffix}`
 ...
 "))
         .run();
@@ -1574,7 +1574,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/{dll_prefix}bar-[..]{dll_suffix}`
 ...
 "))
         .run();
@@ -3589,7 +3589,7 @@ fn compiler_json_error_format() {
     "env": [],
     "linked_libs": [],
     "linked_paths": [],
-    "out_dir": "[ROOT]/foo/target/debug/build/foo-[HASH]/out",
+    "out_dir": "[ROOT]/foo/target/debug/build/foo/[HASH]/build-script-executed/out",
     "package_id": "path+[ROOTURL]/foo#0.5.0",
     "reason": "build-script-executed"
   },
@@ -4808,7 +4808,7 @@ fn deterministic_cfg_flags() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] --cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..] --cfg[..]f_c[..]--cfg[..]f_d[..] --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -5825,7 +5825,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

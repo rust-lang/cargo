@@ -11,6 +11,7 @@ use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
+use crate::core::features::is_new_build_dir_layout_enabled;
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
 
@@ -245,7 +246,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// Note that some units may share the same directory, so care should be
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
-        let separator = match self.ws.gctx().cli_unstable().build_dir_new_layout {
+        let separator = match is_new_build_dir_layout_enabled(self.ws.gctx()) {
             true => "/",
             false => "-",
         };

@@ -282,7 +282,7 @@ fn can_run_doc_tests() {
     foo.cargo("test -v").with_stderr_data(str![[r#"
 ...
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test src/lib.rs [..] --extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib --extern baz=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --color auto --crate-name foo --test src/lib.rs --test-run-directory [ROOT]/foo --extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/libbar-[HASH].rlib --extern baz=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/libbar-[HASH].rlib --extern foo=[ROOT]/foo/target/debug/build/foo/[HASH]/deps/libfoo-[HASH].rlib -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format human`
 
 "#]]).run();
 }

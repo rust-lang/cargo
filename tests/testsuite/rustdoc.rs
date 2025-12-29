@@ -13,7 +13,7 @@ fn rustdoc_simple() {
     p.cargo("rustdoc -v")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..] -L dependency=[ROOT]/foo/target/debug/deps [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=abed4ffdd90a31bc -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -108,7 +108,7 @@ fn rustdoc_args() {
     p.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=abed4ffdd90a31bc -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --cfg=foo --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -161,7 +161,7 @@ fn rustdoc_foo_with_bar_dependency() {
 [CHECKING] bar v0.0.1 ([ROOT]/bar)
 [RUNNING] `rustc [..] [ROOT]/bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps --extern [..]--cfg=foo[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=51580e9609955257 -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/deps/libbar-[HASH].rmeta --cfg=foo --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -197,7 +197,7 @@ fn rustdoc_only_bar_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/bar)
-[RUNNING] `rustdoc [..] --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=9404fbabedfd5f48 -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/deps --cfg=foo --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
@@ -215,7 +215,7 @@ fn rustdoc_same_name_documents_lib() {
     p.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=abed4ffdd90a31bc -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --cfg=foo --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -292,7 +292,7 @@ fn rustdoc_target() {
         .arg(cross_compile::alternate())
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]--target [ALT_TARGET] -o [ROOT]/foo/target/[ALT_TARGET]/doc [..] -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/deps -L dependency=[ROOT]/foo/target/debug/deps[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs --target [ALT_TARGET] -o [ROOT]/foo/target/[ALT_TARGET]/doc --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat -C metadata=d06f108cf9f288d7 -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --crate-version 0.0.1`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/[..]/doc/foo/index.html
 

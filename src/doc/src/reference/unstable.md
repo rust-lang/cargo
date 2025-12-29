@@ -1952,6 +1952,12 @@ enabled = true
 Enables the new build-dir filesystem layout.
 This layout change unblocks work towards caching and locking improvements.
 
+In addition to `-Zbuild-dir-new-layout`, `CARGO_BUILD_DIR_LAYOUT_V2` also exists as
+a way to opt in and out of the new layout during the transition period.
+`CARGO_BUILD_DIR_LAYOUT_V2=true` allows users to opt in to the new layout, even on stable.
+`CARGO_BUILD_DIR_LAYOUT_V2=false` allows users to opt out to the new layout.
+This includes post stabilization but it's important to note that this is a temporary flag and will
+eventually be removed. See the tracking issue for the transition plan and updates.
 
 ## compile-time-deps
 

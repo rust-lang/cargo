@@ -481,7 +481,7 @@ fn build_script() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -579,23 +579,12 @@ fn clean_verbose() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    let mut expected = String::from(
-        "\
-[REMOVING] [ROOT]/foo/target/debug/.fingerprint/bar-[HASH]
-[REMOVING] [ROOT]/foo/target/debug/deps/libbar-[HASH].rlib
-[REMOVING] [ROOT]/foo/target/debug/deps/bar-[HASH].d
-[REMOVING] [ROOT]/foo/target/debug/deps/libbar-[HASH].rmeta
-",
-    );
-    if cfg!(target_os = "macos") {
-        // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
-        for _ in p.glob("target/debug/deps/bar-*.o") {
-            expected.push_str("[REMOVING] [ROOT]/foo/target/debug/deps/bar-[HASH][..].o\n");
-        }
-    }
-    expected.push_str("[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total\n");
     p.cargo("clean -p bar --verbose")
-        .with_stderr_data(&expected.unordered())
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target/debug/build/bar
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]].unordered())
         .run();
     p.cargo("build").run();
 }

@@ -493,7 +493,7 @@ fn linker() {
 [WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
 please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=1e548458c1d02455 -C extra-filename=-e4ee4d3c3259672e --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [ERROR] linker `my-linker-tool` not found
 ...
 "#]])
@@ -559,8 +559,8 @@ fn cross_tests() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
-[RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/deps/bar-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/deps/bar-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -768,18 +768,18 @@ fn build_script_needed_for_host_and_target() {
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] d1 v0.0.0 ([ROOT]/foo/d1)
-[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [ROOT]/foo/target/debug/build/d1-[HASH] [..]
-[RUNNING] `[ROOT]/foo/target/debug/build/d1-[HASH]/build-script-build`
-[RUNNING] `[ROOT]/foo/target/debug/build/d1-[HASH]/build-script-build`
-[RUNNING] `rustc [..] d1/src/lib.rs [..] --out-dir [ROOT]/foo/target/debug/deps [..]
-[RUNNING] `rustc [..] d1/src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps [..]
 [COMPILING] d2 v0.0.0 ([ROOT]/foo/d2)
-[RUNNING] `rustc [..] d2/src/lib.rs [..] --out-dir [ROOT]/foo/target/debug/deps [..]-L [ROOT]/foo/link-[HOST_TARGET]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..] build.rs [..] --out-dir [ROOT]/foo/target/debug/build/foo-[HASH] [..]-L [ROOT]/foo/link-[HOST_TARGET]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
-[RUNNING] `rustc [..] src/main.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] [..]-L [ROOT]/foo/link-[ALT_TARGET]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 d1/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=8088577cb3bb92d0 -C extra-filename=-75212929df66ed9c --out-dir [ROOT]/foo/target/debug/build/[HASH]9c/build-script -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps`
+[RUNNING] `[ROOT]/foo/target/debug/build/[HASH]9c/build-script/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/[HASH]9c/build-script/build-script-build`
+[RUNNING] `rustc --crate-name d1 --edition=2015 d1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=62c324fc51755d3d -C extra-filename=-76e5c527a8358850 --out-dir [ROOT]/foo/target/debug/build/[HASH]50/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]50/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]44/deps -L [ROOT]/foo/link-[HOST_TARGET]`
+[RUNNING] `rustc --crate-name d1 --edition=2015 d1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=180871302507c4b6 -C extra-filename=-609e975b793d66e5 --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]e5/deps --target [ALT_TARGET] -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]ad/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]e5/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]e5/deps -L [ROOT]/foo/link-[ALT_TARGET]`
+[RUNNING] `rustc --crate-name d2 --edition=2015 d2/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=4c1954c21363f341 -C extra-filename=-6afa5d4b0a807121 --out-dir [ROOT]/foo/target/debug/build/[HASH]21/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]50/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]44/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]21/deps --extern d1=[ROOT]/foo/target/debug/build/[HASH]50/deps/libd1-[HASH].rmeta -L [ROOT]/foo/link-[HOST_TARGET]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=6af612251d5b8abd -C extra-filename=-107ac0ff069a6e02 --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/build-script -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]50/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]44/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]21/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern d2=[ROOT]/foo/target/debug/build/[HASH]21/deps/libd2-[HASH].rlib -L [ROOT]/foo/link-[HOST_TARGET]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=771704fd63506bbd -C extra-filename=-04135f6c0fc832dd --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps --target [ALT_TARGET] -L dependency=[ROOT]/foo/target/debug/build/[HASH]9c/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]50/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]44/deps -L dependency=[ROOT]/foo/target/debug/build/[HASH]21/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]ad/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]e5/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps --extern d1=[ROOT]/foo/target/[ALT_TARGET]/debug/build/[HASH]e5/deps/libd1-[HASH].rlib -L [ROOT]/foo/link-[ALT_TARGET]`
 
 "#]].unordered())
         .run();
@@ -949,7 +949,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target [ALT_TARGET] [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1197,8 +1197,8 @@ fn cross_test_dylib() {
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/test.rs (target/[ALT_TARGET]/debug/deps/test-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/deps/foo-[HASH])
+[RUNNING] tests/test.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/deps/test-[HASH])
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1255,7 +1255,7 @@ fn doctest_xcompile_linker() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=8fca04f0bae80a8c -C extra-filename=-2642309d734a26d7 --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/deps -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/deps`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [DOCTEST] foo
 [RUNNING] `rustdoc [..] src/lib.rs [..]
