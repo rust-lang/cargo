@@ -25,7 +25,9 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{CliUnstable, FeatureValue, find_workspace_root, resolve_relative_path};
+use crate::core::{
+    CliUnstable, FeatureValue, Patch, PatchLocation, find_workspace_root, resolve_relative_path,
+};
 use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
@@ -1582,7 +1584,7 @@ pub fn to_real_manifest(
         gctx,
         warnings,
         platform: None,
-        root: package_root,
+        file: manifest_file,
     };
     gather_dependencies(
         &mut manifest_ctx,
@@ -1967,8 +1969,6 @@ fn to_virtual_manifest(
     warnings: &mut Vec<String>,
     _errors: &mut Vec<String>,
 ) -> CargoResult<VirtualManifest> {
-    let root = manifest_file.parent().unwrap();
-
     let mut deps = Vec::new();
     let (replace, patch) = {
         let mut manifest_ctx = ManifestContext {
@@ -1977,7 +1977,7 @@ fn to_virtual_manifest(
             gctx,
             warnings,
             platform: None,
-            root,
+            file: manifest_file,
         };
         (
             replace(&normalized_toml, &mut manifest_ctx)?,
@@ -2045,7 +2045,7 @@ struct ManifestContext<'a, 'b> {
     gctx: &'b GlobalContext,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
-    root: &'a Path,
+    file: &'a Path,
 }
 
 #[tracing::instrument(skip_all)]
@@ -2115,9 +2115,9 @@ fn replace(
 }
 
 fn patch(
-    me: &manifest::TomlManifest,
+    me: &TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
-) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+) -> CargoResult<HashMap<Url, Vec<Patch>>> {
     let mut patch = HashMap::new();
     for (toml_url, deps) in me.patch.iter().flatten() {
         let url = match &toml_url[..] {
@@ -2148,7 +2148,10 @@ fn patch(
                         dep.unused_keys(),
                         &mut manifest_ctx.warnings,
                     );
-                    dep_to_dependency(dep, name, manifest_ctx, None)
+
+                    let dep = dep_to_dependency(dep, name, manifest_ctx, None)?;
+                    let loc = PatchLocation::Manifest(manifest_ctx.file.to_path_buf());
+                    Ok(Patch { dep, loc })
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
         );
@@ -2163,7 +2166,7 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
     platform: Option<Platform>,
-    root: &Path,
+    file: &Path,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     dep_to_dependency(
@@ -2175,7 +2178,7 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
             gctx,
             warnings,
             platform,
-            root,
+            file,
         },
         kind,
     )
@@ -2415,7 +2418,7 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             // always end up hashing to the same value no matter where it's
             // built from.
             if manifest_ctx.source_id.is_path() {
-                let path = manifest_ctx.root.join(path);
+                let path = manifest_ctx.file.parent().unwrap().join(path);
                 let path = paths::normalize_path(&path);
                 SourceId::for_path(&path)
             } else {

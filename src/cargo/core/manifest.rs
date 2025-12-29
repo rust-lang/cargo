@@ -17,7 +17,7 @@ use url::Url;
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::{CompileKind, CrateType};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use crate::core::{Dependency, PackageId, PackageIdSpec, Patch, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
@@ -80,7 +80,7 @@ pub struct Manifest {
     custom_metadata: Option<toml::Value>,
     publish: Option<Vec<String>>,
     replace: Vec<(PackageIdSpec, Dependency)>,
-    patch: HashMap<Url, Vec<Dependency>>,
+    patch: HashMap<Url, Vec<Patch>>,
     workspace: WorkspaceConfig,
     unstable_features: Features,
     edition: Edition,
@@ -116,7 +116,7 @@ pub struct VirtualManifest {
 
     // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
-    patch: HashMap<Url, Vec<Dependency>>,
+    patch: HashMap<Url, Vec<Patch>>,
     workspace: WorkspaceConfig,
     warnings: Warnings,
     features: Features,
@@ -512,7 +512,7 @@ impl Manifest {
         custom_metadata: Option<toml::Value>,
         publish: Option<Vec<String>>,
         replace: Vec<(PackageIdSpec, Dependency)>,
-        patch: HashMap<Url, Vec<Dependency>>,
+        patch: HashMap<Url, Vec<Patch>>,
         workspace: WorkspaceConfig,
         unstable_features: Features,
         edition: Edition,
@@ -640,7 +640,7 @@ impl Manifest {
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
     }
-    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
+    pub fn patch(&self) -> &HashMap<Url, Vec<Patch>> {
         &self.patch
     }
     pub fn links(&self) -> Option<&str> {
@@ -749,7 +749,7 @@ impl VirtualManifest {
         original_toml: Rc<TomlManifest>,
         normalized_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
-        patch: HashMap<Url, Vec<Dependency>>,
+        patch: HashMap<Url, Vec<Patch>>,
         workspace: WorkspaceConfig,
         features: Features,
         resolve_behavior: Option<ResolveBehavior>,
@@ -789,7 +789,7 @@ impl VirtualManifest {
         &self.replace
     }
 
-    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
+    pub fn patch(&self) -> &HashMap<Url, Vec<Patch>> {
         &self.patch
     }
 
