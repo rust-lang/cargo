@@ -21,17 +21,9 @@ pub fn cli() -> Command {
             Arg::new("COMMAND")
                 .num_args(1..)
                 .action(ArgAction::Append)
-                .add(clap_complete::ArgValueCandidates::new(|| {
-                    super::builtin()
-                        .iter()
-                        .map(|cmd| {
-                            let name = cmd.get_name();
-                            clap_complete::CompletionCandidate::new(name)
-                                .help(cmd.get_about().cloned())
-                                .hide(cmd.is_hide_set())
-                        })
-                        .collect()
-                })),
+                .add(clap_complete::ArgValueCandidates::new(
+                    get_completion_candidates,
+                )),
         )
 }
 
@@ -283,4 +275,35 @@ fn try_match_cmd(cmd: &Command, arg: &str) -> Option<String> {
     }
 
     None
+}
+
+/// Returns dash-joined names for nested commands,
+/// so they can be completed as single tokens.
+fn get_completion_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    fn walk(
+        cmd: Command,
+        prefix: Option<&String>,
+        candidates: &mut Vec<clap_complete::CompletionCandidate>,
+    ) {
+        let name = cmd.get_name();
+        let key = match prefix {
+            Some(prefix) => format!("{prefix}-{name}"),
+            None => name.to_string(),
+        };
+
+        for cmd in cmd.get_subcommands() {
+            walk(cmd.clone(), Some(&key), candidates);
+        }
+
+        let candidate = clap_complete::CompletionCandidate::new(&key)
+            .help(cmd.get_about().cloned())
+            .hide(cmd.is_hide_set());
+        candidates.push(candidate);
+    }
+
+    let mut candidates = Vec::new();
+    for cmd in super::builtin() {
+        walk(cmd, None, &mut candidates);
+    }
+    candidates
 }
