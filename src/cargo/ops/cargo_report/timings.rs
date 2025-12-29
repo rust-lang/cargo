@@ -1,7 +1,6 @@
 //! The `cargo report timings` command.
 
 use std::collections::HashSet;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -27,7 +26,7 @@ use crate::core::compiler::timings::report::aggregate_sections;
 use crate::core::compiler::timings::report::compute_concurrency;
 use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
-use crate::util::BuildLogger;
+use crate::ops::cargo_report::util::list_log_files;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
@@ -53,13 +52,13 @@ pub fn report_timings(
     ws: Option<&Workspace<'_>>,
     opts: ReportTimingsOptions<'_>,
 ) -> CargoResult<()> {
-    let Some((log, run_id)) = select_log_file(gctx, ws)? else {
-        let title_extra = if let Some(ws) = ws {
+    let Some((log, run_id)) = list_log_files(gctx, ws)?.next() else {
+        let context = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
             String::new()
         };
-        let title = format!("no build log files found{title_extra}");
+        let title = format!("no sessions found{context}");
         let note = "run command with `-Z build-analysis` to generate log files";
         let report = [Level::ERROR
             .primary_title(title)
@@ -108,57 +107,6 @@ pub fn report_timings(
     }
 
     Ok(())
-}
-
-/// Selects the appropriate log file.
-///
-/// Currently look at the newest log file for the workspace.
-/// If not in a workspace, pick the newest log file in the log directory.
-fn select_log_file(
-    gctx: &GlobalContext,
-    ws: Option<&Workspace<'_>>,
-) -> CargoResult<Option<(PathBuf, RunId)>> {
-    let log_dir = gctx.home().join("log");
-    let log_dir = log_dir.as_path_unlocked();
-
-    if !log_dir.exists() {
-        return Ok(None);
-    }
-
-    // Gets the latest log files in the log directory
-    let mut walk = walkdir::WalkDir::new(log_dir)
-        .follow_links(true)
-        .sort_by(|a, b| a.file_name().cmp(b.file_name()).reverse())
-        .min_depth(1)
-        .max_depth(1)
-        .into_iter()
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-
-            // We only accept JSONL/NDJSON files.
-            if !entry.file_type().is_file() {
-                return None;
-            }
-            if entry.path().extension() != Some(OsStr::new("jsonl")) {
-                return None;
-            }
-
-            // ...and the file name must follow RunId format
-            let run_id = path.file_stem()?.to_str()?.parse::<RunId>().ok()?;
-            Some((entry, run_id))
-        });
-
-    let item = if let Some(ws) = ws {
-        // If we are under a workspace, find only that workspace's log files.
-        let ws_run_id = BuildLogger::generate_run_id(ws);
-        walk.skip_while(|(_, run_id)| !run_id.same_workspace(&ws_run_id))
-            .next()
-    } else {
-        walk.next()
-    };
-
-    Ok(item.map(|(entry, run_id)| (entry.into_path(), run_id)))
 }
 
 fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'static>> {
