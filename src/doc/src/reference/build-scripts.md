@@ -78,9 +78,12 @@ should not modify any files outside of that directory.
 > re-run. This behavior is intentional to support incremental builds, such as
 > native code compilation.
 >
-> Build scripts should not assume that `OUT_DIR` is empty. If a script requires
-> a clean directory, it is responsible for removing or managing any files or
-> subdirectories it creates.
+>Build scripts should not rely on `OUT_DIR` being empty, as its contents may
+>persist across rebuilds. If a script requires a clean directory, it is currently
+>responsible for managing or cleaning up any files or subdirectories it creates.
+>Future improvements in this area are being discussed (see
+>[#16427](https://github.com/rust-lang/cargo/issues/16427) and
+>[#9661](https://github.com/rust-lang/cargo/issues/9661)).
 
 Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo::` as an instruction that will
