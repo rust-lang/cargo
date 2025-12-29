@@ -330,6 +330,7 @@ fn dependency_activates_feature_with_no_close_match() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `serde` but `bar` does not have that feature.
+ available features: cookies, json, tls
 
 
 failed to select a version for `bar` which could resolve this conflict
