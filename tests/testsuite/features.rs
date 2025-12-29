@@ -289,6 +289,57 @@ failed to select a version for `bar` which could resolve this conflict
 }
 
 #[cargo_test]
+fn dependency_activates_feature_with_no_close_match() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies.bar]
+                path = "bar"
+                features = ["serde"]
+            "#,
+        )
+        .file("src/main.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+
+                [features]
+                json = []
+                tls = []
+                cookies = []
+"#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
+versions that meet the requirements `*` are: 0.0.1
+
+package `foo` depends on `bar` with feature `serde` but `bar` does not have that feature.
+ available features: cookies, json, tls
+
+
+failed to select a version for `bar` which could resolve this conflict
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn optional_dev_dependency() {
     let p = project()
         .file(
