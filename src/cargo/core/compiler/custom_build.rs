@@ -451,6 +451,8 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         cmd.display_env_vars();
     }
 
+    let any_build_script_metadata = bcx.gctx.cli_unstable().any_build_script_metadata;
+
     // Gather the set of native dependencies that this package has along with
     // some other variables to close over.
     //
@@ -461,8 +463,26 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .filter_map(|dep| {
             if dep.unit.mode.is_run_custom_build() {
                 let dep_metadata = build_runner.get_run_build_script_metadata(&dep.unit);
+
+                let Some(dependency) = unit.pkg.dependencies().iter().find(|d| {
+                    d.package_name() == dep.unit.pkg.name()
+                        && d.source_id() == dep.unit.pkg.package_id().source_id()
+                        && d.version_req().matches(unit.pkg.version())
+                }) else {
+                    panic!(
+                        "Dependency `{}` not found in `{}`s dependencies",
+                        dep.unit.pkg.name(),
+                        unit.pkg.name()
+                    )
+                };
+
                 Some((
-                    dep.unit.pkg.manifest().links().unwrap().to_string(),
+                    dependency.name_in_toml(),
+                    dep.unit
+                        .pkg
+                        .manifest()
+                        .links()
+                        .map(|links| links.to_string()),
                     dep.unit.pkg.package_id(),
                     dep_metadata,
                 ))
@@ -531,7 +551,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         // native dynamic libraries.
         {
             let build_script_outputs = build_script_outputs.lock().unwrap();
-            for (name, dep_id, dep_metadata) in lib_deps {
+            for (name, links, dep_id, dep_metadata) in lib_deps {
                 let script_output = build_script_outputs.get(dep_metadata).ok_or_else(|| {
                     internal(format!(
                         "failed to locate build state for env vars: {}/{}",
@@ -540,10 +560,18 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 })?;
                 let data = &script_output.metadata;
                 for (key, value) in data.iter() {
-                    cmd.env(
-                        &format!("DEP_{}_{}", super::envify(&name), super::envify(key)),
-                        value,
-                    );
+                    if let Some(ref links) = links {
+                        cmd.env(
+                            &format!("DEP_{}_{}", super::envify(&links), super::envify(key)),
+                            value,
+                        );
+                    }
+                    if any_build_script_metadata {
+                        cmd.env(
+                            &format!("CARGO_DEP_{}_{}", super::envify(&name), super::envify(key)),
+                            value,
+                        );
+                    }
                 }
             }
             if let Some(build_scripts) = build_scripts
