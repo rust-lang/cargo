@@ -146,7 +146,7 @@ pub enum LogMessage {
         /// Status of the rebuild detection fingerprint of this unit
         status: FingerprintStatus,
         /// Reason why the unit is dirty and needs rebuilding.
-        #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         cause: Option<DirtyReason>,
     },
 }
