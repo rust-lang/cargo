@@ -11,7 +11,7 @@ use crate::core::Shell;
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].
 ///
 /// [`Fingerprint::compare`]: super::Fingerprint::compare
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "dirty_reason", rename_all = "kebab-case")]
 pub enum DirtyReason {
     RustcChanged,
@@ -62,8 +62,8 @@ pub enum DirtyReason {
         new_value: Option<String>,
     },
     LocalFingerprintTypeChanged {
-        old: &'static str,
-        new: &'static str,
+        old: String,
+        new: String,
     },
     NumberOfDependenciesChanged {
         old: usize,
@@ -831,8 +831,8 @@ mod json_schema {
     #[test]
     fn local_fingerprint_type_changed() {
         let reason = DirtyReason::LocalFingerprintTypeChanged {
-            old: "precalculated",
-            new: "rerun-if-changed",
+            old: "precalculated".to_owned(),
+            new: "rerun-if-changed".to_owned(),
         };
         assert_data_eq!(
             to_json(&reason),

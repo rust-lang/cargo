@@ -674,7 +674,7 @@ pub struct Fingerprint {
 }
 
 /// Indication of the status on the filesystem for a particular unit.
-#[derive(Clone, Default, Debug, Serialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(tag = "fs_status", rename_all = "kebab-case")]
 pub enum FsStatus {
     /// This unit is to be considered stale, even if hash information all
@@ -690,9 +690,9 @@ pub enum FsStatus {
     /// A dependency was stale.
     StaleDependency {
         unit: u64,
-        #[serde(serialize_with = "serialize_file_time")]
+        #[serde(with = "serde_file_time")]
         dep_mtime: FileTime,
-        #[serde(serialize_with = "serialize_file_time")]
+        #[serde(with = "serde_file_time")]
         max_mtime: FileTime,
     },
 
@@ -717,14 +717,31 @@ impl FsStatus {
     }
 }
 
-/// Serialize FileTime as milliseconds with nano.
-fn serialize_file_time<S>(ft: &FileTime, s: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    let secs_as_millis = ft.unix_seconds() as f64 * 1000.0;
-    let nanos_as_millis = ft.nanoseconds() as f64 / 1_000_000.0;
-    (secs_as_millis + nanos_as_millis).serialize(s)
+mod serde_file_time {
+    use filetime::FileTime;
+    use serde::Deserialize;
+    use serde::Serialize;
+
+    /// Serialize FileTime as milliseconds with nano.
+    pub(super) fn serialize<S>(ft: &FileTime, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let secs_as_millis = ft.unix_seconds() as f64 * 1000.0;
+        let nanos_as_millis = ft.nanoseconds() as f64 / 1_000_000.0;
+        (secs_as_millis + nanos_as_millis).serialize(s)
+    }
+
+    /// Deserialize FileTime from milliseconds with nano.
+    pub(super) fn deserialize<'de, D>(d: D) -> Result<FileTime, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let millis = f64::deserialize(d)?;
+        let secs = (millis / 1000.0) as i64;
+        let nanos = ((millis % 1000.0) * 1_000_000.0) as u32;
+        Ok(FileTime::from_unix_time(secs, nanos))
+    }
 }
 
 impl Serialize for DepFingerprint {
@@ -827,7 +844,7 @@ enum LocalFingerprint {
 }
 
 /// See [`FsStatus::StaleItem`].
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "stale_item", rename_all = "kebab-case")]
 pub enum StaleItem {
     MissingFile {
@@ -846,10 +863,10 @@ pub enum StaleItem {
     },
     ChangedFile {
         reference: PathBuf,
-        #[serde(serialize_with = "serialize_file_time")]
+        #[serde(with = "serde_file_time")]
         reference_mtime: FileTime,
         stale: PathBuf,
-        #[serde(serialize_with = "serialize_file_time")]
+        #[serde(with = "serde_file_time")]
         stale_mtime: FileTime,
     },
     ChangedChecksum {
@@ -1166,8 +1183,8 @@ impl Fingerprint {
                 }
                 (a, b) => {
                     return DirtyReason::LocalFingerprintTypeChanged {
-                        old: b.kind(),
-                        new: a.kind(),
+                        old: b.kind().to_owned(),
+                        new: a.kind().to_owned(),
                     };
                 }
             }
