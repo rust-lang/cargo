@@ -657,6 +657,10 @@ pub struct Fingerprint {
     /// The rustc target. This is only relevant for `.json` files, otherwise
     /// the metadata hash segregates the units.
     compile_kind: u64,
+    /// Unit index for this fingerprint, used for tracing cascading rebuilds.
+    /// Not persisted to disk as indices can change between builds.
+    #[serde(skip)]
+    index: u64,
     /// Description of whether the filesystem status for this unit is up to date
     /// or should be considered stale.
     #[serde(skip)]
@@ -685,15 +689,15 @@ pub enum FsStatus {
 
     /// A dependency was stale.
     StaleDependency {
-        name: InternedString,
+        unit: u64,
         #[serde(serialize_with = "serialize_file_time")]
         dep_mtime: FileTime,
         #[serde(serialize_with = "serialize_file_time")]
         max_mtime: FileTime,
     },
 
-    /// A dependency was stale.
-    StaleDepFingerprint { name: InternedString },
+    /// A dependency's fingerprint was stale.
+    StaleDepFingerprint { unit: u64 },
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
     /// listed in the payload here for other dependencies to compare against.
@@ -1011,6 +1015,7 @@ impl Fingerprint {
             rustflags: Vec::new(),
             config: 0,
             compile_kind: 0,
+            index: 0,
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
         }
@@ -1184,10 +1189,7 @@ impl Fingerprint {
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 return DirtyReason::UnitDependencyInfoChanged {
-                    new_name: a.name,
-                    new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name,
-                    old_fingerprint: b.fingerprint.hash_u64(),
+                    unit: a.fingerprint.index,
                 };
             }
         }
@@ -1263,7 +1265,9 @@ impl Fingerprint {
                 | FsStatus::StaleItem(_)
                 | FsStatus::StaleDependency { .. }
                 | FsStatus::StaleDepFingerprint { .. } => {
-                    self.fs_status = FsStatus::StaleDepFingerprint { name: dep.name };
+                    self.fs_status = FsStatus::StaleDepFingerprint {
+                        unit: dep.fingerprint.index,
+                    };
                     return Ok(());
                 }
             };
@@ -1305,7 +1309,7 @@ impl Fingerprint {
                 );
 
                 self.fs_status = FsStatus::StaleDependency {
-                    name: dep.name,
+                    unit: dep.fingerprint.index,
                     dep_mtime: *dep_mtime,
                     max_mtime: *max_mtime,
                 };
@@ -1637,6 +1641,7 @@ fn calculate_normal(
         memoized_hash: Mutex::new(None),
         config: Hasher::finish(&config),
         compile_kind,
+        index: build_runner.bcx.unit_to_index[unit],
         rustflags: extra_flags,
         fs_status: FsStatus::Stale,
         outputs,
@@ -1703,6 +1708,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
         deps,
         outputs: if overridden { Vec::new() } else { vec![output] },
         rustflags,
+        index: build_runner.bcx.unit_to_index[unit],
 
         // Most of the other info is blank here as we don't really include it
         // in the execution of the build script, but... this may be a latent

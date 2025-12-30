@@ -2708,7 +2708,7 @@ fn calc_bin_artifact_fingerprint() {
 [DIRTY] bar v0.5.0 ([ROOT]/foo/bar): the file `bar/src/main.rs` has changed ([..])
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]`
-[DIRTY] foo v0.1.0 ([ROOT]/foo): the dependency bar was rebuilt
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the dependency `bar` was rebuilt
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

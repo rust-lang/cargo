@@ -3147,7 +3147,7 @@ fn rebuild_tracks_env_in_dep() {
 [CHECKING] bar v0.1.0
 [RUNNING] `rustc --crate-name bar [..]`
 [RUNNING] `rustdoc [..]--crate-name bar [..]`
-[DIRTY] foo v0.0.0 ([ROOT]/foo): the dependency bar was rebuilt
+[DIRTY] foo v0.0.0 ([ROOT]/foo): the dependency `bar` was rebuilt
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
