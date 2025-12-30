@@ -672,7 +672,7 @@ fn dylib() {
 [COMPILING] registry-shared v0.0.1
 [FRESH] registry v0.0.1
 [RUNNING] `rustc --crate-name registry_shared [..]-C embed-bitcode=no [..]`
-[DIRTY] bar v0.0.0 ([..]): dependency info changed
+[DIRTY] bar v0.0.0 ([ROOT]/foo/bar): info of dependency `registry-shared` changed
 [COMPILING] bar v0.0.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no [..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -692,7 +692,7 @@ fn dylib() {
 [FRESH] registry-shared v0.0.1
 [COMPILING] registry v0.0.1
 [RUNNING] `rustc --crate-name registry [..]`
-[DIRTY] bar v0.0.0 ([..]): dependency info changed
+[DIRTY] bar v0.0.0 ([ROOT]/foo/bar): info of dependency `registry` changed
 [COMPILING] bar v0.0.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]--crate-type dylib [..]-C embed-bitcode=no [..]`
 [RUNNING] `rustc --crate-name bar [..]-C lto [..]--test [..]`
