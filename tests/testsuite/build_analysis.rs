@@ -606,6 +606,11 @@ fn log_msg_unit_graph() {
     "timestamp": "[..]T[..]Z"
   },
   {
+    "dependencies": [
+      0,
+      1,
+      4
+    ],
     "index": 2,
     "mode": "doc",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
@@ -633,6 +638,9 @@ fn log_msg_unit_graph() {
     "timestamp": "[..]T[..]Z"
   },
   {
+    "dependencies": [
+      3
+    ],
     "index": 4,
     "mode": "run-custom-build",
     "package_id": "path+[ROOTURL]/foo#0.0.0",
