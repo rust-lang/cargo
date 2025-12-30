@@ -128,6 +128,7 @@ impl Layout {
         target: Option<CompileTarget>,
         dest: &str,
         must_take_artifact_dir_lock: bool,
+        must_take_build_dir_lock_exclusively: bool,
     ) -> CargoResult<Layout> {
         let is_new_layout = ws.gctx().cli_unstable().build_dir_new_layout;
         let mut root = ws.target_dir();
@@ -160,11 +161,20 @@ impl Layout {
         {
             None
         } else {
-            Some(build_dest.open_rw_exclusive_create(
-                ".cargo-lock",
-                ws.gctx(),
-                "build directory",
-            )?)
+            if ws.gctx().cli_unstable().fine_grain_locking && !must_take_build_dir_lock_exclusively
+            {
+                Some(build_dest.open_ro_shared_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?)
+            } else {
+                Some(build_dest.open_rw_exclusive_create(
+                    ".cargo-lock",
+                    ws.gctx(),
+                    "build directory",
+                )?)
+            }
         };
         let build_root = build_root.into_path_unlocked();
         let build_dest = build_dest.as_path_unlocked();

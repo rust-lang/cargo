@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::core::PackageId;
 use crate::core::compiler::compilation::{self, UnitOutput};
+use crate::core::compiler::locking::LockManager;
 use crate::core::compiler::{self, Unit, UserIntent, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
@@ -87,6 +88,9 @@ pub struct BuildRunner<'a, 'gctx> {
     /// because the target has a type error. This is in an Arc<Mutex<..>>
     /// because it is continuously updated as the job progresses.
     pub failed_scrape_units: Arc<Mutex<HashSet<UnitHash>>>,
+
+    /// Manages locks for build units when fine grain locking is enabled.
+    pub lock_manager: Arc<LockManager>,
 }
 
 impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
@@ -126,6 +130,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
             failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
+            lock_manager: Arc::new(LockManager::new()),
         })
     }
 
@@ -417,7 +422,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             | UserIntent::Doctest
             | UserIntent::Bench => true,
         };
-        let host_layout = Layout::new(self.bcx.ws, None, &dest, must_take_artifact_dir_lock)?;
+        let host_layout =
+            Layout::new(self.bcx.ws, None, &dest, must_take_artifact_dir_lock, false)?;
         let mut targets = HashMap::new();
         for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
@@ -426,6 +432,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     Some(target),
                     &dest,
                     must_take_artifact_dir_lock,
+                    false,
                 )?;
                 targets.insert(target, layout);
             }

@@ -250,12 +250,16 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             false => "-",
         };
         let name = unit.pkg.package_id().name();
-        let meta = self.metas[unit];
-        let hash = meta
+        let hash = self.unit_hash(unit);
+        format!("{name}{separator}{hash}")
+    }
+
+    /// The directory hash to use for a given unit
+    pub fn unit_hash(&self, unit: &Unit) -> String {
+        self.metas[unit]
             .pkg_dir()
             .map(|h| h.to_string())
-            .unwrap_or_else(|| self.target_short_hash(unit));
-        format!("{name}{separator}{hash}")
+            .unwrap_or_else(|| self.target_short_hash(unit))
     }
 
     /// Returns the final artifact path for the host (`/…/target/debug`)
@@ -294,6 +298,15 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).build_dir().fingerprint(&dir)
+    }
+
+    /// The lock location for a given build unit.
+    pub fn build_unit_lock(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind)
+            .build_dir()
+            .build_unit(&dir)
+            .join(".lock")
     }
 
     /// Directory where incremental output for the given unit should go.
