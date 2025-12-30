@@ -16,13 +16,11 @@ fn gated_stable_channel() {
         .build();
 
     p.cargo("report rebuilds")
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report rebuilds` command is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report rebuilds` command.
 
 "#]])
         .run();
@@ -37,13 +35,10 @@ fn gated_unstable_options() {
 
     p.cargo("report rebuilds")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] the `cargo report rebuilds` command is unstable, pass `-Z build-analysis` to enable it
+See https://github.com/rust-lang/cargo/issues/15844 for more information about the `cargo report rebuilds` command.
 
 "#]])
         .run();
@@ -53,13 +48,11 @@ For more information, try '--help'.
 fn no_log() {
     cargo_process("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] no sessions found
+  |
+  = [NOTE] run command with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -89,13 +82,11 @@ fn no_log_for_the_current_workspace() {
 
     bar.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
+[ERROR] no sessions found for workspace at `[ROOT]/bar`
+  |
+  = [NOTE] run command with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -115,15 +106,7 @@ fn no_rebuild_data() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -148,15 +131,7 @@ fn basic_rebuild() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -172,6 +147,7 @@ fn all_fresh() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
+    // Second build without changes
     p.cargo("check -Zbuild-analysis")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .masquerade_as_nightly_cargo(&["build-analysis"])
@@ -179,15 +155,7 @@ fn all_fresh() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -260,28 +228,12 @@ fn with_dependencies() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     p.cargo("report rebuilds -Zbuild-analysis -vv")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -349,28 +301,12 @@ fn multiple_root_causes() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
     p.cargo("report rebuilds -Zbuild-analysis --verbose")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -430,15 +366,7 @@ fn shared_dep_cascading() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -462,15 +390,7 @@ fn outside_workspace() {
 
     cargo_process("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
@@ -506,14 +426,6 @@ fn with_manifest_path() {
 
     foo.cargo("report rebuilds --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_status(1)
-        .with_stderr_data(str![[r#"
-[ERROR] unrecognized subcommand 'rebuilds'
-
-Usage: cargo report [OPTIONS] <COMMAND>
-
-For more information, try '--help'.
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
