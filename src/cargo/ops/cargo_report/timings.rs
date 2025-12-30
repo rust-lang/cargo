@@ -177,6 +177,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                 index,
                 features,
                 requested,
+                dependencies: _,
             } => {
                 if requested {
                     requested_units.insert(index);

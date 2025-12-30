@@ -535,6 +535,14 @@ pub fn create_bcx<'a, 'gctx>(
 
         for (index, unit) in units.into_iter().enumerate() {
             let index = index as u64;
+            let dependencies = unit_graph
+                .get(unit)
+                .map(|deps| {
+                    deps.iter()
+                        .filter_map(|dep| unit_to_index.get(&dep.unit).copied())
+                        .collect()
+                })
+                .unwrap_or_default();
             logger.log(LogMessage::UnitRegistered {
                 package_id: unit.pkg.package_id().to_spec(),
                 target: (&unit.target).into(),
@@ -547,6 +555,7 @@ pub fn create_bcx<'a, 'gctx>(
                     .map(|s| s.as_str().to_owned())
                     .collect(),
                 requested: root_unit_indexes.contains(&index),
+                dependencies,
             });
         }
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();

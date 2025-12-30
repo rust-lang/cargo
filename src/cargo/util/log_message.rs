@@ -86,6 +86,9 @@ pub enum LogMessage {
         /// like via the `-p` flag or the default workspace members.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         requested: bool,
+        /// Unit indices that this unit depends on.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        dependencies: Vec<u64>,
     },
     /// Emitted when a compilation unit starts.
     UnitStarted {
