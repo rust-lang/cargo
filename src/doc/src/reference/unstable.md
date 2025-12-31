@@ -67,6 +67,7 @@ Each new feature described below should explain how to use it.
 * Build scripts and linking
     * [Metabuild](#metabuild) --- Provides declarative build scripts.
     * [Multiple Build Scripts](#multiple-build-scripts) --- Allows use of multiple build scripts.
+    * [Any Build Script Metadata](#any-build-script-metadata) --- Allow any build script to specify env vars via `cargo::metadata=key=value`
 * Resolver and features
     * [no-index-update](#no-index-update) --- Prevents cargo from updating the index cache.
     * [avoid-dev-deps](#avoid-dev-deps) --- Prevents the resolver from including dev-dependencies during resolution.
@@ -312,6 +313,16 @@ build = ["foo.rs", "bar.rs"]
 **Accessing Output Directories**:  Output directory of each build script can be accessed by using `<script-name>_OUT_DIR` 
   where the `<script-name>` is the file-stem of the build script, exactly as-is.
   For example, `bar_OUT_DIR` for script at `foo/bar.rs`. (Only set during compilation, can be accessed via `env!` macro)
+
+## Any Build Script Metadata
+* Tracking Issue: [#14903](https://github.com/rust-lang/cargo/issues/3544)
+
+Allow any build script to specify env vars via `cargo::metadata=key=value`
+
+Depedant build scripts can access these key/value pair by reading the `CARGO_DEP_<dep>_<key>` env variable at runtime.
+For build scripts of crates with a `links`, both `DEP_<links>_<key>` and `CARGO_DEP_<dep>_<key>` will be set.
+
+Note that `dep` and `key` in `CARGO_DEP_<dep>_<key>` are uppercased and hyphens (`-`) replaced with underscores (`_`).
 
 ## public-dependency
 * Tracking Issue: [#44663](https://github.com/rust-lang/rust/issues/44663)
