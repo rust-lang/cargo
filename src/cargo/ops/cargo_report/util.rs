@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Workspace;
+use crate::core::compiler::CompileMode;
 use crate::util::BuildLogger;
+use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 
 /// Lists log files by calling a callback for each valid log file.
@@ -56,4 +58,31 @@ pub fn list_log_files(
     });
 
     Ok(Box::new(walk))
+}
+
+pub fn unit_target_description(target: &Target, mode: CompileMode) -> String {
+    // This is pretty similar to how the current `core::compiler::timings`
+    // renders `core::manifest::Target`. However, our target is
+    // a simplified type so we cannot reuse the same logic here.
+    let mut target_str = if target.kind == "lib" && mode == CompileMode::Build {
+        // Special case for brevity, since most dependencies hit this path.
+        "".to_string()
+    } else if target.kind == "build-script" {
+        " build-script".to_string()
+    } else {
+        format!(r#" {} "{}""#, target.name, target.kind)
+    };
+
+    match mode {
+        CompileMode::Test => target_str.push_str(" (test)"),
+        CompileMode::Build => {}
+        CompileMode::Check { test: true } => target_str.push_str(" (check-test)"),
+        CompileMode::Check { test: false } => target_str.push_str(" (check)"),
+        CompileMode::Doc { .. } => target_str.push_str(" (doc)"),
+        CompileMode::Doctest => target_str.push_str(" (doc test)"),
+        CompileMode::Docscrape => target_str.push_str(" (doc scrape)"),
+        CompileMode::RunCustomBuild => target_str.push_str(" (run)"),
+    }
+
+    target_str
 }
