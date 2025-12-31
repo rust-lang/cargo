@@ -64,14 +64,15 @@ pub fn unit_target_description(target: &Target, mode: CompileMode) -> String {
     // This is pretty similar to how the current `core::compiler::timings`
     // renders `core::manifest::Target`. However, our target is
     // a simplified type so we cannot reuse the same logic here.
-    let mut target_str = if target.kind == "lib" && mode == CompileMode::Build {
-        // Special case for brevity, since most dependencies hit this path.
-        "".to_string()
-    } else if target.kind == "build-script" {
-        " build-script".to_string()
-    } else {
-        format!(r#" {} "{}""#, target.name, target.kind)
-    };
+    let mut target_str =
+        if target.kind == "lib" && matches!(mode, CompileMode::Build | CompileMode::Check { .. }) {
+            // Special case for brevity, since most dependencies hit this path.
+            "".to_string()
+        } else if target.kind == "build-script" {
+            " build-script".to_string()
+        } else {
+            format!(r#" {} "{}""#, target.name, target.kind)
+        };
 
     match mode {
         CompileMode::Test => target_str.push_str(" (test)"),
