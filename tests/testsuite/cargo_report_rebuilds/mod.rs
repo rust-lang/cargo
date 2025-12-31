@@ -106,7 +106,12 @@ fn no_rebuild_data() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 0 units rebuilt, 0 cached, 1 new
+
+
+"#]])
         .run();
 }
 
@@ -131,7 +136,19 @@ fn basic_rebuild() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 1 unit rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     0 units
+
+Root rebuilds:
+  0. foo@0.0.0 (check): file modified: src/lib.rs
+     impact: no cascading rebuilds
+
+"#]])
         .run();
 }
 
@@ -155,7 +172,12 @@ fn all_fresh() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 0 units rebuilt, 1 cached, 0 new
+
+
+"#]])
         .run();
 }
 
@@ -228,12 +250,42 @@ fn with_dependencies() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 5 units rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     4 units
+
+Root rebuilds:
+  0. deeper@0.0.0 (check): file modified: deeper/src/lib.rs
+     impact: 4 dependent units rebuilt
+
+[NOTE] pass `-vv` to show all affected rebuilt unit lists
+
+"#]])
         .run();
 
     p.cargo("report rebuilds -Zbuild-analysis -vv")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 5 units rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     4 units
+
+Root rebuilds:
+  0. deeper@0.0.0 (check): file modified: deeper/src/lib.rs
+     impact: 4 dependent units rebuilt
+       - deep@0.0.0 (check)
+       - dep@0.0.0 (check)
+       - foo@0.0.0 (check)
+       - nested@0.0.0 (check)
+
+"#]])
         .run();
 }
 
@@ -301,12 +353,56 @@ fn multiple_root_causes() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 6 units rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 6 units
+  cascading:     0 units
+
+Root rebuilds: (top 5 of 6 by impact)
+  0. pkg1@0.0.0 (check): declared features changed: [] -> ["feat"]
+     impact: no cascading rebuilds
+  1. pkg2@0.0.0 (check): file modified: pkg2/src/lib.rs
+     impact: no cascading rebuilds
+  2. pkg3@0.0.0 (check): target configuration changed
+     impact: no cascading rebuilds
+  3. pkg4@0.0.0 (check): environment variable changed (__CARGO_TEST_MY_FOO): <unset> -> 1
+     impact: no cascading rebuilds
+  4. pkg5@0.0.0 (check): file modified: pkg5/src/lib.rs
+     impact: no cascading rebuilds
+
+[NOTE] pass `--verbose` to show all root rebuilds
+
+"#]])
         .run();
 
     p.cargo("report rebuilds -Zbuild-analysis --verbose")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 6 units rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 6 units
+  cascading:     0 units
+
+Root rebuilds:
+  0. pkg1@0.0.0 (check): declared features changed: [] -> ["feat"]
+     impact: no cascading rebuilds
+  1. pkg2@0.0.0 (check): file modified: pkg2/src/lib.rs
+     impact: no cascading rebuilds
+  2. pkg3@0.0.0 (check): target configuration changed
+     impact: no cascading rebuilds
+  3. pkg4@0.0.0 (check): environment variable changed (__CARGO_TEST_MY_FOO): <unset> -> 1
+     impact: no cascading rebuilds
+  4. pkg5@0.0.0 (check): file modified: pkg5/src/lib.rs
+     impact: no cascading rebuilds
+  5. pkg6@0.0.0 (check): file modified: pkg6/src/lib.rs
+     impact: no cascading rebuilds
+
+"#]])
         .run();
 }
 
@@ -366,7 +462,21 @@ fn shared_dep_cascading() {
 
     p.cargo("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 3 units rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     2 units
+
+Root rebuilds:
+  0. common@0.0.0 (check): file modified: common/src/lib.rs
+     impact: 2 dependent units rebuilt
+
+[NOTE] pass `-vv` to show all affected rebuilt unit lists
+
+"#]])
         .run();
 }
 
@@ -390,7 +500,19 @@ fn outside_workspace() {
 
     cargo_process("report rebuilds -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 1 unit rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     0 units
+
+Root rebuilds:
+  0. foo@0.0.0 (check): file modified: foo/src/lib.rs
+     impact: no cascading rebuilds
+
+"#]])
         .run();
 }
 
@@ -426,6 +548,18 @@ fn with_manifest_path() {
 
     foo.cargo("report rebuilds --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![""])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 1 unit rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     0 units
+
+Root rebuilds:
+  0. bar@0.0.0 (check): file modified: src/lib.rs
+     impact: no cascading rebuilds
+
+"#]])
         .run();
 }
