@@ -7,6 +7,7 @@ mod blanket_hint_mostly_unused;
 mod error;
 mod implicit_minimum_version_req;
 mod inherited;
+mod text_direction_codepoint;
 mod unknown_lints;
 mod warning;
 

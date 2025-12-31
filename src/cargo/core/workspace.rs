@@ -25,6 +25,7 @@ use crate::lints::analyze_cargo_lints_table;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
+use crate::lints::rules::text_direction_codepoint;
 use crate::ops;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
 use crate::util::context::{FeatureUnification, Value};
@@ -1313,6 +1314,13 @@ impl<'gctx> Workspace<'gctx> {
                 &mut run_error_count,
                 self.gctx,
             )?;
+            text_direction_codepoint(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
 
             if run_error_count > 0 {
                 let plural = if run_error_count == 1 { "" } else { "s" };
@@ -1370,6 +1378,17 @@ impl<'gctx> Workspace<'gctx> {
                 &mut run_error_count,
                 self.gctx,
             )?;
+            // Only check for BiDi codepoints in virtual workspace manifests.
+            // For package roots, the lint is run in emit_pkg_lints.
+            if matches!(self.root_maybe(), MaybePackage::Virtual(_)) {
+                text_direction_codepoint(
+                    self.root_maybe().into(),
+                    self.root_manifest(),
+                    &cargo_lints,
+                    &mut run_error_count,
+                    self.gctx,
+                )?;
+            }
         }
 
         // This is a short term hack to allow `blanket_hint_mostly_unused`
