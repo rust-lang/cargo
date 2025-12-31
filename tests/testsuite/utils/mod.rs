@@ -11,6 +11,9 @@ pub fn cargo_process(arg_line: &str) -> Execs {
     let cargo = cargo_exe();
     let mut p = process(&cargo);
     p.env("CARGO", cargo);
+    if let Some(val) = std::env::var_os("RUSTUP_HOME") {
+        p.env("RUSTUP_HOME", val);
+    }
     p.arg_line(arg_line);
     execs().with_process_builder(p)
 }
