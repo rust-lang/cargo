@@ -1,4 +1,6 @@
 mod basic;
+mod crate_name_normalization_from_hyphen_to_underscore;
+mod crate_name_normalization_from_underscore_to_hyphen;
 mod features;
 mod features_activated_over_limit;
 mod features_activated_over_limit_verbose;
