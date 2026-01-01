@@ -1,4 +1,4 @@
-FROM alpine:3.22
+FROM alpine:3.23
 
 RUN apk add --no-cache openssh git
 RUN apk upgrade --no-cache libcrypto3
