@@ -668,14 +668,14 @@ impl ArtifactKind {
 }
 
 /// Patch is a dependency override that knows where it has been defined.
-/// See [PatchLocation] for possible locations.
+/// See [`PatchLocation`] for possible locations.
 #[derive(Clone, Debug)]
 pub struct Patch {
     pub dep: Dependency,
     pub loc: PatchLocation,
 }
 
-/// Place where a patch has been defined.
+/// Place where a [`Patch`] has been defined.
 #[derive(Clone, Debug)]
 pub enum PatchLocation {
     /// Defined in a manifest.
