@@ -133,11 +133,11 @@ impl NewOptions {
 #[serde(rename_all = "kebab-case")]
 struct CargoNewConfig {
     #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "deprecated")]
     name: Option<String>,
 
     #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "deprecated")]
     email: Option<String>,
 
     #[serde(rename = "vcs")]
