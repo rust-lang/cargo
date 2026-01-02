@@ -100,6 +100,9 @@ pub struct HttpRegistry<'gctx> {
     /// Should we include the authorization header?
     auth_required: bool,
 
+    /// The scheme of the included authorization header, if any.
+    authorization_scheme: Option<auth::AuthorizationScheme>,
+
     /// Url to get a token for the registry.
     login_url: Option<Url>,
 
@@ -231,6 +234,7 @@ impl<'gctx> HttpRegistry<'gctx> {
             fetch_started: false,
             registry_config: None,
             auth_required: false,
+            authorization_scheme: None,
             login_url: None,
             auth_error_headers: vec![],
             quiet: false,
@@ -608,6 +612,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                             self.source_id,
                             self.login_url.clone(),
                             auth::AuthorizationErrorReason::TokenRejected,
+                            self.authorization_scheme.clone(),
                         )?;
                         return Poll::Ready(err.context(auth_error));
                     } else {
@@ -667,6 +672,14 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                 self.auth_error_headers.clone(),
                 true,
             )?;
+            let (scheme, _token) = authorization
+                .split_once(" ")
+                .unwrap_or(("", &authorization));
+            self.authorization_scheme = match scheme.to_ascii_lowercase().as_str() {
+                "basic" => Some(auth::AuthorizationScheme::Basic),
+                "bearer" => Some(auth::AuthorizationScheme::Bearer),
+                _ => Some(auth::AuthorizationScheme::Unrecognized),
+            };
             headers.append(&format!("Authorization: {}", authorization))?;
             trace!(target: "network", "including authorization for {}", full_url);
         }
