@@ -25,7 +25,10 @@ pub fn cli() -> Command {
                     )
                     .value_name("id"),
                 )
-                .arg_package("Package to display a report for"),
+                .arg_package("Package to display a report for")
+                .after_help(color_print::cstr!(
+                    "Run `<bright-cyan,bold>cargo help report future-incompatibilities</>` for more detailed information.\n"
+                )),
         )
         .subcommand(
             subcommand("timings")
