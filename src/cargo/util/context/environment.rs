@@ -69,11 +69,7 @@ pub struct Env {
 impl Env {
     /// Create a new `Env` from process's environment variables.
     pub fn new() -> Self {
-        // ALLOWED: This is the only permissible usage of `std::env::vars{_os}`
-        // within cargo. If you do need access to individual variables without
-        // interacting with the config system in [`GlobalContext`], please use
-        // `std::env::var{_os}` and justify the validity of the usage.
-        #[allow(clippy::disallowed_methods)]
+        #[expect(clippy::disallowed_methods, reason = "seeds `GlobalContext::get_env`")]
         let env: HashMap<_, _> = std::env::vars_os().collect();
         let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
         Self {

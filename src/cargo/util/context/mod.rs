@@ -2269,8 +2269,7 @@ pub fn save_credentials(
     }
 
     #[cfg(not(unix))]
-    #[allow(unused)]
-    fn set_permissions(file: &File, mode: u32) -> CargoResult<()> {
+    fn set_permissions(_file: &File, _mode: u32) -> CargoResult<()> {
         Ok(())
     }
 }

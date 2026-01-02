@@ -533,8 +533,10 @@ impl TtyWidth {
     /// Returns the width of the terminal to use for diagnostics (which is
     /// relayed to rustc via `--diagnostic-width`).
     pub fn diagnostic_terminal_width(&self) -> Option<usize> {
-        // ALLOWED: For testing cargo itself only.
-        #[allow(clippy::disallowed_methods)]
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "testing only, no reason for config support"
+        )]
         if let Ok(width) = std::env::var("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS") {
             return Some(width.parse().unwrap());
         }
@@ -616,7 +618,10 @@ fn supports_unicode(stream: &dyn IsTerminal) -> bool {
 }
 
 fn supports_hyperlinks() -> bool {
-    #[allow(clippy::disallowed_methods)] // We are reading the state of the system, not config
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "reading the state of the system, not config"
+    )]
     if std::env::var_os("TERM_PROGRAM").as_deref() == Some(std::ffi::OsStr::new("iTerm.app")) {
         // Override `supports_hyperlinks` as we have an unknown incompatibility with iTerm2
         return false;
@@ -626,7 +631,10 @@ fn supports_hyperlinks() -> bool {
 }
 
 /// Determines whether the terminal supports ANSI OSC 9;4.
-#[allow(clippy::disallowed_methods)] // Read environment variables to detect terminal
+#[expect(
+    clippy::disallowed_methods,
+    reason = "reading the state of the system, not config"
+)]
 fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
     let windows_terminal = std::env::var("WT_SESSION").is_ok();
     let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());

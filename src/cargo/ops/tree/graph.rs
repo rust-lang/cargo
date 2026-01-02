@@ -13,7 +13,7 @@ use std::collections::{HashMap, HashSet};
 #[derive(Debug, Copy, Clone)]
 pub struct NodeId {
     index: usize,
-    #[allow(dead_code)] // intended for `derive(Debug)`
+    #[expect(dead_code, reason = "intended for `derive(Debug)`")]
     debug: InternedString,
 }
 

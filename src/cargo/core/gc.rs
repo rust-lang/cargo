@@ -255,7 +255,7 @@ pub struct Gc<'a, 'gctx> {
     /// This is important to be held, since we don't want multiple cargos to
     /// be allowed to write to the cache at the same time, or for others to
     /// read while we are modifying the cache.
-    #[allow(dead_code)] // Held for drop.
+    #[expect(dead_code, reason = "held for `drop`")]
     lock: CacheLock<'gctx>,
 }
 
