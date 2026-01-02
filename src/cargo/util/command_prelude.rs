@@ -1,8 +1,6 @@
 use crate::CargoResult;
 use crate::core::Dependency;
-use crate::core::compiler::{
-    BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
-};
+use crate::core::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles, shell};
 use crate::ops::lockfile::LOCKFILE_NAME;
@@ -516,12 +514,10 @@ pub trait CommandExt: Sized {
 
     fn arg_timings(self) -> Self {
         self._arg(
-            optional_opt(
+            flag(
                 "timings",
-                "Timing output formats (unstable) (comma separated): html, json",
+                "Output a build timing report at the end of the build",
             )
-            .value_name("FMTS")
-            .require_equals(true)
             .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
@@ -845,31 +841,7 @@ Run `{cmd}` to see possible targets."
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
         build_config.compile_time_deps_only = self.flag("compile-time-deps");
-
-        if self._contains("timings") {
-            for timing_output in self._values_of("timings") {
-                for timing_output in timing_output.split(',') {
-                    let timing_output = timing_output.to_ascii_lowercase();
-                    let timing_output = match timing_output.as_str() {
-                        "html" => {
-                            gctx.cli_unstable()
-                                .fail_if_stable_opt("--timings=html", 7405)?;
-                            TimingOutput::Html
-                        }
-                        "json" => {
-                            gctx.cli_unstable()
-                                .fail_if_stable_opt("--timings=json", 7405)?;
-                            TimingOutput::Json
-                        }
-                        s => bail!("invalid timings output specifier: `{}`", s),
-                    };
-                    build_config.timing_outputs.push(timing_output);
-                }
-            }
-            if build_config.timing_outputs.is_empty() {
-                build_config.timing_outputs.push(TimingOutput::Html);
-            }
-        }
+        build_config.timing_report = self.flag("timings");
 
         if build_config.unit_graph {
             gctx.cli_unstable()
