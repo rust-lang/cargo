@@ -73,6 +73,18 @@ Build scripts may save any output files or intermediate artifacts in the
 directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
 should not modify any files outside of that directory.
 
+> **Note:** Cargo does not clean or reset `OUT_DIR` between builds. The contents
+> of this directory may persist across rebuilds, even if the build script is
+> re-run. This behavior is intentional to support incremental builds, such as
+> native code compilation.
+>
+>Build scripts should not rely on `OUT_DIR` being empty, as its contents may
+>persist across rebuilds. If a script requires a clean directory, it is currently
+>responsible for managing or cleaning up any files or subdirectories it creates.
+>Future improvements in this area are being discussed (see
+>[#16427](https://github.com/rust-lang/cargo/issues/16427) and
+>[#9661](https://github.com/rust-lang/cargo/issues/9661)).
+
 Build scripts communicate with Cargo by printing to stdout. Cargo will
 interpret each line that starts with `cargo::` as an instruction that will
 influence compilation of the package. All other lines are ignored.
