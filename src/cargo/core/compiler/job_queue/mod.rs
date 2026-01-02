@@ -182,6 +182,9 @@ struct DrainState<'gctx> {
     next_id: u32,
     timings: Timings<'gctx>,
 
+    /// Map from unit index to unit, for looking up dependency information.
+    index_to_unit: HashMap<u64, Unit>,
+
     /// Tokens that are currently owned by this Cargo, and may be "associated"
     /// with a rustc process. They may also be unused, though if so will be
     /// dropped on the next loop iteration.
@@ -495,6 +498,12 @@ impl<'gctx> JobQueue<'gctx> {
             progress,
             next_id: 0,
             timings: self.timings,
+            index_to_unit: build_runner
+                .bcx
+                .unit_to_index
+                .iter()
+                .map(|(unit, &index)| (index, unit.clone()))
+                .collect(),
             tokens: Vec::new(),
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(
@@ -1159,8 +1168,9 @@ impl<'gctx> DrainState<'gctx> {
             // being a compiled package.
             Dirty(dirty_reason) => {
                 if !dirty_reason.is_fresh_build() {
-                    gctx.shell()
-                        .verbose(|shell| dirty_reason.present_to(shell, unit, ws_root))?;
+                    gctx.shell().verbose(|shell| {
+                        dirty_reason.present_to(shell, unit, ws_root, &self.index_to_unit)
+                    })?;
                 }
 
                 if unit.mode.is_doc() {

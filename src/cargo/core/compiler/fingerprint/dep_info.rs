@@ -678,6 +678,16 @@ impl Serialize for Checksum {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Checksum {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum InvalidChecksum {
     #[error("algorithm portion incorrect, expected `sha256`, or `blake3`")]

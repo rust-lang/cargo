@@ -196,9 +196,10 @@ impl<'gctx> Timings<'gctx> {
         if !self.enabled {
             return;
         }
-        let mut target = if unit.target.is_lib() && unit.mode == CompileMode::Build {
-            // Special case for brevity, since most dependencies hit
-            // this path.
+        let mut target = if unit.target.is_lib()
+            && matches!(unit.mode, CompileMode::Build | CompileMode::Check { .. })
+        {
+            // Special case for brevity, since most dependencies hit this path.
             "".to_string()
         } else {
             format!(" {}", unit.target.description_named())

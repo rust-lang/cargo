@@ -18,7 +18,6 @@ use crate::AlreadyPrintedError;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Workspace;
-use crate::core::compiler::CompileMode;
 use crate::core::compiler::timings::CompilationSection;
 use crate::core::compiler::timings::UnitData;
 use crate::core::compiler::timings::report::RenderContext;
@@ -27,6 +26,7 @@ use crate::core::compiler::timings::report::compute_concurrency;
 use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
 use crate::ops::cargo_report::util::list_log_files;
+use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
@@ -189,28 +189,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
                     .map(|v| v.to_string())
                     .unwrap_or_else(|| "N/A".into());
 
-                // This is pretty similar to how the current `core::compiler::timings`
-                // renders `core::manifest::Target`. However, our target is
-                // a simplified type so we cannot reuse the same logic here.
-                let mut target_str = if target.kind == "lib" && mode == CompileMode::Build {
-                    // Special case for brevity, since most dependencies hit this path.
-                    "".to_string()
-                } else if target.kind == "build-script" {
-                    " build-script".to_string()
-                } else {
-                    format!(r#" {} "{}""#, target.name, target.kind)
-                };
-
-                match mode {
-                    CompileMode::Test => target_str.push_str(" (test)"),
-                    CompileMode::Build => {}
-                    CompileMode::Check { test: true } => target_str.push_str(" (check-test)"),
-                    CompileMode::Check { test: false } => target_str.push_str(" (check)"),
-                    CompileMode::Doc { .. } => target_str.push_str(" (doc)"),
-                    CompileMode::Doctest => target_str.push_str(" (doc test)"),
-                    CompileMode::Docscrape => target_str.push_str(" (doc scrape)"),
-                    CompileMode::RunCustomBuild => target_str.push_str(" (run)"),
-                }
+                let target_str = unit_target_description(&target, mode);
 
                 let mode_str = if mode.is_run_custom_build() {
                     "run-custom-build"
