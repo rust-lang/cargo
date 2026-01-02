@@ -118,7 +118,7 @@ pub fn rustc_link_arg_bins(flag: &str) {
 
 /// The `rustc-link-arg-tests` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
-/// a tests target.
+/// an integration test target.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 #[track_caller]

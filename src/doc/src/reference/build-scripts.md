@@ -174,8 +174,8 @@ to set a linker script or other linker options.
 ### `cargo::rustc-link-arg-tests=FLAG` {#rustc-link-arg-tests}
 
 The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
-link-arg=FLAG` option][link-arg] to the compiler, but only when building a
-tests target.
+link-arg=FLAG` option][link-arg] to the compiler, but only when building an integration
+test target.
 
 ### `cargo::rustc-link-arg-examples=FLAG` {#rustc-link-arg-examples}
 
