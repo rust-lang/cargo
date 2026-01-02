@@ -1791,7 +1791,10 @@ fn to_timestamp(t: &SystemTime) -> Timestamp {
 ///
 /// If possible, try to avoid calling this too often since accessing clocks
 /// can be a little slow on some systems.
-#[allow(clippy::disallowed_methods)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "testing only, no reason for config support"
+)]
 fn now() -> Timestamp {
     match std::env::var("__CARGO_TEST_LAST_USE_NOW") {
         Ok(now) => now.parse().unwrap(),

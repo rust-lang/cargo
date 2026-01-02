@@ -922,8 +922,10 @@ mod tests {
 }
 
 /// Check if `url` equals to the overridden crates.io URL.
-// ALLOWED: For testing Cargo itself only.
-#[allow(clippy::disallowed_methods)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "testing only, no reason for config support"
+)]
 fn is_overridden_crates_io_url(url: &str) -> bool {
     std::env::var("__CARGO_TEST_CRATES_IO_URL_DO_NOT_USE_THIS").map_or(false, |v| v == url)
 }
