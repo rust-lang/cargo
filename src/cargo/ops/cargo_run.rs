@@ -97,6 +97,7 @@ pub fn run(
         unit,
         path,
         script_metas,
+        env: _env,
     } = &compile.binaries[0];
     let exe = match path.strip_prefix(gctx.cwd()) {
         Ok(path) if path.file_name() == Some(path.as_os_str()) => Path::new(".").join(path),

@@ -284,7 +284,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     unstable_opts,
                     linker: self.compilation.target_linker(unit.kind).clone(),
                     script_metas,
-                    env: artifact::get_env(&self, self.unit_deps(unit))?,
+                    env: artifact::get_env(&self, unit, self.unit_deps(unit))?,
                 });
             }
 
@@ -321,17 +321,17 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             if unit.mode == CompileMode::Test {
                 self.compilation
                     .tests
-                    .push(self.unit_output(unit, &output.path));
+                    .push(self.unit_output(unit, &output.path)?);
             } else if unit.target.is_executable() {
                 self.compilation
                     .binaries
-                    .push(self.unit_output(unit, bindst));
+                    .push(self.unit_output(unit, bindst)?);
             } else if unit.target.is_cdylib()
                 && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
             {
                 self.compilation
                     .cdylibs
-                    .push(self.unit_output(unit, bindst));
+                    .push(self.unit_output(unit, bindst)?);
             }
         }
         Ok(())
@@ -561,13 +561,15 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
     /// Returns a [`UnitOutput`] which represents some information about the
     /// output of a unit.
-    pub fn unit_output(&self, unit: &Unit, path: &Path) -> UnitOutput {
+    pub fn unit_output(&self, unit: &Unit, path: &Path) -> CargoResult<UnitOutput> {
         let script_metas = self.find_build_script_metadatas(unit);
-        UnitOutput {
+        let env = artifact::get_env(&self, unit, self.unit_deps(unit))?;
+        Ok(UnitOutput {
             unit: unit.clone(),
             path: path.to_path_buf(),
             script_metas,
-        }
+            env,
+        })
     }
 
     /// Check if any output file name collision happens.
