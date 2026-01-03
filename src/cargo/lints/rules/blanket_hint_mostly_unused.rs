@@ -2,6 +2,7 @@ use std::path::Path;
 
 use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
+use annotate_snippets::Origin;
 use annotate_snippets::Level;
 use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
@@ -125,18 +126,21 @@ pub fn blanket_hint_mostly_unused(
         let mut report = Vec::new();
         let mut primary_group = Group::with_title(level.clone().primary_title(title));
 
-        if let (Some(span), Some(table_span)) = (
-            get_key_value_span(maybe_pkg.document().unwrap(), &path),
-            get_key_value_span(maybe_pkg.document().unwrap(), &path[..path.len() - 1]),
-        ) {
+        if let Some(contents) = maybe_pkg.contents()
+            && let Some(document) = maybe_pkg.document()
+            && let Some(span) = get_key_value_span(document, &path)
+            && let Some(table_span) = get_key_value_span(document, &path[..path.len() - 1])
+        {
             primary_group = primary_group.element(
-                Snippet::source(maybe_pkg.contents().unwrap())
+                Snippet::source(contents)
                     .path(&manifest_path)
                     .annotation(
                         AnnotationKind::Primary.span(table_span.key.start..table_span.key.end),
                     )
                     .annotation(AnnotationKind::Context.span(span.key.start..span.value.end)),
             );
+        } else {
+            primary_group = primary_group.element(Origin::path(&manifest_path))
         }
 
         {
@@ -147,14 +151,20 @@ pub fn blanket_hint_mostly_unused(
                         .unwrap();
 
                 report.push(
-                    help_group.element(
-                        Snippet::source(maybe_pkg.contents().unwrap())
-                            .path(&manifest_path)
-                            .patch(Patch::new(
+                    if let Some(contents) = maybe_pkg.contents()
+                        && let Some(document) = maybe_pkg.document()
+                        && let Some(table_span) =
+                            get_key_value_span(document, &path[..path.len() - 1])
+                    {
+                        help_group.element(Snippet::source(contents).path(&manifest_path).patch(
+                            Patch::new(
                                 table_span.key.end..table_span.key.end,
                                 ".package.<pkg_name>",
-                            )),
-                    ),
+                            ),
+                        ))
+                    } else {
+                        help_group.element(Origin::path(&manifest_path))
+                    },
                 );
             } else {
                 primary_group = primary_group.element(Level::HELP.message(help_txt));
