@@ -121,13 +121,14 @@ pub fn blanket_hint_mostly_unused(
         let title = "`hint-mostly-unused` is being blanket applied to all dependencies";
         let help_txt =
             "scope `hint-mostly-unused` to specific packages with a lot of unused object code";
+
+        let mut report = Vec::new();
+        let mut primary_group = Group::with_title(level.clone().primary_title(title));
+
         if let (Some(span), Some(table_span)) = (
             get_key_value_span(maybe_pkg.document().unwrap(), &path),
             get_key_value_span(maybe_pkg.document().unwrap(), &path[..path.len() - 1]),
         ) {
-            let mut report = Vec::new();
-            let mut primary_group = Group::with_title(level.clone().primary_title(title));
-
             primary_group = primary_group.element(
                 Snippet::source(maybe_pkg.contents().unwrap())
                     .path(&manifest_path)
@@ -136,9 +137,14 @@ pub fn blanket_hint_mostly_unused(
                     )
                     .annotation(AnnotationKind::Context.span(span.key.start..span.value.end)),
             );
+        }
 
+        {
             if *show_per_pkg_suggestion {
                 let help_group = Group::with_title(Level::HELP.secondary_title(help_txt));
+                let table_span =
+                    get_key_value_span(maybe_pkg.document().unwrap(), &path[..path.len() - 1])
+                        .unwrap();
 
                 report.push(
                     help_group.element(
