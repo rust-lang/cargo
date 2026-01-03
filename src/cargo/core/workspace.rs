@@ -1990,14 +1990,14 @@ impl MaybePackage {
         }
     }
 
-    pub fn contents(&self) -> &str {
+    pub fn contents(&self) -> Option<&str> {
         match self {
             MaybePackage::Package(p) => p.manifest().contents(),
             MaybePackage::Virtual(v) => v.contents(),
         }
     }
 
-    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
+    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         match self {
             MaybePackage::Package(p) => p.manifest().document(),
             MaybePackage::Virtual(v) => v.document(),
