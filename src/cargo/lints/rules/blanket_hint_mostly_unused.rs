@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use annotate_snippets::AnnotationKind;
+use annotate_snippets::Group;
 use annotate_snippets::Level;
 use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
@@ -125,7 +126,9 @@ pub fn blanket_hint_mostly_unused(
             get_key_value_span(maybe_pkg.document().unwrap(), &path[..path.len() - 1]),
         ) {
             let mut report = Vec::new();
-            let mut primary_group = level.clone().primary_title(title).element(
+            let mut primary_group = Group::with_title(level.clone().primary_title(title));
+
+            primary_group = primary_group.element(
                 Snippet::source(maybe_pkg.contents().unwrap())
                     .path(&manifest_path)
                     .annotation(
@@ -135,8 +138,10 @@ pub fn blanket_hint_mostly_unused(
             );
 
             if *show_per_pkg_suggestion {
+                let help_group = Group::with_title(Level::HELP.secondary_title(help_txt));
+
                 report.push(
-                    Level::HELP.secondary_title(help_txt).element(
+                    help_group.element(
                         Snippet::source(maybe_pkg.contents().unwrap())
                             .path(&manifest_path)
                             .patch(Patch::new(
