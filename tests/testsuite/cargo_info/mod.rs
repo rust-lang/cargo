@@ -1,4 +1,5 @@
 mod basic;
+mod crate_name_normalization;
 mod features;
 mod features_activated_over_limit;
 mod features_activated_over_limit_verbose;
