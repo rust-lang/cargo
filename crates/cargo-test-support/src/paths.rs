@@ -46,16 +46,13 @@ pub fn global_root() -> PathBuf {
     }
 }
 
-// We need to give each test a unique id. The test name could serve this
-// purpose, but the `test` crate doesn't have a way to obtain the current test
-// name.[*] Instead, we used the `cargo-test-macro` crate to automatically
-// insert an init function for each test that sets the test name in a thread
-// local variable.
-//
-// [*] It does set the thread name, but only when running concurrently. If not
-// running concurrently, all tests are run on the main thread.
+// We need to give each test a unique id. The test name serve this
+// purpose. We are able to get the test name by having the `cargo-test-macro`
+// crate automatically insert an init function for each test that sets the
+// test name in a thread local variable.
 thread_local! {
     static TEST_ID: RefCell<Option<usize>> = const { RefCell::new(None) };
+    static TEST_DIR: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
 
 /// See [`init_root`]
@@ -64,44 +61,56 @@ pub struct TestIdGuard {
 }
 
 /// For test harnesses like [`crate::cargo_test`]
-pub fn init_root(tmp_dir: &'static str) -> TestIdGuard {
+pub fn init_root(tmp_dir: &'static str, test_dir: PathBuf) -> TestIdGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
-
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
     TEST_ID.with(|n| *n.borrow_mut() = Some(id));
-
+    if cfg!(windows) {
+        // Due to path-length limits, Windows doesn't use the full test name.
+        TEST_DIR.with(|n| *n.borrow_mut() = Some(PathBuf::from(format!("t{id}"))));
+    } else {
+        TEST_DIR.with(|n| *n.borrow_mut() = Some(test_dir));
+    }
     let guard = TestIdGuard { _private: () };
-
     set_global_root(tmp_dir);
     let r = root();
     r.rm_rf();
     r.mkdir_p();
-
+    #[cfg(not(windows))]
+    if id == 0 {
+        // Create a symlink from `t0` to the first test to make it easier to
+        // find and reuse when running a single test.
+        use crate::SymlinkBuilder;
+        let mut alias = global_root();
+        alias.push("t0");
+        alias.rm_rf();
+        SymlinkBuilder::new_dir(r, alias).mk();
+    }
     guard
 }
 
 impl Drop for TestIdGuard {
     fn drop(&mut self) {
         TEST_ID.with(|n| *n.borrow_mut() = None);
+        TEST_DIR.with(|n| *n.borrow_mut() = None);
     }
 }
 
 /// Path to the test's filesystem scratchpad
 ///
-/// ex: `$CARGO_TARGET_TMPDIR/cit/t0`
+/// ex: `$CARGO_TARGET_TMPDIR/cit/<integration test>/<module>/<fn name>/`
+/// or `$CARGO_TARGET_TMPDIR/cit/t0` on Windows
 pub fn root() -> PathBuf {
-    let id = TEST_ID.with(|n| {
-        n.borrow().expect(
+    let test_dir = TEST_DIR.with(|n| {
+        n.borrow().clone().expect(
             "Tests must use the `#[cargo_test]` attribute in \
              order to be able to use the crate root.",
         )
     });
-
     let mut root = global_root();
-    root.push(&format!("t{}", id));
+    root.push(&test_dir);
     root
 }
-
 /// Path to the current test's `$HOME`
 ///
 /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/home`
@@ -507,4 +516,27 @@ pub fn windows_reserved_names_are_allowed() -> bool {
     } else {
         true
     }
+}
+
+/// This takes the test location (std::file!() should be passed) and the test name
+/// and outputs the location the test should be places in, inside of `target/tmp/cit`
+///
+/// `path: tests/testsuite/workspaces.rs`
+/// `name: `workspace_in_git
+/// `output: "testsuite/workspaces/workspace_in_git`
+pub fn test_dir(path: &str, name: &str) -> std::path::PathBuf {
+    let test_dir: std::path::PathBuf = std::path::PathBuf::from(path)
+        .components()
+        // Trim .rs from any files
+        .map(|c| c.as_os_str().to_str().unwrap().trim_end_matches(".rs"))
+        // We only want to take once we have reached `tests` or `src`. This helps when in a
+        // workspace: `workspace/more/src/...` would result in `src/...`
+        .skip_while(|c| c != &"tests" && c != &"src")
+        // We want to skip "tests" since it is taken in `skip_while`.
+        // "src" is fine since you could have test in "src" named the same as one in "tests"
+        // Skip "mod" since `snapbox` tests have a folder per test not a file and the files
+        // are named "mod.rs"
+        .filter(|c| c != &"tests" && c != &"mod")
+        .collect();
+    test_dir.join(name)
 }

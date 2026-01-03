@@ -1423,7 +1423,13 @@ pub trait TestEnvCommandExt: Sized {
             .env("__CARGO_TEST_DISABLE_GLOBAL_KNOWN_HOST", "1")
             // Set retry sleep to 1 millisecond.
             .env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS", "1")
-            .env("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS", "200")
+            // Setting this to a large number helps avoid problems with long
+            // paths getting trimmed in snapshot tests.
+            //
+            // When updating this value, keep in mind that the `CARGO_TARGET_DIR`
+            // that gets set when Cargo's tests get run in `rust-lang/rust` can
+            // easily cause path lengths to exceed 200 characters.
+            .env("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS", "400")
             // Incremental generates a huge amount of data per test, which we
             // don't particularly need. Tests that specifically need to check
             // the incremental behavior should turn this back on.

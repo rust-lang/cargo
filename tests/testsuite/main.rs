@@ -212,3 +212,52 @@ fn aaa_trigger_cross_compile_disabled_check() {
     // This triggers the cross compile disabled check to run ASAP, see #5141
     crate::utils::cross_compile::disabled();
 }
+
+// This is placed here as running tests in `cargo-test-support` would rebuild it
+#[cargo_test]
+#[cfg(not(windows))]
+fn check_test_dir() {
+    let tests = vec![
+        (
+            "tests/testsuite/workspaces.rs",
+            "workspace_in_git",
+            "testsuite/workspaces/workspace_in_git",
+        ),
+        (
+            "tests/testsuite/cargo_remove/invalid_arg/mod.rs",
+            "case",
+            "testsuite/cargo_remove/invalid_arg/case",
+        ),
+        (
+            "tests/build-std/main.rs",
+            "cross_custom",
+            "build-std/main/cross_custom",
+        ),
+        (
+            "src/tools/cargo/tests/testsuite/build.rs",
+            "cargo_compile_simple",
+            "src/tools/cargo/testsuite/build/cargo_compile_simple",
+        ),
+        (
+            "src/tools/cargo/tests/testsuite/cargo_add/add_basic/mod.rs",
+            "case",
+            "src/tools/cargo/testsuite/cargo_add/add_basic/case",
+        ),
+        (
+            "src/tools/cargo/tests/build-std/main.rs",
+            "cross_custom",
+            "src/tools/cargo/build-std/main/cross_custom",
+        ),
+        (
+            "workspace/more/src/tools/cargo/tests/testsuite/build.rs",
+            "cargo_compile_simple",
+            "src/tools/cargo/testsuite/build/cargo_compile_simple",
+        ),
+    ];
+    for (path, name, expected) in tests {
+        assert_eq!(
+            cargo_test_support::paths::test_dir(path, name),
+            std::path::PathBuf::from(expected)
+        );
+    }
+}
