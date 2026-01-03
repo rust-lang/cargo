@@ -57,13 +57,17 @@ pub fn check_im_a_teapot(
         let span =
             get_key_value_span(manifest.document().unwrap(), &["package", "im-a-teapot"]).unwrap();
 
-        let report = &[Group::with_title(level.primary_title(LINT.desc))
-            .element(
+        let mut desc = Group::with_title(level.primary_title(LINT.desc));
+
+        {
+            desc = desc.element(
                 Snippet::source(manifest.contents().unwrap())
                     .path(&manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
-            )
-            .element(Level::NOTE.message(&emitted_reason))];
+            );
+        }
+
+        let report = &[desc.element(Level::NOTE.message(&emitted_reason))];
 
         gctx.shell().print_report(report, lint_level.force())?;
     }
