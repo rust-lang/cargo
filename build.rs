@@ -12,6 +12,9 @@ fn main() {
     #[allow(clippy::disallowed_methods)]
     let target = std::env::var("TARGET").unwrap();
     println!("cargo:rustc-env=RUST_HOST_TARGET={target}");
+    #[allow(clippy::disallowed_methods)]
+    let real_rustc = std::env::var("RUSTC").unwrap();
+    println!("cargo:rustc-env=REAL_RUSTC={real_rustc}");
 }
 
 fn compress_man() {

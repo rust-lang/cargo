@@ -112,6 +112,7 @@ all:
     p.process(make).env("CARGO", cargo_exe()).arg("-j2").run();
 }
 
+#[allow(clippy::disallowed_methods)]
 #[cargo_test]
 fn runner_inherits_jobserver() {
     let make = make_exe();
@@ -196,7 +197,8 @@ test-runner:
         .arg("run")
         .arg("-j2")
         .run();
-    p.process(make)
+    let mut process = p.process(make);
+    process
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("run-runner")
@@ -206,14 +208,18 @@ test-runner:
 [RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
 this is a runner
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
     p.process(make)
         .env("CARGO", cargo_exe())
         .arg("test")
         .arg("-j2")
         .run();
-    p.process(make)
+    let mut process = p.process(make);
+    process
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("test-runner")
@@ -223,8 +229,11 @@ this is a runner
 [RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
 this is a runner
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 
     // but not from `-j` flag
     p.cargo("run -j2")

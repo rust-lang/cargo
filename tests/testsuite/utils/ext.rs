@@ -23,6 +23,9 @@ impl CargoProjectExt for Project {
         let cargo = cargo_exe();
         let mut execs = self.process(&cargo);
         execs.env("CARGO", cargo);
+        if let Some(val) = std::env::var_os("RUSTUP_HOME") {
+            execs.env("RUSTUP_HOME", val);
+        }
         execs.arg_line(cmd);
         execs
     }
