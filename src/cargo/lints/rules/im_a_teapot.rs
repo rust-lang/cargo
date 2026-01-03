@@ -3,6 +3,7 @@ use std::path::Path;
 use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
 use annotate_snippets::Level;
+use annotate_snippets::Origin;
 use annotate_snippets::Snippet;
 use cargo_util_schemas::manifest::TomlToolLints;
 
@@ -54,17 +55,20 @@ pub fn check_im_a_teapot(
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let emitted_reason = LINT.emitted_source(lint_level, reason);
 
-        let span =
-            get_key_value_span(manifest.document().unwrap(), &["package", "im-a-teapot"]).unwrap();
-
         let mut desc = Group::with_title(level.primary_title(LINT.desc));
 
+        if let Some(document) = manifest.document()
+            && let Some(contents) = manifest.contents()
         {
+            let span = get_key_value_span(document, &["package", "im-a-teapot"]).unwrap();
+
             desc = desc.element(
-                Snippet::source(manifest.contents().unwrap())
+                Snippet::source(contents)
                     .path(&manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key.start..span.value.end)),
             );
+        } else {
+            desc = desc.element(Origin::path(&manifest_path));
         }
 
         let report = &[desc.element(Level::NOTE.message(&emitted_reason))];
