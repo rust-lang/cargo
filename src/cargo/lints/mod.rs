@@ -2,6 +2,7 @@ use crate::core::{Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 
 use annotate_snippets::AnnotationKind;
+use annotate_snippets::Group;
 use annotate_snippets::Level;
 use annotate_snippets::Snippet;
 use cargo_util_schemas::manifest::TomlLintLevel;
@@ -164,8 +165,6 @@ fn report_feature_not_enabled(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let contents = manifest.contents().unwrap();
-    let document = manifest.document().unwrap();
     let dash_feature_name = feature_gate.name().replace("_", "-");
     let title = format!("use of unstable lint `{}`", lint_name);
     let label = format!(
@@ -181,19 +180,25 @@ fn report_feature_not_enabled(
         ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
         ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
     };
-    let Some(span) = get_key_value_span(document, key_path) else {
-        // This lint is handled by either package or workspace lint.
-        return Ok(());
-    };
 
-    let report = [Level::ERROR
-        .primary_title(title)
-        .element(
+    let mut error = Group::with_title(Level::ERROR.primary_title(title));
+
+    if let Some(document) = manifest.document()
+        && let Some(contents) = manifest.contents()
+    {
+        let Some(span) = get_key_value_span(document, key_path) else {
+            // This lint is handled by either package or workspace lint.
+            return Ok(());
+        };
+
+        error = error.element(
             Snippet::source(contents)
                 .path(manifest_path)
                 .annotation(AnnotationKind::Primary.span(span.key).label(label)),
         )
-        .element(Level::HELP.message(help))];
+    }
+
+    let report = [error.element(Level::HELP.message(help))];
 
     *error_count += 1;
     gctx.shell().print_report(&report, true)?;
