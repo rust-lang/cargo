@@ -4,6 +4,7 @@ use std::path::Path;
 use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
 use annotate_snippets::Level;
+use annotate_snippets::Origin;
 use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
 use cargo_platform::Platform;
@@ -121,8 +122,8 @@ pub fn lint_package(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
-    let document = manifest.document().unwrap();
-    let contents = manifest.contents().unwrap();
+    let document = manifest.document();
+    let contents = manifest.contents();
     let target_key_for_platform = target_key_for_platform(&manifest);
 
     for dep in manifest.dependencies().iter() {
@@ -168,8 +169,8 @@ pub fn lint_workspace(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let document = maybe_pkg.document().unwrap();
-    let contents = maybe_pkg.contents().unwrap();
+    let document = maybe_pkg.document();
+    let contents = maybe_pkg.contents();
     let toml = match maybe_pkg {
         MaybePackage::Package(p) => p.manifest().normalized_toml(),
         MaybePackage::Virtual(vm) => vm.normalized_toml(),
@@ -250,8 +251,8 @@ pub fn span_of_version_req<'doc>(
 fn report<'a>(
     lint_level: LintLevel,
     reason: LintLevelReason,
-    contents: &'a str,
-    document: &toml::Spanned<toml::de::DeTable<'static>>,
+    contents: Option<&'a str>,
+    document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
     key_path: &[&str],
     manifest_path: &str,
     suggested_req: &str,
@@ -265,11 +266,12 @@ fn report<'a>(
     let mut desc = Group::with_title(level.primary_title(LINT.desc));
     let mut help = Group::with_title(Level::HELP.secondary_title(secondary_title));
 
-    let Some(span) = span_of_version_req(document, key_path) else {
-        return None;
-    };
-
+    if let Some(document) = document
+        && let Some(contents) = contents
     {
+        let Some(span) = span_of_version_req(document, key_path) else {
+            return None;
+        };
         desc = desc.element(
             Snippet::source(contents)
                 .path(manifest_path.to_owned())
@@ -278,7 +280,10 @@ fn report<'a>(
         help = help
             .element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)))
             .element(Level::NOTE.message(emitted_source));
-    };
+    } else {
+        desc = desc.element(Origin::path(manifest_path.to_owned()));
+        help = help.element(Level::NOTE.message(emitted_source));
+    }
 
     Some([desc, help])
 }
