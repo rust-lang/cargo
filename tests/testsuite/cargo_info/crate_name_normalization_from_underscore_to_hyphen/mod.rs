@@ -47,7 +47,7 @@ fn case() {
         .arg("my_package") //underscore on purpose to show the error
         .arg("--registry=dummy-registry")
         .assert()
-        .failure()
+        .success()
         .stdout_eq(file!["stdout.term.svg"])
         .stderr_eq(file!["stderr.term.svg"]);
 }
