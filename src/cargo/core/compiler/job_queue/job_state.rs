@@ -8,6 +8,7 @@ use crate::core::compiler::future_incompat::FutureBreakageItem;
 use crate::core::compiler::locking::LockKey;
 use crate::core::compiler::timings::SectionTiming;
 use crate::util::Queue;
+use crate::util::flock::ReportBlocking;
 use crate::{CargoResult, core::compiler::locking::LockManager};
 
 use super::{Artifact, DiagDedupe, Job, JobId, Message};
@@ -148,11 +149,11 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
     }
 
     pub fn lock_exclusive(&self, lock: &LockKey) -> CargoResult<()> {
-        self.lock_manager.lock(lock)
+        self.lock_manager.lock(lock, self)
     }
 
     pub fn downgrade_to_shared(&self, lock: &LockKey) -> CargoResult<()> {
-        self.lock_manager.downgrade_to_shared(lock)
+        self.lock_manager.downgrade_to_shared(lock, self)
     }
 
     pub fn on_section_timing_emitted(&self, section: SectionTiming) {
@@ -211,5 +212,14 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
     pub fn future_incompat_report(&self, report: Vec<FutureBreakageItem>) {
         self.messages
             .push(Message::FutureIncompatReport(self.id, report));
+    }
+}
+
+impl ReportBlocking for &JobState<'_, '_> {
+    fn blocking(&self, msg: &str) -> CargoResult<()> {
+        self.messages.push_bounded(Message::Blocking {
+            msg: msg.to_string(),
+        });
+        Ok(())
     }
 }
