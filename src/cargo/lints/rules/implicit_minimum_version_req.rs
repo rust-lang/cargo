@@ -262,21 +262,25 @@ fn report<'a>(
     let label = "missing full version components";
     let secondary_title = "consider specifying full `major.minor.patch` version components";
 
+    let mut desc = Group::with_title(level.primary_title(LINT.desc));
+    let mut help = Group::with_title(Level::HELP.secondary_title(secondary_title));
+
     let Some(span) = span_of_version_req(document, key_path) else {
         return None;
     };
 
-    Some([
-        level.clone().primary_title(LINT.desc).element(
+    {
+        desc = desc.element(
             Snippet::source(contents)
                 .path(manifest_path.to_owned())
                 .annotation(AnnotationKind::Primary.span(span.clone()).label(label)),
-        ),
-        Level::HELP
-            .secondary_title(secondary_title)
+        );
+        help = help
             .element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)))
-            .element(Level::NOTE.message(emitted_source)),
-    ])
+            .element(Level::NOTE.message(emitted_source));
+    };
+
+    Some([desc, help])
 }
 
 fn get_suggested_version_req(req: &OptVersionReq) -> Option<String> {
