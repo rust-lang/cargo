@@ -139,18 +139,17 @@ pub fn lint_package(
                 &[dep.kind().kind_table(), name_in_toml][..]
             };
 
-        let Some(span) = span_of_version_req(document, key_path) else {
-            continue;
-        };
-
-        let report = report(
+        let Some(report) = report(
             lint_level,
             reason,
-            span,
             contents,
+            document,
+            key_path,
             &manifest_path,
             &suggested_req,
-        );
+        ) else {
+            continue;
+        };
 
         if lint_level.is_error() {
             *error_count += 1;
@@ -205,18 +204,17 @@ pub fn lint_workspace(
 
         let key_path = ["workspace", "dependencies", name_in_toml];
 
-        let Some(span) = span_of_version_req(document, &key_path) else {
-            continue;
-        };
-
-        let report = report(
+        let Some(report) = report(
             lint_level,
             reason,
-            span,
             contents,
+            document,
+            &key_path,
             &manifest_path,
             &suggested_req,
-        );
+        ) else {
+            continue;
+        };
 
         if lint_level.is_error() {
             *error_count += 1;
@@ -252,17 +250,23 @@ pub fn span_of_version_req<'doc>(
 fn report<'a>(
     lint_level: LintLevel,
     reason: LintLevelReason,
-    span: std::ops::Range<usize>,
     contents: &'a str,
+    document: &toml::Spanned<toml::de::DeTable<'static>>,
+    key_path: &[&str],
     manifest_path: &str,
     suggested_req: &str,
-) -> [Group<'a>; 2] {
+) -> Option<[Group<'a>; 2]> {
     let level = lint_level.to_diagnostic_level();
     let emitted_source = LINT.emitted_source(lint_level, reason);
     let replacement = format!(r#""{suggested_req}""#);
     let label = "missing full version components";
     let secondary_title = "consider specifying full `major.minor.patch` version components";
-    [
+
+    let Some(span) = span_of_version_req(document, key_path) else {
+        return None;
+    };
+
+    Some([
         level.clone().primary_title(LINT.desc).element(
             Snippet::source(contents)
                 .path(manifest_path.to_owned())
@@ -272,7 +276,7 @@ fn report<'a>(
             .secondary_title(secondary_title)
             .element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)))
             .element(Level::NOTE.message(emitted_source)),
-    ]
+    ])
 }
 
 fn get_suggested_version_req(req: &OptVersionReq) -> Option<String> {
