@@ -200,8 +200,10 @@ Then populate
 - This is used in place of `#[test]`
 - This attribute injects code which does some setup before starting the
   test, creating a filesystem "sandbox" under the "cargo integration test"
-  directory for each test such as
-  `/path/to/cargo/target/cit/t123/`
+  directory for each test. The directory for each test is based on the
+  integration test name, module (if there is one), and function name[^1]:
+
+  `/path/to/cargo/target/tmp/cit/<integration test>/<module>/<fn name>/`
 - The sandbox will contain a `home` directory that will be used instead of your normal home directory
 
 `Project`:
@@ -258,6 +260,11 @@ or overwrite a binary immediately after running it. Under some conditions
 Windows will fail with errors like "directory not empty" or "failed to remove"
 or "access is denied".
 
+On Windows, to avoid path length limitations, the tests use the following
+directory structure instead:
+
+`/path/to/cargo/target/tmp/cit/t123/`
+
 ## Debugging tests
 
 In some cases, you may need to dig into a test that is not working as you
@@ -268,7 +275,7 @@ environment. The general process is:
 
    `cargo test --test testsuite -- features2::inactivate_targets`.
 2. In another terminal, head into the sandbox directory to inspect the files and run `cargo` directly.
-    1. The sandbox directories start with `t0` for the first test.
+    1. The first test's sandbox directory is called `t0`.
 
        `cd target/tmp/cit/t0`
     2. Set up the environment so that the sandbox configuration takes effect:
@@ -299,3 +306,6 @@ environment. The general process is:
 [`Command`]: https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html
 [`OutputAssert`]: https://docs.rs/snapbox/latest/snapbox/cmd/struct.OutputAssert.html
 [`Assert`]: https://docs.rs/snapbox/latest/snapbox/struct.Assert.html
+
+[^1]: Windows uses a separate directory layout, see [Platform-Specific Notes](#platform-specific-notes)
+    for more details.
