@@ -32,9 +32,10 @@ mod imp {
         // when-cargo-is-killed-subprocesses-are-also-killed, but that requires
         // one cargo spawned to become its own session leader, so we do that
         // here.
-        //
-        // ALLOWED: For testing cargo itself only.
-        #[allow(clippy::disallowed_methods)]
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "testing only, no reason for config support"
+        )]
         if env::var("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE").is_ok() {
             // SAFETY: I'm unaware of any safety requirements for this function.
             unsafe {

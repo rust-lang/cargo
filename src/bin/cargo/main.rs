@@ -1,5 +1,3 @@
-#![allow(clippy::self_named_module_files)] // false positive in `commands/build.rs`
-
 use cargo::core::features;
 use cargo::core::shell::Shell;
 use cargo::util::network::http::http_handle;
@@ -96,7 +94,7 @@ where
         + Send
         + Sync,
 {
-    #![allow(clippy::disallowed_methods)]
+    #![expect(clippy::disallowed_methods, reason = "runs before config is loaded")]
 
     if env_to_bool(std::env::var_os("CARGO_LOG_PROFILE").as_deref()) {
         let capture_args =

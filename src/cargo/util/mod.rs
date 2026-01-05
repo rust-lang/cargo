@@ -75,9 +75,7 @@ mod vcs;
 mod workspace;
 
 pub fn is_rustup() -> bool {
-    // ALLOWED: `RUSTUP_HOME` should only be read from process env, otherwise
-    // other tools may point to executables from incompatible distributions.
-    #[allow(clippy::disallowed_methods)]
+    #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]
     std::env::var_os("RUSTUP_HOME").is_some()
 }
 
