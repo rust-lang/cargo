@@ -44,6 +44,11 @@ pub fn cli() -> Command {
                         .default_value("10"),
                 ),
         )
+        .subcommand(
+            subcommand("rebuilds")
+                .about("Reports rebuild reasons from previous sessions (unstable)")
+                .arg_manifest_path(),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
@@ -73,6 +78,19 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             let ws = args.workspace(gctx).ok();
             let opts = sessions_opts(args)?;
             ops::report_sessions(gctx, ws.as_ref(), opts)?;
+            Ok(())
+        }
+        Some(("rebuilds", args)) => {
+            gctx.cli_unstable().fail_if_stable_command(
+                gctx,
+                "report rebuilds",
+                15844,
+                "build-analysis",
+                gctx.cli_unstable().build_analysis,
+            )?;
+            let ws = args.workspace(gctx).ok();
+            let opts = rebuilds_opts(args)?;
+            ops::report_rebuilds(gctx, ws.as_ref(), opts)?;
             Ok(())
         }
         Some((cmd, _)) => {
@@ -111,4 +129,8 @@ fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
     let limit = limit.min(usize::MAX as u64) as usize;
 
     Ok(ops::ReportSessionsOptions { limit })
+}
+
+fn rebuilds_opts(_args: &ArgMatches) -> CargoResult<ops::ReportRebuildsOptions> {
+    Ok(ops::ReportRebuildsOptions {})
 }

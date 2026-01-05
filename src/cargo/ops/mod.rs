@@ -17,6 +17,8 @@ pub use self::cargo_package::check_yanked;
 pub use self::cargo_package::package;
 pub use self::cargo_pkgid::pkgid;
 pub use self::cargo_read_manifest::read_package;
+pub use self::cargo_report::rebuilds::ReportRebuildsOptions;
+pub use self::cargo_report::rebuilds::report_rebuilds;
 pub use self::cargo_report::sessions::ReportSessionsOptions;
 pub use self::cargo_report::sessions::report_sessions;
 pub use self::cargo_report::timings::ReportTimingsOptions;
