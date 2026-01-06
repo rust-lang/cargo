@@ -1954,16 +1954,41 @@ cargo +nightly -Zsection-timings build --timings
 * Original Issue: [rust-lang/rust-project-goals#332](https://github.com/rust-lang/rust-project-goals/pull/332)
 * Tracking Issue: [#15844](https://github.com/rust-lang/cargo/issues/15844)
 
-The `-Zbuild-analysis` feature records and persists detailed build metrics
-(timings, rebuild reasons, etc.) across runs, with new commands to query past builds.
+The `-Zbuild-analysis` feature records and persists detailed build metrics on disk,
+with new commands to query past builds.
+
+When enabled,
+Cargo writes build logs in JSONL format to the `$CARGO_HOME/log/` directory 
+Each cargo invocation produces a log file named with a unique session ID.
+These logs contain timing information, rebuild reasons, and other build metadata
+that can be analyzed with the `cargo report` subcommands.
+
+To enable build analysis, add the following [Cargo configuration](config.md):
 
 ```toml
 # Example config.toml file.
+
+[unstable]
+build-analysis = true
 
 # Enable the build metric collection
 [build.analysis]
 enabled = true
 ```
+
+Setting it on a stable toolchain only emits an unknown config warning,
+so it's safe to keep enabled in your Cargo configuration.
+
+### `cargo report` commands
+
+The following commands are available under `-Zbuild-analysis`:
+
+- `cargo report sessions` --- Lists previous build sessions.
+  Use this to find session IDs for other report commands.
+- `cargo report timings` --- Generates an HTML timing report from a previous session,
+  similar to `cargo build --timings` but without rebuilding.
+- `cargo report rebuilds` --- Reports why crates were rebuilt,
+  helping diagnose unexpected recompilations.
 
 ## build-dir-new-layout
 
