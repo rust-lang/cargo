@@ -821,7 +821,7 @@ windows
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "custom targets are unstable in rustc")]
 fn rustc_with_print_cfg_config_toml_env() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -841,6 +841,7 @@ RUST_TARGET_PATH = { value = "./targets", relative = true }
     p.cargo("rustc -Z unstable-options --print cfg")
         .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_data(str!["..."].unordered())
+        .env("RUSTFLAGS", "-Z unstable-options")
         .run();
 }
 
