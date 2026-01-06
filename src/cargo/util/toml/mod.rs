@@ -1899,54 +1899,56 @@ fn missing_dep_diagnostic(
     let snippet = Snippet::source(contents)
         .path(manifest_path)
         .annotation(AnnotationKind::Primary.span(feature_span.value));
-    let group = if missing_dep.weak_optional {
-        let mut orig_deps = vec![
-            (
-                orig_toml.dependencies.as_ref(),
-                vec![DepKind::Normal.kind_table()],
-            ),
-            (
-                orig_toml.build_dependencies.as_ref(),
-                vec![DepKind::Build.kind_table()],
-            ),
-        ];
-        for (name, platform) in orig_toml.target.iter().flatten() {
-            orig_deps.push((
-                platform.dependencies.as_ref(),
-                vec!["target", name, DepKind::Normal.kind_table()],
-            ));
-            orig_deps.push((
-                platform.build_dependencies.as_ref(),
-                vec!["target", name, DepKind::Normal.kind_table()],
-            ));
-        }
+    let group =
+        {
+            if missing_dep.weak_optional {
+                let mut orig_deps = vec![
+                    (
+                        orig_toml.dependencies.as_ref(),
+                        vec![DepKind::Normal.kind_table()],
+                    ),
+                    (
+                        orig_toml.build_dependencies.as_ref(),
+                        vec![DepKind::Build.kind_table()],
+                    ),
+                ];
+                for (name, platform) in orig_toml.target.iter().flatten() {
+                    orig_deps.push((
+                        platform.dependencies.as_ref(),
+                        vec!["target", name, DepKind::Normal.kind_table()],
+                    ));
+                    orig_deps.push((
+                        platform.build_dependencies.as_ref(),
+                        vec!["target", name, DepKind::Normal.kind_table()],
+                    ));
+                }
 
-        if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
-            if let Some(deps) = deps {
-                deps.keys().any(|p| *p.as_str() == *dep_name)
+                if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
+                    if let Some(deps) = deps {
+                        deps.keys().any(|p| *p.as_str() == *dep_name)
+                    } else {
+                        false
+                    }
+                }) {
+                    let toml_path = toml_path
+                        .iter()
+                        .map(|s| *s)
+                        .chain(std::iter::once(dep_name.as_str()))
+                        .collect::<Vec<_>>();
+                    let dep_span = get_key_value_span(&document, &toml_path).unwrap();
+
+                    group
+                        .element(snippet.annotation(
+                            AnnotationKind::Context.span(dep_span.key).label(info_label),
+                        ))
+                        .element(Level::HELP.message(help))
+                } else {
+                    group.element(snippet)
+                }
             } else {
-                false
+                group.element(snippet)
             }
-        }) {
-            let toml_path = toml_path
-                .iter()
-                .map(|s| *s)
-                .chain(std::iter::once(dep_name.as_str()))
-                .collect::<Vec<_>>();
-            let dep_span = get_key_value_span(&document, &toml_path).unwrap();
-
-            group
-                .element(
-                    snippet
-                        .annotation(AnnotationKind::Context.span(dep_span.key).label(info_label)),
-                )
-                .element(Level::HELP.message(help))
-        } else {
-            group.element(snippet)
-        }
-    } else {
-        group.element(snippet)
-    };
+        };
 
     if let Err(err) = gctx.shell().print_report(&[group], true) {
         return Err(err.into());
