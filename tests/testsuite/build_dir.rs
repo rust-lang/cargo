@@ -1117,6 +1117,63 @@ fn template_should_handle_reject_unmatched_brackets() {
         .run();
 }
 
+#[cargo_test]
+fn fallback_env_var_should_allow_overriding() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    // Stable + CARGO_BUILD_DIR_LAYOUT_V2=true should opt in
+    p.cargo("build")
+        .env("CARGO_BUILD_DIR_LAYOUT_V2", "true")
+        .enable_mac_dsym()
+        .run();
+
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-lock
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..].d
+
+"#]]);
+
+    p.root().join("build-dir").rm_rf();
+
+    // Nightly + -Zbuild-dir-new-layout + CARGO_BUILD_DIR_LAYOUT_V2=false should allow user to fall
+    // back to old layout
+    p.cargo("-Zbuild-dir-new-layout build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .env("CARGO_BUILD_DIR_LAYOUT_V2", "false")
+        .enable_mac_dsym()
+        .run();
+
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-lock
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo.json
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/dep-bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/deps/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/deps/foo[..].d
+
+"#]]);
+}
+
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
     // Since the hash will change between test runs simply find the first directories and assume
     // that is the hash dir. The format is a 2 char directory followed by the remaining hash in the

@@ -98,6 +98,7 @@ use crate::core::compiler::future_incompat::FutureIncompatReport;
 use crate::core::compiler::locking::LockKey;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
+use crate::core::features::is_new_build_dir_layout_enabled;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
@@ -1842,7 +1843,7 @@ pub fn lib_search_paths(
     unit: &Unit,
 ) -> CargoResult<Vec<OsString>> {
     let mut lib_search_paths = Vec::new();
-    if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+    if is_new_build_dir_layout_enabled(build_runner.bcx.gctx) {
         let mut map = BTreeMap::new();
 
         // Recursively add all dependency args to rustc process
