@@ -1319,6 +1319,59 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
     );
 }
 
+/// Regression test for https://github.com/rust-lang/cargo/issues/16478
+#[cargo_test]
+fn dirty_untracked_file_when_packaged_from_workspace_member() {
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["inner"]
+                resolver = "2"
+            "#,
+        )
+        .file(
+            "inner/Cargo.toml",
+            r#"
+                [package]
+                name = "inner"
+                edition = "2021"
+            "#,
+        )
+        .file("inner/src/lib.rs", "")
+    });
+    git::commit(&repo);
+
+    p.change_file("inner/untracked", "untracked");
+
+    p.cargo("package --list --no-metadata")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+inner/untracked
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+
+    // Running from workspace member directory should also detect the untracked file.
+    p.cargo("package --list --no-metadata")
+        .cwd("inner")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+untracked
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn dirty_file_outside_pkg_root_considered_dirty() {
     if !symlink_supported() {
