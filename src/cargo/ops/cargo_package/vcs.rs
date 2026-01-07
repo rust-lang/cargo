@@ -4,10 +4,13 @@ use crate::core::{Package, Workspace};
 use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
 use crate::{CargoResult, GlobalContext};
+
 use annotate_snippets::Level;
 use anyhow::Context;
 use cargo_util::paths;
+use gix::bstr::BString;
 use gix::bstr::ByteSlice;
+use gix::bstr::ByteVec;
 use gix::dir::walk::EmissionMode;
 use gix::dirwalk::Options;
 use gix::index::entry::Mode;
@@ -286,7 +289,13 @@ fn collect_statuses(
         .index_worktree_submodules(None)
         .into_iter(
             relative_package_root.map(|rela_pkg_root| {
-                gix::path::into_bstr(rela_pkg_root).into_owned()
+                // Use `:(top)` magic signature to make the pathspec relative to
+                // the repo root, not the current working directory.
+                let mut pathspec = BString::from(":(top)");
+                let prefix =
+                    gix::path::to_unix_separators_on_windows(gix::path::into_bstr(rela_pkg_root));
+                pathspec.push_str(prefix.as_ref());
+                pathspec
             }), /* pathspec patterns */
         )
         .with_context(|| {

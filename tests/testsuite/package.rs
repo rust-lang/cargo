@@ -1357,19 +1357,18 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 "#]])
         .run();
 
+    // Running from workspace member directory should also detect the untracked file.
     p.cargo("package --list --no-metadata")
         .cwd("inner")
-        .with_status(0)
-        .with_stdout_data(str![[r#"
-.cargo_vcs_info.json
-Cargo.lock
-Cargo.toml
-Cargo.toml.orig
-src/lib.rs
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
 untracked
 
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
 "#]])
-        .with_stderr_data(str![""])
         .run();
 }
 
