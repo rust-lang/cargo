@@ -394,6 +394,8 @@ dependencies = [
  "time",
  "toml",
  "toml_edit",
+ "toml_parser",
+ "toml_writer",
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
