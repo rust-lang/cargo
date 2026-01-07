@@ -414,7 +414,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 // Generally cargo check does not need to take the artifact-dir lock but there is
                 // one exception: If check has `--timings` we still need to lock artifact-dir since
                 // we will output the report files.
-                !self.bcx.build_config.timing_outputs.is_empty()
+                self.bcx.build_config.timing_report
             }
             UserIntent::Build
             | UserIntent::Test

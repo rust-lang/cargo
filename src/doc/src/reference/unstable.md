@@ -2190,8 +2190,9 @@ See the [Features chapter](features.md#dependency-features) for more information
 ## timings
 
 The `-Ztimings` option has been stabilized as `--timings` in the 1.60 release.
-(`--timings=html` and the machine-readable `--timings=json` output remain
-unstable and require `-Zunstable-options`.)
+The timings output format option
+(e.g., the `--timings=html` and the machine-readable `--timings=json` output)
+has been removed in 1.94.0-nightly.
 
 ## config-cli
 
