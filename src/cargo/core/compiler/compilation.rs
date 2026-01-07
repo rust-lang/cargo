@@ -53,7 +53,6 @@ pub struct Doctest {
 }
 
 /// Information about the output of a unit.
-#[derive(Ord, PartialOrd, Eq, PartialEq)]
 pub struct UnitOutput {
     /// The unit that generated this output.
     pub unit: Unit,
@@ -63,6 +62,9 @@ pub struct UnitOutput {
     ///
     /// This is used for indexing [`Compilation::extra_env`].
     pub script_metas: Option<Vec<UnitHash>>,
+
+    /// Environment variables to set in the unit's process.
+    pub env: HashMap<String, OsString>,
 }
 
 /// A structure returning the result of a compilation.

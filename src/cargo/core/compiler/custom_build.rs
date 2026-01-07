@@ -377,7 +377,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .inherit_jobserver(&build_runner.jobserver);
 
     // Find all artifact dependencies and make their file and containing directory discoverable using environment variables.
-    for (var, value) in artifact::get_env(build_runner, dependencies)? {
+    for (var, value) in artifact::get_env(build_runner, unit, dependencies)? {
         cmd.env(&var, value);
     }
 

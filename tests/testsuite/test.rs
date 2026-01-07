@@ -5205,6 +5205,29 @@ fn bin_env_for_test() {
         .file("src/bin/foo.rs", "fn main() {}")
         .file("src/bin/with-dash.rs", "fn main() {}")
         .file("src/bin/grussen.rs", "fn main() {}")
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! assert_eq!(option_env!("CARGO_BIN_EXE_foo"), None);
+            //! assert_eq!(option_env!("CARGO_BIN_EXE_with-dash"), None);
+            //! assert_eq!(option_env!("CARGO_BIN_EXE_grüßen"), None);
+            //! assert_eq!(std::env::var("CARGO_BIN_EXE_foo").ok(), None);
+            //! assert_eq!(std::env::var("CARGO_BIN_EXE_with-dash").ok(), None);
+            //! assert_eq!(std::env::var("CARGO_BIN_EXE_grüßen").ok(), None);
+            //! ```
+
+            #[test]
+            fn no_bins() {
+                assert_eq!(option_env!("CARGO_BIN_EXE_foo"), None);
+                assert_eq!(option_env!("CARGO_BIN_EXE_with-dash"), None);
+                assert_eq!(option_env!("CARGO_BIN_EXE_grüßen"), None);
+                assert_eq!(std::env::var("CARGO_BIN_EXE_foo").ok(), None);
+                assert_eq!(std::env::var("CARGO_BIN_EXE_with-dash").ok(), None);
+                assert_eq!(std::env::var("CARGO_BIN_EXE_grüßen").ok(), None);
+            }
+"#,
+        )
         .build();
 
     let bin_path = |name| p.bin(name).to_string_lossy().replace("\\", "\\\\");
@@ -5216,6 +5239,9 @@ fn bin_env_for_test() {
                 assert_eq!(env!("CARGO_BIN_EXE_foo"), "<FOO_PATH>");
                 assert_eq!(env!("CARGO_BIN_EXE_with-dash"), "<WITH_DASH_PATH>");
                 assert_eq!(env!("CARGO_BIN_EXE_grüßen"), "<GRÜSSEN_PATH>");
+                assert_eq!(std::env::var("CARGO_BIN_EXE_foo").ok().as_deref(), Some("<FOO_PATH>"));
+                assert_eq!(std::env::var("CARGO_BIN_EXE_with-dash").ok().as_deref(), Some("<WITH_DASH_PATH>"));
+                assert_eq!(std::env::var("CARGO_BIN_EXE_grüßen").ok().as_deref(), Some("<GRÜSSEN_PATH>"));
             }
         "#
         .replace("<FOO_PATH>", &bin_path("foo"))
@@ -5223,8 +5249,8 @@ fn bin_env_for_test() {
         .replace("<GRÜSSEN_PATH>", &bin_path("grüßen")),
     );
 
-    p.cargo("test --test check_env").run();
-    p.cargo("check --test check_env").run();
+    p.cargo("test").run();
+    p.cargo("check --all-targets").run();
 }
 
 #[cargo_test]
