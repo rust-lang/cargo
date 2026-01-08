@@ -404,8 +404,14 @@ use crate::util::log_message::LogMessage;
 use crate::util::{StableHasher, internal, path_args};
 use crate::{CARGO_ENV, GlobalContext};
 
+use super::BuildContext;
+use super::BuildRunner;
+use super::FileFlavor;
+use super::Job;
+use super::Unit;
+use super::UnitIndex;
+use super::Work;
 use super::custom_build::BuildDeps;
-use super::{BuildContext, BuildRunner, FileFlavor, Job, Unit, Work};
 
 pub use self::dep_info::Checksum;
 pub use self::dep_info::parse_dep_info;
@@ -660,7 +666,7 @@ pub struct Fingerprint {
     /// Unit index for this fingerprint, used for tracing cascading rebuilds.
     /// Not persisted to disk as indices can change between builds.
     #[serde(skip)]
-    index: u64,
+    index: UnitIndex,
     /// Description of whether the filesystem status for this unit is up to date
     /// or should be considered stale.
     #[serde(skip)]
@@ -689,7 +695,7 @@ pub enum FsStatus {
 
     /// A dependency was stale.
     StaleDependency {
-        unit: u64,
+        unit: UnitIndex,
         #[serde(with = "serde_file_time")]
         dep_mtime: FileTime,
         #[serde(with = "serde_file_time")]
@@ -697,7 +703,7 @@ pub enum FsStatus {
     },
 
     /// A dependency's fingerprint was stale.
-    StaleDepFingerprint { unit: u64 },
+    StaleDepFingerprint { unit: UnitIndex },
 
     /// This unit is up-to-date. All outputs and their corresponding mtime are
     /// listed in the payload here for other dependencies to compare against.
@@ -1032,7 +1038,7 @@ impl Fingerprint {
             rustflags: Vec::new(),
             config: 0,
             compile_kind: 0,
-            index: 0,
+            index: UnitIndex::default(),
             fs_status: FsStatus::Stale,
             outputs: Vec::new(),
         }

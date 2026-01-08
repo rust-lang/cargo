@@ -5,7 +5,9 @@
 
 pub mod report;
 
-use super::{CompileMode, Unit};
+use super::CompileMode;
+use super::Unit;
+use super::UnitIndex;
 use crate::core::PackageId;
 use crate::core::compiler::BuildContext;
 use crate::core::compiler::BuildRunner;
@@ -50,7 +52,7 @@ pub struct Timings<'gctx> {
     /// Total number of dirty units.
     total_dirty: u32,
     /// A map from unit to index.
-    unit_to_index: HashMap<Unit, u64>,
+    unit_to_index: HashMap<Unit, UnitIndex>,
     /// Time tracking for each individual unit.
     unit_times: Vec<UnitTime>,
     /// Units that are in the process of being built.
@@ -102,7 +104,7 @@ struct UnitTime {
 /// This is used by the HTML report's JavaScript to render the pipeline graph.
 #[derive(serde::Serialize)]
 pub struct UnitData {
-    pub i: u64,
+    pub i: UnitIndex,
     pub name: String,
     pub version: String,
     pub mode: String,
@@ -110,8 +112,8 @@ pub struct UnitData {
     pub features: Vec<String>,
     pub start: f64,
     pub duration: f64,
-    pub unblocked_units: Vec<u64>,
-    pub unblocked_rmeta_units: Vec<u64>,
+    pub unblocked_units: Vec<UnitIndex>,
+    pub unblocked_rmeta_units: Vec<UnitIndex>,
     pub sections: Option<Vec<(report::SectionName, report::SectionData)>>,
 }
 

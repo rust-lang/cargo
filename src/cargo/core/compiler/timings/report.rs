@@ -10,6 +10,7 @@ use itertools::Itertools as _;
 
 use crate::CargoResult;
 use crate::core::compiler::Unit;
+use crate::core::compiler::UnitIndex;
 
 use super::CompilationSection;
 use super::UnitData;
@@ -353,7 +354,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
 pub(super) fn to_unit_data(
     unit_times: &[UnitTime],
-    unit_map: &HashMap<Unit, u64>,
+    unit_map: &HashMap<Unit, UnitIndex>,
 ) -> Vec<UnitData> {
     unit_times
         .iter()
@@ -406,8 +407,8 @@ pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
     let unit_by_index: HashMap<_, _> = unit_data.iter().map(|u| (u.i, u)).collect();
 
     enum UnblockedBy {
-        Rmeta(u64),
-        Full(u64),
+        Rmeta(UnitIndex),
+        Full(UnitIndex),
     }
 
     // unit_id -> unit that unblocks it.
@@ -478,9 +479,9 @@ pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
     });
 
     let mut concurrency: Vec<Concurrency> = Vec::new();
-    let mut inactive: HashSet<u64> = unit_data.iter().map(|unit| unit.i).collect();
-    let mut waiting: HashSet<u64> = HashSet::new();
-    let mut active: HashSet<u64> = HashSet::new();
+    let mut inactive: HashSet<UnitIndex> = unit_data.iter().map(|unit| unit.i).collect();
+    let mut waiting: HashSet<UnitIndex> = HashSet::new();
+    let mut active: HashSet<UnitIndex> = HashSet::new();
 
     for (t, state, unit_id) in events {
         match state {

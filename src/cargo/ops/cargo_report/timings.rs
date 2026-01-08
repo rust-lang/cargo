@@ -18,6 +18,7 @@ use crate::AlreadyPrintedError;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Workspace;
+use crate::core::compiler::UnitIndex;
 use crate::core::compiler::timings::CompilationSection;
 use crate::core::compiler::timings::UnitData;
 use crate::core::compiler::timings::report::RenderContext;
@@ -132,7 +133,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
 
     let mut platform_targets = HashSet::new();
 
-    let mut requested_units = HashSet::new();
+    let mut requested_units: HashSet<UnitIndex> = HashSet::new();
 
     for (log_index, result) in serde_json::Deserializer::from_reader(reader)
         .into_iter::<LogMessage>()

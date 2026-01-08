@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use super::*;
 use crate::core::Shell;
+use crate::core::compiler::UnitIndex;
 
 /// Tells a better story of why a build is considered "dirty" that leads
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].
@@ -74,7 +75,7 @@ pub enum DirtyReason {
         new: InternedString,
     },
     UnitDependencyInfoChanged {
-        unit: u64,
+        unit: UnitIndex,
     },
     FsStatusOutdated(FsStatus),
     NothingObvious,
@@ -150,7 +151,7 @@ impl DirtyReason {
         s: &mut Shell,
         unit: &Unit,
         root: &Path,
-        index_to_unit: &HashMap<u64, Unit>,
+        index_to_unit: &HashMap<UnitIndex, Unit>,
     ) -> CargoResult<()> {
         match self {
             DirtyReason::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
@@ -550,7 +551,9 @@ mod json_schema {
 
     #[test]
     fn unit_dependency_info_changed() {
-        let reason = DirtyReason::UnitDependencyInfoChanged { unit: 15 };
+        let reason = DirtyReason::UnitDependencyInfoChanged {
+            unit: UnitIndex(15),
+        };
         assert_data_eq!(
             to_json(&reason),
             str![[r#"
@@ -650,7 +653,7 @@ mod json_schema {
     #[test]
     fn fs_status_stale_dependency() {
         let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleDependency {
-            unit: 42,
+            unit: UnitIndex(42),
             dep_mtime: FileTime::from_unix_time(1730567892, 789000000),
             max_mtime: FileTime::from_unix_time(1730567890, 123000000),
         });
@@ -671,7 +674,9 @@ mod json_schema {
 
     #[test]
     fn fs_status_stale_dep_fingerprint() {
-        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleDepFingerprint { unit: 42 });
+        let reason = DirtyReason::FsStatusOutdated(FsStatus::StaleDepFingerprint {
+            unit: UnitIndex(42),
+        });
         assert_data_eq!(
             to_json(&reason),
             str![[r#"
