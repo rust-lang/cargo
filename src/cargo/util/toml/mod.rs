@@ -577,11 +577,23 @@ fn normalize_toml(
         normalized_toml.badges = original_toml.badges.clone();
     } else {
         if let Some(field) = original_toml.requires_package().next() {
-            bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
+            return Err(field_requires_package_error(field));
         }
     }
 
     Ok(normalized_toml)
+}
+
+fn field_requires_package_error(field: &str) -> anyhow::Error {
+    let (table_open, table_close) = if matches!(field, "bin" | "example" | "test" | "bench") {
+        ("[[", "]]")
+    } else {
+        ("[", "]")
+    };
+    let toml_table = format_args!("{table_open}{field}{table_close}");
+    anyhow!(
+        "this virtual manifest does not have a `[package]` section, which is required when specifying the `{toml_table}` section"
+    )
 }
 
 fn normalize_patch<'a>(
