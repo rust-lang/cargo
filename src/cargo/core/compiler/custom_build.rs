@@ -467,7 +467,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 let Some(dependency) = unit.pkg.dependencies().iter().find(|d| {
                     d.package_name() == dep.unit.pkg.name()
                         && d.source_id() == dep.unit.pkg.package_id().source_id()
-                        && d.version_req().matches(unit.pkg.version())
+                        && d.version_req().matches(dep.unit.pkg.version())
                 }) else {
                     panic!(
                         "Dependency `{}` not found in `{}`s dependencies",
