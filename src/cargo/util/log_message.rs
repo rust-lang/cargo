@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::core::compiler::CompileMode;
+use crate::core::compiler::UnitIndex;
 use crate::core::compiler::fingerprint::DirtyReason;
 
 /// A log message.
@@ -78,7 +79,7 @@ pub enum LogMessage {
         /// [custom target]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
         platform: String,
         /// Unit index for compact reference in subsequent events.
-        index: u64,
+        index: UnitIndex,
         /// Enabled features.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         features: Vec<String>,
@@ -88,31 +89,31 @@ pub enum LogMessage {
         requested: bool,
         /// Unit indices that this unit depends on.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        dependencies: Vec<u64>,
+        dependencies: Vec<UnitIndex>,
     },
     /// Emitted when a compilation unit starts.
     UnitStarted {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Seconds elapsed from build start.
         elapsed: f64,
     },
     /// Emitted when a section (e.g., rmeta, link) of the compilation unit finishes.
     UnitRmetaFinished {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Unit indices that were unblocked by this rmeta completion.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        unblocked: Vec<u64>,
+        unblocked: Vec<UnitIndex>,
     },
     /// Emitted when a section (e.g., rmeta, link) of the compilation unit starts.
     ///
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionStarted {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Section name from rustc's `-Zjson=timings` (e.g., "codegen", "link").
@@ -123,7 +124,7 @@ pub enum LogMessage {
     /// Requires `-Zsection-timings` to be enabled.
     UnitSectionFinished {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Section name from rustc's `-Zjson=timings` (e.g., "codegen", "link").
@@ -132,17 +133,17 @@ pub enum LogMessage {
     /// Emitted when a compilation unit finishes.
     UnitFinished {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Seconds elapsed from build start.
         elapsed: f64,
         /// Unit indices that were unblocked by this completion.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        unblocked: Vec<u64>,
+        unblocked: Vec<UnitIndex>,
     },
     /// Emitted when rebuild fingerprint information is determined for a unit.
     UnitFingerprint {
         /// Unit index from the associated unit-registered event.
-        index: u64,
+        index: UnitIndex,
         /// Status of the rebuild detection fingerprint of this unit
         status: FingerprintStatus,
         /// Reason why the unit is dirty and needs rebuilding.

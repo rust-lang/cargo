@@ -1,5 +1,8 @@
 //! Types and impls for [`Unit`].
 
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::core::Package;
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
@@ -15,6 +18,22 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 use super::BuildOutput;
+
+/// Stable identifier for referencing a [`Unit`].
+///
+/// This is an index into the unit graph, assigned when units are registered.
+/// It provides a compact way to reference units.
+#[derive(
+    Serialize, Deserialize, Debug, Default, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord,
+)]
+#[serde(transparent)]
+pub struct UnitIndex(pub u64);
+
+impl fmt::Display for UnitIndex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// All information needed to define a unit.
 ///

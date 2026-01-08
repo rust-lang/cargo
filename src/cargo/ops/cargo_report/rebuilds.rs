@@ -16,6 +16,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Workspace;
 use crate::core::compiler::CompileMode;
+use crate::core::compiler::UnitIndex;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::fingerprint::FsStatus;
 use crate::core::compiler::fingerprint::StaleItem;
@@ -62,7 +63,7 @@ pub fn report_rebuilds(
 
 struct Context {
     root_rebuilds: Vec<RootRebuild>,
-    units: HashMap<u64, UnitInfo>,
+    units: HashMap<UnitIndex, UnitInfo>,
     total_cached: usize,
     total_new: usize,
     total_rebuilt: usize,
@@ -75,17 +76,17 @@ struct UnitInfo {
 }
 
 struct RootRebuild {
-    unit_index: u64,
+    unit_index: UnitIndex,
     reason: DirtyReason,
-    affected_units: Vec<u64>,
+    affected_units: Vec<UnitIndex>,
 }
 
 fn prepare_context(log: &Path) -> CargoResult<Context> {
     let reader = BufReader::new(File::open(log)?);
 
-    let mut units: HashMap<u64, UnitInfo> = HashMap::new();
-    let mut dependencies: HashMap<u64, Vec<u64>> = HashMap::new();
-    let mut dirty_reasons: HashMap<u64, DirtyReason> = HashMap::new();
+    let mut units: HashMap<UnitIndex, UnitInfo> = HashMap::new();
+    let mut dependencies: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::new();
+    let mut dirty_reasons: HashMap<UnitIndex, DirtyReason> = HashMap::new();
     let mut total_cached = 0;
     let mut total_new = 0;
     let mut total_rebuilt = 0;
@@ -148,14 +149,14 @@ fn prepare_context(log: &Path) -> CargoResult<Context> {
     }
 
     // reverse dependency graph (dependents of each unit)
-    let mut reverse_deps: HashMap<u64, Vec<u64>> = HashMap::new();
+    let mut reverse_deps: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::new();
     for (unit_id, deps) in &dependencies {
         for dep_id in deps {
             reverse_deps.entry(*dep_id).or_default().push(*unit_id);
         }
     }
 
-    let rebuilt_units: HashSet<u64> = dirty_reasons.keys().copied().collect();
+    let rebuilt_units: HashSet<UnitIndex> = dirty_reasons.keys().copied().collect();
 
     // Root rebuilds: units that rebuilt but none of their dependencies rebuilt
     let root_rebuilds: Vec<_> = dirty_reasons
@@ -198,10 +199,10 @@ fn prepare_context(log: &Path) -> CargoResult<Context> {
 
 /// Finds all units that were rebuilt as a cascading effect of the given root rebuild.
 fn find_cascading_rebuilds(
-    root_rebuild: u64,
-    dependents: &HashMap<u64, Vec<u64>>,
-    rebuilt_units: &HashSet<u64>,
-) -> Vec<u64> {
+    root_rebuild: UnitIndex,
+    dependents: &HashMap<UnitIndex, Vec<UnitIndex>>,
+    rebuilt_units: &HashSet<UnitIndex>,
+) -> Vec<UnitIndex> {
     let mut affected = Vec::new();
     let mut visited = HashSet::new();
     let mut queue = vec![root_rebuild];
@@ -380,7 +381,7 @@ fn plural(len: usize) -> &'static str {
 
 fn format_dirty_reason(
     reason: &DirtyReason,
-    units: &HashMap<u64, UnitInfo>,
+    units: &HashMap<UnitIndex, UnitInfo>,
     ws_root: &Path,
 ) -> String {
     match reason {

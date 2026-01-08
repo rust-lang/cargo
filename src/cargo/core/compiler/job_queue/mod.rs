@@ -130,9 +130,14 @@ use tracing::{debug, trace};
 pub use self::job::Freshness::{self, Dirty, Fresh};
 pub use self::job::{Job, Work};
 pub use self::job_state::JobState;
+use super::BuildContext;
+use super::BuildRunner;
+use super::CompileMode;
+use super::Unit;
+use super::UnitIndex;
 use super::custom_build::Severity;
-use super::timings::{SectionTiming, Timings};
-use super::{BuildContext, BuildRunner, CompileMode, Unit};
+use super::timings::SectionTiming;
+use super::timings::Timings;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -183,7 +188,7 @@ struct DrainState<'gctx> {
     timings: Timings<'gctx>,
 
     /// Map from unit index to unit, for looking up dependency information.
-    index_to_unit: HashMap<u64, Unit>,
+    index_to_unit: HashMap<UnitIndex, Unit>,
 
     /// Tokens that are currently owned by this Cargo, and may be "associated"
     /// with a rustc process. They may also be unused, though if so will be

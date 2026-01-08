@@ -39,6 +39,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::core::compiler::UnitIndex;
 use crate::core::compiler::UserIntent;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
@@ -527,14 +528,14 @@ pub fn create_bcx<'a, 'gctx>(
     let unit_to_index: HashMap<_, _> = units
         .iter()
         .enumerate()
-        .map(|(i, &unit)| (unit.clone(), i as u64))
+        .map(|(i, &unit)| (unit.clone(), UnitIndex(i as u64)))
         .collect();
     if let Some(logger) = logger {
         let root_unit_indexes: HashSet<_> =
             root_units.iter().map(|unit| unit_to_index[&unit]).collect();
 
         for (index, unit) in units.into_iter().enumerate() {
-            let index = index as u64;
+            let index = UnitIndex(index as u64);
             let dependencies = unit_graph
                 .get(unit)
                 .map(|deps| {
