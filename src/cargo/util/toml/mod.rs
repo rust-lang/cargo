@@ -103,8 +103,8 @@ pub fn read_manifest(
 
         if normalized_toml.package().is_some() {
             to_real_manifest(
-                contents,
-                document,
+                Some(contents),
+                Some(document),
                 original_toml,
                 normalized_toml,
                 features,
@@ -120,8 +120,8 @@ pub fn read_manifest(
         } else if normalized_toml.workspace.is_some() {
             assert!(!is_embedded);
             to_virtual_manifest(
-                contents,
-                document,
+                Some(contents),
+                Some(document),
                 original_toml,
                 normalized_toml,
                 features,
@@ -1267,8 +1267,8 @@ fn deprecated_ws_default_features(
 
 #[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
-    contents: String,
-    document: toml::Spanned<toml::de::DeTable<'static>>,
+    contents: Option<String>,
+    document: Option<toml::Spanned<toml::de::DeTable<'static>>>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
@@ -1755,8 +1755,8 @@ pub fn to_real_manifest(
                 missing_dep_diagnostic(
                     missing_dep,
                     &original_toml,
-                    &document,
-                    &contents,
+                    document.as_ref(),
+                    contents.as_deref(),
                     manifest_file,
                     gctx,
                 )?;
@@ -1817,9 +1817,9 @@ note: only a feature named `default` will be enabled by default"
     let default_run = normalized_package.default_run.clone();
     let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
     let manifest = Manifest::new(
-        Rc::new(contents),
-        Rc::new(document),
-        Rc::new(original_toml),
+        contents.map(Rc::new),
+        document.map(Rc::new),
+        Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         summary,
         default_kind,
@@ -1868,7 +1868,9 @@ note: only a feature named `default` will be enabled by default"
                 .to_owned(),
         );
     }
-    warn_on_unused(&manifest.original_toml()._unused_keys, warnings);
+    if let Some(original_toml) = manifest.original_toml() {
+        warn_on_unused(&original_toml._unused_keys, warnings);
+    }
 
     manifest.feature_gate()?;
 
@@ -1878,15 +1880,13 @@ note: only a feature named `default` will be enabled by default"
 fn missing_dep_diagnostic(
     missing_dep: &MissingDependencyError,
     orig_toml: &TomlManifest,
-    document: &toml::Spanned<toml::de::DeTable<'static>>,
-    contents: &str,
+    document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
+    contents: Option<&str>,
     manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let dep_name = missing_dep.dep_name;
     let manifest_path = rel_cwd_manifest_path(manifest_file, gctx);
-    let feature_span =
-        get_key_value_span(&document, &["features", missing_dep.feature.as_str()]).unwrap();
 
     let title = format!(
         "feature `{}` includes `{}`, but `{}` is not a dependency",
@@ -1898,57 +1898,67 @@ fn missing_dep_diagnostic(
         &dep_name
     );
     let group = Group::with_title(Level::ERROR.primary_title(&title));
-    let snippet = Snippet::source(contents)
-        .path(manifest_path)
-        .annotation(AnnotationKind::Primary.span(feature_span.value));
-    let group = if missing_dep.weak_optional {
-        let mut orig_deps = vec![
-            (
-                orig_toml.dependencies.as_ref(),
-                vec![DepKind::Normal.kind_table()],
-            ),
-            (
-                orig_toml.build_dependencies.as_ref(),
-                vec![DepKind::Build.kind_table()],
-            ),
-        ];
-        for (name, platform) in orig_toml.target.iter().flatten() {
-            orig_deps.push((
-                platform.dependencies.as_ref(),
-                vec!["target", name, DepKind::Normal.kind_table()],
-            ));
-            orig_deps.push((
-                platform.build_dependencies.as_ref(),
-                vec!["target", name, DepKind::Normal.kind_table()],
-            ));
-        }
+    let group =
+        if let Some(contents) = contents
+            && let Some(document) = document
+        {
+            let feature_span =
+                get_key_value_span(&document, &["features", missing_dep.feature.as_str()]).unwrap();
 
-        if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
-            if let Some(deps) = deps {
-                deps.keys().any(|p| *p.as_str() == *dep_name)
+            let snippet = Snippet::source(contents)
+                .path(manifest_path)
+                .annotation(AnnotationKind::Primary.span(feature_span.value));
+
+            if missing_dep.weak_optional {
+                let mut orig_deps = vec![
+                    (
+                        orig_toml.dependencies.as_ref(),
+                        vec![DepKind::Normal.kind_table()],
+                    ),
+                    (
+                        orig_toml.build_dependencies.as_ref(),
+                        vec![DepKind::Build.kind_table()],
+                    ),
+                ];
+                for (name, platform) in orig_toml.target.iter().flatten() {
+                    orig_deps.push((
+                        platform.dependencies.as_ref(),
+                        vec!["target", name, DepKind::Normal.kind_table()],
+                    ));
+                    orig_deps.push((
+                        platform.build_dependencies.as_ref(),
+                        vec!["target", name, DepKind::Normal.kind_table()],
+                    ));
+                }
+
+                if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
+                    if let Some(deps) = deps {
+                        deps.keys().any(|p| *p.as_str() == *dep_name)
+                    } else {
+                        false
+                    }
+                }) {
+                    let toml_path = toml_path
+                        .iter()
+                        .map(|s| *s)
+                        .chain(std::iter::once(dep_name.as_str()))
+                        .collect::<Vec<_>>();
+                    let dep_span = get_key_value_span(&document, &toml_path).unwrap();
+
+                    group
+                        .element(snippet.annotation(
+                            AnnotationKind::Context.span(dep_span.key).label(info_label),
+                        ))
+                        .element(Level::HELP.message(help))
+                } else {
+                    group.element(snippet)
+                }
             } else {
-                false
+                group.element(snippet)
             }
-        }) {
-            let toml_path = toml_path
-                .iter()
-                .map(|s| *s)
-                .chain(std::iter::once(dep_name.as_str()))
-                .collect::<Vec<_>>();
-            let dep_span = get_key_value_span(&document, &toml_path).unwrap();
-
-            group
-                .element(
-                    snippet
-                        .annotation(AnnotationKind::Context.span(dep_span.key).label(info_label)),
-                )
-                .element(Level::HELP.message(help))
         } else {
-            group.element(snippet)
-        }
-    } else {
-        group.element(snippet)
-    };
+            group
+        };
 
     if let Err(err) = gctx.shell().print_report(&[group], true) {
         return Err(err.into());
@@ -1957,8 +1967,8 @@ fn missing_dep_diagnostic(
 }
 
 fn to_virtual_manifest(
-    contents: String,
-    document: toml::Spanned<toml::de::DeTable<'static>>,
+    contents: Option<String>,
+    document: Option<toml::Spanned<toml::de::DeTable<'static>>>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
@@ -1997,9 +2007,9 @@ fn to_virtual_manifest(
         bail!("virtual manifests must be configured with [workspace]");
     }
     let manifest = VirtualManifest::new(
-        Rc::new(contents),
-        Rc::new(document),
-        Rc::new(original_toml),
+        contents.map(Rc::new),
+        document.map(Rc::new),
+        Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         replace,
         patch,
@@ -2008,7 +2018,9 @@ fn to_virtual_manifest(
         resolve_behavior,
     );
 
-    warn_on_unused(&manifest.original_toml()._unused_keys, warnings);
+    if let Some(original_toml) = manifest.original_toml() {
+        warn_on_unused(&original_toml._unused_keys, warnings);
+    }
 
     Ok(manifest)
 }
@@ -2941,8 +2953,8 @@ pub fn prepare_for_publish(
     let mut errors = Default::default();
     let gctx = ws.gctx();
     let manifest = to_real_manifest(
-        contents.to_owned(),
-        document.clone(),
+        contents.map(|c| c.to_owned()),
+        document.cloned(),
         original_toml,
         normalized_toml,
         features,

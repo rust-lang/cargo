@@ -2017,9 +2017,9 @@ struct ManifestErrorContext {
     /// The path to the manifest.
     path: PathBuf,
     /// The locations of various spans within the manifest.
-    spans: toml::Spanned<toml::de::DeTable<'static>>,
+    spans: Option<toml::Spanned<toml::de::DeTable<'static>>>,
     /// The raw manifest contents.
-    contents: String,
+    contents: Option<String>,
     /// A lookup for all the unambiguous renamings, mapping from the original package
     /// name to the renamed one.
     rename_table: HashMap<InternedString, InternedString>,
@@ -2134,6 +2134,7 @@ fn on_stderr_line_inner(
         static PRIV_DEP_REGEX: LazyLock<Regex> =
             LazyLock::new(|| Regex::new("from private dependency '([A-Za-z0-9-_]+)'").unwrap());
         if let Some(crate_name) = PRIV_DEP_REGEX.captures(diag).and_then(|m| m.get(1))
+            && let Some(ref contents) = manifest.contents
             && let Some(span) = manifest.find_crate_span(crate_name.as_str())
         {
             let rel_path = pathdiff::diff_paths(&manifest.path, &manifest.cwd)
@@ -2145,7 +2146,7 @@ fn on_stderr_line_inner(
                 crate_name.as_str()
             )))
             .element(
-                Snippet::source(&manifest.contents)
+                Snippet::source(contents)
                     .path(rel_path)
                     .annotation(AnnotationKind::Context.span(span)),
             )];
@@ -2383,8 +2384,8 @@ impl ManifestErrorContext {
         let bcx = build_runner.bcx;
         ManifestErrorContext {
             path: unit.pkg.manifest_path().to_owned(),
-            spans: unit.pkg.manifest().document().clone(),
-            contents: unit.pkg.manifest().contents().to_owned(),
+            spans: unit.pkg.manifest().document().cloned(),
+            contents: unit.pkg.manifest().contents().map(String::from),
             requested_kinds: bcx.target_data.requested_kinds().to_owned(),
             host_name: bcx.rustc().host,
             rename_table,
@@ -2425,9 +2426,13 @@ impl ManifestErrorContext {
     /// baz = { path = "../bar", package = "bar" }
     /// ```
     fn find_crate_span(&self, unrenamed: &str) -> Option<Range<usize>> {
+        let Some(ref spans) = self.spans else {
+            return None;
+        };
+
         let orig_name = self.rename_table.get(unrenamed)?.as_str();
 
-        if let Some((k, v)) = get_key_value(&self.spans, &["dependencies", orig_name]) {
+        if let Some((k, v)) = get_key_value(&spans, &["dependencies", orig_name]) {
             // We make some effort to find the unrenamed text: in
             //
             // ```
@@ -2447,8 +2452,7 @@ impl ManifestErrorContext {
         // [target.x86_64-unknown-linux-gnu.dependencies] or
         // [target.'cfg(something)'.dependencies]. We filter out target tables
         // that don't match a requested target or a requested cfg.
-        if let Some(target) = self
-            .spans
+        if let Some(target) = spans
             .as_ref()
             .get("target")
             .and_then(|t| t.as_ref().as_table())
