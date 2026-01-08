@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
     let mut lint_docs = String::new();
     for lint in cargo::lints::LINTS.iter().sorted_by_key(|lint| lint.name) {
         if lint.docs.is_some() {
-            let sectipn = match lint.default_level {
+            let sectipn = match lint.primary_group.default_level {
                 LintLevel::Allow => &mut allow,
                 LintLevel::Warn => &mut warn,
                 LintLevel::Deny => &mut deny,
@@ -40,6 +40,8 @@ fn main() -> anyhow::Result<()> {
         "Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only be used on nightly toolchains"
     )?;
     writeln!(buf)?;
+
+    lint_groups(&mut buf)?;
 
     if !allow.is_empty() {
         add_level_section(LintLevel::Allow, &allow, &mut buf)?;
@@ -69,9 +71,51 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
+    let (max_name_len, max_desc_len) = cargo::lints::LINT_GROUPS.iter().filter(|g| !g.hidden).fold(
+        (0, 0),
+        |(max_name_len, max_desc_len), group| {
+            // We add 9 to account for the "cargo::" prefix and backticks
+            let name_len = group.name.chars().count() + 9;
+            let desc_len = group.desc.chars().count();
+            (max_name_len.max(name_len), max_desc_len.max(desc_len))
+        },
+    );
+    let default_level_len = "Default level".chars().count();
+    writeln!(buf, "\n")?;
+    writeln!(
+        buf,
+        "| {:<max_name_len$} | {:<max_desc_len$} | Default level |",
+        "Group", "Description",
+    )?;
+    writeln!(
+        buf,
+        "|-{}-|-{}-|-{}-|",
+        "-".repeat(max_name_len),
+        "-".repeat(max_desc_len),
+        "-".repeat(default_level_len)
+    )?;
+    for group in cargo::lints::LINT_GROUPS.iter() {
+        if group.hidden {
+            continue;
+        }
+        let group_name = format!("`cargo::{}`", group.name);
+        writeln!(
+            buf,
+            "| {:<max_name_len$} | {:<max_desc_len$} | {:<default_level_len$} |",
+            group_name,
+            group.desc,
+            group.default_level.to_string(),
+        )?;
+    }
+    writeln!(buf, "\n")?;
+    Ok(())
+}
+
 fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "## `{}`", lint.name)?;
-    writeln!(buf, "Set to `{}` by default", lint.default_level)?;
+    writeln!(buf, "Group: `{}`\n", lint.primary_group.name)?;
+    writeln!(buf, "Level: `{}`", lint.primary_group.default_level)?;
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
 }
 

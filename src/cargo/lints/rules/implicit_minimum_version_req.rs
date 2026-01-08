@@ -21,6 +21,7 @@ use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::LintLevelReason;
 use crate::lints::ManifestFor;
+use crate::lints::PEDANTIC;
 use crate::lints::get_key_value;
 use crate::lints::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
@@ -28,8 +29,7 @@ use crate::util::OptVersionReq;
 pub const LINT: Lint = Lint {
     name: "implicit_minimum_version_req",
     desc: "dependency version requirement without an explicit minimum version",
-    groups: &[],
-    default_level: LintLevel::Allow,
+    primary_group: &PEDANTIC,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
