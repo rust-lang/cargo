@@ -43,7 +43,7 @@ To accomplish this goal, Cargo does four things:
 * Fetches and builds your package’s dependencies.
 * Invokes `rustc` or another build tool with the correct parameters to build
   your package.
-* Introduces conventions to make working with Rust packages easier.
+* Introduces conventions to make working with Rust packages easier. 
 
 To a large extent, Cargo normalizes the commands needed to build a given
 program or library; this is one aspect to the above mentioned conventions. As
