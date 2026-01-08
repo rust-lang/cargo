@@ -372,8 +372,7 @@ fn migrate_manifests(
         let ws_original_toml = match ws.root_maybe() {
             MaybePackage::Package(package) => package.manifest().original_toml(),
             MaybePackage::Virtual(manifest) => manifest.original_toml(),
-        }
-        .unwrap();
+        };
 
         if Edition::Edition2024 <= prepare_for_edition {
             let root = document.as_table_mut();
@@ -461,8 +460,12 @@ fn rename_dep_fields_2024(parent: &mut dyn toml_edit::TableLike, dep_kind: &str)
 fn remove_ignored_default_features_2024(
     parent: &mut dyn toml_edit::TableLike,
     dep_kind: &str,
-    ws_original_toml: &TomlManifest,
+    ws_original_toml: Option<&TomlManifest>,
 ) -> usize {
+    let Some(ws_original_toml) = ws_original_toml else {
+        return 0;
+    };
+
     let mut fixes = 0;
     for (name_in_toml, target) in parent
         .get_mut(dep_kind)
