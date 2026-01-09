@@ -122,8 +122,16 @@ fn timings_opts<'a>(
     args: &ArgMatches,
 ) -> CargoResult<ops::ReportTimingsOptions<'a>> {
     let open_result = args.get_flag("open");
+    let id = args
+        .get_one::<String>("id")
+        .map(|s| s.parse())
+        .transpose()?;
 
-    Ok(ops::ReportTimingsOptions { open_result, gctx })
+    Ok(ops::ReportTimingsOptions {
+        open_result,
+        gctx,
+        id,
+    })
 }
 
 fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
@@ -133,6 +141,11 @@ fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
     Ok(ops::ReportSessionsOptions { limit })
 }
 
-fn rebuilds_opts(_args: &ArgMatches) -> CargoResult<ops::ReportRebuildsOptions> {
-    Ok(ops::ReportRebuildsOptions {})
+fn rebuilds_opts(args: &ArgMatches) -> CargoResult<ops::ReportRebuildsOptions> {
+    let id = args
+        .get_one::<String>("id")
+        .map(|s| s.parse())
+        .transpose()?;
+
+    Ok(ops::ReportRebuildsOptions { id })
 }

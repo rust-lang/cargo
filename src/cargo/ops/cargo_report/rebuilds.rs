@@ -20,7 +20,7 @@ use crate::core::compiler::UnitIndex;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::fingerprint::FsStatus;
 use crate::core::compiler::fingerprint::StaleItem;
-use crate::ops::cargo_report::util::list_log_files;
+use crate::ops::cargo_report::util::find_log_file;
 use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
@@ -30,21 +30,32 @@ use crate::util::style;
 
 const DEFAULT_DISPLAY_LIMIT: usize = 5;
 
-pub struct ReportRebuildsOptions {}
+pub struct ReportRebuildsOptions {
+    pub id: Option<RunId>,
+}
 
 pub fn report_rebuilds(
     gctx: &GlobalContext,
     ws: Option<&Workspace<'_>>,
-    _opts: ReportRebuildsOptions,
+    opts: ReportRebuildsOptions,
 ) -> CargoResult<()> {
-    let Some((log, run_id)) = list_log_files(gctx, ws)?.next() else {
+    let Some((log, run_id)) = find_log_file(gctx, ws, opts.id.as_ref())? else {
         let context = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
             String::new()
         };
-        let title = format!("no sessions found{context}");
-        let note = "run command with `-Z build-analysis` to generate log files";
+        let (title, note) = if let Some(id) = &opts.id {
+            (
+                format!("session `{id}` not found{context}"),
+                "run `cargo report sessions` to list available sessions",
+            )
+        } else {
+            (
+                format!("no sessions found{context}"),
+                "run command with `-Z build-analysis` to generate log files",
+            )
+        };
         let report = [Level::ERROR
             .primary_title(title)
             .element(Level::NOTE.message(note))];

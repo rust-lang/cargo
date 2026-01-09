@@ -565,7 +565,7 @@ Root rebuilds:
 }
 
 #[cargo_test]
-fn uses_latest_session_by_default() {
+fn with_session_id() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/lib.rs", "")
@@ -577,7 +577,8 @@ fn uses_latest_session_by_default() {
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    let _ = paths::log_file(0);
+    let first_log = paths::log_file(0);
+    let first_session_id = first_log.file_stem().unwrap().to_str().unwrap();
 
     p.change_file("src/lib.rs", "// touched");
 
@@ -589,20 +590,56 @@ fn uses_latest_session_by_default() {
 
     let _ = paths::log_file(1);
 
-    // Without --id, should use the most recent (second) session which has a rebuild
-    p.cargo("report rebuilds -Zbuild-analysis")
-        .masquerade_as_nightly_cargo(&["build-analysis"])
-        .with_stderr_data(str![[r#"
+    // With --id, should use the first session (not the most recent second)
+    p.cargo(&format!(
+        "report rebuilds --id {first_session_id} -Zbuild-analysis"
+    ))
+    .masquerade_as_nightly_cargo(&["build-analysis"])
+    .with_stderr_data(str![[r#"
 Session: [..]
-Status: 1 unit rebuilt, 0 cached, 0 new
+Status: 0 units rebuilt, 0 cached, 1 new
 
-Rebuild impact:
-  root rebuilds: 1 unit
-  cascading:     0 units
 
-Root rebuilds:
-  0. foo@0.0.0 (check): file modified: src/lib.rs
-     impact: no cascading rebuilds
+"#]])
+    .run();
+}
+
+#[cargo_test]
+fn session_id_not_found() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    p.cargo("report rebuilds --id 20260101T000000000Z-0000000000000000 -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] session `20260101T000000000Z-0000000000000000` not found for workspace at `[ROOT]/foo`
+  |
+  = [NOTE] run `cargo report sessions` to list available sessions
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_session_id_format() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("report rebuilds --id invalid-session-id -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] expect run ID in format `20060724T012128000Z-<16-char-hex>`, got `invalid-session-id`
 
 "#]])
         .run();

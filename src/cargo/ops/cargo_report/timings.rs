@@ -26,7 +26,7 @@ use crate::core::compiler::timings::report::aggregate_sections;
 use crate::core::compiler::timings::report::compute_concurrency;
 use crate::core::compiler::timings::report::round_to_centisecond;
 use crate::core::compiler::timings::report::write_html;
-use crate::ops::cargo_report::util::list_log_files;
+use crate::ops::cargo_report::util::find_log_file;
 use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
 use crate::util::log_message::LogMessage;
@@ -38,6 +38,7 @@ pub struct ReportTimingsOptions<'gctx> {
     /// Whether to attempt to open the browser after the report is generated
     pub open_result: bool,
     pub gctx: &'gctx GlobalContext,
+    pub id: Option<RunId>,
 }
 
 /// Collects sections data for later post-processing through [`aggregate_sections`].
@@ -53,14 +54,23 @@ pub fn report_timings(
     ws: Option<&Workspace<'_>>,
     opts: ReportTimingsOptions<'_>,
 ) -> CargoResult<()> {
-    let Some((log, run_id)) = list_log_files(gctx, ws)?.next() else {
+    let Some((log, run_id)) = find_log_file(gctx, ws, opts.id.as_ref())? else {
         let context = if let Some(ws) = ws {
             format!(" for workspace at `{}`", ws.root().display())
         } else {
             String::new()
         };
-        let title = format!("no sessions found{context}");
-        let note = "run command with `-Z build-analysis` to generate log files";
+        let (title, note) = if let Some(id) = &opts.id {
+            (
+                format!("session `{id}` not found{context}"),
+                "run `cargo report sessions` to list available sessions",
+            )
+        } else {
+            (
+                format!("no sessions found{context}"),
+                "run command with `-Z build-analysis` to generate log files",
+            )
+        };
         let report = [Level::ERROR
             .primary_title(title)
             .element(Level::NOTE.message(note))];
