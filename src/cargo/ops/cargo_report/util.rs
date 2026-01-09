@@ -60,6 +60,24 @@ pub fn list_log_files(
     Ok(Box::new(walk))
 }
 
+pub fn find_log_file(
+    gctx: &GlobalContext,
+    ws: Option<&Workspace<'_>>,
+    id: Option<&RunId>,
+) -> CargoResult<Option<(std::path::PathBuf, RunId)>> {
+    match id {
+        Some(requested_id) => {
+            for (path, run_id) in list_log_files(gctx, ws)? {
+                if run_id.to_string() == requested_id.to_string() {
+                    return Ok(Some((path, run_id)));
+                }
+            }
+            Ok(None)
+        }
+        None => Ok(list_log_files(gctx, ws)?.next()),
+    }
+}
+
 pub fn unit_target_description(target: &Target, mode: CompileMode) -> String {
     // This is pretty similar to how the current `core::compiler::timings`
     // renders `core::manifest::Target`. However, our target is

@@ -31,7 +31,8 @@ pub fn cli() -> Command {
             subcommand("timings")
                 .about("Reports the build timings of previous sessions (unstable)")
                 .arg_manifest_path()
-                .arg(flag("open", "Opens the timing report in a browser")),
+                .arg(flag("open", "Opens the timing report in a browser"))
+                .arg(opt("id", "Session ID to report on").value_name("ID")),
         )
         .subcommand(
             subcommand("sessions")
@@ -47,7 +48,8 @@ pub fn cli() -> Command {
         .subcommand(
             subcommand("rebuilds")
                 .about("Reports rebuild reasons from previous sessions (unstable)")
-                .arg_manifest_path(),
+                .arg_manifest_path()
+                .arg(opt("id", "Session ID to report on").value_name("ID")),
         )
 }
 
@@ -120,8 +122,16 @@ fn timings_opts<'a>(
     args: &ArgMatches,
 ) -> CargoResult<ops::ReportTimingsOptions<'a>> {
     let open_result = args.get_flag("open");
+    let id = args
+        .get_one::<String>("id")
+        .map(|s| s.parse())
+        .transpose()?;
 
-    Ok(ops::ReportTimingsOptions { open_result, gctx })
+    Ok(ops::ReportTimingsOptions {
+        open_result,
+        gctx,
+        id,
+    })
 }
 
 fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
@@ -131,6 +141,11 @@ fn sessions_opts(args: &ArgMatches) -> CargoResult<ops::ReportSessionsOptions> {
     Ok(ops::ReportSessionsOptions { limit })
 }
 
-fn rebuilds_opts(_args: &ArgMatches) -> CargoResult<ops::ReportRebuildsOptions> {
-    Ok(ops::ReportRebuildsOptions {})
+fn rebuilds_opts(args: &ArgMatches) -> CargoResult<ops::ReportRebuildsOptions> {
+    let id = args
+        .get_one::<String>("id")
+        .map(|s| s.parse())
+        .transpose()?;
+
+    Ok(ops::ReportRebuildsOptions { id })
 }

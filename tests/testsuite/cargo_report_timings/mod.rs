@@ -345,3 +345,93 @@ fn with_multiple_targets() {
 
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 1);
 }
+
+#[cargo_test]
+fn with_session_id() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let first_log = paths::log_file(0);
+    let first_session_id = first_log.file_stem().unwrap().to_str().unwrap();
+
+    p.change_file("src/lib.rs", "pub fn foo() {}");
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let second_log = paths::log_file(1);
+    let second_session_id = second_log.file_stem().unwrap().to_str().unwrap();
+
+    // With --id, should use the first session (not the most recent second)
+    p.cargo(&format!(
+        "report timings --id {first_session_id} -Zbuild-analysis"
+    ))
+    .masquerade_as_nightly_cargo(&["build-analysis"])
+    .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
+    .run();
+
+    let timing_files: Vec<_> = p.glob("**/cargo-timing-*.html").collect();
+    assert_eq!(timing_files.len(), 1);
+    let timing_file = timing_files[0].as_ref().unwrap();
+    let filename = timing_file.file_name().unwrap().to_str().unwrap();
+    assert!(
+        filename.contains(first_session_id),
+        "Expected timing file to contain first session ID {first_session_id}, got {filename}"
+    );
+    assert!(
+        !filename.contains(second_session_id),
+        "Should not contain second session ID {second_session_id}, got {filename}"
+    );
+}
+
+#[cargo_test]
+fn session_id_not_found() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    p.cargo("report timings --id 20260101T000000000Z-0000000000000000 -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] session `20260101T000000000Z-0000000000000000` not found for workspace at `[ROOT]/foo`
+  |
+  = [NOTE] run `cargo report sessions` to list available sessions
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_session_id_format() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("report timings --id invalid-session-id -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] expect run ID in format `20060724T012128000Z-<16-char-hex>`, got `invalid-session-id`
+
+"#]])
+        .run();
+}
