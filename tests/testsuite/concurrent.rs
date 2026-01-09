@@ -14,7 +14,7 @@ use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};
+use cargo_test_support::{basic_manifest, execs, project, retry, sleep_ms, slow_cpu_multiplier};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -509,4 +509,72 @@ fn no_deadlock_with_git_dependencies() {
         let result = rx.recv_timeout(slow_cpu_multiplier(30)).expect("Deadlock!");
         execs().run_output(&result);
     }
+}
+
+#[cargo_test]
+fn verbose_file_lock_blocking() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    let blocking = std::env::var("BLOCKING").unwrap_or_default();
+                    if blocking == "1" {
+                        std::fs::write("blocking", "").unwrap();
+                        let path = std::path::Path::new("ready");
+                        loop {
+                            if path.exists() {
+                                break;
+                            } else {
+                                std::thread::sleep(std::time::Duration::from_millis(100))
+                            }
+                        }
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    // start a build that will hold the lock on the build directory
+    let mut a = p
+        .cargo("check")
+        .build_command()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("BLOCKING", "1")
+        .spawn()
+        .unwrap();
+
+    // wait for the build script to start
+    retry(100, || p.root().join("blocking").exists().then_some(()));
+
+    let blocked_p = p
+        .cargo("check -vv")
+        .build_command()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("BLOCKING", "0")
+        .spawn()
+        .unwrap();
+
+    sleep_ms(500);
+
+    // release the lock on the build directory
+    std::fs::write(p.root().join("ready"), "").unwrap();
+
+    let blocked_p_otpt = blocked_p.wait_with_output().unwrap();
+
+    assert!(a.wait().unwrap().success());
+    execs()
+        .with_stderr_contains("[BLOCKING] waiting for file lock on build directory")
+        .run_output(&blocked_p_otpt);
 }
