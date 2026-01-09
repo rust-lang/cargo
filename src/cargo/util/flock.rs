@@ -418,7 +418,13 @@ fn acquire(
     if try_acquire(path, lock_try)? {
         return Ok(());
     }
-    let msg = format!("waiting for file lock on {}", msg);
+
+    let msg = if gctx.extra_verbose() {
+        format!("waiting for file lock on {} ({})", msg, path.display())
+    } else {
+        format!("waiting for file lock on {}", msg)
+    };
+
     gctx.shell()
         .status_with_color("Blocking", &msg, &style::NOTE)?;
 
