@@ -3,7 +3,11 @@
 use crate::{
     CargoResult,
     core::compiler::{BuildRunner, Unit},
-    util::{FileLock, Filesystem},
+    util::{
+        FileLock, Filesystem,
+        flock::{self, ReportBlocking},
+        interning::InternedString,
+    },
 };
 use anyhow::bail;
 use std::{
@@ -46,23 +50,26 @@ impl LockManager {
             lock.file().lock_shared()?;
         } else {
             let fs = Filesystem::new(key.0.clone());
-            let lock_msg = format!(
-                "{} ({})",
-                unit.pkg.name(),
-                build_runner.files().unit_hash(unit)
-            );
+            let lock_msg = key.msg();
             let lock = fs.open_ro_shared_create(&key.0, build_runner.bcx.gctx, &lock_msg)?;
             locks.insert(key.clone(), lock);
         }
 
         Ok(key)
     }
-
-    #[instrument(skip(self))]
-    pub fn lock(&self, key: &LockKey) -> CargoResult<()> {
+    #[instrument(skip(self, report_blocking))]
+    pub fn lock(&self, key: &LockKey, report_blocking: impl ReportBlocking) -> CargoResult<()> {
         let mut locks = self.locks.lock().unwrap();
         if let Some(lock) = locks.get_mut(&key) {
-            lock.file().lock()?;
+            let file = lock.file();
+
+            flock::acquire(
+                report_blocking,
+                &key.msg(),
+                &key.0,
+                &|| file.try_lock(),
+                &|| file.lock(),
+            )?;
         } else {
             bail!("lock was not found in lock manager: {key}");
         }
@@ -71,13 +78,24 @@ impl LockManager {
     }
 
     /// Upgrades an existing exclusive lock into a shared lock.
-    #[instrument(skip(self))]
-    pub fn downgrade_to_shared(&self, key: &LockKey) -> CargoResult<()> {
+    #[instrument(skip(self, report_blocking))]
+    pub fn downgrade_to_shared(
+        &self,
+        key: &LockKey,
+        report_blocking: impl ReportBlocking,
+    ) -> CargoResult<()> {
         let mut locks = self.locks.lock().unwrap();
         let Some(lock) = locks.get_mut(key) else {
             bail!("lock was not found in lock manager: {key}");
         };
-        lock.file().lock_shared()?;
+        let file = lock.file();
+        flock::acquire(
+            report_blocking,
+            &key.msg(),
+            &key.0,
+            &|| file.try_lock_shared(),
+            &|| file.lock_shared(),
+        )?;
         Ok(())
     }
 
@@ -93,11 +111,18 @@ impl LockManager {
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct LockKey(PathBuf);
+pub struct LockKey(PathBuf, InternedString, String);
 
 impl LockKey {
     fn from_unit(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Self {
-        Self(build_runner.files().build_unit_lock(unit))
+        let name = unit.pkg.name();
+        let hash = build_runner.files().unit_hash(unit);
+        let path = build_runner.files().build_unit_lock(unit);
+        Self(path, name, hash)
+    }
+
+    fn msg(&self) -> String {
+        format!("{} ({})", self.1, self.2)
     }
 }
 

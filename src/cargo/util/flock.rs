@@ -13,9 +13,7 @@ use std::io;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Display, Path, PathBuf};
 
-use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
-use crate::util::style;
 use anyhow::Context as _;
 use cargo_util::paths;
 
@@ -223,14 +221,14 @@ impl Filesystem {
     /// This function will create a file at `path` if it doesn't already exist
     /// (including intermediate directories), and then it will acquire an
     /// exclusive lock on `path`. If the process must block waiting for the
-    /// lock, the `msg` is printed to [`GlobalContext`].
+    /// lock, the `msg` is shown to the user via [`ReportBlocking`].
     ///
     /// The returned file can be accessed to look at the path and also has
     /// read/write access to the underlying file.
     pub fn open_rw_exclusive_create<P>(
         &self,
         path: P,
-        gctx: &GlobalContext,
+        report_blocking: impl ReportBlocking,
         msg: &str,
     ) -> CargoResult<FileLock>
     where
@@ -239,7 +237,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(gctx, msg, &path, &|| f.try_lock(), &|| f.lock())?;
+        acquire(report_blocking, msg, &path, &|| f.try_lock(), &|| f.lock())?;
         Ok(FileLock { f: Some(f), path })
     }
 
@@ -265,7 +263,7 @@ impl Filesystem {
     ///
     /// This function will fail if `path` doesn't already exist, but if it does
     /// then it will acquire a shared lock on `path`. If the process must block
-    /// waiting for the lock, the `msg` is printed to [`GlobalContext`].
+    /// waiting for the lock, the `msg` is shown to the user via [`ReportBlocking`].
     ///
     /// The returned file can be accessed to look at the path and also has read
     /// access to the underlying file. Any writes to the file will return an
@@ -273,16 +271,20 @@ impl Filesystem {
     pub fn open_ro_shared<P>(
         &self,
         path: P,
-        gctx: &GlobalContext,
+        report_blocking: impl ReportBlocking,
         msg: &str,
     ) -> CargoResult<FileLock>
     where
         P: AsRef<Path>,
     {
         let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
-        acquire(gctx, msg, &path, &|| f.try_lock_shared(), &|| {
-            f.lock_shared()
-        })?;
+        acquire(
+            report_blocking,
+            msg,
+            &path,
+            &|| f.try_lock_shared(),
+            &|| f.lock_shared(),
+        )?;
         Ok(FileLock { f: Some(f), path })
     }
 
@@ -294,15 +296,19 @@ impl Filesystem {
     pub fn open_ro_shared_create<P: AsRef<Path>>(
         &self,
         path: P,
-        gctx: &GlobalContext,
+        report_blocking: impl ReportBlocking,
         msg: &str,
     ) -> CargoResult<FileLock> {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(gctx, msg, &path, &|| f.try_lock_shared(), &|| {
-            f.lock_shared()
-        })?;
+        acquire(
+            report_blocking,
+            msg,
+            &path,
+            &|| f.try_lock_shared(),
+            &|| f.lock_shared(),
+        )?;
         Ok(FileLock { f: Some(f), path })
     }
 
@@ -400,27 +406,23 @@ fn try_acquire(path: &Path, lock_try: &dyn Fn() -> Result<(), TryLockError>) -> 
 /// This function will acquire the lock on a `path`, printing out a nice message
 /// to the console if we have to wait for it. It will first attempt to use `try`
 /// to acquire a lock on the crate, and in the case of contention it will emit a
-/// status message based on `msg` to [`GlobalContext`]'s shell, and then use `block` to
+/// status message based on `msg` to [`ReportBlocking`], and then use `block` to
 /// block waiting to acquire a lock.
 ///
 /// Returns an error if the lock could not be acquired or if any error other
 /// than a contention error happens.
-fn acquire(
-    gctx: &GlobalContext,
+pub fn acquire(
+    report_blocking: impl ReportBlocking,
     msg: &str,
     path: &Path,
     lock_try: &dyn Fn() -> Result<(), TryLockError>,
     lock_block: &dyn Fn() -> io::Result<()>,
 ) -> CargoResult<()> {
-    // Ensure `shell` is not already in use,
-    // regardless of whether we hit contention or not
-    gctx.debug_assert_shell_not_borrowed();
     if try_acquire(path, lock_try)? {
         return Ok(());
     }
     let msg = format!("waiting for file lock on {}", msg);
-    gctx.shell()
-        .status_with_color("Blocking", &msg, &style::NOTE)?;
+    report_blocking.blocking(&msg)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;
     Ok(())
@@ -468,4 +470,8 @@ fn error_unsupported(err: &std::io::Error) -> bool {
         Some(code) if code == ERROR_INVALID_FUNCTION as i32 => true,
         _ => err.kind() == std::io::ErrorKind::Unsupported,
     }
+}
+
+pub trait ReportBlocking {
+    fn blocking(&self, msg: &str) -> CargoResult<()>;
 }

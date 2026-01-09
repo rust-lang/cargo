@@ -149,7 +149,7 @@ use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
-use crate::util::{self, internal};
+use crate::util::{self, internal, style};
 use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -328,6 +328,20 @@ impl<'gctx> DiagDedupe<'gctx> {
         shell.err().write_all(b"\n")?;
         Ok(true)
     }
+
+    /// Emits a flock blocking message
+    ///
+    /// Returns `true` if the message was emitted, or `false` if it was
+    /// suppressed for being a duplicate.
+    fn emit_blocking(&self, msg: &str) -> CargoResult<bool> {
+        let h = util::hash_u64(msg);
+        if !self.seen.borrow_mut().insert(h) {
+            return Ok(false);
+        }
+        let mut shell = self.gctx.shell();
+        shell.status_with_color("Blocking", &msg, &style::NOTE)?;
+        Ok(true)
+    }
 }
 
 /// Possible artifacts that can be produced by compilations, used as edge values
@@ -377,6 +391,10 @@ enum Message {
     Warning {
         id: JobId,
         warning: String,
+    },
+
+    Blocking {
+        msg: String,
     },
 
     FixDiagnostic(diagnostic_server::Message),
@@ -656,6 +674,9 @@ impl<'gctx> DrainState<'gctx> {
                 let emitted = true;
                 let fixable = false;
                 self.bump_warning_count(id, lint, emitted, fixable);
+            }
+            Message::Blocking { msg } => {
+                self.diag_dedupe.emit_blocking(&msg)?;
             }
             Message::WarningCount {
                 id,

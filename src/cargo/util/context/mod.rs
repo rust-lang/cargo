@@ -86,11 +86,12 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::OnceExt as _;
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use crate::util::errors::CargoResult;
+use crate::util::flock::ReportBlocking;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
-use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
+use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc, style};
 
 use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow, bail, format_err};
@@ -2120,6 +2121,13 @@ impl GlobalContext {
 
     pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
         self.ws_roots.lock().unwrap()
+    }
+}
+
+impl ReportBlocking for &GlobalContext {
+    fn blocking(&self, msg: &str) -> CargoResult<()> {
+        self.shell()
+            .status_with_color("Blocking", &msg, &style::NOTE)
     }
 }
 
