@@ -575,6 +575,6 @@ fn verbose_file_lock_blocking() {
 
     assert!(a.wait().unwrap().success());
     execs()
-        .with_stderr_contains("[BLOCKING] waiting for file lock on build directory")
+        .with_stderr_contains("[BLOCKING] waiting for file lock on build directory ([ROOT]/foo/target/debug/.cargo-lock)")
         .run_output(&blocked_p_otpt);
 }
