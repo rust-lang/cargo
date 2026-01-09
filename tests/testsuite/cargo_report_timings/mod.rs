@@ -345,3 +345,50 @@ fn with_multiple_targets() {
 
     assert_eq!(p.glob("**/cargo-timing-*.html").count(), 1);
 }
+
+#[cargo_test]
+fn uses_latest_session_by_default() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let first_log = paths::log_file(0);
+    let first_session_id = first_log.file_stem().unwrap().to_str().unwrap();
+
+    p.change_file("src/lib.rs", "pub fn foo() {}");
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let second_log = paths::log_file(1);
+    let second_session_id = second_log.file_stem().unwrap().to_str().unwrap();
+
+    // Without --id, should use the most recent (second) session
+    p.cargo("report timings -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
+        .run();
+
+    let timing_files: Vec<_> = p.glob("**/cargo-timing-*.html").collect();
+    assert_eq!(timing_files.len(), 1);
+    let timing_file = timing_files[0].as_ref().unwrap();
+    let filename = timing_file.file_name().unwrap().to_str().unwrap();
+    assert!(
+        filename.contains(second_session_id),
+        "Expected timing file to contain second session ID {second_session_id}, got {filename}"
+    );
+    assert!(
+        !filename.contains(first_session_id),
+        "Should not contain first session ID {first_session_id}, got {filename}"
+    );
+}

@@ -31,7 +31,8 @@ pub fn cli() -> Command {
             subcommand("timings")
                 .about("Reports the build timings of previous sessions (unstable)")
                 .arg_manifest_path()
-                .arg(flag("open", "Opens the timing report in a browser")),
+                .arg(flag("open", "Opens the timing report in a browser"))
+                .arg(opt("id", "Session ID to report on").value_name("ID")),
         )
         .subcommand(
             subcommand("sessions")
@@ -47,7 +48,8 @@ pub fn cli() -> Command {
         .subcommand(
             subcommand("rebuilds")
                 .about("Reports rebuild reasons from previous sessions (unstable)")
-                .arg_manifest_path(),
+                .arg_manifest_path()
+                .arg(opt("id", "Session ID to report on").value_name("ID")),
         )
 }
 

@@ -563,3 +563,47 @@ Root rebuilds:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn uses_latest_session_by_default() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // First session: fresh build (1 new unit)
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let _ = paths::log_file(0);
+
+    p.change_file("src/lib.rs", "// touched");
+
+    // Second session: rebuild (1 unit rebuilt)
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    let _ = paths::log_file(1);
+
+    // Without --id, should use the most recent (second) session which has a rebuild
+    p.cargo("report rebuilds -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+Session: [..]
+Status: 1 unit rebuilt, 0 cached, 0 new
+
+Rebuild impact:
+  root rebuilds: 1 unit
+  cascading:     0 units
+
+Root rebuilds:
+  0. foo@0.0.0 (check): file modified: src/lib.rs
+     impact: no cascading rebuilds
+
+"#]])
+        .run();
+}
