@@ -64,7 +64,7 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
             ".env(\"RUSTUP_TOOLCHAIN\", \"{}\")",
             t.into_string().unwrap()
         ),
-        None => format!(".env_remove(\"RUSTUP_TOOLCHAIN\")"),
+        None => String::new(),
     };
     let mut env = vec![("CARGO_RUSTUP_TEST_real_rustc", real_rustc)];
     let rustup_home_setup = match std::env::var_os("RUSTUP_HOME") {
@@ -72,7 +72,7 @@ fn real_rustc_wrapper(bin_dir: &Path, message: &str) -> PathBuf {
             env.push(("CARGO_RUSTUP_TEST_RUSTUP_HOME", h.into()));
             format!(".env(\"RUSTUP_HOME\", env!(\"CARGO_RUSTUP_TEST_RUSTUP_HOME\"))")
         }
-        None => format!(".env_remove(\"RUSTUP_HOME\")"),
+        None => String::new(),
     };
     make_exe(
         bin_dir,
