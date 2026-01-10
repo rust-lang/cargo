@@ -460,11 +460,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     // sorts of variables need to be discovered at that time.
     let lib_deps = dependencies
         .iter()
-        // We allow std dependencies to propagate metadata between other std dependencies but
-        // not to non-std crates. Non-std crates can propagate metadata to other non-std crates.
-        // We enforce a boundary between std and non-std crates. This may be lifted in the
-        // future but for now we are being conservative.
-        .filter(|dep| dep.unit.is_std == unit.is_std)
         .filter_map(|dep| {
             if dep.unit.mode.is_run_custom_build() {
                 let dep_metadata = build_runner.get_run_build_script_metadata(&dep.unit);
