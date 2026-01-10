@@ -509,7 +509,7 @@ impl<'gctx> Workspace<'gctx> {
                 url,
                 deps.iter()
                     .map(|(name, dependency_cv)| {
-                        crate::util::toml::to_dependency(
+                        crate::util::toml::config_patch_to_dependency(
                             &dependency_cv.val,
                             name,
                             source,

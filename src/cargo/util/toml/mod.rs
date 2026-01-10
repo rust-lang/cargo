@@ -2159,8 +2159,9 @@ fn patch(
     Ok(patch)
 }
 
-pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
-    dep: &manifest::TomlDependency<P>,
+/// Transforms a `patch` entry from Cargo config to a [`Dependency`].
+pub(crate) fn config_patch_to_dependency<P: ResolveToPath + Clone>(
+    config_patch: &manifest::TomlDependency<P>,
     name: &str,
     source_id: SourceId,
     gctx: &GlobalContext,
@@ -2170,7 +2171,7 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     dep_to_dependency(
-        dep,
+        config_patch,
         name,
         &mut ManifestContext {
             deps: &mut Vec::new(),
