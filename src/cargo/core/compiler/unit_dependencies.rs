@@ -28,8 +28,8 @@ use crate::core::compiler::{
 };
 use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
-use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
+use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{
     Dependency, Feature, Package, PackageId, PackageSet, Target, TargetKind, Workspace,
 };
@@ -399,6 +399,10 @@ fn compute_deps(
                                 state.features(),
                                 state.package_set,
                                 id,
+                                HasDevUnits::No,
+                                &[unit.kind],
+                                state.target_data,
+                                ForceAllTargets::No,
                             );
                             rf.iter().all(|f| features.contains(f))
                         }
