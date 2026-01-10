@@ -1722,6 +1722,54 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
         .run();
 }
 
+/// Regression test for https://github.com/rust-lang/cargo/issues/16493
+#[cargo_test]
+fn with_patch() {
+    Package::new("cxx", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            edition = "2021"
+
+            [dependencies]
+            cxx = "1.0.0"
+
+            [patch.crates-io]
+            cxx = { path = "cxx" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file(
+            "cxx/Cargo.toml",
+            r#"
+            [package]
+            name = "cxx"
+            version = "1.0.0"
+            edition = "2021"
+            links = "cxx"
+            "#,
+        )
+        .file("cxx/src/lib.rs", "")
+        .file("cxx/build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[COMPILING] cxx v1.0.0 ([ROOT]/foo/cxx)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn only_rerun_build_script() {
     let p = project()
