@@ -2170,19 +2170,15 @@ pub(crate) fn config_patch_to_dependency<P: ResolveToPath + Clone>(
     file: &Path,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
-    dep_to_dependency(
-        config_patch,
-        name,
-        &mut ManifestContext {
-            deps: &mut Vec::new(),
-            source_id,
-            gctx,
-            warnings,
-            platform,
-            file,
-        },
-        kind,
-    )
+    let manifest_ctx = &mut ManifestContext {
+        deps: &mut Vec::new(),
+        source_id,
+        gctx,
+        warnings,
+        platform,
+        file,
+    };
+    dep_to_dependency(config_patch, name, manifest_ctx, kind)
 }
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(
