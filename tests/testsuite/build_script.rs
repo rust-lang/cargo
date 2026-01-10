@@ -1759,14 +1759,12 @@ fn with_patch() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-
-thread 'main' ([..]) panicked at src/cargo/core/compiler/custom_build.rs:[..]
-Dependency `cxx` not found in `foo`s dependencies
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[COMPILING] cxx v1.0.0 ([ROOT]/foo/cxx)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

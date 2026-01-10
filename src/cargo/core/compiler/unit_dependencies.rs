@@ -1005,7 +1005,16 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
                     state.unit_dependencies[&other.unit]
                         .iter()
                         .find(|other_dep| other_dep.unit.mode == CompileMode::RunCustomBuild)
-                        .cloned()
+                        .map(|other_dep| {
+                            let mut dep = other_dep.clone();
+                            let dep_name = other.dep_name.unwrap_or(other.unit.pkg.name());
+                            // Propagate the manifest dep name from the sibling edge.
+                            // The RunCustomBuild-RustCustomBuild edge is synthetic
+                            // and doesn't carry a usable dep name, but build script
+                            // metadata needs one for `CARGO_DEP_<dep_name>_*` env var
+                            dep.dep_name = Some(dep_name);
+                            dep
+                        })
                 })
                 .collect::<HashSet<_>>();
 

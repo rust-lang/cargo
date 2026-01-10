@@ -26,11 +26,15 @@ pub struct UnitDep {
     pub unit_for: UnitFor,
     /// The name the parent uses to refer to this dependency.
     pub extern_crate_name: InternedString,
-    /// If `Some`, the name of the dependency if renamed in toml.
-    /// It's particularly interesting to artifact dependencies which rely on it
-    /// for naming their environment variables. Note that the `extern_crate_name`
-    /// cannot be used for this as it also may be the build target itself,
-    /// which isn't always the renamed dependency name.
+    /// The dependency name as written in the manifest (including a rename).
+    ///
+    /// `None` means this edge does not carry a manifest dep name. For example,
+    /// std edges in build-std or synthetic edges for build script executions.
+    /// When `None`, the package name is typically used by callers as a fallback.
+    ///
+    /// This is mainly for Cargo-synthesized outputs
+    /// (artifact env vars and `CARGO_DEP_*` metadata env)
+    /// and is distinct from `extern_crate_name`.
     pub dep_name: Option<InternedString>,
     /// Whether or not this is a public dependency.
     pub public: bool,
