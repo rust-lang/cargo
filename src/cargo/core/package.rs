@@ -22,8 +22,8 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{
-    CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,
-    SourceId, Target,
+    CliUnstable, Dependency, Edition, Features, Manifest, PackageId, PackageIdSpec,
+    SerializedDependency, SourceId, Target,
 };
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
@@ -168,6 +168,10 @@ impl Package {
     /// Returns `true` if this package is a proc-macro.
     pub fn proc_macro(&self) -> bool {
         self.targets().iter().any(|target| target.proc_macro())
+    }
+    /// Gets the package's language edition
+    pub fn edition(&self) -> Edition {
+        self.manifest().edition()
     }
     /// Gets the package's minimum Rust version.
     pub fn rust_version(&self) -> Option<&RustVersion> {
