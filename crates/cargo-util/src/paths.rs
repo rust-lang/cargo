@@ -33,6 +33,32 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
     })
 }
 
+/// The environment variables that control the temporary directory returned by
+/// `std::env::temp_dir()`.
+///
+/// Cargo overrides this directory when invoking the compiler or when running
+/// build scripts. This is useful when debugging, as it allows more easily
+/// inspecting the state the compiler was working with when something went
+/// wrong (especially if using `-Csave-temps=yes`).
+///
+/// Additionally, this is useful for preventing information leakage and
+/// Man-in-the-middle attacks: `/tmp` is world readable and semi-writable by
+/// design. This is even an issue on macOS, where the temporary directory is
+/// scoped to the current user with `getconf DARWIN_USER_TEMP_DIR`, since you
+/// can still have information leakage / MITM to less privileged processes by
+/// the same user.
+pub fn tmpdir_envvars() -> &'static [&'static str] {
+    // NOTE: On Windows, there's two environment variables that control the
+    // temporary directory, `TMP` and `TEMP`, see `GetTempPath2`:
+    // https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2a
+    // We set both of them for consistency with programs that only read one.
+    if cfg!(windows) {
+        &["TMP", "TEMP"]
+    } else {
+        &["TMPDIR"]
+    }
+}
+
 /// Returns the name of the environment variable used for searching for
 /// dynamic libraries.
 pub fn dylib_path_envvar() -> &'static str {

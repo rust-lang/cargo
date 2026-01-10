@@ -390,9 +390,8 @@ impl BuildDirLayout {
     pub fn build_unit(&self, pkg_dir: &str) -> PathBuf {
         self.build().join(pkg_dir)
     }
-    /// Create and return the tmp path.
-    pub fn prepare_tmp(&self) -> CargoResult<&Path> {
-        paths::create_dir_all(&self.tmp)?;
-        Ok(&self.tmp)
+    /// Return the tmp path.
+    pub fn tmp(&self) -> &Path {
+        &self.tmp
     }
 }

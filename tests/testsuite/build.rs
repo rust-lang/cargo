@@ -6425,3 +6425,69 @@ fn embed_metadata_dylib_dep() {
         )
         .run();
 }
+
+#[cargo_test]
+fn temp_dir_is_inside_build_dir() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2021"
+            [dependencies]
+            pm = { path = "pm" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            pm::foo!();
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                let temp_dir = std::env::temp_dir();
+                assert!(temp_dir.components().any(|c| c.as_os_str() == "custom-build-dir"), "{temp_dir:?}");
+            }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "custom-target-dir"
+            build-dir = "custom-build-dir"
+            "#,
+        )
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+                edition = "2021"
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+
+                #[proc_macro]
+                pub fn foo(input: TokenStream) -> TokenStream {
+                    let temp_dir = std::env::temp_dir();
+                    assert!(temp_dir.components().any(|c| c.as_os_str() == "custom-build-dir"), "{temp_dir:?}");
+                    input
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+}
