@@ -2187,32 +2187,18 @@ pub(crate) fn config_patch_to_dependency<P: ResolveToPath + Clone>(
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(
     orig: &manifest::TomlDependency<P>,
-    name: &str,
-    manifest_ctx: &mut ManifestContext<'_, '_>,
-    kind: Option<DepKind>,
-) -> CargoResult<Dependency> {
-    match *orig {
-        manifest::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
-            &manifest::TomlDetailedDependency::<P> {
-                version: Some(version.clone()),
-                ..Default::default()
-            },
-            name,
-            manifest_ctx,
-            kind,
-        ),
-        manifest::TomlDependency::Detailed(ref details) => {
-            detailed_dep_to_dependency(details, name, manifest_ctx, kind)
-        }
-    }
-}
-
-fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
-    orig: &manifest::TomlDetailedDependency<P>,
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
+    let orig = match orig {
+        manifest::TomlDependency::Simple(version) => &manifest::TomlDetailedDependency::<P> {
+            version: Some(version.clone()),
+            ..Default::default()
+        },
+        manifest::TomlDependency::Detailed(details) => details,
+    };
+
     if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
         anyhow::bail!(
             "dependency ({name_in_toml}) specified without \
