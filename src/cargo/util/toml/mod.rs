@@ -2171,59 +2171,40 @@ fn patch(
     Ok(patch)
 }
 
-pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
-    dep: &manifest::TomlDependency<P>,
+/// Transforms a `patch` entry from Cargo config to a [`Dependency`].
+pub(crate) fn config_patch_to_dependency<P: ResolveToPath + Clone>(
+    config_patch: &manifest::TomlDependency<P>,
     name: &str,
     source_id: SourceId,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
-    platform: Option<Platform>,
-    file: &Path,
-    kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
-    dep_to_dependency(
-        dep,
-        name,
-        &mut ManifestContext {
-            deps: &mut Vec::new(),
-            source_id,
-            gctx,
-            warnings,
-            platform,
-            file,
-        },
-        kind,
-    )
+    let manifest_ctx = &mut ManifestContext {
+        deps: &mut Vec::new(),
+        source_id,
+        gctx,
+        warnings,
+        platform: None,
+        // config path doesn't have manifest file path, and doesn't use it.
+        file: Path::new("unused"),
+    };
+    dep_to_dependency(config_patch, name, manifest_ctx, None)
 }
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(
     orig: &manifest::TomlDependency<P>,
-    name: &str,
-    manifest_ctx: &mut ManifestContext<'_, '_>,
-    kind: Option<DepKind>,
-) -> CargoResult<Dependency> {
-    match *orig {
-        manifest::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
-            &manifest::TomlDetailedDependency::<P> {
-                version: Some(version.clone()),
-                ..Default::default()
-            },
-            name,
-            manifest_ctx,
-            kind,
-        ),
-        manifest::TomlDependency::Detailed(ref details) => {
-            detailed_dep_to_dependency(details, name, manifest_ctx, kind)
-        }
-    }
-}
-
-fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
-    orig: &manifest::TomlDetailedDependency<P>,
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
+    let orig = match orig {
+        manifest::TomlDependency::Simple(version) => &manifest::TomlDetailedDependency::<P> {
+            version: Some(version.clone()),
+            ..Default::default()
+        },
+        manifest::TomlDependency::Detailed(details) => details,
+    };
+
     if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
         anyhow::bail!(
             "dependency ({name_in_toml}) specified without \

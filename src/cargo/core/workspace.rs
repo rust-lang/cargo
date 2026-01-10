@@ -509,17 +509,12 @@ impl<'gctx> Workspace<'gctx> {
                 url,
                 deps.iter()
                     .map(|(name, dependency_cv)| {
-                        crate::util::toml::to_dependency(
+                        crate::util::toml::config_patch_to_dependency(
                             &dependency_cv.val,
                             name,
                             source,
                             self.gctx,
                             &mut warnings,
-                            /* platform */ None,
-                            // NOTE: Since we use ConfigRelativePath, this root isn't used as
-                            // any relative paths are resolved before they'd be joined with root.
-                            Path::new("unused-relative-path"),
-                            /* kind */ None,
                         )
                         .map(|dep| Patch {
                             dep,
