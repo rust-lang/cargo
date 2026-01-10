@@ -390,11 +390,14 @@ pub fn create_bcx<'a, 'gctx>(
     }
 
     let profiles = Profiles::new(ws, build_config.requested_profile)?;
-    profiles.validate_packages(
-        ws.profiles(),
-        &mut gctx.shell(),
-        workspace_resolve.as_ref().unwrap_or(&resolve),
-    )?;
+    let pkg_resolve = workspace_resolve.as_ref().unwrap_or(&resolve);
+    if let Some((std_resolve, _)) = &std_resolve_features {
+        profiles.validate_packages(ws.profiles(), &mut gctx.shell(), || {
+            pkg_resolve.iter().chain(std_resolve.iter())
+        })?
+    } else {
+        profiles.validate_packages(ws.profiles(), &mut gctx.shell(), || pkg_resolve.iter())?
+    };
 
     // If `--target` has not been specified, then the unit graph is built
     // assuming `--target $HOST` was specified. See
