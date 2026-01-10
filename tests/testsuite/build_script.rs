@@ -1722,6 +1722,56 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
         .run();
 }
 
+/// Regression test for https://github.com/rust-lang/cargo/issues/16493
+#[cargo_test]
+fn with_patch() {
+    Package::new("cxx", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            edition = "2021"
+
+            [dependencies]
+            cxx = "1.0.0"
+
+            [patch.crates-io]
+            cxx = { path = "cxx" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file(
+            "cxx/Cargo.toml",
+            r#"
+            [package]
+            name = "cxx"
+            version = "1.0.0"
+            edition = "2021"
+            links = "cxx"
+            "#,
+        )
+        .file("cxx/src/lib.rs", "")
+        .file("cxx/build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+
+thread 'main' ([..]) panicked at src/cargo/core/compiler/custom_build.rs:[..]
+Dependency `cxx` not found in `foo`s dependencies
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn only_rerun_build_script() {
     let p = project()
