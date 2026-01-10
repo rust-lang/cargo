@@ -515,11 +515,6 @@ impl<'gctx> Workspace<'gctx> {
                             source,
                             self.gctx,
                             &mut warnings,
-                            /* platform */ None,
-                            // NOTE: Since we use ConfigRelativePath, this root isn't used as
-                            // any relative paths are resolved before they'd be joined with root.
-                            Path::new("unused-relative-path"),
-                            /* kind */ None,
                         )
                         .map(|dep| Patch {
                             dep,
