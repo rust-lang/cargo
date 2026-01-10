@@ -873,9 +873,7 @@ fn fetch() {
 }
 
 #[cargo_test(build_std_mock)]
-fn std_build_script_metadata_not_propagate_to_user() {
-    // See below for why we added this test:
-    // <https://github.com/rust-lang/cargo/pull/16489>
+fn std_build_script_metadata_propagate_to_user() {
     let setup = setup();
 
     let p = project()
@@ -884,7 +882,7 @@ fn std_build_script_metadata_not_propagate_to_user() {
             "build.rs",
             r#"
             fn main() {
-                assert!(std::env::var("DEP_COMPILER_RT_COMPILER_RT").is_err());
+                assert_eq!(std::env::var("DEP_COMPILER_RT_COMPILER_RT").unwrap(), "foo");
             }
             "#,
         )
