@@ -1023,11 +1023,12 @@ fn summary_for_patch(
     };
     Poll::Ready(Err(if found.is_empty() {
         anyhow::anyhow!(
-            "patch location `{}` does not appear to contain any packages \
-            matching the name `{}`.\n\
-            Check the patch definition in `{}`.",
+            "patch location `{}` does not contain packages matching `{}`\n\
+            help: check `{}` patch definition for `{}` in `{}`",
             &original_patch.dep.source_id(),
             &original_patch.dep.package_name(),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
             original_patch.loc
         )
     } else {

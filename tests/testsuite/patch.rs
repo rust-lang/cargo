@@ -2371,8 +2371,8 @@ fn no_matches() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] patch location `[ROOT]/foo/bar` does not appear to contain any packages matching the name `bar`.
-Check the patch definition in `[ROOT]/foo/Cargo.toml`.
+[ERROR] patch location `[ROOT]/foo/bar` does not contain packages matching `bar`
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();
