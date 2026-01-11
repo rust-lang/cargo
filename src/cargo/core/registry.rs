@@ -1013,7 +1013,7 @@ fn summary_for_patch(
         .map(|summary| summary.as_summary().version())
         .collect::<Vec<_>>();
     let found = match vers.len() {
-        0 => format!(""),
+        0 => "".to_string(),
         1 => format!("version `{}`", vers[0]),
         _ => {
             vers.sort();
@@ -1033,15 +1033,17 @@ fn summary_for_patch(
         )
     } else {
         anyhow::anyhow!(
-            "patch location `{}` contains a `{}` package with {}, but the patch \
-            definition in `{}` requires `{}`.\n\
-            Check that the version in the patch location is what you expect, \
-            and update the patch definition to match.",
-            &original_patch.dep.source_id(),
+            "patch `{}` version mismatch\n\
+            note: patch location contains {}, but patch definition requires `{}`\n\
+            help: check patch location `{}`\n\
+            help: check `{}` patch definition for `{}` in `{}`",
             &original_patch.dep.package_name(),
             found,
-            original_patch.loc,
-            &original_patch.dep.version_req()
+            &original_patch.dep.version_req(),
+            &original_patch.dep.source_id(),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
+            original_patch.loc
         )
     }))
 }

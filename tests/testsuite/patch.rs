@@ -2405,8 +2405,10 @@ fn mismatched_version() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/Cargo.toml` requires `^0.1.1`.
-Check that the version in the patch location is what you expect, and update the patch definition to match.
+[ERROR] patch `bar` version mismatch
+[NOTE] patch location contains version `0.1.0`, but patch definition requires `^0.1.1`
+[HELP] check patch location `[ROOT]/foo/bar`
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();
@@ -2438,8 +2440,10 @@ fn mismatched_version_from_cli_config() {
         .arg_line("--config 'patch.crates-io.bar.version=\"0.1.1\"'")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `--config cli option` requires `^0.1.1`.
-Check that the version in the patch location is what you expect, and update the patch definition to match.
+[ERROR] patch `bar` version mismatch
+[NOTE] patch location contains version `0.1.0`, but patch definition requires `^0.1.1`
+[HELP] check patch location `[ROOT]/foo/bar`
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `--config cli option`
 
 "#]])
         .run();
@@ -2479,8 +2483,10 @@ fn mismatched_version_from_config_file_provided_via_cli() {
         .arg_line("--config tmp/my-config.toml")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/tmp/my-config.toml` requires `^0.1.1`.
-Check that the version in the patch location is what you expect, and update the patch definition to match.
+[ERROR] patch `bar` version mismatch
+[NOTE] patch location contains version `0.1.0`, but patch definition requires `^0.1.1`
+[HELP] check patch location `[ROOT]/foo/bar`
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/tmp/my-config.toml`
 
 "#]])
         .run();
@@ -2622,8 +2628,10 @@ fn patch_walks_backwards_restricted() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] patch location `[ROOT]/foo/bar` contains a `bar` package with version `0.1.0`, but the patch definition in `[ROOT]/foo/Cargo.toml` requires `^0.1.1`.
-Check that the version in the patch location is what you expect, and update the patch definition to match.
+[ERROR] patch `bar` version mismatch
+[NOTE] patch location contains version `0.1.0`, but patch definition requires `^0.1.1`
+[HELP] check patch location `[ROOT]/foo/bar`
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();
