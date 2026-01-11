@@ -1890,11 +1890,8 @@ fn patch_same_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/override`
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  cannot have two `[patch]` entries which both resolve to `bar v0.1.0`.
-  Check patch definitions for `bar` in `[ROOT]/foo/Cargo.toml`
+[ERROR] several `[patch]` entries resolving to same version `bar v0.1.0`
+[HELP] check `bar` patch definitions for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();
@@ -1950,11 +1947,8 @@ fn patch_same_version_different_patch_locations() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/override`
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  cannot have two `[patch]` entries which both resolve to `bar v0.1.0`.
-  Check patch definitions for `bar` in `[ROOT]/foo/.cargo/config.toml, [ROOT]/foo/Cargo.toml`
+[ERROR] several `[patch]` entries resolving to same version `bar v0.1.0`
+[HELP] check `bar` patch definitions for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/.cargo/config.toml`, `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();

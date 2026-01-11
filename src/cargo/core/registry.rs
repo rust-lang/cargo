@@ -477,21 +477,21 @@ impl<'gctx> PackageRegistry<'gctx> {
             let name = summary.package_id().name();
             let version = summary.package_id().version();
             if !name_and_version.insert((name, version)) {
-                let duplicate_locations: Vec<_> = patch_deps
+                let duplicate_locations = patch_deps
                     .iter()
                     .filter(|&p| p.0.dep.package_name() == name)
-                    .map(|p| p.0.loc.to_string())
+                    .map(|p| format!("`{}`", p.0.loc))
                     .unique()
-                    .collect();
+                    .join(", ");
                 return Err(anyhow::anyhow!(
-                    "cannot have two `[patch]` entries which both resolve to `{} v{}`.\n\
-                    Check patch definitions for `{}` in `{}`",
+                    "several `[patch]` entries resolving to same version `{} v{}`\n\
+                    help: check `{}` patch definitions for `{}` in {}",
                     name,
                     version,
                     name,
-                    duplicate_locations.join(", ")
-                ))
-                .context(format!("failed to resolve patches for `{}`", url));
+                    url,
+                    duplicate_locations
+                ));
             }
         }
 
