@@ -2278,9 +2278,9 @@ fn too_many_matches() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] patch for `bar` in `registry `alternative`` resolved to more than one candidate
-Found versions: 0.1.0, 0.1.1
-Update the patch definition in `[ROOT]/foo/Cargo.toml` to select only one package.
-For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
+[NOTE] found versions: 0.1.0, 0.1.1
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
+[HELP] select only one package using `version = "=0.1.1"`
 
 "#]])
         .run();
@@ -2336,9 +2336,9 @@ fn too_many_matches_in_git_repo() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/git-repo`
 [ERROR] patch for `bar` in `[ROOTURL]/git-repo` resolved to more than one candidate
-Found versions: 0.1.0, 0.1.1
-Update the patch definition in `[ROOT]/foo/Cargo.toml` to select only one package.
-For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
+[NOTE] found versions: 0.1.0, 0.1.1
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
+[HELP] select only one package using `version = "=0.1.1"`
 
 "#]])
         .run();

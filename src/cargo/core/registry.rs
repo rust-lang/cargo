@@ -430,7 +430,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
 
                 let (summary, should_unlock) =
-                    match summary_for_patch(&orig_patch, &locked, summaries, source) {
+                    match summary_for_patch(&orig_patch, url, &locked, summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
                             patch_deps_pending.push(patch_dep_remaining);
@@ -935,6 +935,7 @@ fn lock(
 /// via the original patch, so we need to inform the resolver to "unlock" it.
 fn summary_for_patch(
     original_patch: &Patch,
+    orig_patch_url: &Url,
     locked: &Option<LockedPatchDependency>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
@@ -955,13 +956,14 @@ fn summary_for_patch(
         let versions: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
         return Poll::Ready(Err(anyhow::anyhow!(
             "patch for `{}` in `{}` resolved to more than one candidate\n\
-            Found versions: {}\n\
-            Update the patch definition in `{}` to select only one package.\n\
-            For example, add an `=` version requirement to the patch definition, \
-            such as `version = \"={}\"`.",
+            note: found versions: {}\n\
+            help: check `{}` patch definition for `{}` in `{}`\n\
+            help: select only one package using `version = \"={}\"`",
             &original_patch.dep.package_name(),
             &original_patch.dep.source_id(),
             versions.join(", "),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
             original_patch.loc,
             versions.last().unwrap()
         )));
@@ -984,6 +986,7 @@ fn summary_for_patch(
 
         let summary = ready!(summary_for_patch(
             original_patch,
+            orig_patch_url,
             &None,
             orig_matches,
             source
