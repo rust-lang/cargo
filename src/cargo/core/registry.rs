@@ -436,15 +436,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                             patch_deps_pending.push(patch_dep_remaining);
                             continue;
                         }
-                    }
-                    .with_context(|| {
-                        format!(
-                            "patch for `{}` in `{}` failed to resolve",
-                            orig_patch.dep.package_name(),
-                            url,
-                        )
-                    })
-                    .with_context(|| format!("failed to resolve patches for `{}`", url))?;
+                    }?;
 
                 debug!(
                     "patch summary is {:?} should_unlock={:?}",
@@ -1028,7 +1020,7 @@ fn summary_for_patch(
     };
     Poll::Ready(Err(if found.is_empty() {
         anyhow::anyhow!(
-            "The patch location `{}` does not appear to contain any packages \
+            "patch location `{}` does not appear to contain any packages \
             matching the name `{}`.\n\
             Check the patch definition in `{}`.",
             &original_patch.dep.source_id(),
@@ -1037,7 +1029,7 @@ fn summary_for_patch(
         )
     } else {
         anyhow::anyhow!(
-            "The patch location `{}` contains a `{}` package with {}, but the patch \
+            "patch location `{}` contains a `{}` package with {}, but the patch \
             definition in `{}` requires `{}`.\n\
             Check that the version in the patch location is what you expect, \
             and update the patch definition to match.",
