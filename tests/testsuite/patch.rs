@@ -1510,11 +1510,8 @@ fn replace_with_crates_io() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
-
-Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources.
-  Check the patch definition in `[ROOT]/foo/Cargo.toml`.
+[ERROR] patch for `bar` points to the same source, but patches must point to different sources
+[HELP] check `bar` patch definition for `https://github.com/rust-lang/crates.io-index` in `[ROOT]/foo/Cargo.toml`
 
 "#]])
         .run();
