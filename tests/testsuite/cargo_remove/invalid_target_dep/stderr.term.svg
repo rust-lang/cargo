@@ -1,7 +1,7 @@
-<svg width="1096px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="818px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,9 +21,13 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> toml from dependencies for target `wasm32-unknown-unknown`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `toml` could not be found in `target.wasm32-unknown-unknown.dependencies`; it is present in `dependencies`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `toml` could not be found in `target.wasm32-unknown-unknown.dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
+</tspan>
+    <tspan x="10px" y="82px"><tspan>help: a dependency with the same name exists in `dependencies`</tspan>
+</tspan>
+    <tspan x="10px" y="100px">
 </tspan>
   </text>
 

@@ -1,7 +1,7 @@
-<svg width="1104px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,9 +21,13 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> invalid_dependency_name from dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `invalid_dependency_name` could not be found in `dependencies`; dependency `invalid-dependency-name` exists</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `invalid_dependency_name` could not be found in `dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
+</tspan>
+    <tspan x="10px" y="82px"><tspan>help: a dependency with a similar name exists: `invalid-dependency-name`</tspan>
+</tspan>
+    <tspan x="10px" y="100px">
 </tspan>
   </text>
 
