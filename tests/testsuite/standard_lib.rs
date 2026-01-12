@@ -419,6 +419,8 @@ fn build_std_with_no_arg_for_core_only_target() {
 [COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
 [COMPILING] core v0.1.0 ([..]/library/core)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]/compiler_builtins/build.rs [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
 [RUNNING] `[..] rustc --crate-name compiler_builtins [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name core [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name foo [..]--target aarch64-unknown-none[..]`
@@ -456,6 +458,9 @@ fn build_std_with_no_arg_for_core_only_target() {
 [COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
 [COMPILING] registry-dep-using-alloc v1.0.0
 [COMPILING] std v0.1.0 ([..]/library/std)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]/compiler_builtins/build.rs [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
 [RUNNING] `[..]rustc --crate-name compiler_builtins [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..]rustc --crate-name core [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..]rustc --crate-name foo [..]--target aarch64-unknown-none[..]`
@@ -865,4 +870,23 @@ fn fetch() {
         .target_host()
         .with_stderr_does_not_contain("[DOWNLOADED] [..]")
         .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn std_build_script_metadata_propagate_to_user() {
+    let setup = setup();
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                assert_eq!(std::env::var("DEP_COMPILER_RT_COMPILER_RT").unwrap(), "foo");
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("check").build_std(&setup).target_host().run();
 }
