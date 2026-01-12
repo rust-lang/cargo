@@ -1,7 +1,7 @@
-<svg width="894px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
     .container {
@@ -21,9 +21,13 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> semver from dev-dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `semver` could not be found in `dev-dependencies`; it is present in `dependencies`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan>: the dependency `semver` could not be found in `dev-dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="64px">
+</tspan>
+    <tspan x="10px" y="82px"><tspan>help: a dependency with the same name exists in `dependencies`</tspan>
+</tspan>
+    <tspan x="10px" y="100px">
 </tspan>
   </text>
 
