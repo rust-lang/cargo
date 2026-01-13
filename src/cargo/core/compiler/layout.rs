@@ -1,7 +1,15 @@
 //! Management of the directory layout of a build
 //!
 //! The directory layout is a little tricky at times, hence a separate file to
-//! house this logic. The current layout looks like this:
+//! house this logic.
+//!
+//! As of early 2026, Cargo is restructuring the layout and supports 2 layouts.
+//! * the original layout organizing files by type
+//! * the new "build unit" based layout
+//!
+//! For more info the layout transition see: [#15010](https://github.com/rust-lang/cargo/issues/15010)
+//!
+//! ## Original layout
 //!
 //! ```text
 //! # This is the root directory for all output, the top-level package
@@ -87,6 +95,136 @@
 //!                 root-output
 //!                 # Stderr output from the build script.
 //!                 stderr
+//!
+//!     # Output from rustdoc
+//!     doc/
+//!
+//!     # Used by `cargo package` and `cargo publish` to build a `.crate` file.
+//!     package/
+//!
+//!     # Experimental feature for generated build scripts.
+//!     .metabuild/
+//! ```
+//!
+//! ## New layout
+//!
+//! The new build unit based layout has separate structures for `artifact-dir` and `build-dir`.
+//! By default both of these point to `target` in the workspace root.
+//!
+//! ### `artifact-dir` layout
+//!
+//! The `artifact-dir` layout is consider part of the public API and
+//! cannot be easily changed.
+//!
+//! ```text
+//! <artifact-dir>/
+//!
+//!     # All final artifacts are linked into this directory from the build-dir.
+//!     # Note that named profiles will soon be included as separate directories
+//!     # here. They have a restricted format, similar to Rust identifiers, so
+//!     # Cargo-specific directories added in the future should use some prefix
+//!     # like `.` to avoid name collisions.
+//!     debug/  # or release/
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Root directory for all compiled examples.
+//!         examples/
+//!
+//!     # Output from rustdoc
+//!     doc/
+//!
+//!     # Output from `cargo package` to build a `.crate` file.
+//!     package/
+//! ```
+//!
+//! ### `build-dir` layout
+//!
+//! The `build-dir` layout is considered an internal implementation detail of Cargo
+//! meaning that we can change this if needed. However, in reality many tools rely on
+//! implementation details of Cargo so breaking changes need to be done carefully.
+//!
+//! ```text
+//! <build-dir>/
+//!
+//!     # Cache of `rustc -Vv` output for performance.
+//!     .rustc-info.json
+//!
+//!     # Note that named profiles will soon be included as separate directories
+//!     # here. They have a restricted format, similar to Rust identifiers, so
+//!     # Cargo-specific directories added in the future should use some prefix
+//!     # like `.` to avoid name collisions.
+//!     debug/  # or release/
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Directory used to store incremental data for the compiler (when
+//!         # incremental is enabled.
+//!         incremental/
+//!
+//!         # Main directory for storing build unit related files.
+//!         # Files are organized by Cargo build unit (`$pkgname/$META`) so that
+//!         # related files are stored in a single directory.
+//!         build/
+//!
+//!             # This is the location at which the output of all files related to
+//!             # a given build unit. These files are organized together so that we can
+//!             # treat this directly like a single unit for locking and caching.
+//!             $pkgname/
+//!                 $META/
+//!                     # This is the directory for the rustc artifacts of this unit except build
+//!                     # scripts executables which are stored in $pkgname/$META/build-script.
+//!                     deps/
+//!
+//!                         # Each artifact dependency gets in its own directory.
+//!                         artifact/$kind
+//!
+//!                     # Directory that holds all of the fingerprint files for the build unit.
+//!                     fingerprint/
+//!                         # Set of source filenames for this package.
+//!                         dep-lib-$targetname
+//!                         # Timestamp when this package was last built.
+//!                         invoked.timestamp
+//!                         # The fingerprint hash.
+//!                         lib-$targetname
+//!                         # Detailed information used for logging the reason why
+//!                         # something is being recompiled.
+//!                         lib-$targetname.json
+//!                         # The console output from the compiler. This is cached
+//!                         # so that warnings can be redisplayed for "fresh" units.
+//!                         output-lib-$targetname
+//!
+//!                     # If the unit is a build script compilation, the build script
+//!                     # binary will be stored here.
+//!                     build-script/
+//!                         # The build script executable (name may be changed by user).
+//!                         build-script-build-$META
+//!                         # Hard link to build-script-build-$META.
+//!                         build-script-build
+//!                         # Dependency information generated by rustc.
+//!                         build-script-build-$META.d
+//!                         # Debug information, depending on platform and profile
+//!                         # settings.
+//!                         <debug symbols>
+//!
+//!                     # If the unit is a build script execution (running the build script bin)
+//!                     # the output of that build will be stored here.
+//!                     build-script-execution/
+//!                         # Timestamp when the build script was last executed.
+//!                         invoked.timestamp
+//!                         # Directory where script can output files ($OUT_DIR).
+//!                         out/
+//!                         # Output from the build script.
+//!                         output
+//!                         # Path to `out`, used to help when the target directory is
+//!                         # moved.
+//!                         root-output
+//!                         # Stderr output from the build script.
+//!                         stderr
 //!
 //!     # Output from rustdoc
 //!     doc/
