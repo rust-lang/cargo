@@ -10,7 +10,7 @@ use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
@@ -387,12 +387,26 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
+        let package_path = resolver_ctx
+            .parents
+            .path_to_bottom(&parent.package_id())
+            .into_iter()
+            .map(|(pkg_id, _)| pkg_id.clone())
+            .collect::<Vec<PackageId>>();
+
         let sid = dep.source_id();
-        let path = dep
-            .source_id()
-            .url()
-            .to_file_path()
-            .expect("failed to get the path");
+        let path = match dep.source_id().url().to_file_path() {
+            Ok(path) => path,
+            Err(_) => {
+                return ResolveError {
+                    cause: anyhow!(
+                        "no matching package found named '{}' found",
+                        dep.package_name()
+                    ),
+                    package_path,
+                };
+            }
+        };
         let requested = dep.package_name().as_str();
 
         if let Some(gctx) = gctx {
@@ -680,7 +694,7 @@ fn inspect_recursive_packages(
 
 fn _inspect_else_packages(path: &Path) {
     let entry_path = read_dir(path);
-    let entry_result = entry_path
+    let _entry_result = entry_path
         .expect("failed to get the path")
         .map(|f| {
             f.expect("failed to get the path")
@@ -689,8 +703,6 @@ fn _inspect_else_packages(path: &Path) {
                 .to_string()
         })
         .collect::<Vec<_>>();
-
-    println!("{:?}", entry_result);
 
     // let walkdir = WalkDir::new(entry_path);
 }
