@@ -640,8 +640,9 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
     let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());
     let wezterm = std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into());
     let ghostty = std::env::var("TERM_PROGRAM").ok() == Some("ghostty".into());
+    let iterm = std::env::var("TERM_PROGRAM").ok() == Some("iTerm.app".into());
 
-    (windows_terminal || conemu || wezterm || ghostty) && stream.is_terminal()
+    (windows_terminal || conemu || wezterm || ghostty || iterm) && stream.is_terminal()
 }
 
 pub struct Hyperlink<D: fmt::Display> {
