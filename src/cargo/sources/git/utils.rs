@@ -10,33 +10,24 @@ use crate::sources::source::Source as _;
 use crate::util::HumanBytes;
 use crate::util::errors::{CargoResult, GitCliError};
 use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
+
 use anyhow::{Context as _, anyhow};
 use cargo_util::{ProcessBuilder, paths};
 use curl::easy::List;
 use git2::{ErrorClass, ObjectType, Oid};
-use serde::Serialize;
-use serde::ser;
+use tracing::{debug, info};
+use url::Url;
+
 use std::borrow::Cow;
-use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use tracing::{debug, info};
-use url::Url;
 
 /// A file indicates that if present, `git reset` has been done and a repo
 /// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
 const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
-
-fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
-where
-    T: fmt::Display,
-    S: ser::Serializer,
-{
-    s.collect_str(t)
-}
 
 /// A short abbreviated OID.
 ///
@@ -51,10 +42,9 @@ impl GitShortID {
 }
 
 /// A remote repository. It gets cloned into a local [`GitDatabase`].
-#[derive(PartialEq, Clone, Debug, Serialize)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct GitRemote {
     /// URL to a remote repository.
-    #[serde(serialize_with = "serialize_str")]
     url: Url,
 }
 
