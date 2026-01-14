@@ -536,6 +536,78 @@ fn run_embed() {
         .run();
 }
 
+#[cargo_test]
+fn config_lockfile_path() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+
+"#]])
+        .run();
+
+    assert!(p.root().join("Cargo.lock").exists());
+    assert!(!p.root().join("my/Cargo.lock").exists());
+}
+
+#[cargo_test]
+fn cli_ignored_when_config_set() {
+    let cli_lockfile_path = "cli/Cargo.lock";
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .arg("-Zunstable-options")
+        .arg("--lockfile-path")
+        .arg(cli_lockfile_path)
+        .with_stderr_data(str![[r#"
+[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+
+"#]])
+        .run();
+
+    assert!(!p.root().join("my/Cargo.lock").is_file());
+    assert!(p.root().join(cli_lockfile_path).exists());
+}
+
+#[cargo_test]
+fn config_lockfile_path_without_z_flag() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile")
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+
+"#]])
+        .run();
+
+    assert!(p.root().join("Cargo.lock").exists());
+    assert!(!p.root().join("my/Cargo.lock").exists());
+}
+
+#[cargo_test]
+fn config_lockfile_path_rejects_templates() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='{var}/Cargo.lock'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+
+"#]])
+        .run();
+}
+
 const VALID_LOCKFILE: &str = r#"# Test lockfile
 version = 4
 
