@@ -12,7 +12,7 @@ pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
     MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig, find_workspace_root,
-    resolve_relative_path,
+    find_workspace_root_with_membership_check, resolve_relative_path,
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 
