@@ -1646,6 +1646,15 @@ fn calculate_normal(
     if let Some(allow_features) = &build_runner.bcx.gctx.cli_unstable().allow_features {
         allow_features.hash(&mut config);
     }
+    // -Zno-embed-metadata changes how all units are compiled, and it also changes how we tell
+    // rustc to link to deps using `--extern`. If it changes, we should rebuild everything.
+    build_runner
+        .bcx
+        .gctx
+        .cli_unstable()
+        .no_embed_metadata
+        .hash(&mut config);
+
     let compile_kind = unit.kind.fingerprint_hash();
     let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
     declared_features.sort(); // to avoid useless rebuild if the user orders it's features

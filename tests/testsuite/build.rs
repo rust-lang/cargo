@@ -6338,8 +6338,8 @@ fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
     assert!(not_the_same, "renamed uplifted artifact must be unmodified");
 }
 
-#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
-fn embed_metadata() {
+#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
+fn no_embed_metadata() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -6378,8 +6378,8 @@ fn embed_metadata() {
 
 // Make sure that cargo passes --extern=<dep>.rmeta even if <dep>
 // is compiled as a dylib.
-#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
-fn embed_metadata_dylib_dep() {
+#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
+fn no_embed_metadata_dylib_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -6423,5 +6423,55 @@ fn embed_metadata_dylib_dep() {
         .with_stderr_contains(
             "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/deps/libbar.rmeta[..]`",
         )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
+fn no_embed_metadata_invalidate() {
+    // Invalidate all deps when -Zno-embed-metadata is toggled
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [dependencies.bar]
+                path = "bar"
+            "#,
+        )
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &[]))
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file(
+            "bar/src/bar.rs",
+            r#"
+                pub fn gimme() -> &'static str {
+                    "test passed"
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z no-embed-metadata")
+        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
