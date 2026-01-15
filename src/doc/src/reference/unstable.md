@@ -1760,21 +1760,37 @@ path bases without compatibility issues (as existing uses will shadow the
 built-in name).
 
 ## lockfile-path
+
 * Original Issue: [#5707](https://github.com/rust-lang/cargo/issues/5707)
 * Tracking Issue: [#14421](https://github.com/rust-lang/cargo/issues/14421)
 
-This feature allows you to specify the path of lockfile Cargo.lock. 
-By default, lockfile is written into `<workspace_root>/Cargo.lock`. 
-However, when sources are stored in read-only directory, most of the cargo commands 
-would fail, trying to write a lockfile. The `--lockfile-path`
-flag makes it easier to work with readonly sources. 
-Note, that currently path must end with `Cargo.lock`. Meaning, if you want to use 
-this feature in multiple projects, lockfiles should be stored in different directories.
-Example:
+The `-Zlockfile-path` flag enables the `resolver.lockfile-path` configuration option,
+which allows you to specify the path of the lockfile `Cargo.lock`.
 
-```sh
-cargo +nightly metadata --lockfile-path=$LOCKFILES_ROOT/my-project/Cargo.lock -Z unstable-options
-```
+By default, lockfile is written into `<workspace_root>/Cargo.lock`. 
+However, when sources are stored in read-only directory,
+most of the cargo commands would fail when trying to write a lockfile.
+This configuration makes it easier to work with readonly sources. 
+
+Note, that currently path must end with `Cargo.lock`.
+If you want to use this feature in multiple projects,
+lockfiles should be stored in different directories.
+
+### Documentation updates
+
+*as a new `resolver.lockfile-path` entry in config.md*
+
+#### `resolver.lockfile-path`
+
+* Type: string (path)
+* Default: `<workspace_root>/Cargo.lock`
+* Environment: `CARGO_RESOLVER_LOCKFILE_PATH`
+
+Specifies the path to the lockfile.
+By default, the lockfile is written to `<workspace_root>/Cargo.lock`.
+This option is useful when working with read-only source directories.
+
+The path must end with `Cargo.lock`.
 
 ## native-completions
 * Original Issue: [#6645](https://github.com/rust-lang/cargo/issues/6645)
