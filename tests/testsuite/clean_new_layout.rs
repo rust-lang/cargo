@@ -401,7 +401,7 @@ fn build_script() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/build-script/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
