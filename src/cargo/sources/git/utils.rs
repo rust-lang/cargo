@@ -1569,8 +1569,10 @@ fn github_fast_path(
     if response_code == 304 {
         debug!("github fast path up-to-date");
         Ok(FastPathRev::UpToDate)
-    } else if response_code == 200 {
-        let oid_to_fetch = str::from_utf8(&response_body)?.parse::<Oid>()?;
+    } else if response_code == 200
+        && let Some(oid_to_fetch) = rev_to_oid(str::from_utf8(&response_body)?)
+    {
+        // response expected to be a full hash hexstring (40 or 64 chars)
         debug!("github fast path fetch {oid_to_fetch}");
         Ok(FastPathRev::NeedsFetch(oid_to_fetch))
     } else {
