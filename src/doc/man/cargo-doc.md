@@ -107,7 +107,6 @@ and supports common Unix glob patterns.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

@@ -657,7 +657,15 @@ pub trait ArgMatchesExt {
         if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
-        ws.set_requested_lockfile_path(lockfile_path);
+        if lockfile_path.is_some() {
+            if ws.requested_lockfile_path().is_some() {
+                gctx.shell().warn(
+                    "`--lockfile-path` is ignored because `resolver.lockfile-path` is set in config",
+                )?;
+            } else {
+                ws.set_requested_lockfile_path(lockfile_path);
+            }
+        }
         Ok(ws)
     }
 
@@ -1122,6 +1130,11 @@ pub fn lockfile_path(
             lockfile_path.display()
         )
     }
+
+    gctx.shell().warn(
+        "the `--lockfile-path` flag is deprecated and will be removed in a future release, \
+        use `resolver.lockfile-path` config instead",
+    )?;
 
     return Ok(Some(path));
 }

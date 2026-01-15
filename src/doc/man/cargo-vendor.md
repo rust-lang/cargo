@@ -66,7 +66,6 @@ only a subset of the packages have changed.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

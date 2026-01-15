@@ -43,7 +43,6 @@ This is a best-effort filter on allowed packages, including:
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

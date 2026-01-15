@@ -307,12 +307,14 @@ impl BuildTargetConfig {
 /// [resolver]
 /// incompatible-rust-versions = "fallback"
 /// feature-unification = "workspace"
+/// lockfile-path = "my/Cargo.lock"
 /// ```
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
     pub feature_unification: Option<FeatureUnification>,
+    pub lockfile_path: Option<ConfigRelativePath>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]

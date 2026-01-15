@@ -122,7 +122,10 @@ pub use config_value::ConfigValue;
 use config_value::is_nonmergeable_list;
 
 mod path;
-pub use path::{ConfigRelativePath, PathAndArgs};
+pub use path::BracketType;
+pub use path::ConfigRelativePath;
+pub use path::PathAndArgs;
+pub use path::ResolveTemplateError;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};

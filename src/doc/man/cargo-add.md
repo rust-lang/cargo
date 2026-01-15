@@ -167,7 +167,6 @@ Add dependencies to only the specified package.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

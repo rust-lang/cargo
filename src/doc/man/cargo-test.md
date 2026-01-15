@@ -172,7 +172,6 @@ results readable. Test output can be recovered (e.g., for debugging) by passing
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

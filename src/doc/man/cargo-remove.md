@@ -60,7 +60,6 @@ Don't actually write to the manifest.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 ### Package Selection

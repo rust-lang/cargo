@@ -79,7 +79,6 @@ See <https://github.com/rust-lang/cargo/issues/6790> for more information.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

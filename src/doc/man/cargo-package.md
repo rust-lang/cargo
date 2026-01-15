@@ -182,7 +182,6 @@ Valid output formats:
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

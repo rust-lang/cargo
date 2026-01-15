@@ -189,7 +189,6 @@ Sets how each line is displayed. The _prefix_ value can be one of:
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-features }}
