@@ -325,6 +325,7 @@ fn emit_build_output(
 ///
 /// * Set environment variables for the build script run.
 /// * Create the output dir (`OUT_DIR`) for the build script output.
+/// * Create the temporary dir (`TMPDIR`/`TMP`/`TEMP`) that will be set.
 /// * Determine if the build script needs a re-run.
 /// * Run the build script and store its output.
 fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Job> {
@@ -339,6 +340,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let script_dir = build_runner.files().build_script_dir(build_script_unit);
     let script_out_dir = build_runner.files().build_script_out_dir(unit);
     let script_run_dir = build_runner.files().build_script_run_dir(unit);
+    let script_tmp_dir = build_runner.files().build_script_tmp_dir(unit);
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
         prepare_metabuild(build_runner, build_script_unit, deps)?;
@@ -375,6 +377,12 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.gctx.rustdoc()?)
         .inherit_jobserver(&build_runner.jobserver);
+
+    // Make build scripts output temporary files to `script_tmp_dir` instead
+    // of the path returned by `std::env::temp_dir()`.
+    for key in paths::tmpdir_envvars() {
+        cmd.env(key, &script_tmp_dir);
+    }
 
     // Find all artifact dependencies and make their file and containing directory discoverable using environment variables.
     for (var, value) in artifact::get_env(build_runner, unit, dependencies)? {
@@ -505,6 +513,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
+    paths::create_dir_all(&script_tmp_dir)?;
 
     let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();

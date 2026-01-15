@@ -827,13 +827,17 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         }
     }
 
+    let tmpdir = build_runner.files().rustc_tmp_dir(unit);
+    paths::create_dir_all(tmpdir)?;
+
+    // Make `rustc`, proc-macros and the linker output temporary files to
+    // `tmpdir` instead of the path returned by `std::env::temp_dir()`.
+    for key in paths::tmpdir_envvars() {
+        base.env(key, tmpdir);
+    }
+
     if unit.target.is_test() || unit.target.is_bench() {
-        let tmp = build_runner
-            .files()
-            .layout(unit.kind)
-            .build_dir()
-            .prepare_tmp()?;
-        base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
+        base.env("CARGO_TARGET_TMPDIR", tmpdir.display().to_string());
     }
 
     Ok(base)
@@ -961,6 +965,15 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
 
     if !crate_version_flag_already_present(&rustdoc) {
         append_crate_version_flag(unit, &mut rustdoc);
+    }
+
+    let tmpdir = build_runner.files().rustc_tmp_dir(unit);
+    paths::create_dir_all(tmpdir)?;
+
+    // Make `rustdoc` and proc-macros output temporary files to `tmpdir`
+    // instead of the path returned by `std::env::temp_dir()`.
+    for key in paths::tmpdir_envvars() {
+        rustdoc.env(key, tmpdir);
     }
 
     Ok(rustdoc)
