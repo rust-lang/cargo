@@ -26,7 +26,9 @@ use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
 use crate::ops;
+use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
+use crate::util::context;
 use crate::util::context::{FeatureUnification, Value};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
@@ -353,6 +355,49 @@ impl<'gctx> Workspace<'gctx> {
                 .shell()
                 .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
         };
+
+        if let Some(lockfile_path) = config.lockfile_path {
+            if self.gctx().cli_unstable().lockfile_path {
+                // Reserve the ability to add templates in the future.
+                let replacements: [(&str, &str); 0] = [];
+                let path = lockfile_path
+                    .resolve_templated_path(self.gctx(), replacements)
+                    .map_err(|e| match e {
+                        context::ResolveTemplateError::UnexpectedVariable {
+                            variable,
+                            raw_template,
+                        } => {
+                            anyhow!(
+                                "unexpected variable `{variable}` in resolver.lockfile-path `{raw_template}`"
+                            )
+                        }
+                        context::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                            let (btype, literal) = match bracket_type {
+                                context::BracketType::Opening => ("opening", "{"),
+                                context::BracketType::Closing => ("closing", "}"),
+                            };
+
+                            anyhow!(
+                                "unexpected {btype} bracket `{literal}` in build.build-dir path `{raw_template}`"
+                            )
+                        }
+                    })?;
+                if !path.ends_with(LOCKFILE_NAME) {
+                    bail!("the `resolver.lockfile-path` must be a path to a {LOCKFILE_NAME} file");
+                }
+                if path.is_dir() {
+                    bail!(
+                        "`resolver.lockfile-path` `{}` is a directory but expected a file",
+                        path.display()
+                    );
+                }
+                self.requested_lockfile_path = Some(path);
+            } else {
+                self.gctx().shell().warn(
+                    "ignoring `resolver.lockfile-path`, pass `-Zlockfile-path` to enable it",
+                )?;
+            }
+        }
 
         Ok(())
     }
@@ -690,6 +735,7 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
+    // NOTE: may be removed once the deprecated `--lockfile-path` CLI flag is removed
     pub fn set_requested_lockfile_path(&mut self, path: Option<PathBuf>) {
         self.requested_lockfile_path = path;
     }

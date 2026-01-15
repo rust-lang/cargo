@@ -180,13 +180,12 @@ fn broken_symlink() {
         .arg("--lockfile-path")
         .arg(lockfile_path)
         .with_status(101)
-        .with_stderr_data(str![[
-            r#"[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
-
+        .with_stderr_data(str![[r#"
+[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 ...
 
-"#
-        ]])
+"#]])
         .run();
 }
 
@@ -212,13 +211,12 @@ fn loop_symlink() {
         .arg("--lockfile-path")
         .arg(lockfile_path)
         .with_status(101)
-        .with_stderr_data(str![[
-            r#"[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
-
+        .with_stderr_data(str![[r#"
+[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 ...
 
-"#
-        ]])
+"#]])
         .run();
 }
 
@@ -526,13 +524,12 @@ fn run_embed() {
         .arg("--manifest-path")
         .arg("src/main.rs")
         .with_status(101)
-        .with_stderr_data(str![[
-            r#"[WARNING] `package.edition` is unspecified, defaulting to `2024`
+        .with_stderr_data(str![[r#"
+[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
 ...
-"#
-        ]])
+"#]])
         .run();
 }
 
@@ -540,18 +537,15 @@ fn run_embed() {
 fn config_lockfile_path() {
     let p = make_project().build();
 
-    p.cargo("generate-lockfile")
+    p.cargo("generate-lockfile -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='my/Cargo.lock'")
-        .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 
-    assert!(p.root().join("Cargo.lock").exists());
-    assert!(!p.root().join("my/Cargo.lock").exists());
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join("my/Cargo.lock").exists());
 }
 
 #[cargo_test]
@@ -559,7 +553,7 @@ fn cli_ignored_when_config_set() {
     let cli_lockfile_path = "cli/Cargo.lock";
     let p = make_project().build();
 
-    p.cargo("generate-lockfile")
+    p.cargo("generate-lockfile -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='my/Cargo.lock'")
@@ -567,13 +561,14 @@ fn cli_ignored_when_config_set() {
         .arg("--lockfile-path")
         .arg(cli_lockfile_path)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
+[WARNING] `--lockfile-path` is ignored because `resolver.lockfile-path` is set in config
 
 "#]])
         .run();
 
-    assert!(!p.root().join("my/Cargo.lock").is_file());
-    assert!(p.root().join(cli_lockfile_path).exists());
+    assert!(p.root().join("my/Cargo.lock").is_file());
+    assert!(!p.root().join(cli_lockfile_path).exists());
 }
 
 #[cargo_test]
@@ -584,7 +579,7 @@ fn config_lockfile_path_without_z_flag() {
         .arg("--config")
         .arg("resolver.lockfile-path='my/Cargo.lock'")
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+[WARNING] ignoring `resolver.lockfile-path`, pass `-Zlockfile-path` to enable it
 
 "#]])
         .run();
@@ -597,12 +592,13 @@ fn config_lockfile_path_without_z_flag() {
 fn config_lockfile_path_rejects_templates() {
     let p = make_project().build();
 
-    p.cargo("generate-lockfile")
+    p.cargo("generate-lockfile -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='{var}/Cargo.lock'")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.lockfile-path` in `--config cli option`
+[ERROR] unexpected variable `var` in resolver.lockfile-path `{var}/Cargo.lock`
 
 "#]])
         .run();
