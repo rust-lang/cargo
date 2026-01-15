@@ -1007,7 +1007,7 @@ pub fn fetch(
                 fast_path_rev = true;
                 refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
             } else if !matches!(shallow, gix::remote::fetch::Shallow::NoChange)
-                && rev.parse::<Oid>().is_ok()
+                && rev_to_oid(rev).is_some()
             {
                 // There is a specific commit to fetch and we will do so in shallow-mode only
                 // to not disturb the previous logic.
