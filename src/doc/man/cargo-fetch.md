@@ -49,7 +49,6 @@ you plan to use Cargo without a network with the `--offline` flag.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

@@ -97,7 +97,6 @@ Displays what would be updated, but doesn't actually write the lockfile.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

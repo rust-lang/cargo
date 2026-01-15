@@ -71,7 +71,6 @@ they have `required-features` that are missing.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

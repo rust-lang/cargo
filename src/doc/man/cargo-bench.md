@@ -147,7 +147,6 @@ passing `--no-capture` to the benchmark binaries:
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

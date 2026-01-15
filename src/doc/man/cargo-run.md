@@ -87,7 +87,6 @@ Run the specified example.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

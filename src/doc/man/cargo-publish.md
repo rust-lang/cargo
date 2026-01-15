@@ -89,7 +89,6 @@ which defaults to `crates-io`.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 
 {{/options}}
 

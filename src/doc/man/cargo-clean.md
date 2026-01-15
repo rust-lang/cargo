@@ -79,7 +79,6 @@ Remove all artifacts in the directory with the given profile name.
 
 {{> options-locked }}
 
-{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}
