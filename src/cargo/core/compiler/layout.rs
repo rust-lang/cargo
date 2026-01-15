@@ -314,9 +314,9 @@ impl BuildDirLayout {
         if !self.is_new_layout {
             paths::create_dir_all(&self.deps)?;
             paths::create_dir_all(&self.fingerprint)?;
+            paths::create_dir_all(&self.examples)?;
         }
         paths::create_dir_all(&self.incremental)?;
-        paths::create_dir_all(&self.examples)?;
         paths::create_dir_all(&self.build)?;
 
         Ok(())

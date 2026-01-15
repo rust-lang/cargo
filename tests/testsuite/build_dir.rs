@@ -412,7 +412,7 @@ fn examples_should_output_to_build_dir_and_uplift_to_target_dir() {
 
 "#]]);
 
-    assert!(p.root().join("build-dir/debug/examples").exists());
+    assert!(!p.root().join("build-dir/debug/examples").exists());
 
     p.root()
         .join("target-dir")
