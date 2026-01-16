@@ -383,8 +383,8 @@ impl BuildDirLayout {
         }
     }
     /// Fetch the artifact path.
-    pub fn artifact(&self) -> &Path {
-        &self.artifact
+    pub fn artifact(&self, pkg_dir: &str, kind: &str) -> PathBuf {
+        self.artifact.join(pkg_dir).join(kind)
     }
     /// Fetch the build unit path
     pub fn build_unit(&self, pkg_dir: &str) -> PathBuf {
