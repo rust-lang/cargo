@@ -28,13 +28,18 @@ non_kebab_case_bin = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `non_kebab_case_bin`
-  --> Cargo.toml:13:1
-   |
-13 | non_kebab_case_bin = "warn"
-   | ^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] binaries should have a kebab-case name
+  |
+1 | [ROOT]/foo/target/.../foo_bar[EXE]
+  |                   [..]^^^^^^^
+  |
+  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+[HELP] to change the binary name to kebab case, convert `bin.name`
+ --> Cargo.toml:9:8
+  |
+9 - name = "foo_bar"
+9 + name = "foo-bar"
+  |
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -64,13 +69,26 @@ non_kebab_case_bin = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `non_kebab_case_bin`
- --> Cargo.toml:9:1
-  |
-9 | non_kebab_case_bin = "warn"
-  | ^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] binaries should have a kebab-case name
+   |
+ 1 | [ROOT]/foo/target/.../foo_bar[EXE]
+   |                   [..]^^^^^^^
+   |
+   = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+[HELP] to change the binary name to kebab case, convert `package.name`
+  --> Cargo.toml:3:8
+   |
+ 3 - name = "foo_bar"
+ 3 + name = "foo-bar"
+   |
+[HELP] to change the binary name to kebab case, specify `bin.name`
+  --> Cargo.toml:9:29
+   |
+ 9 ~ non_kebab_case_bin = "warn"
+10 + [[bin]]
+11 + name = "foo-bar"
+12 + path = "src/main.rs"
+   |
 [CHECKING] foo_bar v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -100,13 +118,17 @@ non_kebab_case_bin = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `non_kebab_case_bin`
- --> Cargo.toml:9:1
+[WARNING] binaries should have a kebab-case name
   |
-9 | non_kebab_case_bin = "warn"
-  | ^^^^^^^^^^^^^^^^^^
+1 | [ROOT]/foo/target/.../foo_bar[EXE]
+  |                   [..]^^^^^^^
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+[HELP] to change the binary name to kebab case, convert the file stem
+  |
+1 - src/bin/foo_bar.rs
+1 + src/bin/foo-bar.rs
+  |
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -132,13 +154,17 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `[..]`
-[WARNING] unknown lint: `non_kebab_case_bin`
- --> foo_bar:4:1
+[WARNING] binaries should have a kebab-case name
   |
-4 | non_kebab_case_bin = "warn"
-  | ^^^^^^^^^^^^^^^^^^
+1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]
+  |                                        [..]^^^^^^^
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+[HELP] to change the binary name to kebab case, convert the file stem
+  |
+1 - foo_bar
+1 + foo-bar
+  |
 [CHECKING] foo_bar v0.0.0 ([ROOT]/foo/foo_bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
