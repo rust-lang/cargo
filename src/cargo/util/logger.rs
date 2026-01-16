@@ -1,11 +1,11 @@
 //! Build analysis logging infrastructure.
 
+use std::cell::RefCell;
 use std::hash::Hash;
 use std::io::{BufWriter, Write};
 use std::mem::ManuallyDrop;
 use std::path::Path;
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{self, Sender};
 use std::thread::JoinHandle;
 
 use anyhow::Context as _;
@@ -13,22 +13,48 @@ use cargo_util::paths;
 
 use crate::CargoResult;
 use crate::core::Workspace;
+use crate::core::compiler::BuildConfig;
 use crate::util::log_message::LogMessage;
 use crate::util::short_hash;
 
-/// Logger for `-Zbuild-analysis`.
-pub struct BuildLogger {
+// for newer `cargo report` commands
+struct FileLogger {
     tx: ManuallyDrop<Sender<LogMessage>>,
-    run_id: RunId,
     handle: Option<JoinHandle<()>>,
 }
 
-impl BuildLogger {
-    /// Creates a logger if `-Zbuild-analysis` is enabled.
-    pub fn maybe_new(ws: &Workspace<'_>) -> CargoResult<Option<Self>> {
+impl FileLogger {
+    /// Creates a logger if `-Zbuild-analysis` is enabled
+    fn maybe_new(ws: &Workspace<'_>, run_id: &RunId) -> CargoResult<Option<FileLogger>> {
         let analysis = ws.gctx().build_config()?.analysis.as_ref();
         match (analysis, ws.gctx().cli_unstable().build_analysis) {
-            (Some(analysis), true) if analysis.enabled => Ok(Some(Self::new(ws)?)),
+            (Some(analysis), true) if analysis.enabled => {
+                let log_dir = ws.gctx().home().join("log");
+                paths::create_dir_all(log_dir.as_path_unlocked())?;
+
+                let filename = format!("{run_id}.jsonl");
+                let log_file = log_dir.open_rw_exclusive_create(
+                    Path::new(&filename),
+                    ws.gctx(),
+                    "build analysis log",
+                )?;
+
+                let (tx, rx) = mpsc::channel::<LogMessage>();
+
+                let run_id_str = run_id.to_string();
+                let handle = std::thread::spawn(move || {
+                    let mut writer = BufWriter::new(log_file);
+                    for msg in rx {
+                        let _ = msg.write_json_log(&mut writer, &run_id_str);
+                    }
+                    let _ = writer.flush();
+                });
+
+                Ok(Some(Self {
+                    tx: ManuallyDrop::new(tx),
+                    handle: Some(handle),
+                }))
+            }
             (Some(_), false) => {
                 ws.gctx().shell().warn(
                     "ignoring 'build.analysis' config, pass `-Zbuild-analysis` to enable it",
@@ -38,36 +64,62 @@ impl BuildLogger {
             _ => Ok(None),
         }
     }
+}
 
-    fn new(ws: &Workspace<'_>) -> CargoResult<Self> {
+impl Drop for FileLogger {
+    fn drop(&mut self) {
+        // SAFETY: tx is dropped exactly once here to signal thread shutdown.
+        // ManuallyDrop prevents automatic drop after this impl runs.
+        unsafe {
+            ManuallyDrop::drop(&mut self.tx);
+        }
+
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+/// For legacy `cargo build --timings` flag
+struct InMemoryLogger {
+    // using mutex to hide mutability
+    logs: RefCell<Vec<LogMessage>>,
+}
+
+impl InMemoryLogger {
+    fn maybe_new(options: &BuildConfig) -> Option<Self> {
+        if options.timing_report {
+            Some(Self {
+                logs: RefCell::new(Vec::new()),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/// Logger for `-Zbuild-analysis`.
+pub struct BuildLogger {
+    run_id: RunId,
+    file_logger: Option<FileLogger>,
+    in_memory_logger: Option<InMemoryLogger>,
+}
+
+impl BuildLogger {
+    pub fn maybe_new(ws: &Workspace<'_>, options: &BuildConfig) -> CargoResult<Option<Self>> {
         let run_id = Self::generate_run_id(ws);
+        let file_logger = FileLogger::maybe_new(ws, &run_id)?;
+        let in_memory_logger = InMemoryLogger::maybe_new(options);
 
-        let log_dir = ws.gctx().home().join("log");
-        paths::create_dir_all(log_dir.as_path_unlocked())?;
+        if file_logger.is_none() && in_memory_logger.is_none() {
+            return Ok(None);
+        }
 
-        let filename = format!("{run_id}.jsonl");
-        let log_file = log_dir.open_rw_exclusive_create(
-            Path::new(&filename),
-            ws.gctx(),
-            "build analysis log",
-        )?;
-
-        let (tx, rx) = mpsc::channel::<LogMessage>();
-
-        let run_id_str = run_id.to_string();
-        let handle = std::thread::spawn(move || {
-            let mut writer = BufWriter::new(log_file);
-            for msg in rx {
-                let _ = msg.write_json_log(&mut writer, &run_id_str);
-            }
-            let _ = writer.flush();
-        });
-
-        Ok(Self {
-            tx: ManuallyDrop::new(tx),
+        Ok(Some(Self {
             run_id,
-            handle: Some(handle),
-        })
+            file_logger,
+            in_memory_logger,
+        }))
     }
 
     /// Generates a unique run ID.
@@ -82,21 +134,25 @@ impl BuildLogger {
 
     /// Logs a message.
     pub fn log(&self, msg: LogMessage) {
-        let _ = self.tx.send(msg);
+        if let Some(ref logger) = self.in_memory_logger {
+            let mut borrowed = logger.logs.try_borrow_mut().expect(
+                "Unable to get a mutable reference to in-memory logger; please file a bug report",
+            );
+            borrowed.push(msg.clone());
+        };
+
+        if let Some(ref logger) = self.file_logger {
+            let _ = logger.tx.send(msg);
+        };
     }
-}
 
-impl Drop for BuildLogger {
-    fn drop(&mut self) {
-        // SAFETY: tx is dropped exactly once here to signal thread shutdown.
-        // ManuallyDrop prevents automatic drop after this impl runs.
-        unsafe {
-            ManuallyDrop::drop(&mut self.tx);
-        }
-
-        if let Some(handle) = self.handle.take() {
-            let _ = handle.join();
-        }
+    pub fn get_logs(&self) -> Option<Vec<LogMessage>> {
+        self.in_memory_logger.as_ref().map(|l| {
+            l.logs
+                .try_borrow()
+                .expect("Unable to get a reference to in-memory logger; please file a bug report")
+                .clone()
+        })
     }
 }
 

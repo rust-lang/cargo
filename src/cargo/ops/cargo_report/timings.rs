@@ -3,7 +3,6 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
 use std::path::PathBuf;
 
 use annotate_snippets::Level;
@@ -78,7 +77,18 @@ pub fn report_timings(
         return Err(AlreadyPrintedError::new(anyhow::anyhow!("")).into());
     };
 
-    let ctx = prepare_context(&log, &run_id)
+    let reader = BufReader::new(File::open(&log)?);
+    let iter = serde_json::Deserializer::from_reader(reader)
+        .into_iter::<LogMessage>()
+        .enumerate()
+        .filter_map(|(idx, msg)| match msg {
+            Ok(msg) => Some(msg),
+            Err(e) => {
+                tracing::warn!("failed to parse log message at index {idx}: {e}");
+                None
+            }
+        });
+    let ctx = prepare_context(iter, &run_id)
         .with_context(|| format!("failed to analyze log at `{}`", log.display()))?;
 
     // If we are in a workspace,
@@ -120,9 +130,10 @@ pub fn report_timings(
     Ok(())
 }
 
-fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'static>> {
-    let reader = BufReader::new(File::open(&log)?);
-
+pub(crate) fn prepare_context<I>(log: I, run_id: &RunId) -> CargoResult<RenderContext<'_>>
+where
+    I: Iterator<Item = LogMessage>,
+{
     let mut ctx = RenderContext {
         start_str: run_id.timestamp().to_string(),
         root_units: Default::default(),
@@ -145,18 +156,7 @@ fn prepare_context(log: &Path, run_id: &RunId) -> CargoResult<RenderContext<'sta
 
     let mut requested_units: HashSet<UnitIndex> = HashSet::new();
 
-    for (log_index, result) in serde_json::Deserializer::from_reader(reader)
-        .into_iter::<LogMessage>()
-        .enumerate()
-    {
-        let msg = match result {
-            Ok(msg) => msg,
-            Err(e) => {
-                tracing::warn!("failed to parse log message at index {log_index}: {e}");
-                continue;
-            }
-        };
-
+    for msg in log {
         match msg {
             LogMessage::BuildStarted {
                 cwd: _,

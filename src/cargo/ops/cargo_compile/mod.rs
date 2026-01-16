@@ -160,7 +160,7 @@ pub fn compile_ws<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     let interner = UnitInterner::new();
-    let logger = BuildLogger::maybe_new(ws)?;
+    let logger = BuildLogger::maybe_new(ws, &options.build_config)?;
 
     if let Some(ref logger) = logger {
         let rustc = ws.gctx().load_global_rustc(Some(ws))?;
@@ -311,6 +311,7 @@ pub fn create_bcx<'a, 'gctx>(
         let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
         logger.log(LogMessage::ResolutionStarted { elapsed });
     }
+
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -530,6 +531,7 @@ pub fn create_bcx<'a, 'gctx>(
         .enumerate()
         .map(|(i, &unit)| (unit.clone(), UnitIndex(i as u64)))
         .collect();
+
     if let Some(logger) = logger {
         let root_unit_indexes: HashSet<_> =
             root_units.iter().map(|unit| unit_to_index[&unit]).collect();
