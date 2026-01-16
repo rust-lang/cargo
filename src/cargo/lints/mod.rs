@@ -218,40 +218,85 @@ pub struct TomlSpan {
     pub value: Range<usize>,
 }
 
-pub fn get_key_value<'doc>(
+#[derive(Copy, Clone)]
+pub enum TomlIndex<'i> {
+    Key(&'i str),
+    Offset(usize),
+}
+
+impl<'i> TomlIndex<'i> {
+    fn as_key(&self) -> Option<&'i str> {
+        match self {
+            TomlIndex::Key(key) => Some(key),
+            TomlIndex::Offset(_) => None,
+        }
+    }
+}
+
+pub trait AsIndex {
+    fn as_index<'i>(&'i self) -> TomlIndex<'i>;
+}
+
+impl AsIndex for TomlIndex<'_> {
+    fn as_index<'i>(&'i self) -> TomlIndex<'i> {
+        match self {
+            TomlIndex::Key(key) => TomlIndex::Key(key),
+            TomlIndex::Offset(offset) => TomlIndex::Offset(*offset),
+        }
+    }
+}
+
+impl AsIndex for &str {
+    fn as_index<'i>(&'i self) -> TomlIndex<'i> {
+        TomlIndex::Key(self)
+    }
+}
+
+impl AsIndex for usize {
+    fn as_index<'i>(&'i self) -> TomlIndex<'i> {
+        TomlIndex::Offset(*self)
+    }
+}
+
+pub fn get_key_value<'doc, 'i>(
     document: &'doc toml::Spanned<toml::de::DeTable<'static>>,
-    path: &[&str],
+    path: &[impl AsIndex],
 ) -> Option<(
     &'doc toml::Spanned<Cow<'doc, str>>,
     &'doc toml::Spanned<toml::de::DeValue<'static>>,
 )> {
-    let mut table = document.get_ref();
-    let mut iter = path.into_iter().peekable();
-    while let Some(key) = iter.next() {
-        let key_s: &str = key.as_ref();
-        let (key, item) = table.get_key_value(key_s)?;
-        if iter.peek().is_none() {
-            return Some((key, item));
-        }
-        if let Some(next_table) = item.get_ref().as_table() {
-            table = next_table;
-        }
-        if iter.peek().is_some() {
-            if let Some(array) = item.get_ref().as_array() {
-                let next = iter.next().unwrap();
-                return array.iter().find_map(|item| match item.get_ref() {
-                    toml::de::DeValue::String(s) if s == next => Some((key, item)),
-                    _ => None,
-                });
+    let table = document.get_ref();
+    let mut iter = path.into_iter();
+    let index0 = iter.next()?.as_index();
+    let key0 = index0.as_key()?;
+    let (mut current_key, mut current_item) = table.get_key_value(key0)?;
+
+    while let Some(index) = iter.next() {
+        match index.as_index() {
+            TomlIndex::Key(key) => {
+                if let Some(table) = current_item.get_ref().as_table() {
+                    (current_key, current_item) = table.get_key_value(key)?;
+                } else if let Some(array) = current_item.get_ref().as_array() {
+                    current_item = array.iter().find(|item| match item.get_ref() {
+                        toml::de::DeValue::String(s) => s == key,
+                        _ => false,
+                    })?;
+                } else {
+                    return None;
+                }
+            }
+            TomlIndex::Offset(offset) => {
+                let array = current_item.get_ref().as_array()?;
+                current_item = array.get(offset)?;
             }
         }
     }
-    None
+    Some((current_key, current_item))
 }
 
-pub fn get_key_value_span(
+pub fn get_key_value_span<'i>(
     document: &toml::Spanned<toml::de::DeTable<'static>>,
-    path: &[&str],
+    path: &[impl AsIndex],
 ) -> Option<TomlSpan> {
     get_key_value(document, path).map(|(k, v)| TomlSpan {
         key: k.span(),
