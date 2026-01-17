@@ -377,11 +377,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 invalid
             ),
         };
-        self.layout(unit.kind)
-            .build_dir()
-            .artifact()
-            .join(dir)
-            .join(kind)
+        self.layout(unit.kind).build_dir().artifact(&dir, kind)
     }
 
     /// Returns the directory where information about running a build script
