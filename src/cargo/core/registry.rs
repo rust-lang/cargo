@@ -430,21 +430,13 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
 
                 let (summary, should_unlock) =
-                    match summary_for_patch(&orig_patch, &locked, summaries, source) {
+                    match summary_for_patch(&orig_patch, url, &locked, summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
                             patch_deps_pending.push(patch_dep_remaining);
                             continue;
                         }
-                    }
-                    .with_context(|| {
-                        format!(
-                            "patch for `{}` in `{}` failed to resolve",
-                            orig_patch.dep.package_name(),
-                            url,
-                        )
-                    })
-                    .with_context(|| format!("failed to resolve patches for `{}`", url))?;
+                    }?;
 
                 debug!(
                     "patch summary is {:?} should_unlock={:?}",
@@ -456,14 +448,13 @@ impl<'gctx> PackageRegistry<'gctx> {
 
                 if *summary.package_id().source_id().canonical_url() == canonical {
                     return Err(anyhow::anyhow!(
-                        "patch for `{}` in `{}` points to the same source, but \
-                        patches must point to different sources.\n\
-                        Check the patch definition in `{}`.",
+                        "patch for `{}` points to the same source, but patches must point to different sources\n\
+                        help: check `{}` patch definition for `{}` in `{}`",
+                        dep.package_name(),
                         dep.package_name(),
                         url,
                         orig_patch.loc
-                    )
-                    .context(format!("failed to resolve patches for `{}`", url)));
+                    ));
                 }
                 unlocked_summaries.push(summary);
             }
@@ -477,21 +468,21 @@ impl<'gctx> PackageRegistry<'gctx> {
             let name = summary.package_id().name();
             let version = summary.package_id().version();
             if !name_and_version.insert((name, version)) {
-                let duplicate_locations: Vec<_> = patch_deps
+                let duplicate_locations = patch_deps
                     .iter()
                     .filter(|&p| p.0.dep.package_name() == name)
-                    .map(|p| p.0.loc.to_string())
+                    .map(|p| format!("`{}`", p.0.loc))
                     .unique()
-                    .collect();
+                    .join(", ");
                 return Err(anyhow::anyhow!(
-                    "cannot have two `[patch]` entries which both resolve to `{} v{}`.\n\
-                    Check patch definitions for `{}` in `{}`",
+                    "several `[patch]` entries resolving to same version `{} v{}`\n\
+                    help: check `{}` patch definitions for `{}` in {}",
                     name,
                     version,
                     name,
-                    duplicate_locations.join(", ")
-                ))
-                .context(format!("failed to resolve patches for `{}`", url));
+                    url,
+                    duplicate_locations
+                ));
             }
         }
 
@@ -944,6 +935,7 @@ fn lock(
 /// via the original patch, so we need to inform the resolver to "unlock" it.
 fn summary_for_patch(
     original_patch: &Patch,
+    orig_patch_url: &Url,
     locked: &Option<LockedPatchDependency>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
@@ -964,13 +956,14 @@ fn summary_for_patch(
         let versions: Vec<_> = vers.into_iter().map(|v| v.to_string()).collect();
         return Poll::Ready(Err(anyhow::anyhow!(
             "patch for `{}` in `{}` resolved to more than one candidate\n\
-            Found versions: {}\n\
-            Update the patch definition in `{}` to select only one package.\n\
-            For example, add an `=` version requirement to the patch definition, \
-            such as `version = \"={}\"`.",
+            note: found versions: {}\n\
+            help: check `{}` patch definition for `{}` in `{}`\n\
+            help: select only one package using `version = \"={}\"`",
             &original_patch.dep.package_name(),
             &original_patch.dep.source_id(),
             versions.join(", "),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
             original_patch.loc,
             versions.last().unwrap()
         )));
@@ -993,6 +986,7 @@ fn summary_for_patch(
 
         let summary = ready!(summary_for_patch(
             original_patch,
+            orig_patch_url,
             &None,
             orig_matches,
             source
@@ -1019,7 +1013,7 @@ fn summary_for_patch(
         .map(|summary| summary.as_summary().version())
         .collect::<Vec<_>>();
     let found = match vers.len() {
-        0 => format!(""),
+        0 => "".to_string(),
         1 => format!("version `{}`", vers[0]),
         _ => {
             vers.sort();
@@ -1029,24 +1023,27 @@ fn summary_for_patch(
     };
     Poll::Ready(Err(if found.is_empty() {
         anyhow::anyhow!(
-            "The patch location `{}` does not appear to contain any packages \
-            matching the name `{}`.\n\
-            Check the patch definition in `{}`.",
+            "patch location `{}` does not contain packages matching `{}`\n\
+            help: check `{}` patch definition for `{}` in `{}`",
             &original_patch.dep.source_id(),
             &original_patch.dep.package_name(),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
             original_patch.loc
         )
     } else {
         anyhow::anyhow!(
-            "The patch location `{}` contains a `{}` package with {}, but the patch \
-            definition in `{}` requires `{}`.\n\
-            Check that the version in the patch location is what you expect, \
-            and update the patch definition to match.",
-            &original_patch.dep.source_id(),
+            "patch `{}` version mismatch\n\
+            note: patch location contains {}, but patch definition requires `{}`\n\
+            help: check patch location `{}`\n\
+            help: check `{}` patch definition for `{}` in `{}`",
             &original_patch.dep.package_name(),
             found,
-            original_patch.loc,
-            &original_patch.dep.version_req()
+            &original_patch.dep.version_req(),
+            &original_patch.dep.source_id(),
+            &original_patch.dep.package_name(),
+            orig_patch_url,
+            original_patch.loc
         )
     }))
 }
