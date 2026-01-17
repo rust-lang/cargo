@@ -2287,6 +2287,64 @@ For example, add an `=` version requirement to the patch definition, such as `ve
 }
 
 #[cargo_test]
+fn too_many_matches_in_git_repo() {
+    // The patch location has multiple versions that match.
+    Package::new("bar", "0.1.0").publish();
+    let git_repo = git::repo(&paths::root().join("git-repo"))
+        .file(
+            "Cargo.toml",
+            r#"
+        [workspace]
+        members = ["bar", "bar2"]
+        "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .file("bar2/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar2/src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1"
+
+                [patch.crates-io]
+                bar = {{ version = "0.1", git = '{}' }}
+            "#,
+                git_repo.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "")
+        .file("bar2/Cargo.toml", &basic_manifest("bar", "0.1.1"))
+        .file("bar2/src/lib.rs", "")
+        .build();
+
+    // Picks 0.1.1, the most recent version.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/git-repo`
+[ERROR] patch for `bar` in `[ROOTURL]/git-repo` resolved to more than one candidate
+Found versions: 0.1.0, 0.1.1
+Update the patch definition in `[ROOT]/foo/Cargo.toml` to select only one package.
+For example, add an `=` version requirement to the patch definition, such as `version = "=0.1.1"`.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn no_matches() {
     // A patch to a location that does not contain the named package.
     let p = project()
