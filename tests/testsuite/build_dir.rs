@@ -1181,8 +1181,8 @@ fn artifact_deps() {
 
 "#]])
         .with_stdout_data(str![[r#"
-CARGO_BIN_DIR_BAR=[ROOT]/foo/build-dir/debug/deps/artifact/bar/[HASH]/bin
-CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/deps/artifact/bar/[HASH]/bin/bar[..][EXE]
+CARGO_BIN_DIR_BAR=[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin
+CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/bar[..][EXE]
 
 "#]])
         .run();
@@ -1199,8 +1199,8 @@ CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/deps/artifact/bar/[HASH]/bin/b
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/deps/artifact/bar/[HASH]/bin/bar[..][EXE]
-[ROOT]/foo/build-dir/debug/deps/artifact/bar/[HASH]/bin/bar[..].d
+[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/bar[..][EXE]
+[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/bar[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/deps/foo[..].d
 

@@ -384,7 +384,11 @@ impl BuildDirLayout {
     }
     /// Fetch the artifact path.
     pub fn artifact(&self, pkg_dir: &str, kind: &str) -> PathBuf {
-        self.artifact.join(pkg_dir).join(kind)
+        if self.is_new_layout {
+            self.build_unit(pkg_dir).join("artifact").join(kind)
+        } else {
+            self.artifact.join(pkg_dir).join(kind)
+        }
     }
     /// Fetch the build unit path
     pub fn build_unit(&self, pkg_dir: &str) -> PathBuf {
