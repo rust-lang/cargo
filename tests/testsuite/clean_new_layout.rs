@@ -126,10 +126,10 @@ fn clean_multiple_packages_in_glob_char_path() {
     let foo_path = &p.build_dir().join("debug").join("build");
 
     #[cfg(not(target_env = "msvc"))]
-    let file_glob = "foo/*/deps/foo*";
+    let file_glob = "foo/*/out/foo*";
 
     #[cfg(target_env = "msvc")]
-    let file_glob = "foo/*/deps/foo.pdb";
+    let file_glob = "foo/*/out/foo.pdb";
 
     // Assert that build artifacts are produced
     p.cargo("build")
@@ -401,7 +401,7 @@ fn build_script() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/deps/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -556,7 +556,7 @@ fn clean_remove_rlib_rmeta() {
         .run();
     assert!(p.target_debug_dir().join("libfoo.rlib").exists());
     let rmeta = p
-        .glob("target/debug/build/*/*/deps/*.rmeta")
+        .glob("target/debug/build/*/*/out/*.rmeta")
         .next()
         .unwrap()
         .unwrap();
@@ -932,7 +932,7 @@ fn clean_spec_reserved() {
         .run();
     assert!(p.target_debug_dir().join("build").is_dir());
     let build_test = p
-        .glob("target/debug/build/*/*/deps/build-*")
+        .glob("target/debug/build/*/*/out/build-*")
         .next()
         .unwrap()
         .unwrap();

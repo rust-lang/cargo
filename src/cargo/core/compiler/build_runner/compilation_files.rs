@@ -272,7 +272,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.host.build_dir().root()
     }
 
-    /// Returns the host `deps` directory path.
+    /// Returns the host `deps` directory path for a given build unit.
     pub fn host_deps(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.host.build_dir().deps(&dir)
@@ -289,9 +289,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// specified unit. (new layout)
     ///
     /// New features should consider using this so we can avoid their migrations.
-    pub fn deps_dir_new_layout(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir_new_layout(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_dir().deps_new_layout(&dir)
+        self.layout(unit.kind)
+            .build_dir()
+            .out_force_new_layout(&dir)
     }
 
     /// Directory where the fingerprint for the given unit should go.
@@ -530,7 +532,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     // `-Zrustdoc-mergeable-info` always uses the new layout.
                     outputs.push(OutputFile {
                         path: self
-                            .deps_dir_new_layout(unit)
+                            .out_dir_new_layout(unit)
                             .join(unit.target.crate_name())
                             .with_extension("json"),
                         hardlink: None,

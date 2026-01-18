@@ -902,7 +902,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         rustdoc.arg("--merge=none");
         let mut arg = OsString::from("--parts-out-dir=");
         // `-Zrustdoc-mergeable-info` always uses the new layout.
-        arg.push(build_runner.files().deps_dir_new_layout(unit));
+        arg.push(build_runner.files().out_dir_new_layout(unit));
         rustdoc.arg(arg);
     }
 
