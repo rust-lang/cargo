@@ -1531,6 +1531,10 @@ impl CliUnstable {
             debug!("-Zbuild-dir-new-layout implicitly enabled by -Zfine-grain-locking");
             self.build_dir_new_layout = true;
         }
+        if self.rustdoc_mergeable_info && !self.build_dir_new_layout {
+            debug!("-Zrustdoc-mergeable-info implicitly enabled by -Zfine-grain-locking");
+            self.build_dir_new_layout = true;
+        }
     }
 }
 
