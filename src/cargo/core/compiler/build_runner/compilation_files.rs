@@ -231,7 +231,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
         } else {
-            self.deps_dir(unit).to_path_buf()
+            self.out_dir(unit).to_path_buf()
         }
     }
 
@@ -272,26 +272,28 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.host.build_dir().root()
     }
 
-    /// Returns the host `deps` directory path.
-    pub fn host_deps(&self, unit: &Unit) -> PathBuf {
+    /// Returns the host `out` directory path for a given build unit.
+    pub fn host_out(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.host.build_dir().deps(&dir)
+        self.host.build_dir().out(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_dir().deps(&dir)
+        self.layout(unit.kind).build_dir().out(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit. (new layout)
     ///
     /// New features should consider using this so we can avoid their migrations.
-    pub fn deps_dir_new_layout(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir_new_layout(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_dir().deps_new_layout(&dir)
+        self.layout(unit.kind)
+            .build_dir()
+            .out_force_new_layout(&dir)
     }
 
     /// Directory where the fingerprint for the given unit should go.
@@ -530,7 +532,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     // `-Zrustdoc-mergeable-info` always uses the new layout.
                     outputs.push(OutputFile {
                         path: self
-                            .deps_dir_new_layout(unit)
+                            .out_dir_new_layout(unit)
                             .join(unit.target.crate_name())
                             .with_extension("json"),
                         hardlink: None,
@@ -561,7 +563,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     unit.pkg.name(),
                     self.metadata(unit).unit_id()
                 );
-                let path = self.deps_dir(unit).join(file_name);
+                let path = self.out_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
                     hardlink: None,

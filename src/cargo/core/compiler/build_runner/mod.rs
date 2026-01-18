@@ -476,7 +476,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
             if self.bcx.gctx.cli_unstable().build_dir_new_layout {
                 for (unit, _) in self.bcx.unit_graph.iter() {
-                    let dep_dir = self.files().deps_dir(unit);
+                    let dep_dir = self.files().out_dir(unit);
                     paths::create_dir_all(&dep_dir)?;
                     self.compilation.deps_output.insert(kind, dep_dir);
                 }

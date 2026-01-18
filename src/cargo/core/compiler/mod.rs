@@ -902,7 +902,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         rustdoc.arg("--merge=none");
         let mut arg = OsString::from("--parts-out-dir=");
         // `-Zrustdoc-mergeable-info` always uses the new layout.
-        arg.push(build_runner.files().deps_dir_new_layout(unit));
+        arg.push(build_runner.files().out_dir_new_layout(unit));
         rustdoc.arg(arg);
     }
 
@@ -1799,7 +1799,7 @@ fn add_dep_arg<'a, 'b: 'a>(
     if map.contains_key(&unit) {
         return;
     }
-    map.insert(&unit, build_runner.files().deps_dir(&unit));
+    map.insert(&unit, build_runner.files().out_dir(&unit));
 
     for dep in build_runner.unit_deps(unit) {
         add_dep_arg(map, build_runner, &dep.unit);
@@ -1854,7 +1854,7 @@ pub fn lib_search_paths(
         }
     } else {
         let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().deps_dir(unit));
+        deps.push(build_runner.files().out_dir(unit));
         lib_search_paths.extend(["-L".into(), deps]);
     }
 
@@ -1862,7 +1862,7 @@ pub fn lib_search_paths(
     // dependencies are correctly found (for reexported macros).
     if !unit.kind.is_host() {
         let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().host_deps(unit));
+        deps.push(build_runner.files().host_out(unit));
         lib_search_paths.extend(["-L".into(), deps]);
     }
 
