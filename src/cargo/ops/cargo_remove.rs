@@ -55,17 +55,41 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
                 use std::fmt::Write as _;
 
                 let mut error = String::new();
-                let expected_path = expected_path.join(".");
+                let path = expected_path.join(".");
                 let _ = write!(
                     &mut error,
-                    "the dependency `{expected_name}` could not be found in `{expected_path}`"
+                    "the dependency `{expected_name}` could not be found in `{path}`"
                 );
                 if let Some(alt_path) = alt_path {
+                    let mut flags = Vec::new();
+                    match (
+                        expected_path.last().unwrap().as_str(),
+                        alt_path.last().unwrap().as_str(),
+                    ) {
+                        ("build-dependencies", "build-dependencies") => {}
+                        ("dev-dependencies", "dev-dependencies") => {}
+                        ("dependencies", "dependencies") => {}
+                        (_, "build-dependencies") => flags.push("--build"),
+                        (_, "dev-dependencies") => flags.push("--dev"),
+                        (_, _) => {}
+                    }
+                    if expected_path[0] != "target" && alt_path[0] == "target" {
+                        flags.push(&"--target");
+                        flags.push(&alt_path[1]);
+                    }
                     let alt_path = alt_path.join(".");
-                    let _ = write!(
-                        &mut error,
-                        "\n\nhelp: a dependency with the same name exists in `{alt_path}`"
-                    );
+                    if !flags.is_empty() {
+                        let flags = flags.join(" ");
+                        let _ = write!(
+                            &mut error,
+                            "\n\nhelp: pass `{flags}` to remove `{expected_name}` from `{alt_path}`"
+                        );
+                    } else {
+                        let _ = write!(
+                            &mut error,
+                            "\n\nhelp: a dependency with the same name exists in `{alt_path}`"
+                        );
+                    }
                 } else if let Some(alt_name) = alt_name {
                     let _ = write!(
                         &mut error,

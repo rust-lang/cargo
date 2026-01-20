@@ -1,4 +1,4 @@
-<svg width="844px" height="110px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1087px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
@@ -25,7 +25,7 @@
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>
-    <tspan x="10px" y="82px"><tspan>help: a dependency with the same name exists in `target.x86_64-unknown-freebsd.build-dependencies`</tspan>
+    <tspan x="10px" y="82px"><tspan>help: pass `--build --target x86_64-unknown-freebsd` to remove `semver` from `target.x86_64-unknown-freebsd.build-dependencies`</tspan>
 </tspan>
     <tspan x="10px" y="100px">
 </tspan>
