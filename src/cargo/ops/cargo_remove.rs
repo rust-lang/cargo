@@ -5,6 +5,7 @@ use crate::GlobalContext;
 use crate::core::Package;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
+use crate::util::toml_mut::manifest::MissingDependencyError;
 
 /// Remove a dependency from a Cargo.toml manifest file.
 #[derive(Debug)]
@@ -44,7 +45,36 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
             .shell()
             .status("Removing", format!("{dep} from {section}"))?;
 
-        manifest.remove_from_table(&dep_table, dep)?;
+        manifest.remove_from_table(&dep_table, dep).map_err(
+            |MissingDependencyError {
+                 expected_name,
+                 expected_path,
+                 alt_name,
+                 alt_path,
+             }| {
+                use std::fmt::Write as _;
+
+                let mut error = String::new();
+                let expected_path = expected_path.join(".");
+                let _ = write!(
+                    &mut error,
+                    "the dependency `{expected_name}` could not be found in `{expected_path}`"
+                );
+                if let Some(alt_path) = alt_path {
+                    let alt_path = alt_path.join(".");
+                    let _ = write!(
+                        &mut error,
+                        "\n\nhelp: a dependency with the same name exists in `{alt_path}`"
+                    );
+                } else if let Some(alt_name) = alt_name {
+                    let _ = write!(
+                        &mut error,
+                        "\n\nhelp: a dependency with a similar name exists: `{alt_name}`"
+                    );
+                }
+                anyhow::format_err!("{error}")
+            },
+        )?;
 
         // Now that we have removed the crate, if that was the last reference to that
         // crate, then we need to drop any explicitly activated features on
