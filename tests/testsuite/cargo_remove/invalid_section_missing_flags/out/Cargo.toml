@@ -1,0 +1,14 @@
+[package]
+name = "cargo-remove-target-test-fixture"
+version = "0.1.0"
+edition = "2015"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[target.x86_64-unknown-freebsd.build-dependencies]
+semver = "0.1.0"
+
+[target.wasm32-unknown-unknown.build-dependencies]
+semver = "0.1.0"
