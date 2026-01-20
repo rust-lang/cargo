@@ -253,7 +253,9 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             if is_namespaced_features_supported {
                 let dep_key = dep.toml_key();
                 if !manifest.is_explicit_dep_activation(dep_key) {
-                    let table = manifest.get_table_mut(&[String::from("features")])?;
+                    let table = manifest
+                        .get_table_mut(&[String::from("features")])
+                        .expect("manifest validated");
                     let dep_name = dep.rename.as_deref().unwrap_or(&dep.name);
                     let new_feature: toml_edit::Value =
                         [format!("dep:{dep_name}")].iter().collect();
@@ -271,7 +273,6 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
     if was_sorted {
         if let Some(table) = manifest
             .get_table_mut(&dep_table)
-            .ok()
             .and_then(TomlItem::as_table_like_mut)
         {
             table.sort_values();
