@@ -401,7 +401,11 @@ impl LocalManifest {
     }
 
     /// Remove entry from a Cargo.toml.
-    pub fn remove_from_table(&mut self, table_path: &[String], name: &str) -> CargoResult<()> {
+    pub fn remove_from_table(
+        &mut self,
+        table_path: &[String],
+        name: &str,
+    ) -> Result<(), MissingDependencyError> {
         let parent_table = self
             .get_table_mut(table_path)
             .expect("manifest validated, path should be to a table");
@@ -429,15 +433,15 @@ impl LocalManifest {
                 let found_table_path = sections.iter().find_map(|(t, i)| {
                     let table_path: Vec<String> =
                         t.to_table().iter().map(|s| s.to_string()).collect();
-                    i.get(name).is_some().then(|| table_path.join("."))
+                    i.get(name).is_some().then(|| table_path)
                 });
 
-                return Err(non_existent_dependency_err(
-                    name,
-                    table_path.join("."),
-                    found_table_path,
-                    alt_name.as_deref(),
-                ));
+                return Err(MissingDependencyError {
+                    expected_name: name.to_owned(),
+                    expected_path: table_path.to_owned(),
+                    alt_name: alt_name,
+                    alt_path: found_table_path,
+                });
             }
         }
 
@@ -668,24 +672,39 @@ fn parse_manifest_err() -> anyhow::Error {
     anyhow::format_err!("unable to parse external Cargo.toml")
 }
 
-fn non_existent_dependency_err(
-    name: impl std::fmt::Display,
-    search_table: impl std::fmt::Display,
-    found_table: Option<impl std::fmt::Display>,
-    alt_name: Option<&str>,
-) -> anyhow::Error {
-    let mut msg = format!("the dependency `{name}` could not be found in `{search_table}`");
-    if let Some(found_table) = found_table {
-        msg.push_str(&format!(
-            "\n\nhelp: a dependency with the same name exists in `{found_table}`"
-        ));
-    } else if let Some(alt_name) = alt_name {
-        msg.push_str(&format!(
-            "\n\nhelp: a dependency with a similar name exists: `{alt_name}`"
-        ));
-    }
-    anyhow::format_err!(msg)
+#[derive(Debug)]
+pub struct MissingDependencyError {
+    pub expected_name: String,
+    pub expected_path: Vec<String>,
+    pub alt_path: Option<Vec<String>>,
+    pub alt_name: Option<String>,
 }
+
+impl std::fmt::Display for MissingDependencyError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let expected_name = &self.expected_name;
+        let expected_path = self.expected_path.join(".");
+        write!(
+            fmt,
+            "the dependency `{expected_name}` could not be found in `{expected_path}`"
+        )?;
+        if let Some(alt_path) = &self.alt_path {
+            let alt_path = alt_path.join(".");
+            write!(
+                fmt,
+                "\n\nhelp: a dependency with the same name exists in `{alt_path}`"
+            )?;
+        } else if let Some(alt_name) = &self.alt_name {
+            write!(
+                fmt,
+                "\n\nhelp: a dependency with a similar name exists: `{alt_name}`"
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for MissingDependencyError {}
 
 fn remove_array_index(array: &mut toml_edit::Array, index: usize) {
     let value = array.remove(index);
