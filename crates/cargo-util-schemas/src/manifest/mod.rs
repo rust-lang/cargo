@@ -1796,7 +1796,7 @@ impl<'de> de::Deserialize<'de> for VecStringOrBool {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PathValue(pub PathBuf);
 
 impl fmt::Debug for PathValue {
