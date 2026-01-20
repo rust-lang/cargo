@@ -13,6 +13,7 @@ mod invalid_package;
 mod invalid_package_multiple;
 mod invalid_section;
 mod invalid_section_dep;
+mod invalid_section_missing_flags;
 mod invalid_target;
 mod invalid_target_dep;
 mod last_dep;

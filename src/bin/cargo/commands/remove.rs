@@ -75,7 +75,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         0 => {
             return Err(CliError::new(
                 anyhow::format_err!(
-                    "no packages selected to modify.  Please specify one with `-p <PKGID>`"
+                    "no package selected to modify
+help: specify a package with `-p <PKGID>`"
                 ),
                 101,
             ));
@@ -85,9 +86,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             let names = packages.iter().map(|p| p.name()).collect::<Vec<_>>();
             return Err(CliError::new(
                 anyhow::format_err!(
-                    "`cargo remove` could not determine which package to modify. \
-                    Use the `--package` option to specify a package. \n\
-                    available packages: {}",
+                    "no package selected to modify
+help: specify a package with `-p <PKGID>`
+      available packages: {}",
                     names.join(", ")
                 ),
                 101,
