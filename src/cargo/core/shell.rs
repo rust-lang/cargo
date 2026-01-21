@@ -640,9 +640,59 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
     let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());
     let wezterm = std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into());
     let ghostty = std::env::var("TERM_PROGRAM").ok() == Some("ghostty".into());
-    let iterm = std::env::var("TERM_PROGRAM").ok() == Some("iTerm.app".into());
+    // iTerm added OSC 9;4 support in v3.6.6, which we can check for.
+    // See https://github.com/rust-lang/cargo/pull/16506#discussion_r2706584034 for reference.
+    let iterm = term_features_has_progress();
 
     (windows_terminal || conemu || wezterm || ghostty || iterm) && stream.is_terminal()
+}
+
+#[expect(
+    clippy::disallowed_methods,
+    reason = "reading the state of the system, not config"
+)]
+// For iTerm, the TERM_FEATURES value "P" indicates OSC 9;4 support.
+// See https://iterm2.com/feature-reporting/ for reference.
+fn term_features_has_progress() -> bool {
+    let Ok(value) = std::env::var("TERM_FEATURES") else {
+        return false;
+    };
+
+    let mut current = String::new();
+
+    for ch in value.chars() {
+        if !ch.is_ascii_alphanumeric() {
+            break;
+        }
+        if ch.is_ascii_uppercase() {
+            if current == "P" {
+                return true;
+            }
+            current.clear();
+            current.push(ch);
+        } else {
+            current.push(ch);
+        }
+    }
+    current == "P"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::term_features_has_progress;
+
+    #[test]
+    fn term_features_progress_detection() {
+        // With PROGRESS feature ("P")
+        unsafe { std::env::set_var("TERM_FEATURES", "MBT2ScP") };
+        assert!(term_features_has_progress());
+
+        // Without PROGRESS feature
+        unsafe { std::env::set_var("TERM_FEATURES", "MBT2Sc") };
+        assert!(!term_features_has_progress());
+
+        unsafe { std::env::remove_var("TERM_FEATURES") };
+    }
 }
 
 pub struct Hyperlink<D: fmt::Display> {
