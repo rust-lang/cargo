@@ -948,10 +948,9 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("check -Zcargo-lints --quiet")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(
-            str![[r#"
+        .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
  --> Cargo.toml:7:7
   |
@@ -974,19 +973,8 @@ implicit_minimum_version_req = "warn"
 8 | regex = "1.0.0"
   |             ++
   = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
-[UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
-[DOWNLOADING] crates ...
-[DOWNLOADED] regex v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] regex v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]
-            .unordered(),
-        )
+"#]])
         .run();
 }
 
