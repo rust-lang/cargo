@@ -126,6 +126,7 @@ pub fn lint_package(
     let contents = manifest.contents();
     let target_key_for_platform = target_key_for_platform(&manifest);
 
+    let mut is_first = true;
     for dep in manifest.dependencies().iter() {
         let version_req = dep.version_req();
         let Some(suggested_req) = get_suggested_version_req(&version_req) else {
@@ -143,6 +144,7 @@ pub fn lint_package(
         let Some(report) = report(
             lint_level,
             reason,
+            is_first,
             contents,
             document,
             key_path,
@@ -151,6 +153,8 @@ pub fn lint_package(
         ) else {
             continue;
         };
+
+        is_first = false;
 
         if lint_level.is_error() {
             *error_count += 1;
@@ -198,6 +202,7 @@ pub fn lint_workspace(
             (name, req)
         });
 
+    let mut is_first = true;
     for (name_in_toml, version_req) in dep_iter {
         let Some(suggested_req) = get_suggested_version_req(&version_req) else {
             continue;
@@ -208,6 +213,7 @@ pub fn lint_workspace(
         let Some(report) = report(
             lint_level,
             reason,
+            is_first,
             contents,
             document,
             &key_path,
@@ -216,6 +222,8 @@ pub fn lint_workspace(
         ) else {
             continue;
         };
+
+        is_first = false;
 
         if lint_level.is_error() {
             *error_count += 1;
@@ -251,6 +259,7 @@ pub fn span_of_version_req<'doc>(
 fn report<'a>(
     lint_level: LintLevel,
     reason: LintLevelReason,
+    is_first: bool,
     contents: Option<&'a str>,
     document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
     key_path: &[&str],
@@ -258,7 +267,6 @@ fn report<'a>(
     suggested_req: &str,
 ) -> Option<[Group<'a>; 2]> {
     let level = lint_level.to_diagnostic_level();
-    let emitted_source = LINT.emitted_source(lint_level, reason);
     let replacement = format!(r#""{suggested_req}""#);
     let label = "missing full version components";
     let secondary_title = "consider specifying full `major.minor.patch` version components";
@@ -277,12 +285,15 @@ fn report<'a>(
                 .path(manifest_path.to_owned())
                 .annotation(AnnotationKind::Primary.span(span.clone()).label(label)),
         );
-        help = help
-            .element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)))
-            .element(Level::NOTE.message(emitted_source));
+        help = help.element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)));
+        if is_first {
+            help = help.element(Level::NOTE.message(LINT.emitted_source(lint_level, reason)));
+        }
     } else {
         desc = desc.element(Origin::path(manifest_path.to_owned()));
-        help = help.element(Level::NOTE.message(emitted_source));
+        if is_first {
+            help = help.element(Level::NOTE.message(LINT.emitted_source(lint_level, reason)));
+        }
     }
 
     Some([desc, help])

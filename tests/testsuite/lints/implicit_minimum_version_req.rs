@@ -973,7 +973,6 @@ implicit_minimum_version_req = "warn"
   |
 8 | regex = "1.0.0"
   |             ++
-  = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
