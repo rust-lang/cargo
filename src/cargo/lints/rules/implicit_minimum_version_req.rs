@@ -272,17 +272,18 @@ fn report<'a>(
         let Some(span) = span_of_version_req(document, key_path) else {
             return None;
         };
-        desc = desc.element(
-            Snippet::source(contents)
-                .path(manifest_path.to_owned())
-                .annotation(AnnotationKind::Primary.span(span.clone()).label(label)),
-        );
-        help = help
-            .element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)))
+        desc = desc
+            .element(
+                Snippet::source(contents)
+                    .path(manifest_path.to_owned())
+                    .annotation(AnnotationKind::Primary.span(span.clone()).label(label)),
+            )
             .element(Level::NOTE.message(emitted_source));
+        help = help.element(Snippet::source(contents).patch(Patch::new(span.clone(), replacement)));
     } else {
-        desc = desc.element(Origin::path(manifest_path.to_owned()));
-        help = help.element(Level::NOTE.message(emitted_source));
+        desc = desc
+            .element(Origin::path(manifest_path.to_owned()))
+            .element(Level::NOTE.message(emitted_source));
     }
 
     Some([desc, help])
