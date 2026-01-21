@@ -2,8 +2,8 @@
 
 use crate::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
-use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{rustc_host, str};
 
 #[cargo_test]
 fn feature_activates_missing_feature() {
@@ -2417,5 +2417,40 @@ fn invalid_feature_name_slash_error() {
   |                 ^^^^^^^^^
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn dont_demand_not_required_dep() {
+    Package::new("not-required", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "sample"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["feat"]
+feat = ["dep:not-required"]
+
+[target.'cfg(false)'.dependencies]
+not-required = { version = "1.0", optional = true }
+
+[[example]]
+name = "demo"
+required-features = ["feat"]
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/demo.rs", "fn main() {}")
+        .build();
+
+    let host = rustc_host();
+    p.cargo(&format!("fetch --target={host}")).run();
+    p.cargo(&format!("check --target={host} --examples --frozen"))
         .run();
 }

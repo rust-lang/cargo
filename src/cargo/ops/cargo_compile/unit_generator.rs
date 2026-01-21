@@ -11,7 +11,7 @@ use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
-use crate::core::resolver::{HasDevUnits, Resolve};
+use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CargoResult, closest_msg};
@@ -716,6 +716,10 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                             self.resolved_features,
                             self.package_set,
                             pkg.package_id(),
+                            self.has_dev_units,
+                            self.requested_kinds,
+                            self.target_data,
+                            ForceAllTargets::No,
                         )
                     });
                     rf.iter().filter(|f| !features.contains(*f)).collect()
