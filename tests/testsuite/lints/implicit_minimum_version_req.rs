@@ -968,7 +968,6 @@ implicit_minimum_version_req = "warn"
 8 | regex = "1.0"
   |         ^^^^^ missing full version components
   |
-  = [NOTE] `cargo::implicit_minimum_version_req` is set to `warn` in `[lints]`
 [HELP] consider specifying full `major.minor.patch` version components
   |
 8 | regex = "1.0.0"
