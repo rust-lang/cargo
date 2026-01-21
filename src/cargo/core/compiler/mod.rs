@@ -1538,8 +1538,7 @@ fn trim_paths_args(
     }
 
     // feature gate was checked during manifest/config parsing.
-    cmd.arg("-Zunstable-options");
-    cmd.arg(format!("-Zremap-path-scope={trim_paths}"));
+    cmd.arg(format!("--remap-path-scope={trim_paths}"));
 
     // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
     // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.

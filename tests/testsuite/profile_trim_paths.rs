@@ -65,7 +65,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn release_profile_default_to_object() {
     let p = project()
         .file(
@@ -84,14 +84,14 @@ fn release_profile_default_to_object() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn one_option() {
     let build = |option| {
         let p = project()
@@ -122,7 +122,7 @@ fn one_option() {
                 "\
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]\
-    -Zremap-path-scope={option} \
+    --remap-path-scope={option} \
     --remap-path-prefix=[ROOT]/foo=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -132,12 +132,12 @@ fn one_option() {
     }
     build("none")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_does_not_contain("[..]-Zremap-path-scope=[..]")
+        .with_stderr_does_not_contain("[..]--remap-path-scope=[..]")
         .with_stderr_does_not_contain("[..]--remap-path-prefix=[..]")
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn multiple_options() {
     let p = project()
         .file(
@@ -159,14 +159,14 @@ fn multiple_options() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=diagnostics,macro,object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=diagnostics,macro,object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn profile_merge_works() {
     let p = project()
         .file(
@@ -192,14 +192,14 @@ fn profile_merge_works() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `custom` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn registry_dependency() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -236,9 +236,9 @@ fn registry_dependency() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -246,7 +246,7 @@ fn registry_dependency() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn registry_dependency_with_build_script_codegen() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -306,11 +306,11 @@ fn registry_dependency_with_build_script_codegen() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name build_script_build [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name bar [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -318,7 +318,7 @@ fn registry_dependency_with_build_script_codegen() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn git_dependency() {
     let git_project = git::new("bar", |project| {
         project
@@ -358,9 +358,9 @@ bar-[..]/[..]/src/lib.rs
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOTURL]/bar#[..])
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -368,7 +368,7 @@ bar-[..]/[..]/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn path_dependency() {
     let p = project()
         .file(
@@ -403,9 +403,9 @@ cocktail-bar/src/lib.rs
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/cocktail-bar)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -413,7 +413,7 @@ cocktail-bar/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn path_dependency_outside_workspace() {
     let _bar = project()
         .at("bar")
@@ -449,9 +449,9 @@ bar-0.0.1/src/lib.rs
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/bar=bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/bar=bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -459,7 +459,7 @@ bar-0.0.1/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -495,10 +495,10 @@ fn diagnostics_works() {
         )
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..] rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [WARNING] unused variable: `unused`
 ...
-[RUNNING] `[..] rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 ...
 "#]])
         .run();
@@ -517,17 +517,29 @@ mod object_works {
             .stdout
     }
 
-    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "nm",
+        nightly,
+        reason = "--remap-path-scope will be stabilized in 1.95"
+    )]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "nm",
+        nightly,
+        reason = "--remap-path-scope will be stabilized in 1.95"
+    )]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "nm",
+        nightly,
+        reason = "--remap-path-scope will be stabilized in 1.95"
+    )]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -550,7 +562,7 @@ mod object_works {
     #[cargo_test(
         requires = "readelf",
         nightly,
-        reason = "-Zremap-path-scope is unstable"
+        reason = "--remap-path-scope will be stabilized in 1.95"
     )]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
@@ -559,7 +571,7 @@ mod object_works {
     #[cargo_test(
         requires = "readelf",
         nightly,
-        reason = "-Zremap-path-scope is unstable"
+        reason = "--remap-path-scope will be stabilized in 1.95"
     )]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
@@ -568,7 +580,7 @@ mod object_works {
     #[cargo_test(
         requires = "readelf",
         nightly,
-        reason = "-Zremap-path-scope is unstable"
+        reason = "--remap-path-scope will be stabilized in 1.95"
     )]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
@@ -591,7 +603,7 @@ mod object_works {
     #[cargo_test(
         requires = "strings",
         nightly,
-        reason = "-Zremap-path-scope is unstable"
+        reason = "--remap-path-scope will be stabilized in 1.95"
     )]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
@@ -661,12 +673,12 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
             "\
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
-    -Zremap-path-scope=object \
+    --remap-path-scope=object \
     --remap-path-prefix=[ROOT]/home/.cargo/registry/src= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
-    -Zremap-path-scope=object \
+    --remap-path-scope=object \
     --remap-path-prefix=[ROOT]/foo=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -702,7 +714,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 }
 
 // TODO: might want to move to test/testsuite/build_script.rs once stabilized.
-#[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
 fn custom_build_env_var_trim_paths() {
     let p = project()
         .file(
@@ -772,7 +784,11 @@ fn custom_build_env_var_trim_paths() {
 // This test is disabled, as it currently doesn't work due to issues with lldb.
 #[cfg(any())]
 #[cfg(unix)]
-#[cargo_test(requires = "lldb", nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(
+    requires = "lldb",
+    nightly,
+    reason = "--remap-path-scope will be stabilized in 1.95"
+)]
 fn lldb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
     use cargo_util::is_ci;
@@ -823,7 +839,7 @@ fn lldb_works_after_trimmed() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -850,7 +866,11 @@ Hello, Ferris!
 // This test is disabled, as it currently doesn't work.
 #[cfg(any())]
 #[cfg(target_env = "msvc")]
-#[cargo_test(requires = "cdb", nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(
+    requires = "cdb",
+    nightly,
+    reason = "--remap-path-scope will be stabilized in 1.95"
+)]
 fn cdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
 
@@ -890,7 +910,7 @@ fn cdb_works_after_trimmed() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -989,7 +1009,7 @@ fn rustdoc_diagnostics_works() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..]rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..]rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 ...
 [WARNING] unopened HTML tag `script`
  --> -[..]/bar-0.0.1/src/lib.rs:2:17
