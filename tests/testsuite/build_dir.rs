@@ -296,10 +296,10 @@ fn build_script_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/invoked.timestamp
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/output
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/root-output
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/stderr
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/output
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/root-output
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stderr
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock

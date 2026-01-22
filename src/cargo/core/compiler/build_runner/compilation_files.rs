@@ -389,9 +389,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind)
-            .build_dir()
-            .build_script_execution(&dir)
+        self.layout(unit.kind).build_dir().run(&dir)
     }
 
     /// Returns the "`OUT_DIR`" directory for running a build script.
