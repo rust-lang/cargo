@@ -1,5 +1,43 @@
 # Changelog
 
+## Cargo 1.95 (2026-04-16)
+[85eff7c8...HEAD](https://github.com/rust-lang/cargo/compare/85eff7c8...HEAD)
+
+### Added
+
+### Changed
+
+- cargo-remove: Suggest `--dev`, `--build`, or `--target` flags when removing
+  a dependency that exists in a different table.
+  [#16533](https://github.com/rust-lang/cargo/pull/16533)
+- Improve patch-related error messages to follow rustc diagnostic style.
+  [#16498](https://github.com/rust-lang/cargo/pull/16498)
+
+### Fixed
+
+- Fixed `cargo test --frozen` attempting to download dependencies
+  that are not actually required for the specified tests.
+  [#16221](https://github.com/rust-lang/cargo/pull/16221)
+
+### Nightly only
+
+- `-Ztrim-paths`: use stabilized `-Cremap-path-scope` rustc flag.
+  [#16536](https://github.com/rust-lang/cargo/pull/16536)
+- `-Zcargo-lints`: new `non_kebab_case_bin` lint
+  to warn when binary names contain underscores instead of hyphens.
+  [#16524](https://github.com/rust-lang/cargo/pull/16524)
+- `-Zcargo-lints`: show `implicit_minimum_version_req` lint source once per package.
+  [#16535](https://github.com/rust-lang/cargo/pull/16535)
+- `-Zbuild-dir-new-layout`: store artifact dependencies in build unit directory.
+  [#16519](https://github.com/rust-lang/cargo/pull/16519)
+
+### Documentation
+
+### Internal
+
+- Reuse timing metric collection logic between `--timings` and `-Zbuild-analysis`.
+  [#16497](https://github.com/rust-lang/cargo/pull/16497)
+
 ## Cargo 1.94 (2026-03-05)
 
 [2c283a9a...rust-1.94.0](https://github.com/rust-lang/cargo/compare/2c283a9a...rust-1.94.0)
