@@ -640,8 +640,50 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
     let conemu = std::env::var("ConEmuANSI").ok() == Some("ON".into());
     let wezterm = std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into());
     let ghostty = std::env::var("TERM_PROGRAM").ok() == Some("ghostty".into());
+    // iTerm added OSC 9;4 support in v3.6.6, which we can check for.
+    // For context: https://github.com/rust-lang/cargo/pull/16506#discussion_r2706584034
+    let iterm = std::env::var("TERM_PROGRAM").ok() == Some("iTerm.app".into())
+        && std::env::var("TERM_FEATURES")
+            .ok()
+            .is_some_and(|v| term_features_has_progress(&v));
 
-    (windows_terminal || conemu || wezterm || ghostty) && stream.is_terminal()
+    (windows_terminal || conemu || wezterm || ghostty || iterm) && stream.is_terminal()
+}
+
+// For iTerm, the TERM_FEATURES value "P" indicates OSC 9;4 support.
+// Context: https://iterm2.com/feature-reporting/
+fn term_features_has_progress(value: &str) -> bool {
+    let mut current = String::new();
+
+    for ch in value.chars() {
+        if !ch.is_ascii_alphanumeric() {
+            break;
+        }
+        if ch.is_ascii_uppercase() {
+            if current == "P" {
+                return true;
+            }
+            current.clear();
+            current.push(ch);
+        } else {
+            current.push(ch);
+        }
+    }
+    current == "P"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::term_features_has_progress;
+
+    #[test]
+    fn term_features_progress_detection() {
+        // With PROGRESS feature ("P")
+        assert!(term_features_has_progress("MBT2ScP"));
+
+        // Without PROGRESS feature
+        assert!(!term_features_has_progress("MBT2Sc"));
+    }
 }
 
 pub struct Hyperlink<D: fmt::Display> {
