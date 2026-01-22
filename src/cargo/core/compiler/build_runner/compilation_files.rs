@@ -213,7 +213,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
-    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+    pub fn output_dir(&self, unit: &Unit) -> PathBuf {
         // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
         // will be put into doc/ and not into deps/ where the *.examples files are stored.
         if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
@@ -511,10 +511,10 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             }
             CompileMode::Doc => {
                 let path = if bcx.build_config.intent.wants_doc_json_output() {
-                    self.out_dir(unit)
+                    self.output_dir(unit)
                         .join(format!("{}.json", unit.target.crate_name()))
                 } else {
-                    self.out_dir(unit)
+                    self.output_dir(unit)
                         .join(unit.target.crate_name())
                         .join("index.html")
                 };
@@ -609,7 +609,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         unit: &Unit,
         bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Vec<OutputFile>> {
-        let out_dir = self.out_dir(unit);
+        let out_dir = self.output_dir(unit);
 
         let info = bcx.target_data.info(unit.kind);
         let triple = bcx.target_data.short_name(&unit.kind);
