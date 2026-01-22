@@ -384,9 +384,7 @@ fn cargo_build_deprecated_out_dir() {
 
 #[cargo_test]
 fn artifact_dir_rejected_on_stable() {
-    let p = project()
-        .file("src/main.rs", "fn main() {}")
-        .build();
+    let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("build --artifact-dir out")
         .with_status(101)
@@ -397,7 +395,6 @@ See https://github.com/rust-lang/cargo/issues/6790 for more information about th
 "#]])
         .run();
 }
-
 
 fn check_dir_contents(
     artifact_dir: &Path,
