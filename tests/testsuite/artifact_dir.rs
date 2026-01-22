@@ -382,6 +382,23 @@ fn cargo_build_deprecated_out_dir() {
     );
 }
 
+#[cargo_test]
+fn artifact_dir_rejected_on_stable() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --artifact-dir out")
+        .with_status(101)
+        .with_stderr_data(str![[r#"[ERROR] the `--artifact-dir` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/6790 for more information about the `--artifact-dir` flag.
+
+"#]])
+        .run();
+}
+
+
 fn check_dir_contents(
     artifact_dir: &Path,
     expected_linux: &[&str],
