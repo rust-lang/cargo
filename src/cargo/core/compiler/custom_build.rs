@@ -505,6 +505,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
+    paths::create_dir_all(&script_run_dir)?;
 
     let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
