@@ -377,7 +377,7 @@ impl BuildDirLayout {
     /// Fetch the build script execution path.
     pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
         if self.is_new_layout {
-            self.build_unit(pkg_dir).join("build-script")
+            self.build_unit(pkg_dir).join("run")
         } else {
             self.build().join(pkg_dir)
         }
