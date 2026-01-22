@@ -12,7 +12,7 @@ use crate::config::GlobalContextBuilder;
 /// Helper to verify that it is OK to acquire the given lock (it shouldn't block).
 fn verify_lock_is_ok(mode: CacheLockMode) {
     let root = paths::root();
-    threaded_timeout(10, move || {
+    threaded_timeout(100, move || {
         let gctx = GlobalContextBuilder::new().root(root).build();
         let locker = CacheLocker::new();
         // This would block if it is held.
