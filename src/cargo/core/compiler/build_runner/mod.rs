@@ -214,17 +214,17 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         for unit in units_with_build_script {
             for dep in &self.bcx.unit_graph[unit] {
                 if dep.unit.mode.is_run_custom_build() {
-                    let out_dir = self
-                        .files()
-                        .build_script_out_dir(&dep.unit)
-                        .display()
-                        .to_string();
+                    let out_dir = if self.bcx.gctx.cli_unstable().build_dir_new_layout {
+                        self.files().out_dir_new_layout(&dep.unit)
+                    } else {
+                        self.files().build_script_out_dir(&dep.unit)
+                    };
                     let script_meta = self.get_run_build_script_metadata(&dep.unit);
                     self.compilation
                         .extra_env
                         .entry(script_meta)
                         .or_insert_with(Vec::new)
-                        .push(("OUT_DIR".to_string(), out_dir));
+                        .push(("OUT_DIR".to_string(), out_dir.display().to_string()));
                 }
             }
         }

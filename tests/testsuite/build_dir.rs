@@ -279,6 +279,10 @@ fn build_script_should_output_to_build_dir() {
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/CACHEDIR.TAG
 [ROOT]/foo/build-dir/debug/.cargo-lock
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo.txt
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[..].d
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[..][EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build-script-build[EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
@@ -292,10 +296,6 @@ fn build_script_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[..].d
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[..][EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build-script-build[EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/out/foo.txt
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/invoked.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/output
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/build-script/root-output

@@ -1749,7 +1749,11 @@ fn build_deps_args(
     // Add `OUT_DIR` environment variables for build scripts
     let first_custom_build_dep = deps.iter().find(|dep| dep.unit.mode.is_run_custom_build());
     if let Some(dep) = first_custom_build_dep {
-        let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+        let out_dir = if bcx.gctx.cli_unstable().build_dir_new_layout {
+            build_runner.files().out_dir_new_layout(&dep.unit)
+        } else {
+            build_runner.files().build_script_out_dir(&dep.unit)
+        };
         cmd.env("OUT_DIR", &out_dir);
     }
 
@@ -1764,7 +1768,11 @@ fn build_deps_args(
     if is_multiple_build_scripts_enabled {
         for dep in deps {
             if dep.unit.mode.is_run_custom_build() {
-                let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+                let out_dir = if bcx.gctx.cli_unstable().build_dir_new_layout {
+                    build_runner.files().out_dir_new_layout(&dep.unit)
+                } else {
+                    build_runner.files().build_script_out_dir(&dep.unit)
+                };
                 let target_name = dep.unit.target.name();
                 let out_dir_prefix = target_name
                     .strip_prefix("build-script-")
