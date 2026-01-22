@@ -471,7 +471,7 @@ pub struct Example {
 // Example usage that will break.
 fn main() {
     let f = updated_crate::Example { f1: 1, f2: 2 };
-    let x = &f.f2; // Error: reference to packed field is unaligned
+    let x = &f.f2; // Error: error[E0793]: reference to field of packed struct is unaligned
 }
 ```
 
@@ -656,7 +656,7 @@ use updated_crate::Packed;
 
 fn main() {
     let p = Packed { a: 1, b: 2 };
-    let x = &p.b; // Error: reference to packed field is unaligned
+    let x = &p.b; // Error: error[E0793]: reference to field of packed struct is unaligned
 }
 ```
 
