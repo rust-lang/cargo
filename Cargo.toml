@@ -27,20 +27,20 @@ blake3 = "1.8.2"
 build-rs = { version = "0.3.1", path = "crates/build-rs" }
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
-cargo-credential-libsecret = { version = "0.5.5", path = "credential/cargo-credential-libsecret" }
-cargo-credential-macos-keychain = { version = "0.4.20", path = "credential/cargo-credential-macos-keychain" }
-cargo-credential-wincred = { version = "0.4.20", path = "credential/cargo-credential-wincred" }
+cargo-credential-libsecret = { version = "0.5.6", path = "credential/cargo-credential-libsecret" }
+cargo-credential-macos-keychain = { version = "0.4.21", path = "credential/cargo-credential-macos-keychain" }
+cargo-credential-wincred = { version = "0.4.21", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.3.0" }
-cargo-test-macro = { version = "0.4.9", path = "crates/cargo-test-macro" }
-cargo-test-support = { version = "0.10.0", path = "crates/cargo-test-support" }
-cargo-util = { version = "0.2.27", path = "crates/cargo-util" }
+cargo-test-macro = { version = "0.4.10", path = "crates/cargo-test-macro" }
+cargo-test-support = { version = "0.10.1", path = "crates/cargo-test-support" }
+cargo-util = { version = "0.2.28", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.12.1", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.23.1"
 clap = "4.5.53"
 clap_complete = { version = "4.5.64", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
-crates-io = { version = "0.40.17", path = "crates/crates-io" }
+crates-io = { version = "0.40.18", path = "crates/crates-io" }
 criterion = { version = "0.8.1", features = ["html_reports"] }
 curl = "0.4.49"
 # Do not upgrade curl-sys past 0.4.83

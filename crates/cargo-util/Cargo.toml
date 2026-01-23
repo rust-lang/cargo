@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util"
-version = "0.2.27"
+version = "0.2.28"
 rust-version = "1.93"  # MSRV:1
 edition.workspace = true
 license.workspace = true
