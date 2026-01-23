@@ -165,7 +165,6 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
-[COMPILING] test v0.0.0 ([..])
 ...
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -211,10 +210,22 @@ fn lto() {
         )
         .build();
 
-    p.cargo("build")
-        .build_std_arg("std")
-        .env("RUSTFLAGS", "-C linker-features=-lld")
-        .run();
+    let mut exec = p.cargo("build");
+    exec.build_std_arg("std");
+    // Include `-lld` to disable the self-contained linker. This test is
+    // checking for the behavior when using the system linker (like GNU ld or
+    // older versions of lld) which have problems with the bitcode sections in
+    // compiler_builtins.
+    //
+    // This option is only available on x86-64-unknown-linux-gnu.
+    if cfg!(all(
+        target_arch = "x86_64",
+        target_os = "linux",
+        target_env = "gnu"
+    )) {
+        exec.env("RUSTFLAGS", "-C linker-features=-lld");
+    }
+    exec.run();
 }
 
 #[cargo_test(build_std_real)]
