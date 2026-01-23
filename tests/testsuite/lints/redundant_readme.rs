@@ -26,13 +26,17 @@ redundant_readme = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_readme`
-  --> Cargo.toml:10:1
-   |
-10 | redundant_readme = "warn"
-   | ^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] explicit `package.readme` can be inferred
+ --> Cargo.toml:7:1
+  |
+7 | readme = "README.md"
+  | ^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
+[HELP] consider removing `package.readme`
+  |
+7 - readme = "README.md"
+  |
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -63,13 +67,6 @@ redundant_readme = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_readme`
- --> Cargo.toml:9:1
-  |
-9 | redundant_readme = "warn"
-  | ^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -101,13 +98,6 @@ redundant_readme = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_readme`
-  --> Cargo.toml:10:1
-   |
-10 | redundant_readme = "warn"
-   | ^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -139,13 +129,6 @@ redundant_readme = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_readme`
-  --> Cargo.toml:10:1
-   |
-10 | redundant_readme = "warn"
-   | ^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
