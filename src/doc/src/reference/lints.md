@@ -26,6 +26,7 @@ These lints are all set to the 'allow' level by default.
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
 - [`non_kebab_case_bin`](#non_kebab_case_bin)
+- [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
 
 ## `blanket_hint_mostly_unused`
@@ -142,6 +143,41 @@ Should be written as:
 ```toml
 [[bin]]
 name = "foo-bar"
+```
+
+
+## `redundant_readme`
+Group: `style`
+
+Level: `warn`
+
+### What it does
+
+Checks for `package.readme` fields that can be inferred.
+
+See also [`package.readme` reference documentation](manifest.md#the-readme-field).
+
+### Why it is bad
+
+Adds boilerplate.
+
+### Drawbacks
+
+It might not be obvious if they named their file correctly.
+
+### Example
+
+```toml
+[package]
+name = "foo"
+readme = "README.md"
+```
+
+Should be written as:
+
+```toml
+[package]
+name = "foo"
 ```
 
 

@@ -845,7 +845,7 @@ fn normalize_package_readme(
     }
 }
 
-const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"];
+pub const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"];
 
 /// Checks if a file with any of the default README file names exists in the package root.
 /// If so, returns a `String` representing that name.
