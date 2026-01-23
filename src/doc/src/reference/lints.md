@@ -20,6 +20,7 @@ Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only 
 
 These lints are all set to the 'allow' level by default.
 - [`implicit_minimum_version_req`](#implicit_minimum_version_req)
+- [`non_kebab_case_packages`](#non_kebab_case_packages)
 
 ## Warn-by-default
 
@@ -142,6 +143,38 @@ Should be written as:
 
 ```toml
 [[bin]]
+name = "foo-bar"
+```
+
+
+## `non_kebab_case_packages`
+Group: `restriction`
+
+Level: `allow`
+
+### What it does
+
+Detect package names that are not kebab-case.
+
+### Why it is bad
+
+Having multiple naming styles within a workspace can be confusing.
+
+### Drawbacks
+
+Users have to mentally translate package names to namespaces in Rust.
+
+### Example
+
+```toml
+[package]
+name = "foo_bar"
+```
+
+Should be written as:
+
+```toml
+[package]
 name = "foo-bar"
 ```
 
