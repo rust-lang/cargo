@@ -21,7 +21,7 @@ use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
 pub const LINT: Lint = Lint {
-    name: "non_kebab_case_bin",
+    name: "non_kebab_case_bins",
     desc: "binaries should have a kebab-case name",
     primary_group: &STYLE,
     edition_lint_opts: None,
@@ -61,7 +61,7 @@ name = "foo-bar"
     ),
 };
 
-pub fn non_kebab_case_bin(
+pub fn non_kebab_case_bins(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

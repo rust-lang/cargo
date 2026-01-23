@@ -25,7 +25,7 @@ use crate::lints::analyze_cargo_lints_table;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
-use crate::lints::rules::non_kebab_case_bin;
+use crate::lints::rules::non_kebab_case_bins;
 use crate::lints::rules::redundant_readme;
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
@@ -1356,7 +1356,7 @@ impl<'gctx> Workspace<'gctx> {
                 &mut run_error_count,
                 self.gctx,
             )?;
-            non_kebab_case_bin(
+            non_kebab_case_bins(
                 self,
                 pkg.into(),
                 &path,
