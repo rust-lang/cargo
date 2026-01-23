@@ -165,7 +165,6 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
-[COMPILING] test v0.0.0 ([..])
 ...
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
