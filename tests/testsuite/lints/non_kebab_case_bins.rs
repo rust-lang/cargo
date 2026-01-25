@@ -19,7 +19,7 @@ name = "foo_bar"
 path = "src/main.rs"
 
 [lints.cargo]
-non_kebab_case_bin = "warn"
+non_kebab_case_bins = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -33,7 +33,7 @@ non_kebab_case_bin = "warn"
 1 | [ROOT]/foo/target/.../foo_bar[EXE]
   |                   [..]^^^^^^^
   |
-  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+  = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
 [HELP] to change the binary name to kebab case, convert `bin.name`
  --> Cargo.toml:9:8
   |
@@ -60,7 +60,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
-non_kebab_case_bin = "warn"
+non_kebab_case_bins = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -74,7 +74,7 @@ non_kebab_case_bin = "warn"
  1 | [ROOT]/foo/target/.../foo_bar[EXE]
    |                   [..]^^^^^^^
    |
-   = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+   = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
 [HELP] to change the binary name to kebab case, convert `package.name`
   --> Cargo.toml:3:8
    |
@@ -82,9 +82,9 @@ non_kebab_case_bin = "warn"
  3 + name = "foo-bar"
    |
 [HELP] to change the binary name to kebab case, specify `bin.name`
-  --> Cargo.toml:9:29
+  --> Cargo.toml:9:30
    |
- 9 ~ non_kebab_case_bin = "warn"
+ 9 ~ non_kebab_case_bins = "warn"
 10 + [[bin]]
 11 + name = "foo-bar"
 12 + path = "src/main.rs"
@@ -109,7 +109,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
-non_kebab_case_bin = "warn"
+non_kebab_case_bins = "warn"
 "#,
         )
         .file("src/bin/foo_bar.rs", "fn main() {}")
@@ -123,7 +123,7 @@ non_kebab_case_bin = "warn"
 1 | [ROOT]/foo/target/.../foo_bar[EXE]
   |                   [..]^^^^^^^
   |
-  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+  = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
 [HELP] to change the binary name to kebab case, convert the file stem
   |
 1 - src/bin/foo_bar.rs
@@ -144,7 +144,7 @@ fn bin_name_from_script_name() {
             r#"
 ---
 [lints.cargo]
-non_kebab_case_bin = "warn"
+non_kebab_case_bins = "warn"
 ---
 fn main() {}"#,
         )
@@ -159,7 +159,7 @@ fn main() {}"#,
 1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]
   |                                        [..]^^^^^^^
   |
-  = [NOTE] `cargo::non_kebab_case_bin` is set to `warn` in `[lints]`
+  = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
 [HELP] to change the binary name to kebab case, convert the file stem
   |
 1 - foo_bar

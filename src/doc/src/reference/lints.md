@@ -25,7 +25,7 @@ These lints are all set to the 'allow' level by default.
 
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
-- [`non_kebab_case_bin`](#non_kebab_case_bin)
+- [`non_kebab_case_bins`](#non_kebab_case_bins)
 - [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
 
@@ -110,7 +110,7 @@ serde = "1.0.219"
 ```
 
 
-## `non_kebab_case_bin`
+## `non_kebab_case_bins`
 Group: `style`
 
 Level: `warn`
