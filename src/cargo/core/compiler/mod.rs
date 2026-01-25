@@ -864,9 +864,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_path_args(bcx.ws, unit, &mut rustdoc);
     add_cap_lints(bcx, unit, &mut rustdoc);
 
-    if let CompileKind::Target(target) = unit.kind {
-        rustdoc.arg("--target").arg(target.rustc_target());
-    }
+    unit.kind.add_target_arg(&mut rustdoc);
     let doc_dir = build_runner.files().out_dir(unit);
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
@@ -1414,9 +1412,7 @@ fn build_base_args(
         }
     }
 
-    if let CompileKind::Target(n) = unit.kind {
-        cmd.arg("--target").arg(n.rustc_target());
-    }
+    unit.kind.add_target_arg(cmd);
 
     opt(
         cmd,

@@ -34,6 +34,57 @@ pub trait Copy {
 }
 "#;
 
+#[cargo_test]
+fn custom_target_gated() {
+    // Checks that .json targets require the -Z option.
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.0"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("build --target custom-target.json")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `.json` target specs require -Zjson-target-spec
+
+"#]])
+        .run();
+
+    // Same with config settings.
+    p.cargo("build")
+        .env("CARGO_BUILD_TARGET", "custom-target.json")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `.json` target specs require -Zjson-target-spec
+
+"#]])
+        .run();
+
+    // And artifact dependencies.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            edition = "2015"
+
+            [dependencies]
+            bar = { path = "bar/", artifact = "bin", target = "custom-target.json" }
+        "#,
+    );
+    p.cargo("build -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `.json` target specs require -Zjson-target-spec
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
 fn custom_target_minimal() {
     let p = project()
@@ -51,13 +102,16 @@ fn custom_target_minimal() {
         .file("custom-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --lib --target custom-target.json -v").run();
-    p.cargo("build --lib --target src/../custom-target.json -v")
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
+        .run();
+    p.cargo("build --lib --target src/../custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .run();
 
     // Ensure that the correct style of flag is passed to --target with doc tests.
-    p.cargo("test --doc --target src/../custom-target.json -v")
-        .masquerade_as_nightly_cargo(&["no_core", "lang_items"])
+    p.cargo("test --doc --target src/../custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["no_core", "lang_items", "json-target-spec"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -119,7 +173,9 @@ fn custom_target_dependency() {
         .file("custom-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --lib --target custom-target.json -v").run();
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
+        .run();
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
@@ -138,7 +194,9 @@ fn custom_bin_target() {
         .file("custom-bin-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --target custom-bin-target.json -v").run();
+    p.cargo("build --target custom-bin-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
+        .run();
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
@@ -159,8 +217,11 @@ fn changing_spec_rebuilds() {
         .file("custom-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --lib --target custom-target.json -v").run();
-    p.cargo("build --lib --target custom-target.json -v")
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
+        .run();
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -172,7 +233,8 @@ fn changing_spec_rebuilds() {
     // Some arbitrary change that I hope is safe.
     let spec = spec.replace('{', "{\n\"vendor\": \"unknown\",\n");
     fs::write(&spec_path, spec).unwrap();
-    p.cargo("build --lib --target custom-target.json -v")
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
@@ -204,7 +266,8 @@ fn changing_spec_relearns_crate_types() {
         .file("custom-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --lib --target custom-target.json -v")
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot produce cdylib for `foo v0.1.0 ([ROOT]/foo)` [..]
@@ -218,7 +281,8 @@ fn changing_spec_relearns_crate_types() {
     let spec = spec.replace('{', "{\n\"dynamic-linking\": true,\n");
     fs::write(&spec_path, spec).unwrap();
 
-    p.cargo("build --lib --target custom-target.json -v")
+    p.cargo("build --lib --target custom-target.json -v -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
@@ -248,7 +312,8 @@ fn custom_target_ignores_filepath() {
         .build();
 
     // Should build the library the first time.
-    p.cargo("build --lib --target a/custom-target.json")
+    p.cargo("build --lib --target a/custom-target.json -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -257,7 +322,8 @@ fn custom_target_ignores_filepath() {
         .run();
 
     // But not the second time, even though the path to the custom target is different.
-    p.cargo("build --lib --target b/custom-target.json")
+    p.cargo("build --lib --target b/custom-target.json -Zjson-target-spec")
+        .masquerade_as_nightly_cargo(&["json_target_spec"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

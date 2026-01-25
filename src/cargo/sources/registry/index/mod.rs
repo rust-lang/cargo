@@ -20,8 +20,8 @@
 //!
 //! To learn the rationale behind this multi-layer index metadata loading,
 //! see [the documentation of the on-disk index cache](cache).
-use crate::core::Dependency;
 use crate::core::dependency::{Artifact, DepKind};
+use crate::core::{CliUnstable, Dependency};
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::IntoUrl;
@@ -195,14 +195,18 @@ impl IndexSummary {
     }
 }
 
-fn index_package_to_summary(pkg: &IndexPackage<'_>, source_id: SourceId) -> CargoResult<Summary> {
+fn index_package_to_summary(
+    pkg: &IndexPackage<'_>,
+    source_id: SourceId,
+    cli_unstable: &CliUnstable,
+) -> CargoResult<Summary> {
     // ****CAUTION**** Please be extremely careful with returning errors, see
     // `IndexSummary::parse` for details
     let pkgid = PackageId::new(pkg.name.as_ref().into(), pkg.vers.clone(), source_id);
     let deps = pkg
         .deps
         .iter()
-        .map(|dep| registry_dependency_into_dep(dep.clone(), source_id))
+        .map(|dep| registry_dependency_into_dep(dep.clone(), source_id, cli_unstable))
         .collect::<CargoResult<Vec<_>>>()?;
     let mut features = pkg.features.clone();
     if let Some(features2) = pkg.features2.clone() {
@@ -289,7 +293,7 @@ impl<'gctx> RegistryIndex<'gctx> {
     where
         'a: 'b,
     {
-        let bindeps = self.gctx.cli_unstable().bindeps;
+        let cli_unstable = self.gctx.cli_unstable();
 
         let source_id = self.source_id;
 
@@ -308,7 +312,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             .iter_mut()
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
             .filter_map(move |maybe| {
-                match maybe.parse(raw_data, source_id, bindeps) {
+                match maybe.parse(raw_data, source_id, cli_unstable) {
                     Ok(sum) => Some(sum),
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
@@ -354,7 +358,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             &name,
             self.source_id,
             load,
-            self.gctx.cli_unstable().bindeps,
+            self.gctx.cli_unstable(),
             &self.cache_manager,
         ))?
         .unwrap_or_default();
@@ -474,7 +478,7 @@ impl Summaries {
         name: &str,
         source_id: SourceId,
         load: &mut dyn RegistryData,
-        bindeps: bool,
+        cli_unstable: &CliUnstable,
         cache_manager: &CacheManager<'_>,
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // This is the file we're loading from cache or the index data.
@@ -524,7 +528,7 @@ impl Summaries {
                     // allow future cargo implementations to break the
                     // interpretation of each line here and older cargo will simply
                     // ignore the new lines.
-                    let summary = match IndexSummary::parse(line, source_id, bindeps) {
+                    let summary = match IndexSummary::parse(line, source_id, cli_unstable) {
                         Ok(summary) => summary,
                         Err(e) => {
                             // This should only happen when there is an index
@@ -611,13 +615,13 @@ impl MaybeIndexSummary {
         &mut self,
         raw_data: &[u8],
         source_id: SourceId,
-        bindeps: bool,
+        cli_unstable: &CliUnstable,
     ) -> CargoResult<&IndexSummary> {
         let (start, end) = match self {
             MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id, bindeps)?;
+        let summary = IndexSummary::parse(&raw_data[start..end], source_id, cli_unstable)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
@@ -638,7 +642,11 @@ impl IndexSummary {
     ///
     /// The `line` provided is expected to be valid JSON. It is supposed to be
     /// a [`IndexPackage`].
-    fn parse(line: &[u8], source_id: SourceId, bindeps: bool) -> CargoResult<IndexSummary> {
+    fn parse(
+        line: &[u8],
+        source_id: SourceId,
+        cli_unstable: &CliUnstable,
+    ) -> CargoResult<IndexSummary> {
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
         // index cache, and can cause cargo to get confused when switching
@@ -647,7 +655,7 @@ impl IndexSummary {
         // values carefully when making changes here.
         let index_summary = (|| {
             let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
-            let summary = index_package_to_summary(&index, source_id)?;
+            let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
             Ok((index, summary))
         })();
         let (index, summary, valid) = match index_summary {
@@ -679,14 +687,14 @@ impl IndexSummary {
                     links: Default::default(),
                     pubtime: Default::default(),
                 };
-                let summary = index_package_to_summary(&index, source_id)?;
+                let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
                 (index, summary, false)
             }
         };
         let v = index.v.unwrap_or(1);
         tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
 
-        let v_max = if bindeps {
+        let v_max = if cli_unstable.bindeps {
             INDEX_V_MAX + 1
         } else {
             INDEX_V_MAX
@@ -708,6 +716,7 @@ impl IndexSummary {
 fn registry_dependency_into_dep(
     dep: RegistryDependency<'_>,
     default: SourceId,
+    cli_unstable: &CliUnstable,
 ) -> CargoResult<Dependency> {
     let RegistryDependency {
         name,
@@ -764,7 +773,12 @@ fn registry_dependency_into_dep(
     }
 
     if let Some(artifacts) = artifact {
-        let artifact = Artifact::parse(&artifacts, lib, bindep_target.as_deref())?;
+        let artifact = Artifact::parse(
+            &artifacts,
+            lib,
+            bindep_target.as_deref(),
+            cli_unstable.json_target_spec,
+        )?;
         dep.set_artifact(artifact);
     }
 

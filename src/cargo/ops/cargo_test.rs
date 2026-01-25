@@ -1,4 +1,4 @@
-use crate::core::compiler::{Compilation, CompileKind, Doctest, Unit, UnitHash, UnitOutput};
+use crate::core::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::shell::ColorChoice;
 use crate::core::shell::Verbosity;
@@ -211,10 +211,7 @@ fn run_doc_tests(
         add_path_args(ws, unit, &mut p);
         p.arg("--test-run-directory").arg(unit.pkg.root());
 
-        if let CompileKind::Target(target) = unit.kind {
-            // use `rustc_target()` to properly handle JSON target paths
-            p.arg("--target").arg(target.rustc_target());
-        }
+        unit.kind.add_target_arg(&mut p);
 
         if let Some((runtool, runtool_args)) = compilation.target_runner(unit.kind) {
             p.arg("--test-runtool").arg(runtool);

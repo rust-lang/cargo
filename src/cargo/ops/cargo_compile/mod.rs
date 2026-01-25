@@ -221,9 +221,7 @@ pub fn print<'a>(
         if let Some(args) = target_rustc_args {
             process.args(args);
         }
-        if let CompileKind::Target(t) = kind {
-            process.arg("--target").arg(t.rustc_target());
-        }
+        kind.add_target_arg(&mut process);
         process.arg("--print").arg(print_opt_value);
         process.exec()?;
     }
@@ -400,7 +398,10 @@ pub fn create_bcx<'a, 'gctx>(
     // If `--target` has not been specified, then the unit graph is built
     // assuming `--target $HOST` was specified. See
     // `rebuild_unit_graph_shared` for more on why this is done.
-    let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
+    let explicit_host_kind = CompileKind::Target(CompileTarget::new(
+        &target_data.rustc.host,
+        gctx.cli_unstable().json_target_spec,
+    )?);
     let explicit_host_kinds: Vec<_> = build_config
         .requested_kinds
         .iter()
