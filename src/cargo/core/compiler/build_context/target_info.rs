@@ -200,9 +200,7 @@ impl TargetInfo {
                 process.inherit_jobserver(client);
             }
 
-            if let CompileKind::Target(target) = kind {
-                process.arg("--target").arg(target.rustc_target());
-            }
+            kind.add_target_arg(&mut process);
 
             let crate_type_process = process.clone();
             const KNOWN_CRATE_TYPES: &[CrateType] = &[
@@ -331,11 +329,7 @@ impl TargetInfo {
                     .args(&rustflags)
                     .env_remove("RUSTC_LOG");
 
-                if let CompileKind::Target(target) = kind {
-                    target_spec_process
-                        .arg("--target")
-                        .arg(target.rustc_target());
-                }
+                kind.add_target_arg(&mut target_spec_process);
 
                 #[derive(Deserialize)]
                 struct Metadata {

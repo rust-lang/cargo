@@ -221,9 +221,7 @@ pub fn print<'a>(
         if let Some(args) = target_rustc_args {
             process.args(args);
         }
-        if let CompileKind::Target(t) = kind {
-            process.arg("--target").arg(t.rustc_target());
-        }
+        kind.add_target_arg(&mut process);
         process.arg("--print").arg(print_opt_value);
         process.exec()?;
     }
