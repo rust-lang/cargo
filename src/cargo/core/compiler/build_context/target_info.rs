@@ -959,7 +959,7 @@ impl<'gctx> RustcTargetData<'gctx> {
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
         let target_applies_to_host = gctx.target_applies_to_host()?;
-        let host_target = CompileTarget::new(&rustc.host)?;
+        let host_target = CompileTarget::new(&rustc.host, gctx.cli_unstable().json_target_spec)?;
         let host_info = TargetInfo::new(gctx, requested_kinds, &rustc, CompileKind::Host)?;
 
         // This config is used for link overrides and choosing a linker.

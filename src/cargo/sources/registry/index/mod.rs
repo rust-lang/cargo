@@ -195,14 +195,18 @@ impl IndexSummary {
     }
 }
 
-fn index_package_to_summary(pkg: &IndexPackage<'_>, source_id: SourceId) -> CargoResult<Summary> {
+fn index_package_to_summary(
+    pkg: &IndexPackage<'_>,
+    source_id: SourceId,
+    cli_unstable: &CliUnstable,
+) -> CargoResult<Summary> {
     // ****CAUTION**** Please be extremely careful with returning errors, see
     // `IndexSummary::parse` for details
     let pkgid = PackageId::new(pkg.name.as_ref().into(), pkg.vers.clone(), source_id);
     let deps = pkg
         .deps
         .iter()
-        .map(|dep| registry_dependency_into_dep(dep.clone(), source_id))
+        .map(|dep| registry_dependency_into_dep(dep.clone(), source_id, cli_unstable))
         .collect::<CargoResult<Vec<_>>>()?;
     let mut features = pkg.features.clone();
     if let Some(features2) = pkg.features2.clone() {
@@ -651,7 +655,7 @@ impl IndexSummary {
         // values carefully when making changes here.
         let index_summary = (|| {
             let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
-            let summary = index_package_to_summary(&index, source_id)?;
+            let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
             Ok((index, summary))
         })();
         let (index, summary, valid) = match index_summary {
@@ -683,7 +687,7 @@ impl IndexSummary {
                     links: Default::default(),
                     pubtime: Default::default(),
                 };
-                let summary = index_package_to_summary(&index, source_id)?;
+                let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
                 (index, summary, false)
             }
         };
@@ -712,6 +716,7 @@ impl IndexSummary {
 fn registry_dependency_into_dep(
     dep: RegistryDependency<'_>,
     default: SourceId,
+    cli_unstable: &CliUnstable,
 ) -> CargoResult<Dependency> {
     let RegistryDependency {
         name,
@@ -768,7 +773,12 @@ fn registry_dependency_into_dep(
     }
 
     if let Some(artifacts) = artifact {
-        let artifact = Artifact::parse(&artifacts, lib, bindep_target.as_deref())?;
+        let artifact = Artifact::parse(
+            &artifacts,
+            lib,
+            bindep_target.as_deref(),
+            cli_unstable.json_target_spec,
+        )?;
         dep.set_artifact(artifact);
     }
 

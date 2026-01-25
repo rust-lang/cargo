@@ -94,9 +94,15 @@ impl CompileKind {
 
                     if value.as_str() == "host-tuple" {
                         let host_triple = env!("RUST_HOST_TARGET");
-                        Ok(CompileKind::Target(CompileTarget::new(host_triple)?))
+                        Ok(CompileKind::Target(CompileTarget::new(
+                            host_triple,
+                            gctx.cli_unstable().json_target_spec,
+                        )?))
                     } else {
-                        Ok(CompileKind::Target(CompileTarget::new(value.as_str())?))
+                        Ok(CompileKind::Target(CompileTarget::new(
+                            value.as_str(),
+                            gctx.cli_unstable().json_target_spec,
+                        )?))
                     }
                 })
                 // First collect into a set to deduplicate any `--target` passed
@@ -186,13 +192,17 @@ pub enum CompileTarget {
 }
 
 impl CompileTarget {
-    pub fn new(name: &str) -> CargoResult<CompileTarget> {
+    pub fn new(name: &str, unstable_json: bool) -> CargoResult<CompileTarget> {
         let name = name.trim();
         if name.is_empty() {
             bail!("target was empty");
         }
         if !name.ends_with(".json") {
             return Ok(CompileTarget::Tuple(name.into()));
+        }
+
+        if !unstable_json {
+            bail!("`.json` target specs require -Zjson-target-spec");
         }
 
         // If `name` ends in `.json` then it's likely a custom target

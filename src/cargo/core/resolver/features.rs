@@ -811,6 +811,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             pkg_id: PackageId,
             dep: &Dependency,
             lib_fk: FeaturesFor,
+            unstable_json_spec: bool,
         ) -> CargoResult<Vec<FeaturesFor>> {
             let Some(artifact) = dep.artifact() else {
                 return Ok(vec![lib_fk]);
@@ -844,7 +845,9 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                     ArtifactTarget::BuildDependencyAssumeTarget => {
                         for kind in this.requested_targets {
                             let target = match kind {
-                                CompileKind::Host => CompileTarget::new(&host_triple).unwrap(),
+                                CompileKind::Host => {
+                                    CompileTarget::new(&host_triple, unstable_json_spec).unwrap()
+                                }
                                 CompileKind::Target(target) => *target,
                             };
                             activate_target(target)?;
@@ -859,6 +862,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             Ok(result)
         }
 
+        let unstable_json_spec = self.ws.gctx().cli_unstable().json_target_spec;
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
@@ -915,7 +919,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                             fk
                         };
 
-                        let dep_fks = artifact_features_for(self, pkg_id, dep, lib_fk)?;
+                        let dep_fks =
+                            artifact_features_for(self, pkg_id, dep, lib_fk, unstable_json_spec)?;
                         Ok(dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk)))
                     })
                     .flatten_ok()

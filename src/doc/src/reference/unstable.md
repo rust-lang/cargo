@@ -100,6 +100,7 @@ Each new feature described below should explain how to use it.
     * [panic-immediate-abort](#panic-immediate-abort) --- Passes `-Cpanic=immediate-abort` to the compiler.
     * [compile-time-deps](#compile-time-deps) --- Perma-unstable feature for rust-analyzer
     * [fine-grain-locking](#fine-grain-locking) --- Use fine grain locking instead of locking the entire build cache
+    * [target-spec-json](#target-spec-json) --- Allows the use of `.json` custom target specs.
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -2028,7 +2029,7 @@ cargo +nightly build --compile-time-deps -Z unstable-options
 cargo +nightly check --compile-time-deps --all-targets -Z unstable-options
 ```
 
-# `rustc-unicode`
+## `rustc-unicode`
 * Tracking Issue: [rust#148607](https://github.com/rust-lang/rust/issues/148607)
 
 Enable `rustc`'s unicode error format in Cargo's error messages
@@ -2044,6 +2045,17 @@ so that `cargo doc` can merge cross-crate information
 (like the search index, source files index, etc.)
 from separate output directories,
 and run `rustdoc` in parallel.
+
+## target-spec-json
+* Tracking Issue: [rust-lang/rust#151528](https://github.com/rust-lang/rust/issues/151528)
+
+The `-Z target-spec-json` CLI flag enables the ability to use [custom target spec JSON files](https://doc.rust-lang.org/nightly/rustc/targets/custom.html) as a target.
+
+```console
+cargo +nightly build --target my-target.json -Z target-spec-json
+```
+
+This usually must be combined with [build-std](#build-std).
 
 # Stabilized and removed features
 
