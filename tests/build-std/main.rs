@@ -165,8 +165,8 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
+[COMPILING] [..]
 ...
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
 [RUNNING] unittests src/main.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
