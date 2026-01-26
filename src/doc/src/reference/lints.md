@@ -20,6 +20,7 @@ Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only 
 
 These lints are all set to the 'allow' level by default.
 - [`implicit_minimum_version_req`](#implicit_minimum_version_req)
+- [`non_kebab_case_features`](#non_kebab_case_features)
 - [`non_kebab_case_packages`](#non_kebab_case_packages)
 - [`non_snake_case_packages`](#non_snake_case_packages)
 
@@ -145,6 +146,38 @@ Should be written as:
 ```toml
 [[bin]]
 name = "foo-bar"
+```
+
+
+## `non_kebab_case_features`
+Group: `restriction`
+
+Level: `allow`
+
+### What it does
+
+Detect feature names that are not kebab-case.
+
+### Why it is bad
+
+Having multiple naming styles within a workspace can be confusing.
+
+### Drawbacks
+
+Users would expect that a feature tightly coupled to a dependency would match the dependency's name.
+
+### Example
+
+```toml
+[features]
+foo_bar = []
+```
+
+Should be written as:
+
+```toml
+[features]
+foo-bar = []
 ```
 
 
