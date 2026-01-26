@@ -28,6 +28,7 @@ use crate::lints::rules::implicit_minimum_version_req;
 use crate::lints::rules::non_kebab_case_bins;
 use crate::lints::rules::non_kebab_case_features;
 use crate::lints::rules::non_kebab_case_packages;
+use crate::lints::rules::non_snake_case_features;
 use crate::lints::rules::non_snake_case_packages;
 use crate::lints::rules::redundant_readme;
 use crate::ops;
@@ -1382,6 +1383,13 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
             non_kebab_case_features(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
+            non_snake_case_features(
                 pkg.into(),
                 &path,
                 &cargo_lints,
