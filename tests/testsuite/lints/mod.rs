@@ -8,6 +8,8 @@ mod error;
 mod implicit_minimum_version_req;
 mod inherited;
 mod non_kebab_case_bins;
+mod non_kebab_case_packages;
+mod non_snake_case_packages;
 mod redundant_readme;
 mod unknown_lints;
 mod warning;

@@ -26,6 +26,8 @@ use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
 use crate::lints::rules::non_kebab_case_bins;
+use crate::lints::rules::non_kebab_case_packages;
+use crate::lints::rules::non_snake_case_packages;
 use crate::lints::rules::redundant_readme;
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
@@ -1350,6 +1352,20 @@ impl<'gctx> Workspace<'gctx> {
 
             check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             implicit_minimum_version_req(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
+            non_kebab_case_packages(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
+            non_snake_case_packages(
                 pkg.into(),
                 &path,
                 &cargo_lints,
