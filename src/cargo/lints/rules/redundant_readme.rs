@@ -93,6 +93,7 @@ pub fn lint_package(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
+    // Must check `original_toml`, before any inferring happened
     let Some(original_toml) = manifest.original_toml() else {
         return Ok(());
     };
