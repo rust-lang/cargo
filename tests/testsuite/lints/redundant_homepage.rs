@@ -89,3 +89,52 @@ redundant_homepage = "warn"
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn inherited() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace.package]
+documentation = "https://docs.rs/cargo/latest/cargo/"
+homepage = "https://docs.rs/cargo/latest/cargo/"
+
+[package]
+name = "cargo"
+version = "0.0.1"
+edition = "2015"
+documentation.workspace = true
+homepage.workspace = true
+
+[lints.cargo]
+redundant_homepage = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("README.md", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+  --> Cargo.toml:11:1
+   |
+10 | documentation.workspace = true
+   | -------------
+11 | homepage.workspace = true
+   | ^^^^^^^^
+   |
+   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+   |
+11 - homepage.workspace = true
+11 + .workspace = true
+   |
+[CHECKING] cargo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
