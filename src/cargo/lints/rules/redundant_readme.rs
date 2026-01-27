@@ -8,7 +8,9 @@ use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
 use cargo_util_schemas::manifest::InheritableField;
 use cargo_util_schemas::manifest::StringOrBool;
+use cargo_util_schemas::manifest::TomlInheritedField;
 use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_schemas::manifest::WorkspaceValue;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -106,6 +108,20 @@ pub fn lint_package(
 
     let readme = match readme {
         InheritableField::Value(StringOrBool::String(readme)) => readme,
+        InheritableField::Inherit(TomlInheritedField {
+            workspace: WorkspaceValue,
+        }) => {
+            if let Some(InheritableField::Value(StringOrBool::String(readme))) = manifest
+                .normalized_toml()
+                .package
+                .as_ref()
+                .and_then(|p| p.readme.as_ref())
+            {
+                readme
+            } else {
+                return Ok(());
+            }
+        }
         _ => {
             return Ok(());
         }

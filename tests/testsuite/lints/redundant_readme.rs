@@ -163,6 +163,18 @@ redundant_readme = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] explicit `package.readme` can be inferred
+  --> Cargo.toml:10:1
+   |
+10 | readme.workspace = true
+   | ^^^^^^
+   |
+   = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
+[HELP] consider removing `package.readme`
+   |
+10 - readme.workspace = true
+10 + .workspace = true
+   |
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
