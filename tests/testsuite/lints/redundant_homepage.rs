@@ -130,7 +130,6 @@ redundant_homepage = "warn"
 [HELP] consider removing `package.homepage`
    |
 11 - homepage.workspace = true
-11 + .workspace = true
    |
 [CHECKING] cargo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

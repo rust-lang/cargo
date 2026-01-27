@@ -173,7 +173,6 @@ redundant_readme = "warn"
 [HELP] consider removing `package.readme`
    |
 10 - readme.workspace = true
-10 + .workspace = true
    |
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
