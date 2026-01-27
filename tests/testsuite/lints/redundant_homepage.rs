@@ -26,13 +26,19 @@ redundant_homepage = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_homepage`
-  --> Cargo.toml:10:1
-   |
-10 | redundant_homepage = "warn"
-   | ^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:7:12
+  |
+6 | repository = "https://github.com/rust-lang/cargo/"
+  |              -------------------------------------
+7 | homepage = "https://github.com/rust-lang/cargo/"
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+7 - homepage = "https://github.com/rust-lang/cargo/"
+  |
 [CHECKING] cargo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -64,13 +70,19 @@ redundant_homepage = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `redundant_homepage`
-  --> Cargo.toml:10:1
-   |
-10 | redundant_homepage = "warn"
-   | ^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:7:12
+  |
+6 | documentation = "https://docs.rs/cargo/latest/cargo/"
+  |                 -------------------------------------
+7 | homepage = "https://docs.rs/cargo/latest/cargo/"
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+7 - homepage = "https://docs.rs/cargo/latest/cargo/"
+  |
 [CHECKING] cargo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

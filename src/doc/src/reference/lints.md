@@ -30,6 +30,7 @@ These lints are all set to the 'allow' level by default.
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
 - [`non_kebab_case_bins`](#non_kebab_case_bins)
+- [`redundant_homepage`](#redundant_homepage)
 - [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
 
@@ -275,6 +276,41 @@ Should be written as:
 ```toml
 [package]
 name = "foo-bar"
+```
+
+
+## `redundant_homepage`
+Group: `style`
+
+Level: `warn`
+
+### What it does
+
+Checks if the value of `package.homepage` is already covered by another field.
+
+See also [`package.homepage` reference documentation](manifest.md#the-homepage-field).
+
+### Why it is bad
+
+When package browsers render each link, a redundant link adds visual noise.
+
+### Drawbacks
+
+### Example
+
+```toml
+[package]
+name = "foo"
+homepage = "https://github.com/rust-lang/cargo/"
+repository = "https://github.com/rust-lang/cargo/"
+```
+
+Should be written as:
+
+```toml
+[package]
+name = "foo"
+repository = "https://github.com/rust-lang/cargo/"
 ```
 
 
