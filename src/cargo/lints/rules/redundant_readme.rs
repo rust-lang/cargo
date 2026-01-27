@@ -103,10 +103,8 @@ pub fn lint_package(
     let Some(readme) = &original_pkg.readme else {
         return Ok(());
     };
-    let InheritableField::Value(readme) = readme else {
-        return Ok(());
-    };
-    let StringOrBool::String(readme) = readme else {
+
+    let InheritableField::Value(StringOrBool::String(readme)) = readme else {
         return Ok(());
     };
 
