@@ -139,9 +139,15 @@ pub fn lint_package(
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "readme"])
     {
+        let span = if let Some(workspace_span) =
+            get_key_value_span(document, &["package", "readme", "workspace"])
+        {
+            span.key.start..workspace_span.value.end
+        } else {
+            span.key.start..span.value.end
+        };
         let mut help =
             Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
-        let span = span.key.start..span.value.end;
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)
