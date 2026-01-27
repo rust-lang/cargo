@@ -109,6 +109,7 @@ pub fn lint_package(
     let StringOrBool::String(readme) = readme else {
         return Ok(());
     };
+
     if !DEFAULT_README_FILES.contains(&readme.as_str()) {
         return Ok(());
     }
