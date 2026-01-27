@@ -12,6 +12,7 @@ mod non_kebab_case_features;
 mod non_kebab_case_packages;
 mod non_snake_case_features;
 mod non_snake_case_packages;
+mod redundant_homepage;
 mod redundant_readme;
 mod unknown_lints;
 mod warning;
