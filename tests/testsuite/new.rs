@@ -556,16 +556,15 @@ fn git_default_branch() {
 
 #[cargo_test]
 fn non_utf8_str_in_ignore_file() {
-    let gitignore = paths::home().join(".gitignore");
-    File::create(gitignore).unwrap();
+    let dir = paths::home().join("foo");
+    fs::create_dir(&dir).unwrap();
+    fs::write(dir.join(".gitignore"), &[0xFF, 0xFE]).unwrap();
 
-    fs::write(paths::home().join(".gitignore"), &[0xFF, 0xFE]).unwrap();
-
-    cargo_process(&format!("init {} --vcs git", paths::home().display()))
+    cargo_process(&format!("init {} --vcs git", dir.display()))
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) package
-[ERROR] Failed to create package `home` at `[ROOT]/home`
+[ERROR] Failed to create package `foo` at `[ROOT]/home/foo`
 
 Caused by:
   Character at line 0 is invalid. Cargo only supports UTF-8.
