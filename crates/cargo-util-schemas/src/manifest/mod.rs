@@ -622,7 +622,7 @@ impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlInheritedField {
-    workspace: WorkspaceValue,
+    pub workspace: WorkspaceValue,
 }
 
 impl TomlInheritedField {
@@ -643,7 +643,7 @@ impl Default for TomlInheritedField {
 #[serde(try_from = "bool")]
 #[serde(into = "bool")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-struct WorkspaceValue;
+pub struct WorkspaceValue;
 
 impl TryFrom<bool> for WorkspaceValue {
     type Error = String;

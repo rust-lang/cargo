@@ -8,7 +8,9 @@ use annotate_snippets::Patch;
 use annotate_snippets::Snippet;
 use cargo_util_schemas::manifest::InheritableField;
 use cargo_util_schemas::manifest::StringOrBool;
+use cargo_util_schemas::manifest::TomlInheritedField;
 use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_schemas::manifest::WorkspaceValue;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -93,6 +95,7 @@ pub fn lint_package(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
+    // Must check `original_toml`, before any inferring happened
     let Some(original_toml) = manifest.original_toml() else {
         return Ok(());
     };
@@ -102,12 +105,28 @@ pub fn lint_package(
     let Some(readme) = &original_pkg.readme else {
         return Ok(());
     };
-    let InheritableField::Value(readme) = readme else {
-        return Ok(());
+
+    let readme = match readme {
+        InheritableField::Value(StringOrBool::String(readme)) => readme,
+        InheritableField::Inherit(TomlInheritedField {
+            workspace: WorkspaceValue,
+        }) => {
+            if let Some(InheritableField::Value(StringOrBool::String(readme))) = manifest
+                .normalized_toml()
+                .package
+                .as_ref()
+                .and_then(|p| p.readme.as_ref())
+            {
+                readme
+            } else {
+                return Ok(());
+            }
+        }
+        _ => {
+            return Ok(());
+        }
     };
-    let StringOrBool::String(readme) = readme else {
-        return Ok(());
-    };
+
     if !DEFAULT_README_FILES.contains(&readme.as_str()) {
         return Ok(());
     }
@@ -137,9 +156,15 @@ pub fn lint_package(
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "readme"])
     {
+        let span = if let Some(workspace_span) =
+            get_key_value_span(document, &["package", "readme", "workspace"])
+        {
+            span.key.start..workspace_span.value.end
+        } else {
+            span.key.start..span.value.end
+        };
         let mut help =
             Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
-        let span = span.key.start..span.value.end;
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)

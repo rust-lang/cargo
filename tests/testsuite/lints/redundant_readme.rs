@@ -135,3 +135,48 @@ redundant_readme = "warn"
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn inherited() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace.package]
+readme = "README.md"
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+readme.workspace = true
+
+[lints.cargo]
+redundant_readme = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("README.md", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] explicit `package.readme` can be inferred
+  --> Cargo.toml:10:1
+   |
+10 | readme.workspace = true
+   | ^^^^^^
+   |
+   = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
+[HELP] consider removing `package.readme`
+   |
+10 - readme.workspace = true
+   |
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
