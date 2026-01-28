@@ -245,6 +245,7 @@ corresponding environment variable is set to the empty string, `""`.
 * `CARGO_PKG_REPOSITORY` --- The repository from the manifest of your package.
 * `CARGO_PKG_LICENSE` --- The license from the manifest of your package.
 * `CARGO_PKG_LICENSE_FILE` --- The license file from the manifest of your package.
+* `CARGO_PKG_EDITION` --- The Rust language edition from the manifest of your package.
 * `CARGO_PKG_RUST_VERSION` --- The Rust version from the manifest of your package.
   Note that this is the minimum Rust version supported by the package, not the
   current Rust version.
