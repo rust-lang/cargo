@@ -6,10 +6,10 @@ use cargo_test_support::str;
 #[cargo_test]
 fn case() {
     snapbox::cmd::Command::cargo_ui()
-        .arg_line("init --vcs none")
+        .arg_line("init")
         .current_dir(paths::home())
         .assert()
-        .success()
+        .code(101)
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 }
