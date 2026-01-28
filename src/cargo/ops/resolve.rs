@@ -507,7 +507,9 @@ pub fn resolve_with_previous<'gctx>(
         &replace,
         registry,
         &version_prefs,
-        ResolveVersion::with_rust_version(ws.lowest_rust_version()),
+        previous
+            .map(|p| p.version())
+            .unwrap_or(ResolveVersion::with_rust_version(ws.lowest_rust_version())),
         Some(ws.gctx()),
     )?;
 

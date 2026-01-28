@@ -13,8 +13,8 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
+    VersionOrdering, VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -48,6 +48,11 @@ pub struct RegistryQueryer<'a> {
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
+    /// a cache of `Dependency`s that contain at least one weak features
+    ///
+    /// when resolver try to resolve the very dependency, these features will also be added as
+    /// input of `resolve_features`. This make deferring dependency possible
+    dep_with_weak_feats: HashMap<Dependency, Vec<InternedString>>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -63,6 +68,7 @@ impl<'a> RegistryQueryer<'a> {
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
+            dep_with_weak_feats: HashMap::new(),
         }
     }
 
@@ -229,6 +235,7 @@ impl<'a> RegistryQueryer<'a> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_version: Option<VersionOrdering>,
+        version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -241,7 +248,13 @@ impl<'a> RegistryQueryer<'a> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(
+            parent,
+            candidate,
+            opts,
+            &mut self.dep_with_weak_feats,
+            version,
+        )?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -291,12 +304,27 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    dep_with_weak_feats: &mut HashMap<Dependency, Vec<InternedString>>,
+    version: ResolveVersion,
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
     let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
 
-    let reqs = build_requirements(parent, s, opts)?;
+    let extra_feats: Vec<InternedString> = dep_with_weak_feats
+        .extract_if(|dep, _| dep.matches(s))
+        .flat_map(|(_, feats)| feats.into_iter())
+        .collect();
+
+    let reqs = build_requirements(parent, s, opts, extra_feats, version)?;
+    // if we cannot handle it locally, leave it for matching deferiing later
+    for (package, feats) in reqs.dep_with_weak_feats {
+        if let Some(target) = deps.clone().find(|dep| {
+            dep.explicit_name_in_toml() == Some(package) || dep.package_name() == package
+        }) {
+            dep_with_weak_feats.insert(target.clone(), feats.into_iter().collect());
+        }
+    }
     let mut ret = Vec::new();
     let default_dep = BTreeSet::new();
     let mut valid_dep_names = HashSet::new();
@@ -334,7 +362,7 @@ pub fn resolve_features<'b>(
         }
     }
 
-    Ok((reqs.into_features(), ret))
+    Ok((reqs.features, ret))
 }
 
 /// Takes requested features for a single package from the input `ResolveOpts` and
@@ -344,12 +372,19 @@ fn build_requirements<'a, 'b: 'a>(
     parent: Option<PackageId>,
     s: &'a Summary,
     opts: &'b ResolveOpts,
+    extra_feats: Vec<InternedString>,
+    version: ResolveVersion,
 ) -> ActivateResult<Requirements<'a>> {
-    let mut reqs = Requirements::new(s);
+    let mut reqs = Requirements::new(s, parent.is_none() || version < ResolveVersion::V5);
 
     let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
         if uses_default_features && s.features().contains_key("default") {
             if let Err(e) = reqs.require_feature(INTERNED_DEFAULT) {
+                return Err(e.into_activate_error(parent, s));
+            }
+        }
+        for feat in extra_feats {
+            if let Err(e) = reqs.require_feature(feat) {
                 return Err(e.into_activate_error(parent, s));
             }
         }
@@ -405,6 +440,12 @@ struct Requirements<'a> {
     /// The set of features enabled on this package which is later used when
     /// compiling to instruct the code what features were enabled.
     features: HashSet<InternedString>,
+    /// The set of feature values (package, feat) are all weak dep features (foo?/bar)
+    /// and is kept to be handled later
+    dep_with_weak_feats: HashMap<InternedString, BTreeSet<InternedString>>,
+    /// `include_anyway` will bypass weak dependency feature check.
+    /// Used to keep weak dependency at root crate
+    include_anyway: bool,
 }
 
 /// An error for a requirement.
@@ -424,16 +465,14 @@ enum RequirementError {
 }
 
 impl Requirements<'_> {
-    fn new(summary: &Summary) -> Requirements<'_> {
+    fn new<'a>(summary: &'a Summary, include_anyway: bool) -> Requirements<'a> {
         Requirements {
             summary,
             deps: HashMap::new(),
             features: HashSet::new(),
+            dep_with_weak_feats: HashMap::new(),
+            include_anyway,
         }
-    }
-
-    fn into_features(self) -> HashSet<InternedString> {
-        self.features
     }
 
     fn require_dep_feature(
@@ -445,21 +484,36 @@ impl Requirements<'_> {
         // If `package` is indeed an optional dependency then we activate the
         // feature named `package`, but otherwise if `package` is a required
         // dependency then there's no feature associated with it.
-        if !weak
-            && self
+        if !weak {
+            if self
                 .summary
                 .dependencies()
                 .iter()
                 .any(|dep| dep.name_in_toml() == package && dep.is_optional())
-        {
-            // This optional dependency may not have an implicit feature of
-            // the same name if the `dep:` syntax is used to avoid creating
-            // that implicit feature.
-            if self.summary.features().contains_key(&package) {
-                self.require_feature(package)?;
+            {
+                // This optional dependency may not have an implicit feature of
+                // the same name if the `dep:` syntax is used to avoid creating
+                // that implicit feature.
+                if self.summary.features().contains_key(&package) {
+                    self.require_feature(package)?;
+                }
+            }
+            self.deps.entry(package).or_default().insert(feat);
+        } else {
+            if self.include_anyway {
+                self.deps.entry(package).or_default().insert(feat);
+            } else {
+                if let Some(feats) = self.deps.get_mut(&package) {
+                    feats.insert(feat);
+                } else {
+                    self.dep_with_weak_feats
+                        .entry(package)
+                        .or_default()
+                        .insert(feat);
+                }
             }
         }
-        self.deps.entry(package).or_default().insert(feat);
+
         Ok(())
     }
 
@@ -495,9 +549,6 @@ impl Requirements<'_> {
             FeatureValue::DepFeature {
                 dep_name,
                 dep_feature,
-                // Weak features are always activated in the dependency
-                // resolver. They will be narrowed inside the new feature
-                // resolver.
                 weak,
             } => self.require_dep_feature(*dep_name, *dep_feature, *weak)?,
         };

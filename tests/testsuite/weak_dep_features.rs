@@ -77,8 +77,10 @@ fn simple() {
 fn deferred() {
     // A complex chain that requires deferring enabling the feature due to
     // another dependency getting enabled.
+    Package::new("the_feat", "1.0.0").publish();
     Package::new("bar", "1.0.0")
-        .feature("feat", &[])
+        .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+        .feature("feat", &["the_feat"])
         .file("src/lib.rs", &require(&["feat"], &[]))
         .publish();
     Package::new("dep", "1.0.0")
@@ -105,14 +107,37 @@ fn deferred() {
         .file("src/lib.rs", "")
         .build();
 
+    // the_feat is here
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] the_feat v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    let lockfile = p.read_lockfile();
+    let lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &lockfile);
+
+    p.cargo("clean").run();
+    // the_feat is still here
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] the_feat v1.0.0
 [CHECKING] bar v1.0.0
 [CHECKING] dep v1.0.0
 [CHECKING] bar_activator v1.0.0
@@ -372,8 +397,10 @@ fn weak_with_host_decouple() {
 #[cargo_test]
 fn weak_namespaced() {
     // Behavior with a dep: dependency.
+    Package::new("the_feat", "1.0.0").publish();
     Package::new("bar", "1.0.0")
-        .feature("feat", &[])
+        .feature("feat", &["the_feat"])
+        .add_dep(&Dependency::new("the_feat", "1.0.0").optional(true))
         .file("src/lib.rs", &require(&["feat"], &[]))
         .publish();
     let p = project()
@@ -399,8 +426,9 @@ fn weak_namespaced() {
     p.cargo("check --features f1")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -428,7 +456,8 @@ foo v0.1.0 ([ROOT]/foo) feats:f1
         .arg("{p} feats:{f}")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo) feats:f1,f2
-└── bar v1.0.0 feats:feat
+└── bar v1.0.0 feats:feat,the_feat
+    └── the_feat v1.0.0 feats:
 
 "#]])
         .run();
@@ -438,9 +467,65 @@ foo v0.1.0 ([ROOT]/foo) feats:f1,f2
 
     p.cargo("check --features f1,f2")
         .with_stderr_data(str![[r#"
+[CHECKING] the_feat v1.0.0
 [CHECKING] bar v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    let lockfile = p.read_lockfile();
+    let lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &lockfile);
+
+    // run f1; f1,f2 check
+    p.change_file("src/lib.rs", &require(&["f1"], &["f2", "bar"]));
+    p.cargo("check --features f1 -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.change_file("src/lib.rs", &require(&["f1", "f2"], &["bar"]));
+    p.cargo("check --features f1,f2 -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // list new dep tree
+    p.cargo("tree -Znext-lockfile-bump -f")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .arg("{p} feats:{f}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) feats:
+
+"#]])
+        .run();
+
+    p.cargo("tree -Znext-lockfile-bump --features f1 -f")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .arg("{p} feats:{f}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) feats:f1
+
+"#]])
+        .run();
+    p.cargo("tree -Znext-lockfile-bump --features f1,f2 -f")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .arg("{p} feats:{f}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) feats:f1,f2
+└── bar v1.0.0 feats:feat,the_feat
+    └── the_feat v1.0.0 feats:
 
 "#]])
         .run();
@@ -665,4 +750,192 @@ optional = true
 "##]],
         )],
     );
+}
+
+#[cargo_test]
+fn disabled_weak_direct_dep() {
+    // A weak direct dependency should be included in Cargo.lock,
+    // even if disabled, and even if on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { version = "1.0", optional = true }
+
+                [features]
+                f1 = ["bar?/feat"]
+            "#,
+        )
+        .file("src/lib.rs", &require(&["f1"], &[]))
+        .build();
+
+    // bar is inside lockfile.
+    p.cargo("check --features f1")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    let lockfile = p.read_lockfile();
+    let lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &lockfile);
+    p.cargo("clean").run();
+
+    // bar is still there because it is a direct (optional) dependency.
+    p.cargo("check -Znext-lockfile-bump --features f1")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn disabled_weak_optional_deps() {
+    // A weak dependency of a dependency should not be included in Cargo.lock,
+    // at least on lockfile version 5.
+    Package::new("bar", "1.0.0")
+        .feature("feat", &[])
+        .file("src/lib.rs", &require(&["feat"], &[]))
+        .publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/feat"])
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // bar is here
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    let lockfile = p.read_lockfile();
+    let lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &lockfile);
+    p.cargo("clean").run();
+
+    p.cargo("check -Znext-lockfile-bump --features dep/bar")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v1.0.0
+[CHECKING] dep v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn weak_features() {
+    Package::new("foo", "0.1.0").feature("feat", &[]).publish();
+    Package::new("foo", "0.2.0").feature("feat", &[]).publish();
+    Package::new("bar", "0.1.0")
+        .add_dep(
+            &Dependency::new("foo1", "0.1.0")
+                .optional(true)
+                .package("foo"),
+        )
+        .add_dep(
+            &Dependency::new("foo2", "0.2.0")
+                .optional(true)
+                .package("foo"),
+        )
+        .feature("feat", &["foo1?/feat", "foo2?/feat"])
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = { version = "0.1.0", features = ["feat"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Both foo 0.1.0 and foo 0.2.0 included
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
+[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[CHECKING] bar v0.1.0
+[CHECKING] test v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    let lockfile = p.read_lockfile();
+    let lockfile = lockfile.replace("version = 4", "version = 5");
+    p.change_file("Cargo.lock", &lockfile);
+    p.cargo("clean").run();
+
+    // Both foo are gone
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v0.1.0
+[CHECKING] test v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
