@@ -105,6 +105,8 @@ pub fn lint_package(
     };
 
     let InheritableField::Value(StringOrBool::String(readme)) = readme else {
+        // Not checking inheritance because at most one package can be identified from the lint and
+        // consistency of inheritance is likely best.
         return Ok(());
     };
 
