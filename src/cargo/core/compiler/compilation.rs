@@ -373,6 +373,7 @@ impl<'gctx> Compilation<'gctx> {
         // in BuildContext::target_metadata()
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_MANIFEST_PATH", pkg.manifest_path())
+            .env("CARGO_PKG_EDITION", pkg.edition().to_string())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
