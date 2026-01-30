@@ -2558,7 +2558,7 @@ edition = "2021"
     );
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn migrate_removes_project_for_script() {
     let p = project()
         .file(
@@ -2586,8 +2586,7 @@ fn main() {
         )
         .build();
 
-    p.cargo("-Zscript fix --edition --allow-no-vcs --manifest-path foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("fix --edition --allow-no-vcs --manifest-path foo.rs")
         .with_stderr_data(str![[r#"
 [MIGRATING] foo.rs from 2021 edition to 2024
 [FIXED] foo.rs (1 fix)
@@ -3090,7 +3089,10 @@ fn script_without_frontmatter() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[WARNING] flag `-Z script` has been stabilized in the 1.95 release, and is no longer necessary
+  Cargo scripts are now always available
+
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3128,7 +3130,10 @@ fn main() {}",
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[WARNING] flag `-Z script` has been stabilized in the 1.95 release, and is no longer necessary
+  Cargo scripts are now always available
+
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3168,7 +3173,10 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[WARNING] flag `-Z script` has been stabilized in the 1.95 release, and is no longer necessary
+  Cargo scripts are now always available
+
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3207,7 +3215,10 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[WARNING] flag `-Z script` has been stabilized in the 1.95 release, and is no longer necessary
+  Cargo scripts are now always available
+
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3245,6 +3256,9 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
+[WARNING] flag `-Z script` has been stabilized in the 1.95 release, and is no longer necessary
+  Cargo scripts are now always available
+
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
