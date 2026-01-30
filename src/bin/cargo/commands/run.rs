@@ -95,45 +95,42 @@ pub fn is_manifest_command(arg: &str) -> bool {
 
 pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsString]) -> CliResult {
     let manifest_path = Path::new(cmd);
-    match manifest_path.is_file() {
-        true => {}
-        false => {
-            let possible_commands = crate::list_commands(gctx);
-            let is_dir = if manifest_path.is_dir() {
-                format!(": `{cmd}` is a directory")
-            } else {
+    if !manifest_path.is_file() {
+        let possible_commands = crate::list_commands(gctx);
+        let is_dir = if manifest_path.is_dir() {
+            format!(": `{cmd}` is a directory")
+        } else {
+            "".to_owned()
+        };
+        let suggested_command = if let Some(suggested_command) = possible_commands
+            .keys()
+            .filter(|c| cmd.starts_with(c.as_str()))
+            .max_by_key(|c| c.len())
+        {
+            let actual_args = cmd.strip_prefix(suggested_command).unwrap();
+            let args = if args.is_empty() {
                 "".to_owned()
-            };
-            let suggested_command = if let Some(suggested_command) = possible_commands
-                .keys()
-                .filter(|c| cmd.starts_with(c.as_str()))
-                .max_by_key(|c| c.len())
-            {
-                let actual_args = cmd.strip_prefix(suggested_command).unwrap();
-                let args = if args.is_empty() {
-                    "".to_owned()
-                } else {
-                    format!(
-                        " {}",
-                        args.into_iter().map(|os| os.to_string_lossy()).join(" ")
-                    )
-                };
+            } else {
                 format!(
-                    "\nhelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`"
+                    " {}",
+                    args.into_iter().map(|os| os.to_string_lossy()).join(" ")
                 )
-            } else {
-                "".to_owned()
             };
-            let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!("\nhelp: there is a script with a similar name: `{suggested_script}`")
-            } else {
-                "".to_owned()
-            };
-            return Err(anyhow::anyhow!(
-                "no such file or subcommand `{cmd}`{is_dir}{suggested_command}{suggested_script}"
+            format!(
+                "\nhelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`"
             )
-            .into());
-        }
+        } else {
+            "".to_owned()
+        };
+        let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
+            format!("\nhelp: there is a script with a similar name: `{suggested_script}`")
+        } else {
+            "".to_owned()
+        };
+        return Err(anyhow::anyhow!(
+            "no such file or subcommand `{cmd}`{is_dir}{suggested_command}{suggested_script}"
+        )
+        .into());
     }
 
     let manifest_path = root_manifest(Some(manifest_path), gctx)?;
