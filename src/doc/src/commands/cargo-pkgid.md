@@ -90,7 +90,7 @@ terminal.</li>
 <dl>
 
 <dt class="option-term" id="option-cargo-pkgid---manifest-path"><a class="option-anchor" href="#option-cargo-pkgid---manifest-path"><code>--manifest-path</code> <em>path</em></a></dt>
-<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
+<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> or cargo script file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
 

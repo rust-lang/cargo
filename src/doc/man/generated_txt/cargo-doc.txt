@@ -228,8 +228,9 @@ OPTIONS
 
    Manifest Options
        --manifest-path path
-           Path to the Cargo.toml file. By default, Cargo searches for the
-           Cargo.toml file in the current directory or any parent directory.
+           Path to the Cargo.toml or cargo script file. By default, Cargo
+           searches for the Cargo.toml file in the current directory or any
+           parent directory.
 
        --ignore-rust-version
            Ignore rust-version specification in packages.
