@@ -26,7 +26,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS] [COMMAND]</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">-Zscript</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;MANIFEST_RS&gt; [ARGS]...</tspan>
+    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;MANIFEST_RS&gt; [ARGS]...</tspan>
 </tspan>
     <tspan x="10px" y="100px">
 </tspan>

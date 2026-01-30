@@ -95,12 +95,9 @@ pub fn is_manifest_command(arg: &str) -> bool {
 
 pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsString]) -> CliResult {
     let manifest_path = Path::new(cmd);
-    match (manifest_path.is_file(), gctx.cli_unstable().script) {
-        (true, true) => {}
-        (true, false) => {
-            return Err(anyhow::anyhow!("running the file `{cmd}` requires `-Zscript`").into());
-        }
-        (false, true) => {
+    match manifest_path.is_file() {
+        true => {}
+        false => {
             let possible_commands = crate::list_commands(gctx);
             let is_dir = if manifest_path.is_dir() {
                 format!(": `{cmd}` is a directory")
@@ -134,42 +131,6 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
             };
             return Err(anyhow::anyhow!(
                 "no such file or subcommand `{cmd}`{is_dir}{suggested_command}{suggested_script}"
-            )
-            .into());
-        }
-        (false, false) => {
-            // HACK: duplicating the above for minor tweaks but this will all go away on
-            // stabilization
-            let possible_commands = crate::list_commands(gctx);
-            let suggested_command = if let Some(suggested_command) = possible_commands
-                .keys()
-                .filter(|c| cmd.starts_with(c.as_str()))
-                .max_by_key(|c| c.len())
-            {
-                let actual_args = cmd.strip_prefix(suggested_command).unwrap();
-                let args = if args.is_empty() {
-                    "".to_owned()
-                } else {
-                    format!(
-                        " {}",
-                        args.into_iter().map(|os| os.to_string_lossy()).join(" ")
-                    )
-                };
-                format!(
-                    "\nhelp: there is a command with a similar name: `{suggested_command} {actual_args}{args}`"
-                )
-            } else {
-                "".to_owned()
-            };
-            let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
-                format!(
-                    "\nhelp: there is a script with a similar name: `{suggested_script}` (requires `-Zscript`)"
-                )
-            } else {
-                "".to_owned()
-            };
-            return Err(anyhow::anyhow!(
-                "no such subcommand `{cmd}`{suggested_command}{suggested_script}"
             )
             .into());
         }
