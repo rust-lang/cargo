@@ -7,6 +7,7 @@ cargo --- The Rust package manager
 ## SYNOPSIS
 
 `cargo` [_options_] _command_ [_args_]\
+`cargo` [_options_] _script_ [_args_]\
 `cargo` [_options_] `--version`\
 `cargo` [_options_] `--list`\
 `cargo` [_options_] `--help`\
@@ -343,7 +344,11 @@ stable yet and may be subject to change.
        mkdir foo && cd foo
        cargo init .
 
-6. Learn about a command's options and usage:
+6. Run a script
+
+       cargo task.rs --action
+
+7. Learn about a command's options and usage:
 
        cargo help clean
 
