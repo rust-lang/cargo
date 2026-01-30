@@ -259,7 +259,7 @@ fn explicit_bin_within_namespace() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[cfg(unix)]
 fn namespaced_script_name() {
     let p = cargo_test_support::project()
@@ -275,8 +275,8 @@ fn main() {}
         )
         .build();
 
-    p.cargo("read-manifest -Zscript --manifest-path foo::bar.rs")
-        .masquerade_as_nightly_cargo(&["script", "open-namespaces"])
+    p.cargo("read-manifest --manifest-path foo::bar.rs")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
         .with_stdout_data(
             str![[r#"
 {

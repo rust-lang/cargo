@@ -43,7 +43,7 @@ non_kebab_case_packages = "warn"
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn package_name_from_script_name() {
     let p = cargo_test_support::project()
         .file(
@@ -57,8 +57,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("check -Zcargo-lints -Zscript --manifest-path foo_bar")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
+    p.cargo("check -Zcargo-lints --manifest-path foo_bar")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `[..]`
 [WARNING] packages should have a kebab-case name

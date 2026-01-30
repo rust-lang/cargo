@@ -110,7 +110,7 @@ impl std::fmt::Display for Fixture {
                 write!(
                     fmt,
                     r#"
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn {fn_name}() {{
     let fixture_path = {fixture_path:?};
@@ -127,7 +127,7 @@ fn {fn_name}() {{
                 write!(
                     fmt,
                     r#"
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn {fn_name}() {{
     let fixture_path = {fixture_path:?};
@@ -154,7 +154,7 @@ fn assert_success(fixture_path: &str, assertion_path: &str) {
         .build();
 
     // `read-manifest` to validate frontmatter content without processing deps, compiling
-    p.cargo("-Zscript read-manifest --manifest-path script")
+    p.cargo("read-manifest --manifest-path script")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(snapbox::Data::read_from(
             std::path::Path::new(assertion_path),
@@ -170,7 +170,7 @@ fn assert_failure(fixture_path: &str, assertion_path: &str) {
         .build();
 
     // `read-manifest` to validate frontmatter content without processing deps, compiling
-    p.cargo("-Zscript read-manifest --manifest-path script")
+    p.cargo("read-manifest --manifest-path script")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(snapbox::Data::read_from(
@@ -182,7 +182,7 @@ fn assert_failure(fixture_path: &str, assertion_path: &str) {
 
 // START CODE GENERATION
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn content_contains_whitespace() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/content-contains-whitespace.rs";
@@ -190,7 +190,7 @@ fn content_contains_whitespace() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn content_non_lexible_tokens() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/content-non-lexible-tokens.rs";
@@ -198,7 +198,7 @@ fn content_non_lexible_tokens() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn escape_hyphens_leading() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-leading.rs";
@@ -206,7 +206,7 @@ fn escape_hyphens_leading() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn escape_hyphens_nonleading_1() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-1.rs";
@@ -214,7 +214,7 @@ fn escape_hyphens_nonleading_1() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn escape_hyphens_nonleading_2() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-2.rs";
@@ -222,7 +222,7 @@ fn escape_hyphens_nonleading_2() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn escape_hyphens_nonleading_3() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/escape-hyphens-nonleading-3.rs";
@@ -230,7 +230,7 @@ fn escape_hyphens_nonleading_3() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_close_extra_after() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-close-extra-after.rs";
@@ -238,7 +238,7 @@ fn fence_close_extra_after() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_indented() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-indented.rs";
@@ -246,7 +246,7 @@ fn fence_indented() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_indented_mismatch() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-indented-mismatch.rs";
@@ -254,7 +254,7 @@ fn fence_indented_mismatch() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_mismatch_1() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-1.rs";
@@ -262,7 +262,7 @@ fn fence_mismatch_1() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_mismatch_2() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-mismatch-2.rs";
@@ -270,7 +270,7 @@ fn fence_mismatch_2() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_too_many_dashes() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-too-many-dashes.rs";
@@ -278,7 +278,7 @@ fn fence_too_many_dashes() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_1() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-1.rs";
@@ -286,7 +286,7 @@ fn fence_unclosed_1() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_2() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-2.rs";
@@ -294,7 +294,7 @@ fn fence_unclosed_2() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_3() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-3.rs";
@@ -302,7 +302,7 @@ fn fence_unclosed_3() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_4() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-4.rs";
@@ -310,7 +310,7 @@ fn fence_unclosed_4() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_5() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-5.rs";
@@ -318,7 +318,7 @@ fn fence_unclosed_5() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_unclosed_6() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-unclosed-6.rs";
@@ -326,7 +326,7 @@ fn fence_unclosed_6() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_whitespace_trailing_1() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-1.rs";
@@ -334,7 +334,7 @@ fn fence_whitespace_trailing_1() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn fence_whitespace_trailing_2() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/fence-whitespace-trailing-2.rs";
@@ -342,7 +342,7 @@ fn fence_whitespace_trailing_2() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn frontmatter_crlf() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/frontmatter-crlf.rs";
@@ -350,7 +350,7 @@ fn frontmatter_crlf() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_comma() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-comma.rs";
@@ -358,7 +358,7 @@ fn infostring_comma() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_dot_leading() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-leading.rs";
@@ -366,7 +366,7 @@ fn infostring_dot_leading() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_dot_nonleading() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-dot-nonleading.rs";
@@ -374,7 +374,7 @@ fn infostring_dot_nonleading() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_hyphen_leading() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-leading.rs";
@@ -382,7 +382,7 @@ fn infostring_hyphen_leading() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_hyphen_nonleading() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-hyphen-nonleading.rs";
@@ -390,7 +390,7 @@ fn infostring_hyphen_nonleading() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn infostring_space() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/infostring-space.rs";
@@ -398,7 +398,7 @@ fn infostring_space() {
     assert_failure(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn location_after_shebang() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/location-after-shebang.rs";
@@ -406,7 +406,7 @@ fn location_after_shebang() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn location_after_tokens() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/location-after-tokens.rs";
@@ -414,7 +414,7 @@ fn location_after_tokens() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn location_include_in_expr_ctxt() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/location-include-in-expr-ctxt.rs";
@@ -422,7 +422,7 @@ fn location_include_in_expr_ctxt() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn location_include_in_item_ctxt() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/location-include-in-item-ctxt.rs";
@@ -430,7 +430,7 @@ fn location_include_in_item_ctxt() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn location_proc_macro_observer() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/location-proc-macro-observer.rs";
@@ -438,7 +438,7 @@ fn location_proc_macro_observer() {
     assert_success(fixture_path, assertion_path);
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[rustfmt::skip]  // code-generated
 fn multifrontmatter() {
     let fixture_path = "tests/testsuite/script/rustc_fixtures/multifrontmatter.rs";

@@ -155,9 +155,6 @@ pub fn read_manifest(
 fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> CargoResult<String> {
     let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
     if is_embedded {
-        if !gctx.cli_unstable().script {
-            anyhow::bail!("parsing `{}` requires `-Zscript`", path.display());
-        }
         contents = embedded::expand_manifest(&contents)
             .map_err(|e| emit_frontmatter_diagnostic(e, &contents, path, gctx))?;
     }
