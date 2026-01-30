@@ -129,7 +129,6 @@ Each new feature described below should explain how to use it.
     * [asymmetric-token](#asymmetric-token) --- Adds support for authentication tokens using asymmetric cryptography (`cargo:paseto` provider).
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
-    * [script](#script) --- Enable support for single-file `.rs` packages.
     * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
@@ -1385,99 +1384,6 @@ Valid operations are the following:
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
 * Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide and libgit2 are still smart enough to shallow fetch without unshallowing the existing repository.
 
-## script
-
-* Tracking Issue: [#12207](https://github.com/rust-lang/cargo/issues/12207)
-
-Cargo can directly run `.rs` files as:
-```console
-$ cargo +nightly -Zscript file.rs
-```
-where `file.rs` can be as simple as:
-```rust
-fn main() {}
-```
-
-A user may optionally specify a manifest in a `cargo` code fence in a module-level comment, like:
-````rust
-#!/usr/bin/env -S cargo +nightly -Zscript
----cargo
-[dependencies]
-clap = { version = "4.2", features = ["derive"] }
----
-
-use clap::Parser;
-
-#[derive(Parser, Debug)]
-#[clap(version)]
-struct Args {
-    #[clap(short, long, help = "Path to config")]
-    config: Option<std::path::PathBuf>,
-}
-
-fn main() {
-    let args = Args::parse();
-    println!("{:?}", args);
-}
-````
-
-### Single-file packages
-
-In addition to today's multi-file packages (`Cargo.toml` file with other `.rs`
-files), we are adding the concept of single-file packages which may contain an
-embedded manifest.  There is no required distinguishment for a single-file
-`.rs` package from any other `.rs` file.
-
-Single-file packages may be selected via `--manifest-path`, like
-`cargo test --manifest-path foo.rs`. Unlike `Cargo.toml`, these files cannot be auto-discovered.
-
-A single-file package may contain an embedded manifest.  An embedded manifest
-is stored using `TOML` in rust "frontmatter", a markdown code-fence with `cargo`
-at the start of the infostring at the top of the file.
-
-Inferred / defaulted manifest fields:
-- `package.name = <slugified file stem>`
-- `package.edition = <current>` to avoid always having to add an embedded
-  manifest at the cost of potentially breaking scripts on rust upgrades
-  - Warn when `edition` is unspecified to raise awareness of this
-
-Disallowed manifest fields:
-- `[workspace]`, `[lib]`, `[[bin]]`, `[[example]]`, `[[test]]`, `[[bench]]`
-- `package.workspace`, `package.build`, `package.links`, `package.autolib`, `package.autobins`, `package.autoexamples`, `package.autotests`, `package.autobenches`
-
-The default `CARGO_TARGET_DIR` for single-file packages is at `$CARGO_HOME/target/<hash>`:
-- Avoid conflicts from multiple single-file packages being in the same directory
-- Avoid problems with the single-file package's parent directory being read-only
-- Avoid cluttering the user's directory
-
-The lockfile for single-file packages will be placed in `CARGO_TARGET_DIR`.  In
-the future, when workspaces are supported, that will allow a user to have a
-persistent lockfile.
-
-### Manifest-commands
-
-You may pass a manifest directly to the `cargo` command, without a subcommand,
-like `foo/Cargo.toml` or a single-file package like `foo.rs`.  This is mostly
-intended for being put in `#!` lines.
-
-The precedence for how to interpret `cargo <subcommand>` is
-1. Built-in xor single-file packages
-2. Aliases
-3. External subcommands
-
-A parameter is identified as a manifest-command if it has one of:
-- Path separators
-- A `.rs` extension
-- The file name is `Cargo.toml`
-
-Differences between `cargo run --manifest-path <path>` and `cargo <path>`
-- `cargo <path>` runs with the config for `<path>` and not the current dir, more like `cargo install --path <path>`
-- `cargo <path>` is at a verbosity level below the normal default.  Pass `-v` to get normal output.
-
-When running a package with an embedded manifest,
-[`arg0`](https://doc.rust-lang.org/std/os/unix/process/trait.CommandExt.html#tymethod.arg0) will be the scripts path.
-To get the executable's path, see [`current_exe`](https://doc.rust-lang.org/std/env/fn.current_exe.html).
-
 ### Documentation Updates
 
 ## Profile `trim-paths` option
@@ -2348,3 +2254,7 @@ See the [`include` config documentation](config.md#include) for more.
 ## pubtime
 
 The `pubtime` index field  has been stabilized in Rust 1.94.0.
+
+## Cargo script
+
+Support for `-Zscript` has been stabilized in 1.95.0.

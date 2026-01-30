@@ -7,6 +7,7 @@ cargo --- The Rust package manager
 ## SYNOPSIS
 
 `cargo` [_options_] _command_ [_args_]\
+`cargo` [_options_] _script_ [_args_]\
 `cargo` [_options_] `--version`\
 `cargo` [_options_] `--list`\
 `cargo` [_options_] `--help`\
@@ -19,11 +20,24 @@ available at <https://rust-lang.org>.
 
 _command_ may be one of:
 - built-in commands, see below
+- [script](#scripts)
 - [aliases]
 - [external tools]
 
 [aliases]: ../reference/config.html#alias
 [external tools]: ../reference/external-tools.html#custom-subcommands
+
+## SCRIPTS
+
+A _script_ is distinguished from a _command_ or _alias_ by having path separators present or a `.rs` extension.
+These are Rust source files with an optional [manifest] embedded in the frontmatter.
+
+`cargo` _script_ operate on system or user level, not project level.
+This means that the local [configuration discovery] is ignored.
+Instead, the configuration discovery begins at `$CARGO_HOME/config.toml`.
+
+[manifest]: ../reference/manifest.html
+[configuration discovery]: ../reference/config.html#hierarchical-structure
 
 ## COMMANDS
 
@@ -359,7 +373,11 @@ stable yet and may be subject to change.
        mkdir foo && cd foo
        cargo init .
 
-6. Learn about a command's options and usage:
+6. Run a script
+
+       cargo task.rs --action
+
+7. Learn about a command's options and usage:
 
        cargo help clean
 

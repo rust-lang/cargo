@@ -8,6 +8,8 @@ cargo \[em] The Rust package manager
 .SH "SYNOPSIS"
 \fBcargo\fR [\fIoptions\fR] \fIcommand\fR [\fIargs\fR]
 .br
+\fBcargo\fR [\fIoptions\fR] \fIscript\fR [\fIargs\fR]
+.br
 \fBcargo\fR [\fIoptions\fR] \fB\-\-version\fR
 .br
 \fBcargo\fR [\fIoptions\fR] \fB\-\-list\fR
@@ -26,12 +28,23 @@ available at <https://rust\-lang.org>\&.
 .RE
 .sp
 .RS 4
+\h'-04'\(bu\h'+03'script
+.RE
+.sp
+.RS 4
 \h'-04'\(bu\h'+03'\fIaliases\fR <https://doc.rust\-lang.org/cargo/reference/config.html#alias>
 .RE
 .sp
 .RS 4
 \h'-04'\(bu\h'+03'\fIexternal tools\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#custom\-subcommands>
 .RE
+.SH "SCRIPTS"
+A \fIscript\fR is distinguished from a \fIcommand\fR or \fIalias\fR by having path separators present or a \fB\&.rs\fR extension.
+These are Rust source files with an optional \fImanifest\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html> embedded in the frontmatter.
+.sp
+\fBcargo\fR \fIscript\fR operate on system or user level, not project level.
+This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.
+Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&.
 .SH "COMMANDS"
 .SS "Build Commands"
 \fBcargo\-bench\fR(1)
@@ -422,7 +435,17 @@ cargo init .
 .RE
 .sp
 .RS 4
-\h'-04' 6.\h'+01'Learn about a command\[cq]s options and usage:
+\h'-04' 6.\h'+01'Run a script
+.sp
+.RS 4
+.nf
+cargo task.rs \-\-action
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 7.\h'+01'Learn about a command\[cq]s options and usage:
 .sp
 .RS 4
 .nf
