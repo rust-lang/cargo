@@ -531,7 +531,8 @@ target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 * Environment: `CARGO_BUILD_TARGET_DIR` or `CARGO_TARGET_DIR`
 
 The path to where all compiler output is placed. The default if not specified
-is a directory named `target` located at the root of the workspace.
+is a directory named `target` located at the root of the workspace for `Cargo.toml` files.
+The default for scripts is in an unspecified cache directory, away from the script's location.
 
 Can be overridden with the `--target-dir` CLI option.
 

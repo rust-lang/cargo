@@ -19,6 +19,9 @@ Unlike [cargo-test(1)](cargo-test.html) and [cargo-bench(1)](cargo-bench.html), 
 working directory of the binary executed to the current working directory, same 
 as if it was executed in the shell directly.
 
+When running scripts, the process' [arg0](../../std/env/fn.args.html) will be set to the
+script's path on a best-effort basis.
+
 ## OPTIONS
 
 ### Package Selection
@@ -213,7 +216,7 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 <dl>
 
 <dt class="option-term" id="option-cargo-run---manifest-path"><a class="option-anchor" href="#option-cargo-run---manifest-path"><code>--manifest-path</code> <em>path</em></a></dt>
-<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
+<dd class="option-desc"><p>Path to the <code>Cargo.toml</code> or cargo script file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</p>
 </dd>
 
