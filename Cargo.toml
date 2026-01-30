@@ -23,13 +23,13 @@ anstyle = "1.0.13"
 anyhow = "1.0.100"
 base64 = "0.22.1"
 blake3 = "1.8.2"
-build-rs = { version = "0.3.1", path = "crates/build-rs" }
+build-rs = { version = "0.3.4", path = "crates/build-rs" }
 cargo = { path = "" }
-cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
+cargo-credential = { version = "0.4.10", path = "credential/cargo-credential" }
 cargo-credential-libsecret = { version = "0.5.6", path = "credential/cargo-credential-libsecret" }
 cargo-credential-macos-keychain = { version = "0.4.21", path = "credential/cargo-credential-macos-keychain" }
 cargo-credential-wincred = { version = "0.4.21", path = "credential/cargo-credential-wincred" }
-cargo-platform = { path = "crates/cargo-platform", version = "0.3.0" }
+cargo-platform = { path = "crates/cargo-platform", version = "0.3.3" }
 cargo-test-macro = { version = "0.4.10", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.10.1", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.28", path = "crates/cargo-util" }
@@ -85,7 +85,7 @@ regex = "1.12.2"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
 rustc-stable-hash = "0.1.2"
-rustfix = { version = "0.9.2", path = "crates/rustfix" }
+rustfix = { version = "0.9.5", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.2.0"
 security-framework = "3.5.1"
