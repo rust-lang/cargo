@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{env, fs};
+use std::{env, fmt, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
@@ -14,6 +14,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};
 
+use annotate_snippets::Level;
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
@@ -36,6 +37,42 @@ impl Drop for Transaction {
         for bin in self.bins.iter() {
             let _ = paths::remove_file(bin);
         }
+    }
+}
+
+enum RustupToolchainSource {
+    Default,
+    Environment,
+    CommandLine,
+    OverrideDB,
+    ToolchainFile,
+    Other(String),
+}
+
+#[allow(dead_code)]
+impl RustupToolchainSource {
+    fn is_implicit_override(&self) -> bool {
+        match self {
+            Self::Default => false,
+            Self::Environment => true,
+            Self::CommandLine => false,
+            Self::OverrideDB => true,
+            Self::ToolchainFile => true,
+            Self::Other(_) => true,
+        }
+    }
+}
+
+impl fmt::Display for RustupToolchainSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Default => "default",
+            Self::Environment => "environment variable",
+            Self::CommandLine => "command line",
+            Self::OverrideDB => "rustup directory override",
+            Self::ToolchainFile => "rustup toolchain file",
+            Self::Other(other) => other,
+        })
     }
 }
 
@@ -315,6 +352,28 @@ impl<'gctx> InstallablePackage<'gctx> {
 
     fn install_one(mut self, dry_run: bool) -> CargoResult<bool> {
         self.gctx.shell().status("Installing", &self.pkg)?;
+
+        if let Some(source) = get_rustup_toolchain_source()
+            && source.is_implicit_override()
+        {
+            #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]
+            let maybe_toolchain = env::var("RUSTUP_TOOLCHAIN")
+                .ok()
+                .map(|toolchain| format!(" with `{toolchain}`"))
+                .unwrap_or_default();
+            let report = &[Level::WARNING
+                .secondary_title(format!(
+                    "default toolchain implicitly overridden{maybe_toolchain} by {source}"
+                ))
+                .element(Level::HELP.message(format!(
+                    "use `cargo +stable install` if you meant to use the stable toolchain"
+                )))
+                .element(Level::NOTE.message(format!(
+                    "rustup selects the toolchain based on the parent environment and not the \
+                     environment of the package being installed"
+                )))];
+            self.gctx.shell().print_report(report, false)?;
+        }
 
         // Normalize to absolute path for consistency throughout.
         // See: https://github.com/rust-lang/cargo/issues/16023
@@ -609,6 +668,20 @@ impl<'gctx> InstallablePackage<'gctx> {
             "consider running without --locked",
         )
     }
+}
+
+fn get_rustup_toolchain_source() -> Option<RustupToolchainSource> {
+    #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]
+    let source = std::env::var("RUSTUP_TOOLCHAIN_SOURCE").ok()?;
+    let source = match source.as_str() {
+        "default" => RustupToolchainSource::Default,
+        "env" => RustupToolchainSource::Environment,
+        "cli" => RustupToolchainSource::CommandLine,
+        "path-override" => RustupToolchainSource::OverrideDB,
+        "toolchain-file" => RustupToolchainSource::ToolchainFile,
+        other => RustupToolchainSource::Other(other.to_owned()),
+    };
+    Some(source)
 }
 
 fn make_warning_about_missing_features(binaries: &[&Target]) -> String {
