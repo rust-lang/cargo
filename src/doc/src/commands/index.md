@@ -4,4 +4,5 @@
 * [Manifest Commands](manifest-commands.md)
 * [Package Commands](package-commands.md)
 * [Publishing Commands](publishing-commands.md)
+* [Report Commands](report-commands.md)
 * [Deprecated and Removed](deprecated-and-removed.md)

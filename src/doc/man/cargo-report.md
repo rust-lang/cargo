@@ -8,35 +8,36 @@ cargo-report --- Generate and display various kinds of reports
 
 `cargo report` _type_ [_options_]
 
-### DESCRIPTION
+## DESCRIPTION
 
 Displays a report of the given _type_ --- currently, only `future-incompat` is supported
 
 ## OPTIONS
 
+### Display Options
+
 {{#options}}
-
-{{#option "`--id` _id_" }}
-Show the report with the specified Cargo-generated id
-{{/option}}
-
-{{#option "`-p` _spec_..." "`--package` _spec_..." }}
-Only display a report for the specified package
-{{/option}}
-
+{{> options-display }}
 {{/options}}
+
+### Manifest Options
+
+{{#options}}
+{{> options-locked }}
+{{/options}}
+
+{{> section-options-common }}
+
+{{> section-environment }}
+
+{{> section-exit-status }}
 
 ## EXAMPLES
 
-1. Display the latest future-incompat report:
+1. Display the available kinds of reports:
 
-       cargo report future-incompat
-
-2. Display the latest future-incompat report for a specific package:
-
-       cargo report future-incompat --package my-dep:0.0.1
+       cargo report --help
 
 ## SEE ALSO
-[Future incompat report](../reference/future-incompat-report.html)
 
-{{man "cargo" 1}}
+{{man "cargo" 1}}, {{man "cargo-report-future-incompatibilities" 1}}

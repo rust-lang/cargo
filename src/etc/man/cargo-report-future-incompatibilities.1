@@ -1,15 +1,36 @@
 '\" t
-.TH "CARGO\-REPORT" "1"
+.TH "CARGO\-REPORT\-FUTURE\-INCOMPATIBILITIES" "1"
 .nh
 .ad l
 .ss \n[.ss] 0
 .SH "NAME"
-cargo\-report \[em] Generate and display various kinds of reports
+cargo\-report\-future\-incompatibilities \[em] Reports any crates which will eventually stop compiling
 .SH "SYNOPSIS"
-\fBcargo report\fR \fItype\fR [\fIoptions\fR]
+\fBcargo report future\-incompatibilities\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
-Displays a report of the given \fItype\fR \[em] currently, only \fBfuture\-incompat\fR is supported
+Displays a report of future\-incompatible warnings that were emitted during
+previous builds.
+These are warnings for changes that may become hard errors in the future,
+causing dependencies to stop building in a future version of rustc.
+.sp
+For more, see the chapter on \fIFuture incompat report\fR <https://doc.rust\-lang.org/cargo/reference/future\-incompat\-report.html>\&.
 .SH "OPTIONS"
+.sp
+\fB\-\-id\fR \fIid\fR
+.RS 4
+Show the report with the specified Cargo\-generated id.
+If not specified, shows the most recent report.
+.RE
+.SS "Package Selection"
+By default, the package in the current working directory is selected. The \fB\-p\fR
+flag can be used to choose a different package in a workspace.
+.sp
+\fB\-p\fR \fIspec\fR, 
+\fB\-\-package\fR \fIspec\fR
+.RS 4
+The package to display a report for. See \fBcargo\-pkgid\fR(1) for the SPEC
+format.
+.RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
@@ -145,13 +166,23 @@ details on environment variables that Cargo reads.
 .SH "EXAMPLES"
 .sp
 .RS 4
-\h'-04' 1.\h'+01'Display the available kinds of reports:
+\h'-04' 1.\h'+01'Display the latest future\-incompat report:
 .sp
 .RS 4
 .nf
-cargo report \-\-help
+cargo report future\-incompat
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 2.\h'+01'Display the latest future\-incompat report for a specific package:
+.sp
+.RS 4
+.nf
+cargo report future\-incompat \-\-package my\-dep@0.0.1
 .fi
 .RE
 .RE
 .SH "SEE ALSO"
-\fBcargo\fR(1), \fBcargo\-report\-future\-incompatibilities\fR(1)
+\fBcargo\fR(1), \fBcargo\-report\fR(1), \fBcargo\-build\fR(1)
