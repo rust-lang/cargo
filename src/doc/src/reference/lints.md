@@ -33,6 +33,7 @@ These lints are all set to the 'warn' level by default.
 - [`redundant_homepage`](#redundant_homepage)
 - [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
+- [`unused_workspace_dependencies`](#unused_workspace_dependencies)
 
 ## `blanket_hint_mostly_unused`
 Group: `suspicious`
@@ -367,6 +368,26 @@ Checks for unknown lints in the `[lints.cargo]` table
 ```toml
 [lints.cargo]
 this-lint-does-not-exist = "warn"
+```
+
+
+## `unused_workspace_dependencies`
+Group: `suspicious`
+
+Level: `warn`
+
+### What it does
+Checks for any entry in `[workspace.dependencies]` that has not been inherited
+
+### Why it is bad
+They can give the false impression that these dependencies are used
+
+### Example
+```toml
+[workspace.dependencies]
+regex = "1"
+
+[dependencies]
 ```
 
 
