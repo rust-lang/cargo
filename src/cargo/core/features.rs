@@ -891,7 +891,6 @@ unstable_cli_options!(
     rustdoc_mergeable_info: bool = ("Use rustdoc mergeable cross-crate-info files"),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
     sbom: bool = ("Enable the `sbom` option in build config in .cargo/config.toml file"),
-    script: bool = ("Enable support for single-file, `.rs` packages"),
     section_timings: bool = ("Enable support for extended compilation sections in --timings output"),
     separate_nightlies: bool,
     skip_rustdoc_fingerprint: bool,
@@ -984,6 +983,8 @@ const STABILIZED_PACKAGE_WORKSPACE: &str =
 const STABILIZED_BUILD_DIR: &str = "build.build-dir is now always enabled.";
 
 const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always available";
+
+const STABILIZED_SCRIPT: &str = "Cargo scripts are now always available";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1373,6 +1374,7 @@ impl CliUnstable {
             "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
             "build-dir" => stabilized_warn(k, "1.91", STABILIZED_BUILD_DIR),
             "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
+            "script" => stabilized_warn(k, "1.95", STABILIZED_SCRIPT),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1436,7 +1438,6 @@ impl CliUnstable {
             "separate-nightlies" => self.separate_nightlies = parse_empty(k, v)?,
             "checksum-freshness" => self.checksum_freshness = parse_empty(k, v)?,
             "skip-rustdoc-fingerprint" => self.skip_rustdoc_fingerprint = parse_empty(k, v)?,
-            "script" => self.script = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "panic-immediate-abort" => self.panic_immediate_abort = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
