@@ -1063,13 +1063,10 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
                 manifest_path.display()
             )
         } else if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
-            // Placeholder
-            {
-                anyhow::bail!(
-                    "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
-                    path.display()
-                )
-            }
+            anyhow::bail!(
+                "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
+                path.display()
+            )
         }
         Ok(path)
     } else {

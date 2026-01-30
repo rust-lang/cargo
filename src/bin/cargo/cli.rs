@@ -337,9 +337,7 @@ To pass the arguments to the subcommand, remove `--`",
                     }
                 }
                 if commands::run::is_manifest_command(cmd) {
-                    {
-                        return Ok((args, GlobalArgs::default()));
-                    }
+                    return Ok((args, GlobalArgs::default()));
                 }
 
                 let mut alias = alias
@@ -476,15 +474,12 @@ impl Exec {
         match self {
             Self::Builtin(exec) => exec(gctx, subcommand_args),
             Self::Manifest(cmd) => {
-                // Placeholder
-                {
-                    let ext_args: Vec<OsString> = subcommand_args
-                        .get_many::<OsString>("")
-                        .unwrap_or_default()
-                        .cloned()
-                        .collect();
-                    commands::run::exec_manifest_command(gctx, &cmd, &ext_args)
-                }
+                let ext_args: Vec<OsString> = subcommand_args
+                    .get_many::<OsString>("")
+                    .unwrap_or_default()
+                    .cloned()
+                    .collect();
+                commands::run::exec_manifest_command(gctx, &cmd, &ext_args)
             }
             Self::External(cmd) => {
                 let mut ext_args = vec![OsStr::new(&cmd)];
