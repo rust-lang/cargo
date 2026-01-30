@@ -3,7 +3,7 @@ use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 use crate::util::{GlobalContext, restricted_names};
-use anyhow::{Context as _, anyhow};
+use anyhow::{Context as _, anyhow, bail};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
 use home::home_dir;
@@ -66,12 +66,15 @@ pub struct NewOptions {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NewProjectKind {
     Bin,
-    Lib,
+    Lib { proc_macro: bool },
 }
 
 impl NewProjectKind {
     fn is_bin(self) -> bool {
         self == NewProjectKind::Bin
+    }
+    fn is_proc_macro(self) -> bool {
+        self == NewProjectKind::Lib { proc_macro: true }
     }
 }
 
@@ -79,7 +82,8 @@ impl fmt::Display for NewProjectKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             NewProjectKind::Bin => "binary (application)",
-            NewProjectKind::Lib => "library",
+            NewProjectKind::Lib { proc_macro: false } => "library",
+            NewProjectKind::Lib { proc_macro: true } => "library (proc-macro)",
         }
         .fmt(f)
     }
@@ -87,7 +91,7 @@ impl fmt::Display for NewProjectKind {
 
 struct SourceFileInformation {
     relative_path: String,
-    bin: bool,
+    kind: NewProjectKind,
 }
 
 struct MkOptions<'a> {
@@ -104,17 +108,24 @@ impl NewOptions {
         version_control: Option<VersionControl>,
         bin: bool,
         lib: bool,
+        proc_macro: bool,
         path: PathBuf,
         name: Option<String>,
         edition: Option<String>,
         registry: Option<String>,
     ) -> CargoResult<NewOptions> {
-        let auto_detect_kind = !bin && !lib;
+        let auto_detect_kind = !bin && !lib && !proc_macro;
 
-        let kind = match (bin, lib) {
-            (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
-            (false, true) => NewProjectKind::Lib,
-            (_, false) => NewProjectKind::Bin,
+        let kind = match (bin, lib, proc_macro) {
+            (true, false, false) | (false, false, false) => NewProjectKind::Bin,
+            (false, true, false) => NewProjectKind::Lib { proc_macro: false },
+            (false, false, true) => NewProjectKind::Lib { proc_macro: true },
+
+            // invalid
+            (true, true, false) => bail!("can't specify both binary and library outputs"),
+            (true, false, true) => bail!("can't specify both binary and proc-macro outputs"),
+            (false, true, true) => bail!("can't specify both library and proc-macro outputs"),
+            (true, true, true) => bail!("can't specify all binary, library and proc-macro outputs"),
         };
 
         let opts = NewOptions {
@@ -363,18 +374,27 @@ fn detect_source_paths_and_types(
         let sfi = match i.handling {
             H::Bin => SourceFileInformation {
                 relative_path: pp,
-                bin: true,
+                kind: NewProjectKind::Bin,
             },
             H::Lib => SourceFileInformation {
-                relative_path: pp,
-                bin: false,
+                relative_path: pp.clone(),
+                kind: NewProjectKind::Lib {
+                    proc_macro: paths::read(&path.join(pp.clone()))?
+                        .contains("proc_macro::TokenStream"),
+                },
             },
             H::Detect => {
                 let content = paths::read(&path.join(pp.clone()))?;
-                let isbin = content.contains("fn main");
+                let kind = if content.contains("fn main") {
+                    NewProjectKind::Bin
+                } else if content.contains("proc_macro::TokenStream") {
+                    NewProjectKind::Lib { proc_macro: true }
+                } else {
+                    NewProjectKind::Lib { proc_macro: false }
+                };
                 SourceFileInformation {
                     relative_path: pp,
-                    bin: isbin,
+                    kind,
                 }
             }
         };
@@ -387,7 +407,7 @@ fn detect_source_paths_and_types(
     let mut duplicates_checker: BTreeMap<&str, &SourceFileInformation> = BTreeMap::new();
 
     for i in detected_files {
-        if i.bin {
+        if i.kind.is_bin() {
             if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, &name) {
                 anyhow::bail!(
                     "\
@@ -417,17 +437,15 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool) -> SourceFileInformation {
-    if bin {
-        SourceFileInformation {
-            relative_path: "src/main.rs".to_string(),
-            bin: true,
-        }
+fn plan_new_source_file(kind: NewProjectKind) -> SourceFileInformation {
+    let relative_path = if kind.is_bin() {
+        "src/main.rs".to_string()
     } else {
-        SourceFileInformation {
-            relative_path: "src/lib.rs".to_string(),
-            bin: false,
-        }
+        "src/lib.rs".to_string()
+    };
+    SourceFileInformation {
+        relative_path,
+        kind,
     }
 }
 
@@ -436,10 +454,10 @@ fn calculate_new_project_kind(
     auto_detect_kind: bool,
     found_files: &Vec<SourceFileInformation>,
 ) -> NewProjectKind {
-    let bin_file = found_files.iter().find(|x| x.bin);
+    let bin_file = found_files.iter().find(|x| x.kind.is_bin());
 
     let kind_from_files = if !found_files.is_empty() && bin_file.is_none() {
-        NewProjectKind::Lib
+        NewProjectKind::Lib { proc_macro: false }
     } else {
         NewProjectKind::Bin
     };
@@ -474,7 +492,7 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
         version_control: opts.version_control,
         path,
         name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin())],
+        source_files: vec![plan_new_source_file(opts.kind)],
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -517,34 +535,31 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     }
     check_path(path, &mut gctx.shell())?;
 
-    let has_bin = kind.is_bin();
-
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(has_bin));
-    } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
+        src_paths_types.push(plan_new_source_file(kind));
+    } else if let Ok(file) = itertools::Itertools::exactly_one(src_paths_types.iter_mut())
+        && file.kind != kind
+    {
         // we've found the only file and it's not the type user wants. Change the type and warn
-        let file_type = if src_paths_types[0].bin {
-            NewProjectKind::Bin
-        } else {
-            NewProjectKind::Lib
-        };
         gctx.shell().warn(format!(
             "file `{}` seems to be a {} file",
-            src_paths_types[0].relative_path, file_type
+            file.relative_path, file.kind
         ))?;
-        src_paths_types[0].bin = has_bin
-    } else if src_paths_types.len() > 1 && !has_bin {
+        file.kind = kind;
+    } else if let [first, second, ..] = &src_paths_types[..]
+        && !kind.is_bin()
+    {
         // We have found both lib and bin files and the user would like us to treat both as libs
         anyhow::bail!(
             "cannot have a package with \
              multiple libraries, \
              found both `{}` and `{}`",
-            src_paths_types[0].relative_path,
-            src_paths_types[1].relative_path
+            first.relative_path,
+            second.relative_path
         )
     }
 
-    check_name(name, opts.name.is_none(), has_bin, &mut gctx.shell())?;
+    check_name(name, opts.name.is_none(), kind.is_bin(), &mut gctx.shell())?;
 
     let mut version_control = opts.version_control;
 
@@ -810,7 +825,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
     for i in &opts.source_files {
-        if i.bin {
+        if i.kind.is_bin() {
             if i.relative_path != "src/main.rs" {
                 let mut bin = toml_edit::Table::new();
                 bin["name"] = toml_edit::value(name);
@@ -823,10 +838,18 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
                     .expect("bin is an array of tables")
                     .push(bin);
             }
-        } else if i.relative_path != "src/lib.rs" {
-            let mut lib = toml_edit::Table::new();
-            lib["path"] = toml_edit::value(i.relative_path.clone());
-            manifest["lib"] = toml_edit::Item::Table(lib);
+        } else {
+            if i.relative_path != "src/lib.rs" {
+                let mut lib = toml_edit::Table::new();
+                lib["path"] = toml_edit::value(i.relative_path.clone());
+                manifest["lib"] = toml_edit::Item::Table(lib);
+            }
+            if i.kind.is_proc_macro() {
+                if manifest.get("lib").is_none() {
+                    manifest["lib"] = toml_edit::Item::Table(toml_edit::Table::new());
+                }
+                manifest["lib"]["proc-macro"] = true.into();
+            }
         }
     }
 
@@ -896,14 +919,16 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
             paths::create_dir_all(src_dir)?;
         }
 
-        let default_file_content: &[u8] = if i.bin {
-            b"\
+        let default_file_content: &[u8] = match i.kind {
+            NewProjectKind::Bin => {
+                b"\
 fn main() {
     println!(\"Hello, world!\");
 }
 "
-        } else {
-            b"\
+            }
+            NewProjectKind::Lib { proc_macro: false } => {
+                b"\
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
@@ -919,6 +944,29 @@ mod tests {
     }
 }
 "
+            }
+            NewProjectKind::Lib { proc_macro: true } => {
+                b"\
+#[proc_macro]
+pub fn identity_proc_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    input
+}
+
+#[proc_macro_derive(Foo, attributes(foo))]
+pub fn identity_derive_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn identity_attribute_macro(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let _ = args;
+    input
+}
+"
+            }
         };
 
         if !path_of_source_file.is_file() {
