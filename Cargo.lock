@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "build-rs"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "unicode-ident",
 ]
@@ -334,7 +334,7 @@ dependencies = [
  "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
- "cargo-platform 0.3.2",
+ "cargo-platform 0.3.3",
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
@@ -354,7 +354,7 @@ dependencies = [
  "heck",
  "hex",
  "hmac",
- "home 0.5.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "home 0.5.12",
  "http-auth",
  "ignore",
  "im-rc",
@@ -408,7 +408,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "anyhow",
  "libc",
@@ -422,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-1password"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "cargo-credential",
  "serde",
@@ -465,7 +465,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "serde",
  "serde_core",
@@ -2325,15 +2325,15 @@ dependencies = [
 [[package]]
 name = "home"
 version = "0.5.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "home"
-version = "0.5.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
+version = "0.5.13"
 dependencies = [
  "windows-sys 0.61.2",
 ]
@@ -3847,7 +3847,7 @@ name = "resolver-tests"
 version = "0.0.0"
 dependencies = [
  "cargo",
- "cargo-platform 0.3.2",
+ "cargo-platform 0.3.3",
  "cargo-util",
  "cargo-util-schemas",
  "proptest",
@@ -3913,7 +3913,7 @@ checksum = "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08"
 
 [[package]]
 name = "rustfix"
-version = "0.9.4"
+version = "0.9.5"
 dependencies = [
  "anyhow",
  "proptest",

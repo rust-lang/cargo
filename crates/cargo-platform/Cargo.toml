@@ -1,10 +1,9 @@
 [package]
 name = "cargo-platform"
-version = "0.3.2"
+version = "0.3.3"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-homepage.workspace = true
 repository.workspace = true
 documentation = "https://docs.rs/cargo-platform"
 description = "Cargo's representation of a target platform."

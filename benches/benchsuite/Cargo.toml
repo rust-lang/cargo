@@ -3,8 +3,7 @@ name = "benchsuite"
 version = "0.0.0"
 edition.workspace = true
 license.workspace = true
-homepage = "https://github.com/rust-lang/cargo"
-repository = "https://github.com/rust-lang/cargo"
+repository.workspace = true
 description = "Benchmarking suite for Cargo."
 publish = false
 

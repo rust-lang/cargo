@@ -4,7 +4,6 @@ version = "0.12.1"
 rust-version = "1.93"  # MSRV:1
 edition.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 description = "Deserialization schemas for Cargo"
 

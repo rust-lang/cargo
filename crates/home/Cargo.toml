@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.5.12"
+version = "0.5.13"
 authors = ["Brian Anderson <andersrb@gmail.com>"]
 rust-version.workspace = true
 documentation = "https://docs.rs/home"
@@ -13,7 +13,6 @@ include = [
     "/README.md",
 ]
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 description = "Shared definitions of home directories."
 

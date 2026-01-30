@@ -4,7 +4,6 @@ version = "0.4.10"
 edition.workspace = true
 rust-version = "1.93"  # MSRV:1
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 description = "Helper proc-macro for Cargo's testsuite."
 

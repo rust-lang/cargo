@@ -1,6 +1,6 @@
 [package]
 name = "rustfix"
-version = "0.9.4"
+version = "0.9.5"
 authors = [
     "Pascal Hertleif <killercup@gmail.com>",
     "Oliver Schneider <oli-obk@users.noreply.github.com>",
@@ -8,7 +8,6 @@ authors = [
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 description = "Automatically apply the suggestions made by rustc"
 documentation = "https://docs.rs/rustfix"
