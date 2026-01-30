@@ -213,7 +213,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
     /// Returns the directory where the artifacts for the given unit are
     /// initially created.
-    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+    pub fn output_dir(&self, unit: &Unit) -> PathBuf {
         // Docscrape units need to have doc/ set as the out_dir so sources for reverse-dependencies
         // will be put into doc/ and not into deps/ where the *.examples files are stored.
         if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
@@ -231,7 +231,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         } else if unit.artifact.is_true() {
             self.artifact_dir(unit)
         } else {
-            self.deps_dir(unit).to_path_buf()
+            self.out_dir(unit).to_path_buf()
         }
     }
 
@@ -272,26 +272,28 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.host.build_dir().root()
     }
 
-    /// Returns the host `deps` directory path.
-    pub fn host_deps(&self, unit: &Unit) -> PathBuf {
+    /// Returns the host `out` directory path for a given build unit.
+    pub fn host_out(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.host.build_dir().deps(&dir)
+        self.host.build_dir().out(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit.
-    pub fn deps_dir(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_dir().deps(&dir)
+        self.layout(unit.kind).build_dir().out(&dir)
     }
 
     /// Returns the directories where Rust crate dependencies are found for the
     /// specified unit. (new layout)
     ///
     /// New features should consider using this so we can avoid their migrations.
-    pub fn deps_dir_new_layout(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir_new_layout(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind).build_dir().deps_new_layout(&dir)
+        self.layout(unit.kind)
+            .build_dir()
+            .out_force_new_layout(&dir)
     }
 
     /// Directory where the fingerprint for the given unit should go.
@@ -387,9 +389,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         assert!(unit.target.is_custom_build());
         assert!(unit.mode.is_run_custom_build());
         let dir = self.pkg_dir(unit);
-        self.layout(unit.kind)
-            .build_dir()
-            .build_script_execution(&dir)
+        self.layout(unit.kind).build_dir().run(&dir)
     }
 
     /// Returns the "`OUT_DIR`" directory for running a build script.
@@ -511,10 +511,10 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             }
             CompileMode::Doc => {
                 let path = if bcx.build_config.intent.wants_doc_json_output() {
-                    self.out_dir(unit)
+                    self.output_dir(unit)
                         .join(format!("{}.json", unit.target.crate_name()))
                 } else {
-                    self.out_dir(unit)
+                    self.output_dir(unit)
                         .join(unit.target.crate_name())
                         .join("index.html")
                 };
@@ -530,7 +530,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     // `-Zrustdoc-mergeable-info` always uses the new layout.
                     outputs.push(OutputFile {
                         path: self
-                            .deps_dir_new_layout(unit)
+                            .out_dir_new_layout(unit)
                             .join(unit.target.crate_name())
                             .with_extension("json"),
                         hardlink: None,
@@ -561,7 +561,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     unit.pkg.name(),
                     self.metadata(unit).unit_id()
                 );
-                let path = self.deps_dir(unit).join(file_name);
+                let path = self.out_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
                     hardlink: None,
@@ -609,7 +609,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         unit: &Unit,
         bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Vec<OutputFile>> {
-        let out_dir = self.out_dir(unit);
+        let out_dir = self.output_dir(unit);
 
         let info = bcx.target_data.info(unit.kind);
         let triple = bcx.target_data.short_name(&unit.kind);
