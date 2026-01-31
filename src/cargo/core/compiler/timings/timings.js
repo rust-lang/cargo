@@ -531,14 +531,17 @@ class SvgRenderer {
     const axes = this._draw_graph_axes({ canvas_height, graph_height, graph_width, px_per_sec });
 
     // Draw Y tick marks.
-    const path_commands = Array(units.length - 1)
-      .fill(0)
-      .map((_, idx) => {
-        const n = idx + 1;
-        const y = MARGIN + Y_TICK_DIST * n;
-        return `M${X_LINE} ${y} h-5`;
-      });
-    const y_ticks = `<path class="axis axis-y" d="${path_commands.join(" ")}"></path>`;
+    let y_ticks = '';
+    if (units.length != 0) {
+      const path_commands = Array(units.length - 1)
+        .fill(0)
+        .map((_, idx) => {
+          const n = idx + 1;
+          const y = MARGIN + Y_TICK_DIST * n;
+          return `M${X_LINE} ${y} h-5`;
+        });
+      y_ticks = `<path class="axis axis-y" d="${path_commands.join(" ")}"></path>`;
+    }
 
     // Draw Y labels.
     const y_labels = Array(units.length)
