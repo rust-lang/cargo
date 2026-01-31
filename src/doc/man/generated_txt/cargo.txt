@@ -5,6 +5,7 @@ NAME
 
 SYNOPSIS
        cargo [options] command [args]
+       cargo [options] script [args]
        cargo [options] --version
        cargo [options] --list
        cargo [options] --help
@@ -306,7 +307,11 @@ EXAMPLES
               mkdir foo && cd foo
               cargo init .
 
-       6. Learn about a command’s options and usage:
+       6. Run a script
+
+              cargo task.rs --action
+
+       7. Learn about a command’s options and usage:
 
               cargo help clean
 

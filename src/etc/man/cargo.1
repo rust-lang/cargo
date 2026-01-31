@@ -8,6 +8,8 @@ cargo \[em] The Rust package manager
 .SH "SYNOPSIS"
 \fBcargo\fR [\fIoptions\fR] \fIcommand\fR [\fIargs\fR]
 .br
+\fBcargo\fR [\fIoptions\fR] \fIscript\fR [\fIargs\fR]
+.br
 \fBcargo\fR [\fIoptions\fR] \fB\-\-version\fR
 .br
 \fBcargo\fR [\fIoptions\fR] \fB\-\-list\fR
@@ -408,7 +410,17 @@ cargo init .
 .RE
 .sp
 .RS 4
-\h'-04' 6.\h'+01'Learn about a command\[cq]s options and usage:
+\h'-04' 6.\h'+01'Run a script
+.sp
+.RS 4
+.nf
+cargo task.rs \-\-action
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 7.\h'+01'Learn about a command\[cq]s options and usage:
 .sp
 .RS 4
 .nf
