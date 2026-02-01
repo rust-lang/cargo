@@ -327,7 +327,7 @@ jobs:
     - name: Checkout Actions Repository
       uses: actions/checkout@v5
     - name: Spell Check Repo
-      uses: crate-ci/typos@v1.42.0
+      uses: crate-ci/typos@v1.42.3
 
   report-timings:
     name: Timing HTML report
