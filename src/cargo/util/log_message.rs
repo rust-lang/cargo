@@ -21,6 +21,8 @@ use crate::core::compiler::fingerprint::DirtyReason;
 pub enum LogMessage {
     /// Emitted when a build starts.
     BuildStarted {
+        /// The command-line arguments Cargo was invoked with.
+        command: Vec<String>,
         /// Current working directory.
         cwd: PathBuf,
         /// Host triple.
