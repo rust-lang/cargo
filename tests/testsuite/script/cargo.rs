@@ -142,7 +142,7 @@ fn path_required() {
 
 [HELP] view all installed commands with `cargo --list`
 [HELP] find a package to install `echo` with `cargo search cargo-echo`
-[HELP] To run the file `echo`, provide a relative path like `./echo`
+[HELP] to run the file `echo`, provide a relative path like `./echo`
 
 "#]])
         .run();
