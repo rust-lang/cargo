@@ -14,6 +14,15 @@ DESCRIPTION
        This program is a package manager and build tool for the Rust language,
        available at <https://rust-lang.org>.
 
+       command may be one of:
+
+       o  built-in commands, see below
+
+       o  aliases <https://doc.rust-lang.org/cargo/reference/config.html#alias>
+
+       o  external tools
+          <https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands>
+
 COMMANDS
    Build Commands
        cargo-bench(1)
