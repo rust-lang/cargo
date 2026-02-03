@@ -159,6 +159,7 @@ where
     for msg in log {
         match msg {
             LogMessage::BuildStarted {
+                command: _,
                 cwd: _,
                 host,
                 jobs,

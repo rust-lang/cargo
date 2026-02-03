@@ -168,6 +168,9 @@ pub fn compile_ws<'a>(
             .ok()
             .map(|x| x.get() as u64);
         logger.log(LogMessage::BuildStarted {
+            command: std::env::args_os()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect(),
             cwd: ws.gctx().cwd().to_path_buf(),
             host: rustc.host.to_string(),
             jobs: options.build_config.jobs,

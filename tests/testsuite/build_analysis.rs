@@ -77,6 +77,7 @@ fn log_msg_build_started() {
         str![[r#"
 [
   {
+    "command": "{...}",
     "cwd": "[ROOT]/foo",
     "host": "[HOST_TARGET]",
     "jobs": "{...}",
