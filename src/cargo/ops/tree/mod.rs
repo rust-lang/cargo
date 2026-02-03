@@ -149,7 +149,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     // `FeatureResolver` will need to be taught what "all" means.
     let requested_kinds = CompileKind::from_requested_targets(ws.gctx(), &requested_targets)?;
     let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
-    let specs = opts.packages.to_package_id_specs(ws)?;
+    let requested_specs = opts.packages.to_package_id_specs(ws)?;
     let has_dev = if opts
         .edge_kinds
         .contains(&EdgeKind::Dep(DepKind::Development))
@@ -169,7 +169,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &mut target_data,
         &requested_kinds,
         &opts.cli_features,
-        &specs,
+        &requested_specs,
         has_dev,
         force_all,
         dry_run,
@@ -198,15 +198,29 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
             opts,
         )?;
 
-        let root_specs = if opts.invert.is_empty() {
-            specs
+        let root_ids = if opts.invert.is_empty() {
+            let entry_ids = ws_resolve.targeted_resolve.specs_to_ids(&specs)?;
+
+            let requested_ids = ws_resolve
+                .targeted_resolve
+                .specs_to_ids(&requested_specs)?
+                .into_iter()
+                .collect::<HashSet<_>>();
+
+            entry_ids
+                .into_iter()
+                .filter(|id| requested_ids.contains(id))
+                .collect()
         } else {
-            opts.invert
+            let invert_specs = opts
+                .invert
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
-                .collect::<Result<Vec<PackageIdSpec>, _>>()?
+                .collect::<Result<Vec<PackageIdSpec>, _>>()?;
+
+            ws_resolve.targeted_resolve.specs_to_ids(&invert_specs)?
         };
-        let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
+
         let root_indexes = graph.indexes_from_ids(&root_ids);
 
         let root_indexes = if opts.duplicates {
