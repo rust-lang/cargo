@@ -33,6 +33,7 @@ use crate::lints::rules::non_snake_case_packages;
 use crate::lints::rules::redundant_homepage;
 use crate::lints::rules::redundant_readme;
 use crate::lints::rules::unused_workspace_dependencies;
+use crate::lints::rules::unused_workspace_package_fields;
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
@@ -1462,6 +1463,14 @@ impl<'gctx> Workspace<'gctx> {
                 bail!("encountered {verify_error_count} error{plural} while verifying lints")
             }
 
+            unused_workspace_package_fields(
+                self,
+                self.root_maybe(),
+                self.root_manifest(),
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
             unused_workspace_dependencies(
                 self,
                 self.root_maybe(),

@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use cargo_test_support::project;
-use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 
 #[cargo_test]
@@ -51,13 +50,27 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_workspace_package_fields`
-  --> Cargo.toml:12:1
-   |
-12 | unused_workspace_package_fields = "warn"
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] unused field in `workspace.package`
+ --> Cargo.toml:8:1
+  |
+8 | rust-version = "1.0"
+  | ^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_workspace_package_fields` is set to `warn` by default
+[HELP] consider removing the unused field
+  |
+8 - rust-version = "1.0"
+  |
+[WARNING] unused field in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | unknown = "foo"
+  | ^^^^^^^
+  |
+[HELP] consider removing the unused field
+  |
+9 - unknown = "foo"
+  |
 [WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.package.unknown
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

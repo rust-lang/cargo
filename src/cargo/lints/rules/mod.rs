@@ -10,6 +10,7 @@ mod redundant_homepage;
 mod redundant_readme;
 mod unknown_lints;
 mod unused_workspace_dependencies;
+mod unused_workspace_package_fields;
 
 pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 pub use im_a_teapot::check_im_a_teapot;
@@ -23,6 +24,7 @@ pub use redundant_homepage::redundant_homepage;
 pub use redundant_readme::redundant_readme;
 pub use unknown_lints::output_unknown_lints;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
+pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
 pub const LINTS: &[crate::lints::Lint] = &[
     blanket_hint_mostly_unused::LINT,
@@ -37,4 +39,5 @@ pub const LINTS: &[crate::lints::Lint] = &[
     redundant_readme::LINT,
     unknown_lints::LINT,
     unused_workspace_dependencies::LINT,
+    unused_workspace_package_fields::LINT,
 ];
