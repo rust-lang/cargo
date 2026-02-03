@@ -34,6 +34,7 @@ These lints are all set to the 'warn' level by default.
 - [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
 - [`unused_workspace_dependencies`](#unused_workspace_dependencies)
+- [`unused_workspace_package_fields`](#unused_workspace_package_fields)
 
 ## `blanket_hint_mostly_unused`
 Group: `suspicious`
@@ -388,6 +389,27 @@ They can give the false impression that these dependencies are used
 regex = "1"
 
 [dependencies]
+```
+
+
+## `unused_workspace_package_fields`
+Group: `suspicious`
+
+Level: `warn`
+
+### What it does
+Checks for any fields in `[workspace.package]` that has not been inherited
+
+### Why it is bad
+They can give the false impression that these fields are used
+
+### Example
+```toml
+[workspace.package]
+edition = "2024"
+
+[package]
+name = "foo"
 ```
 
 
