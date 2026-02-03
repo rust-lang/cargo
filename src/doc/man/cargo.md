@@ -17,6 +17,14 @@ cargo --- The Rust package manager
 This program is a package manager and build tool for the Rust language,
 available at <https://rust-lang.org>.
 
+_command_ may be one of:
+- built-in commands, see below
+- [aliases]
+- [external tools]
+
+[aliases]: ../reference/config.html#alias
+[external tools]: ../reference/external-tools.html#custom-subcommands
+
 ## COMMANDS
 
 ### Build Commands
