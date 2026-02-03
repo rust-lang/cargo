@@ -16,6 +16,7 @@ mod redundant_homepage;
 mod redundant_readme;
 mod unknown_lints;
 mod unused_workspace_dependencies;
+mod unused_workspace_package_fields;
 mod warning;
 
 #[cargo_test]
