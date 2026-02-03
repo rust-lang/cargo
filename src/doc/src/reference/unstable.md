@@ -79,7 +79,7 @@ Each new feature described below should explain how to use it.
     * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
-    * [lockfile-publish-time] --- Limit resolver to packages older than the specified time
+    * [lockfile-publish-time](#lockfile-publish-time) --- Limit resolver to packages older than the specified time
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
