@@ -1625,3 +1625,73 @@ failed to select a version for `the_feat` which could resolve this conflict
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn defer_to_bad_feat() {
+    // A complex chain that requires deferring enabling the feature due to
+    // another dependency getting enabled.
+    Package::new("bar", "1.0.0").feature("feat", &[]).publish();
+    Package::new("dep", "1.0.0")
+        .add_dep(Dependency::new("bar", "1.0").optional(true))
+        .feature("feat", &["bar?/bad"])
+        .publish();
+    Package::new("bar_activator", "1.0.0")
+        .dep("bar", "1.0")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                dep = { version = "1.0", features = ["feat"] }
+                bar_activator = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `bar`.
+    ... required by package `dep v1.0.0`
+    ... which satisfies dependency `dep = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.0` are: 1.0.0
+
+package `dep` depends on `bar` with feature `bad` but `bar` does not have that feature.
+ package `bar` does have feature `feat`
+
+
+failed to select a version for `bar` which could resolve this conflict
+
+"#]])
+        .run();
+
+    // Update to new lockfile version
+    p.change_file("Cargo.lock", "version = 5");
+
+    p.cargo("check -Znext-lockfile-bump")
+        .with_status(101)
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `bar`.
+    ... required by package `bar_activator v1.0.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.0` are: 1.0.0
+
+package `dep` depends on `bar` with feature `bad` but `bar` does not have that feature.
+ package `bar` does have feature `feat`
+
+
+failed to select a version for `bar` which could resolve this conflict
+
+"#]])
+        .run();
+}

@@ -9,15 +9,16 @@
 //!
 //! This module impl that cache in all the gory details
 
-use crate::core::resolver::context::ResolverContext;
+use crate::core::resolver::context::{ResolverContext, WeakDepFeats};
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, ResolveVersion,
-    VersionOrdering, VersionPreferences,
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
+    VersionPreferences,
 };
 use crate::core::{
-    Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
+    Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry,
+    ResolveVersion, Summary,
 };
 use crate::sources::source::QueryKind;
 use crate::util::closest_msg;
@@ -43,7 +44,7 @@ pub struct RegistryQueryer<'a> {
     /// `parent.is_none()` (the first element of the cache key) as it doesn't change through
     /// execution.
     summary_cache: HashMap<
-        (Option<PackageId>, Summary, ResolveOpts, Vec<InternedString>),
+        (Option<PackageId>, Summary, ResolveOpts, Vec<WeakDepFeats>),
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
     /// all the cases we ended up using a supplied replacement
@@ -228,7 +229,7 @@ impl<'a> RegistryQueryer<'a> {
         parent: Option<PackageId>,
         candidate: &Summary,
         opts: &ResolveOpts,
-        weak_dep_feat_requires: Vec<InternedString>,
+        weak_dep_feat_requires: Vec<WeakDepFeats>,
         first_version: Option<VersionOrdering>,
         version: ResolveVersion,
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
@@ -278,8 +279,10 @@ impl<'a> RegistryQueryer<'a> {
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
         for (dep, wdf) in generated_requires.into_iter() {
-            // register dependency 'dep' with extra features
-            cx.weak_dep_with_feats.entry(dep).or_default().extend(wdf);
+            // register dependency 'dep' with extra features and the parent that requires them.
+            // later when resolver encounter an error caused by one of the extra feature,
+            // we can make sure whether that's caused by the parent rather the package requires it.
+            cx.weak_dep_with_feats.entry(dep).or_default().push(wdf);
         }
         cx.weak_dep_with_feats
             .retain(|dep, _| !dep.matches(&candidate));
@@ -315,12 +318,12 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
-    weak_dep_feat_requires: &Vec<InternedString>,
+    weak_dep_feat_requires: &Vec<WeakDepFeats>,
     version: ResolveVersion,
 ) -> ActivateResult<(
     HashSet<InternedString>,
     Vec<(Dependency, FeaturesSet)>,
-    Vec<(Dependency, Vec<InternedString>)>,
+    Vec<(Dependency, WeakDepFeats)>,
 )> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
@@ -358,7 +361,13 @@ pub fn resolve_features<'b>(
                 should_include = true;
                 base.extend(weak_feats.iter())
             }
-            generated_requires.push((dep.clone(), weak_feats));
+            generated_requires.push((
+                dep.clone(),
+                WeakDepFeats {
+                    extra_feats: weak_feats,
+                    parent: s.package_id(),
+                },
+            ));
         }
         // Skip optional dependencies, but not those enabled through a
         // feature
@@ -400,7 +409,7 @@ fn build_requirements<'a, 'b: 'a>(
     parent: Option<PackageId>,
     s: &'a Summary,
     opts: &'b ResolveOpts,
-    weak_dep_feat_requires: &Vec<InternedString>,
+    weak_dep_feat_requires: &Vec<WeakDepFeats>,
     version: ResolveVersion,
 ) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s, parent.is_none() || version < ResolveVersion::V5);
@@ -414,9 +423,15 @@ fn build_requirements<'a, 'b: 'a>(
         Ok(())
     };
 
-    for feat in weak_dep_feat_requires {
-        if let Err(e) = reqs.require_feature(*feat) {
-            return Err(e.into_activate_error(parent, s));
+    for WeakDepFeats {
+        extra_feats,
+        parent,
+    } in weak_dep_feat_requires.iter()
+    {
+        for feat in extra_feats {
+            if let Err(e) = reqs.require_feature(*feat) {
+                return Err(e.into_activate_error(Some(*parent), s));
+            }
         }
     }
 

@@ -648,6 +648,13 @@ fn activate(
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
             .insert(dep.clone());
+        for wdf in weak_dep_feat_requires.iter() {
+            // add an edge from candidate to parent in the parents graph
+            cx.parents
+                .link(candidate_pid, wdf.parent)
+            // and associate dep with that edge
+            .insert(dep.clone());
+        }
     }
 
     let activated = cx.flag_activated(&candidate, opts, parent)?;

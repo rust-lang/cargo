@@ -30,7 +30,7 @@ pub struct ResolverContext {
     /// when resolver try to resolve the very dependency, these features will also be added as
     /// input of `resolve_features`. This make deferring dependency possible
     pub weak_dep_with_feats:
-        im_rc::HashMap<Dependency, Vec<InternedString>, rustc_hash::FxBuildHasher>,
+        im_rc::HashMap<Dependency, Vec<WeakDepFeats>, rustc_hash::FxBuildHasher>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -208,4 +208,12 @@ impl ResolverContext {
         }
         graph
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+/// Describe what feats the dependency should have if enabled,
+/// and their parent packages
+pub struct WeakDepFeats {
+    pub extra_feats: Vec<InternedString>,
+    pub parent: PackageId,
 }
