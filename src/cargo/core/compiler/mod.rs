@@ -74,6 +74,7 @@ use tracing::{debug, instrument, trace};
 pub use self::build_config::UserIntent;
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::BuildContext;
+pub use self::build_context::DepKindSet;
 pub use self::build_context::FileFlavor;
 pub use self::build_context::FileType;
 pub use self::build_context::RustcTargetData;
