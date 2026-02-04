@@ -36,13 +36,6 @@ fn unused_dep_normal() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -92,13 +85,6 @@ fn unused_dep_build() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -142,13 +128,6 @@ fn unused_dep_build_no_build_rs() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -212,13 +191,6 @@ fn unused_dep_lib_bins() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:14:13
-   |
-14 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -239,13 +211,6 @@ fn unused_dep_lib_bins() {
     p.cargo("check -Zcargo-lints --lib")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:14:13
-   |
-14 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -254,13 +219,6 @@ fn unused_dep_lib_bins() {
     p.cargo("check -Zcargo-lints --bins")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:14:13
-   |
-14 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -269,13 +227,6 @@ fn unused_dep_lib_bins() {
     p.cargo("check -Zcargo-lints --bin foo")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:14:13
-   |
-14 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -325,13 +276,6 @@ fn unused_dep_build_with_used_dep_normal() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:15:13
-   |
-15 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -384,13 +328,6 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -446,13 +383,6 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:15:13
-   |
-15 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -509,13 +439,6 @@ fn unused_dep_dev_but_explicit_used_dep_normal() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:15:13
-   |
-15 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -565,13 +488,6 @@ fn optional_dependency() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -584,13 +500,6 @@ fn optional_dependency() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [DOWNLOADING] crates ...
 [DOWNLOADED] used v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
@@ -641,13 +550,6 @@ fn unused_dep_renamed() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -696,13 +598,6 @@ fn warning_replay() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -717,13 +612,6 @@ fn warning_replay() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:12:13
-   |
-12 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -769,13 +657,6 @@ fn unused_dep_target() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -863,13 +744,6 @@ fn unused_dev_deps() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:17:13
-   |
-17 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -883,13 +757,6 @@ fn unused_dev_deps() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:17:13
-   |
-17 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] unit_used v0.1.0 (registry `dummy-registry`)
@@ -916,13 +783,6 @@ fn unused_dev_deps() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:17:13
-   |
-17 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [COMPILING] example_used v0.1.0
 [COMPILING] unit_used v0.1.0
 [COMPILING] unused v0.1.0
@@ -943,13 +803,6 @@ fn unused_dev_deps() {
     p.cargo("test -Zcargo-lints --no-run --all-targets")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:17:13
-   |
-17 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
@@ -965,13 +818,6 @@ fn unused_dev_deps() {
     p.cargo("test -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> Cargo.toml:17:13
-   |
-17 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [RUNNING] tests/hello.rs (target/debug/deps/hello-[HASH][EXE])
@@ -1075,24 +921,10 @@ fn package_selection() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> bar/Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[WARNING] unknown lint: `unused_dependencies`
-   |
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-  --> foo/Cargo.toml:15:13
-15 |             unused_dependencies = "warn"
 [LOCKING] 5 packages to latest compatible versions
 [DOWNLOADED] used_foo v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] used_external v0.1.0 (registry `dummy-registry`)
@@ -1114,21 +946,7 @@ fn package_selection() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> bar/Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[WARNING] unknown lint: `unused_dependencies`
-   |
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-  --> foo/Cargo.toml:15:13
-15 |             unused_dependencies = "warn"
 
 "#]]
             .unordered(),
@@ -1139,21 +957,7 @@ fn package_selection() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unknown lint: `unused_dependencies`
-  --> bar/Cargo.toml:13:13
-   |
-13 |             unused_dependencies = "warn"
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[WARNING] unknown lint: `unused_dependencies`
-   |
-   |             ^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-  --> foo/Cargo.toml:15:13
-15 |             unused_dependencies = "warn"
 
 "#]]
             .unordered(),
