@@ -1065,6 +1065,8 @@ implicit_minimum_version_req = "warn"
 [package]
 name = "member"
 edition = "2021"
+
+[lints]
 "#,
         )
         .file("member/src/lib.rs", "")
