@@ -99,6 +99,18 @@ workspace = true
    |
 11 - unused = "1"
    |
+[WARNING] unused dependency
+ --> bar/Cargo.toml:9:1
+  |
+9 | build-dep.workspace = true
+  | ^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 - build-dep.workspace = true
+9 + .workspace = true
+  |
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions
 [DOWNLOADING] crates ...
