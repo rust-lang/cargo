@@ -10,6 +10,7 @@ mod non_snake_case_packages;
 mod redundant_homepage;
 mod redundant_readme;
 mod unknown_lints;
+mod unused_dependencies;
 mod unused_workspace_dependencies;
 mod unused_workspace_package_fields;
 
@@ -41,6 +42,7 @@ pub const LINTS: &[crate::lints::Lint] = &[
     redundant_homepage::LINT,
     redundant_readme::LINT,
     unknown_lints::LINT,
+    unused_dependencies::LINT,
     unused_workspace_dependencies::LINT,
     unused_workspace_package_fields::LINT,
 ];
