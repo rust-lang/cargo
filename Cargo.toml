@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [workspace.package]
-rust-version = "1.90"  # MSRV:3
+rust-version = "1.91"  # MSRV:3
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang/cargo"
