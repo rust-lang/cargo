@@ -120,6 +120,20 @@ authors = []
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] missing `[lints]` to inherit `[workspace.lints]`
+ --> foo/Cargo.toml
+  = [NOTE] `cargo::missing_lints_inheritance` is set to `warn` by default
+[HELP] to inherit `workspace.lints, add:
+  |
+7 ~             
+8 + [lints]
+9 + workspace = true
+  |
+[HELP] to clarify your intent to not inherit, add:
+  |
+7 ~             
+8 + [lints]
+  |
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

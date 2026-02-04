@@ -64,13 +64,20 @@ edition = "2015"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `missing_lints_inheritance`
- --> Cargo.toml:6:1
+[WARNING] missing `[lints]` to inherit `[workspace.lints]`
+ --> bar/Cargo.toml
+  = [NOTE] `cargo::missing_lints_inheritance` is set to `warn` by default
+[HELP] to inherit `workspace.lints, add:
   |
-6 | missing_lints_inheritance = "warn"
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^
+5 ~ edition = "2015"
+6 + [lints]
+7 + workspace = true
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[HELP] to clarify your intent to not inherit, add:
+  |
+5 ~ edition = "2015"
+6 + [lints]
+  |
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -109,13 +116,6 @@ edition = "2015"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `missing_lints_inheritance`
- --> Cargo.toml:6:1
-  |
-6 | missing_lints_inheritance = "warn"
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -155,13 +155,6 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `missing_lints_inheritance`
- --> Cargo.toml:6:1
-  |
-6 | missing_lints_inheritance = "warn"
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

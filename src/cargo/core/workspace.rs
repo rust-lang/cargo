@@ -25,6 +25,7 @@ use crate::lints::analyze_cargo_lints_table;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req;
+use crate::lints::rules::missing_lints_inheritance;
 use crate::lints::rules::non_kebab_case_bins;
 use crate::lints::rules::non_kebab_case_features;
 use crate::lints::rules::non_kebab_case_packages;
@@ -1408,6 +1409,14 @@ impl<'gctx> Workspace<'gctx> {
             )?;
             redundant_homepage(
                 pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
+            missing_lints_inheritance(
+                self,
+                pkg,
                 &path,
                 &cargo_lints,
                 &mut run_error_count,
