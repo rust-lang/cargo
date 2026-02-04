@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use crate::core::Workspace;
+use crate::core::compiler::DepKindSet;
 use crate::core::compiler::UserIntent;
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::IsArtifact;
@@ -370,13 +371,20 @@ impl<'a> UnitGenerator<'a, '_> {
     }
 
     /// Create a list of proposed targets given the context in `UnitGenerator`
-    fn create_proposals(&self) -> CargoResult<Vec<Proposal<'_>>> {
+    fn create_proposals(&self) -> CargoResult<(Vec<Proposal<'_>>, DepKindSet)> {
         let mut proposals: Vec<Proposal<'_>> = Vec::new();
+        let mut selected_dep_kinds = DepKindSet::default();
+
+        selected_dep_kinds.build = true;
 
         match *self.filter {
             CompileFilter::Default {
                 required_features_filterable,
             } => {
+                selected_dep_kinds.normal = true;
+                // can't enable `selected_dep_kinds.dev` because benches aren't enabled for
+                // UserIntent::Test
+
                 for pkg in self.packages {
                     let default = self.filter_default_targets(pkg.targets());
                     proposals.extend(default.into_iter().map(|target| Proposal {
@@ -410,6 +418,14 @@ impl<'a> UnitGenerator<'a, '_> {
                 ref benches,
             } => {
                 if *lib != LibRule::False {
+                    match bins {
+                        FilterRule::All => {
+                            selected_dep_kinds.normal = true;
+                        }
+                        _ => (),
+                    }
+                    // can't enable `selected_dep_kinds.dev` because doctests aren't enabled
+
                     let mut libs = Vec::new();
                     let compile_mode = to_compile_mode(self.intent);
                     for proposal in self.filter_targets(Target::is_lib, false, compile_mode) {
@@ -486,7 +502,7 @@ impl<'a> UnitGenerator<'a, '_> {
             }
         }
 
-        Ok(proposals)
+        Ok((proposals, selected_dep_kinds))
     }
 
     /// Proposes targets from which to scrape examples for documentation
@@ -757,9 +773,10 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
     /// compile. Dependencies for these units are computed later in [`unit_dependencies`].
     ///
     /// [`unit_dependencies`]: crate::core::compiler::unit_dependencies
-    pub fn generate_root_units(&self) -> CargoResult<Vec<Unit>> {
-        let proposals = self.create_proposals()?;
-        self.proposals_to_units(proposals)
+    pub fn generate_root_units(&self) -> CargoResult<(Vec<Unit>, DepKindSet)> {
+        let (proposals, selected_dep_kinds) = self.create_proposals()?;
+        let units = self.proposals_to_units(proposals)?;
+        Ok((units, selected_dep_kinds))
     }
 
     /// Generates units specifically for doc-scraping.

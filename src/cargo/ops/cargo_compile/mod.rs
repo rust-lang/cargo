@@ -39,7 +39,6 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::UnitIndex;
 use crate::core::compiler::UserIntent;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
@@ -47,6 +46,7 @@ use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation}
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::core::compiler::{DepKindSet, UnitIndex};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
@@ -423,6 +423,7 @@ pub fn create_bcx<'a, 'gctx>(
         logger.log(LogMessage::UnitGraphStarted { elapsed });
     }
 
+    let mut selected_dep_kinds = DepKindSet::default();
     for SpecsAndResolvedFeatures {
         specs,
         resolved_features,
@@ -456,7 +457,9 @@ pub fn create_bcx<'a, 'gctx>(
             interner,
             has_dev_units,
         };
-        let mut targeted_root_units = generator.generate_root_units()?;
+        let (mut targeted_root_units, curr_selected_dep_kinds) = generator.generate_root_units()?;
+        // Should be fine as the loop iterate is independent of target selection
+        selected_dep_kinds = curr_selected_dep_kinds;
 
         if let Some(args) = target_rustc_crate_types {
             override_rustc_crate_types(&mut targeted_root_units, args, interner)?;
@@ -680,6 +683,7 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         logger,
         pkg_set,
         build_config,
+        selected_dep_kinds,
         profiles,
         extra_compiler_args,
         target_data,
