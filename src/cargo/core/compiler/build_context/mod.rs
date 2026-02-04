@@ -64,6 +64,9 @@ pub struct BuildContext<'a, 'gctx> {
     /// Configuration information for a rustc build.
     pub build_config: &'a BuildConfig,
 
+    /// Associated [`DepKind`][crate::core::dependency::DepKind]s for root targets
+    pub selected_dep_kinds: DepKindSet,
+
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
@@ -97,6 +100,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         logger: Option<&'a BuildLogger>,
         packages: PackageSet<'gctx>,
         build_config: &'a BuildConfig,
+        selected_dep_kinds: DepKindSet,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData<'gctx>,
@@ -118,6 +122,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
             logger,
             packages,
             build_config,
+            selected_dep_kinds,
             profiles,
             extra_compiler_args,
             target_data,
@@ -156,4 +161,11 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+pub struct DepKindSet {
+    pub build: bool,
+    pub normal: bool,
+    pub dev: bool,
 }
