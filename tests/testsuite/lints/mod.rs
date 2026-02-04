@@ -7,6 +7,7 @@ mod blanket_hint_mostly_unused;
 mod error;
 mod implicit_minimum_version_req;
 mod inherited;
+mod missing_lints_inheritance;
 mod non_kebab_case_bins;
 mod non_kebab_case_features;
 mod non_kebab_case_packages;
