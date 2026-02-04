@@ -27,6 +27,7 @@ pub use non_snake_case_packages::non_snake_case_packages;
 pub use redundant_homepage::redundant_homepage;
 pub use redundant_readme::redundant_readme;
 pub use unknown_lints::output_unknown_lints;
+pub use unused_dependencies::unused_build_dependencies_no_build_rs;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
 pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
