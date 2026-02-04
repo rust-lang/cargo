@@ -33,6 +33,7 @@ use crate::lints::rules::non_snake_case_features;
 use crate::lints::rules::non_snake_case_packages;
 use crate::lints::rules::redundant_homepage;
 use crate::lints::rules::redundant_readme;
+use crate::lints::rules::unused_build_dependencies_no_build_rs;
 use crate::lints::rules::unused_workspace_dependencies;
 use crate::lints::rules::unused_workspace_package_fields;
 use crate::ops;
@@ -1394,6 +1395,13 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
             non_snake_case_features(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut run_error_count,
+                self.gctx,
+            )?;
+            unused_build_dependencies_no_build_rs(
                 pkg.into(),
                 &path,
                 &cargo_lints,

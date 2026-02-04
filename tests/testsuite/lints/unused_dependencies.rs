@@ -128,6 +128,17 @@ fn unused_dep_build_no_build_rs() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
