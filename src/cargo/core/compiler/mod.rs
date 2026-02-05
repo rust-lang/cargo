@@ -1175,8 +1175,8 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     }
 
     cmd.arg("--error-format=json");
-    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
+    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
     if let MessageFormat::Short | MessageFormat::Json { short: true, .. } =
         build_runner.bcx.build_config.message_format
     {
@@ -1186,11 +1186,9 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     {
         json.push_str(",diagnostic-unicode");
     }
-
     if enable_timings {
         json.push_str(",timings");
     }
-
     cmd.arg(json);
 
     let gctx = build_runner.bcx.gctx;
