@@ -7,6 +7,7 @@ use crate::core::compiler::CompileKind;
 use crate::core::compiler::Unit;
 use crate::core::compiler::UnitIndex;
 use crate::core::compiler::unit_graph::UnitGraph;
+use crate::core::dependency::DepKind;
 use crate::core::profiles::Profiles;
 use crate::util::Rustc;
 use crate::util::context::GlobalContext;
@@ -64,7 +65,7 @@ pub struct BuildContext<'a, 'gctx> {
     /// Configuration information for a rustc build.
     pub build_config: &'a BuildConfig,
 
-    /// Associated [`DepKind`][crate::core::dependency::DepKind]s for root targets
+    /// Associated [`DepKind`]s for root targets
     pub selected_dep_kinds: DepKindSet,
 
     /// Extra compiler args for either `rustc` or `rustdoc`.
@@ -168,4 +169,14 @@ pub struct DepKindSet {
     pub build: bool,
     pub normal: bool,
     pub dev: bool,
+}
+
+impl DepKindSet {
+    pub fn contains(&self, kind: DepKind) -> bool {
+        match kind {
+            DepKind::Build => self.build,
+            DepKind::Normal => self.normal,
+            DepKind::Development => self.dev,
+        }
+    }
 }
