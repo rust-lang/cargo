@@ -1329,7 +1329,7 @@ fn bad_deferred() {
         .feature("feat", &["bar?/feat"])
         .publish();
     Package::new("bar_activator", "1.0.0")
-        .feature_dep("dep", "1.0", &["bar"])
+        .feature_dep("bar", "1.0", &[])
         .publish();
     let p = project()
         .file(
@@ -1356,8 +1356,8 @@ fn bad_deferred() {
 candidate versions found which didn't match: 0.1.0
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v1.0.0`
-    ... which satisfies dependency `bar = "^1.0"` of package `dep v1.0.0`
-    ... which satisfies dependency `dep = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_activator v1.0.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])

@@ -215,5 +215,10 @@ impl ResolverContext {
 /// and their parent packages
 pub struct WeakDepFeats {
     pub extra_feats: Vec<InternedString>,
-    pub parent: PackageId,
+    pub direct_parent: PackageId,
+    /// used to trace the root cause that requires these features
+    ///
+    /// if A depend on B, while B opt dep on C with weak feature F,
+    /// then this will be set to A
+    pub package_requiring_this: PackageId,
 }

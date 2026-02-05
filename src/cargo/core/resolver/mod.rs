@@ -244,7 +244,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut dep, candidates, mut features)) = frame;
+        let (mut parent, ((mut dep, candidates, mut features), package_requiring_this)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -355,6 +355,7 @@ fn activate_deps_loop(
                             &resolver_ctx,
                             registry.registry,
                             &parent,
+                            package_requiring_this,
                             &dep,
                             &conflicting_activations,
                             &candidates,
@@ -449,7 +450,7 @@ fn activate_deps_loop(
                             frame
                                 .remaining_siblings
                                 .remaining()
-                                .find_map(|(new_dep, _, _)| {
+                                .find_map(|((new_dep, _, _), _)| {
                                     past_conflicting_activations.conflicting(&resolver_ctx, new_dep)
                                 })
                         {
@@ -651,9 +652,9 @@ fn activate(
         for wdf in weak_dep_feat_requires.iter() {
             // add an edge from candidate to parent in the parents graph
             cx.parents
-                .link(candidate_pid, wdf.parent)
-            // and associate dep with that edge
-            .insert(dep.clone());
+                .link(candidate_pid, wdf.direct_parent)
+                // and associate dep with that edge
+                .insert(dep.clone());
         }
     }
 
