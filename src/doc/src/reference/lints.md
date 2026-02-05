@@ -29,6 +29,7 @@ These lints are all set to the 'allow' level by default.
 
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
+- [`missing_lints_inheritance`](#missing_lints_inheritance)
 - [`non_kebab_case_bins`](#non_kebab_case_bins)
 - [`redundant_homepage`](#redundant_homepage)
 - [`redundant_readme`](#redundant_readme)
@@ -114,6 +115,37 @@ Should be written as a full specific version:
 ```toml
 [dependencies]
 serde = "1.0.219"
+```
+
+
+## `missing_lints_inheritance`
+Group: `suspicious`
+
+Level: `warn`
+
+### What it does
+
+Checks for packages without a `lints` table while `workspace.lints` is present.
+
+### Why it is bad
+
+Many people mistakenly think that `workspace.lints` is implicitly inherited when it is not.
+
+### Drawbacks
+
+### Example
+
+```toml
+[workspace.lints.cargo]
+```
+
+Should be written as:
+
+```toml
+[workspace.lints.cargo]
+
+[lints]
+workspace = true
 ```
 
 
