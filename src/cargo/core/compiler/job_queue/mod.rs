@@ -384,6 +384,7 @@ enum Message {
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
     SectionTiming(JobId, SectionTiming),
+    UnusedExterns(JobId, Vec<String>),
 }
 
 impl<'gctx> JobQueue<'gctx> {
@@ -719,6 +720,9 @@ impl<'gctx> DrainState<'gctx> {
                         is_local,
                         items,
                     });
+            }
+            Message::UnusedExterns(id, _unused_externs) => {
+                let _unit = &self.active[&id];
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.context("failed to acquire jobserver token")?;
