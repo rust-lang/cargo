@@ -2545,7 +2545,7 @@ edition = "2021"
     );
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn migrate_removes_project_for_script() {
     let p = project()
         .file(
@@ -2573,8 +2573,7 @@ fn main() {
         )
         .build();
 
-    p.cargo("-Zscript fix --edition --allow-no-vcs --manifest-path foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("fix --edition --allow-no-vcs --manifest-path foo.rs")
         .with_stderr_data(str![[r#"
 [MIGRATING] foo.rs from 2021 edition to 2024
 [FIXED] foo.rs (1 fix)

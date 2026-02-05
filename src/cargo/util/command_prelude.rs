@@ -1097,9 +1097,6 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
                 manifest_path.display()
             )
         }
-        if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
-            anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
-        }
         Ok(path)
     } else {
         find_root_manifest_for_wd(gctx.cwd())
