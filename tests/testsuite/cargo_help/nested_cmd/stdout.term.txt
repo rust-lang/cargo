@@ -1,34 +1,33 @@
-CARGO-REMOVE(1)
+CARGO-REPORT-FUTURE-INCOMPATIBILITIES(1)
 
 NAME
-       cargo-remove — Remove dependencies from a Cargo.toml manifest file
+       cargo-report-future-incompatibilities — Reports any crates which will
+       eventually stop compiling
 
 SYNOPSIS
-       cargo remove [options] dependency…
+       cargo report future-incompatibilities [options]
 
 DESCRIPTION
-       Remove one or more dependencies from a Cargo.toml manifest.
+       Displays a report of future-incompatible warnings that were emitted
+       during previous builds. These are warnings for changes that may become
+       hard errors in the future, causing dependencies to stop building in a
+       future version of rustc.
+
+       For more, see the chapter on Future incompat report
+       <https://doc.rust-lang.org/cargo/reference/future-incompat-report.html>.
 
 OPTIONS
-   Section options
-       --dev
-           Remove as a development dependency
-           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies>.
+       --id id
+           Show the report with the specified Cargo-generated id. If not
+           specified, shows the most recent report.
 
-       --build
-           Remove as a build dependency
-           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#build-dependencies>.
+   Package Selection
+       By default, the package in the current working directory is selected.
+       The -p flag can be used to choose a different package in a workspace.
 
-       --target target
-           Remove as a dependency to the given target platform
-           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies>.
-
-           To avoid unexpected shell expansions, you may use quotes around each
-           target, e.g., --target 'cfg(unix)'.
-
-   Miscellaneous Options
-       --dry-run
-           Don’t actually write to the manifest.
+       -p spec, --package spec
+           The package to display a report for. See cargo-pkgid(1) for the SPEC
+           format.
 
    Display Options
        -v, --verbose
@@ -57,10 +56,6 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>.
 
    Manifest Options
-       --manifest-path path
-           Path to the Cargo.toml file. By default, Cargo searches for the
-           Cargo.toml file in the current directory or any parent directory.
-
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo
@@ -92,10 +87,6 @@ OPTIONS
 
        --frozen
            Equivalent to specifying both --locked and --offline.
-
-   Package Selection
-       -p spec…, --package spec…
-           Package to remove from.
 
    Common Options
        +toolchain
@@ -144,18 +135,14 @@ EXIT STATUS
        o  101: Cargo failed to complete.
 
 EXAMPLES
-       1. Remove regex as a dependency
+       1. Display the latest future-incompat report:
 
-              cargo remove regex
+              cargo report future-incompat
 
-       2. Remove trybuild as a dev-dependency
+       2. Display the latest future-incompat report for a specific package:
 
-              cargo remove --dev trybuild
-
-       3. Remove nom from the wasm32-unknown-unknown dependencies table
-
-              cargo remove --target wasm32-unknown-unknown nom
+              cargo report future-incompat --package my-dep@0.0.1
 
 SEE ALSO
-       cargo(1), cargo-add(1)
+       cargo(1), cargo-report(1), cargo-build(1)
 
