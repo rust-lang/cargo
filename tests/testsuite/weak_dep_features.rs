@@ -1115,7 +1115,7 @@ dependencies = [
 }
 
 #[cargo_test]
-fn weak_features() {
+fn weak_feats_requiring_renamed_dep() {
     Package::new("foo", "0.1.0").feature("feat", &[]).publish();
     Package::new("foo", "0.2.0").feature("feat", &[]).publish();
     Package::new("bar", "0.1.0")
@@ -1240,6 +1240,7 @@ dependencies = [
 
 #[cargo_test]
 fn bad_weak_feat_within_one_package() {
+    // they should be identical
     Package::new("foo", "0.1.0").feature("feat", &[]).publish();
     Package::new("foo", "0.2.0").feature("feat2", &[]).publish();
     Package::new("bar", "0.1.0")
@@ -1312,6 +1313,1978 @@ failed to select a version for `foo` which could resolve this conflict
 
 "#]])
         .run();
+}
+
+// here we start to check the order of resolver traversing dep tree
+// that's done via adding candidates to deprioritize one package
+
+// A -> bar_activator
+// B -> feat_activator
+// C -> bar_wrapper
+macro_rules! quick_ordering {
+    (C, $count:expr) => {
+        for i in 0..$count {
+            Package::new("bar_wrapper", format!("1.1.{i}").as_str())
+                .add_dep(Dependency::new("bar", "1.0").optional(true))
+                .feature("feat", &["bar?/the_feat"])
+                .publish();
+        }
+    };
+    (B, $count:expr) => {
+        for i in 0..$count {
+            Package::new("feat_activator", format!("1.1.{i}").as_str())
+                .feature_dep("bar_wrapper", "1.1", &["feat"])
+                .publish();
+        }
+    };
+    (A, $count:expr) => {
+        for i in 0..$count {
+            Package::new("bar_activator", format!("1.1.{i}").as_str())
+                .feature_dep("bar_wrapper", "1.1", &["bar"])
+                .publish();
+        }
+    };
+}
+
+#[cargo_test]
+fn order_check_baseline() {
+    Package::new("the_feat", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+        .publish();
+    quick_ordering!(A, 1);
+    quick_ordering!(B, 1);
+    quick_ordering!(C, 1);
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 5 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] the_feat v1.0.0
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] bar_activator v1.1.0
+[CHECKING] feat_activator v1.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // Update to new lockfile version
+    p.change_file("Cargo.lock", "version = 5");
+
+    p.cargo("check -Znext-lockfile-bump")
+        .masquerade_as_nightly_cargo(&["weak_dep_check"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 5 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.1.0
+[ADDING] bar_wrapper v1.1.0
+[ADDING] feat_activator v1.1.0
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+mod missing_dependency {
+    use super::*;
+
+    #[cargo_test]
+    fn missing_dependency_order_check() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 1);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn missing_dependency_order_check_by_abc() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 2);
+        quick_ordering!(C, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn missing_dependency_order_check_by_bac() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(A, 2);
+        quick_ordering!(C, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `bar_wrapper`.
+    ... required by package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.2, 1.1.1, 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `bar_wrapper v1.1.1`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `bar_wrapper` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn missing_dependency_order_check_by_acb() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(B, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.2`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn missing_dependency_order_check_by_bca() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(A, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+}
+
+mod fallback_bar_activator {
+    use super::*;
+
+    #[cargo_test]
+    fn fallback_bar_activator_order_check() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 1);
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.0", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] bar_activator v1.0.0 (available: v1.1.0)
+[ADDING] bar_wrapper v1.1.0
+[ADDING] feat_activator v1.1.0
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] feat_activator v1.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_bar_activator_order_check_by_abc() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 3);
+        quick_ordering!(C, 4);
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.0", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] bar_activator v1.0.0 (available: v1.1.0)
+[ADDING] bar_wrapper v1.1.1 (available: v1.1.3)
+[ADDING] feat_activator v1.1.2
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.1.2 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.1 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.1
+[CHECKING] bar_activator v1.0.0
+[CHECKING] feat_activator v1.1.2
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_bar_activator_order_check_by_bac() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(A, 1);
+        quick_ordering!(C, 3);
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.0", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] bar_activator v1.0.0 (available: v1.1.0)
+[ADDING] bar_wrapper v1.1.2
+[ADDING] feat_activator v1.1.0
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.2 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.2
+[CHECKING] feat_activator v1.1.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_bar_activator_order_check_by_acb() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(C, 3);
+        quick_ordering!(B, 4);
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.0", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.0"` of package `bar_activator v1.0.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] bar_activator v1.0.0 (available: v1.1.0)
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.2)
+[ADDING] feat_activator v1.1.3
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.1.3 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] feat_activator v1.1.3
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_bar_activator_order_check_by_bca() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(A, 2);
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.0", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] bar_activator v1.0.0 (available: v1.1.1)
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.1)
+[ADDING] feat_activator v1.1.0
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] feat_activator v1.1.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+}
+
+mod fallback_feat_activator {
+    use super::*;
+
+    #[cargo_test]
+    fn fallback_feat_activator_order_check() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 1);
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.1", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_feat_activator_order_check_by_abc() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 3);
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.1", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.2)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] bar_activator v1.1.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.1.0
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.2)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_feat_activator_order_check_by_bac() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(A, 3);
+        quick_ordering!(C, 4);
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.1", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar_activator v1.1.0 (available: v1.1.2)
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.3)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] bar_activator v1.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.1.0 (available: v1.1.2)
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.3)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_feat_activator_order_check_by_acb() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(B, 2);
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.1", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `the_feat = "^1.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.1`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn fallback_feat_activator_order_check_by_bca() {
+        Package::new("the_feat", "0.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 3);
+        quick_ordering!(A, 4);
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "1.1", &[])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar_activator v1.1.0 (available: v1.1.3)
+[ADDING] bar_wrapper v1.1.0 (available: v1.1.2)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v1.1.0
+[CHECKING] bar_activator v1.1.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.1.0 (available: v1.1.3)
+[ADDING] bar_wrapper v1.1.1 (available: v1.1.2)
+[ADDING] feat_activator v1.0.0 (available: v1.1.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar_wrapper v1.1.1 (registry `dummy-registry`)
+[CHECKING] bar_wrapper v1.1.1
+[CHECKING] bar_activator v1.1.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+}
+
+mod multiple_the_feat_required {
+    use super::*;
+
+    #[cargo_test]
+    fn multiple_the_feat_required_order_check() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("the_feat", "1.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.1").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 1);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+                the_feat = "=1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_the_feat_required_order_check_by_abc() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("the_feat", "1.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.1").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(B, 2);
+        quick_ordering!(C, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+                the_feat = "=1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_the_feat_required_order_check_by_bac() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("the_feat", "1.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.1").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(A, 2);
+        quick_ordering!(C, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+                the_feat = "=1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `bar_wrapper`.
+    ... required by package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.2, 1.1.1, 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `foo v0.1.0 ([ROOT]/foo)`
+
+  previously selected package `bar_wrapper v1.1.1`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `bar_wrapper` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_the_feat_required_order_check_by_acb() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("the_feat", "1.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.1").optional(true))
+            .publish();
+        quick_ordering!(A, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(B, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+                the_feat = "=1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `bar_activator v1.1.0`
+    ... which satisfies dependency `bar_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.2`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_the_feat_required_order_check_by_bca() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("the_feat", "1.1.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.1").optional(true))
+            .publish();
+        quick_ordering!(B, 1);
+        quick_ordering!(C, 2);
+        quick_ordering!(A, 3);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+                the_feat = "=1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .with_status(101)
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for `the_feat`.
+    ... required by package `bar v1.0.0`
+    ... which satisfies dependency `bar = "^1.0"` of package `bar_wrapper v1.1.0`
+    ... which satisfies dependency `bar_wrapper = "^1.1"` of package `feat_activator v1.1.0`
+    ... which satisfies dependency `feat_activator = "^1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+versions that meet the requirements `^1.1` are: 1.1.0
+
+all possible versions conflict with previously selected packages.
+
+  previously selected package `the_feat v1.0.0`
+    ... which satisfies dependency `the_feat = "=1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
+
+failed to select a version for `the_feat` which could resolve this conflict
+
+"#]])
+            .run();
+    }
+}
+
+mod multiple_bar_wrapper_major_version {
+    use super::*;
+
+    #[cargo_test]
+    fn multiple_bar_wrapper_major_version_order_check() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "2.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v2.0.0
+[CHECKING] bar_wrapper v1.0.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.0.0
+[ADDING] bar_wrapper v1.0.0
+[ADDING] bar_wrapper v2.0.0
+[ADDING] feat_activator v1.0.0
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_bar_wrapper_major_version_order_check_by_abc() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("feat_activator", "1.0.1")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.1")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "2.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v2.0.0
+[CHECKING] feat_activator v1.0.1
+[CHECKING] bar_wrapper v1.0.1
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.0.0
+[ADDING] bar_wrapper v1.0.1
+[ADDING] bar_wrapper v2.0.0
+[ADDING] feat_activator v1.0.1
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_bar_wrapper_major_version_order_check_by_bac() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("bar_activator", "1.0.1")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.1")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "2.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v2.0.0
+[CHECKING] bar_wrapper v1.0.1
+[CHECKING] feat_activator v1.0.0
+[CHECKING] bar_activator v1.0.1
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.0.1
+[ADDING] bar_wrapper v1.0.1
+[ADDING] bar_wrapper v2.0.0
+[ADDING] feat_activator v1.0.0
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_bar_wrapper_major_version_order_check_by_acb() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("feat_activator", "1.0.1")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("feat_activator", "1.0.2")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "2.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.0.2 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v2.0.0
+[CHECKING] bar_wrapper v1.0.0
+[CHECKING] feat_activator v1.0.2
+[CHECKING] bar_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.0.0
+[ADDING] bar_wrapper v1.0.0
+[ADDING] bar_wrapper v2.0.0
+[ADDING] feat_activator v1.0.2
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+
+    #[cargo_test]
+    fn multiple_bar_wrapper_major_version_order_check_by_bca() {
+        Package::new("the_feat", "1.0.0").publish();
+        Package::new("bar", "1.0.0")
+            .add_dep(Dependency::new("the_feat", "1.0").optional(true))
+            .publish();
+        Package::new("bar_activator", "1.0.0")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("bar_activator", "1.0.1")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("bar_activator", "1.0.2")
+            .feature_dep("bar_wrapper", "^1.0.0", &["bar"])
+            .publish();
+        Package::new("feat_activator", "1.0.0")
+            .feature_dep("bar_wrapper", ">=1.0.0, <=2.0.0", &["feat"])
+            .publish();
+        Package::new("bar_wrapper", "1.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        Package::new("bar_wrapper", "2.0.0")
+            .add_dep(Dependency::new("bar", "1.0").optional(true))
+            .feature("feat", &["bar?/the_feat"])
+            .publish();
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                feat_activator = "1.0"
+                bar_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] the_feat v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_wrapper v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.2 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[CHECKING] bar v1.0.0
+[CHECKING] bar_wrapper v2.0.0
+[CHECKING] bar_wrapper v1.0.0
+[CHECKING] feat_activator v1.0.0
+[CHECKING] bar_activator v1.0.2
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] bar v1.0.0
+[ADDING] bar_activator v1.0.2
+[ADDING] bar_wrapper v1.0.0
+[ADDING] bar_wrapper v2.0.0
+[ADDING] feat_activator v1.0.0
+[ADDING] the_feat v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
 }
 
 #[cargo_test]
@@ -1694,4 +3667,202 @@ failed to select a version for `bar` which could resolve this conflict
 
 "#]])
         .run();
+}
+mod double_dep_defer_to_one {
+    use super::*;
+
+    #[cargo_test]
+    fn double_dep_defer_to_one_order_check() {
+        Package::new("feat1", "1.0.0").publish();
+        Package::new("feat2", "1.0.0").publish();
+        Package::new("feat_container", "1.0.0")
+            .add_dep(Dependency::new("feat1", "1.0").optional(true))
+            .add_dep(Dependency::new("feat2", "1.0").optional(true))
+            .publish();
+        Package::new("feat1_activator", "1.0.0")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat1"])
+            .publish();
+        Package::new("feat2_activator", "1.0.0")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat2"])
+            .publish();
+        Package::new("container_activator", "1.0.0")
+            .dep("feat_container", "1.0")
+            .publish();
+
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                container_activator = "1.0"
+                feat1_activator = "1.0"
+                feat2_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_container v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat2_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat2 v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat1_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat1 v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] container_activator v1.0.0 (registry `dummy-registry`)
+[CHECKING] feat_container v1.0.0
+[CHECKING] feat1_activator v1.0.0
+[CHECKING] feat2_activator v1.0.0
+[CHECKING] container_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] container_activator v1.0.0
+[ADDING] feat1 v1.0.0
+[ADDING] feat1_activator v1.0.0
+[ADDING] feat2 v1.0.0
+[ADDING] feat2_activator v1.0.0
+[ADDING] feat_container v1.0.0
+[CHECKING] feat1 v1.0.0
+[CHECKING] feat2 v1.0.0
+[CHECKING] feat_container v1.0.0
+[CHECKING] feat1_activator v1.0.0
+[CHECKING] feat2_activator v1.0.0
+[CHECKING] container_activator v1.0.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
+
+    #[cargo_test]
+    fn double_dep_defer_to_one_order_check_f1cf2() {
+        Package::new("feat1", "1.0.0").publish();
+        Package::new("feat2", "1.0.0").publish();
+        Package::new("feat_container", "1.0.0")
+            .add_dep(Dependency::new("feat1", "1.0").optional(true))
+            .add_dep(Dependency::new("feat2", "1.0").optional(true))
+            .publish();
+        Package::new("feat1_activator", "1.0.0")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat1"])
+            .publish();
+        Package::new("container_activator", "1.0.0")
+            .dep("feat_container", "1.0")
+            .publish();
+        Package::new("container_activator", "1.0.1")
+            .dep("feat_container", "1.0")
+            .publish();
+        Package::new("feat2_activator", "1.0.0")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat2"])
+            .publish();
+        Package::new("feat2_activator", "1.0.1")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat2"])
+            .publish();
+        Package::new("feat2_activator", "1.0.2")
+            .add_dep(Dependency::new("feat_container", "1.0").optional(true))
+            .feature("default", &["feat_container?/feat2"])
+            .publish();
+
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                container_activator = "1.0"
+                feat1_activator = "1.0"
+                feat2_activator = "1.0"
+            "#,
+            )
+            .file("src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] feat_container v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat2_activator v1.0.2 (registry `dummy-registry`)
+[DOWNLOADED] feat2 v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat1_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] feat1 v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] container_activator v1.0.1 (registry `dummy-registry`)
+[CHECKING] feat_container v1.0.0
+[CHECKING] feat1_activator v1.0.0
+[CHECKING] feat2_activator v1.0.2
+[CHECKING] container_activator v1.0.1
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+
+        // Update to new lockfile version
+        p.change_file("Cargo.lock", "version = 5");
+
+        p.cargo("check -Znext-lockfile-bump")
+            .masquerade_as_nightly_cargo(&["weak_dep_check"])
+            .with_stderr_data(
+                str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[ADDING] container_activator v1.0.1
+[ADDING] feat1 v1.0.0
+[ADDING] feat1_activator v1.0.0
+[ADDING] feat2 v1.0.0
+[ADDING] feat2_activator v1.0.2
+[ADDING] feat_container v1.0.0
+[CHECKING] feat1 v1.0.0
+[CHECKING] feat2 v1.0.0
+[CHECKING] feat_container v1.0.0
+[CHECKING] container_activator v1.0.1
+[CHECKING] feat1_activator v1.0.0
+[CHECKING] feat2_activator v1.0.2
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+                .unordered(),
+            )
+            .run();
+    }
 }
