@@ -22,6 +22,8 @@ available. The following is a sample of some popular crates[^†]:
 [^†]: This list is not an endorsement. Evaluate your dependencies to see which
 is right for your project.
 
+Note: The examples in this guide use the `build-rs` crate. This is the recommended way to emit build script instructions, as it ensures type safety and correct formatting. To use it, add build-rs to your [build-dependencies].
+
 ## Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
@@ -50,6 +52,9 @@ Here we can see that we have a `build.rs` build script and our binary in
 name = "hello-from-generated-code"
 version = "0.1.0"
 edition = "2024"
+
+[build-dependencies]
+build-rs= "0.3.0"
 ```
 
 Let’s see what’s inside the build script:
@@ -71,7 +76,7 @@ fn main() {
         }
         "
     ).unwrap();
-    println!("cargo::rerun-if-changed=build.rs");
+    build_rs::output::rerun_if_changed("build.rs");
 }
 ```
 
@@ -156,6 +161,9 @@ Pretty similar to before! Next, the manifest:
 name = "hello-world-from-c"
 version = "0.1.0"
 edition = "2024"
+
+[build-dependencies]
+build-rs= "0.3.0"
 ```
 
 For now we’re not going to use any build dependencies, so let’s take a look at
@@ -180,9 +188,9 @@ fn main() {
                       .current_dir(&Path::new(&out_dir))
                       .status().unwrap();
 
-    println!("cargo::rustc-link-search=native={}", out_dir);
-    println!("cargo::rustc-link-lib=static=hello");
-    println!("cargo::rerun-if-changed=src/hello.c");
+    build_rs::output::rustc_link_search(out_dir);
+    build_rs::output::rustc_link_lib_kind("static", "hello");
+    build_rs::output::rerun_if_changed("src/hello.c");
 }
 ```
 
@@ -210,6 +218,7 @@ crate](https://crates.io/crates/cc) from [crates.io]. First, add it to the
 ```toml
 [build-dependencies]
 cc = "1.0"
+build-rs= "0.3.0"
 ```
 
 And rewrite the build script to use this crate:
@@ -221,7 +230,7 @@ fn main() {
     cc::Build::new()
         .file("src/hello.c")
         .compile("hello");
-    println!("cargo::rerun-if-changed=src/hello.c");
+    build_rs::output::rerun_if_changed("src/hello.c");
 }
 ```
 
@@ -310,6 +319,7 @@ links = "z"
 
 [build-dependencies]
 pkg-config = "0.3.16"
+build-rs = "0.3.0"
 ```
 
 Take note that we included the `links` key in the `package` table. This tells
@@ -323,7 +333,7 @@ The build script is fairly simple:
 
 fn main() {
     pkg_config::Config::new().probe("zlib").unwrap();
-    println!("cargo::rerun-if-changed=build.rs");
+    build_rs::output::rerun_if_changed("build.rs");
 }
 ```
 
@@ -399,6 +409,7 @@ libz-sys = "1.0.25"
 
 [build-dependencies]
 cc = "1.0.46"
+build-rs = "0.3.0"
 ```
 
 Here we have included `libz-sys` which will ensure that there is only one
@@ -415,7 +426,7 @@ fn main() {
         cfg.include(include);
     }
     cfg.compile("z_user");
-    println!("cargo::rerun-if-changed=src/z_user.c");
+    build_rs::output::rerun_if_changed("src/z_user.c");
 }
 ```
 
@@ -447,7 +458,7 @@ script looks something [like
 this](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61a733a66e7877fc/openssl-sys/build/main.rs#L216):
 
 ```rust,ignore
-println!("cargo::metadata=version_number={openssl_version:x}");
+build_rs::output::metadata("version_number","openssl_version");
 ```
 
 This instruction causes the `DEP_OPENSSL_VERSION_NUMBER` environment variable
@@ -463,26 +474,26 @@ values](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61
 ```rust,ignore
 // (portion of build.rs)
 
-println!("cargo::rustc-check-cfg=cfg(ossl101,ossl102)");
-println!("cargo::rustc-check-cfg=cfg(ossl110,ossl110g,ossl111)");
+build_rs::output::rustc_check_cfgs(&["ossl101","ossl102",]);
+build_rs::output::rustc_check_cfgs(&["ossl110","ossl110g","ossl111",]);
 
 if let Ok(version) = env::var("DEP_OPENSSL_VERSION_NUMBER") {
     let version = u64::from_str_radix(&version, 16).unwrap();
 
     if version >= 0x1_00_01_00_0 {
-        println!("cargo::rustc-cfg=ossl101");
+        build_rs::output::rustc_check_cfgs(&["ossl101"]);
     }
     if version >= 0x1_00_02_00_0 {
-        println!("cargo::rustc-cfg=ossl102");
+        build_rs::output::rustc_check_cfgs(&["ossl102"]);
     }
     if version >= 0x1_01_00_00_0 {
-        println!("cargo::rustc-cfg=ossl110");
+        build_rs::output::rustc_check_cfgs(&["ossl110"]);
     }
     if version >= 0x1_01_00_07_0 {
-        println!("cargo::rustc-cfg=ossl110g");
+        build_rs::output::rustc_check_cfgs(&["ossl110g"]);        
     }
     if version >= 0x1_01_01_00_0 {
-        println!("cargo::rustc-cfg=ossl111");
+        build_rs::output::rustc_check_cfgs(&["ossl111"]);
     }
 }
 ```
@@ -512,5 +523,5 @@ libraries, which could cause problems.
 [`rustc-cfg` instructions]: build-scripts.md#rustc-cfg
 [`openssl` crate]: https://crates.io/crates/openssl
 [`openssl-sys` crate]: https://crates.io/crates/openssl-sys
-
+[`build-rs` crate]: https://crates.io/crates/build-rs
 [crates.io]: https://crates.io/
