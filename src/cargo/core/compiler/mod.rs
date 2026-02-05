@@ -51,6 +51,7 @@ pub mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
+mod unused_deps;
 
 use std::borrow::Cow;
 use std::cell::OnceCell;
