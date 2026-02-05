@@ -138,6 +138,7 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
+use super::unused_deps::UnusedDepState;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -186,6 +187,7 @@ struct DrainState<'gctx> {
     progress: Progress<'gctx>,
     next_id: u32,
     timings: Timings<'gctx>,
+    unused_dep_state: UnusedDepState,
 
     /// Map from unit index to unit, for looking up dependency information.
     index_to_unit: HashMap<UnitIndex, Unit>,
@@ -504,6 +506,7 @@ impl<'gctx> JobQueue<'gctx> {
             progress,
             next_id: 0,
             timings: self.timings,
+            unused_dep_state: UnusedDepState::new(build_runner),
             index_to_unit: build_runner
                 .bcx
                 .unit_to_index
@@ -721,8 +724,10 @@ impl<'gctx> DrainState<'gctx> {
                         items,
                     });
             }
-            Message::UnusedExterns(id, _unused_externs) => {
-                let _unit = &self.active[&id];
+            Message::UnusedExterns(id, unused_externs) => {
+                let unit = &self.active[&id];
+                self.unused_dep_state
+                    .record_unused_externs_for_unit(unit, unused_externs);
             }
             Message::Token(acquired_token) => {
                 let token = acquired_token.context("failed to acquire jobserver token")?;
@@ -815,6 +820,18 @@ impl<'gctx> DrainState<'gctx> {
             }
         }
         self.progress.clear();
+
+        if build_runner.bcx.gctx.cli_unstable().cargo_lints {
+            let mut warn_count = 0;
+            let mut error_count = 0;
+            drop(self.unused_dep_state.emit_unused_warnings(
+                &mut warn_count,
+                &mut error_count,
+                build_runner,
+            ));
+            errors.count += error_count;
+            build_runner.compilation.lint_warning_count += warn_count;
+        }
 
         let profile_name = build_runner.bcx.build_config.requested_profile;
         // NOTE: this may be a bit inaccurate, since this may not display the
