@@ -12,7 +12,7 @@ use crate::core::compiler::BuildContext;
 use crate::core::compiler::RustdocFingerprint;
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
-use crate::util::{CargoResult, GlobalContext, context};
+use crate::util::{CargoResult, GlobalContext};
 
 /// Represents the kind of process we are creating.
 #[derive(Debug)]
@@ -235,13 +235,15 @@ impl<'gctx> Compilation<'gctx> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(
-            ProcessBuilder::new(cmd),
-            pkg,
-            None,
-            CompileKind::Host,
-            ToolKind::HostProcess,
-        )
+        let builder = if let Some((runner, args)) = self.target_runner(CompileKind::Host) {
+            let mut builder = ProcessBuilder::new(runner);
+            builder.args(args);
+            builder.arg(cmd);
+            builder
+        } else {
+            ProcessBuilder::new(cmd)
+        };
+        self.fill_env(builder, pkg, None, CompileKind::Host, ToolKind::HostProcess)
     }
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
@@ -440,14 +442,11 @@ fn target_runner(
     bcx: &BuildContext<'_, '_>,
     kind: CompileKind,
 ) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
-    let target = bcx.target_data.short_name(&kind);
-
-    // try target.{}.runner
-    let key = format!("target.{}.runner", target);
-
-    if let Some(v) = bcx.gctx.get::<Option<context::PathAndArgs>>(&key)? {
-        let path = v.path.resolve_program(bcx.gctx);
-        return Ok(Some((path, v.args)));
+    // Try host.runner / target.{}.runner via target_config, which routes
+    // through host_config for CompileKind::Host when -Zhost-config is enabled.
+    if let Some(runner) = bcx.target_data.target_config(kind).runner.as_ref() {
+        let path = runner.val.path.clone().resolve_program(bcx.gctx);
+        return Ok(Some((path, runner.val.args.clone())));
     }
 
     // try target.'cfg(...)'.runner
