@@ -34,6 +34,7 @@ These lints are all set to the 'warn' level by default.
 - [`redundant_homepage`](#redundant_homepage)
 - [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
+- [`unused_dependencies`](#unused_dependencies)
 - [`unused_workspace_dependencies`](#unused_workspace_dependencies)
 - [`unused_workspace_package_fields`](#unused_workspace_package_fields)
 
@@ -401,6 +402,39 @@ Checks for unknown lints in the `[lints.cargo]` table
 ```toml
 [lints.cargo]
 this-lint-does-not-exist = "warn"
+```
+
+
+## `unused_dependencies`
+Group: `style`
+
+Level: `warn`
+
+### What it does
+
+Checks for dependencies that are not used by any of the cargo targets.
+
+### Why it is bad
+
+Slows down compilation time.
+
+### Drawbacks
+
+### Example
+
+```toml
+[package]
+name = "foo"
+
+[dependencies]
+unused = "1"
+```
+
+Should be written as:
+
+```toml
+[package]
+name = "foo"
 ```
 
 
