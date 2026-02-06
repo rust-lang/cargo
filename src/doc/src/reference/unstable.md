@@ -708,12 +708,17 @@ false` is set in the Cargo configuration file.
 # config.toml
 [host]
 linker = "/path/to/host/linker"
+runner = "host-runner"
 [host.x86_64-unknown-linux-gnu]
 linker = "/path/to/host/arch/linker"
+runner = "host-arch-runner"
 rustflags = ["-Clink-arg=--verbose"]
 [target.x86_64-unknown-linux-gnu]
 linker = "/path/to/target/linker"
 ```
+
+The `host.runner` setting wraps execution of host build targets such as build
+scripts, similar to how `target.<triple>.runner` wraps `cargo run`/`test`/`bench`.
 
 The generic `host` table above will be entirely ignored when building on an
 `x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
