@@ -609,29 +609,40 @@ impl KnownHost {
         }
         for pattern in self.patterns.split(',') {
             let pattern = pattern.to_lowercase();
-            let is_glob = is_glob_pattern(&pattern);
 
-            if is_glob {
+            let (negated, pattern) = match pattern.strip_prefix('!') {
+                Some(rest) => (true, rest.to_string()),
+                None => (false, pattern),
+            };
+
+            let matches = if is_glob_pattern(&pattern) && !is_bracketed_with_port(&pattern) {
                 match glob::Pattern::new(&pattern) {
-                    Ok(glob) => match_found |= glob.matches(&host),
+                    Ok(glob) => glob.matches(&host),
                     Err(e) => {
                         tracing::warn!(
                             "failed to interpret hostname `{pattern}` as glob pattern: {e}"
-                        )
+                        );
+                        false
                     }
                 }
+            } else {
+                pattern == host
+            };
+
+            // if the host is a negation and the rest matches then preemtively return false
+            if negated && matches {
+                return false;
             }
 
-            if let Some(pattern) = pattern.strip_prefix('!') {
-                if pattern == host {
-                    return false;
-                }
-            } else {
-                match_found |= pattern == host;
-            }
+            // note that if a negation does not match then it does not mean that we found a match
+            match_found |= !negated && matches;
         }
         match_found
     }
+}
+
+fn is_bracketed_with_port(pattern: &str) -> bool {
+    pattern.starts_with('[') && pattern.contains("]:")
 }
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
@@ -974,7 +985,7 @@ mod tests {
 
         assert!(khs[0].host_matches("web.example.com"));
         assert!(
-            khs[0].host_matches("ssh.example.com"),
+            !khs[0].host_matches("ssh.example.com"),
             "negated glob !*.example.com should reject ssh.example.com"
         );
     }
@@ -988,7 +999,7 @@ mod tests {
         let khs = load_hostfile_contents(kh_path, contents);
 
         assert!(
-            khs[0].host_matches("e:2222"),
+            !khs[0].host_matches("e:2222"),
             "Bracketed host with port should not be glob matched"
         );
         assert!(
