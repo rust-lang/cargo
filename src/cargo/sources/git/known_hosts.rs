@@ -963,4 +963,41 @@ mod tests {
             _ => panic!("Expected host key to be reject with error HostKeyRevoked."),
         }
     }
+
+    #[test]
+    fn negated_glob_rejects_match() {
+        let contents = r#"
+            *example.com,!*h.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR
+            "#;
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, contents);
+
+        assert!(khs[0].host_matches("web.example.com"));
+        assert!(
+            khs[0].host_matches("ssh.example.com"),
+            "negated glob !*.example.com should reject ssh.example.com"
+        );
+    }
+
+    #[test]
+    fn validate_bracketed_host_with_port() {
+        let contents = r#"
+            [example.com]:2222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKVYJpa0yUGaNk0NXQTPWa0tHjqRpx+7hl2diReH6DtR
+            "#;
+        let kh_path = Path::new("/home/abc/.known_hosts");
+        let khs = load_hostfile_contents(kh_path, contents);
+
+        assert!(
+            khs[0].host_matches("e:2222"),
+            "Bracketed host with port should not be glob matched"
+        );
+        assert!(
+            !khs[0].host_matches("[example.com]:443"),
+            "Bracketed host with different port should not match"
+        );
+        assert!(
+            khs[0].host_matches("[example.com]:2222"),
+            "Bracketed host with port should match"
+        );
+    }
 }
