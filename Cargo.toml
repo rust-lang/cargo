@@ -72,6 +72,9 @@ memfd = "0.6.5"
 miow = "0.6.1"
 opener = "0.8.3"
 openssl = "0.10.75"
+# Pinned due to ppc64 ELFv1/v2 ABI issue in 3.5.5
+# https://github.com/openssl/openssl/issues/29815
+openssl-src = "=300.5.4"
 os_info = { version = "3.14.0", default-features = false }
 pasetors = { version = "0.7.7", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
@@ -236,6 +239,7 @@ cargo-credential-macos-keychain.workspace = true
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = { workspace = true, optional = true }
+openssl-src = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
 cargo-credential-wincred.workspace = true
