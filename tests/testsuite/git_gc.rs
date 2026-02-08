@@ -62,6 +62,8 @@ fn run_test(path_env: Option<&OsStr>) {
     drop((repo, index));
     Package::new("bar", "0.1.1").publish();
 
+    // Each fetch above creates a new pack file in the index. Count them before
+    // running cargo update so we can verify gc actually consolidates them.
     let before = find_index()
         .join(".git/objects/pack")
         .read_dir()
@@ -69,6 +71,9 @@ fn run_test(path_env: Option<&OsStr>) {
         .count();
     assert!(before > N);
 
+    // Set __CARGO_PACKFILE_LIMIT=10 so gc.autoPackLimit=10 is passed to
+    // `git gc --auto`. This forces consolidation at a low threshold rather
+    // than relying on git's default (which is much higher).
     let mut cmd = foo.cargo("update");
     cmd.env("__CARGO_PACKFILE_LIMIT", "10");
     if let Some(path) = path_env {
@@ -76,6 +81,7 @@ fn run_test(path_env: Option<&OsStr>) {
     }
     cmd.env("CARGO_LOG", "trace");
     cmd.run();
+
     let after = find_index()
         .join(".git/objects/pack")
         .read_dir()
