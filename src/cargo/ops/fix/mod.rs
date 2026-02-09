@@ -100,7 +100,6 @@ pub struct FixOptions {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
-    pub requested_lockfile_path: Option<PathBuf>,
 }
 
 /// The behavior of `--edition` migration.

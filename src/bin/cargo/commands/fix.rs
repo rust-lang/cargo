@@ -102,7 +102,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         allow_staged: allow_dirty || args.flag("allow-staged"),
         allow_no_vcs: args.flag("allow-no-vcs"),
         broken_code: args.flag("broken-code"),
-        requested_lockfile_path: lockfile_path,
     };
 
     if let Some(fe) = &gctx.cli_unstable().fix_edition {
