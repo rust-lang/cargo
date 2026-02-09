@@ -34,8 +34,8 @@ impl RustVersion {
         msrv.matches(&rustc)
     }
 
-    pub fn into_partial(self) -> PartialVersion {
-        self.0
+    pub fn to_partial(&self) -> PartialVersion {
+        self.clone().0
     }
 
     pub fn as_partial(&self) -> &PartialVersion {
@@ -174,7 +174,7 @@ mod test {
         let mut passed = true;
         for (dep_msrv, ws_msrv, expected) in cases {
             let dep_msrv: RustVersion = dep_msrv.parse().unwrap();
-            let ws_msrv = ws_msrv.parse::<RustVersion>().unwrap().into_partial();
+            let ws_msrv = ws_msrv.parse::<RustVersion>().unwrap().to_partial();
             if dep_msrv.is_compatible_with(&ws_msrv) != *expected {
                 println!("failed: {dep_msrv} is_compatible_with {ws_msrv} == {expected}");
                 passed = false;

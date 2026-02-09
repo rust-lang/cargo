@@ -862,7 +862,7 @@ fn get_latest_dependency(
                 let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()
-                    .map(|msrv| CargoResult::Ok((msrv.clone().into_partial(), true)))
+                    .map(|msrv| CargoResult::Ok((msrv.to_partial(), true)))
                     .unwrap_or_else(|| {
                         let rustc = gctx.load_global_rustc(None)?;
 
