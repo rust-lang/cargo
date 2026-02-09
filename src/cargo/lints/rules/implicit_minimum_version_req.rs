@@ -26,7 +26,7 @@ use crate::lints::get_key_value;
 use crate::lints::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
 
-pub const LINT: Lint = Lint {
+pub static LINT: Lint = Lint {
     name: "implicit_minimum_version_req",
     desc: "dependency version requirement without an explicit minimum version",
     primary_group: &PEDANTIC,

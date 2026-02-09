@@ -20,7 +20,7 @@ use crate::lints::STYLE;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: Lint = Lint {
     name: "non_kebab_case_bins",
     desc: "binaries should have a kebab-case name",
     primary_group: &STYLE,

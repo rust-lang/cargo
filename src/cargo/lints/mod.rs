@@ -18,7 +18,7 @@ use crate::{CargoResult, GlobalContext};
 pub mod rules;
 pub use rules::LINTS;
 
-pub const LINT_GROUPS: &[LintGroup] = &[
+pub static LINT_GROUPS: &[LintGroup] = &[
     COMPLEXITY,
     CORRECTNESS,
     NURSERY,

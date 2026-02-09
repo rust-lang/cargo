@@ -20,7 +20,7 @@ use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: Lint = Lint {
     name: "unused_workspace_dependencies",
     desc: "unused workspace dependency",
     primary_group: &SUSPICIOUS,

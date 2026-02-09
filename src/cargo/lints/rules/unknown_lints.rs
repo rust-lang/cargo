@@ -15,7 +15,7 @@ use crate::lints::ManifestFor;
 use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 
-pub const LINT: Lint = Lint {
+pub static LINT: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
