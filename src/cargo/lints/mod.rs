@@ -1,5 +1,8 @@
-use crate::core::{Edition, Feature, Features, MaybePackage, Package};
-use crate::{CargoResult, GlobalContext};
+use std::borrow::Cow;
+use std::cmp::{Reverse, max_by_key};
+use std::fmt::Display;
+use std::ops::Range;
+use std::path::Path;
 
 use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
@@ -9,11 +12,8 @@ use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
-use std::borrow::Cow;
-use std::cmp::{Reverse, max_by_key};
-use std::fmt::Display;
-use std::ops::Range;
-use std::path::Path;
+use crate::core::{Edition, Feature, Features, MaybePackage, Package};
+use crate::{CargoResult, GlobalContext};
 
 pub mod rules;
 pub use rules::LINTS;

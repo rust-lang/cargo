@@ -1,10 +1,10 @@
+use std::fmt::Write;
+use std::path::PathBuf;
+
 use cargo::lints::Lint;
 use cargo::lints::LintLevel;
 use cargo::util::command_prelude::{ArgMatchesExt, flag};
 use itertools::Itertools;
-
-use std::fmt::Write;
-use std::path::PathBuf;
 
 fn cli() -> clap::Command {
     clap::Command::new("xtask-lint-docs").arg(flag("check", "Check that the docs are up-to-date"))
