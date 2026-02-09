@@ -252,9 +252,7 @@ fn try_get_msrv_from_nearest_manifest_or_ws(
     ws: Option<&Workspace<'_>>,
 ) -> Option<PartialVersion> {
     // Try to get the MSRV from the nearest manifest.
-    let rust_version = nearest_package.and_then(|p| p.rust_version().map(|v| v.as_partial()));
+    let rust_version = nearest_package.and_then(|p| p.rust_version().map(|v| v.to_partial()));
     // If the nearest manifest does not have a specific Rust version, try to get it from the workspace.
-    rust_version
-        .or_else(|| ws.and_then(|ws| ws.lowest_rust_version().map(|v| v.as_partial())))
-        .cloned()
+    rust_version.or_else(|| ws.and_then(|ws| ws.lowest_rust_version().map(|v| v.to_partial())))
 }

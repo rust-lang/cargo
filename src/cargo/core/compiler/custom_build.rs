@@ -47,7 +47,7 @@ use cargo_util_schemas::manifest::RustVersion;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
-use std::str::{self, FromStr};
+use std::str;
 use std::sync::{Arc, Mutex};
 
 /// A build script instruction that tells Cargo to display an error after the
@@ -840,8 +840,8 @@ impl BuildOutput {
             flag: &str,
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
-                let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
-                if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
+                let new_syntax_added_in = RustVersion::new(1, 77, 0);
+                if !new_syntax_added_in.is_compatible_with(&msrv.to_partial()) {
                     let old_syntax_suggestion = if has_reserved_prefix(flag) {
                         format!(
                             "Switch to the old `cargo:{flag}` syntax (note the single colon).\n"

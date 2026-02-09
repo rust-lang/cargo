@@ -1312,7 +1312,7 @@ pub fn to_real_manifest(
         if let Some(pkg_msrv) = &rust_version {
             if let Some(edition_msrv) = edition.first_version() {
                 let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
-                if !edition_msrv.is_compatible_with(pkg_msrv.as_partial()) {
+                if !edition_msrv.is_compatible_with(&pkg_msrv.to_partial()) {
                     bail!(
                         "rust-version {} is incompatible with the version ({}) required by \
                             the specified edition ({})",
@@ -1332,7 +1332,7 @@ pub fn to_real_manifest(
                     e.first_version()
                         .map(|e| {
                             let e = RustVersion::try_from(e).unwrap();
-                            e.is_compatible_with(pkg_msrv.as_partial())
+                            e.is_compatible_with(&pkg_msrv.to_partial())
                         })
                         .unwrap_or_default()
                 })
