@@ -56,6 +56,7 @@ pub fn unused_workspace_package_fields(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        ws.lowest_rust_version(),
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
     );

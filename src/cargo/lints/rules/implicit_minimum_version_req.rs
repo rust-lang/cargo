@@ -17,6 +17,7 @@ use crate::GlobalContext;
 use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::LintLevelReason;
@@ -91,6 +92,7 @@ pub fn implicit_minimum_version_req_pkg(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        pkg.rust_version(),
         pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );
@@ -149,6 +151,7 @@ pub fn implicit_minimum_version_req_pkg(
 }
 
 pub fn implicit_minimum_version_req_ws(
+    ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
@@ -157,6 +160,7 @@ pub fn implicit_minimum_version_req_ws(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        ws.lowest_rust_version(),
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
     );

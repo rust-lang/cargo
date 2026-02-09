@@ -1460,6 +1460,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
             implicit_minimum_version_req_ws(
+                self,
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
@@ -1473,6 +1474,7 @@ impl<'gctx> Workspace<'gctx> {
         // improve the testing experience while we are collecting feedback
         if self.gctx.cli_unstable().profile_hint_mostly_unused {
             blanket_hint_mostly_unused(
+                self,
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,

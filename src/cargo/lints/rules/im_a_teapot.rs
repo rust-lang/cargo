@@ -36,8 +36,12 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) =
-        LINT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = LINT.level(
+        pkg_lints,
+        pkg.rust_version(),
+        manifest.edition(),
+        manifest.unstable_features(),
+    );
 
     if lint_level == LintLevel::Allow {
         return Ok(());

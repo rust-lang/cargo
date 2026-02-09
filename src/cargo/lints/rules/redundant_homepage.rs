@@ -69,6 +69,7 @@ pub fn redundant_homepage(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        pkg.rust_version(),
         pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );

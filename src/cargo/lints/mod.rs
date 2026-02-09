@@ -45,7 +45,19 @@ pub enum ManifestFor<'a> {
 
 impl ManifestFor<'_> {
     fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
-        lint.level(pkg_lints, self.edition(), self.unstable_features())
+        lint.level(
+            pkg_lints,
+            self.rust_version(),
+            self.edition(),
+            self.unstable_features(),
+        )
+    }
+
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        match self {
+            ManifestFor::Package(p) => p.rust_version(),
+            ManifestFor::Workspace { ws, maybe_pkg: _ } => ws.lowest_rust_version(),
+        }
     }
 
     pub fn contents(&self) -> Option<&str> {
@@ -423,6 +435,7 @@ impl Lint {
     pub fn level(
         &self,
         pkg_lints: &TomlToolLints,
+        pkg_rust_version: Option<&RustVersion>,
         edition: Edition,
         unstable_features: &Features,
     ) -> (LintLevel, LintLevelReason) {
@@ -433,6 +446,13 @@ impl Lint {
             .is_some_and(|f| !unstable_features.is_enabled(f))
         {
             return (LintLevel::Allow, LintLevelReason::Default);
+        }
+
+        if let (Some(msrv), Some(pkg_rust_version)) = (&self.msrv, pkg_rust_version) {
+            let pkg_rust_version = pkg_rust_version.to_partial();
+            if !msrv.is_compatible_with(&pkg_rust_version) {
+                return (LintLevel::Allow, LintLevelReason::Default);
+            }
         }
 
         let lint_level_priority = level_priority(
