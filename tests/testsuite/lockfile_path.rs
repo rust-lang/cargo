@@ -12,9 +12,6 @@ use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     ProjectBuilder, basic_bin_manifest, cargo_test, paths, project, symlink_supported,
 };
-///////////////////////////////
-//// Unstable feature tests start
-///////////////////////////////
 
 #[cargo_test]
 fn must_have_unstable_options() {
@@ -51,10 +48,6 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
         .with_status(101)
         .run();
 }
-
-///////////////////////////////
-//// Unstable feature tests end
-///////////////////////////////
 
 #[cargo_test]
 fn basic_lockfile_created() {
@@ -103,10 +96,6 @@ fn basic_lockfile_override() {
 
     assert!(p.root().join(lockfile_path).is_file());
 }
-
-//////////////////////
-///// Symlink tests
-//////////////////////
 
 #[cargo_test]
 fn symlink_in_path() {
@@ -219,10 +208,6 @@ fn loop_symlink() {
 "#]])
         .run();
 }
-
-/////////////////////////
-//// Commands tests
-/////////////////////////
 
 #[cargo_test]
 fn add_lockfile_override() {
