@@ -7,7 +7,6 @@ use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::fmt::Write;
 use std::path::Path;
-use std::str::FromStr;
 
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -745,7 +744,7 @@ fn check_rust_version_for_optional_dependency(
 ) -> CargoResult<bool> {
     match rust_version {
         Some(version) => {
-            let syntax_support_version = RustVersion::from_str("1.60.0")?;
+            let syntax_support_version = RustVersion::new(1, 60, 0);
             Ok(&syntax_support_version <= version)
         }
         None => Ok(true),

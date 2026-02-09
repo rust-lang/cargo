@@ -11,6 +11,16 @@ use crate::core::PartialVersionError;
 pub struct RustVersion(PartialVersion);
 
 impl RustVersion {
+    pub const fn new(major: u64, minor: u64, patch: u64) -> Self {
+        Self(PartialVersion {
+            major,
+            minor: Some(minor),
+            patch: Some(patch),
+            pre: None,
+            build: None,
+        })
+    }
+
     pub fn is_compatible_with(&self, rustc: &PartialVersion) -> bool {
         let msrv = self.0.to_caret_req();
         // Remove any pre-release identifiers for easier comparison
