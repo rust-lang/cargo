@@ -1,4 +1,4 @@
-<svg width="827px" height="578px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="542px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
@@ -52,35 +52,31 @@
 </tspan>
     <tspan x="10px" y="298px"><tspan>          Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--ignore-rust-version</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>          Path to Cargo.lock (unstable)</tspan>
+    <tspan x="10px" y="334px"><tspan>          Ignore `rust-version` specification in packages</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--ignore-rust-version</tspan>
+    <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--publish-time</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;yyyy-mm-ddThh:mm:ssZ&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>          Ignore `rust-version` specification in packages</tspan>
+    <tspan x="10px" y="370px"><tspan>          Latest publish time allowed for registry packages (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--publish-time</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;yyyy-mm-ddThh:mm:ssZ&gt;</tspan>
+    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>          Latest publish time allowed for registry packages (unstable)</tspan>
+    <tspan x="10px" y="406px"><tspan>          Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>          Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="442px"><tspan>          Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--offline</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>          Run without accessing the network</tspan>
+    <tspan x="10px" y="478px"><tspan>          Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--frozen</tspan>
+    <tspan x="10px" y="496px">
 </tspan>
-    <tspan x="10px" y="514px"><tspan>          Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="514px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help generate-lockfile</tspan><tspan class="bold">` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="532px">
-</tspan>
-    <tspan x="10px" y="550px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help generate-lockfile</tspan><tspan class="bold">` for more detailed information.</tspan>
-</tspan>
-    <tspan x="10px" y="568px">
 </tspan>
   </text>
 

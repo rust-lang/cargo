@@ -114,7 +114,6 @@ pub fn cli() -> Command {
             ArgValueCandidates::new(get_target_triples_with_all),
         )
         .arg_manifest_path()
-        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<bright-cyan,bold>cargo help tree</>` for more detailed information.\n"
         ))
