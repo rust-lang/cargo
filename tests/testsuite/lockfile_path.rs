@@ -14,6 +14,77 @@ use cargo_test_support::{
 };
 
 #[cargo_test]
+fn config_lockfile_path_without_z_flag() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile")
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `resolver.lockfile-path`, pass `-Zlockfile-path` to enable it
+
+"#]])
+        .run();
+
+    assert!(p.root().join("Cargo.lock").exists());
+    assert!(!p.root().join("my/Cargo.lock").exists());
+}
+
+#[cargo_test]
+fn config_lockfile_path() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile -Zlockfile-path")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .with_stderr_data(str![""])
+        .run();
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join("my/Cargo.lock").exists());
+}
+
+#[cargo_test]
+fn cli_ignored_when_config_set() {
+    let cli_lockfile_path = "cli/Cargo.lock";
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile -Zlockfile-path")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .arg("-Zunstable-options")
+        .arg("--lockfile-path")
+        .arg(cli_lockfile_path)
+        .with_stderr_data(str![[r#"
+[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
+[WARNING] `--lockfile-path` is ignored because `resolver.lockfile-path` is set in config
+
+"#]])
+        .run();
+
+    assert!(p.root().join("my/Cargo.lock").is_file());
+    assert!(!p.root().join(cli_lockfile_path).exists());
+}
+
+#[cargo_test]
+fn config_lockfile_path_rejects_templates() {
+    let p = make_project().build();
+
+    p.cargo("generate-lockfile -Zlockfile-path")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("--config")
+        .arg("resolver.lockfile-path='{var}/Cargo.lock'")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected variable `var` in resolver.lockfile-path `{var}/Cargo.lock`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn must_have_unstable_options() {
     let lockfile_path = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
@@ -514,77 +585,6 @@ fn run_embed() {
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
 ...
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn config_lockfile_path() {
-    let p = make_project().build();
-
-    p.cargo("generate-lockfile -Zlockfile-path")
-        .masquerade_as_nightly_cargo(&["lockfile-path"])
-        .arg("--config")
-        .arg("resolver.lockfile-path='my/Cargo.lock'")
-        .with_stderr_data(str![""])
-        .run();
-
-    assert!(!p.root().join("Cargo.lock").exists());
-    assert!(p.root().join("my/Cargo.lock").exists());
-}
-
-#[cargo_test]
-fn cli_ignored_when_config_set() {
-    let cli_lockfile_path = "cli/Cargo.lock";
-    let p = make_project().build();
-
-    p.cargo("generate-lockfile -Zlockfile-path")
-        .masquerade_as_nightly_cargo(&["lockfile-path"])
-        .arg("--config")
-        .arg("resolver.lockfile-path='my/Cargo.lock'")
-        .arg("-Zunstable-options")
-        .arg("--lockfile-path")
-        .arg(cli_lockfile_path)
-        .with_stderr_data(str![[r#"
-[WARNING] the `--lockfile-path` flag is deprecated and will be removed in a future release, use `resolver.lockfile-path` config instead
-[WARNING] `--lockfile-path` is ignored because `resolver.lockfile-path` is set in config
-
-"#]])
-        .run();
-
-    assert!(p.root().join("my/Cargo.lock").is_file());
-    assert!(!p.root().join(cli_lockfile_path).exists());
-}
-
-#[cargo_test]
-fn config_lockfile_path_without_z_flag() {
-    let p = make_project().build();
-
-    p.cargo("generate-lockfile")
-        .arg("--config")
-        .arg("resolver.lockfile-path='my/Cargo.lock'")
-        .with_stderr_data(str![[r#"
-[WARNING] ignoring `resolver.lockfile-path`, pass `-Zlockfile-path` to enable it
-
-"#]])
-        .run();
-
-    assert!(p.root().join("Cargo.lock").exists());
-    assert!(!p.root().join("my/Cargo.lock").exists());
-}
-
-#[cargo_test]
-fn config_lockfile_path_rejects_templates() {
-    let p = make_project().build();
-
-    p.cargo("generate-lockfile -Zlockfile-path")
-        .masquerade_as_nightly_cargo(&["lockfile-path"])
-        .arg("--config")
-        .arg("resolver.lockfile-path='{var}/Cargo.lock'")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] unexpected variable `var` in resolver.lockfile-path `{var}/Cargo.lock`
-
 "#]])
         .run();
 }
