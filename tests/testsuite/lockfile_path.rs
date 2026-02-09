@@ -31,7 +31,7 @@ fn config_lockfile_path_without_z_flag() {
 }
 
 #[cargo_test]
-fn config_lockfile_path() {
+fn config_lockfile_created() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project().build();
 
