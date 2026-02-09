@@ -32,28 +32,30 @@ fn config_lockfile_path_without_z_flag() {
 
 #[cargo_test]
 fn config_lockfile_path() {
+    let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project().build();
 
     p.cargo("generate-lockfile -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
-        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .arg(&format!("resolver.lockfile-path='{lockfile_path}'"))
         .with_stderr_data(str![""])
         .run();
 
     assert!(!p.root().join("Cargo.lock").exists());
-    assert!(p.root().join("my/Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path).exists());
 }
 
 #[cargo_test]
 fn cli_ignored_when_config_set() {
+    let lockfile_path = "mylockfile/Cargo.lock";
     let cli_lockfile_path = "cli/Cargo.lock";
     let p = make_project().build();
 
     p.cargo("generate-lockfile -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
-        .arg("resolver.lockfile-path='my/Cargo.lock'")
+        .arg(&format!("resolver.lockfile-path='{lockfile_path}'"))
         .arg("-Zunstable-options")
         .arg("--lockfile-path")
         .arg(cli_lockfile_path)
@@ -64,7 +66,7 @@ fn cli_ignored_when_config_set() {
 "#]])
         .run();
 
-    assert!(p.root().join("my/Cargo.lock").is_file());
+    assert!(p.root().join(lockfile_path).exists());
     assert!(!p.root().join(cli_lockfile_path).exists());
 }
 
