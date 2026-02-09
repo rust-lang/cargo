@@ -37,10 +37,6 @@ impl RustVersion {
     pub fn to_partial(&self) -> PartialVersion {
         self.clone().0
     }
-
-    pub fn as_partial(&self) -> &PartialVersion {
-        &self.0
-    }
 }
 
 impl std::str::FromStr for RustVersion {

@@ -841,7 +841,7 @@ impl BuildOutput {
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
                 let new_syntax_added_in = RustVersion::new(1, 77, 0);
-                if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
+                if !new_syntax_added_in.is_compatible_with(&msrv.to_partial()) {
                     let old_syntax_suggestion = if has_reserved_prefix(flag) {
                         format!(
                             "Switch to the old `cargo:{flag}` syntax (note the single colon).\n"
