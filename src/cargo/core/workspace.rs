@@ -1364,56 +1364,20 @@ impl<'gctx> Workspace<'gctx> {
                 &mut run_error_count,
                 self.gctx,
             )?;
-            non_kebab_case_packages(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_snake_case_packages(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
+            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            non_snake_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             non_kebab_case_bins(
                 self,
-                pkg.into(),
+                pkg,
                 &path,
                 &cargo_lints,
                 &mut run_error_count,
                 self.gctx,
             )?;
-            non_kebab_case_features(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_snake_case_features(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            redundant_readme(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            redundant_homepage(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
+            non_kebab_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            non_snake_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            redundant_readme(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            redundant_homepage(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             missing_lints_inheritance(
                 self,
                 pkg,
