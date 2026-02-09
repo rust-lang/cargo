@@ -39,7 +39,7 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
         lint.level(pkg_lints, self.edition(), self.unstable_features())
     }
 
@@ -313,7 +313,7 @@ pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
         .to_string()
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LintGroup {
     pub name: &'static str,
     pub default_level: LintLevel,
@@ -395,7 +395,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     hidden: true,
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,

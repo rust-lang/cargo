@@ -18,7 +18,7 @@ use crate::lints::RESTRICTION;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub static LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "non_snake_case_packages",
     desc: "packages should have a snake-case name",
     primary_group: &RESTRICTION,

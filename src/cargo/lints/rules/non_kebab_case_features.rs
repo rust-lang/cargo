@@ -18,7 +18,7 @@ use crate::lints::RESTRICTION;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub static LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_features",
     desc: "features should have a kebab-case name",
     primary_group: &RESTRICTION,

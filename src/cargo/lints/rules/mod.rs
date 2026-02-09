@@ -28,7 +28,7 @@ pub use unknown_lints::output_unknown_lints;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
 pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
-pub static LINTS: &[crate::lints::Lint] = &[
+pub static LINTS: &[&crate::lints::Lint] = &[
     blanket_hint_mostly_unused::LINT,
     implicit_minimum_version_req::LINT,
     im_a_teapot::LINT,
