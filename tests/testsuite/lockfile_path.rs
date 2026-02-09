@@ -87,7 +87,7 @@ fn config_lockfile_path_rejects_templates() {
 }
 
 #[cargo_test]
-fn must_have_unstable_options() {
+fn cli_must_have_unstable_options() {
     let lockfile_path = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
 
@@ -105,7 +105,7 @@ See https://github.com/rust-lang/cargo/issues/14421 for more information about t
 }
 
 #[cargo_test]
-fn must_be_nightly() {
+fn cli_must_be_nightly() {
     let lockfile_path = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
 
@@ -123,7 +123,7 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
 }
 
 #[cargo_test]
-fn basic_lockfile_created() {
+fn cli_basic_lockfile_created() {
     let lockfile_path = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
 
@@ -138,7 +138,7 @@ fn basic_lockfile_created() {
 }
 
 #[cargo_test]
-fn basic_lockfile_read() {
+fn cli_basic_lockfile_read() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project().file(lockfile_path, VALID_LOCKFILE).build();
 
@@ -154,7 +154,7 @@ fn basic_lockfile_read() {
 }
 
 #[cargo_test]
-fn basic_lockfile_override() {
+fn cli_basic_lockfile_override() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project()
         .file("Cargo.lock", "This is an invalid lock file!")
@@ -171,7 +171,7 @@ fn basic_lockfile_override() {
 }
 
 #[cargo_test]
-fn symlink_in_path() {
+fn cli_symlink_in_path() {
     if !symlink_supported() {
         return;
     }
@@ -197,7 +197,7 @@ fn symlink_in_path() {
 }
 
 #[cargo_test]
-fn symlink_lockfile() {
+fn cli_symlink_lockfile() {
     if !symlink_supported() {
         return;
     }
@@ -224,7 +224,7 @@ fn symlink_lockfile() {
 }
 
 #[cargo_test]
-fn broken_symlink() {
+fn cli_broken_symlink() {
     if !symlink_supported() {
         return;
     }
@@ -252,7 +252,7 @@ fn broken_symlink() {
 }
 
 #[cargo_test]
-fn loop_symlink() {
+fn cli_loop_symlink() {
     if !symlink_supported() {
         return;
     }
@@ -283,7 +283,7 @@ fn loop_symlink() {
 }
 
 #[cargo_test]
-fn add_lockfile_override() {
+fn cli_add_lockfile_override() {
     let lockfile_path = "mylockfile/Cargo.lock";
     project()
         .at("bar")
@@ -306,7 +306,7 @@ fn add_lockfile_override() {
 }
 
 #[cargo_test]
-fn clean_lockfile_override() {
+fn cli_clean_lockfile_override() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project()
         .file("Cargo.lock", "This is an invalid lock file!")
@@ -324,7 +324,7 @@ fn clean_lockfile_override() {
 }
 
 #[cargo_test]
-fn fix_lockfile_override() {
+fn cli_fix_lockfile_override() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project()
         .file("Cargo.lock", "This is an invalid lock file!")
@@ -343,7 +343,7 @@ fn fix_lockfile_override() {
 }
 
 #[cargo_test]
-fn publish_lockfile_read() {
+fn cli_publish_lockfile_read() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = make_project().file(lockfile_path, VALID_LOCKFILE).build();
     let registry = RegistryBuilder::new().http_api().http_index().build();
@@ -361,7 +361,7 @@ fn publish_lockfile_read() {
 }
 
 #[cargo_test]
-fn remove_lockfile_override() {
+fn cli_remove_lockfile_override() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let manifest = r#"
         [package]
@@ -402,7 +402,7 @@ fn remove_lockfile_override() {
 }
 
 #[cargo_test]
-fn assert_respect_pinned_version_from_lockfile_path() {
+fn cli_assert_respect_pinned_version_from_lockfile_path() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let p = project()
         .file(
@@ -460,7 +460,7 @@ bar = "0.1.0"
 }
 
 #[cargo_test]
-fn install_respects_lock_file_path() {
+fn cli_install_respects_lock_file_path() {
     // `cargo install` will imply --locked when lockfile path is provided
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
@@ -529,7 +529,7 @@ dependencies = [
 }
 
 #[cargo_test]
-fn install_lock_file_path_must_present() {
+fn cli_install_lock_file_path_must_present() {
     // `cargo install` will imply --locked when lockfile path is provided
     Package::new("bar", "0.1.0").publish();
     Package::new("foo", "0.1.0")
@@ -553,7 +553,7 @@ fn install_lock_file_path_must_present() {
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn run_embed() {
+fn cli_run_embed() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let invalid_lockfile = "Cargo.lock";
     let p = project()
