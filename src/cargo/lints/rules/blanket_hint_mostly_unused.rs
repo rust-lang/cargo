@@ -22,6 +22,7 @@ pub static LINT: &Lint = &Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
     primary_group: &SUSPICIOUS,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

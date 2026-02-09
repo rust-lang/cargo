@@ -8,6 +8,7 @@ use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
 use annotate_snippets::Level;
 use annotate_snippets::Snippet;
+use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
@@ -404,6 +405,12 @@ pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,
     pub primary_group: &'static LintGroup,
+    /// The minimum supported Rust version for applying this lint
+    ///
+    /// Note: If the lint is on by default and did not qualify as a hard-warning before the
+    /// linting system, then at earliest an MSRV of 1.78 is required as `[lints.cargo]` was a hard
+    /// error before then.
+    pub msrv: Option<RustVersion>,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating

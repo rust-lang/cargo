@@ -22,6 +22,7 @@ pub static LINT: &Lint = &Lint {
     name: "non_snake_case_packages",
     desc: "packages should have a snake-case name",
     primary_group: &RESTRICTION,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

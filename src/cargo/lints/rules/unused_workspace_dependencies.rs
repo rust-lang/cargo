@@ -24,6 +24,7 @@ pub static LINT: &Lint = &Lint {
     name: "unused_workspace_dependencies",
     desc: "unused workspace dependency",
     primary_group: &SUSPICIOUS,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

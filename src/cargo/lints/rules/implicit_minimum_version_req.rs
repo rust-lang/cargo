@@ -29,6 +29,7 @@ pub static LINT: &Lint = &Lint {
     name: "implicit_minimum_version_req",
     desc: "dependency version requirement without an explicit minimum version",
     primary_group: &PEDANTIC,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

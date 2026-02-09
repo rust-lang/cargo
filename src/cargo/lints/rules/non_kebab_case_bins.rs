@@ -24,6 +24,7 @@ pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_bins",
     desc: "binaries should have a kebab-case name",
     primary_group: &STYLE,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

@@ -23,6 +23,7 @@ pub static LINT: &Lint = &Lint {
     name: "redundant_homepage",
     desc: "`package.homepage` is redundant with another manifest field",
     primary_group: &STYLE,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

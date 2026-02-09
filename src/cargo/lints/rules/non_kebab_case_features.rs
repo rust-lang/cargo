@@ -22,6 +22,7 @@ pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_features",
     desc: "features should have a kebab-case name",
     primary_group: &RESTRICTION,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

@@ -25,6 +25,7 @@ pub static LINT: &Lint = &Lint {
     name: "redundant_readme",
     desc: "explicit `package.readme` can be inferred",
     primary_group: &STYLE,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

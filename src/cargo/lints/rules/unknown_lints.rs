@@ -19,6 +19,7 @@ pub static LINT: &Lint = &Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
