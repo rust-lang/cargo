@@ -158,6 +158,8 @@ mod test {
             &features,
             None::<&String>,
             msrv.map(|m| m.parse().unwrap()),
+            None,
+            None,
         )
         .unwrap()
     }

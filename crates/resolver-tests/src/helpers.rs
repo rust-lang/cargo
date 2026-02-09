@@ -119,7 +119,16 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
     } else {
         None
     };
-    Summary::new(name.to_pkgid(), dep, &BTreeMap::new(), link, None).unwrap()
+    Summary::new(
+        name.to_pkgid(),
+        dep,
+        &BTreeMap::new(),
+        link,
+        None,
+        None,
+        None,
+    )
+    .unwrap()
 }
 
 pub fn pkg_dep_with<T: ToPkgId>(
@@ -137,11 +146,20 @@ pub fn pkg_dep_with<T: ToPkgId>(
         .into_iter()
         .map(|&(name, values)| (name.into(), values.into_iter().map(|&v| v.into()).collect()))
         .collect();
-    Summary::new(name.to_pkgid(), dep, &features, link, None).unwrap()
+    Summary::new(name.to_pkgid(), dep, &features, link, None, None, None).unwrap()
 }
 
 pub fn pkg_dep_link<T: ToPkgId>(name: T, link: &str, dep: Vec<Dependency>) -> Summary {
-    Summary::new(name.to_pkgid(), dep, &BTreeMap::new(), Some(link), None).unwrap()
+    Summary::new(
+        name.to_pkgid(),
+        dep,
+        &BTreeMap::new(),
+        Some(link),
+        None,
+        None,
+        None,
+    )
+    .unwrap()
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
@@ -177,6 +195,8 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         &BTreeMap::new(),
         link,
         None,
+        None,
+        None,
     )
     .unwrap()
 }
@@ -185,7 +205,16 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     let mut deps = sum.dependencies().to_vec();
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
-    Summary::new(sum.package_id(), deps, &BTreeMap::new(), sum.links(), None).unwrap()
+    Summary::new(
+        sum.package_id(),
+        deps,
+        &BTreeMap::new(),
+        sum.links(),
+        None,
+        None,
+        None,
+    )
+    .unwrap()
 }
 
 pub fn dep(name: &str) -> Dependency {

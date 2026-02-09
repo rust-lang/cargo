@@ -219,7 +219,15 @@ fn index_package_to_summary(
         .map(|(name, values)| (name.into(), values.into_iter().map(|v| v.into()).collect()))
         .collect::<BTreeMap<_, _>>();
     let links: Option<InternedString> = pkg.links.as_ref().map(|l| l.as_ref().into());
-    let mut summary = Summary::new(pkgid, deps, &features, links, pkg.rust_version.clone())?;
+    let mut summary = Summary::new(
+        pkgid,
+        deps,
+        &features,
+        links,
+        pkg.rust_version.clone(),
+        None,
+        None,
+    )?;
     summary.set_checksum(pkg.cksum.clone());
     if let Some(pubtime) = pkg.pubtime {
         summary.set_pubtime(pubtime);

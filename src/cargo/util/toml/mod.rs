@@ -1729,6 +1729,19 @@ pub fn to_real_manifest(
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
+    let default_kind = normalized_package
+        .default_target
+        .as_ref()
+        .map(|t| CompileTarget::new(&*t, gctx.cli_unstable().json_target_spec))
+        .transpose()?
+        .map(CompileKind::Target);
+    let forced_kind = normalized_package
+        .forced_target
+        .as_ref()
+        .map(|t| CompileTarget::new(&*t, gctx.cli_unstable().json_target_spec))
+        .transpose()?
+        .map(CompileKind::Target);
+
     let summary = {
         let summary = Summary::new(
             pkgid,
@@ -1747,6 +1760,8 @@ pub fn to_real_manifest(
                 .collect(),
             normalized_package.links.as_deref(),
             rust_version.clone(),
+            default_kind,
+            forced_kind,
         );
         // edition2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
         // need to check whether `dep_name` is stripped as unused dependency
@@ -1789,18 +1804,6 @@ note: only a feature named `default` will be enabled by default"
         }
     }
 
-    let default_kind = normalized_package
-        .default_target
-        .as_ref()
-        .map(|t| CompileTarget::new(&*t, gctx.cli_unstable().json_target_spec))
-        .transpose()?
-        .map(CompileKind::Target);
-    let forced_kind = normalized_package
-        .forced_target
-        .as_ref()
-        .map(|t| CompileTarget::new(&*t, gctx.cli_unstable().json_target_spec))
-        .transpose()?
-        .map(CompileKind::Target);
     let include = normalized_package
         .normalized_include()
         .expect("previously normalized")

@@ -148,6 +148,7 @@ mod package_message_format;
 mod patch;
 mod path;
 mod paths;
+mod per_package_target;
 mod pgo;
 mod pkgid;
 mod precise_pre_release;
