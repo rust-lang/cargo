@@ -23,7 +23,7 @@ pub static LINT: &Lint = &Lint {
     name: "unused_workspace_package_fields",
     desc: "unused field in `workspace.package`",
     primary_group: &SUSPICIOUS,
-    msrv: None,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(

@@ -45,3 +45,10 @@ pub static LINTS: &[&crate::lints::Lint] = &[
     unused_workspace_dependencies::LINT,
     unused_workspace_package_fields::LINT,
 ];
+
+/// Version required for specifying `[lints.cargo]`
+///
+/// Before this, it was an error.  No on-by-default lint should fire before this time without
+/// another way of disabling it.
+static CARGO_LINTS_MSRV: cargo_util_schemas::manifest::RustVersion =
+    cargo_util_schemas::manifest::RustVersion::new(1, 79, 0);
