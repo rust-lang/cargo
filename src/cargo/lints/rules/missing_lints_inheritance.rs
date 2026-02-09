@@ -16,7 +16,7 @@ use crate::lints::LintLevel;
 use crate::lints::SUSPICIOUS;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "missing_lints_inheritance",
     desc: "missing `[lints]` to inherit `[workspace.lints]`",
     primary_group: &SUSPICIOUS,

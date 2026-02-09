@@ -15,7 +15,8 @@ mod unused_workspace_package_fields;
 
 pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 pub use im_a_teapot::check_im_a_teapot;
-pub use implicit_minimum_version_req::implicit_minimum_version_req;
+pub use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
+pub use implicit_minimum_version_req::implicit_minimum_version_req_ws;
 pub use missing_lints_inheritance::missing_lints_inheritance;
 pub use non_kebab_case_bins::non_kebab_case_bins;
 pub use non_kebab_case_features::non_kebab_case_features;
@@ -28,7 +29,7 @@ pub use unknown_lints::output_unknown_lints;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
 pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
-pub const LINTS: &[crate::lints::Lint] = &[
+pub static LINTS: &[&crate::lints::Lint] = &[
     blanket_hint_mostly_unused::LINT,
     implicit_minimum_version_req::LINT,
     im_a_teapot::LINT,

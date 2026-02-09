@@ -1,5 +1,8 @@
-use crate::core::{Edition, Feature, Features, MaybePackage, Package};
-use crate::{CargoResult, GlobalContext};
+use std::borrow::Cow;
+use std::cmp::{Reverse, max_by_key};
+use std::fmt::Display;
+use std::ops::Range;
+use std::path::Path;
 
 use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
@@ -9,16 +12,13 @@ use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
-use std::borrow::Cow;
-use std::cmp::{Reverse, max_by_key};
-use std::fmt::Display;
-use std::ops::Range;
-use std::path::Path;
+use crate::core::{Edition, Feature, Features, MaybePackage, Package};
+use crate::{CargoResult, GlobalContext};
 
 pub mod rules;
 pub use rules::LINTS;
 
-pub const LINT_GROUPS: &[LintGroup] = &[
+pub static LINT_GROUPS: &[LintGroup] = &[
     COMPLEXITY,
     CORRECTNESS,
     NURSERY,
@@ -39,7 +39,7 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
         lint.level(pkg_lints, self.edition(), self.unstable_features())
     }
 
@@ -313,7 +313,7 @@ pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
         .to_string()
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct LintGroup {
     pub name: &'static str,
     pub default_level: LintLevel,
@@ -395,7 +395,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     hidden: true,
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,

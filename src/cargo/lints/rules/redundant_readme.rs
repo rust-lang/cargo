@@ -21,7 +21,7 @@ use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 use crate::util::toml::DEFAULT_README_FILES;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "redundant_readme",
     desc: "explicit `package.readme` can be inferred",
     primary_group: &STYLE,

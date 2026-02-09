@@ -24,7 +24,8 @@ use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::lints::analyze_cargo_lints_table;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
-use crate::lints::rules::implicit_minimum_version_req;
+use crate::lints::rules::implicit_minimum_version_req_pkg;
+use crate::lints::rules::implicit_minimum_version_req_ws;
 use crate::lints::rules::missing_lints_inheritance;
 use crate::lints::rules::non_kebab_case_bins;
 use crate::lints::rules::non_kebab_case_features;
@@ -1357,63 +1358,27 @@ impl<'gctx> Workspace<'gctx> {
             let mut run_error_count = 0;
 
             check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            implicit_minimum_version_req(
-                pkg.into(),
+            implicit_minimum_version_req_pkg(
+                pkg,
                 &path,
                 &cargo_lints,
                 &mut run_error_count,
                 self.gctx,
             )?;
-            non_kebab_case_packages(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_snake_case_packages(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
+            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            non_snake_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             non_kebab_case_bins(
                 self,
-                pkg.into(),
+                pkg,
                 &path,
                 &cargo_lints,
                 &mut run_error_count,
                 self.gctx,
             )?;
-            non_kebab_case_features(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_snake_case_features(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            redundant_readme(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            redundant_homepage(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
+            non_kebab_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            non_snake_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            redundant_readme(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            redundant_homepage(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
             missing_lints_inheritance(
                 self,
                 pkg,
@@ -1488,8 +1453,8 @@ impl<'gctx> Workspace<'gctx> {
                 &mut run_error_count,
                 self.gctx,
             )?;
-            implicit_minimum_version_req(
-                self.root_maybe().into(),
+            implicit_minimum_version_req_ws(
+                self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
                 &mut run_error_count,

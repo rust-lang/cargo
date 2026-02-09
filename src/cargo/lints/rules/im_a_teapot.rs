@@ -18,7 +18,7 @@ use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
 /// This lint is only to be used for testing purposes
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "im_a_teapot",
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,

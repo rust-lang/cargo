@@ -19,7 +19,7 @@ use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "unused_workspace_package_fields",
     desc: "unused field in `workspace.package`",
     primary_group: &SUSPICIOUS,

@@ -1,10 +1,10 @@
+use std::fmt::Write;
+use std::path::PathBuf;
+
 use cargo::lints::Lint;
 use cargo::lints::LintLevel;
 use cargo::util::command_prelude::{ArgMatchesExt, flag};
 use itertools::Itertools;
-
-use std::fmt::Write;
-use std::path::PathBuf;
 
 fn cli() -> clap::Command {
     clap::Command::new("xtask-lint-docs").arg(flag("check", "Check that the docs are up-to-date"))
@@ -114,7 +114,8 @@ fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
 
 fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "## `{}`", lint.name)?;
-    writeln!(buf, "Group: `{}`\n", lint.primary_group.name)?;
+    writeln!(buf, "Group: `{}`", lint.primary_group.name)?;
+    writeln!(buf)?;
     writeln!(buf, "Level: `{}`", lint.primary_group.default_level)?;
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
 }
