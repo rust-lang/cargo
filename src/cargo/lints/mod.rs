@@ -12,6 +12,7 @@ use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
+use crate::core::Workspace;
 use crate::core::{Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 
@@ -35,7 +36,10 @@ pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.
     Package(&'a Package),
     /// Lint runs for workspace-level config.
-    Workspace { maybe_pkg: &'a MaybePackage },
+    Workspace {
+        ws: &'a Workspace<'a>,
+        maybe_pkg: &'a MaybePackage,
+    },
 }
 
 impl ManifestFor<'_> {
@@ -46,28 +50,28 @@ impl ManifestFor<'_> {
     pub fn contents(&self) -> Option<&str> {
         match self {
             ManifestFor::Package(p) => p.manifest().contents(),
-            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.contents(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.contents(),
         }
     }
 
     pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         match self {
             ManifestFor::Package(p) => p.manifest().document(),
-            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.document(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.document(),
         }
     }
 
     pub fn edition(&self) -> Edition {
         match self {
             ManifestFor::Package(p) => p.manifest().edition(),
-            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.edition(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.edition(),
         }
     }
 
     pub fn unstable_features(&self) -> &Features {
         match self {
             ManifestFor::Package(p) => p.manifest().unstable_features(),
-            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.unstable_features(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.unstable_features(),
         }
     }
 }
@@ -78,9 +82,9 @@ impl<'a> From<&'a Package> for ManifestFor<'a> {
     }
 }
 
-impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
-    fn from(maybe_pkg: &'a MaybePackage) -> ManifestFor<'a> {
-        ManifestFor::Workspace { maybe_pkg }
+impl<'a> From<(&'a Workspace<'a>, &'a MaybePackage)> for ManifestFor<'a> {
+    fn from((ws, maybe_pkg): (&'a Workspace<'a>, &'a MaybePackage)) -> ManifestFor<'a> {
+        ManifestFor::Workspace { ws, maybe_pkg }
     }
 }
 

@@ -1431,7 +1431,7 @@ impl<'gctx> Workspace<'gctx> {
             let mut verify_error_count = 0;
 
             analyze_cargo_lints_table(
-                self.root_maybe().into(),
+                (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
                 &mut verify_error_count,
