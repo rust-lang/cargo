@@ -68,7 +68,6 @@ impl<'gctx> InstallablePackage<'gctx> {
         no_track: bool,
         needs_update_if_source_is_index: bool,
         current_rust_version: Option<&PartialVersion>,
-        lockfile_path: Option<&Path>,
     ) -> CargoResult<Option<Self>> {
         if let Some(name) = krate {
             if name == "." {
@@ -156,7 +155,6 @@ impl<'gctx> InstallablePackage<'gctx> {
                     &root,
                     &dst,
                     force,
-                    lockfile_path,
                 ) {
                     let msg = format!(
                         "package `{}` is already installed, use --force to override",
@@ -181,13 +179,8 @@ impl<'gctx> InstallablePackage<'gctx> {
             }
         };
 
-        let (ws, rustc, target) = make_ws_rustc_target(
-            gctx,
-            &original_opts,
-            &source_id,
-            pkg.clone(),
-            lockfile_path.clone(),
-        )?;
+        let (ws, rustc, target) =
+            make_ws_rustc_target(gctx, &original_opts, &source_id, pkg.clone())?;
 
         if !gctx.lock_update_allowed() {
             // When --lockfile-path is set, check that passed lock file exists
@@ -660,7 +653,6 @@ pub fn install(
     force: bool,
     no_track: bool,
     dry_run: bool,
-    lockfile_path: Option<&Path>,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     // Normalize to absolute path for consistency throughout.
@@ -700,7 +692,6 @@ pub fn install(
             no_track,
             true,
             current_rust_version.as_ref(),
-            lockfile_path,
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -732,7 +723,6 @@ pub fn install(
                     no_track,
                     !did_update,
                     current_rust_version.as_ref(),
-                    lockfile_path,
                 ) {
                     Ok(Some(installable_pkg)) => {
                         did_update = true;
@@ -839,7 +829,6 @@ fn installed_exact_package<T>(
     root: &Filesystem,
     dst: &Path,
     force: bool,
-    lockfile_path: Option<&Path>,
 ) -> CargoResult<Option<Package>>
 where
     T: Source,
@@ -855,7 +844,7 @@ where
     // best-effort check to see if we can avoid hitting the network.
     if let Ok(pkg) = select_dep_pkg(source, dep, gctx, false, None) {
         let (_ws, rustc, target) =
-            make_ws_rustc_target(gctx, opts, &source.source_id(), pkg.clone(), lockfile_path)?;
+            make_ws_rustc_target(gctx, opts, &source.source_id(), pkg.clone())?;
         if let Ok(true) = is_installed(&pkg, gctx, opts, &rustc, &target, root, dst, force) {
             return Ok(Some(pkg));
         }
@@ -868,7 +857,6 @@ fn make_ws_rustc_target<'gctx>(
     opts: &ops::CompileOptions,
     source_id: &SourceId,
     pkg: Package,
-    lockfile_path: Option<&Path>,
 ) -> CargoResult<(Workspace<'gctx>, Rustc, String)> {
     let mut ws = if source_id.is_git() || source_id.is_path() {
         Workspace::new(pkg.manifest_path(), gctx)?
@@ -879,9 +867,6 @@ fn make_ws_rustc_target<'gctx>(
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
-    if ws.requested_lockfile_path().is_none() {
-        ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
-    }
     // if --lockfile-path is set, imply --locked
     if ws.requested_lockfile_path().is_some() {
         ws.set_ignore_lock(false);
