@@ -114,7 +114,8 @@ fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
 
 fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "## `{}`", lint.name)?;
-    writeln!(buf, "Group: `{}`\n", lint.primary_group.name)?;
+    writeln!(buf, "Group: `{}`", lint.primary_group.name)?;
+    writeln!(buf)?;
     writeln!(buf, "Level: `{}`", lint.primary_group.default_level)?;
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
 }
