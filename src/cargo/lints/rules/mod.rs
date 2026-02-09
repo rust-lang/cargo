@@ -15,7 +15,8 @@ mod unused_workspace_package_fields;
 
 pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 pub use im_a_teapot::check_im_a_teapot;
-pub use implicit_minimum_version_req::implicit_minimum_version_req;
+pub use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
+pub use implicit_minimum_version_req::implicit_minimum_version_req_ws;
 pub use missing_lints_inheritance::missing_lints_inheritance;
 pub use non_kebab_case_bins::non_kebab_case_bins;
 pub use non_kebab_case_features::non_kebab_case_features;
