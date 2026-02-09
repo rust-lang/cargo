@@ -74,7 +74,7 @@ pub fn output_unknown_lints(
 
         let key_path = match manifest {
             ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-            ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+            ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
         };
 
         let mut report = Vec::new();

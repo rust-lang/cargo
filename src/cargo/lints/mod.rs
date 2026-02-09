@@ -35,7 +35,7 @@ pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.
     Package(&'a Package),
     /// Lint runs for workspace-level config.
-    Workspace(&'a MaybePackage),
+    Workspace { maybe_pkg: &'a MaybePackage },
 }
 
 impl ManifestFor<'_> {
@@ -46,28 +46,28 @@ impl ManifestFor<'_> {
     pub fn contents(&self) -> Option<&str> {
         match self {
             ManifestFor::Package(p) => p.manifest().contents(),
-            ManifestFor::Workspace(p) => p.contents(),
+            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.contents(),
         }
     }
 
     pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         match self {
             ManifestFor::Package(p) => p.manifest().document(),
-            ManifestFor::Workspace(p) => p.document(),
+            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.document(),
         }
     }
 
     pub fn edition(&self) -> Edition {
         match self {
             ManifestFor::Package(p) => p.manifest().edition(),
-            ManifestFor::Workspace(p) => p.edition(),
+            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.edition(),
         }
     }
 
     pub fn unstable_features(&self) -> &Features {
         match self {
             ManifestFor::Package(p) => p.manifest().unstable_features(),
-            ManifestFor::Workspace(p) => p.unstable_features(),
+            ManifestFor::Workspace { maybe_pkg } => maybe_pkg.unstable_features(),
         }
     }
 }
@@ -79,8 +79,8 @@ impl<'a> From<&'a Package> for ManifestFor<'a> {
 }
 
 impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
-    fn from(value: &'a MaybePackage) -> ManifestFor<'a> {
-        ManifestFor::Workspace(value)
+    fn from(maybe_pkg: &'a MaybePackage) -> ManifestFor<'a> {
+        ManifestFor::Workspace { maybe_pkg }
     }
 }
 
@@ -184,7 +184,7 @@ fn report_feature_not_enabled(
 
     let key_path = match manifest {
         ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-        ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+        ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
     };
 
     let mut error = Group::with_title(Level::ERROR.primary_title(title));
