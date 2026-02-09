@@ -77,7 +77,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(args.honor_rust_version());
     let lockfile_path = args.lockfile_path(gctx)?;
-    ws.set_requested_lockfile_path(lockfile_path.clone());
+    if ws.requested_lockfile_path().is_none() {
+        ws.set_requested_lockfile_path(lockfile_path.clone());
+    }
 
     let mut opts =
         args.compile_options(gctx, intent, Some(&ws), ProfileChecking::LegacyTestOnly)?;

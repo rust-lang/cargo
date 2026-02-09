@@ -235,21 +235,9 @@ fn config_fix_lockfile_override() {
         .arg("--package")
         .arg("test_foo")
         .arg("--allow-no-vcs")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
-
-Caused by:
-  TOML parse error at line 1, column 6
-    |
-  1 | This is an invalid lock file!
-    |      ^
-  key with no value, expected `=`
-
-"#]])
         .run();
 
-    assert!(!p.root().join(lockfile_path).is_file());
+    assert!(p.root().join(lockfile_path).is_file());
 }
 
 #[cargo_test]
