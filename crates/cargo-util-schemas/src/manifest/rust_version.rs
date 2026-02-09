@@ -6,23 +6,24 @@ use serde_untagged::UntaggedEnumVisitor;
 use crate::core::PartialVersion;
 use crate::core::PartialVersionError;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize)]
-#[serde(transparent)]
-pub struct RustVersion(PartialVersion);
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
+pub struct RustVersion {
+    major: u64,
+    minor: Option<u64>,
+    patch: Option<u64>,
+}
 
 impl RustVersion {
     pub const fn new(major: u64, minor: u64, patch: u64) -> Self {
-        Self(PartialVersion {
+        Self {
             major,
             minor: Some(minor),
             patch: Some(patch),
-            pre: None,
-            build: None,
-        })
+        }
     }
 
     pub fn is_compatible_with(&self, rustc: &PartialVersion) -> bool {
-        let msrv = self.0.to_caret_req();
+        let msrv = self.to_partial().to_caret_req();
         // Remove any pre-release identifiers for easier comparison
         let rustc = semver::Version {
             major: rustc.major,
@@ -35,7 +36,18 @@ impl RustVersion {
     }
 
     pub fn to_partial(&self) -> PartialVersion {
-        self.clone().0
+        let Self {
+            major,
+            minor,
+            patch,
+        } = self.clone();
+        PartialVersion {
+            major,
+            minor,
+            patch,
+            pre: None,
+            build: None,
+        }
     }
 }
 
@@ -62,13 +74,33 @@ impl TryFrom<PartialVersion> for RustVersion {
     type Error = RustVersionError;
 
     fn try_from(partial: PartialVersion) -> Result<Self, Self::Error> {
-        if partial.pre.is_some() {
+        let PartialVersion {
+            major,
+            minor,
+            patch,
+            pre,
+            build,
+        } = partial;
+        if pre.is_some() {
             return Err(RustVersionErrorKind::Prerelease.into());
         }
-        if partial.build.is_some() {
+        if build.is_some() {
             return Err(RustVersionErrorKind::BuildMetadata.into());
         }
-        Ok(Self(partial))
+        Ok(Self {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+impl serde::Serialize for RustVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
@@ -86,7 +118,7 @@ impl<'de> serde::Deserialize<'de> for RustVersion {
 
 impl Display for RustVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        self.to_partial().fmt(f)
     }
 }
 
