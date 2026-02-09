@@ -260,7 +260,6 @@ class SvgRenderer {
     dominant-baseline: middle;
     fill: ${TEXT_COLOR};
     font-size: 14px;
-    pointer-events: none;
     text-anchor: start
   }
   .dep-line {
