@@ -6,7 +6,7 @@ use serde_untagged::UntaggedEnumVisitor;
 use crate::core::PartialVersion;
 use crate::core::PartialVersionError;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
 pub struct RustVersion {
     major: u64,
     minor: Option<u64>,
@@ -40,7 +40,7 @@ impl RustVersion {
             major,
             minor,
             patch,
-        } = self.clone();
+        } = *self;
         PartialVersion {
             major,
             minor,
