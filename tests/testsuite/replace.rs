@@ -739,7 +739,7 @@ Caused by:
   unable to update [ROOTURL]/override
 
 Caused by:
-  Could not find Cargo.toml in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/[..]`
+  could not find `Cargo.toml` in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/[..]`
 
 "#]])
         .run();

@@ -1042,12 +1042,13 @@ fn read_packages(
             None => {
                 if find_project_manifest_exact(path, "cargo.toml").is_ok() {
                     Err(anyhow::format_err!(
-                        "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
+                        "could not find `Cargo.toml` in `{}`
+help: found `cargo.toml`, consider renaming it to `Cargo.toml`",
                         path.display()
                     ))
                 } else {
                     Err(anyhow::format_err!(
-                        "Could not find Cargo.toml in `{}`",
+                        "could not find `Cargo.toml` in `{}`",
                         path.display()
                     ))
                 }

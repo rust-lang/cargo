@@ -1215,10 +1215,10 @@ fn git_repo_with_lowercase_cargo_toml() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository [..]
-[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+[ERROR] could not find `Cargo.toml` in `[..]`
+[HELP] found `cargo.toml`, consider renaming it to `Cargo.toml`
 
-"#]]
-        )
+"#]])
         .run();
 }
 
