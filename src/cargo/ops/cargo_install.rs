@@ -879,7 +879,9 @@ fn make_ws_rustc_target<'gctx>(
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
-    ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
+    if ws.requested_lockfile_path().is_none() {
+        ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
+    }
     // if --lockfile-path is set, imply --locked
     if ws.requested_lockfile_path().is_some() {
         ws.set_ignore_lock(false);

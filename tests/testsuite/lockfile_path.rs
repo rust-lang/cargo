@@ -420,15 +420,10 @@ dependencies = [
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='../foo/Cargo.lock'")
-        .with_stderr_data(str![[r#"
-...
-[..]not rust[..]
-...
-"#]])
-        .with_status(101)
         .run();
 
     assert!(paths::root().join("foo/Cargo.lock").is_file());
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -450,6 +445,12 @@ fn config_install_lock_file_path_must_present() {
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='../lockfile_dir/Cargo.lock'")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] no Cargo.lock file found in the requested path [ROOT]/install/../lockfile_dir/Cargo.lock
+...
+"#]])
+        .with_status(101)
         .run();
 }
 
