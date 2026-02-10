@@ -189,7 +189,7 @@ fn bad4() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo` package
-[ERROR] Failed to create package `foo` at `[ROOT]/foo/foo`
+[ERROR] failed to create package `foo` at `[ROOT]/foo/foo`
 
 Caused by:
   error in [ROOT]/foo/.cargo/config.toml: `cargo-new.vcs` expected a string, but found a boolean
