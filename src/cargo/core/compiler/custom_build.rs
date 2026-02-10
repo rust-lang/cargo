@@ -1163,7 +1163,7 @@ impl BuildOutput {
                 };
             } else {
                 bail!(
-                    "Only `-l` and `-L` flags are allowed in {}: `{}`",
+                    "only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )
