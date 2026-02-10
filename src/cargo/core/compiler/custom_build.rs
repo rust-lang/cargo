@@ -1147,7 +1147,7 @@ impl BuildOutput {
                     value = match flags_iter.next() {
                         Some(v) => v,
                         None => bail! {
-                            "Flag in rustc-flags has no value in {}: {}",
+                            "flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
                         },
