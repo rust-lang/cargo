@@ -674,7 +674,7 @@ fn install_target_dir() {
 
     p.cargo("install --target-dir td_test")
         .with_stderr_data(str![[r#"
-[WARNING] Using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -1370,7 +1370,7 @@ fn installs_from_cwd_by_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("install").with_stderr_data(str![[r#"
-[WARNING] Using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 ...
 "#]]).run();
     assert_has_installed_exe(paths::cargo_home(), "foo");
@@ -1395,7 +1395,7 @@ fn installs_from_cwd_with_2018_warnings() {
     p.cargo("install")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Using `cargo install` to install the binaries from the package in current working directory is no longer supported, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[ERROR] using `cargo install` to install the binaries from the package in current working directory is no longer supported, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 
 "#]])
         .run();
