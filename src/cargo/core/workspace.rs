@@ -740,7 +740,13 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_lock_root(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            self.build_dir()
+            // Include a workspace hash in case the user requests a shared build-dir so that
+            // scripts don't fight over the `Cargo.lock` content
+            let workspace_manifest_path = self.root_manifest();
+            let real_path = std::fs::canonicalize(workspace_manifest_path)
+                .unwrap_or_else(|_err| workspace_manifest_path.to_owned());
+            let hash = crate::util::hex::short_hash(&real_path);
+            self.build_dir().join(hash)
         } else {
             Filesystem::new(self.root().to_owned())
         }
