@@ -20,6 +20,7 @@ pub static LINT: &Lint = &Lint {
     name: "missing_lints_inheritance",
     desc: "missing `[lints]` to inherit `[workspace.lints]`",
     primary_group: &SUSPICIOUS,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -62,6 +63,7 @@ pub fn missing_lints_inheritance(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        pkg.rust_version(),
         pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );

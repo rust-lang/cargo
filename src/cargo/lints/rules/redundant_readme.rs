@@ -25,6 +25,7 @@ pub static LINT: &Lint = &Lint {
     name: "redundant_readme",
     desc: "explicit `package.readme` can be inferred",
     primary_group: &STYLE,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -70,6 +71,7 @@ pub fn redundant_readme(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        pkg.rust_version(),
         pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );

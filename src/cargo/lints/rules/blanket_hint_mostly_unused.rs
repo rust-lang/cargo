@@ -12,6 +12,7 @@ use cargo_util_schemas::manifest::TomlToolLints;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
+use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::SUSPICIOUS;
@@ -22,6 +23,7 @@ pub static LINT: &Lint = &Lint {
     name: "blanket_hint_mostly_unused",
     desc: "blanket_hint_mostly_unused lint",
     primary_group: &SUSPICIOUS,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -54,6 +56,7 @@ hint-mostly-unused = true
 };
 
 pub fn blanket_hint_mostly_unused(
+    ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     path: &Path,
     pkg_lints: &TomlToolLints,
@@ -62,6 +65,7 @@ pub fn blanket_hint_mostly_unused(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         pkg_lints,
+        ws.lowest_rust_version(),
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
     );

@@ -8,10 +8,12 @@ use annotate_snippets::AnnotationKind;
 use annotate_snippets::Group;
 use annotate_snippets::Level;
 use annotate_snippets::Snippet;
+use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
+use crate::core::Workspace;
 use crate::core::{Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 
@@ -35,39 +37,54 @@ pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.
     Package(&'a Package),
     /// Lint runs for workspace-level config.
-    Workspace(&'a MaybePackage),
+    Workspace {
+        ws: &'a Workspace<'a>,
+        maybe_pkg: &'a MaybePackage,
+    },
 }
 
 impl ManifestFor<'_> {
     fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
-        lint.level(pkg_lints, self.edition(), self.unstable_features())
+        lint.level(
+            pkg_lints,
+            self.rust_version(),
+            self.edition(),
+            self.unstable_features(),
+        )
+    }
+
+    pub fn rust_version(&self) -> Option<&RustVersion> {
+        match self {
+            ManifestFor::Package(p) => p.rust_version(),
+            ManifestFor::Workspace { ws, maybe_pkg: _ } => ws.lowest_rust_version(),
+        }
     }
 
     pub fn contents(&self) -> Option<&str> {
         match self {
             ManifestFor::Package(p) => p.manifest().contents(),
-            ManifestFor::Workspace(p) => p.contents(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.contents(),
         }
     }
 
     pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         match self {
             ManifestFor::Package(p) => p.manifest().document(),
-            ManifestFor::Workspace(p) => p.document(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.document(),
         }
     }
 
     pub fn edition(&self) -> Edition {
         match self {
             ManifestFor::Package(p) => p.manifest().edition(),
-            ManifestFor::Workspace(p) => p.edition(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.edition(),
         }
     }
 
     pub fn unstable_features(&self) -> &Features {
         match self {
             ManifestFor::Package(p) => p.manifest().unstable_features(),
-            ManifestFor::Workspace(p) => p.unstable_features(),
+            ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.unstable_features(),
         }
     }
 }
@@ -78,9 +95,9 @@ impl<'a> From<&'a Package> for ManifestFor<'a> {
     }
 }
 
-impl<'a> From<&'a MaybePackage> for ManifestFor<'a> {
-    fn from(value: &'a MaybePackage) -> ManifestFor<'a> {
-        ManifestFor::Workspace(value)
+impl<'a> From<(&'a Workspace<'a>, &'a MaybePackage)> for ManifestFor<'a> {
+    fn from((ws, maybe_pkg): (&'a Workspace<'a>, &'a MaybePackage)) -> ManifestFor<'a> {
+        ManifestFor::Workspace { ws, maybe_pkg }
     }
 }
 
@@ -184,7 +201,7 @@ fn report_feature_not_enabled(
 
     let key_path = match manifest {
         ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-        ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+        ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
     };
 
     let mut error = Group::with_title(Level::ERROR.primary_title(title));
@@ -400,6 +417,12 @@ pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,
     pub primary_group: &'static LintGroup,
+    /// The minimum supported Rust version for applying this lint
+    ///
+    /// Note: If the lint is on by default and did not qualify as a hard-warning before the
+    /// linting system, then at earliest an MSRV of 1.78 is required as `[lints.cargo]` was a hard
+    /// error before then.
+    pub msrv: Option<RustVersion>,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating
@@ -412,6 +435,7 @@ impl Lint {
     pub fn level(
         &self,
         pkg_lints: &TomlToolLints,
+        pkg_rust_version: Option<&RustVersion>,
         edition: Edition,
         unstable_features: &Features,
     ) -> (LintLevel, LintLevelReason) {
@@ -422,6 +446,13 @@ impl Lint {
             .is_some_and(|f| !unstable_features.is_enabled(f))
         {
             return (LintLevel::Allow, LintLevelReason::Default);
+        }
+
+        if let (Some(msrv), Some(pkg_rust_version)) = (&self.msrv, pkg_rust_version) {
+            let pkg_rust_version = pkg_rust_version.to_partial();
+            if !msrv.is_compatible_with(&pkg_rust_version) {
+                return (LintLevel::Allow, LintLevelReason::Default);
+            }
         }
 
         let lint_level_priority = level_priority(

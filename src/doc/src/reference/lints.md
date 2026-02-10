@@ -42,6 +42,8 @@ Group: `suspicious`
 
 Level: `warn`
 
+MSRV: `1.79.0`
+
 ### What it does
 Checks if `hint-mostly-unused` being applied to all dependencies.
 
@@ -123,6 +125,8 @@ Group: `suspicious`
 
 Level: `warn`
 
+MSRV: `1.79.0`
+
 ### What it does
 
 Checks for packages without a `lints` table while `workspace.lints` is present.
@@ -153,6 +157,8 @@ workspace = true
 Group: `style`
 
 Level: `warn`
+
+MSRV: `1.79.0`
 
 ### What it does
 
@@ -318,6 +324,8 @@ Group: `style`
 
 Level: `warn`
 
+MSRV: `1.79.0`
+
 ### What it does
 
 Checks if the value of `package.homepage` is already covered by another field.
@@ -352,6 +360,8 @@ repository = "https://github.com/rust-lang/cargo/"
 Group: `style`
 
 Level: `warn`
+
+MSRV: `1.79.0`
 
 ### What it does
 
@@ -388,6 +398,8 @@ Group: `suspicious`
 
 Level: `warn`
 
+MSRV: `1.79.0`
+
 ### What it does
 Checks for unknown lints in the `[lints.cargo]` table
 
@@ -409,6 +421,8 @@ Group: `suspicious`
 
 Level: `warn`
 
+MSRV: `1.79.0`
+
 ### What it does
 Checks for any entry in `[workspace.dependencies]` that has not been inherited
 
@@ -428,6 +442,8 @@ regex = "1"
 Group: `suspicious`
 
 Level: `warn`
+
+MSRV: `1.79.0`
 
 ### What it does
 Checks for any fields in `[workspace.package]` that has not been inherited

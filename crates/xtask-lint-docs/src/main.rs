@@ -117,6 +117,10 @@ fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "Group: `{}`", lint.primary_group.name)?;
     writeln!(buf)?;
     writeln!(buf, "Level: `{}`", lint.primary_group.default_level)?;
+    if let Some(msrv) = &lint.msrv {
+        writeln!(buf)?;
+        writeln!(buf, "MSRV: `{msrv}`")?;
+    }
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
 }
 

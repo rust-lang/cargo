@@ -19,6 +19,7 @@ pub static LINT: &Lint = &Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -74,7 +75,7 @@ pub fn output_unknown_lints(
 
         let key_path = match manifest {
             ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-            ManifestFor::Workspace(_) => &["workspace", "lints", "cargo", lint_name][..],
+            ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
         };
 
         let mut report = Vec::new();
