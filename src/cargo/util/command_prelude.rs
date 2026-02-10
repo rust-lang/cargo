@@ -917,7 +917,7 @@ Run `{cmd}` to see possible targets."
         let mut compile_opts = self.compile_options(gctx, intent, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(restricted_names::is_glob_pattern) {
-            anyhow::bail!("Glob patterns on package selection are not supported.")
+            anyhow::bail!("glob patterns on package selection are not supported.")
         }
         compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
