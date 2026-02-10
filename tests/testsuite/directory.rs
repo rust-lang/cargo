@@ -669,7 +669,7 @@ Caused by:
   failed to load source for dependency `git`
 
 Caused by:
-  Unable to update [..]
+  unable to update https://example.com/
 
 Caused by:
   the source my-git-repo requires a lock file to be present first before it can be

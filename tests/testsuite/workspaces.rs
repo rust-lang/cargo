@@ -2433,7 +2433,7 @@ Caused by:
   failed to load source for dependency `x`
 
 Caused by:
-  Unable to update [ROOT]/foo/x
+  unable to update [ROOT]/foo/x
 
 Caused by:
   failed to read `[ROOT]/foo/x/Cargo.toml`

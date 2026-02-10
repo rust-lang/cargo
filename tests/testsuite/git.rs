@@ -813,7 +813,7 @@ fn update_with_shared_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
-[ERROR] Unable to update [ROOTURL]/bar#0.1.2
+[ERROR] unable to update [ROOTURL]/bar#0.1.2
 
 Caused by:
   revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)
@@ -1071,7 +1071,7 @@ Caused by:
   failed to load source for dependency `dep1`
 
 Caused by:
-  Unable to update [ROOTURL]/dep1
+  unable to update [ROOTURL]/dep1
 
 Caused by:
   failed to update submodule `src`
@@ -2850,7 +2850,7 @@ Caused by:
   failed to load source for dependency `dep1`
 
 Caused by:
-  Unable to update [ROOTURL]/dep1
+  unable to update [ROOTURL]/dep1
 
 "#]])
         .run();
@@ -4140,7 +4140,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+  unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -4183,7 +4183,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+  unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]

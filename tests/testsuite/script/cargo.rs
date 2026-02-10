@@ -2009,7 +2009,7 @@ Caused by:
   failed to load source for dependency `script`
 
 Caused by:
-  Unable to update [ROOT]/foo/script.rs
+  unable to update [ROOT]/foo/script.rs
 
 Caused by:
   single file packages cannot be used as dependencies

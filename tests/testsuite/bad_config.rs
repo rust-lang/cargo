@@ -455,7 +455,7 @@ Caused by:
   failed to load source for dependency `foo`
 
 Caused by:
-  Unable to update git://host.xz
+  unable to update git://host.xz
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -476,7 +476,7 @@ Caused by:
   failed to load source for dependency `foo`
 
 Caused by:
-  Unable to update file:///
+  unable to update file:///
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -2338,7 +2338,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update https://github.com/rust-lang/does-not-exist/pull/123
+  unable to update https://github.com/rust-lang/does-not-exist/pull/123
 ...
   [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository. 
   [HELP] Replace the dependency with 
@@ -2383,7 +2383,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update http://127.0.0.1/#foo
+  unable to update http://127.0.0.1/#foo
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -2445,7 +2445,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `crates-io`
+  unable to update registry `crates-io`
 
 Caused by:
   could not find a configured source with the name `bar` when attempting to lookup `crates-io` (configuration in `[ROOT]/foo/.cargo/config.toml`)
@@ -2490,7 +2490,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `crates-io`
+  unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)
@@ -2538,7 +2538,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `crates-io`
+  unable to update registry `crates-io`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is eventually replaced with itself (configuration in `[ROOT]/foo/.cargo/config.toml`)

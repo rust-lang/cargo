@@ -392,7 +392,7 @@ fn patch_to_git_pull_request() {
 [ERROR] failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update https://github.com/rust-lang/does-not-exist/pull/123
+  unable to update https://github.com/rust-lang/does-not-exist/pull/123
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]

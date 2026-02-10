@@ -52,7 +52,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update https://127.0.0.1:[..]/repos/bar.git
+  unable to update https://127.0.0.1:[..]/repos/bar.git
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
