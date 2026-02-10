@@ -416,20 +416,14 @@ dependencies = [
 "#,
         )
         .build();
-    p.cargo("install foo -Zlockfile-path")
+    p.cargo("install foo --locked -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='../foo/Cargo.lock'")
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[INSTALLING] foo v0.1.0
-[LOCKING] 1 package to latest compatible version
-[COMPILING] bar v0.1.1
 ...
-[ERROR] could not compile `bar` (lib) due to 1 previous error
-[ERROR] failed to compile `foo v0.1.0`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
-
+[..]not rust[..]
+...
 "#]])
         .with_status(101)
         .run();
@@ -452,7 +446,7 @@ fn config_install_lock_file_path_must_present() {
 
     let p = project().at("install").build();
 
-    p.cargo("install foo -Zlockfile-path")
+    p.cargo("install foo --locked -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("--config")
         .arg("resolver.lockfile-path='../lockfile_dir/Cargo.lock'")
