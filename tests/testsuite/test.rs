@@ -4768,7 +4768,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     p.cargo("test --lib --doc")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Can't mix --doc with other target selecting options
+[ERROR] can't mix --doc with other target selecting options
 
 "#]])
         .run();

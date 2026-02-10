@@ -89,7 +89,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if doc {
         if compile_opts.filter.is_specific() {
             return Err(
-                anyhow::format_err!("Can't mix --doc with other target selecting options").into(),
+                anyhow::format_err!("can't mix --doc with other target selecting options").into(),
             );
         }
         if no_run {
