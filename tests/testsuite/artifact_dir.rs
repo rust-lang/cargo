@@ -326,60 +326,26 @@ For more information, try '--help'.
 }
 
 #[cargo_test]
-fn deprecated_out_dir() {
+fn removed_out_dir_flag() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo(&["out-dir"])
+        .with_status(1)
         .enable_mac_dsym()
         .with_stderr_data(str![[r#"
-[WARNING] the --out-dir flag has been changed to --artifact-dir
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] unexpected argument '--out-dir' found
+
+  tip: a similar argument exists: '--artifact-dir'
+
+Usage: cargo[EXE] build [OPTIONS]
+
+For more information, try '--help'.
 
 "#]])
         .run();
-    check_dir_contents(
-        &p.root().join("out"),
-        &["foo"],
-        &["foo", "foo.dSYM"],
-        &["foo.exe", "foo.pdb"],
-        &["foo.exe"],
-    );
-}
-
-#[cargo_test]
-fn cargo_build_deprecated_out_dir() {
-    let p = project()
-        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
-        .file(
-            ".cargo/config.toml",
-            r#"
-            [build]
-            out-dir = "out"
-            "#,
-        )
-        .build();
-
-    p.cargo("build -Z unstable-options")
-        .masquerade_as_nightly_cargo(&["out-dir"])
-        .enable_mac_dsym()
-        .with_stderr_data(str![[r#"
-[WARNING] the out-dir config option has been changed to artifact-dir
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-    check_dir_contents(
-        &p.root().join("out"),
-        &["foo"],
-        &["foo", "foo.dSYM"],
-        &["foo.exe", "foo.pdb"],
-        &["foo.exe"],
-    );
 }
 
 #[cargo_test]

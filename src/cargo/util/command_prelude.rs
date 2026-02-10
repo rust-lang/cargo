@@ -542,15 +542,16 @@ pub trait CommandExt: Sized {
             .help_heading(heading::COMPILATION_OPTIONS),
         )
         ._arg(unsupported_short_arg)
-        ._arg(
-            opt(
-                "out-dir",
-                "Copy final artifacts to this directory (deprecated; use --artifact-dir instead)",
-            )
-            .value_name("PATH")
-            .conflicts_with("artifact-dir")
-            .hide(true),
-        )
+        ._arg({
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--artifact-dir");
+            Arg::new("unsupported-out-dir-flag")
+                .help("")
+                .long("out-dir")
+                .value_name("PATH")
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        })
     }
 
     fn arg_compile_time_deps(self) -> Self {
