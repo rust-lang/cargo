@@ -2012,7 +2012,7 @@ Caused by:
   Unable to update [ROOT]/foo/script.rs
 
 Caused by:
-  Single file packages cannot be used as dependencies
+  single file packages cannot be used as dependencies
 
 "#]])
         .run();
