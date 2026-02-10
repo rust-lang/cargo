@@ -616,7 +616,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
@@ -629,7 +629,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
