@@ -2139,8 +2139,8 @@ fn update_ambiguous() {
     p.cargo("update bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
+[ERROR] specificationm `bar` is ambiguous
+[HELP] re-run this command with one of the following specifications
   bar@0.5.0
   bar@0.6.0
 

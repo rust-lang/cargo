@@ -865,8 +865,8 @@ fn test_override_dep() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 2 packages to latest compatible versions
-[ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
-Please re-run this command with one of the following specifications:
+[ERROR] specificationm `bar` is ambiguous
+[HELP] re-run this command with one of the following specifications
   registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
   git+[ROOTURL]/override#bar@0.1.0
 
