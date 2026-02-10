@@ -93,7 +93,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             );
         }
         if no_run {
-            return Err(anyhow::format_err!("Can't skip running doc tests with --no-run").into());
+            return Err(anyhow::format_err!("can't skip running doc tests with --no-run").into());
         }
         compile_opts.build_config.intent = UserIntent::Doctest;
         compile_opts.filter = ops::CompileFilter::lib_only();

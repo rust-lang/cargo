@@ -4791,7 +4791,7 @@ fn can_not_no_run_doc_tests() {
     p.cargo("test --doc --no-run")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Can't skip running doc tests with --no-run
+[ERROR] can't skip running doc tests with --no-run
 
 "#]])
         .run();
