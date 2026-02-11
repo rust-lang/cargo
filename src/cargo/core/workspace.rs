@@ -1129,16 +1129,22 @@ impl<'gctx> Workspace<'gctx> {
         let current_dir = self.current_manifest.parent().unwrap();
         let root_pkg = self.packages.get(root);
 
-        // FIXME: Make this more generic by using a relative path resolver between member and root.
-        let members_msg = match current_dir.strip_prefix(root_dir) {
-            Ok(rel) => format!(
+        // Use pathdiff to handle finding the relative path between the current package
+        // and the workspace root. This usually does a good job of handling `..` and
+        // other weird things.
+        // Normalize paths first to ensure `../` components are resolved if possible,
+        // which helps `diff_paths` find the most direct relative path.
+        let current_dir = paths::normalize_path(current_dir);
+        let root_dir = paths::normalize_path(root_dir);
+        let members_msg = match pathdiff::diff_paths(&current_dir, &root_dir) {
+            Some(rel) => format!(
                 "this may be fixable by adding `{}` to the \
                      `workspace.members` array of the manifest \
                      located at: {}",
                 rel.display(),
                 root.display()
             ),
-            Err(_) => format!(
+            None => format!(
                 "this may be fixable by adding a member to \
                      the `workspace.members` array of the \
                      manifest located at: {}",
