@@ -1,8 +1,5 @@
-use std::fs;
-
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
-use cargo_test_support::paths::cargo_home;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 
@@ -394,7 +391,7 @@ msg = hello
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn use_cargo_home_config() {
+fn use_script_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
         .at("script")
@@ -412,40 +409,7 @@ rustc = "non-existent-rustc"
         .file("script.rs", script)
         .build();
 
-    // Verify that the config from the current directory is used
-    p.cargo("-Zscript script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
-arg0: [..]
-args: ["-NotAnArg"]
-
-"#]])
-        .run();
-
-    // Verify that the config from the parent directory is not used
-    p.cargo("-Zscript ../script/script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
-arg0: [..]
-args: ["-NotAnArg"]
-
-"#]])
-        .run();
-
-    // Write a global config.toml in the cargo home directory
-    let cargo_home = cargo_home();
-    fs::write(
-        &cargo_home.join("config.toml"),
-        r#"
-[build]
-rustc = "non-existent-rustc"
-"#,
-    )
-    .unwrap();
-
-    // Verify the global config is used
+    // Verify the config is bad
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
@@ -454,6 +418,17 @@ rustc = "non-existent-rustc"
 
 Caused by:
   [NOT_FOUND]
+
+"#]])
+        .run();
+
+    // Verify that the config isn't used
+    p.cargo("-Zscript ../script/script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
+arg0: [..]
+args: ["-NotAnArg"]
 
 "#]])
         .run();
