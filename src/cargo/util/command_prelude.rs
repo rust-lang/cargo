@@ -1083,20 +1083,31 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
         // In general, we try to avoid normalizing paths in Cargo,
         // but in this particular case we need it to fix #3586.
         let path = paths::normalize_path(&path);
-        if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
-            anyhow::bail!(
-                "the manifest-path must be a path to a Cargo.toml file: `{}`",
-                path.display()
-            )
-        }
         if !path.exists() {
             anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
-        }
-        if path.is_dir() {
+        } else if path.is_dir() {
+            let child_path = path.join("Cargo.toml");
+            let suggested_path = if child_path.exists() {
+                format!("\nhelp: {} exists", child_path.display())
+            } else {
+                "".to_string()
+            };
             anyhow::bail!(
-                "manifest path `{}` is a directory but expected a file",
+                "manifest path `{}` is a directory but expected a file{suggested_path}",
                 manifest_path.display()
             )
+        } else if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
+            if gctx.cli_unstable().script {
+                anyhow::bail!(
+                    "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
+                    path.display()
+                )
+            } else {
+                anyhow::bail!(
+                    "the manifest-path must be a path to a Cargo.toml file: `{}`",
+                    path.display()
+                )
+            }
         }
         if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
             anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())

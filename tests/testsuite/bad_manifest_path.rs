@@ -25,7 +25,8 @@ fn bench_dir_containing_cargo_toml() {
         "bench",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -37,7 +38,7 @@ fn bench_dir_plus_file() {
         "bench",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -49,7 +50,7 @@ fn bench_dir_plus_path() {
         "bench",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -73,7 +74,8 @@ fn build_dir_containing_cargo_toml() {
         "check",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -85,7 +87,7 @@ fn build_dir_plus_file() {
         "bench",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -97,7 +99,7 @@ fn build_dir_plus_path() {
         "bench",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -121,7 +123,8 @@ fn clean_dir_containing_cargo_toml() {
         "clean",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -133,7 +136,7 @@ fn clean_dir_plus_file() {
         "clean",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -145,7 +148,7 @@ fn clean_dir_plus_path() {
         "clean",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -169,7 +172,8 @@ fn doc_dir_containing_cargo_toml() {
         "doc",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -181,7 +185,7 @@ fn doc_dir_plus_file() {
         "doc",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -193,7 +197,7 @@ fn doc_dir_plus_path() {
         "doc",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -217,7 +221,8 @@ fn fetch_dir_containing_cargo_toml() {
         "fetch",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -229,7 +234,7 @@ fn fetch_dir_plus_file() {
         "fetch",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -241,7 +246,7 @@ fn fetch_dir_plus_path() {
         "fetch",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -265,7 +270,8 @@ fn generate_lockfile_dir_containing_cargo_toml() {
         "generate-lockfile",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -277,7 +283,7 @@ fn generate_lockfile_dir_plus_file() {
         "generate-lockfile",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -289,7 +295,7 @@ fn generate_lockfile_dir_plus_path() {
         "generate-lockfile",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -313,7 +319,8 @@ fn package_dir_containing_cargo_toml() {
         "package",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -325,7 +332,7 @@ fn package_dir_plus_file() {
         "package",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -337,7 +344,7 @@ fn package_dir_plus_path() {
         "package",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -361,7 +368,8 @@ fn pkgid_dir_containing_cargo_toml() {
         "pkgid",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -373,7 +381,7 @@ fn pkgid_dir_plus_file() {
         "pkgid",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -385,7 +393,7 @@ fn pkgid_dir_plus_path() {
         "pkgid",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -409,7 +417,8 @@ fn publish_dir_containing_cargo_toml() {
         "publish",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -421,7 +430,7 @@ fn publish_dir_plus_file() {
         "publish",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -433,7 +442,7 @@ fn publish_dir_plus_path() {
         "publish",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -457,7 +466,8 @@ fn read_manifest_dir_containing_cargo_toml() {
         "read-manifest",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -469,7 +479,7 @@ fn read_manifest_dir_plus_file() {
         "read-manifest",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -481,7 +491,7 @@ fn read_manifest_dir_plus_path() {
         "read-manifest",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -505,7 +515,8 @@ fn run_dir_containing_cargo_toml() {
         "run",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -517,7 +528,7 @@ fn run_dir_plus_file() {
         "run",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -529,7 +540,7 @@ fn run_dir_plus_path() {
         "run",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -553,7 +564,8 @@ fn rustc_dir_containing_cargo_toml() {
         "rustc",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -565,7 +577,7 @@ fn rustc_dir_plus_file() {
         "rustc",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -577,7 +589,7 @@ fn rustc_dir_plus_path() {
         "rustc",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -601,7 +613,8 @@ fn test_dir_containing_cargo_toml() {
         "test",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -613,7 +626,7 @@ fn test_dir_plus_file() {
         "test",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -625,7 +638,7 @@ fn test_dir_plus_path() {
         "test",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -649,7 +662,8 @@ fn update_dir_containing_cargo_toml() {
         "update",
         "foo",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
 
 "#]],
     );
@@ -661,7 +675,7 @@ fn update_dir_plus_file() {
         "update",
         "foo/bar",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`
+[ERROR] manifest path `foo/bar` does not exist
 
 "#]],
     );
@@ -673,7 +687,7 @@ fn update_dir_plus_path() {
         "update",
         "foo/bar/baz",
         str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`
+[ERROR] manifest path `foo/bar/baz` does not exist
 
 "#]],
     );
@@ -705,7 +719,7 @@ fn verify_project_dir_containing_cargo_toml() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`"
+    "invalid": "manifest path `foo` is a directory but expected a file\n[HELP] [ROOT]/foo/Cargo.toml exists"
   }
 ]
 "#]]
@@ -729,7 +743,7 @@ fn verify_project_dir_plus_file() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`"
+    "invalid": "manifest path `foo/bar` does not exist"
   }
 ]
 "#]]
@@ -753,7 +767,7 @@ fn verify_project_dir_plus_path() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`"
+    "invalid": "manifest path `foo/bar/baz` does not exist"
   }
 ]
 "#]]
