@@ -1,1 +1,12 @@
 mod help;
+mod nested_alias_dash_joined;
+mod nested_cmd;
+mod nested_cmd_dash_joined;
+mod nested_cmd_suggestion;
+mod nested_cmd_with_extra_flags;
+mod nested_subcommand_suggestion;
+mod single_alias;
+mod single_cmd;
+mod single_cmd_space_joined;
+mod single_cmd_suggestion;
+mod single_cmd_with_extra_flags;

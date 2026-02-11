@@ -88,9 +88,9 @@ Package to remove from.
 
        cargo remove --dev trybuild
 
-3. Remove `nom` from the `x86_64-pc-windows-gnu` dependencies table
+3. Remove `nom` from the `wasm32-unknown-unknown` dependencies table
 
-       cargo remove --target x86_64-pc-windows-gnu nom
+       cargo remove --target wasm32-unknown-unknown nom
 
 ## SEE ALSO
 {{man "cargo" 1}}, {{man "cargo-add" 1}}
