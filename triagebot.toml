@@ -44,6 +44,11 @@ label = "O-windows"
 # Documentation at: https://forge.rust-lang.org/triagebot/review-changes-since.html
 [review-changes-since]
 
+# Adds a "View all comments" link on the issue body that shows all the comments of an issue/PR
+# Documentation at: https://forge.rust-lang.org/triagebot/view-all-comments-link.html
+[view-all-comments-link]
+threshold = 20
+
 [merge-conflicts]
 remove = []
 add = ["S-waiting-on-author"]
