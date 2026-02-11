@@ -356,9 +356,9 @@ impl<'gctx> InstallablePackage<'gctx> {
                 "failed to compile `{}`, intermediate artifacts can be \
                  found at `{}`.\nTo reuse those artifacts with a future \
                  compilation, set the environment variable \
-                 `CARGO_TARGET_DIR` to that path.",
+                 `CARGO_BUILD_BUILD_DIR` to that path.",
                 self.pkg,
-                self.ws.target_dir().display()
+                self.ws.build_dir().display()
             )
         })?;
         let mut binaries: Vec<(&str, &Path)> = compile

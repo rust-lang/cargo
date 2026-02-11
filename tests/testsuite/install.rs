@@ -1170,7 +1170,7 @@ fn compile_failure() {
 ...
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 ...
 "#]])
         .run();
@@ -2571,7 +2571,7 @@ fn failed_install_retains_temp_directory() {
 
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 "#]]);
 
@@ -2620,8 +2620,8 @@ fn failed_install_points_to_build_dir_for_intermediate_artifacts() {
   | ^ expected one of `!` or `::`
 
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
-[ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+[ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/home/.cargo/build-artifacts`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 "#]]);
 }
@@ -3014,7 +3014,7 @@ fn dry_run_incompatible_package_dependency() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
   rustc [..] is not supported by the following package:
