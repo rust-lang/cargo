@@ -481,7 +481,7 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
 
     mk(gctx, &mkopts).with_context(|| {
         format!(
-            "Failed to create package `{}` at `{}`",
+            "failed to create package `{}` at `{}`",
             name,
             path.display()
         )
@@ -593,7 +593,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
 
     mk(gctx, &mkopts).with_context(|| {
         format!(
-            "Failed to create package `{}` at `{}`",
+            "failed to create package `{}` at `{}`",
             name,
             path.display()
         )

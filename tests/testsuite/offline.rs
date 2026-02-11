@@ -302,7 +302,7 @@ Caused by:
   failed to load source for dependency `dep1`
 
 Caused by:
-  Unable to update https://github.com/some_user/dep1.git
+  unable to update https://github.com/some_user/dep1.git
 
 Caused by:
   can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)

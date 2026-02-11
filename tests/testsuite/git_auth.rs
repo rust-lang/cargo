@@ -147,7 +147,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update http://{addr}/foo/bar
+  unable to update http://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -226,7 +226,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update https://{addr}/foo/bar
+  unable to update https://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -324,7 +324,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update ssh://{addr}/foo/bar
+  unable to update ssh://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -379,7 +379,7 @@ Caused by:
   failed to load source for dependency `foo`
 
 Caused by:
-  Unable to update ssh://needs-proxy.invalid/git
+  unable to update ssh://needs-proxy.invalid/git
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/git-[HASH]
@@ -413,7 +413,7 @@ Caused by:
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains("[..]Unable to update[..]")
+        .with_stderr_contains("[..]unable to update[..]")
         .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
         .run();
 }
@@ -457,7 +457,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update https://foo.bar/foo/bar
+  unable to update https://foo.bar/foo/bar
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]

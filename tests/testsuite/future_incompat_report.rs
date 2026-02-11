@@ -501,7 +501,7 @@ fn bad_ids() {
     p.cargo("report future-incompatibilities --id foo")
         .with_status(1)
         .with_stderr_data(str![
-            "[ERROR] Invalid value: could not parse `foo` as a number"
+            "[ERROR] invalid value: could not parse `foo` as a number"
         ])
         .run();
 

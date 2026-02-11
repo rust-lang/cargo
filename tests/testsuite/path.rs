@@ -577,7 +577,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update [ROOT]/foo/src/bar
+  unable to update [ROOT]/foo/src/bar
 
 Caused by:
   failed to read `[ROOT]/foo/src/bar/Cargo.toml`
@@ -1147,7 +1147,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update [ROOT]/foo/shared_proj/\"
+  unable to update [ROOT]/foo/shared_proj/\"
 
 Caused by:
   failed to read `[ROOT]/foo/shared_proj/\"/Cargo.toml`
@@ -1762,7 +1762,7 @@ Caused by:
   failed to load source for dependency `c`
 
 Caused by:
-  Unable to update [ROOT]/foo/c
+  unable to update [ROOT]/foo/c
 
 Caused by:
   failed to read `[ROOT]/foo/c/Cargo.toml`

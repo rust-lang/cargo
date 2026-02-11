@@ -1080,16 +1080,16 @@ impl BuildOutput {
                         if nightly_features_allowed
                             || rustc_bootstrap_allows(library_name.as_deref())
                         {
-                            log_messages.push((Severity::Warning, format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
-                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
+                            log_messages.push((Severity::Warning, format!("cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
                             )));
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
                             bail!(
-                                "Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
-                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
+                                "cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
                                 whence,
@@ -1153,7 +1153,7 @@ impl BuildOutput {
                     value = match flags_iter.next() {
                         Some(v) => v,
                         None => bail! {
-                            "Flag in rustc-flags has no value in {}: {}",
+                            "flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
                         },
@@ -1169,7 +1169,7 @@ impl BuildOutput {
                 };
             } else {
                 bail!(
-                    "Only `-l` and `-L` flags are allowed in {}: `{}`",
+                    "only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )

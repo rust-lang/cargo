@@ -989,7 +989,7 @@ fn custom_build_script_wrong_rustc_flags() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([ROOT]/foo)`: `-aaa -bbb`
+[ERROR] only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([ROOT]/foo)`: `-aaa -bbb`
 
 "#]])
         .run();

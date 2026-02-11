@@ -564,7 +564,7 @@ fn non_utf8_str_in_ignore_file() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CREATING] binary (application) package
-[ERROR] Failed to create package `foo` at `[ROOT]/home/foo`
+[ERROR] failed to create package `foo` at `[ROOT]/home/foo`
 
 Caused by:
   Character at line 0 is invalid. Cargo only supports UTF-8.

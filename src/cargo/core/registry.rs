@@ -542,7 +542,7 @@ impl<'gctx> PackageRegistry<'gctx> {
         let source = self
             .source_config
             .load(source_id, &self.yanked_whitelist)
-            .with_context(|| format!("Unable to update {}", source_id))?;
+            .with_context(|| format!("unable to update {}", source_id))?;
         assert_eq!(source.source_id(), source_id);
 
         if kind == Kind::Override {
@@ -812,7 +812,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         for (source_id, source) in self.sources.sources_mut() {
             source
                 .block_until_ready()
-                .with_context(|| format!("Unable to update {}", source_id))?;
+                .with_context(|| format!("unable to update {}", source_id))?;
         }
         Ok(())
     }

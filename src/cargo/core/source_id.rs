@@ -405,7 +405,7 @@ impl SourceId {
                     .to_file_path()
                     .expect("path sources cannot be remote");
                 if crate::util::toml::is_embedded(&path) {
-                    anyhow::bail!("Single file packages cannot be used as dependencies")
+                    anyhow::bail!("single file packages cannot be used as dependencies")
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }

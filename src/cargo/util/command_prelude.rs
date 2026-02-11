@@ -616,7 +616,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
@@ -629,7 +629,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
@@ -917,7 +917,7 @@ Run `{cmd}` to see possible targets."
         let mut compile_opts = self.compile_options(gctx, intent, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(restricted_names::is_glob_pattern) {
-            anyhow::bail!("Glob patterns on package selection are not supported.")
+            anyhow::bail!("glob patterns on package selection are not supported.")
         }
         compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
