@@ -2805,7 +2805,7 @@ fn error_if_member_is_outside_root() {
 current:   [ROOT]/member/Cargo.toml
 workspace: [ROOT]/root/Cargo.toml
 
-this may be fixable by adding a member to the `workspace.members` array of the manifest located at: [ROOT]/root/Cargo.toml
+this may be fixable by adding `../member` to the `workspace.members` array of the manifest located at: [ROOT]/root/Cargo.toml
 Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
 
 "#]])
@@ -2872,7 +2872,7 @@ fn error_if_manifest_path_is_relative() {
 current:   [ROOT]/outside/Cargo.toml
 workspace: [ROOT]/root/Cargo.toml
 
-this may be fixable by adding a member to the `workspace.members` array of the manifest located at: [ROOT]/root/Cargo.toml
+this may be fixable by adding `../outside` to the `workspace.members` array of the manifest located at: [ROOT]/root/Cargo.toml
 Alternatively, to keep it out of the workspace, add the package to the `workspace.exclude` array, or add an empty `[workspace]` table to the package's manifest.
 
 "#]])
