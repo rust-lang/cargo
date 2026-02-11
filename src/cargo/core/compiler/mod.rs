@@ -300,7 +300,7 @@ fn rustc(
     let name = unit.pkg.name();
 
     let outputs = build_runner.outputs(unit)?;
-    let root = build_runner.files().out_dir(unit);
+    let root = build_runner.files().output_dir(unit);
 
     // Prepare the native lib state (extra `-L` and `-l` flags).
     let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
@@ -865,7 +865,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_cap_lints(bcx, unit, &mut rustdoc);
 
     unit.kind.add_target_arg(&mut rustdoc);
-    let doc_dir = build_runner.files().out_dir(unit);
+    let doc_dir = build_runner.files().output_dir(unit);
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(unit));
@@ -902,7 +902,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         rustdoc.arg("--merge=none");
         let mut arg = OsString::from("--parts-out-dir=");
         // `-Zrustdoc-mergeable-info` always uses the new layout.
-        arg.push(build_runner.files().deps_dir_new_layout(unit));
+        arg.push(build_runner.files().out_dir_new_layout(unit));
         rustdoc.arg(arg);
     }
 
@@ -969,7 +969,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let mut rustdoc = prepare_rustdoc(build_runner, unit)?;
 
     let crate_name = unit.target.crate_name();
-    let doc_dir = build_runner.files().out_dir(unit);
+    let doc_dir = build_runner.files().output_dir(unit);
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
@@ -1402,7 +1402,7 @@ fn build_base_args(
     }
 
     cmd.arg("--out-dir")
-        .arg(&build_runner.files().out_dir(unit));
+        .arg(&build_runner.files().output_dir(unit));
 
     fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str, val: Option<&OsStr>) {
         if let Some(val) = val {
@@ -1749,7 +1749,11 @@ fn build_deps_args(
     // Add `OUT_DIR` environment variables for build scripts
     let first_custom_build_dep = deps.iter().find(|dep| dep.unit.mode.is_run_custom_build());
     if let Some(dep) = first_custom_build_dep {
-        let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+        let out_dir = if bcx.gctx.cli_unstable().build_dir_new_layout {
+            build_runner.files().out_dir_new_layout(&dep.unit)
+        } else {
+            build_runner.files().build_script_out_dir(&dep.unit)
+        };
         cmd.env("OUT_DIR", &out_dir);
     }
 
@@ -1764,7 +1768,11 @@ fn build_deps_args(
     if is_multiple_build_scripts_enabled {
         for dep in deps {
             if dep.unit.mode.is_run_custom_build() {
-                let out_dir = &build_runner.files().build_script_out_dir(&dep.unit);
+                let out_dir = if bcx.gctx.cli_unstable().build_dir_new_layout {
+                    build_runner.files().out_dir_new_layout(&dep.unit)
+                } else {
+                    build_runner.files().build_script_out_dir(&dep.unit)
+                };
                 let target_name = dep.unit.target.name();
                 let out_dir_prefix = target_name
                     .strip_prefix("build-script-")

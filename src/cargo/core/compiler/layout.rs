@@ -324,16 +324,16 @@ impl BuildDirLayout {
     /// Fetch the deps path.
     pub fn deps(&self, pkg_dir: &str) -> PathBuf {
         if self.is_new_layout {
-            self.deps_new_layout(pkg_dir)
+            self.out_force_new_layout(pkg_dir)
         } else {
             self.legacy_deps().to_path_buf()
         }
     }
-    /// Fetch the deps path. (new layout)
+    /// Fetch the output path for build units. (new layout only)
     ///
     /// New features should consider using this so we can avoid their migrations.
-    pub fn deps_new_layout(&self, pkg_dir: &str) -> PathBuf {
-        self.build_unit(pkg_dir).join("deps")
+    pub fn out_force_new_layout(&self, pkg_dir: &str) -> PathBuf {
+        self.build_unit(pkg_dir).join("out")
     }
     /// Fetch the deps path. (old layout)
     pub fn legacy_deps(&self) -> &Path {
@@ -377,7 +377,7 @@ impl BuildDirLayout {
     /// Fetch the build script execution path.
     pub fn build_script_execution(&self, pkg_dir: &str) -> PathBuf {
         if self.is_new_layout {
-            self.build_unit(pkg_dir).join("build-script")
+            self.build_unit(pkg_dir).join("run")
         } else {
             self.build().join(pkg_dir)
         }
