@@ -847,12 +847,6 @@ a v0.1.0 ([ROOT]/foo/a)
 ├── common v0.1.0 ([ROOT]/foo/common)
 └── outside v0.1.0
 
-b v0.1.0 ([ROOT]/foo/b)
-├── common v0.1.0 ([ROOT]/foo/common)
-└── outside v0.1.0
-
-common v0.1.0 ([ROOT]/foo/common)
-
 "#]])
         .run();
 }
