@@ -206,6 +206,9 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
                 .into_iter()
                 .collect::<HashSet<_>>();
 
+            // `entry_specs` can be broader than the CLI request (for example,
+            // all workspace members when `feature-unification=workspace`).
+            // Keep only the packages explicitly requested by `-p`.
             entry_ids
                 .into_iter()
                 .filter(|id| requested_ids.contains(id))
