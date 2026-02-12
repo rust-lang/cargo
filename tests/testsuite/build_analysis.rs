@@ -733,6 +733,10 @@ fn json_message_build_started_with_run_id() {
             str![[r#"
 [
   {
+    "reason": "build-started",
+    "run_id": "[..]T[..]Z-[..]"
+  },
+  {
     "reason": "compiler-artifact",
     "...": "{...}"
   },
