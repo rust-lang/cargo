@@ -31,39 +31,18 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let subcommand = args.get_one::<String>("COMMAND");
-    if let Some(subcommand) = subcommand {
-        if !try_help(gctx, subcommand)? {
-            match check_builtin(&subcommand) {
-                Some(s) => {
-                    crate::execute_internal_subcommand(
-                        gctx,
-                        &[OsStr::new(s), OsStr::new("--help")],
-                    )?;
-                }
-                None => {
-                    crate::execute_external_subcommand(
-                        gctx,
-                        subcommand,
-                        &[OsStr::new(subcommand), OsStr::new("--help")],
-                    )?;
-                }
-            }
-        }
-    } else {
-        let mut cmd = crate::cli::cli(gctx);
-        let _ = cmd.print_help();
-    }
-    Ok(())
-}
+    let Some(subcommand) = args.get_one::<String>("COMMAND") else {
+        let _ = crate::cli::cli(gctx).print_help();
+        return Ok(());
+    };
 
-fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = match check_alias(gctx, subcommand) {
+    // Expand alias first
+    let subcommand = match aliased_command(gctx, subcommand).ok().flatten() {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
             drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
-            return Ok(true);
+            return Ok(());
         }
         // Otherwise, resolve the alias into its subcommand.
         Some(argv) => {
@@ -74,13 +53,28 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         None => subcommand.to_string(),
     };
 
-    let subcommand = match check_builtin(&subcommand) {
-        Some(s) => s,
-        None => return Ok(false),
-    };
+    if super::builtin_exec(&subcommand).is_some() {
+        if try_help(&subcommand)? {
+            return Ok(());
+        }
+        crate::execute_internal_subcommand(gctx, &[OsStr::new(&subcommand), OsStr::new("--help")])?;
+    } else {
+        // If not built-in, try giving `--help` to external command.
+        crate::execute_external_subcommand(
+            gctx,
+            &subcommand,
+            &[OsStr::new(&subcommand), OsStr::new("--help")],
+        )?;
+    }
 
-    // ALLOWED: For testing cargo itself only.
-    #[allow(clippy::disallowed_methods)]
+    Ok(())
+}
+
+fn try_help(subcommand: &str) -> CargoResult<bool> {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "testing only, no reason for config support"
+    )]
     let force_help_text = std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok();
 
     if resolve_executable(Path::new("man")).is_ok() && !force_help_text {
@@ -89,9 +83,8 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         };
         write_and_spawn(subcommand, &man, "man")?;
     } else {
-        let txt = match extract_man(subcommand, "txt") {
-            Some(txt) => txt,
-            None => return Ok(false),
+        let Some(txt) = extract_man(subcommand, "txt") else {
+            return Ok(false);
         };
         if force_help_text {
             drop(std::io::stdout().write_all(&txt));
@@ -104,20 +97,6 @@ fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
         }
     }
     Ok(true)
-}
-
-/// Checks if the given subcommand is an alias.
-///
-/// Returns None if it is not an alias.
-fn check_alias(gctx: &GlobalContext, subcommand: &str) -> Option<Vec<String>> {
-    aliased_command(gctx, subcommand).ok().flatten()
-}
-
-/// Checks if the given subcommand is a built-in command (not via an alias).
-///
-/// Returns None if it is not a built-in command.
-fn check_builtin(subcommand: &str) -> Option<&str> {
-    super::builtin_exec(subcommand).map(|_| subcommand)
 }
 
 /// Extracts the given man page from the compressed archive.
