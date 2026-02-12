@@ -150,6 +150,7 @@ impl Container {
             .args(&["inspect", name])
             .exec_with_output()
             .unwrap();
+        println!("{}", String::from_utf8_lossy(&output.stdout));
         serde_json::from_slice(&output.stdout).unwrap()
     }
 
