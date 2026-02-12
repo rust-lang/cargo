@@ -964,6 +964,34 @@ Caused by:
 }
 
 #[cargo_test]
+fn target_runner_does_not_apply_to_build_script() {
+    // Regression test for https://github.com/rust-lang/miri/issues/4855
+    // `target.<host>.runner` should not wrap build scripts.
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{target}]
+                runner = "nonexistent-runner"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(

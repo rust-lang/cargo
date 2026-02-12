@@ -235,7 +235,11 @@ impl<'gctx> Compilation<'gctx> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        let builder = if let Some((runner, args)) = self.target_runner(CompileKind::Host) {
+        // Only use host runner when -Zhost-config is enabled
+        // to ensure `target.<host>.runner` does not wrap build scripts.
+        let builder = if !self.gctx.target_applies_to_host()?
+            && let Some((runner, args)) = self.target_runner(CompileKind::Host)
+        {
             let mut builder = ProcessBuilder::new(runner);
             builder.args(args);
             builder.arg(cmd);
