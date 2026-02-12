@@ -982,18 +982,10 @@ fn target_runner_does_not_apply_to_build_script() {
         .file("src/lib.rs", "")
         .build();
 
-    // FIXME: target runner should not apply to build scripts.
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  could not execute process `nonexistent-runner [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
