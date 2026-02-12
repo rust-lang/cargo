@@ -182,7 +182,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .collect();
 
     for SpecsAndResolvedFeatures {
-        specs,
+        specs: entry_specs,
         resolved_features,
     } in ws_resolve.specs_and_features
     {
@@ -190,7 +190,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
             ws,
             &ws_resolve.targeted_resolve,
             &resolved_features,
-            &specs,
+            &entry_specs,
             &opts.cli_features,
             &target_data,
             &requested_kinds,
@@ -199,7 +199,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         )?;
 
         let root_specs = if opts.invert.is_empty() {
-            specs
+            entry_specs
         } else {
             opts.invert
                 .iter()
