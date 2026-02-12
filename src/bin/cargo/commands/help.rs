@@ -71,8 +71,10 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 }
 
 fn try_help(subcommand: &str) -> CargoResult<bool> {
-    // ALLOWED: For testing cargo itself only.
-    #[allow(clippy::disallowed_methods)]
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "testing only, no reason for config support"
+    )]
     let force_help_text = std::env::var("__CARGO_TEST_FORCE_HELP_TXT").is_ok();
 
     if resolve_executable(Path::new("man")).is_ok() && !force_help_text {
