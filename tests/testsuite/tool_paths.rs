@@ -406,6 +406,43 @@ fn custom_runner_env_true() {
 }
 
 #[cargo_test]
+fn custom_runner_target_applies_to_host() {
+    // This ensures that without `--target` (non-cross-target mode)
+    // Cargo still respects targe configuration.
+    let target = rustc_host();
+
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [target.{}]
+                    runner = "nonexistent-runner -r"
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    p.cargo("run -Z target-applies-to-host")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
+        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE]`
+[ERROR] could not execute process `nonexistent-runner -r target/debug/foo[EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn custom_linker_env() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
