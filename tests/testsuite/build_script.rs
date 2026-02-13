@@ -964,6 +964,55 @@ Caused by:
 }
 
 #[cargo_test]
+fn host_runner_does_not_apply_to_cargo_run() {
+    // `host.runner` should only wrap build scripts, not `cargo run`.
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"hello\"); }")
+        .build();
+
+    // with --target
+    p.cargo("run -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
+
+    // without --target
+    p.cargo("run -Z target-applies-to-host -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `nonexistent-host-runner target/debug/foo[EXE]`
+[ERROR] could not execute process `nonexistent-host-runner target/debug/foo` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .with_stdout_data(str![""])
+        .run();
+}
+
+#[cargo_test]
 fn target_runner_does_not_apply_to_build_script() {
     // Regression test for https://github.com/rust-lang/miri/issues/4855
     // `target.<host>.runner` should not wrap build scripts.
