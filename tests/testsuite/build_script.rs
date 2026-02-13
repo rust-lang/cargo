@@ -997,18 +997,16 @@ hello
     // without --target
     p.cargo("run -Z target-applies-to-host -Z host-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `nonexistent-host-runner target/debug/foo[EXE]`
-[ERROR] could not execute process `nonexistent-host-runner target/debug/foo` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+[RUNNING] `target/debug/foo[EXE]`
 
 "#]])
-        .with_stdout_data(str![""])
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
         .run();
 }
 

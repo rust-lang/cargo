@@ -425,14 +425,18 @@ fn custom_runner_target_applies_to_host() {
         )
         .build();
 
-    // FIXME: Target configuration should be applied also for target-applies-to-host
     p.cargo("run -Z target-applies-to-host")
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `target/debug/foo[EXE]`
+[RUNNING] `nonexistent-runner -r target/debug/foo[EXE]`
+[ERROR] could not execute process `nonexistent-runner -r target/debug/foo[EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
 
 "#]])
         .run();
