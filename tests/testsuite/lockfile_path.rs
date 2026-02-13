@@ -454,7 +454,7 @@ fn config_install_lock_file_path_must_present() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn config_run_embed() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let invalid_lockfile = "Cargo.lock";
@@ -465,7 +465,6 @@ fn config_run_embed() {
 
     p.cargo("run -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
-        .arg("-Zscript")
         .arg("--config")
         .arg(&format!("resolver.lockfile-path='{lockfile_path}'"))
         .arg("--manifest-path")
@@ -477,7 +476,6 @@ fn config_run_embed() {
     p.cargo("run -Zlockfile-path")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("-Zunstable-options")
-        .arg("-Zscript")
         .arg("--config")
         .arg(&format!("resolver.lockfile-path='{invalid_lockfile}'"))
         .arg("--manifest-path")
@@ -997,7 +995,7 @@ fn cli_install_lock_file_path_must_present() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cli_run_embed() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let invalid_lockfile = "Cargo.lock";
@@ -1009,7 +1007,6 @@ fn cli_run_embed() {
     p.cargo("run")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("-Zunstable-options")
-        .arg("-Zscript")
         .arg("--lockfile-path")
         .arg(lockfile_path)
         .arg("--manifest-path")
@@ -1021,7 +1018,6 @@ fn cli_run_embed() {
     p.cargo("run")
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("-Zunstable-options")
-        .arg("-Zscript")
         .arg("--lockfile-path")
         .arg(invalid_lockfile)
         .arg("--manifest-path")

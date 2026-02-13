@@ -794,13 +794,8 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
     build_base_args(build_runner, &mut base, unit)?;
+    // TODO: remove once frontmatter hits nightly
     if unit.pkg.manifest().is_embedded() {
-        if !gctx.cli_unstable().script {
-            anyhow::bail!(
-                "parsing `{}` requires `-Zscript`",
-                unit.pkg.manifest_path().display()
-            );
-        }
         base.arg("-Z").arg("crate-attr=feature(frontmatter)");
     }
 
@@ -849,13 +844,8 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     let bcx = build_runner.bcx;
     // script_metadata is not needed here, it is only for tests.
     let mut rustdoc = build_runner.compilation.rustdoc_process(unit, None)?;
+    // TODO: remove once frontmatter hits nightly
     if unit.pkg.manifest().is_embedded() {
-        if !bcx.gctx.cli_unstable().script {
-            anyhow::bail!(
-                "parsing `{}` requires `-Zscript`",
-                unit.pkg.manifest_path().display()
-            );
-        }
         rustdoc.arg("-Z").arg("crate-attr=feature(frontmatter)");
     }
     rustdoc.inherit_jobserver(&build_runner.jobserver);
