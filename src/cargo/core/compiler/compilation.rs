@@ -128,7 +128,8 @@ pub struct Compilation<'gctx> {
     /// `rustc_workspace_wrapper_process`
     primary_rustc_process: Option<ProcessBuilder>,
 
-    target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
+    /// The runner to use for each host or target process.
+    runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
     /// The linker to use for each host or target.
     target_linkers: HashMap<CompileKind, Option<PathBuf>>,
 
@@ -142,7 +143,7 @@ impl<'gctx> Compilation<'gctx> {
         let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
         let host = bcx.host_triple().to_string();
-        let mut target_runners = bcx
+        let mut runners = bcx
             .build_config
             .requested_kinds
             .iter()
@@ -155,7 +156,7 @@ impl<'gctx> Compilation<'gctx> {
             // Need to insert target config explicitly for target-applies-to-host=false
             // to find the correct configs.
             let kind = explicit_host_kind(&host);
-            target_runners.insert(kind, target_runner(bcx, kind)?);
+            runners.insert(kind, target_runner(bcx, kind)?);
         }
         Ok(Compilation {
             native_dirs: BTreeSet::new(),
@@ -174,7 +175,7 @@ impl<'gctx> Compilation<'gctx> {
             rustc_process,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
-            target_runners,
+            runners,
             target_linkers: bcx
                 .build_config
                 .requested_kinds
@@ -250,7 +251,7 @@ impl<'gctx> Compilation<'gctx> {
         // to ensure `target.<host>.runner` does not wrap build scripts.
         let builder = if !self.gctx.target_applies_to_host()?
             && let Some((runner, args)) = self
-                .target_runners
+                .runners
                 .get(&CompileKind::Host)
                 .and_then(|x| x.as_ref())
         {
@@ -273,7 +274,7 @@ impl<'gctx> Compilation<'gctx> {
         } else {
             kind
         };
-        self.target_runners.get(&kind).and_then(|x| x.as_ref())
+        self.runners.get(&kind).and_then(|x| x.as_ref())
     }
 
     /// Gets the user-specified linker for a particular host or target.
