@@ -1080,6 +1080,109 @@ Caused by:
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn workspace_members_mentions_script() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/nop.rs"]
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript check")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn workspace_members_glob_matches_script() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/*"]
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript check")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn package_workspace() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/*"]
+
+[package]
+name = "foo"
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+package.workspace = "../"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript ./scripts/nop.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/scripts/nop.rs`
+
+Caused by:
+  `package.workspace` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_lib() {
     let p = cargo_test_support::project()
         .file(
