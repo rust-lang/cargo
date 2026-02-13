@@ -1414,16 +1414,16 @@ fn build_base_args(
 
     unit.kind.add_target_arg(cmd);
 
-    opt(
-        cmd,
-        "-C",
-        "linker=",
-        build_runner
-            .compilation
-            .target_linker(unit.kind)
-            .as_ref()
-            .map(|s| s.as_ref()),
-    );
+    opt(cmd, "-C", "linker=", {
+        if unit.target.for_host() && !bcx.gctx.target_applies_to_host()? {
+            build_runner.compilation.host_linker().map(|s| s.as_ref())
+        } else {
+            build_runner
+                .compilation
+                .target_linker(unit.kind)
+                .map(|s| s.as_ref())
+        }
+    });
     if incremental {
         let dir = build_runner.files().incremental_dir(&unit);
         opt(cmd, "-C", "incremental=", Some(dir.as_os_str()));

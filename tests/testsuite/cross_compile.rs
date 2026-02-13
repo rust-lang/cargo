@@ -1335,7 +1335,8 @@ fn host_linker_does_not_apply_to_binary_build() {
 "#]])
         .run();
 
-    // FIXME: without --target, host.linker incorrectly applies to normal binaries.
+    // with target-applies-to-host=false,
+    // host.linker should not be applied but target.linker
     p.cargo("build -Z target-applies-to-host -Z host-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
@@ -1344,7 +1345,7 @@ fn host_linker_does_not_apply_to_binary_build() {
         // https://github.com/rust-lang/rust/blob/7ad4e69ad585d8ff214f7b42d01f1959eda08f40/compiler/rustc_codegen_ssa/src/back/link.rs?plain=1#L971-L975
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] linker `nonexistent-host-linker` not found
+[ERROR] linker `nonexistent-target-linker` not found
   |
   = [NOTE] [NOT_FOUND]
 ...
