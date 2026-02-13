@@ -1299,3 +1299,55 @@ fn always_emit_warnings_as_warnings_when_learning_target_info() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn host_linker_does_not_apply_to_binary_build() {
+    // `host.linker` should only apply to build scripts, not to normal binary builds.
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [host]
+                linker = "nonexistent-host-linker"
+                [target.{target}]
+                linker = "nonexistent-target-linker"
+                "#,
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        // Need to omit some MSVC-specific diagnostics
+        // because rustc prints extra stuff when linker was not found.
+        // https://github.com/rust-lang/rust/blob/7ad4e69ad585d8ff214f7b42d01f1959eda08f40/compiler/rustc_codegen_ssa/src/back/link.rs?plain=1#L971-L975
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] linker `nonexistent-target-linker` not found
+  |
+  = [NOTE] [NOT_FOUND]
+...
+"#]])
+        .run();
+
+    // FIXME: without --target, host.linker incorrectly applies to normal binaries.
+    p.cargo("build -Z target-applies-to-host -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        // Need to omit some MSVC-specific diagnostics
+        // because rustc prints extra stuff when linker was not found.
+        // https://github.com/rust-lang/rust/blob/7ad4e69ad585d8ff214f7b42d01f1959eda08f40/compiler/rustc_codegen_ssa/src/back/link.rs?plain=1#L971-L975
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] linker `nonexistent-host-linker` not found
+  |
+  = [NOTE] [NOT_FOUND]
+...
+"#]])
+        .run();
+}
