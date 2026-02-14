@@ -1635,7 +1635,12 @@ fn calculate_normal(
         unit.pkg.manifest().lint_rustflags(),
     ));
     let mut config = StableHasher::new();
-    if let Some(linker) = build_runner.compilation.target_linker(unit.kind) {
+    let linker = if unit.target.for_host() && !build_runner.bcx.gctx.target_applies_to_host()? {
+        build_runner.compilation.host_linker()
+    } else {
+        build_runner.compilation.target_linker(unit.kind)
+    };
+    if let Some(linker) = linker {
         linker.hash(&mut config);
     }
     if unit.mode.is_doc() && build_runner.bcx.gctx.cli_unstable().rustdoc_map {

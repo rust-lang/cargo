@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::{OsStr, OsString};
+use std::path::Path;
 use std::path::PathBuf;
 
 use cargo_platform::CfgExpr;
@@ -131,7 +132,7 @@ pub struct Compilation<'gctx> {
     /// The runner to use for each host or target process.
     runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
     /// The linker to use for each host or target.
-    target_linkers: HashMap<CompileKind, Option<PathBuf>>,
+    linkers: HashMap<CompileKind, Option<PathBuf>>,
 
     /// The total number of lint warnings emitted by the compilation.
     pub lint_warning_count: usize,
@@ -158,6 +159,19 @@ impl<'gctx> Compilation<'gctx> {
             let kind = explicit_host_kind(&host);
             runners.insert(kind, target_runner(bcx, kind)?);
         }
+
+        let mut linkers = bcx
+            .build_config
+            .requested_kinds
+            .iter()
+            .chain(Some(&CompileKind::Host))
+            .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
+            .collect::<CargoResult<HashMap<_, _>>>()?;
+        if !bcx.gctx.target_applies_to_host()? {
+            // See above reason in runner why we do this.
+            let kind = explicit_host_kind(&host);
+            linkers.insert(kind, target_linker(bcx, kind)?);
+        }
         Ok(Compilation {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::new(),
@@ -176,13 +190,7 @@ impl<'gctx> Compilation<'gctx> {
             rustc_workspace_wrapper_process,
             primary_rustc_process,
             runners,
-            target_linkers: bcx
-                .build_config
-                .requested_kinds
-                .iter()
-                .chain(Some(&CompileKind::Host))
-                .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
-                .collect::<CargoResult<HashMap<_, _>>>()?,
+            linkers,
             lint_warning_count: 0,
         })
     }
@@ -277,9 +285,28 @@ impl<'gctx> Compilation<'gctx> {
         self.runners.get(&kind).and_then(|x| x.as_ref())
     }
 
+    /// Gets the `[host.linker]` for host build target (build scripts and proc macros).
+    pub fn host_linker(&self) -> Option<&Path> {
+        self.linkers
+            .get(&CompileKind::Host)
+            .and_then(|x| x.as_ref())
+            .map(|x| x.as_path())
+    }
+
     /// Gets the user-specified linker for a particular host or target.
-    pub fn target_linker(&self, kind: CompileKind) -> Option<PathBuf> {
-        self.target_linkers.get(&kind).and_then(|x| x.clone())
+    pub fn target_linker(&self, kind: CompileKind) -> Option<&Path> {
+        let target_applies_to_host = self.gctx.target_applies_to_host().unwrap_or(true);
+        let kind = if !target_applies_to_host && kind.is_host() {
+            // Use explicit host target triple when `target-applies-to-host=false`
+            // This ensures `host.linker` won't be accidentally applied to normal builds
+            explicit_host_kind(&self.host)
+        } else {
+            kind
+        };
+        self.linkers
+            .get(&kind)
+            .and_then(|x| x.as_ref())
+            .map(|x| x.as_path())
     }
 
     /// Returns a [`ProcessBuilder`] appropriate for running a process for the
