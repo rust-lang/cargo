@@ -35,7 +35,6 @@ pub fn cli() -> Command {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
-        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<bright-cyan,bold>cargo help publish</>` for more detailed information.\n"
         ))

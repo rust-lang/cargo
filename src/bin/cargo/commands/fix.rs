@@ -54,7 +54,6 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_timings()
         .arg_manifest_path()
-        .arg_lockfile_path()
         .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<bright-cyan,bold>cargo help fix</>` for more detailed information.\n"
@@ -76,10 +75,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // Can't use workspace() to avoid using -Zavoid-dev-deps (if passed)
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(args.honor_rust_version());
-    let lockfile_path = args.lockfile_path(gctx)?;
-    if ws.requested_lockfile_path().is_none() {
-        ws.set_requested_lockfile_path(lockfile_path.clone());
-    }
 
     let mut opts =
         args.compile_options(gctx, intent, Some(&ws), ProfileChecking::LegacyTestOnly)?;

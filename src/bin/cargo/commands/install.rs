@@ -103,7 +103,6 @@ pub fn cli() -> Command {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_timings()
-        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<bright-cyan,bold>cargo help install</>` for more detailed information.\n"
         ))
@@ -233,12 +232,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx.cli_unstable().fail_if_stable_opt("--dry-run", 11123)?;
     }
 
-    let requested_lockfile_path = args.lockfile_path(gctx)?;
-    // 14421: lockfile path should imply --locked on running `install`
-    if requested_lockfile_path.is_some() {
-        gctx.set_locked(true);
-    }
-
     if args.flag("list") {
         ops::install_list(root, gctx)?;
     } else {
@@ -252,7 +245,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             args.flag("force"),
             args.flag("no-track"),
             args.dry_run(),
-            requested_lockfile_path.as_deref(),
         )?;
     }
     Ok(())

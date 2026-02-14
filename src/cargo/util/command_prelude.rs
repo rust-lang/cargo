@@ -3,7 +3,6 @@ use crate::core::Dependency;
 use crate::core::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
 use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles, shell};
-use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -391,25 +390,6 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_lockfile_path(self) -> Self {
-        self._arg(
-            opt("lockfile-path", "Path to Cargo.lock (unstable)")
-                .value_name("PATH")
-                .help_heading(heading::MANIFEST_OPTIONS)
-                .add(clap_complete::engine::ArgValueCompleter::new(
-                    clap_complete::engine::PathCompleter::any().filter(|path: &Path| {
-                        let file_name = match path.file_name() {
-                            Some(name) => name,
-                            None => return false,
-                        };
-
-                        // allow `Cargo.lock` file
-                        file_name == OsStr::new("Cargo.lock")
-                    }),
-                )),
-        )
-    }
-
     fn arg_message_format(self) -> Self {
         self._arg(
             multi_opt("message-format", "FMT", "Error format")
@@ -645,27 +625,13 @@ pub trait ArgMatchesExt {
         root_manifest(self._value_of("manifest-path").map(Path::new), gctx)
     }
 
-    fn lockfile_path(&self, gctx: &GlobalContext) -> CargoResult<Option<PathBuf>> {
-        lockfile_path(self._value_of("lockfile-path").map(Path::new), gctx)
-    }
-
     #[tracing::instrument(skip_all)]
     fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(gctx)?;
-        let lockfile_path = self.lockfile_path(gctx)?;
         let mut ws = Workspace::new(&root, gctx)?;
         ws.set_resolve_honors_rust_version(self.honor_rust_version());
         if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
-        }
-        if lockfile_path.is_some() {
-            if ws.requested_lockfile_path().is_some() {
-                gctx.shell().warn(
-                    "`--lockfile-path` is ignored because `resolver.lockfile-path` is set in config",
-                )?;
-            } else {
-                ws.set_requested_lockfile_path(lockfile_path);
-            }
         }
         Ok(ws)
     }
@@ -1116,39 +1082,6 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
     } else {
         find_root_manifest_for_wd(gctx.cwd())
     }
-}
-
-pub fn lockfile_path(
-    lockfile_path: Option<&Path>,
-    gctx: &GlobalContext,
-) -> CargoResult<Option<PathBuf>> {
-    let Some(lockfile_path) = lockfile_path else {
-        return Ok(None);
-    };
-
-    gctx.cli_unstable()
-        .fail_if_stable_opt("--lockfile-path", 14421)?;
-
-    let path = gctx.cwd().join(lockfile_path);
-
-    if !path.ends_with(LOCKFILE_NAME) {
-        bail!(
-            "the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})"
-        )
-    }
-    if path.is_dir() {
-        bail!(
-            "lockfile path `{}` is a directory but expected a file",
-            lockfile_path.display()
-        )
-    }
-
-    gctx.shell().warn(
-        "the `--lockfile-path` flag is deprecated and will be removed in a future release, \
-        use `resolver.lockfile-path` config instead",
-    )?;
-
-    return Ok(Some(path));
 }
 
 pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
