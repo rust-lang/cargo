@@ -299,6 +299,21 @@ fn do_package<'a>(
         let ar_files = prepare_archive(ws, &pkg, &opts)?;
 
         if opts.list {
+            // Check file accessibility before listing to warn about potential issues
+            for ar_file in &ar_files {
+                if let FileContents::OnDisk(ref path) = ar_file.contents {
+                    // Use the same File::open logic that the archiver uses to maintain sync
+                    if let Err(e) = File::open(path) {
+                        // Emit a warning but continue processing
+                        let _ = ws.gctx().shell().warn(format!(
+                            "cannot access `{}`: {}. `cargo package` will fail.",
+                            path.display(),
+                            e
+                        ));
+                    }
+                }
+            }
+
             match opts.fmt {
                 PackageMessageFormat::Human => {
                     // While this form is called "human",
@@ -894,8 +909,19 @@ fn tar(
         let mut header = Header::new_gnu();
         match contents {
             FileContents::OnDisk(disk_path) => {
-                let mut file = File::open(&disk_path).with_context(|| {
-                    format!("failed to open for archiving: `{}`", disk_path.display())
+                let mut file = File::open(&disk_path).map_err(|e| {
+                    // If this is a permission denied error, add a helpful hint
+                    if e.kind() == std::io::ErrorKind::PermissionDenied {
+                        anyhow::Error::from(e).context(format!(
+                            "failed to open for archiving: `{}`\n\nNote: If this is a local artifact, add it to .gitignore or the 'exclude' list in Cargo.toml.",
+                            disk_path.display()
+                        ))
+                    } else {
+                        anyhow::Error::from(e).context(format!(
+                            "failed to open for archiving: `{}`",
+                            disk_path.display()
+                        ))
+                    }
                 })?;
                 let metadata = file.metadata().with_context(|| {
                     format!("could not learn metadata for: `{}`", disk_path.display())
