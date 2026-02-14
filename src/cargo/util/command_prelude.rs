@@ -542,15 +542,16 @@ pub trait CommandExt: Sized {
             .help_heading(heading::COMPILATION_OPTIONS),
         )
         ._arg(unsupported_short_arg)
-        ._arg(
-            opt(
-                "out-dir",
-                "Copy final artifacts to this directory (deprecated; use --artifact-dir instead)",
-            )
-            .value_name("PATH")
-            .conflicts_with("artifact-dir")
-            .hide(true),
-        )
+        ._arg({
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--artifact-dir");
+            Arg::new("unsupported-out-dir-flag")
+                .help("")
+                .long("out-dir")
+                .value_name("PATH")
+                .value_parser(value_parser)
+                .action(ArgAction::SetTrue)
+                .hide(true)
+        })
     }
 
     fn arg_compile_time_deps(self) -> Self {
@@ -615,7 +616,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
@@ -628,7 +629,7 @@ pub trait ArgMatchesExt {
             Some(arg) => Some(arg.parse::<i32>().map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
-                    format!("Invalid value: could not parse `{}` as a number", arg),
+                    format!("invalid value: could not parse `{}` as a number", arg),
                 )
             })?),
         };
@@ -916,7 +917,7 @@ Run `{cmd}` to see possible targets."
         let mut compile_opts = self.compile_options(gctx, intent, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(restricted_names::is_glob_pattern) {
-            anyhow::bail!("Glob patterns on package selection are not supported.")
+            anyhow::bail!("glob patterns on package selection are not supported.")
         }
         compile_opts.spec = Packages::Packages(spec);
         Ok(compile_opts)
@@ -1082,20 +1083,31 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
         // In general, we try to avoid normalizing paths in Cargo,
         // but in this particular case we need it to fix #3586.
         let path = paths::normalize_path(&path);
-        if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
-            anyhow::bail!(
-                "the manifest-path must be a path to a Cargo.toml file: `{}`",
-                path.display()
-            )
-        }
         if !path.exists() {
             anyhow::bail!("manifest path `{}` does not exist", manifest_path.display())
-        }
-        if path.is_dir() {
+        } else if path.is_dir() {
+            let child_path = path.join("Cargo.toml");
+            let suggested_path = if child_path.exists() {
+                format!("\nhelp: {} exists", child_path.display())
+            } else {
+                "".to_string()
+            };
             anyhow::bail!(
-                "manifest path `{}` is a directory but expected a file",
+                "manifest path `{}` is a directory but expected a file{suggested_path}",
                 manifest_path.display()
             )
+        } else if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
+            if gctx.cli_unstable().script {
+                anyhow::bail!(
+                    "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
+                    path.display()
+                )
+            } else {
+                anyhow::bail!(
+                    "the manifest-path must be a path to a Cargo.toml file: `{}`",
+                    path.display()
+                )
+            }
         }
         if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
             anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())

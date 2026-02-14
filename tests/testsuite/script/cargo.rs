@@ -1,8 +1,5 @@
-use std::fs;
-
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
-use cargo_test_support::paths::cargo_home;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 
@@ -394,7 +391,7 @@ msg = hello
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn use_cargo_home_config() {
+fn use_script_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
         .at("script")
@@ -412,40 +409,7 @@ rustc = "non-existent-rustc"
         .file("script.rs", script)
         .build();
 
-    // Verify that the config from the current directory is used
-    p.cargo("-Zscript script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
-arg0: [..]
-args: ["-NotAnArg"]
-
-"#]])
-        .run();
-
-    // Verify that the config from the parent directory is not used
-    p.cargo("-Zscript ../script/script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
-arg0: [..]
-args: ["-NotAnArg"]
-
-"#]])
-        .run();
-
-    // Write a global config.toml in the cargo home directory
-    let cargo_home = cargo_home();
-    fs::write(
-        &cargo_home.join("config.toml"),
-        r#"
-[build]
-rustc = "non-existent-rustc"
-"#,
-    )
-    .unwrap();
-
-    // Verify the global config is used
+    // Verify the config is bad
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
@@ -454,6 +418,17 @@ rustc = "non-existent-rustc"
 
 Caused by:
   [NOT_FOUND]
+
+"#]])
+        .run();
+
+    // Verify that the config isn't used
+    p.cargo("-Zscript ../script/script.rs -NotAnArg")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
+arg0: [..]
+args: ["-NotAnArg"]
 
 "#]])
         .run();
@@ -1105,6 +1080,109 @@ Caused by:
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn workspace_members_mentions_script() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/nop.rs"]
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript check")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn workspace_members_glob_matches_script() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/*"]
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript check")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn package_workspace() {
+    let p = cargo_test_support::project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["scripts/*"]
+
+[package]
+name = "foo"
+"#,
+        )
+        .file(
+            "scripts/nop.rs",
+            r#"
+----
+package.edition = "2021"
+package.workspace = "../"
+----
+
+fn main() {}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript ./scripts/nop.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/scripts/nop.rs`
+
+Caused by:
+  `package.workspace` is not allowed in embedded manifests
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn disallow_explicit_lib() {
     let p = cargo_test_support::project()
         .file(
@@ -1592,7 +1670,7 @@ fn cmd_check_with_missing_script_rs() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/script.rs`
+[ERROR] manifest path `script.rs` does not exist
 
 "#]])
         .run();
@@ -1607,7 +1685,7 @@ fn cmd_check_with_missing_script() {
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/script`
+[ERROR] manifest path `script` does not exist
 
 "#]])
         .run();
@@ -2034,10 +2112,10 @@ Caused by:
   failed to load source for dependency `script`
 
 Caused by:
-  Unable to update [ROOT]/foo/script.rs
+  unable to update [ROOT]/foo/script.rs
 
 Caused by:
-  Single file packages cannot be used as dependencies
+  single file packages cannot be used as dependencies
 
 "#]])
         .run();

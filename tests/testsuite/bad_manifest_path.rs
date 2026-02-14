@@ -4,7 +4,7 @@ use crate::prelude::*;
 use cargo_test_support::{basic_bin_manifest, main_file, project, str};
 
 #[track_caller]
-fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
+fn assert_bad_manifest_path(command: &str, manifest_path_argument: &str, stderr: impl IntoData) {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
@@ -15,310 +15,694 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .arg(manifest_path_argument)
         .cwd(p.root().parent().unwrap())
         .with_status(101)
-        .with_stderr_data(
-            "[ERROR] the manifest-path must be a path to a Cargo.toml file: `[ROOT]/[..]`\n",
-        )
-        .run();
-}
-
-#[track_caller]
-fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
-    let p = project().build();
-    let expected_path = manifest_path_argument
-        .split('/')
-        .collect::<Vec<_>>()
-        .join("[..]");
-
-    p.cargo(command)
-        .arg("--manifest-path")
-        .arg(manifest_path_argument)
-        .cwd(p.root().parent().unwrap())
-        .with_status(101)
-        .with_stderr_data(format!(
-            "[ERROR] manifest path `{}` does not exist\n",
-            expected_path
-        ))
+        .with_stderr_data(stderr)
         .run();
 }
 
 #[cargo_test]
 fn bench_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("bench", "foo");
+    assert_bad_manifest_path(
+        "bench",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn bench_dir_plus_file() {
-    assert_not_a_cargo_toml("bench", "foo/bar");
+    assert_bad_manifest_path(
+        "bench",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn bench_dir_plus_path() {
-    assert_not_a_cargo_toml("bench", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "bench",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn bench_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("bench", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "bench",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn build_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("check", "foo");
+    assert_bad_manifest_path(
+        "check",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn build_dir_plus_file() {
-    assert_not_a_cargo_toml("bench", "foo/bar");
+    assert_bad_manifest_path(
+        "bench",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn build_dir_plus_path() {
-    assert_not_a_cargo_toml("bench", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "bench",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn build_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("check", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "check",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn clean_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("clean", "foo");
+    assert_bad_manifest_path(
+        "clean",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn clean_dir_plus_file() {
-    assert_not_a_cargo_toml("clean", "foo/bar");
+    assert_bad_manifest_path(
+        "clean",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn clean_dir_plus_path() {
-    assert_not_a_cargo_toml("clean", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "clean",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn clean_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("clean", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "clean",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn doc_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("doc", "foo");
+    assert_bad_manifest_path(
+        "doc",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn doc_dir_plus_file() {
-    assert_not_a_cargo_toml("doc", "foo/bar");
+    assert_bad_manifest_path(
+        "doc",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn doc_dir_plus_path() {
-    assert_not_a_cargo_toml("doc", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "doc",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn doc_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("doc", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "doc",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn fetch_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("fetch", "foo");
+    assert_bad_manifest_path(
+        "fetch",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn fetch_dir_plus_file() {
-    assert_not_a_cargo_toml("fetch", "foo/bar");
+    assert_bad_manifest_path(
+        "fetch",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn fetch_dir_plus_path() {
-    assert_not_a_cargo_toml("fetch", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "fetch",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn fetch_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("fetch", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "fetch",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn generate_lockfile_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("generate-lockfile", "foo");
+    assert_bad_manifest_path(
+        "generate-lockfile",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn generate_lockfile_dir_plus_file() {
-    assert_not_a_cargo_toml("generate-lockfile", "foo/bar");
+    assert_bad_manifest_path(
+        "generate-lockfile",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn generate_lockfile_dir_plus_path() {
-    assert_not_a_cargo_toml("generate-lockfile", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "generate-lockfile",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn generate_lockfile_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("generate-lockfile", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "generate-lockfile",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn package_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("package", "foo");
+    assert_bad_manifest_path(
+        "package",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn package_dir_plus_file() {
-    assert_not_a_cargo_toml("package", "foo/bar");
+    assert_bad_manifest_path(
+        "package",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn package_dir_plus_path() {
-    assert_not_a_cargo_toml("package", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "package",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn package_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("package", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "package",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn pkgid_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("pkgid", "foo");
+    assert_bad_manifest_path(
+        "pkgid",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn pkgid_dir_plus_file() {
-    assert_not_a_cargo_toml("pkgid", "foo/bar");
+    assert_bad_manifest_path(
+        "pkgid",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn pkgid_dir_plus_path() {
-    assert_not_a_cargo_toml("pkgid", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "pkgid",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn pkgid_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("pkgid", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "pkgid",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn publish_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("publish", "foo");
+    assert_bad_manifest_path(
+        "publish",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn publish_dir_plus_file() {
-    assert_not_a_cargo_toml("publish", "foo/bar");
+    assert_bad_manifest_path(
+        "publish",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn publish_dir_plus_path() {
-    assert_not_a_cargo_toml("publish", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "publish",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn publish_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("publish", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "publish",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn read_manifest_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("read-manifest", "foo");
+    assert_bad_manifest_path(
+        "read-manifest",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn read_manifest_dir_plus_file() {
-    assert_not_a_cargo_toml("read-manifest", "foo/bar");
+    assert_bad_manifest_path(
+        "read-manifest",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn read_manifest_dir_plus_path() {
-    assert_not_a_cargo_toml("read-manifest", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "read-manifest",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn read_manifest_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("read-manifest", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "read-manifest",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn run_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("run", "foo");
+    assert_bad_manifest_path(
+        "run",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn run_dir_plus_file() {
-    assert_not_a_cargo_toml("run", "foo/bar");
+    assert_bad_manifest_path(
+        "run",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn run_dir_plus_path() {
-    assert_not_a_cargo_toml("run", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "run",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn run_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("run", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "run",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn rustc_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("rustc", "foo");
+    assert_bad_manifest_path(
+        "rustc",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn rustc_dir_plus_file() {
-    assert_not_a_cargo_toml("rustc", "foo/bar");
+    assert_bad_manifest_path(
+        "rustc",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn rustc_dir_plus_path() {
-    assert_not_a_cargo_toml("rustc", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "rustc",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn rustc_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("rustc", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "rustc",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn test_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("test", "foo");
+    assert_bad_manifest_path(
+        "test",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn test_dir_plus_file() {
-    assert_not_a_cargo_toml("test", "foo/bar");
+    assert_bad_manifest_path(
+        "test",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn test_dir_plus_path() {
-    assert_not_a_cargo_toml("test", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "test",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn test_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("test", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "test",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn update_dir_containing_cargo_toml() {
-    assert_not_a_cargo_toml("update", "foo");
+    assert_bad_manifest_path(
+        "update",
+        "foo",
+        str![[r#"
+[ERROR] manifest path `foo` is a directory but expected a file
+[HELP] [ROOT]/foo/Cargo.toml exists
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn update_dir_plus_file() {
-    assert_not_a_cargo_toml("update", "foo/bar");
+    assert_bad_manifest_path(
+        "update",
+        "foo/bar",
+        str![[r#"
+[ERROR] manifest path `foo/bar` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn update_dir_plus_path() {
-    assert_not_a_cargo_toml("update", "foo/bar/baz");
+    assert_bad_manifest_path(
+        "update",
+        "foo/bar/baz",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
 fn update_dir_to_nonexistent_cargo_toml() {
-    assert_cargo_toml_doesnt_exist("update", "foo/bar/baz/Cargo.toml");
+    assert_bad_manifest_path(
+        "update",
+        "foo/bar/baz/Cargo.toml",
+        str![[r#"
+[ERROR] manifest path `foo/bar/baz/Cargo.toml` does not exist
+
+"#]],
+    );
 }
 
 #[cargo_test]
@@ -335,7 +719,7 @@ fn verify_project_dir_containing_cargo_toml() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo`"
+    "invalid": "manifest path `foo` is a directory but expected a file\n[HELP] [ROOT]/foo/Cargo.toml exists"
   }
 ]
 "#]]
@@ -359,7 +743,7 @@ fn verify_project_dir_plus_file() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar`"
+    "invalid": "manifest path `foo/bar` does not exist"
   }
 ]
 "#]]
@@ -383,7 +767,7 @@ fn verify_project_dir_plus_path() {
             str![[r#"
 [
   {
-    "invalid": "the manifest-path must be a path to a Cargo.toml file: `[ROOT]/foo/bar/baz`"
+    "invalid": "manifest path `foo/bar/baz` does not exist"
   }
 ]
 "#]]

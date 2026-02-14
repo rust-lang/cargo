@@ -19,10 +19,11 @@ use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "unused_workspace_package_fields",
     desc: "unused field in `workspace.package`",
     primary_group: &SUSPICIOUS,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -55,6 +56,7 @@ pub fn unused_workspace_package_fields(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        ws.lowest_rust_version(),
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
     );

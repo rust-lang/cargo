@@ -73,9 +73,9 @@ impl<'gctx> InstallablePackage<'gctx> {
         if let Some(name) = krate {
             if name == "." {
                 bail!(
-                    "To install the binaries for the package in current working \
+                    "to install the binaries for the package in current working \
                      directory use `cargo install --path .`. \n\
-                     Use `cargo build` if you want to simply build the package."
+                     use `cargo build` if you want to simply build the package."
                 )
             }
         }
@@ -228,17 +228,17 @@ impl<'gctx> InstallablePackage<'gctx> {
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
                 gctx.shell().warn(
-                    "Using `cargo install` to install the binaries from the \
+                    "using `cargo install` to install the binaries from the \
                      package in current working directory is deprecated, \
                      use `cargo install --path .` instead. \
-                     Use `cargo build` if you want to simply build the package.",
+                     note: use `cargo build` if you want to simply build the package.",
                 )?
             } else {
                 bail!(
-                    "Using `cargo install` to install the binaries from the \
+                    "using `cargo install` to install the binaries from the \
                      package in current working directory is no longer supported, \
                      use `cargo install --path .` instead. \
-                     Use `cargo build` if you want to simply build the package."
+                     note: use `cargo build` if you want to simply build the package."
                 )
             }
         };
@@ -356,9 +356,9 @@ impl<'gctx> InstallablePackage<'gctx> {
                 "failed to compile `{}`, intermediate artifacts can be \
                  found at `{}`.\nTo reuse those artifacts with a future \
                  compilation, set the environment variable \
-                 `CARGO_TARGET_DIR` to that path.",
+                 `CARGO_BUILD_BUILD_DIR` to that path.",
                 self.pkg,
-                self.ws.target_dir().display()
+                self.ws.build_dir().display()
             )
         })?;
         let mut binaries: Vec<(&str, &Path)> = compile
@@ -879,7 +879,9 @@ fn make_ws_rustc_target<'gctx>(
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
-    ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
+    if ws.requested_lockfile_path().is_none() {
+        ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
+    }
     // if --lockfile-path is set, imply --locked
     if ws.requested_lockfile_path().is_some() {
         ws.set_ignore_lock(false);

@@ -317,7 +317,7 @@ fn fail_with_glob() {
     p.cargo("rustdoc -p '*z'")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Glob patterns on package selection are not supported.
+[ERROR] glob patterns on package selection are not supported.
 
 "#]])
         .run();

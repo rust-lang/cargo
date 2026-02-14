@@ -19,7 +19,7 @@ use cargo_util::{ProcessBuilder, ProcessError};
 
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, exe};
-use cargo_test_support::paths;
+use cargo_test_support::paths::{self, cargo_home};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -376,8 +376,8 @@ fn missing_current_working_directory() {
     cargo_process("install .")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] To install the binaries for the package in current working directory use `cargo install --path .`. 
-Use `cargo build` if you want to simply build the package.
+[ERROR] to install the binaries for the package in current working directory use `cargo install --path .`. 
+use `cargo build` if you want to simply build the package.
 
 "#]])
         .run();
@@ -674,7 +674,7 @@ fn install_target_dir() {
 
     p.cargo("install --target-dir td_test")
         .with_stderr_data(str![[r#"
-[WARNING] Using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -1170,7 +1170,7 @@ fn compile_failure() {
 ...
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 ...
 "#]])
         .run();
@@ -1215,10 +1215,10 @@ fn git_repo_with_lowercase_cargo_toml() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository [..]
-[ERROR] Could not find Cargo.toml in `[..]`, but found cargo.toml please try to rename it to Cargo.toml
+[ERROR] could not find `Cargo.toml` in `[..]`
+[HELP] found `cargo.toml`, consider renaming it to `Cargo.toml`
 
-"#]]
-        )
+"#]])
         .run();
 }
 
@@ -1370,7 +1370,7 @@ fn installs_from_cwd_by_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("install").with_stderr_data(str![[r#"
-[WARNING] Using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 ...
 "#]]).run();
     assert_has_installed_exe(paths::cargo_home(), "foo");
@@ -1395,7 +1395,7 @@ fn installs_from_cwd_with_2018_warnings() {
     p.cargo("install")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Using `cargo install` to install the binaries from the package in current working directory is no longer supported, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
+[ERROR] using `cargo install` to install the binaries from the package in current working directory is no longer supported, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 
 "#]])
         .run();
@@ -2571,7 +2571,7 @@ fn failed_install_retains_temp_directory() {
 
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 [ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 "#]]);
 
@@ -2581,6 +2581,49 @@ To reuse those artifacts with a future compilation, set the environment variable
     let path = Path::new(&stderr[..end]);
     assert!(path.exists());
     assert!(path.join("release/deps").exists());
+}
+
+#[cargo_test]
+fn failed_install_points_to_build_dir_for_intermediate_artifacts() {
+    let custom_build_dir = cargo_home().join("build-artifacts");
+
+    let p = project()
+        .file("src/main.rs", "x")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "0.0.1"
+        authors = []
+        edition = "2021"
+
+        [dependencies]
+    "#,
+        )
+        .build();
+
+    let err = cargo_process("install --path")
+        .env("CARGO_BUILD_BUILD_DIR", &custom_build_dir)
+        .arg(p.root())
+        .exec_with_output()
+        .unwrap_err();
+    let err = err.downcast::<ProcessError>().unwrap();
+    let stderr = String::from_utf8(err.stderr.unwrap()).unwrap();
+    assert_e2e().eq(&stderr, str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] expected one of `!` or `::`, found `<eof>`
+ --> src/main.rs:1:1
+  |
+1 | x
+  | ^ expected one of `!` or `::`
+
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+[ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/home/.cargo/build-artifacts`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
+
+"#]]);
 }
 
 #[cargo_test]
@@ -2971,7 +3014,7 @@ fn dry_run_incompatible_package_dependency() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
   rustc [..] is not supported by the following package:

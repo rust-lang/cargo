@@ -83,3 +83,25 @@ fn cargo_verify_project_honours_unstable_features() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn verify_project_invalid_toml_syntax() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("verify-project")
+        .with_status(1)
+        .with_stdout_data(str![[r#"
+{"invalid":"TOML parse error at line 4, column 11/n  |/n4 | version = /n  |           ^/nstring values must be quoted, expected literal string/n"}
+
+"#]])
+        .run();
+}

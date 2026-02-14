@@ -565,7 +565,7 @@ Caused by:
   failed to load source for dependency `a`
 
 Caused by:
-  Unable to update [ROOT]/foo/a
+  unable to update [ROOT]/foo/a
 
 Caused by:
   failed to parse manifest at `[ROOT]/foo/a/Cargo.toml`

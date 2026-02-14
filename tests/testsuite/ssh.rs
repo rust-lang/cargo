@@ -139,7 +139,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
+  unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -231,7 +231,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
+  unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -344,7 +344,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update ssh://testuser@127.0.0.1:{port}/repos/bar.git
+  unable to update ssh://testuser@127.0.0.1:{port}/repos/bar.git
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -474,7 +474,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
+  unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -503,7 +503,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
+  unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -536,7 +536,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+  unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -565,7 +565,7 @@ Caused by:
   failed to load source for dependency `bitflags`
 
 Caused by:
-  Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+  unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]

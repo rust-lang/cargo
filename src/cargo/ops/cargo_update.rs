@@ -793,7 +793,7 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
     }
 
     if let Some(ver) = ws.lowest_rust_version() {
-        Some(ver.clone().into_partial())
+        Some(ver.to_partial())
     } else {
         let rustc = ws.gctx().load_global_rustc(Some(ws)).ok()?;
         let rustc_version = rustc.version.clone().into();
@@ -1254,7 +1254,7 @@ fn annotate_required_rust_version(
             .map(|p| {
                 (
                     p.rust_version()
-                        .map(|r| r.clone().into_partial())
+                        .map(|r| r.to_partial())
                         .or_else(|| rustc_version.clone()),
                     p.package_id(),
                 )

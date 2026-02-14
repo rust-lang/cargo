@@ -1631,8 +1631,8 @@ fn ambiguous_name() {
 [DOWNLOADED] dep v2.0.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[ERROR] There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
-Please re-run this command with one of the following specifications:
+[ERROR] specificationm `dep` is ambiguous
+[HELP] re-run this command with one of the following specifications
   dep@1.0.0
   dep@2.0.0
 

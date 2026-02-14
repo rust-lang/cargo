@@ -49,10 +49,7 @@ use self::targets::to_targets;
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
 pub fn is_embedded(path: &Path) -> bool {
     let ext = path.extension();
-    (ext == Some(OsStr::new("rs")) ||
-        // Provide better errors by not considering directories to be embedded manifests
-        ext.is_none())
-        && path.is_file()
+    ext == Some(OsStr::new("rs")) || ext.is_none()
 }
 
 /// Loads a `Cargo.toml` from a file on disk.
@@ -1312,7 +1309,7 @@ pub fn to_real_manifest(
         if let Some(pkg_msrv) = &rust_version {
             if let Some(edition_msrv) = edition.first_version() {
                 let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
-                if !edition_msrv.is_compatible_with(pkg_msrv.as_partial()) {
+                if !edition_msrv.is_compatible_with(&pkg_msrv.to_partial()) {
                     bail!(
                         "rust-version {} is incompatible with the version ({}) required by \
                             the specified edition ({})",
@@ -1332,7 +1329,7 @@ pub fn to_real_manifest(
                     e.first_version()
                         .map(|e| {
                             let e = RustVersion::try_from(e).unwrap();
-                            e.is_compatible_with(pkg_msrv.as_partial())
+                            e.is_compatible_with(&pkg_msrv.to_partial())
                         })
                         .unwrap_or_default()
                 })

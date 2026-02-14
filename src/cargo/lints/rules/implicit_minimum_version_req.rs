@@ -17,19 +17,20 @@ use crate::GlobalContext;
 use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::LintLevelReason;
-use crate::lints::ManifestFor;
 use crate::lints::PEDANTIC;
 use crate::lints::get_key_value;
 use crate::lints::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "implicit_minimum_version_req",
     desc: "dependency version requirement without an explicit minimum version",
     primary_group: &PEDANTIC,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -82,14 +83,19 @@ serde = "1.0.219"
     ),
 };
 
-pub fn implicit_minimum_version_req(
-    manifest: ManifestFor<'_>,
+pub fn implicit_minimum_version_req_pkg(
+    pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT);
+    let (lint_level, reason) = LINT.level(
+        cargo_lints,
+        pkg.rust_version(),
+        pkg.manifest().edition(),
+        pkg.manifest().unstable_features(),
+    );
 
     if lint_level == LintLevel::Allow {
         return Ok(());
@@ -97,29 +103,6 @@ pub fn implicit_minimum_version_req(
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    match manifest {
-        ManifestFor::Package(pkg) => {
-            lint_package(pkg, manifest_path, lint_level, reason, error_count, gctx)
-        }
-        ManifestFor::Workspace(maybe_pkg) => lint_workspace(
-            maybe_pkg,
-            manifest_path,
-            lint_level,
-            reason,
-            error_count,
-            gctx,
-        ),
-    }
-}
-
-pub fn lint_package(
-    pkg: &Package,
-    manifest_path: String,
-    lint_level: LintLevel,
-    reason: LintLevelReason,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
     let document = manifest.document();
@@ -167,14 +150,27 @@ pub fn lint_package(
     Ok(())
 }
 
-pub fn lint_workspace(
+pub fn implicit_minimum_version_req_ws(
+    ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
-    manifest_path: String,
-    lint_level: LintLevel,
-    reason: LintLevelReason,
+    manifest_path: &Path,
+    cargo_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    let (lint_level, reason) = LINT.level(
+        cargo_lints,
+        ws.lowest_rust_version(),
+        maybe_pkg.edition(),
+        maybe_pkg.unstable_features(),
+    );
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+
     let document = maybe_pkg.document();
     let contents = maybe_pkg.contents();
     let toml = match maybe_pkg {

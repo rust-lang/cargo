@@ -47,7 +47,7 @@ use cargo_util_schemas::manifest::RustVersion;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
-use std::str::{self, FromStr};
+use std::str;
 use std::sync::{Arc, Mutex};
 
 /// A build script instruction that tells Cargo to display an error after the
@@ -337,7 +337,12 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .map(|d| &d.unit)
         .expect("running a script not depending on an actual script");
     let script_dir = build_runner.files().build_script_dir(build_script_unit);
-    let script_out_dir = build_runner.files().build_script_out_dir(unit);
+
+    let script_out_dir = if bcx.gctx.cli_unstable().build_dir_new_layout {
+        build_runner.files().out_dir_new_layout(unit)
+    } else {
+        build_runner.files().build_script_out_dir(unit)
+    };
     let script_run_dir = build_runner.files().build_script_run_dir(unit);
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
@@ -505,6 +510,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
+    paths::create_dir_all(&script_run_dir)?;
 
     let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
@@ -840,8 +846,8 @@ impl BuildOutput {
             flag: &str,
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
-                let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
-                if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
+                let new_syntax_added_in = RustVersion::new(1, 77, 0);
+                if !new_syntax_added_in.is_compatible_with(&msrv.to_partial()) {
                     let old_syntax_suggestion = if has_reserved_prefix(flag) {
                         format!(
                             "Switch to the old `cargo:{flag}` syntax (note the single colon).\n"
@@ -1074,16 +1080,16 @@ impl BuildOutput {
                         if nightly_features_allowed
                             || rustc_bootstrap_allows(library_name.as_deref())
                         {
-                            log_messages.push((Severity::Warning, format!("Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
-                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
+                            log_messages.push((Severity::Warning, format!("cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.",
                                 val, whence
                             )));
                         } else {
                             // Setting RUSTC_BOOTSTRAP would change the behavior of the crate.
                             // Abort with an error.
                             bail!(
-                                "Cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
-                                note: Crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
+                                "cannot set `RUSTC_BOOTSTRAP={}` from {}.\n\
+                                note: crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.\n\
                                 help: If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP={}` before running cargo instead.",
                                 val,
                                 whence,
@@ -1147,7 +1153,7 @@ impl BuildOutput {
                     value = match flags_iter.next() {
                         Some(v) => v,
                         None => bail! {
-                            "Flag in rustc-flags has no value in {}: {}",
+                            "flag in rustc-flags has no value in {}: {}",
                             whence,
                             value
                         },
@@ -1163,7 +1169,7 @@ impl BuildOutput {
                 };
             } else {
                 bail!(
-                    "Only `-l` and `-L` flags are allowed in {}: `{}`",
+                    "only `-l` and `-L` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )
@@ -1366,7 +1372,11 @@ fn prev_build_output(
     build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
 ) -> (Option<BuildOutput>, PathBuf) {
-    let script_out_dir = build_runner.files().build_script_out_dir(unit);
+    let script_out_dir = if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+        build_runner.files().out_dir_new_layout(unit)
+    } else {
+        build_runner.files().build_script_out_dir(unit)
+    };
     let script_run_dir = build_runner.files().build_script_run_dir(unit);
     let root_output_file = script_run_dir.join("root-output");
     let output_file = script_run_dir.join("output");

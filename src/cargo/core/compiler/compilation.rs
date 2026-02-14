@@ -9,10 +9,11 @@ use cargo_util::{ProcessBuilder, paths};
 
 use crate::core::Package;
 use crate::core::compiler::BuildContext;
+use crate::core::compiler::CompileTarget;
 use crate::core::compiler::RustdocFingerprint;
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
-use crate::util::{CargoResult, GlobalContext, context};
+use crate::util::{CargoResult, GlobalContext};
 
 /// Represents the kind of process we are creating.
 #[derive(Debug)]
@@ -127,7 +128,8 @@ pub struct Compilation<'gctx> {
     /// `rustc_workspace_wrapper_process`
     primary_rustc_process: Option<ProcessBuilder>,
 
-    target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
+    /// The runner to use for each host or target process.
+    runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
     /// The linker to use for each host or target.
     target_linkers: HashMap<CompileKind, Option<PathBuf>>,
 
@@ -140,6 +142,22 @@ impl<'gctx> Compilation<'gctx> {
         let rustc_process = bcx.rustc().process();
         let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
+        let host = bcx.host_triple().to_string();
+        let mut runners = bcx
+            .build_config
+            .requested_kinds
+            .iter()
+            .chain(Some(&CompileKind::Host))
+            .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
+            .collect::<CargoResult<HashMap<_, _>>>()?;
+        if !bcx.gctx.target_applies_to_host()? {
+            // When `target-applies-to-host=false`, and without `--target`,
+            // there will be only `CompileKind::Host` in requested_kinds.
+            // Need to insert target config explicitly for target-applies-to-host=false
+            // to find the correct configs.
+            let kind = explicit_host_kind(&host);
+            runners.insert(kind, target_runner(bcx, kind)?);
+        }
         Ok(Compilation {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::new(),
@@ -153,17 +171,11 @@ impl<'gctx> Compilation<'gctx> {
             to_doc_test: Vec::new(),
             rustdoc_fingerprints: None,
             gctx: bcx.gctx,
-            host: bcx.host_triple().to_string(),
+            host,
             rustc_process,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
-            target_runners: bcx
-                .build_config
-                .requested_kinds
-                .iter()
-                .chain(Some(&CompileKind::Host))
-                .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
-                .collect::<CargoResult<HashMap<_, _>>>()?,
+            runners,
             target_linkers: bcx
                 .build_config
                 .requested_kinds
@@ -235,17 +247,34 @@ impl<'gctx> Compilation<'gctx> {
         cmd: T,
         pkg: &Package,
     ) -> CargoResult<ProcessBuilder> {
-        self.fill_env(
-            ProcessBuilder::new(cmd),
-            pkg,
-            None,
-            CompileKind::Host,
-            ToolKind::HostProcess,
-        )
+        // Only use host runner when -Zhost-config is enabled
+        // to ensure `target.<host>.runner` does not wrap build scripts.
+        let builder = if !self.gctx.target_applies_to_host()?
+            && let Some((runner, args)) = self
+                .runners
+                .get(&CompileKind::Host)
+                .and_then(|x| x.as_ref())
+        {
+            let mut builder = ProcessBuilder::new(runner);
+            builder.args(args);
+            builder.arg(cmd);
+            builder
+        } else {
+            ProcessBuilder::new(cmd)
+        };
+        self.fill_env(builder, pkg, None, CompileKind::Host, ToolKind::HostProcess)
     }
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
-        self.target_runners.get(&kind).and_then(|x| x.as_ref())
+        let target_applies_to_host = self.gctx.target_applies_to_host().unwrap_or(true);
+        let kind = if !target_applies_to_host && kind.is_host() {
+            // Use explicit host target triple when `target-applies-to-host=false`
+            // This ensures `host.runner` won't be accidentally applied to `cargo run` / `cargo test`.
+            explicit_host_kind(&self.host)
+        } else {
+            kind
+        };
+        self.runners.get(&kind).and_then(|x| x.as_ref())
     }
 
     /// Gets the user-specified linker for a particular host or target.
@@ -440,14 +469,9 @@ fn target_runner(
     bcx: &BuildContext<'_, '_>,
     kind: CompileKind,
 ) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
-    let target = bcx.target_data.short_name(&kind);
-
-    // try target.{}.runner
-    let key = format!("target.{}.runner", target);
-
-    if let Some(v) = bcx.gctx.get::<Option<context::PathAndArgs>>(&key)? {
-        let path = v.path.resolve_program(bcx.gctx);
-        return Ok(Some((path, v.args)));
+    if let Some(runner) = bcx.target_data.target_config(kind).runner.as_ref() {
+        let path = runner.val.path.clone().resolve_program(bcx.gctx);
+        return Ok(Some((path, runner.val.args.clone())));
     }
 
     // try target.'cfg(...)'.runner
@@ -512,4 +536,9 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         );
     }
     Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(bcx.gctx)))
+}
+
+fn explicit_host_kind(host: &str) -> CompileKind {
+    let target = CompileTarget::new(host, false).expect("must be a host tuple");
+    CompileKind::Target(target)
 }

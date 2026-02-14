@@ -439,7 +439,7 @@ pub fn resolve_with_previous<'gctx>(
     if ws.resolve_honors_rust_version() {
         let mut rust_versions: Vec<_> = ws
             .members()
-            .filter_map(|p| p.rust_version().map(|rv| rv.as_partial().clone()))
+            .filter_map(|p| p.rust_version().map(|rv| rv.to_partial()))
             .collect();
         if rust_versions.is_empty() {
             let rustc = ws.gctx().load_global_rustc(Some(ws))?;

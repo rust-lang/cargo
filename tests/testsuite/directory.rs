@@ -193,7 +193,7 @@ fn simple_install_fail() {
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
   no matching package found
@@ -669,7 +669,7 @@ Caused by:
   failed to load source for dependency `git`
 
 Caused by:
-  Unable to update [..]
+  unable to update https://example.com/
 
 Caused by:
   the source my-git-repo requires a lock file to be present first before it can be
@@ -771,7 +771,7 @@ fn version_missing() {
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [ERROR] failed to compile [..], intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
   failed to select a version for the requirement `foo = "^2"`

@@ -423,7 +423,7 @@ Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update registry `crates-io`
+  unable to update registry `crates-io`
 
 Caused by:
   failed to update replaced source registry `crates-io`

@@ -811,6 +811,234 @@ fn custom_build_linker_bad_cross_arch_host() {
 }
 
 #[cargo_test]
+fn host_runner_wraps_build_script() {
+    let target = rustc_host();
+    let wrapper = tools::echo_wrapper();
+    let p = project()
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build should succeed with the host runner wrapping the build script
+    p.cargo("build -Z target-applies-to-host -Z host-config -v --target")
+        .arg(&target)
+        .env("CARGO_HOST_RUNNER", &wrapper)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]build.rs [..]`
+[RUNNING] `[..]/rustc-echo-wrapper[EXE] [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc [..]--crate-name foo [..]`
+[FINISHED] [..]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn host_runner_does_not_apply_to_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [host]
+                runner = "nonexistent-runner"
+                [target.{target}]
+                runner = "nonexistent-target-runner"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // build.rs execution should fail due to the host runner, not the target runner
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  could not execute process `nonexistent-runner [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn host_runner_arch_takes_precedence() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [host]
+                runner = "nonexistent-generic-runner"
+                [host.{target}]
+                runner = "nonexistent-arch-runner"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // host.<triple>.runner should take precedence over host.runner
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  could not execute process `nonexistent-arch-runner [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn host_runner_ignored_without_flag() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [host]
+            runner = "nonexistent-runner"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // Without -Zhost-config, host.runner should be ignored and build succeeds
+    p.cargo("build").run();
+}
+
+#[cargo_test]
+fn host_runner_with_args() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [host]
+            runner = ["nonexistent-runner", "--flag", "arg1"]
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    // Runner args should be passed correctly before the build script path
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  could not execute process `nonexistent-runner --flag arg1 [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn host_runner_does_not_apply_to_cargo_run() {
+    // `host.runner` should only wrap build scripts, not `cargo run`.
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { println!(\"hello\"); }")
+        .build();
+
+    // with --target
+    p.cargo("run -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
+
+    // without --target
+    p.cargo("run -Z target-applies-to-host -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_runner_does_not_apply_to_build_script() {
+    // Regression test for https://github.com/rust-lang/miri/issues/4855
+    // `target.<host>.runner` should not wrap build scripts.
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{target}]
+                runner = "nonexistent-runner"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(
@@ -836,7 +1064,7 @@ fn custom_build_script_wrong_rustc_flags() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([ROOT]/foo)`: `-aaa -bbb`
+[ERROR] only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([ROOT]/foo)`: `-aaa -bbb`
 
 "#]])
         .run();

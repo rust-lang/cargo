@@ -30,12 +30,6 @@ pub struct Container {
 pub struct ContainerHandle {
     /// The name of the container.
     name: String,
-    /// The IP address of the container.
-    ///
-    /// NOTE: This is currently unused, but may be useful so I left it in.
-    /// This can only be used on Linux. macOS and Windows docker doesn't allow
-    /// direct connection to the container.
-    pub ip_address: String,
     /// Port mappings of `container_port` to `host_port` for ports exposed via EXPOSE.
     pub port_mappings: HashMap<u16, u16>,
 }
@@ -69,22 +63,11 @@ impl Container {
         self.copy_files(&name);
         self.start_container(&name);
         let info = self.container_inspect(&name);
-        let ip_address = if cfg!(target_os = "linux") {
-            info[0]["NetworkSettings"]["IPAddress"]
-                .as_str()
-                .unwrap()
-                .to_string()
-        } else {
-            // macOS and Windows can't make direct connections to the
-            // container. It only works through exposed ports or mapped ports.
-            "127.0.0.1".to_string()
-        };
         let port_mappings = self.port_mappings(&info);
         self.wait_till_ready(&port_mappings);
 
         ContainerHandle {
             name,
-            ip_address,
             port_mappings,
         }
     }

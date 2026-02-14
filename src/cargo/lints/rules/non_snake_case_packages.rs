@@ -18,10 +18,11 @@ use crate::lints::RESTRICTION;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 
-pub const LINT: Lint = Lint {
+pub static LINT: &Lint = &Lint {
     name: "non_snake_case_packages",
     desc: "packages should have a snake-case name",
     primary_group: &RESTRICTION,
+    msrv: None,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
@@ -64,6 +65,7 @@ pub fn non_snake_case_packages(
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
         cargo_lints,
+        pkg.rust_version(),
         pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );
