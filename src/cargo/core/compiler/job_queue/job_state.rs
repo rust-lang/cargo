@@ -212,4 +212,13 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         self.messages
             .push(Message::FutureIncompatReport(self.id, report));
     }
+
+    /// The rustc emitted the list of unused `--extern` args.
+    ///
+    /// This is useful for checking unused dependencies.
+    /// Should only be called once, as the compiler only emits it once per compilation.
+    pub fn unused_externs(&self, unused_externs: Vec<String>) {
+        self.messages
+            .push(Message::UnusedExterns(self.id, unused_externs));
+    }
 }
