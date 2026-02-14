@@ -1437,7 +1437,7 @@ struct BuildScriptRunFiles {
     stdout: PathBuf,
     /// The stderr produced by the build script
     stderr: PathBuf,
-    /// A file that contains the path of `root`.
+    /// A file that contains the path to the `out` dir of the build script.
     /// This is used for detect if the directory was moved since the previous run.
     root_output: PathBuf,
 }
