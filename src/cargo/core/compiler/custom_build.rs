@@ -1445,7 +1445,11 @@ struct BuildScriptRunFiles {
 impl BuildScriptRunFiles {
     pub fn for_unit(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Self {
         let root = build_runner.files().build_script_run_dir(unit);
-        let stdout = root.join("output");
+        let stdout = if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
+            root.join("stdout")
+        } else {
+            root.join("output")
+        };
         let stderr = root.join("stderr");
         let root_output = root.join("root-output");
         Self {
