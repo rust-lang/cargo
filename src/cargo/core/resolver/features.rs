@@ -843,7 +843,9 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                     // FIXME: this needs to interact with the `default-target`
                     // and `forced-target` values of the dependency
                     ArtifactTarget::BuildDependencyAssumeTarget => {
-                        for kind in this.requested_targets {
+                        let pkg = this.package_set.get_one(pkg_id)?;
+                        let forced_kind = pkg.manifest().summary().forced_kind();
+                        if let Some(kind) = forced_kind {
                             let target = match kind {
                                 CompileKind::Host => {
                                     CompileTarget::new(&host_triple, unstable_json_spec).unwrap()
@@ -852,6 +854,18 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                             };
                             activate_target(target)?;
                             result.push(FeaturesFor::ArtifactDep(target));
+                        } else {
+                            for kind in this.requested_targets {
+                                let target = match kind {
+                                    CompileKind::Host => {
+                                        CompileTarget::new(&host_triple, unstable_json_spec)
+                                            .unwrap()
+                                    }
+                                    CompileKind::Target(target) => *target,
+                                };
+                                activate_target(target)?;
+                                result.push(FeaturesFor::ArtifactDep(target));
+                            }
                         }
                     }
                 }

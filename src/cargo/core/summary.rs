@@ -1,3 +1,4 @@
+use crate::core::compiler::CompileKind;
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::CargoResult;
 use crate::util::closest_msg;
@@ -29,6 +30,8 @@ struct Inner {
     checksum: Option<String>,
     links: Option<InternedString>,
     rust_version: Option<RustVersion>,
+    default_kind: Option<CompileKind>,
+    forced_kind: Option<CompileKind>,
     pubtime: Option<jiff::Timestamp>,
 }
 
@@ -69,6 +72,8 @@ impl Summary {
         features: &BTreeMap<InternedString, Vec<InternedString>>,
         links: Option<impl Into<InternedString>>,
         rust_version: Option<RustVersion>,
+        default_kind: Option<CompileKind>,
+        forced_kind: Option<CompileKind>,
     ) -> CargoResult<Summary> {
         // ****CAUTION**** If you change anything here that may raise a new
         // error, be sure to coordinate that change with either the index
@@ -91,6 +96,8 @@ impl Summary {
                 checksum: None,
                 links: links.map(|l| l.into()),
                 rust_version,
+                default_kind,
+                forced_kind,
                 pubtime: None,
             }),
         })
@@ -124,6 +131,14 @@ impl Summary {
 
     pub fn rust_version(&self) -> Option<&RustVersion> {
         self.inner.rust_version.as_ref()
+    }
+
+    pub fn default_kind(&self) -> Option<&CompileKind> {
+        self.inner.default_kind.as_ref()
+    }
+
+    pub fn forced_kind(&self) -> Option<&CompileKind> {
+        self.inner.forced_kind.as_ref()
     }
 
     pub fn pubtime(&self) -> Option<jiff::Timestamp> {

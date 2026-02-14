@@ -190,8 +190,16 @@ pub fn resolve_with_global_context_raw(
         used: HashSet::new(),
     };
 
-    let root_summary =
-        Summary::new(root_pkg_id, deps, &BTreeMap::new(), None::<&String>, None).unwrap();
+    let root_summary = Summary::new(
+        root_pkg_id,
+        deps,
+        &BTreeMap::new(),
+        None::<&String>,
+        None,
+        None,
+        None,
+    )
+    .unwrap();
 
     let opts = ResolveOpts::everything();
 
