@@ -513,7 +513,10 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
         .status("Creating", format!("{} package", opts.kind))?;
 
     if path.join("Cargo.toml").exists() {
-        anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
+        anyhow::bail!(
+            "`cargo init` cannot be run on existing Cargo packages\n\
+             help: use `cargo new` to create a package in a new subdirectory"
+        )
     }
     check_path(path, &mut gctx.shell())?;
 
