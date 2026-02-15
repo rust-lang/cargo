@@ -1,12 +1,45 @@
 //! Management of the directory layout of a build
 //!
 //! The directory layout is a little tricky at times, hence a separate file to
-//! house this logic. The current layout looks like this:
+//! house this logic. Cargo stores build artifacts in two directories: `artifact-dir` and
+//! `build-dir`
+//!
+//! ## `artifact-dir` layout
+//!
+//! `artifact-dir` is where final artifacts like binaries are stored.
+//! The `artifact-dir` layout is consider part of the public API and
+//! cannot be easily changed.
 //!
 //! ```text
-//! # This is the root directory for all output, the top-level package
-//! # places all of its output here.
-//! target/
+//! <artifact-dir>/
+//!
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Root directory for all compiled examples.
+//!         examples/
+//!
+//!     # Output from rustdoc
+//!     doc/
+//!
+//!     # Output from `cargo package` to build a `.crate` file.
+//!     package/
+//! ```
+//!
+//! ## `build-dir` layout
+//!
+//! `build-dir` is where intermediate build artifacts are stored.
+//! The `build-dir` layout is considered an internal implementation detail of Cargo
+//! meaning that we can change this if needed. However, in reality many tools rely on
+//! implementation details of Cargo so breaking changes need to be done carefully.
+//!
+//! ```text
+//! <build-dir>/
 //!
 //!     # Cache of `rustc -Vv` output for performance.
 //!     .rustc-info.json
@@ -84,9 +117,6 @@
 //!                 root-output
 //!                 # Stderr output from the build script.
 //!                 stderr
-//!
-//!     # Output from rustdoc
-//!     doc/
 //!
 //!     # Used by `cargo package` and `cargo publish` to build a `.crate` file.
 //!     package/
