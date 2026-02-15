@@ -840,11 +840,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         activate_target(target)?;
                         result.push(FeaturesFor::ArtifactDep(target))
                     }
-                    // FIXME: this needs to interact with the `default-target`
-                    // and `forced-target` values of the dependency
                     ArtifactTarget::BuildDependencyAssumeTarget => {
-                        let pkg = this.package_set.get_one(pkg_id)?;
-                        let forced_kind = pkg.manifest().summary().forced_kind();
+                        let forced_kind = this.resolve.summary(pkg_id).forced_kind();
                         if let Some(kind) = forced_kind {
                             let target = match kind {
                                 CompileKind::Host => {
