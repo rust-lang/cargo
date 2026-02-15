@@ -11,12 +11,9 @@
 //!     # Cache of `rustc -Vv` output for performance.
 //!     .rustc-info.json
 //!
-//!     # All final artifacts are linked into this directory from `deps`.
-//!     # Note that named profiles will soon be included as separate directories
-//!     # here. They have a restricted format, similar to Rust identifiers, so
-//!     # Cargo-specific directories added in the future should use some prefix
-//!     # like `.` to avoid name collisions.
-//!     debug/  # or release/
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
 //!
 //!         # File used to lock the directory to prevent multiple cargo processes
 //!         # from using it at the same time.
