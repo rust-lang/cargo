@@ -2277,6 +2277,16 @@ fn vendor_summary_output() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("vendor --respect-source-config")
-        .with_stderr_contains("[..]Vendored 1 crates into [..]vendor")
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[..]`)
+   Vendoring bar v0.1.0 ([..]bar-0.1.0) to vendor/bar
+To use vendored sources, add this to your .cargo/config.toml for this project:
+
+    Vendored 1 crates into vendor
+
+"#]])
         .run();
 }
