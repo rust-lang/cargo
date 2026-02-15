@@ -125,6 +125,85 @@
 //!     .metabuild/
 //! ```
 //!
+//! ### New `build-dir` layout
+//!
+//! `build-dir` supports a new "build unit" based layout that is unstable.
+//! It can be enabled via `-Zbuild-dir-new-layout`.
+//! For more info about the layout transition see: [#15010](https://github.com/rust-lang/cargo/issues/15010)
+//!
+//! ```text
+//! <build-dir>/
+//!
+//!     # Cache of `rustc -Vv` output for performance.
+//!     .rustc-info.json
+//!
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Directory used to store incremental data for the compiler (when
+//!         # incremental is enabled.
+//!         incremental/
+//!
+//!         # Main directory for storing build unit related files.
+//!         # Files are organized by Cargo build unit (`$pkgname/$META`) so that
+//!         # related files are stored in a single directory.
+//!         build/
+//!
+//!             # This is the location at which the output of all files related to
+//!             # a given build unit. These files are organized together so that we can
+//!             # treat this directly like a single unit for locking and caching.
+//!             $pkgname/
+//!                 $META/
+//!                     # The general purpose output directory for build units.
+//!                     # For compilation units, the rustc artifact will be located here.
+//!                     # For build script run units, this is the $OUT_DIR
+//!                     out/
+//!
+//!                         # For artifact dependency units, the output is nested by the kind
+//!                         artifact/$kind
+//!
+//!                     # Directory that holds all of the fingerprint files for the build unit.
+//!                     fingerprint/
+//!                         # Set of source filenames for this package.
+//!                         dep-lib-$targetname
+//!                         # Timestamp when this package was last built.
+//!                         invoked.timestamp
+//!                         # The fingerprint hash.
+//!                         lib-$targetname
+//!                         # Detailed information used for logging the reason why
+//!                         # something is being recompiled.
+//!                         lib-$targetname.json
+//!                         # The console output from the compiler. This is cached
+//!                         # so that warnings can be redisplayed for "fresh" units.
+//!                         output-lib-$targetname
+//!
+//!                     # Directory for "execution" units that spawn a process (excluding compilation with
+//!                     # rustc). Contains the process execution details.
+//!                     # Currently the only execution unit Cargo supports is running build script
+//!                     # binaries.
+//!                     run/
+//!                         # Timestamp of last execution.
+//!                         invoked.timestamp
+//!                         # Stdout output from the process.
+//!                         stdout
+//!                         # Stderr output from the process.
+//!                         stderr
+//!                         # Path to `out`, used to help when the target directory is
+//!                         # moved. (build scripts)
+//!                         root-output
+//!
+//!     # Used by `cargo package` and `cargo publish` to build a `.crate` file.
+//!     package/
+//!
+//!     # Experimental feature for generated build scripts.
+//!     .metabuild/
+//! ```
+//!
 //! When cross-compiling, the layout is the same, except it appears in
 //! `target/$TRIPLE`.
 
