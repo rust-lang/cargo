@@ -2256,3 +2256,27 @@ fn vendor_filters_git_files_recursively() {
     assert!(!p.root().join("vendor/bar/.gitattributes").exists());
     assert!(p.root().join("vendor/bar/src/lib.rs").exists());
 }
+
+#[cargo_test]
+fn vendor_summary_output() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stderr_contains("[..]Vendored 1 crates into [..]vendor")
+        .run();
+}
