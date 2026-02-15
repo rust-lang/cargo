@@ -357,6 +357,7 @@ fn verify_vendor_multiple_build_scripts() {
 [WARNING] ignoring `package.build` entry `build2.rs` as it is not included in the published package
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
+    Vendored 1 crates into vendor
 
 "#]])
         .run();
