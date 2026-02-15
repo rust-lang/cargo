@@ -1989,6 +1989,7 @@ fn dont_delete_non_registry_sources_with_respect_source_config() {
    Vendoring log v0.3.5 ([ROOT]/foo/vendor/log) to new-vendor-dir/log
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
+    Vendored 1 crates into new-vendor-dir
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -2166,6 +2167,7 @@ fn vendor_local_registry() {
    Vendoring bar v0.0.0 ([ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.0) to vendor/bar
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
+    Vendored 1 crates into vendor
 
 "#]])
         .run();

@@ -55,10 +55,12 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    gctx.shell().status(
-        "Vendored",
-        format!("{} crates into {}", count, opts.destination.display()),
-    )?;
+    if count > 0 {
+        gctx.shell().status(
+            "Vendored",
+            format!("{} crates into {}", count, opts.destination.display()),
+        )?;
+    }
 
     Ok(())
 }
