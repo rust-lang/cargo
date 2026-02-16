@@ -282,7 +282,10 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
-                    linker: self.compilation.target_linker(unit.kind).clone(),
+                    linker: self
+                        .compilation
+                        .target_linker(unit.kind)
+                        .map(|p| p.to_path_buf()),
                     script_metas,
                     env: artifact::get_env(&self, unit, self.unit_deps(unit))?,
                 });
