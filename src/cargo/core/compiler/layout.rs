@@ -1,22 +1,52 @@
 //! Management of the directory layout of a build
 //!
 //! The directory layout is a little tricky at times, hence a separate file to
-//! house this logic. The current layout looks like this:
+//! house this logic. Cargo stores build artifacts in two directories: `artifact-dir` and
+//! `build-dir`
+//!
+//! ## `artifact-dir` layout
+//!
+//! `artifact-dir` is where final artifacts like binaries are stored.
+//! The `artifact-dir` layout is consider part of the public API and
+//! cannot be easily changed.
 //!
 //! ```text
-//! # This is the root directory for all output, the top-level package
-//! # places all of its output here.
-//! target/
+//! <artifact-dir>/
+//!
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Root directory for all compiled examples.
+//!         examples/
+//!
+//!     # Output from rustdoc
+//!     doc/
+//!
+//!     # Output from `cargo package` to build a `.crate` file.
+//!     package/
+//! ```
+//!
+//! ## `build-dir` layout
+//!
+//! `build-dir` is where intermediate build artifacts are stored.
+//! The `build-dir` layout is considered an internal implementation detail of Cargo
+//! meaning that we can change this if needed. However, in reality many tools rely on
+//! implementation details of Cargo so breaking changes need to be done carefully.
+//!
+//! ```text
+//! <build-dir>/
 //!
 //!     # Cache of `rustc -Vv` output for performance.
 //!     .rustc-info.json
 //!
-//!     # All final artifacts are linked into this directory from `deps`.
-//!     # Note that named profiles will soon be included as separate directories
-//!     # here. They have a restricted format, similar to Rust identifiers, so
-//!     # Cargo-specific directories added in the future should use some prefix
-//!     # like `.` to avoid name collisions.
-//!     debug/  # or release/
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
 //!
 //!         # File used to lock the directory to prevent multiple cargo processes
 //!         # from using it at the same time.
@@ -88,8 +118,84 @@
 //!                 # Stderr output from the build script.
 //!                 stderr
 //!
-//!     # Output from rustdoc
-//!     doc/
+//!     # Used by `cargo package` and `cargo publish` to build a `.crate` file.
+//!     package/
+//!
+//!     # Experimental feature for generated build scripts.
+//!     .metabuild/
+//! ```
+//!
+//! ### New `build-dir` layout
+//!
+//! `build-dir` supports a new "build unit" based layout that is unstable.
+//! It can be enabled via `-Zbuild-dir-new-layout`.
+//! For more info about the layout transition see: [#15010](https://github.com/rust-lang/cargo/issues/15010)
+//!
+//! ```text
+//! <build-dir>/
+//!
+//!     # Cache of `rustc -Vv` output for performance.
+//!     .rustc-info.json
+//!
+//!     # Compilation files are grouped by build target and profile.
+//!     # The target is omitted if not explicitly specified.
+//!     [<target>]/<profile>/ # e.g. `debug` / `release`
+//!
+//!         # File used to lock the directory to prevent multiple cargo processes
+//!         # from using it at the same time.
+//!         .cargo-lock
+//!
+//!         # Directory used to store incremental data for the compiler (when
+//!         # incremental is enabled.
+//!         incremental/
+//!
+//!         # Main directory for storing build unit related files.
+//!         # Files are organized by Cargo build unit (`$pkgname/$META`) so that
+//!         # related files are stored in a single directory.
+//!         build/
+//!
+//!             # This is the location at which the output of all files related to
+//!             # a given build unit. These files are organized together so that we can
+//!             # treat this directly like a single unit for locking and caching.
+//!             $pkgname/
+//!                 $META/
+//!                     # The general purpose output directory for build units.
+//!                     # For compilation units, the rustc artifact will be located here.
+//!                     # For build script run units, this is the $OUT_DIR
+//!                     out/
+//!
+//!                         # For artifact dependency units, the output is nested by the kind
+//!                         artifact/$kind
+//!
+//!                     # Directory that holds all of the fingerprint files for the build unit.
+//!                     fingerprint/
+//!                         # Set of source filenames for this package.
+//!                         dep-lib-$targetname
+//!                         # Timestamp when this package was last built.
+//!                         invoked.timestamp
+//!                         # The fingerprint hash.
+//!                         lib-$targetname
+//!                         # Detailed information used for logging the reason why
+//!                         # something is being recompiled.
+//!                         lib-$targetname.json
+//!                         # The console output from the compiler. This is cached
+//!                         # so that warnings can be redisplayed for "fresh" units.
+//!                         output-lib-$targetname
+//!
+//!                     # Directory for "execution" units that spawn a process (excluding compilation with
+//!                     # rustc). Contains the process execution details.
+//!                     # Currently the only execution unit Cargo supports is running build script
+//!                     # binaries.
+//!                     run/
+//!                         # Timestamp of last execution.
+//!                         invoked.timestamp
+//!                         # Stdout output from the process.
+//!                         stdout
+//!                         # Stderr output from the process.
+//!                         stderr
+//!                         # Path to `out`, used to help when the target directory is
+//!                         # moved. (build scripts)
+//!                         root-output
 //!
 //!     # Used by `cargo package` and `cargo publish` to build a `.crate` file.
 //!     package/
