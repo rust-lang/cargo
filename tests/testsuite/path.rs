@@ -1919,3 +1919,151 @@ foo v1.0.0 ([ROOT]/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn invalid_package_name_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/crates/bar
+required by package `foo v0.5.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_package_in_subdirectory() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/definitely_not_bar/Cargo.toml",
+            r#"
+            [package]
+            name = "definitely_not_bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/definitely_not_bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to load manifest for dependency `definitely_not_bar`
+
+Caused by:
+  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_manifest_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/alice/Cargo.toml",
+            r#"
+            [package]
+            name = "alice"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+        "#,
+        )
+        .file("crates/bar/alice/src/lib.rs", "")
+        .file(
+            "crates/bar/bob/Cargo.toml",
+            r#"
+            [package]
+            name = "bob"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+        "#,
+        )
+        .file("crates/bar/bob/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to load manifest for dependency `definitely_not_bar`
+
+Caused by:
+  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
