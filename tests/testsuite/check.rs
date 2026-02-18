@@ -1558,7 +1558,7 @@ fn check_fixable_warning_for_clippy() {
         .env("CLIPPY_ARGS", "-Wclippy::pedantic__CLIPPY_HACKERY__-Aclippy::allow_attributes__CLIPPY_HACKERY__") // Set -Wclippy::pedantic
         .with_stderr_data(str![[r#"
 ...
-[WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
+[WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo -- -Wclippy::pedantic -Aclippy::allow_attributes` to apply 1 suggestion)
 ...
 "#]])
         .run();
