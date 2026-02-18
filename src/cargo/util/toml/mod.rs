@@ -1359,7 +1359,21 @@ pub fn to_real_manifest(
         default_edition
     };
     if !edition.is_stable() {
-        features.require(Feature::unstable_editions())?;
+        // Build a help hint pointing the user at the required toolchain version.
+        // Prefer the edition's known minimum version (if it was set at unstable time);
+        // fall back to the package's `rust-version` field.
+        let pkg_version = normalized_package
+            .normalized_version()
+            .expect("previously normalized");
+        let required_rustc = edition
+            .first_version()
+            .map(|v| format!("{}.{}", v.major, v.minor))
+            .or_else(|| rust_version.as_ref().map(|rv| rv.to_string()));
+        let hint = required_rustc.map(|rv| match pkg_version {
+            Some(v) => format!("help: {}@{} requires rustc {}", package_name, v, rv),
+            None => format!("help: {} requires rustc {}", package_name, rv),
+        });
+        features.require_with_hint(Feature::unstable_editions(), hint.as_deref())?;
     }
 
     if original_toml.project.is_some() {
