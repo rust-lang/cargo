@@ -173,7 +173,8 @@ fn log_msg_timing_info() {
     "reason": "unit-finished",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z"
-  }
+  },
+  "{...}"
 ]
 "#]]
         .is_json()
@@ -319,7 +320,8 @@ fn log_msg_timing_info_section_timings() {
     "reason": "unit-finished",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z"
-  }
+  },
+  "{...}"
 ]
 "#]]
         .is_json()
