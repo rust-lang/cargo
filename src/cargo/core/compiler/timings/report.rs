@@ -108,7 +108,7 @@ pub struct RenderContext<'a> {
     /// Recorded CPU states, stored as tuples. First element is when the
     /// recording was taken and second element is percentage usage of the
     /// system.
-    pub cpu_usage: &'a [(f64, f64)],
+    pub cpu_usage: Cow<'a, [(f64, f64)]>,
     /// Compiler version info, i.e., `rustc 1.92.0-beta.2 (0a411606e 2025-10-31)`.
     pub rustc_version: String,
     /// The host triple (arch-platform-OS).
@@ -257,7 +257,7 @@ fn write_js_data(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()>
     writeln!(
         f,
         "const CPU_USAGE = {};",
-        serde_json::to_string_pretty(&ctx.cpu_usage)?
+        serde_json::to_string_pretty(ctx.cpu_usage.as_ref())?
     )?;
     Ok(())
 }

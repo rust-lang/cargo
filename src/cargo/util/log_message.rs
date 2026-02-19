@@ -152,6 +152,13 @@ pub enum LogMessage {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         cause: Option<DirtyReason>,
     },
+    /// Emitted periodically with CPU usage samples.
+    CpuUsage {
+        /// Seconds elapsed from build start.
+        elapsed: f64,
+        /// CPU usage percentage (0.0 to 100.0).
+        usage: f64,
+    },
 }
 
 /// Cargo target information.
