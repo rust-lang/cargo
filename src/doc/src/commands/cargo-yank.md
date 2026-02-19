@@ -51,7 +51,7 @@ requirements, following a given release being yanked:
 ### When to yank
 
 Crates should only be yanked in exceptional circumstances, for example, an
-accidental publish, an unintentional SemVer breakages, or a significantly
+accidental publish, unintentional SemVer breakages, or a significantly
 broken and unusable crate. In the case of security vulnerabilities, [RustSec]
 is typically a less disruptive mechanism to inform users and encourage them
 to upgrade, and avoids the possibility of significant downstream disruption
