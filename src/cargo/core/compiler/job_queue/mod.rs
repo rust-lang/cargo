@@ -1089,11 +1089,11 @@ impl<'gctx> DrainState<'gctx> {
                     // check if `RUSTC_WORKSPACE_WRAPPER` is set and pointing towards
                     // `clippy-driver`.
                     let clippy = std::ffi::OsStr::new("clippy-driver");
-                    let command = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem())
-                    {
-                        Some(wrapper) if wrapper == clippy => "cargo clippy --fix",
-                        _ => "cargo fix",
-                    };
+                    let (clippy_invocation, command) =
+                        match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem()) {
+                            Some(wrapper) if wrapper == clippy => (true, "cargo clippy --fix"),
+                            _ => (false, "cargo fix"),
+                        };
                     let mut args =
                         format!("{} -p {}", unit.target.description_named(), unit.pkg.name());
                     if unit.mode.is_rustc_test()
@@ -1112,6 +1112,7 @@ impl<'gctx> DrainState<'gctx> {
                         " (run `{command} --{args}{}` to apply {suggestions})",
                         if let Some(cli_lints_os) = env::var_os("CLIPPY_ARGS")
                             && let Ok(cli_lints) = cli_lints_os.into_string()
+                            && clippy_invocation
                         {
                             // Clippy can take lints through the CLI, each lint flag is separated by "__CLIPPY_HACKERY__".
                             let cli_lints = cli_lints.replace("__CLIPPY_HACKERY__", " ");
