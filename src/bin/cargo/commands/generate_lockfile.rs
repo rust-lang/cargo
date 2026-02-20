@@ -10,7 +10,6 @@ pub fn cli() -> Command {
         .about("Generate the lockfile for a package")
         .arg_silent_suggestion()
         .arg_manifest_path()
-        .arg_lockfile_path()
         .arg_ignore_rust_version_with_help("Ignore `rust-version` specification in packages")
         .arg(
             clap::Arg::new("publish-time")
