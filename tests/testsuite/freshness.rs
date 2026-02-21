@@ -3244,3 +3244,71 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn symlink_to_package() {
+    // Illustrates what happens when the path is a symlink, and the symlink
+    // target changes.
+    if !cargo_test_support::symlink_supported() {
+        return;
+    }
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    bar::bar();
+                }
+            "#,
+        )
+        .file("bar1/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file(
+            "bar1/src/lib.rs",
+            r#"
+                pub fn bar() {
+                    println!("one");
+                }
+            "#,
+        )
+        .file("bar2/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file(
+            "bar2/src/lib.rs",
+            r#"
+                pub fn bar() {
+                    println!("two");
+                }
+            "#,
+        )
+        .symlink_dir("bar1", "bar")
+        .build();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    let bar_path = p.root().join("bar");
+    cargo_util::paths::remove_file(&bar_path).unwrap();
+    p.symlink("bar2", "bar");
+    // FIXME: This is not rebuilding when it should.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
