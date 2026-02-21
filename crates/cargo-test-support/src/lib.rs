@@ -1383,6 +1383,11 @@ pub trait TestEnvCommandExt: Sized {
                 self = self.env_remove(&k);
             }
         }
+        for (k, _v) in env::vars() {
+            if k.starts_with("RUSTUP_") {
+                self = self.env_remove(&k);
+            }
+        }
         if env::var_os("RUSTUP_TOOLCHAIN").is_some() {
             // Override the PATH to avoid executing the rustup wrapper thousands
             // of times. This makes the testsuite run substantially faster.

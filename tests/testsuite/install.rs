@@ -280,7 +280,8 @@ fn multiple_pkgs_path_set() {
     let mut path = path();
     path.push(paths::cargo_home().join("bin"));
     let new_path = env::join_paths(path).unwrap();
-    cargo_process("install foo bar baz")
+    let mut process = cargo_process("install foo bar baz");
+    process
         .env("PATH", new_path)
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -303,8 +304,11 @@ fn multiple_pkgs_path_set() {
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
     assert_has_installed_exe(paths::cargo_home(), "foo");
     assert_has_installed_exe(paths::cargo_home(), "bar");
 
@@ -645,8 +649,11 @@ fn relative_install_location_with_path_set() {
 [INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        cmd.env("RUSTUP_HOME", val);
+    }
+    cmd.run();
 
     assert_has_installed_exe(&project_t1, "foo");
 }
