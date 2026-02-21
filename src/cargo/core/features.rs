@@ -733,6 +733,19 @@ impl Features {
 
     /// Checks if the given feature is enabled.
     pub fn require(&self, feature: &Feature) -> CargoResult<()> {
+        self.require_with_hint(feature, None)
+    }
+
+    /// Like [`require`][Self::require], but appends an optional help message
+    /// to the error, placed just before the documentation link.
+    ///
+    /// Use this when the call site has additional context (e.g. the package's
+    /// `rust-version`) that can make the error more actionable.
+    pub(crate) fn require_with_hint(
+        &self,
+        feature: &Feature,
+        hint: Option<&str>,
+    ) -> CargoResult<()> {
         if feature.is_enabled(self) {
             return Ok(());
         }
@@ -766,6 +779,9 @@ impl Features {
                 "Consider trying a newer version of Cargo \
                  (this may require the nightly release)."
             );
+        }
+        if let Some(hint) = hint {
+            let _ = writeln!(msg, "{}", hint);
         }
         let _ = writeln!(
             msg,
