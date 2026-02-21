@@ -51,6 +51,7 @@ pub mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
+mod unused_deps;
 
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -74,6 +75,7 @@ use tracing::{debug, instrument, trace};
 pub use self::build_config::UserIntent;
 pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
 pub use self::build_context::BuildContext;
+pub use self::build_context::DepKindSet;
 pub use self::build_context::FileFlavor;
 pub use self::build_context::FileType;
 pub use self::build_context::RustcTargetData;
@@ -836,6 +838,12 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
+    if build_runner.bcx.gctx.cli_unstable().cargo_lints {
+        // Added last to reduce the risk of RUSTFLAGS or `[lints]` from interfering with
+        // `unused_dependencies` tracking
+        base.arg("-Wunused_crate_dependencies");
+    }
+
     Ok(base)
 }
 
@@ -1178,8 +1186,11 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     }
 
     cmd.arg("--error-format=json");
-    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
+    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
+    if build_runner.bcx.gctx.cli_unstable().cargo_lints {
+        json.push_str(",unused-externs-silent");
+    }
     if let MessageFormat::Short | MessageFormat::Json { short: true, .. } =
         build_runner.bcx.build_config.message_format
     {
@@ -1189,11 +1200,9 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     {
         json.push_str(",diagnostic-unicode");
     }
-
     if enable_timings {
         json.push_str(",timings");
     }
-
     cmd.arg(json);
 
     let gctx = build_runner.bcx.gctx;
@@ -2340,6 +2349,19 @@ fn on_stderr_line_inner(
             state.rmeta_produced();
         }
         return Ok(false);
+    }
+
+    #[derive(serde::Deserialize)]
+    struct UnusedExterns {
+        unused_extern_names: Vec<String>,
+    }
+    if let Ok(uext) = serde_json::from_str::<UnusedExterns>(compiler_message.get()) {
+        trace!(
+            "obtained unused externs list from rustc: `{:?}`",
+            uext.unused_extern_names
+        );
+        state.unused_externs(uext.unused_extern_names);
+        return Ok(true);
     }
 
     // And failing all that above we should have a legitimate JSON diagnostic
