@@ -9,6 +9,7 @@ use anyhow::bail;
 use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
+    fs::TryLockError,
     path::PathBuf,
     sync::RwLock,
 };
@@ -56,6 +57,20 @@ impl LockManager {
         }
 
         Ok(key)
+    }
+
+    #[instrument(skip(self))]
+    pub fn try_lock(&self, key: &LockKey) -> CargoResult<bool> {
+        let locks = self.locks.read().unwrap();
+        if let Some(lock) = locks.get(&key) {
+            return match lock.file().try_lock() {
+                Ok(()) => Ok(true),
+                Err(TryLockError::WouldBlock) => Ok(false),
+                Err(TryLockError::Error(err)) => Err(anyhow::Error::new(err)),
+            };
+        } else {
+            bail!("lock was not found in lock manager: {key}");
+        }
     }
 
     #[instrument(skip(self))]

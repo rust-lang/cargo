@@ -1,8 +1,10 @@
 //! See [`JobState`].
 
+use std::sync::mpsc;
 use std::{cell::Cell, marker, sync::Arc};
 
 use cargo_util::ProcessBuilder;
+use tracing::debug;
 
 use crate::core::compiler::future_incompat::FutureBreakageItem;
 use crate::core::compiler::locking::LockKey;
@@ -51,6 +53,13 @@ pub struct JobState<'a, 'gctx> {
     /// Manages locks for build units when fine grain locking is enabled.
     lock_manager: Arc<LockManager>,
 
+    /// If the job gets blocked for some reason (like waiting on a filesystem lock) we instruct the
+    /// job server to let other jobs proceed, effectively giving up our token.
+    /// Once we are unblocked, we want to wait for the job server to reschedule us while we keep
+    /// holding the lock. The scheduler will send an event over this mpsc channel when it
+    /// reschedules us.
+    resume: mpsc::Receiver<()>,
+
     // Historical versions of Cargo made use of the `'a` argument here, so to
     // leave the door open to future refactorings keep it here.
     _marker: marker::PhantomData<&'a ()>,
@@ -63,6 +72,7 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         output: Option<&'a DiagDedupe<'gctx>>,
         rmeta_required: bool,
         lock_manager: Arc<LockManager>,
+        resume: mpsc::Receiver<()>,
     ) -> Self {
         Self {
             id,
@@ -70,6 +80,7 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
             output,
             rmeta_required: Cell::new(rmeta_required),
             lock_manager,
+            resume,
             _marker: marker::PhantomData,
         }
     }
@@ -148,7 +159,16 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
     }
 
     pub fn lock_exclusive(&self, lock: &LockKey) -> CargoResult<()> {
-        self.lock_manager.lock(lock)
+        let acquired = self.lock_manager.try_lock(lock)?;
+        if !acquired {
+            debug!(?lock, "Lock will block, suspending task");
+            self.messages.push(Message::Blocked(self.id));
+            self.lock_manager.lock(lock)?;
+            self.messages.push(Message::Unblocked(self.id));
+            self.resume.recv()?;
+        }
+
+        Ok(())
     }
 
     pub fn downgrade_to_shared(&self, lock: &LockKey) -> CargoResult<()> {

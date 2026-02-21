@@ -114,11 +114,11 @@ mod job;
 mod job_state;
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Write as _;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::thread::{self, Scope};
 use std::time::Duration;
 
@@ -178,7 +178,11 @@ struct DrainState<'gctx> {
     diag_dedupe: DiagDedupe<'gctx>,
     /// Count of warnings, used to print a summary after the job succeeds
     warning_count: HashMap<JobId, WarningCount>,
-    active: HashMap<JobId, Unit>,
+    active: HashMap<JobId, ActiveJob>,
+    /// Jobs that are currently blocked due to file lock
+    blocked: VecDeque<JobId>,
+    /// Jobs that were blocked but are now ready to resume
+    unblocked: VecDeque<JobId>,
     compiled: HashSet<PackageId>,
     documented: HashSet<PackageId>,
     scraped: HashSet<PackageId>,
@@ -208,6 +212,13 @@ struct DrainState<'gctx> {
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+}
+
+/// An active job that is currently being processed
+struct ActiveJob {
+    unit: Unit,
+    /// A sender to resume a previously blocked task when rescheduled
+    resume: mpsc::Sender<()>,
 }
 
 /// Count of warnings, used to print a summary after the job succeeds
@@ -384,6 +395,8 @@ enum Message {
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
     SectionTiming(JobId, SectionTiming),
+    Blocked(JobId),
+    Unblocked(JobId),
 }
 
 impl<'gctx> JobQueue<'gctx> {
@@ -496,6 +509,8 @@ impl<'gctx> JobQueue<'gctx> {
             diag_dedupe: DiagDedupe::new(build_runner.bcx.gctx),
             warning_count: HashMap::new(),
             active: HashMap::new(),
+            blocked: VecDeque::new(),
+            unblocked: VecDeque::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
             scraped: HashSet::new(),
@@ -584,27 +599,38 @@ impl<'gctx> DrainState<'gctx> {
         // The `pending_queue` is sorted in ascending priority order, and we
         // remove items from its end to schedule the highest priority items
         // sooner.
-        while self.has_extra_tokens() && !self.pending_queue.is_empty() {
-            let (unit, job, _) = self.pending_queue.pop().unwrap();
-            *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
-            // Print out some nice progress information.
-            // NOTE: An error here will drop the job without starting it.
-            // That should be OK, since we want to exit as soon as
-            // possible during an error.
-            self.note_working_on(
-                build_runner.bcx.gctx,
-                build_runner.bcx.ws.root(),
-                &unit,
-                job.freshness(),
-            )?;
-            self.run(&unit, job, build_runner, scope);
+        while self.has_extra_tokens()
+            && (!self.pending_queue.is_empty() || !self.unblocked.is_empty())
+        {
+            match self.unblocked.pop_front() {
+                Some(job) => {
+                    let task = self.active.get(&job).expect("unblocked job was not active");
+                    task.resume.send(())?;
+                }
+                None => {
+                    let (unit, job, _) = self.pending_queue.pop().unwrap();
+                    *self.counts.get_mut(&unit.pkg.package_id()).unwrap() -= 1;
+                    // Print out some nice progress information.
+                    // NOTE: An error here will drop the job without starting it.
+                    // That should be OK, since we want to exit as soon as
+                    // possible during an error.
+                    self.note_working_on(
+                        build_runner.bcx.gctx,
+                        build_runner.bcx.ws.root(),
+                        &unit,
+                        job.freshness(),
+                    )?;
+                    self.run(&unit, job, build_runner, scope);
+                }
+            };
         }
 
         Ok(())
     }
 
     fn has_extra_tokens(&self) -> bool {
-        self.active.len() < self.tokens.len() + 1
+        // When a task is blocked, we give the token another job
+        (self.active.len() - self.blocked.len()) < self.tokens.len() + 1
     }
 
     fn handle_event(
@@ -621,7 +647,7 @@ impl<'gctx> DrainState<'gctx> {
                     .shell()
                     .verbose(|c| c.status("Running", &cmd))?;
                 self.timings
-                    .unit_start(build_runner, id, self.active[&id].clone());
+                    .unit_start(build_runner, id, self.active[&id].unit.clone());
             }
             Message::Stdout(out) => {
                 writeln!(build_runner.bcx.gctx.shell().out(), "{}", out)?;
@@ -680,13 +706,13 @@ impl<'gctx> DrainState<'gctx> {
                             id,
                             &build_runner.bcx.rustc().workspace_wrapper,
                         );
-                        self.active.remove(&id).unwrap()
+                        self.active.remove(&id).unwrap().unit
                     }
                     // ... otherwise if it hasn't finished we leave it
                     // in there as we'll get another `Finish` later on.
                     Artifact::Metadata => {
                         trace!("end (meta): {:?}", id);
-                        self.active[&id].clone()
+                        self.active[&id].unit.clone()
                     }
                 };
                 debug!("end ({:?}): {:?}", unit, result);
@@ -712,7 +738,7 @@ impl<'gctx> DrainState<'gctx> {
                 }
             }
             Message::FutureIncompatReport(id, items) => {
-                let unit = &self.active[&id];
+                let unit = &self.active[&id].unit;
                 let package_id = unit.pkg.package_id();
                 let is_local = unit.is_local();
                 self.per_package_future_incompat_reports
@@ -728,6 +754,26 @@ impl<'gctx> DrainState<'gctx> {
             }
             Message::SectionTiming(id, section) => {
                 self.timings.unit_section_timing(build_runner, id, &section);
+            }
+            Message::Blocked(id) => {
+                assert!(
+                    self.active.contains_key(&id),
+                    "job was blocked without being active"
+                );
+                assert!(
+                    !self.blocked.contains(&id),
+                    "job was blocked while being already blocked"
+                );
+                self.blocked.push_back(id);
+            }
+            Message::Unblocked(id) => {
+                let idx = self
+                    .blocked
+                    .iter()
+                    .position(|&job_id| job_id == id)
+                    .expect("job was unblocked that was not blocked");
+                let _ = self.blocked.remove(idx).unwrap();
+                self.unblocked.push_back(id);
             }
         }
 
@@ -906,7 +952,7 @@ impl<'gctx> DrainState<'gctx> {
         let active_names = self
             .active
             .values()
-            .map(|u| self.name_for_progress(u))
+            .map(|job| self.name_for_progress(&job.unit))
             .collect::<Vec<_>>();
         let _ = self.progress.tick_now(
             self.finished,
@@ -960,7 +1006,13 @@ impl<'gctx> DrainState<'gctx> {
 
         debug!("start {}: {:?}", id, unit);
 
-        assert!(self.active.insert(id, unit.clone()).is_none());
+        let (tx, rx) = mpsc::channel();
+
+        let active_job = ActiveJob {
+            unit: unit.clone(),
+            resume: tx,
+        };
+        assert!(self.active.insert(id, active_job).is_none());
 
         let messages = self.messages.clone();
         let is_fresh = job.freshness().is_fresh();
@@ -968,7 +1020,7 @@ impl<'gctx> DrainState<'gctx> {
         let lock_manager = build_runner.lock_manager.clone();
 
         let doit = move |diag_dedupe| {
-            let state = JobState::new(id, messages, diag_dedupe, rmeta_required, lock_manager);
+            let state = JobState::new(id, messages, diag_dedupe, rmeta_required, lock_manager, rx);
             state.run_to_finish(job);
         };
 
@@ -1063,7 +1115,7 @@ impl<'gctx> DrainState<'gctx> {
             None | Some(_) => return,
         };
         runner.compilation.lint_warning_count += count.lints;
-        let unit = &self.active[&id];
+        let unit = &self.active[&id].unit;
         let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
         message.push_str(" generated ");
         match count.total {
