@@ -349,7 +349,7 @@ fn cargo_compile_with_unsupported_short_unstable_feature_flag() {
   tip: a similar argument exists: '-Z'
 
 Usage: cargo [..][OPTIONS] [COMMAND]
-       cargo [..][OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+       cargo [..][OPTIONS] <MANIFEST_RS> [ARGS]...
 
 For more information, try '--help'.
 

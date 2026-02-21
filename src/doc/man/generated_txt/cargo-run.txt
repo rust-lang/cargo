@@ -17,6 +17,10 @@ DESCRIPTION
        directory of the binary executed to the current working directory, same
        as if it was executed in the shell directly.
 
+       When running scripts, the process’ arg0
+       <https://doc.rust-lang.org/std/env/fn.args.html> will be set to the
+       script’s path on a best-effort basis.
+
 OPTIONS
    Package Selection
        By default, the package in the current working directory is selected.
@@ -173,8 +177,9 @@ OPTIONS
 
    Manifest Options
        --manifest-path path
-           Path to the Cargo.toml file. By default, Cargo searches for the
-           Cargo.toml file in the current directory or any parent directory.
+           Path to the Cargo.toml or cargo script file. By default, Cargo
+           searches for the Cargo.toml file in the current directory or any
+           parent directory.
 
        --ignore-rust-version
            Ignore rust-version specification in packages.

@@ -363,6 +363,9 @@ autobins = false
 > is `false` if at least one target is manually defined in `Cargo.toml`.
 > Beginning with the 2018 edition, the default is always `true`.
 
+> **Note:** Scripts are self-contained and do not support additional targets
+> nor controlling target discovery.
+
 > **MSRV:** Respected as of 1.27 for `autobins`, `autoexamples`, `autotests`, and `autobenches`
 
 > **MSRV:** Respected as of 1.83 for `autolib`
