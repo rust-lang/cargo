@@ -1989,6 +1989,7 @@ fn dont_delete_non_registry_sources_with_respect_source_config() {
    Vendoring log v0.3.5 ([ROOT]/foo/vendor/log) to new-vendor-dir/log
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
+    Vendored 1 crates into new-vendor-dir
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -2166,6 +2167,7 @@ fn vendor_local_registry() {
    Vendoring bar v0.0.0 ([ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.0) to vendor/bar
 To use vendored sources, add this to your .cargo/config.toml for this project:
 
+    Vendored 1 crates into vendor
 
 "#]])
         .run();
@@ -2255,4 +2257,38 @@ fn vendor_filters_git_files_recursively() {
     assert!(!p.root().join("vendor/bar/tests/.gitattributes").exists());
     assert!(!p.root().join("vendor/bar/.gitattributes").exists());
     assert!(p.root().join("vendor/bar/src/lib.rs").exists());
+}
+
+#[cargo_test]
+fn vendor_summary_output() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("bar", "0.1.0").publish();
+
+    p.cargo("vendor --respect-source-config")
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 (registry `[..]`)
+   Vendoring bar v0.1.0 ([..]bar-0.1.0) to vendor/bar
+To use vendored sources, add this to your .cargo/config.toml for this project:
+
+    Vendored 1 crates into vendor
+
+"#]])
+        .run();
 }
