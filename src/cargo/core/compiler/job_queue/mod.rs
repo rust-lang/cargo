@@ -116,11 +116,11 @@ mod job_state;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
+use std::{env, io};
 
 use anyhow::{Context as _, format_err};
 use jobserver::{Acquired, HelperThread};
@@ -1089,11 +1089,15 @@ impl<'gctx> DrainState<'gctx> {
                     // check if `RUSTC_WORKSPACE_WRAPPER` is set and pointing towards
                     // `clippy-driver`.
                     let clippy = std::ffi::OsStr::new("clippy-driver");
-                    let command = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem())
-                    {
-                        Some(wrapper) if wrapper == clippy => "cargo clippy --fix",
-                        _ => "cargo fix",
+                    let is_clippy = rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem())
+                        == Some(clippy);
+
+                    let command = if is_clippy {
+                        "cargo clippy --fix"
+                    } else {
+                        "cargo fix"
                     };
+
                     let mut args =
                         format!("{} -p {}", unit.target.description_named(), unit.pkg.name());
                     if unit.mode.is_rustc_test()
@@ -1105,9 +1109,22 @@ impl<'gctx> DrainState<'gctx> {
                     if fixable > 1 {
                         suggestions.push_str("s")
                     }
+
+                    #[expect(clippy::disallowed_methods, reason = "consistency with clippy")]
                     let _ = write!(
                         message,
-                        " (run `{command} --{args}` to apply {suggestions})"
+                        " (run `{command} --{args}{}` to apply {suggestions})",
+                        if let Some(cli_lints_os) = env::var_os("CLIPPY_ARGS")
+                            && let Ok(cli_lints) = cli_lints_os.into_string()
+                            && is_clippy
+                        {
+                            // Clippy can take lints through the CLI, each lint flag is separated by "__CLIPPY_HACKERY__".
+                            let cli_lints = cli_lints.replace("__CLIPPY_HACKERY__", " ");
+                            let cli_lints = cli_lints.trim_ascii_end(); // Remove that last space left by __CLIPPY_HACKERY__
+                            format!(" -- {cli_lints}")
+                        } else {
+                            "".to_owned()
+                        }
                     );
                 }
             }
