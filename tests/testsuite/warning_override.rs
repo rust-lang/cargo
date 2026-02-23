@@ -289,3 +289,61 @@ fn hard_warning_allow() {
         .with_status(0)
         .run();
 }
+
+#[cargo_test]
+fn keep_going() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#
+            ),
+        )
+        .file("build.rs", "fn main() { let x = 3; }")
+        .file("src/main.rs", "fn main() { let y = 4; }")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `x`
+...
+[ERROR] `foo` (build script) generated 1 warning
+[WARNING] unused variable: `y`
+...
+[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+
+    p.cargo("check --keep-going")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused variable: `x`
+...
+[ERROR] `foo` (build script) generated 1 warning
+[WARNING] unused variable: `y`
+...
+[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+}
