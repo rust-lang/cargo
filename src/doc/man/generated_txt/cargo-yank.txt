@@ -55,7 +55,7 @@ DESCRIPTION
 
    When to yank
        Crates should only be yanked in exceptional circumstances, for example,
-       an accidental publish, an unintentional SemVer breakages, or a
+       an accidental publish, unintentional SemVer breakages, or a
        significantly broken and unusable crate. In the case of security
        vulnerabilities, RustSec <https://rustsec.org/> is typically a less
        disruptive mechanism to inform users and encourage them to upgrade, and
