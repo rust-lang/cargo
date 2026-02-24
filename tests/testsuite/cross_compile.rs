@@ -1353,3 +1353,25 @@ fn host_linker_does_not_apply_to_binary_build() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cross_with_host_config() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+no entry found for key
+...
+"#]])
+        .run();
+}
