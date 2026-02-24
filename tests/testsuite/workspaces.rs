@@ -1124,6 +1124,11 @@ fn new_warning_with_corrupt_ws() {
   |     ^
 [WARNING] compiling this new package may not work due to invalid workspace configuration
 
+failed searching for potential workspace
+package manifest: `[ROOT]/foo/bar/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/foo/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -1402,6 +1407,11 @@ fn error_if_parent_cargo_toml_is_invalid() {
   |
 1 | Totally not a TOML file
   |         ^
+[ERROR] failed searching for potential workspace
+package manifest: `[ROOT]/foo/bar/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/foo/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
 
 "#]])
         .run();
@@ -2222,7 +2232,14 @@ fn parent_manifest_error_mentions_workspace_search() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/home/Cargo.toml`
+[ERROR] failed searching for potential workspace
+package manifest: `[ROOT]/home/stuff/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/home/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
+
+Caused by:
+  failed to parse manifest at `[ROOT]/home/Cargo.toml`
 
 Caused by:
   no targets specified in the manifest
