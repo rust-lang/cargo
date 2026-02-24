@@ -1339,6 +1339,7 @@ fn host_linker_does_not_apply_to_binary_build() {
     // host.linker should not be applied but target.linker
     p.cargo("build -Z target-applies-to-host -Z host-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .with_status(101)
         // Need to omit some MSVC-specific diagnostics
         // because rustc prints extra stuff when linker was not found.
@@ -1350,5 +1351,22 @@ fn host_linker_does_not_apply_to_binary_build() {
   = [NOTE] [NOT_FOUND]
 ...
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn cross_with_host_config() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let target = cross_compile::alternate();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+
+    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(0)
         .run();
 }
