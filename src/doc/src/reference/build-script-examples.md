@@ -430,6 +430,36 @@ already installed.
 
 // … rest of code that makes use of zlib.
 ```
+## Reading target configuration
+
+When a build script needs to make decisions based on the target platform, it should read the `CARGO_CFG_*` environment
+variables rather than using `cfg!` or `#[cfg]` attributes. This is because
+the build script is compiled for and runs on the *host* machine, while
+`CARGO_CFG_*` variables reflect the *target* platform, an important distinction
+when cross-compiling.
+```rust,ignore
+// build.rs
+
+fn main() {
+    // reads the TARGET configuration
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+
+    if target_os == "windows" {
+        println!("cargo::rustc-link-lib=userenv");
+    } else if target_os == "linux" {
+        println!("cargo::rustc-link-lib=pthread");
+    }
+}
+```
+
+Note that some configuration values may contain multiple values separated by
+commas (for example, `CARGO_CFG_TARGET_FAMILY` may be `unix,wasm`). When
+checking these values, be sure to handle this appropriately.
+
+For a more convenient, typed API, consider using the [`build-rs`] crate
+which handles these details for you.
+
+[`build-rs`]: https://crates.io/crates/build-rs
 
 ## Conditional compilation
 
