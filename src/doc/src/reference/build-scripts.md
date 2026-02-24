@@ -67,6 +67,19 @@ the source directory of the build script’s package.
 
 [build-env]: environment-variables.md#environment-variables-cargo-sets-for-build-scripts
 
+> **Note:** When checking [configuration options] like `target_os` or `target_arch`
+> in a build script, do not use the `cfg!` macro or `#[cfg]` attribute, these
+> check the **host** machine (where the build script runs), not the **target**
+> platform you're compiling for. This distinction matters when cross-compiling.
+>
+> Instead, read the corresponding [`CARGO_CFG_*`][build-env] environment variables,
+> which correctly reflect the target's configuration. For a typed API, consider
+> using the [`build-rs`] crate. See the [build script examples] for more details.
+
+[configuration options]: ../../reference/conditional-compilation.html
+[`build-rs`]: https://crates.io/crates/build-rs
+[build script examples]: build-script-examples.md#conditional-compilation
+
 ## Outputs of the Build Script
 
 Build scripts may save any output files or intermediate artifacts in the
