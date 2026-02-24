@@ -6,7 +6,10 @@ use std::fs;
 use crate::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use cargo_test_support::{
+    ProjectBuilder, basic_lib_manifest, basic_manifest, git, paths, project, project_in_home,
+    sleep_ms,
+};
 
 #[cargo_test]
 fn simple_explicit() {
@@ -2196,6 +2199,37 @@ fn cargo_home_at_root_works() {
 
     p.cargo("check").run();
     p.cargo("check --frozen").env("CARGO_HOME", p.root()).run();
+}
+
+#[cargo_test]
+fn parent_manifest_error_mentions_workspace_search() {
+    ProjectBuilder::new(paths::home())
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "home-manifest"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .build();
+
+    let p = project_in_home("stuff")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/home/Cargo.toml`
+
+Caused by:
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
