@@ -365,6 +365,11 @@ let out_dir = env::var("OUT_DIR").unwrap();
   > hence variables present in one target triple might not be available in the other.
   >
   > Some cfg values like `test` are not available.
+  >
+  > **Tip:** For a typed API to read these values, consider using the [`build-rs`]
+  > crate instead of parsing environment variables manually. Also note that
+  > `CARGO_CFG_*` variables should be used instead of the `cfg!` macro or `#[cfg]`
+  > attribute in build scripts, those check the *host* platform, not the *target*.
 * `OUT_DIR` --- the folder in which all output and intermediate artifacts should
   be placed. This folder is inside the build directory for the package being built,
   and it is unique for the package in question. Cargo does not clean or reset this
@@ -429,6 +434,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [`release`]: profiles.md#release
 [`debug`]: profiles.md#debug
 [`opt-level`]: profiles.md#opt-level
+[`build-rs`]: https://crates.io/crates/build-rs
 
 ## Environment variables Cargo sets for `cargo test`
 
