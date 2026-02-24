@@ -144,6 +144,17 @@ impl<'gctx> Compilation<'gctx> {
         let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
         let host = bcx.host_triple().to_string();
+
+        // When `target-applies-to-host=false`, and without `--target`,
+        // there will be only `CompileKind::Host` in requested_kinds.
+        // Need to insert target config explicitly for target-applies-to-host=false
+        // to find the correct configs.
+        let insert_explicit_host_runner = !bcx.gctx.target_applies_to_host()?
+            && bcx
+                .build_config
+                .requested_kinds
+                .iter()
+                .any(CompileKind::is_host);
         let mut runners = bcx
             .build_config
             .requested_kinds
@@ -151,11 +162,7 @@ impl<'gctx> Compilation<'gctx> {
             .chain(Some(&CompileKind::Host))
             .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
             .collect::<CargoResult<HashMap<_, _>>>()?;
-        if !bcx.gctx.target_applies_to_host()? {
-            // When `target-applies-to-host=false`, and without `--target`,
-            // there will be only `CompileKind::Host` in requested_kinds.
-            // Need to insert target config explicitly for target-applies-to-host=false
-            // to find the correct configs.
+        if insert_explicit_host_runner {
             let kind = explicit_host_kind(&host);
             runners.insert(kind, target_runner(bcx, kind)?);
         }
@@ -167,8 +174,7 @@ impl<'gctx> Compilation<'gctx> {
             .chain(Some(&CompileKind::Host))
             .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
             .collect::<CargoResult<HashMap<_, _>>>()?;
-        if !bcx.gctx.target_applies_to_host()? {
-            // See above reason in runner why we do this.
+        if insert_explicit_host_runner {
             let kind = explicit_host_kind(&host);
             linkers.insert(kind, target_linker(bcx, kind)?);
         }

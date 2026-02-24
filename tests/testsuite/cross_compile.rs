@@ -1367,11 +1367,6 @@ fn cross_with_host_config() {
     p.cargo("build -Z target-applies-to-host -Z host-config --target")
         .arg(&target)
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-no entry found for key
-...
-"#]])
+        .with_status(0)
         .run();
 }
