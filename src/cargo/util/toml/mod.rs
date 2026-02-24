@@ -634,8 +634,7 @@ fn normalize_package_toml<'a>(
                 const DEFAULT_EDITION: crate::core::features::Edition =
                     crate::core::features::Edition::LATEST_STABLE;
                 let _ = gctx.shell().warn(format_args!(
-                    "`package.edition` is unspecified, defaulting to `{}`",
-                    DEFAULT_EDITION
+                    "`package.edition` is unspecified, defaulting to `{DEFAULT_EDITION}`"
                 ));
                 Some(manifest::InheritableField::Value(
                     DEFAULT_EDITION.to_string(),
