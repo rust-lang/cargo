@@ -138,7 +138,7 @@ impl ResolveBehavior {
     }
 }
 
-/// Options for how the resolve should work.
+/// Options for how a Summary should be activated during the resolve.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ResolveOpts {
     /// Whether or not dev-dependencies should be included.
