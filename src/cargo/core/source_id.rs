@@ -140,19 +140,16 @@ impl SourceId {
         }
     }
 
-    pub fn new_builtin(name: &str) -> CargoResult<SourceId> {
-        // Injecting builtins earlier (somewhere with access to RustcTargetData) is needed instead of this
-        let home = std::env::var("HOME").expect("HOME is set");
-        let path = format!(
-            "file://{home}/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/"
-        );
-        if name == "compiler_builtins" {
-            Self::from_url(&format!(
-                "builtin+{path}compiler-builtins/compiler-builtins"
-            ))
+    pub fn new_builtin(name: &str, root: &PathBuf) -> CargoResult<SourceId> {
+        let path = if name == "compiler_builtins" {
+            root.join("compiler-builtins").join("compiler-builtins")
         } else {
-            Self::from_url(&format!("builtin+{path}{name}"))
-        }
+            root.join(name)
+        };
+        Self::from_url(&format!(
+            "builtin+file://{}",
+            path.to_str().expect("path is utf8")
+        ))
     }
 
     /// Parses a source URL and returns the corresponding ID.

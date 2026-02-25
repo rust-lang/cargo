@@ -739,11 +739,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
             } else {
                 Version::new(0, 0, 0)
             };
-            let pkg_id = PackageId::new(
-                dep.package_name(),
-                ver,
-                SourceId::new_builtin(&dep.package_name()).expect("SourceId ok"),
-            );
+            let pkg_id = PackageId::new(dep.package_name(), ver, dep.source_id());
 
             let summary = Summary::new(
                 pkg_id,

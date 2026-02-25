@@ -59,6 +59,7 @@
 //! over the place.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -126,7 +127,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
-    inject_builtins: bool,
+    builtins_root: Option<&PathBuf>,
 ) -> CargoResult<Resolve> {
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
@@ -134,7 +135,7 @@ pub fn resolve(
         }
         _ => None,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs, inject_builtins);
+    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs, builtins_root);
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();

@@ -171,12 +171,12 @@ impl Dependency {
         }
     }
 
-    pub fn new_injected_builtin(name: InternedString) -> Dependency {
+    pub fn new_injected_builtin(name: InternedString, root: &PathBuf) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
             inner: Arc::new(Inner {
                 name,
-                source_id: SourceId::new_builtin(&name).expect("package name is valid url"),
+                source_id: SourceId::new_builtin(&name, root).expect("package name is valid url"),
                 registry_id: None,
                 req: OptVersionReq::Any,
                 kind: DepKind::Normal,

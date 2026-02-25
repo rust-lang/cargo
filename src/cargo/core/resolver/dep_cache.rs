@@ -27,6 +27,7 @@ use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::task::Poll;
 use tracing::debug;
@@ -58,9 +59,9 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         registry: &'a mut T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
-        inject_builtins: bool,
+        builtins_root: Option<&PathBuf>,
     ) -> Self {
-        let builtins = if inject_builtins {
+        let builtins = if let Some(root) = builtins_root {
             [
                 "std",
                 "alloc",
@@ -70,7 +71,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
                 "compiler_builtins",
             ]
             .iter()
-            .map(|&krate| Dependency::new_injected_builtin(krate.into()))
+            .map(|&krate| Dependency::new_injected_builtin(krate.into(), root))
             .collect()
         } else {
             vec![]
