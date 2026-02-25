@@ -25,6 +25,10 @@ pub struct ResolverContext {
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, im_rc::HashSet<Dependency, rustc_hash::FxBuildHasher>>,
+    // Opaque dependencies require a separate resolver run as they allow for multiple
+    // different semver-compatible versions of crates in the final resolve. This is the
+    // (unactivated) set of Summaries that need handling in a future invocation
+    //pub promises: HashSet<Dependency>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
