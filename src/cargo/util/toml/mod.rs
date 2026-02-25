@@ -1359,7 +1359,15 @@ pub fn to_real_manifest(
         default_edition
     };
     if !edition.is_stable() {
-        features.require(Feature::unstable_editions())?;
+        let version = normalized_package
+            .normalized_version()
+            .expect("previously normalized")
+            .map(|v| format!("@{v}"))
+            .unwrap_or_default();
+        let hint = rust_version
+            .as_ref()
+            .map(|rv| format!("help: {package_name}{version} requires rust {rv}"));
+        features.require_with_hint(Feature::unstable_editions(), hint.as_deref())?;
     }
 
     if original_toml.project.is_some() {

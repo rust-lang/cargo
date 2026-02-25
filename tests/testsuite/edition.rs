@@ -273,6 +273,7 @@ Caused by:
   The package requires the Cargo feature called `unstable-editions`, but that feature is not stabilized in this version of Cargo ([..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unstable-editions for more information about the status of this feature.
+  [HELP] foo@0.1.0 requires rust 1.90
 
 "#]])
         .run();
