@@ -151,16 +151,18 @@ pub fn fix(
 
     let mut target_data =
         RustcTargetData::new(original_ws, &opts.compile_opts.build_config.requested_kinds)?;
+
+    let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
+    let members: Vec<&Package> = original_ws
+        .members()
+        .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+        .collect();
     if let Some(edition_mode) = opts.edition {
-        let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
-        let members: Vec<&Package> = original_ws
-            .members()
-            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
-            .collect();
         migrate_manifests(original_ws, &members, edition_mode)?;
 
         check_resolver_change(&original_ws, &mut target_data, opts)?;
     }
+    fix_manifests(original_ws, &members)?;
     let ws = original_ws.reload(gctx)?;
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
@@ -288,6 +290,50 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
          ",
         files_list
     );
+}
+
+fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
+    for pkg in pkgs {
+        if !pkg.manifest().is_embedded()
+            || pkg
+                .manifest()
+                .original_toml()
+                .and_then(|m| m.package())
+                .map(|pkg| pkg.edition.is_some())
+                .unwrap_or(false)
+        {
+            continue;
+        }
+        let file = pkg.manifest_path();
+        let file = file.strip_prefix(ws.root()).unwrap_or(file);
+        let file = file.display();
+
+        let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+        let document = &mut manifest_mut.data;
+        let mut fixes = 0;
+
+        let root = document.as_table_mut();
+
+        fixes += 1;
+        root.entry("package").or_insert_with(|| {
+            let mut t = toml_edit::Table::new();
+            t.set_position(Some(-1));
+            t.into()
+        });
+        root["package"]["edition"] = crate::core::features::Edition::LATEST_STABLE
+            .to_string()
+            .into();
+
+        if 0 < fixes {
+            let verb = if fixes == 1 { "fix" } else { "fixes" };
+            let msg = format!("{file} ({fixes} {verb})");
+            ws.gctx().shell().status("Fixed", msg)?;
+
+            manifest_mut.write()?;
+        }
+    }
+
+    Ok(())
 }
 
 fn migrate_manifests(

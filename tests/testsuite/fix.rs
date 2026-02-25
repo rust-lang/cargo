@@ -3078,7 +3078,7 @@ fn script_without_frontmatter() {
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3087,7 +3087,14 @@ fn script_without_frontmatter() {
 
     assert_e2e().eq(
         p.read_file("echo.rs"),
-        str!["fn main() {}"],
+        str![[r#"
+---
+[package]
+edition = "2024"
+---
+
+fn main() {}
+"#]],
     );
 }
 
@@ -3109,7 +3116,7 @@ fn main() {}",
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3118,13 +3125,15 @@ fn main() {}",
 
     assert_e2e().eq(
         p.read_file("echo.rs"),
-        str![[r#"
+        str![[r##"
 #!/usr/bin/env cargo
 ---
+[package]
+edition = "2024"
 [dependencies]
 ---
 fn main() {}
-"#]],
+"##]],
     );
 }
 
@@ -3147,7 +3156,7 @@ fn main() {}"#,
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3161,6 +3170,7 @@ fn main() {}"#,
 ---
 [package]
 name = "foo"
+edition = "2024"
 ---
 fn main() {}
 "##]],
@@ -3185,7 +3195,7 @@ fn main() {}"#,
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3198,6 +3208,7 @@ fn main() {}"#,
 #!/usr/bin/env cargo
 ---
 package.name = "foo"
+package.edition = "2024"
 ---
 fn main() {}
 "##]],
