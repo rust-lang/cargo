@@ -2105,7 +2105,7 @@ script.path = "script.rs"
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] no edition set: defaulting to the 2015 edition while the latest is [..]
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [ERROR] failed to get `script` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:

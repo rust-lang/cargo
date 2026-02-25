@@ -1347,12 +1347,12 @@ pub fn to_real_manifest(
         // their MSRV.
         if msrv_edition != default_edition || rust_version.is_none() {
             let tip = if msrv_edition == latest_edition || rust_version.is_none() {
-                format!(" while the latest is {latest_edition}")
+                format!(" while the latest is `{latest_edition}`")
             } else {
                 format!(" while {msrv_edition} is compatible with `rust-version`")
             };
             warnings.push(format!(
-                "no edition set: defaulting to the {default_edition} edition{tip}",
+                "`package.edition` is unspecified, defaulting to `{default_edition}`{tip}"
             ));
         }
         default_edition
