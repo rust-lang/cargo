@@ -483,7 +483,7 @@ fn config_run_embed() {
         .arg("src/main.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[WARNING] `package.edition` is unspecified, defaulting to `[..]`
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
 ...
 "#]])
