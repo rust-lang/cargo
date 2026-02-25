@@ -64,6 +64,7 @@ pub fn resolve_std<'gctx>(
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let mut std_ws = Workspace::new(&std_ws_manifest_path, gctx)?;
+    std_ws.set_is_std(true);
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
