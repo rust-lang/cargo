@@ -130,14 +130,20 @@ impl PackageIdSpec {
                     // Leave `sparse` as part of URL, see `SourceId::new`
                     // url = strip_url_protocol(&url);
                 }
-                "path" => {
+                kind_str @ ("path" | "builtin") => {
                     if url.query().is_some() {
                         return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     if scheme != "file" {
                         return Err(ErrorKind::UnsupportedPathPlusScheme(scheme.into()).into());
                     }
-                    kind = Some(SourceKind::Path);
+                    //TODO: This affects Cargo's json output, and needs consideration for what we
+                    //want for different commands.
+                    kind = if kind_str == "path" {
+                        Some(SourceKind::Path)
+                    } else {
+                        Some(SourceKind::Builtin)
+                    };
                     url = strip_url_protocol(&url);
                 }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
