@@ -242,6 +242,43 @@ Caused by:
         .run();
 }
 
+#[cargo_test]
+fn future_edition_with_rust_version_hint() {
+    // When an unstable edition is used and the package has `rust-version` set,
+    // the error message should include a `help:` line pointing the user at the
+    // required Rust toolchain version, matching the format used elsewhere in
+    // Cargo (e.g. `{name}@{version} requires rust {msrv}`).
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "future"
+                rust-version = "1.90"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `unstable-editions` is required
+
+  The package requires the Cargo feature called `unstable-editions`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#unstable-editions for more information about the status of this feature.
+  [HELP] foo@0.1.0 requires rust 1.90
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "future edition is always unstable")]
 fn future_edition_works() {
     let p = project()
