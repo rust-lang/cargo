@@ -176,6 +176,10 @@ impl SourceId {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
             }
+            "builtin" => {
+                let url = url.into_url()?;
+                SourceId::new(SourceKind::Builtin, url, None)
+            }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
     }
@@ -433,6 +437,14 @@ impl SourceId {
                     .expect("path sources cannot be remote");
                 Ok(Box::new(DirectorySource::new(&path, self, gctx)))
             }
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources should not be remote");
+                Ok(Box::new(PathSource::new(&path, self, gctx)))
+            }
         }
     }
 
@@ -679,6 +691,7 @@ impl fmt::Display for SourceId {
             }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
         }
     }
 }
