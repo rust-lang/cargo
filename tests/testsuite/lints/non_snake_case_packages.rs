@@ -60,7 +60,7 @@ fn main() {}"#,
     p.cargo("check -Zcargo-lints -Zscript --manifest-path foo-bar")
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `[..]`
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [WARNING] packages should have a snake-case name
  --> foo-bar
   = [NOTE] `cargo::non_snake_case_packages` is set to `warn` in `[lints]`
