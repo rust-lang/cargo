@@ -520,8 +520,9 @@ pub fn resolve_with_previous<'gctx>(
                     ResolveOpts {
                         dev_deps,
                         features: RequestedFeatures::CliFeatures(features),
-                        // TODO: set this to true when build-std is enabled
-                        inject_builtins: false,
+                        inject_builtins: ws.gctx().cli_unstable().build_std.is_some()
+                            && !ws.is_std()
+                            && !member.proc_macro(),
                     },
                 )
             })

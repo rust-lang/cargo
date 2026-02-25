@@ -101,6 +101,9 @@ pub struct Workspace<'gctx> {
     /// `cargo install` or `cargo package` commands.
     is_ephemeral: bool,
 
+    /// `true` if this is the standard library's workspace
+    is_std: bool,
+
     /// `true` if this workspace should enforce optional dependencies even when
     /// not needed; false if this workspace should only enforce dependencies
     /// needed by the current configuration (such as in cargo install). In some
@@ -260,6 +263,7 @@ impl<'gctx> Workspace<'gctx> {
             member_ids: HashSet::default(),
             default_members: Vec::new(),
             is_ephemeral: false,
+            is_std: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::default()),
             ignore_lock: false,
@@ -701,6 +705,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
+    }
+
+    pub fn set_is_std(&mut self, is_std: bool) {
+        self.is_std = is_std;
+    }
+
+    pub fn is_std(&self) -> bool {
+        self.is_std
     }
 
     pub fn require_optional_deps(&self) -> bool {
