@@ -361,6 +361,28 @@ fn compute_deps(
     }
     state.dev_dependency_edges.extend(dev_deps);
 
+    if unit.mode.is_rustc_test() && unit.target.harness() {
+        let unit: Vec<_> = state.opaque_roots[&unit.kind]
+            .iter()
+            .filter(|&u| u.pkg.name() == "test")
+            .collect();
+        assert!(
+            unit.len() == 1,
+            "libstd was resolved with test crate as root"
+        );
+        let unit = unit[0];
+        let unitdep = UnitDep {
+            unit: unit.clone(),
+            unit_for: UnitFor::new_normal(unit.kind),
+            extern_crate_name: unit.pkg.name(),
+            dep_name: None,
+            public: true,
+            noprelude: true,
+            nounused: true,
+        };
+        ret.push(unitdep);
+    }
+
     // If this target is a build script, then what we've collected so far is
     // all we need. If this isn't a build script, then it depends on the
     // build script if there is one.
