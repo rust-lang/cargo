@@ -3066,3 +3066,186 @@ edition = "future"
 "#]],
     );
 }
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn script_without_frontmatter() {
+    let p = cargo_test_support::project()
+        .file("echo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
+[CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert_e2e().eq(
+        p.read_file("echo.rs"),
+        str![[r#"
+---
+[package]
+edition = "2024"
+---
+
+fn main() {}
+"#]],
+    );
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn script_with_frontmatter() {
+    let p = cargo_test_support::project()
+        .file(
+            "echo.rs",
+            "#!/usr/bin/env cargo
+---
+[dependencies]
+---
+fn main() {}",
+        )
+        .build();
+
+    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
+[CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert_e2e().eq(
+        p.read_file("echo.rs"),
+        str![[r##"
+#!/usr/bin/env cargo
+---
+[package]
+edition = "2024"
+[dependencies]
+---
+fn main() {}
+"##]],
+    );
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn script_with_package_table() {
+    let p = cargo_test_support::project()
+        .file(
+            "echo.rs",
+            r#"#!/usr/bin/env cargo
+---
+[package]
+name = "foo"
+---
+fn main() {}"#,
+        )
+        .build();
+
+    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert_e2e().eq(
+        p.read_file("echo.rs"),
+        str![[r##"
+#!/usr/bin/env cargo
+---
+[package]
+name = "foo"
+edition = "2024"
+---
+fn main() {}
+"##]],
+    );
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn script_with_package_dotted() {
+    let p = cargo_test_support::project()
+        .file(
+            "echo.rs",
+            r#"#!/usr/bin/env cargo
+---
+package.name = "foo"
+---
+fn main() {}"#,
+        )
+        .build();
+
+    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[FIXED] echo.rs (1 fix)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert_e2e().eq(
+        p.read_file("echo.rs"),
+        str![[r##"
+#!/usr/bin/env cargo
+---
+package.name = "foo"
+package.edition = "2024"
+---
+fn main() {}
+"##]],
+    );
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn script_with_edition() {
+    let p = cargo_test_support::project()
+        .file(
+            "echo.rs",
+            r#"#!/usr/bin/env cargo
+---
+package.edition = "2015"
+---
+fn main() {}"#,
+        )
+        .build();
+
+    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert_e2e().eq(
+        p.read_file("echo.rs"),
+        str![[r##"
+#!/usr/bin/env cargo
+---
+package.edition = "2015"
+---
+fn main() {}
+"##]],
+    );
+}
