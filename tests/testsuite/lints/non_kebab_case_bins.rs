@@ -153,7 +153,7 @@ fn main() {}"#,
     p.cargo("check -Zcargo-lints -Zscript --manifest-path foo_bar")
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `[..]`
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [WARNING] binaries should have a kebab-case name
   |
 1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]

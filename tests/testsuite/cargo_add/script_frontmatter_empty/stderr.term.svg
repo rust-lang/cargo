@@ -1,7 +1,7 @@
-<svg width="740px" height="128px" xmlns="http://www.w3.org/2000/svg">
+<svg width="810px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
@@ -19,13 +19,13 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to `2024`</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to `2024`</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
 </tspan>
     <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
 </tspan>

@@ -60,7 +60,7 @@ fn main() {}"#,
     p.cargo("check -Zcargo-lints -Zscript --manifest-path foo_bar")
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `[..]`
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [WARNING] packages should have a kebab-case name
  --> foo_bar
   = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
