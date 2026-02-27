@@ -7895,3 +7895,81 @@ fn package_dir_not_excluded_from_backups() {
         "CACHEDIR.TAG should exist in target directory to exclude it from backups"
     );
 }
+
+// Unix-only test because Windows has different permission handling
+#[cfg(unix)]
+#[cargo_test]
+fn unreadable_directory_error_message() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let p = project().file("src/lib.rs", "").build();
+
+    // Create an unreadable directory
+    let unreadable_dir = p.root().join("unreadable-dir");
+    fs::create_dir(&unreadable_dir).unwrap();
+    fs::set_permissions(&unreadable_dir, fs::Permissions::from_mode(0o000)).unwrap();
+
+    // Ensure cleanup happens even if test fails
+    struct Cleanup(std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(&self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+    let _cleanup = Cleanup(unreadable_dir.clone());
+
+    // cargo package should fail with Permission Denied error and helpful hint
+    p.cargo("package --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  failed to open for archiving: `[ROOT]/foo/unreadable-dir`
+
+  Note: If this is a local artifact, add it to .gitignore or the 'exclude' list in Cargo.toml.
+
+Caused by:
+  Permission denied (os error 13)
+
+"#]])
+        .run();
+}
+
+#[cfg(unix)]
+#[cargo_test]
+fn unreadable_directory_list_warning() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let p = project().file("src/lib.rs", "").build();
+
+    // Create an unreadable directory
+    let unreadable_dir = p.root().join("unreadable-dir");
+    fs::create_dir(&unreadable_dir).unwrap();
+    fs::set_permissions(&unreadable_dir, fs::Permissions::from_mode(0o000)).unwrap();
+
+    // Ensure cleanup happens even if test fails
+    struct Cleanup(std::path::PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(&self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+    let _cleanup = Cleanup(unreadable_dir.clone());
+
+    // cargo package --list should succeed but warn about unreadable directory
+    p.cargo("package --list")
+        .with_status(0)  // Should still succeed
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[WARNING] cannot access `[ROOT]/foo/unreadable-dir`: Permission denied (os error 13). `cargo package` will fail.
+
+"#]])
+        .run();
+}
