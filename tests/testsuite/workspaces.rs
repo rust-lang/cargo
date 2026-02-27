@@ -2347,7 +2347,6 @@ fn ws_err_unused() {
         "[badges]",
         "[lints]",
     ] {
-        let key = table.trim_start_matches('[').trim_end_matches(']');
         let p = project()
             .file(
                 "Cargo.toml",
@@ -2370,7 +2369,7 @@ fn ws_err_unused() {
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  this virtual manifest specifies a `{key}` section, which is not allowed
+  this virtual manifest does not have a `[package]` section, which is required when specifying the `{table}` section
 ",
             ))
             .run();
