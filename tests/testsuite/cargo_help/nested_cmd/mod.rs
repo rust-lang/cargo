@@ -9,7 +9,7 @@ fn case() {
         .arg("report")
         .arg("future-incompatibilities")
         .assert()
-        .code(1)
+        .success()
         .stdout_eq(file!["stdout.term.txt"])
         .stderr_eq(file!["stderr.term.svg"]);
 }

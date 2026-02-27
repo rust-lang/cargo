@@ -30,7 +30,7 @@
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">cargo[EXE] help</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;COMMAND&gt;</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">cargo[EXE] help</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;COMMAND&gt;...</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>

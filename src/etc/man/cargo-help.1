@@ -9,6 +9,18 @@ cargo\-help \[em] Get help for a Cargo command
 \fBcargo help\fR [\fIsubcommand\fR]
 .SH "DESCRIPTION"
 Prints a help message for the given command.
+.sp
+For commands with subcommands, separate the command levels with spaces. For
+example, \fBcargo help report future\-incompatibilities\fR displays help for the
+\fBcargo report future\-incompatibilities\fR command.
+.sp
+Spaces separate hierarchy levels only between a parent command and its
+subcommands. Dashes that are part of a command\[cq]s name, such as
+\fBgenerate\-lockfile\fR, must always be preserved.
+.sp
+Multiple command levels can also be written as a single dash\-joined word.
+For example, \fBcargo help report\-future\-incompatibilities\fR is equivalent to
+\fBcargo help report future\-incompatibilities\fR\&.
 .SH "OPTIONS"
 .SS "Display Options"
 .sp
@@ -155,7 +167,27 @@ cargo help build
 .RE
 .sp
 .RS 4
-\h'-04' 2.\h'+01'Help is also available with the \fB\-\-help\fR flag:
+\h'-04' 2.\h'+01'Get help for a nested command:
+.sp
+.RS 4
+.nf
+cargo help report future\-incompatibilities
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 3.\h'+01'The dash\-joined form also works:
+.sp
+.RS 4
+.nf
+cargo help report\-future\-incompatibilities
+.fi
+.RE
+.RE
+.sp
+.RS 4
+\h'-04' 4.\h'+01'Help is also available with the \fB\-\-help\fR flag:
 .sp
 .RS 4
 .nf
