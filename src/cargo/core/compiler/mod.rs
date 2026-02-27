@@ -1293,7 +1293,8 @@ fn build_base_args(
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (contains_dy_lib && !build_runner.is_primary_package(unit));
+        || (contains_dy_lib && !build_runner.is_primary_package(unit) && !unit.mode.is_any_test());
+
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
