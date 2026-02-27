@@ -138,6 +138,7 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
+use super::unused_deps::UnusedDepState;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -186,6 +187,7 @@ struct DrainState<'gctx> {
     progress: Progress<'gctx>,
     next_id: u32,
     timings: Timings<'gctx>,
+    unused_dep_state: UnusedDepState,
 
     /// Map from unit index to unit, for looking up dependency information.
     index_to_unit: HashMap<UnitIndex, Unit>,
@@ -384,6 +386,7 @@ enum Message {
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
     SectionTiming(JobId, SectionTiming),
+    UnusedExterns(JobId, Vec<String>),
 }
 
 impl<'gctx> JobQueue<'gctx> {
@@ -503,6 +506,7 @@ impl<'gctx> JobQueue<'gctx> {
             progress,
             next_id: 0,
             timings: self.timings,
+            unused_dep_state: UnusedDepState::new(build_runner),
             index_to_unit: build_runner
                 .bcx
                 .unit_to_index
@@ -543,12 +547,10 @@ impl<'gctx> JobQueue<'gctx> {
             .take()
             .map(move |srv| srv.start(move |msg| messages.push(Message::FixDiagnostic(msg))));
 
-        thread::scope(
-            move |scope| match state.drain_the_queue(build_runner, scope, &helper) {
-                Some(err) => Err(err),
-                None => Ok(()),
-            },
-        )
+        thread::scope(move |scope| {
+            let (result,) = state.drain_the_queue(build_runner, scope, &helper);
+            result
+        })
     }
 }
 
@@ -722,6 +724,11 @@ impl<'gctx> DrainState<'gctx> {
                         items,
                     });
             }
+            Message::UnusedExterns(id, unused_externs) => {
+                let unit = &self.active[&id];
+                self.unused_dep_state
+                    .record_unused_externs_for_unit(unit, unused_externs);
+            }
             Message::Token(acquired_token) => {
                 let token = acquired_token.context("failed to acquire jobserver token")?;
                 self.tokens.push(token);
@@ -762,14 +769,15 @@ impl<'gctx> DrainState<'gctx> {
     /// This is the "main" loop, where Cargo does all work to run the
     /// compiler.
     ///
-    /// This returns an Option to prevent the use of `?` on `Result` types
-    /// because it is important for the loop to carefully handle errors.
+    /// This returns a tuple of `Result` to prevent the use of `?` on
+    /// `Result` types because it is important for the loop to
+    /// carefully handle errors.
     fn drain_the_queue<'s>(
         mut self,
         build_runner: &mut BuildRunner<'_, '_>,
         scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
-    ) -> Option<anyhow::Error> {
+    ) -> (Result<(), anyhow::Error>,) {
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -813,6 +821,18 @@ impl<'gctx> DrainState<'gctx> {
         }
         self.progress.clear();
 
+        if build_runner.bcx.gctx.cli_unstable().cargo_lints {
+            let mut warn_count = 0;
+            let mut error_count = 0;
+            drop(self.unused_dep_state.emit_unused_warnings(
+                &mut warn_count,
+                &mut error_count,
+                build_runner,
+            ));
+            errors.count += error_count;
+            build_runner.compilation.lint_warning_count += warn_count;
+        }
+
         let profile_name = build_runner.bcx.build_config.requested_profile;
         // NOTE: this may be a bit inaccurate, since this may not display the
         // profile for what was actually built. Profile overrides can change
@@ -853,7 +873,7 @@ impl<'gctx> DrainState<'gctx> {
         if let Some(error) = errors.to_error() {
             // Any errors up to this point have already been printed via the
             // `display_error` inside `handle_error`.
-            Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
+            (Err(anyhow::Error::new(AlreadyPrintedError::new(error))),)
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
             let profile_link = build_runner.bcx.gctx.shell().err_hyperlink(
                 "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
@@ -868,10 +888,10 @@ impl<'gctx> DrainState<'gctx> {
                 &self.per_package_future_incompat_reports,
             );
 
-            None
+            (Ok(()),)
         } else {
             debug!("queue: {:#?}", self.queue);
-            Some(internal("finished with jobs still left in the queue"))
+            (Err(internal("finished with jobs still left in the queue")),)
         }
     }
 

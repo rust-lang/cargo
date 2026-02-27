@@ -7,6 +7,7 @@ use crate::core::compiler::CompileKind;
 use crate::core::compiler::Unit;
 use crate::core::compiler::UnitIndex;
 use crate::core::compiler::unit_graph::UnitGraph;
+use crate::core::dependency::DepKind;
 use crate::core::profiles::Profiles;
 use crate::util::Rustc;
 use crate::util::context::GlobalContext;
@@ -64,6 +65,9 @@ pub struct BuildContext<'a, 'gctx> {
     /// Configuration information for a rustc build.
     pub build_config: &'a BuildConfig,
 
+    /// Associated [`DepKind`]s for root targets
+    pub selected_dep_kinds: DepKindSet,
+
     /// Extra compiler args for either `rustc` or `rustdoc`.
     pub extra_compiler_args: HashMap<Unit, Vec<String>>,
 
@@ -97,6 +101,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         logger: Option<&'a BuildLogger>,
         packages: PackageSet<'gctx>,
         build_config: &'a BuildConfig,
+        selected_dep_kinds: DepKindSet,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
         target_data: RustcTargetData<'gctx>,
@@ -118,6 +123,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
             logger,
             packages,
             build_config,
+            selected_dep_kinds,
             profiles,
             extra_compiler_args,
             target_data,
@@ -155,5 +161,22 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     /// `cargo rustc` or `cargo rustdoc`.
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
+    }
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+pub struct DepKindSet {
+    pub build: bool,
+    pub normal: bool,
+    pub dev: bool,
+}
+
+impl DepKindSet {
+    pub fn contains(&self, kind: DepKind) -> bool {
+        match kind {
+            DepKind::Build => self.build,
+            DepKind::Normal => self.normal,
+            DepKind::Development => self.dev,
+        }
     }
 }

@@ -24,6 +24,7 @@ pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::rustc::Rustc;
 pub use self::semver_ext::{OptVersionReq, VersionExt};
+pub use self::unhashed::Unhashed;
 pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,
@@ -71,6 +72,7 @@ pub mod sqlite;
 pub mod style;
 pub mod toml;
 pub mod toml_mut;
+mod unhashed;
 mod vcs;
 mod workspace;
 

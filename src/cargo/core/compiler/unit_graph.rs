@@ -8,8 +8,10 @@ use crate::GlobalContext;
 use crate::core::Target;
 use crate::core::compiler::Unit;
 use crate::core::compiler::{CompileKind, CompileMode};
+use crate::core::dependency::Dependency;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::util::CargoResult;
+use crate::util::Unhashed;
 use crate::util::interning::InternedString;
 use std::collections::HashMap;
 
@@ -40,6 +42,10 @@ pub struct UnitDep {
     pub public: bool,
     /// If `true`, the dependency should not be added to Rust's prelude.
     pub noprelude: bool,
+    /// The manifest dependency that gave rise to this dependency
+    ///
+    /// Skip hashing as this is redundant and for book keekping purposes only
+    pub manifest_deps: Unhashed<Option<Vec<Dependency>>>,
 }
 
 const VERSION: u32 = 1;

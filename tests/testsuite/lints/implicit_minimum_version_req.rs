@@ -50,6 +50,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1"
+  | ^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -98,6 +109,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1.0"
+  | ^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -135,6 +157,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.2.3 (registry `dummy-registry`)
 [CHECKING] dep v1.2.3
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1.0.0"
+  | ^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.0.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -183,6 +216,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = { version = "1" }
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = { version = "1" }
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -231,6 +275,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = ">=1.0"
+  | ^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = ">=1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -268,6 +323,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "<2.0"
+  | ^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "<2.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -305,6 +371,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1.*"
+  | ^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.*"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -342,6 +419,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1.0.*"
+  | ^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.0.*"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -379,6 +467,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [CHECKING] dep v1.1.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = ">1.0"
+  | ^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = ">1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -416,6 +515,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "<=2.0"
+  | ^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "<=2.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -464,6 +574,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = ">=1.0, <2.0"
+  | ^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = ">=1.0, <2.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -501,6 +622,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "~1.0"
+  | ^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "~1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -538,6 +670,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "=1"
+  | ^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "=1"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -580,6 +723,17 @@ edition = "2021"
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | bar = { path = "bar" }
+  | ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - bar = { path = "bar" }
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -634,6 +788,17 @@ edition = "2021"
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | bar = { path = "bar", version = "0.1" }
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - bar = { path = "bar", version = "0.1" }
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -676,6 +841,17 @@ implicit_minimum_version_req = "warn"
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | bar = { git = '[ROOTURL]/bar' }
+  | ^^^^^^^^^^^^^^^[..]^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - bar = { git = '[ROOTURL]/bar' }
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -729,6 +905,17 @@ implicit_minimum_version_req = "warn"
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | bar = { git = '[ROOTURL]/bar', version = "0.1" }
+  | ^^^^^^^^^^^^^^^[..]^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - bar = { git = '[ROOTURL]/bar', version = "0.1" }
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -823,6 +1010,17 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [COMPILING] dep v1.0.0
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1.0"
+  | ^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -872,6 +1070,9 @@ implicit_minimum_version_req = "warn"
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -972,6 +1173,27 @@ implicit_minimum_version_req = "warn"
   |
 8 | regex = "1.0.0"
   |             ++
+[WARNING] unused dependency
+ --> Cargo.toml:7:1
+  |
+7 | dep = "1"
+  | ^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1"
+  |
+[WARNING] unused dependency
+ --> Cargo.toml:8:1
+  |
+8 | regex = "1.0"
+  | ^^^^^^^^^^^^^
+  |
+[HELP] remove the dependency
+  |
+8 - regex = "1.0"
+  |
 
 "#]])
         .run();
@@ -1033,6 +1255,18 @@ workspace = true
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] member v0.0.0 ([ROOT]/foo/member)
+[WARNING] unused dependency
+ --> member/Cargo.toml:7:1
+  |
+7 | dep.workspace = true
+  | ^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep.workspace = true
+7 + .workspace = true
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1183,6 +1417,17 @@ workspace = true
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [CHECKING] member v0.0.0 ([ROOT]/foo/member)
+[WARNING] unused dependency
+ --> member/Cargo.toml:7:1
+  |
+7 | dep = "1.0"
+  | ^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+7 - dep = "1.0"
+  |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
