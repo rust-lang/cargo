@@ -76,6 +76,7 @@ pub(super) fn activation_error(
     resolver_ctx: &ResolverContext,
     registry: &mut dyn Registry,
     parent: &Summary,
+    packages_requiring_this: Option<(PackageId, PackageId)>,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
     candidates: &[Summary],
@@ -86,7 +87,7 @@ pub(super) fn activation_error(
             err,
             resolver_ctx
                 .parents
-                .path_to_bottom(&parent.package_id())
+                .path_to_bottom(&parent.package_id(), packages_requiring_this.as_ref())
                 .into_iter()
                 .map(|(node, _)| node)
                 .cloned()
@@ -99,6 +100,7 @@ pub(super) fn activation_error(
         msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path_in_context(
             resolver_ctx,
+            packages_requiring_this,
             &parent.package_id(),
         ));
 
@@ -144,7 +146,11 @@ pub(super) fn activation_error(
                     msg.push_str("`, but it conflicts with a previous package which links to `");
                     msg.push_str(link);
                     msg.push_str("` as well:\n");
-                    msg.push_str(&describe_path_in_context(resolver_ctx, p));
+                    msg.push_str(&describe_path_in_context(
+                        resolver_ctx,
+                        packages_requiring_this,
+                        p,
+                    ));
                     msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
                     msg.push_str("Try to adjust your dependencies so that only one package uses the `links = \"");
                     msg.push_str(link);
@@ -220,7 +226,11 @@ pub(super) fn activation_error(
             for (p, r) in &conflicting_activations {
                 if let ConflictReason::Semver = r {
                     msg.push_str("\n\n  previously selected ");
-                    msg.push_str(&describe_path_in_context(resolver_ctx, p));
+                    msg.push_str(&describe_path_in_context(
+                        resolver_ctx,
+                        packages_requiring_this,
+                        p,
+                    ));
                 }
             }
         }
@@ -407,7 +417,7 @@ pub(super) fn activation_error(
     let _ = write!(
         &mut msg,
         "required by {}",
-        describe_path_in_context(resolver_ctx, &parent.package_id()),
+        describe_path_in_context(resolver_ctx, packages_requiring_this, &parent.package_id()),
     );
 
     if let Some(gctx) = gctx {
@@ -517,10 +527,14 @@ fn alt_names(
 
 /// Returns String representation of dependency chain for a particular `pkgid`
 /// within given context.
-pub(super) fn describe_path_in_context(cx: &ResolverContext, id: &PackageId) -> String {
+pub(super) fn describe_path_in_context(
+    cx: &ResolverContext,
+    key_path: Option<(PackageId, PackageId)>,
+    id: &PackageId,
+) -> String {
     let iter = cx
         .parents
-        .path_to_bottom(id)
+        .path_to_bottom(id, key_path.as_ref())
         .into_iter()
         .map(|(p, d)| (p, d.and_then(|d| d.iter().next())));
     describe_path(iter)

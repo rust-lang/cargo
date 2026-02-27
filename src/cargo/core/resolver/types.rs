@@ -233,14 +233,14 @@ impl DepsFrame {
     fn min_candidates(&self) -> usize {
         self.remaining_siblings
             .peek()
-            .map(|(_, candidates, _)| candidates.len())
+            .map(|((_, candidates, _), _)| candidates.len())
             .unwrap_or(0)
     }
 
     pub fn flatten(&self) -> impl Iterator<Item = (PackageId, &Dependency)> + '_ {
         self.remaining_siblings
             .remaining()
-            .map(move |(d, _, _)| (self.parent.package_id(), d))
+            .map(move |((d, _, _), _)| (self.parent.package_id(), d))
     }
 }
 
@@ -319,8 +319,15 @@ impl RemainingDeps {
 
 /// Information about the dependencies for a crate, a tuple of:
 ///
-/// (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Summary>>, FeaturesSet);
+/// ((dependency info, candidates, features activated), track info)
+pub type DepInfo = (
+    (Dependency, Rc<Vec<Summary>>, FeaturesSet),
+    Option<DepTrack>,
+);
+/// Information about which crate the dependencies is actually for, a tuple of:
+///
+/// (packages that requires this, and its parent)
+pub type DepTrack = (PackageId, PackageId);
 
 /// All possible reasons that a package might fail to activate.
 ///
