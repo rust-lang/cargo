@@ -151,15 +151,17 @@ fn builtin_alias_shadowing_external_subcommand() {
     paths.push(p.root());
     let path = env::join_paths(paths).unwrap();
 
-    p.cargo("t")
-        .env("PATH", &path)
-        .with_stderr_data(str![[r#"
+    let mut process = p.cargo("t");
+    process.env("PATH", &path).with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 }
 
 #[cargo_test]
@@ -181,7 +183,8 @@ fn alias_shadowing_external_subcommand() {
     paths.push(echo.target_debug_dir());
     let path = env::join_paths(paths).unwrap();
 
-    p.cargo("echo")
+    let mut process = p.cargo("echo");
+    process
         .env("PATH", &path)
         .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
@@ -190,8 +193,11 @@ fn alias_shadowing_external_subcommand() {
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 }
 
 #[cargo_test]

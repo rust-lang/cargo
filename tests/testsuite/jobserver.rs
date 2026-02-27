@@ -196,7 +196,8 @@ test-runner:
         .arg("run")
         .arg("-j2")
         .run();
-    p.process(make)
+    let mut process = p.process(make);
+    process
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("run-runner")
@@ -206,14 +207,18 @@ test-runner:
 [RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
 this is a runner
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
     p.process(make)
         .env("CARGO", cargo_exe())
         .arg("test")
         .arg("-j2")
         .run();
-    p.process(make)
+    let mut process = p.process(make);
+    process
         .env("PATH", path)
         .env("CARGO", cargo_exe())
         .arg("test-runner")
@@ -223,8 +228,11 @@ this is a runner
 [RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
 this is a runner
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 
     // but not from `-j` flag
     p.cargo("run -j2")
@@ -238,7 +246,8 @@ this is a runner
 
 "#]])
         .run();
-    p.cargo("run -j2")
+    let mut process = p.cargo("run -j2");
+    process
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
@@ -251,13 +260,17 @@ this is a runner
 [..]no jobserver from env[..]
 ...
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
     p.cargo("test -j2")
         .with_status(101)
         .with_stdout_data("...\n[..]no jobserver from env[..]\n...")
         .run();
-    p.cargo("test -j2")
+    let mut process = p.cargo("test -j2");
+    process
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
@@ -269,8 +282,11 @@ this is a runner
 ...
 
 "#]])
-        .with_stdout_data("...\n[..]no jobserver from env[..]\n...")
-        .run();
+        .with_stdout_data("...\n[..]no jobserver from env[..]\n...");
+    if let Some(val) = env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 }
 
 #[cargo_test]
