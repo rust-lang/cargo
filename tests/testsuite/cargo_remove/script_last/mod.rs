@@ -15,8 +15,6 @@ fn case() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["script"])
-        .arg("-Zscript")
         .arg("remove")
         .arg_line("--manifest-path cargo-remove-test-fixture.rs docopt")
         .current_dir(cwd)

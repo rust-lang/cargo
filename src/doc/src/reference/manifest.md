@@ -4,6 +4,22 @@ The `Cargo.toml` file for each package is called its *manifest*. It is written
 in the [TOML] format. It contains metadata that is needed to compile the package. Checkout
 the `cargo locate-project` section for more detail on how cargo finds the manifest file.
 
+The content of the manifest can also be embedded inside of the frontmatter inside of a Rust source file:
+```rust
+#!/usr/bin/env cargo
+---
+[package]
+edition = "2024"
+
+[dependencies]
+regex = "1"
+---
+
+fn main() {
+    // ...
+}
+```
+
 Every manifest file consists of the following sections:
 
 * [`cargo-features`](unstable.md) --- Unstable, nightly-only features.
@@ -66,10 +82,11 @@ name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
 ```
 
-The only field required by Cargo is [`name`](#the-name-field). If publishing to
-a registry, the registry may require additional fields. See the notes below and
-[the publishing chapter][publishing] for requirements for publishing to
-[crates.io].
+The only field required by Cargo for `Cargo.toml` files is [`name`](#the-name-field).
+There are no required fields for cargo scripts.
+If publishing to a registry, the registry may require additional fields. See
+the notes below and [the publishing chapter][publishing] for requirements for
+publishing to [crates.io].
 
 ### The `name` field
 
@@ -87,6 +104,9 @@ a keyword. [crates.io] imposes even more restrictions, such as:
 - Do not use reserved names.
 - Do not use special Windows names such as "nul".
 - Use a maximum of 64 characters of length.
+
+This field is optional for scripts and defaults to the file stem.
+The field is required for `Cargo.toml` manifests.
 
 [alphanumeric]: ../../std/primitive.char.html#method.is_alphanumeric
 
@@ -154,7 +174,9 @@ with the latest stable edition. By default `cargo new` creates a manifest with
 the 2024 edition currently.
 
 If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
-assumed for backwards compatibility. Note that all manifests
+assumed for backwards compatibility.
+In scripts, the current edition is assumed.
+Note that all manifests
 created with [`cargo new`] will not use this historical fallback because they
 will have `edition` explicitly specified to a newer value.
 
@@ -328,6 +350,8 @@ table defined. That is, a crate cannot both be a root crate in a workspace
 
 For more information, see the [workspaces chapter](workspaces.md).
 
+This field is disallowed in scripts.
+
 ### The `build` field
 
 The `build` field specifies a file in the package root which is a [build
@@ -347,6 +371,8 @@ The default is `"build.rs"`, which loads the script from a file named
 specify a path to a different file or `build = false` to disable automatic
 detection of the build script.
 
+This field is disallowed in scripts.
+
 ### The `links` field
 
 The `links` field specifies the name of a native library that is being linked
@@ -363,6 +389,8 @@ on Linux) may specify:
 # ...
 links = "git2"
 ```
+
+This field is disallowed in scripts.
 
 ### The `exclude` and `include` fields
 
@@ -518,6 +546,8 @@ both `src/bin/a.rs` and `src/bin/b.rs`:
 [package]
 default-run = "a"
 ```
+
+This field is disallowed in scripts.
 
 ## The `[lints]` section
 

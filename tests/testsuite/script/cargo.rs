@@ -24,14 +24,13 @@ fn path() -> Vec<std::path::PathBuf> {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect()
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn basic_rs() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v echo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v echo.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
@@ -49,14 +48,13 @@ args: []
 }
 
 #[cfg(unix)]
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn arg0() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v echo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v echo.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [ROOT]/foo/echo.rs
@@ -74,14 +72,13 @@ args: []
 }
 
 #[cfg(windows)]
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn arg0() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v echo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v echo.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
@@ -98,14 +95,13 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn basic_path() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v ./echo")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v ./echo")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
@@ -122,14 +118,13 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn path_required() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v echo")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v echo")
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
@@ -146,7 +141,7 @@ fn path_required() {
 }
 
 #[cfg(unix)]
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn manifest_precedence_over_plugins() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -158,9 +153,8 @@ fn manifest_precedence_over_plugins() {
     path.push(p.root().join("path-test"));
     let path = std::env::join_paths(path.iter()).unwrap();
 
-    p.cargo("-Zscript -v echo.rs")
+    p.cargo("-v echo.rs")
         .env("PATH", &path)
-        .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
@@ -177,64 +171,7 @@ args: []
         .run();
 }
 
-#[cfg(unix)]
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn warn_when_plugin_masks_manifest_on_stable() {
-    let p = cargo_test_support::project()
-        .file("echo.rs", ECHO_SCRIPT)
-        .executable(std::path::Path::new("path-test").join("cargo-echo.rs"), "")
-        .build();
-
-    let mut path = path();
-    path.push(p.root().join("path-test"));
-    let path = std::env::join_paths(path.iter()).unwrap();
-
-    p.cargo("-v echo.rs")
-        .env("PATH", &path)
-        .with_stdout_data("")
-        .with_stderr_data(str![[r#"
-[WARNING] external subcommand `echo.rs` has the appearance of a manifest-command
-  |
-  = [NOTE] this was previously accepted but will be phased out when `-Zscript` is stabilized; see <https://github.com/rust-lang/cargo/issues/12207>
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn requires_nightly() {
-    let p = cargo_test_support::project()
-        .file("echo.rs", ECHO_SCRIPT)
-        .build();
-
-    p.cargo("-v echo.rs")
-        .with_status(101)
-        .with_stdout_data("")
-        .with_stderr_data(str![[r#"
-[ERROR] running the file `echo.rs` requires `-Zscript`
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn requires_z_flag() {
-    let p = cargo_test_support::project()
-        .file("echo.rs", ECHO_SCRIPT)
-        .build();
-
-    p.cargo("-v echo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout_data("")
-        .with_stderr_data(str![[r#"
-[ERROR] running the file `echo.rs` requires `-Zscript`
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn manifest_parse_error() {
     // Exaggerate the newlines to make it more obvious if the error's line number is off
     let script = r#"#!/usr/bin/env cargo
@@ -255,8 +192,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -270,7 +206,7 @@ fn main() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -285,8 +221,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -300,7 +235,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -314,8 +249,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -330,7 +264,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn rebuild() {
     let script = r#"#!/usr/bin/env cargo-eval
 
@@ -342,8 +276,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 msg = undefined
 
@@ -358,8 +291,7 @@ msg = undefined
         .run();
 
     // Verify we don't rebuild
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 msg = undefined
 
@@ -373,9 +305,8 @@ msg = undefined
         .run();
 
     // Verify we do rebuild
-    p.cargo("-Zscript -v script.rs")
+    p.cargo("-v script.rs")
         .env("_MESSAGE", "hello")
-        .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
 msg = hello
 
@@ -390,7 +321,7 @@ msg = hello
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn use_script_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
@@ -410,8 +341,7 @@ rustc = "non-existent-rustc"
         .build();
 
     // Verify the config is bad
-    p.cargo("-Zscript script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("script.rs -NotAnArg")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] could not execute process `non-existent-rustc -vV` (never executed)
@@ -423,8 +353,7 @@ Caused by:
         .run();
 
     // Verify that the config isn't used
-    p.cargo("-Zscript ../script/script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("../script/script.rs -NotAnArg")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -434,15 +363,14 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn default_programmatic_verbosity() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("script.rs -NotAnArg")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -453,15 +381,14 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn quiet() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -q script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-q script.rs -NotAnArg")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -472,7 +399,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -484,8 +411,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 line: 4
 
@@ -500,15 +426,14 @@ line: 4
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_escaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v -- script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v -- script.rs -NotAnArg")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -525,15 +450,14 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_unescaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs -NotAnArg")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs -NotAnArg")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -550,15 +474,14 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_same_flags() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -575,15 +498,14 @@ args: ["--help"]
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_has_weird_chars() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("s-h.w§c!.rs", script)
         .build();
 
-    p.cargo("-Zscript -v s-h.w§c!.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v s-h.w§c!.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/s-h-w-c-[EXE]
 arg0: [..]
@@ -600,15 +522,14 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_has_leading_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("42answer.rs", script)
         .build();
 
-    p.cargo("-Zscript -v 42answer.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v 42answer.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/answer[EXE]
 arg0: [..]
@@ -625,13 +546,12 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_is_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("42.rs", script).build();
 
-    p.cargo("-Zscript -v 42.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v 42.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/package[EXE]
 arg0: [..]
@@ -648,14 +568,13 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[cfg(not(windows))]
 fn test_name_is_windows_reserved_name() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("con", script).build();
 
-    p.cargo("-Zscript -v ./con")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v ./con")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]
 arg0: [..]
@@ -672,13 +591,12 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_is_sysroot_package_name() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("test", script).build();
 
-    p.cargo("-Zscript -v ./test")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v ./test")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]
 arg0: [..]
@@ -695,13 +613,12 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_is_keyword() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("self", script).build();
 
-    p.cargo("-Zscript -v ./self")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v ./self")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]
 arg0: [..]
@@ -718,15 +635,14 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_is_deps_dir_implicit() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("deps.rs", script)
         .build();
 
-    p.cargo("-Zscript -v deps.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v deps.rs")
         .with_status(101)
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -740,7 +656,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_is_deps_dir_explicit() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -764,8 +680,7 @@ fn test () {}
         .file("deps.rs", script)
         .build();
 
-    p.cargo("-Zscript -v deps.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v deps.rs")
         .with_status(101)
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -779,14 +694,13 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn script_like_dir() {
     let p = cargo_test_support::project()
         .file("foo.rs/foo", "something")
         .build();
 
-    p.cargo("-Zscript -v foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v foo.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`: `foo.rs` is a directory
@@ -795,12 +709,11 @@ fn script_like_dir() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn non_existent_rs() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript -v foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v foo.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
@@ -809,29 +722,27 @@ fn non_existent_rs() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn non_existent_rs_stable() {
     let p = cargo_test_support::project().build();
 
     p.cargo("-v foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] no such subcommand `foo.rs`
+[ERROR] no such file or subcommand `foo.rs`
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn did_you_mean_file() {
     let p = cargo_test_support::project()
         .file("food.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript -v foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v foo.rs")
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
@@ -842,30 +753,28 @@ fn did_you_mean_file() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn did_you_mean_file_stable() {
     let p = cargo_test_support::project()
         .file("food.rs", ECHO_SCRIPT)
         .build();
 
     p.cargo("-v foo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] no such subcommand `foo.rs`
-[HELP] there is a script with a similar name: `./food.rs` (requires `-Zscript`)
+[ERROR] no such file or subcommand `foo.rs`
+[HELP] there is a script with a similar name: `./food.rs`
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn did_you_mean_command() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript -v build--manifest-path=./Cargo.toml")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v build--manifest-path=./Cargo.toml")
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
@@ -876,23 +785,22 @@ fn did_you_mean_command() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn did_you_mean_command_stable() {
     let p = cargo_test_support::project().build();
 
     p.cargo("-v build--manifest-path=./Cargo.toml")
-        .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
+[ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
 [HELP] there is a command with a similar name: `build --manifest-path=./Cargo.toml`
 
 "#]])
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -908,8 +816,7 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -929,7 +836,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_path_dep() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -947,8 +854,7 @@ fn main() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -965,7 +871,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_no_build_rs() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -977,8 +883,7 @@ fn main() {
         .file("build.rs", "broken")
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -993,7 +898,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_no_autobins() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -1005,8 +910,7 @@ fn main() {
         .file("src/bin/not-script/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -1021,7 +925,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn test_no_autolib() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -1033,8 +937,7 @@ fn main() {
         .file("src/lib.rs", r#"compile_error!{"must not be built"}"#)
         .build();
 
-    p.cargo("-Zscript -v script.rs --help")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs --help")
         .with_stdout_data(str![[r#"
 Hello world!
 
@@ -1049,7 +952,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_workspace() {
     let p = cargo_test_support::project()
         .file(
@@ -1066,8 +969,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1079,7 +981,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn workspace_members_mentions_script() {
     let p = cargo_test_support::project()
         .file(
@@ -1101,8 +1003,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript check")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
@@ -1111,7 +1012,7 @@ fn main() {}
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn workspace_members_glob_matches_script() {
     let p = cargo_test_support::project()
         .file(
@@ -1133,8 +1034,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript check")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] manifest path `[ROOT]/foo` contains no package: The manifest is virtual, and the workspace has no members.
@@ -1143,7 +1043,7 @@ fn main() {}
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn package_workspace() {
     let p = cargo_test_support::project()
         .file(
@@ -1169,8 +1069,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript ./scripts/nop.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("./scripts/nop.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/scripts/nop.rs`
@@ -1182,7 +1081,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_lib() {
     let p = cargo_test_support::project()
         .file(
@@ -1201,8 +1100,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1214,7 +1112,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_bin() {
     let p = cargo_test_support::project()
         .file(
@@ -1233,8 +1131,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1246,7 +1143,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_example() {
     let p = cargo_test_support::project()
         .file(
@@ -1265,8 +1162,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1278,7 +1174,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_test() {
     let p = cargo_test_support::project()
         .file(
@@ -1297,8 +1193,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1310,7 +1205,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_bench() {
     let p = cargo_test_support::project()
         .file(
@@ -1329,8 +1224,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1342,7 +1236,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_build() {
     let p = cargo_test_support::project()
         .file(
@@ -1359,8 +1253,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1372,7 +1265,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_links() {
     let p = cargo_test_support::project()
         .file(
@@ -1389,8 +1282,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1402,7 +1294,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_autolib() {
     let p = cargo_test_support::project()
         .file(
@@ -1419,8 +1311,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1432,7 +1323,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_autobins() {
     let p = cargo_test_support::project()
         .file(
@@ -1449,8 +1340,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1462,7 +1352,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_autoexamples() {
     let p = cargo_test_support::project()
         .file(
@@ -1479,8 +1369,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1492,7 +1381,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_autotests() {
     let p = cargo_test_support::project()
         .file(
@@ -1509,8 +1398,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1522,7 +1410,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn disallow_explicit_package_autobenches() {
     let p = cargo_test_support::project()
         .file(
@@ -1539,8 +1427,7 @@ fn main() {}
         )
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/script.rs`
@@ -1552,15 +1439,14 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -1577,7 +1463,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn no_local_lockfile() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1587,8 +1473,7 @@ fn no_local_lockfile() {
 
     assert!(!local_lockfile_path.exists());
 
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -1607,50 +1492,14 @@ args: []
     assert!(!local_lockfile_path.exists());
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn cmd_check_requires_nightly() {
-    let script = ECHO_SCRIPT;
-    let p = cargo_test_support::project()
-        .file("script.rs", script)
-        .build();
-
-    p.cargo("check --manifest-path script.rs")
-        .with_status(101)
-        .with_stdout_data("")
-        .with_stderr_data(str![[r#"
-[ERROR] embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
-fn cmd_check_requires_z_flag() {
-    let script = ECHO_SCRIPT;
-    let p = cargo_test_support::project()
-        .file("script.rs", script)
-        .build();
-
-    p.cargo("check --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout_data("")
-        .with_stderr_data(str![[r#"
-[ERROR] embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_check_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript check --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("check --manifest-path script.rs")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -1661,12 +1510,11 @@ fn cmd_check_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_check_with_missing_script_rs() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript check --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("check --manifest-path script.rs")
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
@@ -1676,12 +1524,11 @@ fn cmd_check_with_missing_script_rs() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_check_with_missing_script() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript check --manifest-path script")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("check --manifest-path script")
         .with_status(101)
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
@@ -1691,15 +1538,14 @@ fn cmd_check_with_missing_script() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_build_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript build --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("build --manifest-path script.rs")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -1710,15 +1556,14 @@ fn cmd_build_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_test_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript test --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("test --manifest-path script.rs")
         .with_stdout_data(str![[r#"
 
 running 1 test
@@ -1738,7 +1583,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_clean_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1746,12 +1591,9 @@ fn cmd_clean_with_embedded() {
         .build();
 
     // Ensure there is something to clean
-    p.cargo("-Zscript script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
-        .run();
+    p.cargo("script.rs").run();
 
-    p.cargo("-Zscript clean --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("clean --manifest-path script.rs")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -1761,15 +1603,14 @@ fn cmd_clean_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_generate_lockfile_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript generate-lockfile --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("generate-lockfile --manifest-path script.rs")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -1778,15 +1619,14 @@ fn cmd_generate_lockfile_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_metadata_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript metadata --manifest-path script.rs --format-version=1")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("metadata --manifest-path script.rs --format-version=1")
         .with_stdout_data(
             str![[r#"
 {
@@ -1866,15 +1706,14 @@ fn cmd_metadata_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_read_manifest_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript read-manifest --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("read-manifest --manifest-path script.rs")
         .with_stdout_data(
             str![[r#"
 {
@@ -1928,14 +1767,13 @@ fn cmd_read_manifest_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_run_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript run --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("run --manifest-path script.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]
 arg0: [..]
@@ -1952,14 +1790,13 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_tree_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript tree --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("tree --manifest-path script.rs")
         .with_stdout_data(str![[r#"
 script v0.0.0 ([ROOT]/foo/script.rs)
 
@@ -1971,14 +1808,13 @@ script v0.0.0 ([ROOT]/foo/script.rs)
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_update_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript update --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("update --manifest-path script.rs")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -1987,14 +1823,13 @@ fn cmd_update_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_verify_project_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript verify-project --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("verify-project --manifest-path script.rs")
         .with_stdout_data(
             str![[r#"
 {
@@ -2010,18 +1845,15 @@ fn cmd_verify_project_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_pkgid_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
-        .run();
+    p.cargo("script.rs").run();
 
-    p.cargo("-Zscript pkgid --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("pkgid --manifest-path script.rs")
         .with_stdout_data(str![[r#"
 path+[ROOTURL]/foo/script.rs#script@0.0.0
 
@@ -2033,14 +1865,13 @@ path+[ROOTURL]/foo/script.rs#script@0.0.0
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_pkgid_with_embedded_no_lock_file() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript pkgid --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("pkgid --manifest-path script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -2050,7 +1881,7 @@ fn cmd_pkgid_with_embedded_no_lock_file() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_pkgid_with_embedded_dep() {
     Package::new("dep", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -2066,12 +1897,9 @@ fn main() {
         .file("script.rs", script)
         .build();
 
-    p.cargo("-Zscript script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
-        .run();
+    p.cargo("script.rs").run();
 
-    p.cargo("-Zscript pkgid --manifest-path script.rs -p dep")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("pkgid --manifest-path script.rs -p dep")
         .with_stdout_data(str![[r#"
 registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
 
@@ -2083,7 +1911,7 @@ registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn script_as_dep() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -2102,7 +1930,6 @@ script.path = "script.rs"
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
@@ -2121,14 +1948,13 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_install_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript install --path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("install --path script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `[ROOT]/foo/script.rs` is not a directory. --path must point to a directory containing a Cargo.toml file.
@@ -2137,14 +1963,13 @@ fn cmd_install_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript package --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("package --manifest-path script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -2154,14 +1979,13 @@ fn cmd_package_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn cmd_publish_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo("-Zscript publish --manifest-path script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("publish --manifest-path script.rs")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -2171,7 +1995,7 @@ fn cmd_publish_with_embedded() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn manifest_path_env() {
     let p = cargo_test_support::project()
         .file(
@@ -2185,8 +2009,7 @@ fn main() {
 "#,
         )
         .build();
-    p.cargo("-Zscript -v script.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script.rs")
         .with_stdout_data(str![[r#"
 CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
 
@@ -2201,7 +2024,7 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 fn ignore_surrounding_workspace() {
     let p = cargo_test_support::project()
         .file(
@@ -2235,8 +2058,7 @@ members = [
         )
         .build();
 
-    p.cargo("-Zscript -v script/echo.rs")
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo("-v script/echo.rs")
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]
 arg0: [..]
@@ -2253,7 +2075,7 @@ args: []
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zscript is unstable")]
+#[cargo_test(nightly, reason = "`#[feature(frontmatter]` hasn't hit stable yet")]
 #[cfg(target_os = "linux")]
 fn memfd_script() {
     use std::io::Write;
@@ -2273,8 +2095,7 @@ fn memfd_script() {
         .file("echo.rs", ECHO_SCRIPT)
         .build();
 
-    p.cargo(&format!("-Zscript -v /proc/self/fd/{raw_fd}"))
-        .masquerade_as_nightly_cargo(&["script"])
+    p.cargo(&format!("-v /proc/self/fd/{raw_fd}"))
         .with_stdout_data(str![[r#"
 current_exe: [ROOT]/home/.cargo/build/[HASH]/target/debug/package
 arg0: /proc/self/fd/[..]
