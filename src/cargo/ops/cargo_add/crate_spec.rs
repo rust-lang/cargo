@@ -1,11 +1,16 @@
 //! Crate name parsing.
 
 use anyhow::Context as _;
+use thiserror::Error;
 
 use super::Dependency;
 use crate::CargoResult;
 use crate::util::toml_mut::dependency::RegistrySource;
 use cargo_util_schemas::manifest::PackageName;
+
+#[derive(Error, Debug)]
+#[error(transparent)]
+pub(crate) struct CrateSpecResolutionError(pub crate::Error);
 
 /// User-specified crate
 ///
@@ -22,7 +27,12 @@ pub struct CrateSpec {
 
 impl CrateSpec {
     /// Convert a string to a `Crate`
-    pub fn resolve(pkg_id: &str) -> CargoResult<Self> {
+    pub fn resolve(pkg_id: &str) -> Result<Self, CrateSpecResolutionError> {
+        // enables targeted add_spec_fix_suggestion
+        Self::resolve_inner(pkg_id).map_err(CrateSpecResolutionError)
+    }
+
+    fn resolve_inner(pkg_id: &str) -> CargoResult<Self> {
         let (name, version) = pkg_id
             .split_once('@')
             .map(|(n, v)| (n, Some(v)))
