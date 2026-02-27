@@ -14,6 +14,7 @@ enum Chunk {
     Repository,
     Features,
     LibName,
+    VersionRequirement,
 }
 
 pub struct Pattern(Vec<Chunk>);
@@ -30,6 +31,7 @@ impl Pattern {
                 RawChunk::Argument("repository") | RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("features") | RawChunk::Argument("f") => Chunk::Features,
                 RawChunk::Argument("lib") => Chunk::LibName,
+                RawChunk::Argument("ver-req") => Chunk::VersionRequirement,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
                 }
@@ -109,6 +111,13 @@ impl<'a> fmt::Display for Display<'a> {
                                 .find(|target| target.is_lib())
                             {
                                 write!(fmt, "{}", target.crate_name())?;
+                            }
+                        }
+                        Chunk::VersionRequirement => {
+                            if let Some(version_req) =
+                                self.graph.version_req_for_id(package.package_id())
+                            {
+                                write!(fmt, "{}", version_req)?;
                             }
                         }
                     }
