@@ -387,6 +387,23 @@ impl fmt::Display for AuthorizationErrorReason {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum AuthorizationScheme {
+    Basic,
+    Bearer,
+    Unrecognized,
+}
+
+impl fmt::Display for AuthorizationScheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AuthorizationScheme::Basic => write!(f, "Basic"),
+            AuthorizationScheme::Bearer => write!(f, "Bearer"),
+            AuthorizationScheme::Unrecognized => write!(f, "unrecognized"),
+        }
+    }
+}
+
 /// An authorization error from accessing a registry.
 #[derive(Debug)]
 pub struct AuthorizationError {
@@ -400,6 +417,8 @@ pub struct AuthorizationError {
     reason: AuthorizationErrorReason,
     /// Should `cargo login` and the `_TOKEN` env var be included when displaying this error?
     supports_cargo_token_credential_provider: bool,
+    /// What authorization scheme was specified in the token, if any?
+    scheme: Option<AuthorizationScheme>,
 }
 
 impl AuthorizationError {
@@ -408,6 +427,7 @@ impl AuthorizationError {
         sid: SourceId,
         login_url: Option<Url>,
         reason: AuthorizationErrorReason,
+        scheme: Option<AuthorizationScheme>,
     ) -> CargoResult<Self> {
         // Only display the _TOKEN environment variable suggestion if the `cargo:token` credential
         // provider is available for the source. Otherwise setting the environment variable will
@@ -422,6 +442,7 @@ impl AuthorizationError {
             login_url,
             reason,
             supports_cargo_token_credential_provider,
+            scheme,
         })
     }
 }
@@ -459,6 +480,19 @@ impl fmt::Display for AuthorizationError {
                 write!(
                     f,
                     "\nYou may need to log in using this registry's credential provider"
+                )?;
+            }
+            if let Some(scheme) = &self.scheme {
+                write!(
+                    f,
+                    "Your registry token is prefixed with an embedded {} authentication scheme. Is this correct?",
+                    scheme,
+                )?;
+            } else {
+                write!(
+                    f,
+                    "Your registry token is not prefixed with an embedded authorization scheme (e.g. `Bearer `).\n\
+                    Does this registry require an authentication scheme?",
                 )?;
             }
             Ok(())
@@ -624,6 +658,7 @@ pub fn auth_token(
             *sid,
             login_url.cloned(),
             AuthorizationErrorReason::TokenMissing,
+            None,
         )?
         .into()),
     }
