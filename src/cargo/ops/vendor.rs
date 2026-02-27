@@ -41,7 +41,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
-    let vendor_config = sync(gctx, &workspaces, opts).context("failed to sync")?;
+    let (vendor_config, count) = sync(gctx, &workspaces, opts).context("failed to sync")?;
 
     if gctx.shell().verbosity() != Verbosity::Quiet {
         if vendor_config.source.is_empty() {
@@ -53,6 +53,13 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
             );
             crate::drop_print!(gctx, "{}", &toml::to_string_pretty(&vendor_config).unwrap());
         }
+    }
+
+    if count > 0 {
+        gctx.shell().status(
+            "Vendored",
+            format!("{} crates into {}", count, opts.destination.display()),
+        )?;
     }
 
     Ok(())
@@ -121,7 +128,7 @@ fn sync(
     gctx: &GlobalContext,
     workspaces: &[&Workspace<'_>],
     opts: &VendorOptions<'_>,
-) -> CargoResult<VendorConfig> {
+) -> CargoResult<(VendorConfig, usize)> {
     let dry_run = false;
     let vendor_dir = try_canonicalize(opts.destination);
     let vendor_dir = vendor_dir.as_deref().unwrap_or(opts.destination);
@@ -419,7 +426,7 @@ fn sync(
         paths::remove_dir(vendor_dir)?;
     }
 
-    Ok(VendorConfig { source: config })
+    Ok((VendorConfig { source: config }, ids.len()))
 }
 
 fn cp_sources(
