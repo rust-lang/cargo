@@ -1332,10 +1332,9 @@ fn host_dep_feature() {
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar v1.0.0
-    └── optdep v1.0.0
-[build-dependencies]
-└── bar v1.0.0 (*)
+├── bar v1.0.0
+│   └── optdep v1.0.0
+└── optdep v2.0.0
 
 "#]])
         .run();
@@ -1355,8 +1354,6 @@ bar v1.0.0
 optdep v1.0.0
 └── bar v1.0.0
     └── foo v0.1.0 ([ROOT]/foo)
-    [build-dependencies]
-    └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
         .run();
@@ -1367,18 +1364,15 @@ optdep v1.0.0
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar v1.0.0
-[build-dependencies]
-└── bar v1.0.0
-    └── optdep v1.0.0
+├── bar v1.0.0
+│   └── optdep v1.0.0
+└── optdep v2.0.0
 
 "#]])
         .run();
 
     p.cargo("tree -p bar")
         .with_stdout_data(str![[r#"
-bar v1.0.0
-
 bar v1.0.0
 └── optdep v1.0.0
 
@@ -1389,7 +1383,6 @@ bar v1.0.0
         .with_stdout_data(str![[r#"
 optdep v1.0.0
 └── bar v1.0.0
-    [build-dependencies]
     └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
@@ -1398,11 +1391,11 @@ optdep v1.0.0
     // Check that -d handles duplicates with features.
     p.cargo("tree -d")
         .with_stdout_data(str![[r#"
-bar v1.0.0
-└── foo v0.1.0 ([ROOT]/foo)
+optdep v1.0.0
+└── bar v1.0.0
+    └── foo v0.1.0 ([ROOT]/foo)
 
-bar v1.0.0
-[build-dependencies]
+optdep v2.0.0
 └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
