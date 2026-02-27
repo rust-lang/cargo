@@ -1206,7 +1206,9 @@ impl<'gctx> DrainState<'gctx> {
                     if unit.mode.is_check() {
                         gctx.shell().status("Checking", &unit.pkg)?;
                     } else {
-                        gctx.shell().status("Compiling", &unit.pkg)?;
+                        // Say `Compiled` for packages finished compiling instead of `Compiling`
+                        // As the bottom bar already has the status of the packages being currently compiled.
+                        gctx.shell().status("Compiled", &unit.pkg)?;
                     }
                 }
             }
