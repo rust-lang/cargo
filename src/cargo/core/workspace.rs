@@ -495,9 +495,16 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn target_dir(&self) -> Filesystem {
-        self.target_dir
+        let target_dir = self
+            .target_dir
             .clone()
-            .unwrap_or_else(|| self.default_target_dir())
+            .unwrap_or_else(|| self.default_target_dir());
+
+        let path = target_dir.as_path_unlocked();
+        paths::create_dir_all(path).unwrap();
+        std::fs::write(path.join(".gitignore"), "*\n").unwrap();
+
+        target_dir
     }
 
     pub fn build_dir(&self) -> Filesystem {
