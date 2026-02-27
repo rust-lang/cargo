@@ -719,6 +719,39 @@ fn log_msg_resolution_events() {
     );
 }
 
+#[cargo_test]
+fn json_message_build_started_with_run_id() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis --message-format=json")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "reason": "build-started",
+    "run_id": "[..]T[..]Z-[..]"
+  },
+  {
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+}
+
 fn get_log(idx: usize) -> String {
     std::fs::read_to_string(log_file(idx)).unwrap()
 }
