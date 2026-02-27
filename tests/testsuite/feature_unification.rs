@@ -837,6 +837,18 @@ b v0.1.0 ([ROOT]/foo/b)
 
 "#]])
         .run();
+
+    p.cargo("tree -p a")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
+├── common v0.1.0 ([ROOT]/foo/common)
+└── outside v0.1.0
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
