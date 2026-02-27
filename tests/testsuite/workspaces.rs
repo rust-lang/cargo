@@ -6,7 +6,10 @@ use std::fs;
 use crate::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
+use cargo_test_support::{
+    ProjectBuilder, basic_lib_manifest, basic_manifest, git, paths, project, project_in_home,
+    sleep_ms,
+};
 
 #[cargo_test]
 fn simple_explicit() {
@@ -1121,6 +1124,11 @@ fn new_warning_with_corrupt_ws() {
   |     ^
 [WARNING] compiling this new package may not work due to invalid workspace configuration
 
+failed searching for potential workspace
+package manifest: `[ROOT]/foo/bar/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/foo/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 "#]]).run();
@@ -1399,6 +1407,11 @@ fn error_if_parent_cargo_toml_is_invalid() {
   |
 1 | Totally not a TOML file
   |         ^
+[ERROR] failed searching for potential workspace
+package manifest: `[ROOT]/foo/bar/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/foo/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
 
 "#]])
         .run();
@@ -2196,6 +2209,44 @@ fn cargo_home_at_root_works() {
 
     p.cargo("check").run();
     p.cargo("check --frozen").env("CARGO_HOME", p.root()).run();
+}
+
+#[cargo_test]
+fn parent_manifest_error_mentions_workspace_search() {
+    ProjectBuilder::new(paths::home())
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "home-manifest"
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .build();
+
+    let p = project_in_home("stuff")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed searching for potential workspace
+package manifest: `[ROOT]/home/stuff/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/home/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
+
+Caused by:
+  failed to parse manifest at `[ROOT]/home/Cargo.toml`
+
+Caused by:
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+"#]])
+        .run();
 }
 
 #[cargo_test]

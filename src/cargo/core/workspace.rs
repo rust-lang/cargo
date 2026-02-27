@@ -2406,7 +2406,19 @@ fn find_workspace_root_with_loader(
 
     for ances_manifest_path in find_root_iter(manifest_path, gctx) {
         debug!("find_root - trying {}", ances_manifest_path.display());
-        if let Some(ws_root_path) = loader(&ances_manifest_path)? {
+        let ws_root_path = loader(&ances_manifest_path).with_context(|| {
+            format!(
+                "failed searching for potential workspace\n\
+                 package manifest: `{}`\n\
+                 invalid potential workspace manifest: `{}`\n\
+                 \n\
+                 help: to avoid searching for a non-existent workspace, add \
+                 `[workspace]` to the package manifest",
+                manifest_path.display(),
+                ances_manifest_path.display(),
+            )
+        })?;
+        if let Some(ws_root_path) = ws_root_path {
             return Ok(Some(ws_root_path));
         }
     }

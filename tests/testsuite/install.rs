@@ -2317,6 +2317,11 @@ fn git_install_reads_workspace_manifest() {
   |
 6 |             incremental = 3
   |                           ^
+[ERROR] failed searching for potential workspace
+package manifest: `[ROOT]/home/.cargo/git/checkouts/foo-[HASH]/[..]/bin1/Cargo.toml`
+invalid potential workspace manifest: `[ROOT]/home/.cargo/git/checkouts/foo-[HASH]/[..]/Cargo.toml`
+
+[HELP] to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest
 
 "#]])
         .run();
