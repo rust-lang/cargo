@@ -82,6 +82,7 @@ impl Summary {
                 )
             }
         }
+
         let feature_map = build_feature_map(features, &dependencies)?;
         Ok(Summary {
             inner: Arc::new(Inner {
@@ -95,6 +96,10 @@ impl Summary {
             }),
         })
     }
+
+    // Virtual summary representing a package Cargo knows how to retrieve later
+    // pub fn new_builtin(pkg_id: PackageId,
+    //    features: &BTreeMap<InternedString, Vec<InternedString>>) ->
 
     pub fn package_id(&self) -> PackageId {
         self.inner.package_id

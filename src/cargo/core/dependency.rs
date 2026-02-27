@@ -51,6 +51,10 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+
+    // Opaque dependencies should be resolved with a separate resolver run, and handled
+    // by unit generation.
+    opaque: bool,
 }
 
 #[derive(Serialize)]
@@ -162,6 +166,30 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                opaque: false,
+            }),
+        }
+    }
+
+    pub fn new_injected_builtin(name: InternedString) -> Dependency {
+        assert!(!name.is_empty());
+        Dependency {
+            inner: Arc::new(Inner {
+                name,
+                source_id: SourceId::new_builtin(&name).expect("package name is valid url"),
+                registry_id: None,
+                req: OptVersionReq::Any,
+                kind: DepKind::Normal,
+                only_match_name: true,
+                optional: false,
+                public: false,
+                features: Vec::new(),
+                default_features: true,
+                specified_req: false,
+                platform: None,
+                explicit_name_in_toml: None,
+                artifact: None,
+                opaque: true,
             }),
         }
     }
@@ -454,6 +482,10 @@ impl Dependency {
     /// Previously, every dependency was potentially seen as library.
     pub(crate) fn maybe_lib(&self) -> bool {
         self.artifact().map(|a| a.is_lib).unwrap_or(true)
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.inner.opaque
     }
 }
 

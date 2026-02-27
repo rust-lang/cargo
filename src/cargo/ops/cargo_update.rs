@@ -47,6 +47,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         None,
         &[],
         true,
+        true,
     )?;
     ops::write_pkg_lockfile(ws, &mut resolve)?;
     print_lockfile_changes(ws, previous_resolve, &resolve, &mut registry)?;
@@ -86,6 +87,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         None,
                         None,
                         &[],
+                        true,
                         true,
                     )?
                 }
@@ -176,6 +178,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         Some(&previous_resolve),
         Some(&keep),
         &[],
+        true,
         true,
     )?;
 

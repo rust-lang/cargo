@@ -140,6 +140,21 @@ impl SourceId {
         }
     }
 
+    pub fn new_builtin(name: &str) -> CargoResult<SourceId> {
+        // Injecting builtins earlier (somewhere with access to RustcTargetData) is needed instead of this
+        let home = std::env::var("HOME").expect("HOME is set");
+        let path = format!(
+            "file://{home}/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/"
+        );
+        if name == "compiler_builtins" {
+            Self::from_url(&format!(
+                "builtin+{path}compiler-builtins/compiler-builtins"
+            ))
+        } else {
+            Self::from_url(&format!("builtin+{path}{name}"))
+        }
+    }
+
     /// Parses a source URL and returns the corresponding ID.
     ///
     /// ## Example
@@ -175,6 +190,10 @@ impl SourceId {
             "path" => {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
+            }
+            "builtin" => {
+                let url = url.into_url()?;
+                SourceId::new(SourceKind::Builtin, url, None)
             }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
@@ -387,6 +406,10 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    pub fn is_builtin(self) -> bool {
+        matches!(self.inner.kind, SourceKind::Builtin)
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
@@ -432,6 +455,14 @@ impl SourceId {
                     .to_file_path()
                     .expect("path sources cannot be remote");
                 Ok(Box::new(DirectorySource::new(&path, self, gctx)))
+            }
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources should not be remote");
+                Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
         }
     }
@@ -679,6 +710,7 @@ impl fmt::Display for SourceId {
             }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
         }
     }
 }

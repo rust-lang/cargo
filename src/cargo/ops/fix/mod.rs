@@ -624,6 +624,7 @@ fn check_resolver_change<'gctx>(
             has_dev_units,
             crate::core::resolver::features::ForceAllTargets::No,
             dry_run,
+            true,
         )?;
 
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);

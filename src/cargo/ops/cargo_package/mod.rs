@@ -778,6 +778,7 @@ fn build_lock(
         None,
         &[],
         true,
+        true,
     )?;
 
     let pkg_set = ops::get_resolved_packages(&new_resolve, tmp_reg)?;

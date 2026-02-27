@@ -322,6 +322,7 @@ pub fn create_bcx<'a, 'gctx>(
         has_dev_units,
         ForceAllTargets::No,
         dry_run,
+        true,
     )?;
     let WorkspaceResolve {
         mut pkg_set,

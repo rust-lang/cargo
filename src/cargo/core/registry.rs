@@ -9,7 +9,7 @@
 //! The former is just one kind of source,
 //! while the latter involves operations on the registry Web API.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::task::{Poll, ready};
 
 use crate::core::{Dependency, PackageId, PackageSet, Patch, SourceId, Summary};
@@ -24,6 +24,7 @@ use crate::util::{CanonicalUrl, GlobalContext};
 use annotate_snippets::Level;
 use anyhow::Context as _;
 use itertools::Itertools;
+use semver::Version;
 use tracing::{debug, trace};
 use url::Url;
 
@@ -724,6 +725,36 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 )
             })?;
 
+        if dep.is_opaque() {
+            // Currently, all opaque dependencies are builtins.
+            // Create a dummy Summary that can be replaced with a real package during
+            // unit generation
+            trace!(
+                "Injecting package to satisfy builtin dependency on {}",
+                dep.package_name()
+            );
+            let ver = if dep.package_name() == "compiler_builtins" {
+                //TODO: hack
+                Version::new(0, 1, 160)
+            } else {
+                Version::new(0, 0, 0)
+            };
+            let pkg_id = PackageId::new(
+                dep.package_name(),
+                ver,
+                SourceId::new_builtin(&dep.package_name()).expect("SourceId ok"),
+            );
+
+            let summary = Summary::new(
+                pkg_id,
+                vec![],
+                &BTreeMap::new(), // TODO: bodge
+                Option::<String>::None,
+                None,
+            )?;
+            f(IndexSummary::Candidate(summary));
+            return Poll::Ready(Ok(()));
+        }
         let source = self.sources.get_mut(dep.source_id());
         match (override_summary, source) {
             (Some(_), None) => {
