@@ -289,6 +289,48 @@ fn host_proc_macro() {
 }
 
 #[cargo_test(build_std_real)]
+fn build_std_does_not_warn_about_implicit_std_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "buildstd_test"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .build_std()
+        .target_host()
+        .env("RUSTFLAGS", "-W unused-crate-dependencies")
+        // correctly warns
+        .with_stderr_contains("[WARNING] extern crate `bar` is unused in crate `buildstd_test`")
+        // should NOT warn but currently do
+        .with_stderr_contains("[WARNING] extern crate `core` is unused [..]")
+        .with_stderr_contains("[WARNING] extern crate `alloc` is unused [..]")
+        .with_stderr_contains("[WARNING] extern crate `compiler_builtins` is unused [..]")
+        .with_stderr_contains("[WARNING] extern crate `proc_macro` is unused [..]")
+        .with_stderr_contains("[WARNING] extern crate `panic_unwind` is unused [..]")
+        .run();
+}
+#[cargo_test(build_std_real)]
 fn cross_custom() {
     let p = project()
         .file(
