@@ -61,6 +61,7 @@ fn simple() {
           "extern_crate_name": "b",
           "index": 1,
           "noprelude": false,
+          "nounused": false,
           "public": false
         }
       ],
@@ -106,6 +107,7 @@ fn simple() {
           "extern_crate_name": "c",
           "index": 2,
           "noprelude": false,
+          "nounused": false,
           "public": false
         }
       ],
@@ -189,6 +191,7 @@ fn simple() {
           "extern_crate_name": "a",
           "index": 0,
           "noprelude": false,
+          "nounused": false,
           "public": false
         }
       ],
