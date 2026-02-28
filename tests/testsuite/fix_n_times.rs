@@ -499,14 +499,8 @@ after fixes were automatically applied the compiler reported errors within these
 
   * src/lib.rs
 
-This likely indicates a bug in either rustc or cargo itself,
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
+Fix failed, but broken code changes were saved as requested with `--broken-code`.
+The code needs to be manually reviewed and fixed.
 
 The following errors were reported:
 rustc fix shim error count=2

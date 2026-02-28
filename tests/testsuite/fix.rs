@@ -1432,7 +1432,12 @@ fn fix_to_broken_code() {
 ...
 [WARNING] failed to automatically apply fixes suggested by rustc to crate `bar`
 ...
+Fix failed, but broken code changes were saved as requested with `--broken-code`.
+The code needs to be manually reviewed and fixed.
+...
 "#]])
+        .with_stderr_does_not_contain("[..]--broken-code[..]flag[..]")
+        .with_stderr_does_not_contain("[..]bug report[..]")
         .run();
 
     assert_e2e().eq(
