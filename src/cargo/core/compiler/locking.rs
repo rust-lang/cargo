@@ -16,14 +16,50 @@ use tracing::instrument;
 
 /// A struct to store the lock handles for build units during compilation.
 pub struct LockManager {
+    acquisition: RwLock<Option<FileLock>>,
     locks: RwLock<HashMap<LockKey, FileLock>>,
 }
 
 impl LockManager {
     pub fn new() -> Self {
         Self {
+            acquisition: RwLock::new(None),
             locks: RwLock::new(HashMap::new()),
         }
+    }
+
+    /// Acquires the acquisition lock required to call [`LockManager::lock`] and [`LockManager::lock_shared`]
+    ///
+    /// This should be called prior to attempting lock build units and should be released prior to
+    /// executing compilation jobs to allow other Cargos to proceed if they do not share any build
+    /// units.
+    #[instrument(skip_all)]
+    pub fn acquire_acquisition_lock(&self, build_runner: &BuildRunner<'_, '_>) -> CargoResult<()> {
+        let path = build_runner.files().acquisition_lock();
+        let fs = Filesystem::new(path.to_path_buf());
+
+        let lock = fs.open_rw_exclusive_create(&path, build_runner.bcx.gctx, "acquisition lock")?;
+
+        let Ok(mut acquisition_lock) = self.acquisition.write() else {
+            bail!("failed to take acquisition write lock");
+        };
+        *acquisition_lock = Some(lock);
+
+        Ok(())
+    }
+
+    /// Releases the acquisition lock, see [`LockManager::acquire_acquisition_lock`]
+    #[instrument(skip_all)]
+    pub fn release_acquisition_lock(&self) -> CargoResult<()> {
+        let Ok(mut acquisition_lock) = self.acquisition.write() else {
+            bail!("failed to take acquisition write lock");
+        };
+        assert!(
+            acquisition_lock.is_some(),
+            "attempted to release acquisition while it was not taken"
+        );
+        *acquisition_lock = None;
+        Ok(())
     }
 
     /// Takes a shared lock on a given [`Unit`]
@@ -38,6 +74,10 @@ impl LockManager {
         build_runner: &BuildRunner<'_, '_>,
         unit: &Unit,
     ) -> CargoResult<LockKey> {
+        assert!(
+            self.acquisition.read().unwrap().is_some(),
+            "attempted to take shared lock without acquisition lock"
+        );
         let key = LockKey::from_unit(build_runner, unit);
         tracing::Span::current().record("key", key.0.to_str());
 
@@ -60,6 +100,10 @@ impl LockManager {
 
     #[instrument(skip(self))]
     pub fn lock(&self, key: &LockKey) -> CargoResult<()> {
+        assert!(
+            self.acquisition.read().unwrap().is_some(),
+            "attempted to take exclusive lock without acquisition lock"
+        );
         let locks = self.locks.read().unwrap();
         if let Some(lock) = locks.get(&key) {
             lock.file().lock()?;

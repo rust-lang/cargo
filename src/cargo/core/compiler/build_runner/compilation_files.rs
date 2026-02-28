@@ -444,6 +444,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .map(Arc::clone)
     }
 
+    /// Returns the path to the acquisition lock, used to avoid multiple Cargos from deadlocking
+    pub fn acquisition_lock(&self) -> &Path {
+        self.host.build_dir().acquisition_lock()
+    }
+
     /// Returns the path where the output for the given unit and `FileType`
     /// should be uplifted to.
     ///

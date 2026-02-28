@@ -147,10 +147,6 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
             .push(Message::Finish(self.id, Artifact::Metadata, Ok(())));
     }
 
-    pub fn lock_exclusive(&self, lock: &LockKey) -> CargoResult<()> {
-        self.lock_manager.lock(lock)
-    }
-
     pub fn downgrade_to_shared(&self, lock: &LockKey) -> CargoResult<()> {
         self.lock_manager.downgrade_to_shared(lock)
     }

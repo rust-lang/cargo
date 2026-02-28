@@ -237,19 +237,20 @@ fn compile<'gctx>(
                 work.then(link_targets(build_runner, unit, true)?)
             });
 
-            // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
+            // If -Zfine-grain-locking is enabled, we take an exclusive
             // lock before starting, then downgrade to a shared lock after the job is finished.
             if build_runner.bcx.gctx.cli_unstable().fine_grain_locking && job.freshness().is_dirty()
             {
                 if let Some(lock) = lock {
-                    // Here we unlock the current shared lock to avoid deadlocking with other cargo
-                    // processes. Then we configure our compile job to take an exclusive lock
-                    // before starting. Once we are done compiling (including both rmeta and rlib)
-                    // we downgrade to a shared lock to allow other cargo's to read the build unit.
-                    // We will hold this shared lock for the remainder of compilation to prevent
-                    // other cargo from re-compiling while we are still using the unit.
-                    build_runner.lock_manager.unlock(&lock)?;
-                    job.before(prebuild_lock_exclusive(lock.clone()));
+                    // We take an exclusive lock before scheduling the job to keep our locking model
+                    // simple. While this does mean we could potentially be waiting for another job
+                    // when this could begin immediately, it reduces the risk of deadlock.
+                    //
+                    // We are also optimizing for avoiding rust-analyzer's `cargo check` preventing
+                    // the user from running `cargo build` while developing. Generally, only a few
+                    // workspace units will be changing in each build and the units will not be
+                    // shared between `build` and `check` allowing them to run in parallel.
+                    build_runner.lock_manager.lock(&lock)?;
                     job.after(downgrade_lock_to_shared(lock));
                 }
             }
@@ -613,13 +614,6 @@ fn verbose_if_simple_exit_code(err: Error) -> Error {
         Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
         _ => err,
     }
-}
-
-fn prebuild_lock_exclusive(lock: LockKey) -> Work {
-    Work::new(move |state| {
-        state.lock_exclusive(&lock)?;
-        Ok(())
-    })
 }
 
 fn downgrade_lock_to_shared(lock: LockKey) -> Work {
