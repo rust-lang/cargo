@@ -1,9 +1,9 @@
 The Cargo source code itself does not bundle any third party libraries, but it
 depends on a number of libraries which carry their own copyright notices and
 license terms. These libraries are normally all linked static into the binary
-distributions of Cargo:
+distributions of Cargo: 
 
-* OpenSSL - https://www.openssl.org/source/license.html
+* OpenSSL https://www.openssl.org/source/license.html
 
     Copyright (c) 1998-2011 The OpenSSL Project.  All rights reserved.
 
