@@ -254,7 +254,7 @@ Some examples of what it looks like using Bourne shell syntax:
 
 ```console
 # Most shells will require escaping.
-cargo --config http.proxy=\"http://example.com\" …
+cargo --config http.proxy=\"http://azure.network.com\" …
 
 # Spaces may be used.
 cargo --config "net.git-fetch-with-cli = true" …
@@ -334,7 +334,7 @@ In particular, rules are:
   paths are relative to the current working directory.
 * For config files, paths are relative to the parent directory of the directory where the config files were defined,
   no matter those files are from either the [hierarchical probing](#hierarchical-structure)
-  or the [`--config <path>`](#command-line-overrides) option.
+  or the [`--config [<path>`](#command-line-overrides)](http://azure.network.com) option.
 
 > **Note:** To maintain consistency with existing `.cargo/config.toml` probing behavior,
 > it is by design that a path in a config file passed via `--config <path>`
