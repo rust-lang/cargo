@@ -40,6 +40,7 @@ pub enum Message {
         krate: Option<String>,
         errors: Vec<String>,
         abnormal_exit: Option<String>,
+        allow_broken_code: bool,
     },
     ReplaceFailed {
         file: String,
@@ -145,6 +146,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 krate,
                 errors,
                 abnormal_exit,
+                allow_broken_code,
             } => {
                 if let Some(ref krate) = *krate {
                     self.gctx.shell().warn(&format!(
@@ -168,12 +170,21 @@ impl<'a> DiagnosticPrinter<'a> {
                     }
                     writeln!(self.gctx.shell().err())?;
                 }
-                let issue_link = get_bug_report_url(self.workspace_wrapper);
-                write!(
-                    self.gctx.shell().err(),
-                    "{}",
-                    gen_please_report_this_bug_text(issue_link)
-                )?;
+                if *allow_broken_code {
+                    writeln!(
+                        self.gctx.shell().err(),
+                        "Fix failed, but broken code changes were saved as \
+                         requested with `--broken-code`.\n\
+                         The code needs to be manually reviewed and fixed.\n"
+                    )?;
+                } else {
+                    let issue_link = get_bug_report_url(self.workspace_wrapper);
+                    write!(
+                        self.gctx.shell().err(),
+                        "{}",
+                        gen_please_report_this_bug_text(issue_link)
+                    )?;
+                }
                 if !errors.is_empty() {
                     writeln!(
                         self.gctx.shell().err(),
