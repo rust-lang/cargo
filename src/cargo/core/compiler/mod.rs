@@ -250,6 +250,12 @@ fn compile<'gctx>(
                     // the user from running `cargo build` while developing. Generally, only a few
                     // workspace units will be changing in each build and the units will not be
                     // shared between `build` and `check` allowing them to run in parallel.
+                    //
+                    // Also note that we unlock before taking the exclusive lock as not all
+                    // platforms support lock upgrading. This is safe as we hold the acquisition
+                    // lock so we should be the only one operating on the locks so we can assume
+                    // that the lock will not be stolen by another instance.
+                    build_runner.lock_manager.unlock(&lock)?;
                     build_runner.lock_manager.lock(&lock)?;
                     job.after(downgrade_lock_to_shared(lock));
                 }

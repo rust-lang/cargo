@@ -178,6 +178,15 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         self.check_collisions()?;
         self.compute_metadata_for_doc_units();
 
+        // When -Zfine-grain-locking is enabled, we take an "acquisition lock" exclusively
+        // that we hold while taking other locks. This lock will block other Cargos from also
+        // taking locks possibly causing deadlocks. We drop the acquisition lock before we start
+        // executing jobs allowing other Cargos to compile in parallel if they do not share build
+        // units.
+        if self.bcx.gctx.cli_unstable().fine_grain_locking {
+            self.lock_manager.acquire_acquisition_lock(&self)?;
+        }
+
         // We need to make sure that if there were any previous docs already compiled,
         // they were compiled with the same Rustc version that we're currently using.
         // See the function doc comment for more.
@@ -198,6 +207,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // that much for performance anyway.
         for fingerprint in self.fingerprints.values() {
             fingerprint.clear_memoized();
+        }
+
+        // Release acquisition lock allowing other Cargos to proceed
+        if self.bcx.gctx.cli_unstable().fine_grain_locking {
+            self.lock_manager.release_acquisition_lock()?;
         }
 
         // Now that we've figured out everything that we're going to do, do it!
