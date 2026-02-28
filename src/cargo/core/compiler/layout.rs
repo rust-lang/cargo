@@ -286,6 +286,7 @@ impl Layout {
         let build_dest = build_dest.as_path_unlocked();
         let deps = build_dest.join("deps");
         let artifact = deps.join("artifact");
+        let acquisition_lock = build_dest.join(".acquisition-lock");
 
         let artifact_dir = if must_take_artifact_dir_lock {
             // For now we don't do any more finer-grained locking on the artifact
@@ -323,6 +324,7 @@ impl Layout {
                 fingerprint: build_dest.join(".fingerprint"),
                 examples: build_dest.join("examples"),
                 tmp: build_root.join("tmp"),
+                acquisition_lock,
                 _lock: build_dir_lock,
                 is_new_layout,
             },
@@ -405,6 +407,7 @@ pub struct BuildDirLayout {
     examples: PathBuf,
     /// The directory for temporary data of integration tests and benches
     tmp: PathBuf,
+    acquisition_lock: PathBuf,
     /// The lockfile for a build (`.cargo-lock`). Will be unlocked when this
     /// struct is `drop`ped.
     ///
@@ -504,5 +507,9 @@ impl BuildDirLayout {
     pub fn prepare_tmp(&self) -> CargoResult<&Path> {
         paths::create_dir_all(&self.tmp)?;
         Ok(&self.tmp)
+    }
+    // Fetch the acquisition lock path
+    pub fn acquisition_lock(&self) -> &Path {
+        &self.acquisition_lock
     }
 }
