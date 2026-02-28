@@ -320,16 +320,25 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
         .build_std()
         .target_host()
         .env("RUSTFLAGS", "-W unused-crate-dependencies")
-        // correctly warns
-        .with_stderr_contains("[WARNING] extern crate `bar` is unused in crate `buildstd_test`")
-        // should NOT warn but currently do
-        .with_stderr_contains("[WARNING] extern crate `core` is unused [..]")
-        .with_stderr_contains("[WARNING] extern crate `alloc` is unused [..]")
-        .with_stderr_contains("[WARNING] extern crate `compiler_builtins` is unused [..]")
-        .with_stderr_contains("[WARNING] extern crate `proc_macro` is unused [..]")
-        .with_stderr_contains("[WARNING] extern crate `panic_unwind` is unused [..]")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] extern crate `bar` is unused in crate `buildstd_test`
+[..]
+  = [HELP] remove the dependency or add `use bar as _;` to the crate root
+  = [NOTE] requested on the command line with `-W unused-crate-dependencies`
+
+[WARNING] `buildstd_test` (bin "buildstd_test") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[WARNING] extern crate `core` is unused [..]")
+        .with_stderr_does_not_contain("[WARNING] extern crate `alloc` is unused [..]")
+        .with_stderr_does_not_contain("[WARNING] extern crate `compiler_builtins` is unused [..]")
+        .with_stderr_does_not_contain("[WARNING] extern crate `proc_macro` is unused [..]")
+        .with_stderr_does_not_contain("[WARNING] extern crate `panic_unwind` is unused [..]")
         .run();
 }
+
 #[cargo_test(build_std_real)]
 fn cross_custom() {
     let p = project()

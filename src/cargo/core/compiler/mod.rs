@@ -1872,68 +1872,75 @@ pub fn extern_args(
     let no_embed_metadata = build_runner.bcx.gctx.cli_unstable().no_embed_metadata;
 
     // Closure to add one dependency to `result`.
-    let mut link_to =
-        |dep: &UnitDep, extern_crate_name: InternedString, noprelude: bool| -> CargoResult<()> {
-            let mut value = OsString::new();
-            let mut opts = Vec::new();
-            let is_public_dependency_enabled = unit
-                .pkg
-                .manifest()
-                .unstable_features()
-                .require(Feature::public_dependency())
-                .is_ok()
-                || build_runner.bcx.gctx.cli_unstable().public_dependency;
-            if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
-                opts.push("priv");
-                *unstable_opts = true;
-            }
-            if noprelude {
-                opts.push("noprelude");
-                *unstable_opts = true;
-            }
-            if !opts.is_empty() {
-                value.push(opts.join(","));
-                value.push(":");
-            }
-            value.push(extern_crate_name.as_str());
-            value.push("=");
+    let mut link_to = |dep: &UnitDep,
+                       extern_crate_name: InternedString,
+                       noprelude: bool,
+                       nounused: bool|
+     -> CargoResult<()> {
+        let mut value = OsString::new();
+        let mut opts = Vec::new();
+        let is_public_dependency_enabled = unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .require(Feature::public_dependency())
+            .is_ok()
+            || build_runner.bcx.gctx.cli_unstable().public_dependency;
+        if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
+            opts.push("priv");
+            *unstable_opts = true;
+        }
+        if noprelude {
+            opts.push("noprelude");
+            *unstable_opts = true;
+        }
+        if nounused {
+            opts.push("nounused");
+            *unstable_opts = true;
+        }
+        if !opts.is_empty() {
+            value.push(opts.join(","));
+            value.push(":");
+        }
+        value.push(extern_crate_name.as_str());
+        value.push("=");
 
-            let mut pass = |file| {
-                let mut value = value.clone();
-                value.push(file);
-                result.push(OsString::from("--extern"));
-                result.push(value);
-            };
+        let mut pass = |file| {
+            let mut value = value.clone();
+            value.push(file);
+            result.push(OsString::from("--extern"));
+            result.push(value);
+        };
 
-            let outputs = build_runner.outputs(&dep.unit)?;
+        let outputs = build_runner.outputs(&dep.unit)?;
 
-            if build_runner.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
-                // Example: rlib dependency for an rlib, rmeta is all that is required.
-                let output = outputs
-                    .iter()
-                    .find(|output| output.flavor == FileFlavor::Rmeta)
-                    .expect("failed to find rmeta dep for pipelined dep");
-                pass(&output.path);
-            } else {
-                // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
-                for output in outputs.iter() {
-                    if output.flavor == FileFlavor::Linkable {
-                        pass(&output.path);
-                    }
-                    // If we use -Zembed-metadata=no, we also need to pass the path to the
-                    // corresponding .rmeta file to the linkable artifact, because the
-                    // normal dependency (rlib) doesn't contain the full metadata.
-                    else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
-                        pass(&output.path);
-                    }
+        if build_runner.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
+            // Example: rlib dependency for an rlib, rmeta is all that is required.
+            let output = outputs
+                .iter()
+                .find(|output| output.flavor == FileFlavor::Rmeta)
+                .expect("failed to find rmeta dep for pipelined dep");
+            pass(&output.path);
+        } else {
+            // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
+            for output in outputs.iter() {
+                if output.flavor == FileFlavor::Linkable {
+                    pass(&output.path);
+                }
+                // If we use -Zembed-metadata=no, we also need to pass the path to the
+                // corresponding .rmeta file to the linkable artifact, because the
+                // normal dependency (rlib) doesn't contain the full metadata.
+                else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
+                    pass(&output.path);
                 }
             }
-            Ok(())
-        };
+        }
+        Ok(())
+    };
 
     for dep in deps {
         if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
-            link_to(dep, dep.extern_crate_name, dep.noprelude)?;
+            link_to(dep, dep.extern_crate_name, dep.noprelude, dep.nounused)?;
         }
     }
     if unit.target.proc_macro() {

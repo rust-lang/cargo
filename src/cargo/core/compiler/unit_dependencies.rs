@@ -206,6 +206,7 @@ fn attach_std_deps(
                 // TODO: Does this `public` make sense?
                 public: true,
                 noprelude: true,
+                nounused: true,
             }));
             found = true;
         }
@@ -911,6 +912,7 @@ fn new_unit_dep_with_profile(
         dep_name,
         public,
         noprelude: false,
+        nounused: false,
     })
 }
 
