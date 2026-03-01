@@ -50,7 +50,7 @@ flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.4"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
-gix = { version = "0.79.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
+gix = { version = "0.80.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
 glob = "0.3.3"
 handlebars = { version = "6.4.0", features = ["dir_source"] }
 heck = "0.5.0"
