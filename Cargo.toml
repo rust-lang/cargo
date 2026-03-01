@@ -262,7 +262,7 @@ cargo-test-support.workspace = true
 gix = { workspace = true, features = ["revision"] }
 # When building Cargo for tests, a safety-measure in `gix` needs to be disabled
 # to allow sending credentials over HTTP connections.
-gix-transport = { version = "0.54.0", features = ["http-client-insecure-credentials"] }
+gix-transport = { version = "0.55.0", features = ["http-client-insecure-credentials"] }
 same-file.workspace = true
 snapbox.workspace = true
 
