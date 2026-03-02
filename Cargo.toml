@@ -51,6 +51,7 @@ git2 = "0.20.4"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
 gix = { version = "0.79.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
+gix-transport = "0.54.0"
 glob = "0.3.3"
 handlebars = { version = "6.4.0", features = ["dir_source"] }
 heck = "0.5.0"
@@ -262,7 +263,7 @@ cargo-test-support.workspace = true
 gix = { workspace = true, features = ["revision"] }
 # When building Cargo for tests, a safety-measure in `gix` needs to be disabled
 # to allow sending credentials over HTTP connections.
-gix-transport = { version = "0.54.0", features = ["http-client-insecure-credentials"] }
+gix-transport = { workspace = true, features = ["http-client-insecure-credentials"] }
 same-file.workspace = true
 snapbox.workspace = true
 
