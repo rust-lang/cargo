@@ -221,6 +221,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     for (pkg, _, src) in packaged {
         let filename = pkg.package_id().tarball_name();
         let dst = artifact_dir.open_rw_exclusive_create(filename, ws.gctx(), "uplifted package")?;
+        dst.file().set_len(0)?;
         src.file().seek(SeekFrom::Start(0))?;
         std::io::copy(&mut src.file(), &mut dst.file())?;
         result.push(dst);

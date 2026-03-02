@@ -7898,11 +7898,8 @@ fn package_dir_not_excluded_from_backups() {
 
 #[cargo_test]
 fn repackage_smaller_crate_has_trailing_garbage() {
-    // When a package is re-packaged and the
-    // new .crate file is smaller than the previous one, the artifact on disk has
-    // trailing garbage bytes because the destination file is not truncated before
-    // writing.
-    // See https://github.com/rust-lang/cargo/issues/16683.
+    // When a package is re-packaged and the new .crate file is smaller than
+    // the previous one, the artifact on disk should be smaller without trailing garbage bytes.
     let big_file_contents = "x".repeat(100_000);
     let p = project()
         .file(
@@ -7945,11 +7942,9 @@ fn repackage_smaller_crate_has_trailing_garbage() {
 
     let second_size = fs::metadata(&crate_path).unwrap().len();
 
-    // Without truncating dst before writing, the file on disk retains the
-    // old (larger) size. The second size should be much less than the first, but
-    // instead it equals the first size because trailing garbage was left behind.
-    assert_eq!(
-        first_size, second_size,
-        "the .crate file should have the same size after removing big.txt"
+    // The target .crate file *is* smaller.
+    assert!(
+        first_size > second_size,
+        "the .crate file should be smaller after removing big.txt"
     );
 }
