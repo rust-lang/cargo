@@ -7895,3 +7895,61 @@ fn package_dir_not_excluded_from_backups() {
         "CACHEDIR.TAG should exist in target directory to exclude it from backups"
     );
 }
+
+#[cargo_test]
+fn repackage_smaller_crate_has_trailing_garbage() {
+    // When a package is re-packaged and the
+    // new .crate file is smaller than the previous one, the artifact on disk has
+    // trailing garbage bytes because the destination file is not truncated before
+    // writing.
+    // See https://github.com/rust-lang/cargo/issues/16683.
+    let big_file_contents = "x".repeat(100_000);
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                include = ["src/**", "Cargo.toml", "big.txt"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("big.txt", &big_file_contents)
+        .build();
+
+    // First package run: includes big.txt, so the .crate file is large.
+    p.cargo("package --no-verify").run();
+
+    let crate_path = p.root().join("target/package/foo-0.0.1.crate");
+    let first_size = fs::metadata(&crate_path).unwrap().len();
+
+    // Remove big.txt from the project so the next package will be smaller.
+    fs::remove_file(p.root().join("big.txt")).unwrap();
+
+    // Update the manifest to no longer include big.txt.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2021"
+            include = ["src/**", "Cargo.toml"]
+        "#,
+    );
+
+    // Second package run: no big.txt, so the .crate file should be much smaller.
+    p.cargo("package --no-verify").run();
+
+    let second_size = fs::metadata(&crate_path).unwrap().len();
+
+    // Without truncating dst before writing, the file on disk retains the
+    // old (larger) size. The second size should be much less than the first, but
+    // instead it equals the first size because trailing garbage was left behind.
+    assert_eq!(
+        first_size, second_size,
+        "the .crate file should have the same size after removing big.txt"
+    );
+}
