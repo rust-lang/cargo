@@ -430,7 +430,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         }
     }
     for (k, v) in cfg_map {
-        // FIXME: We should handle raw-idents somehow instead of predenting they
+        // FIXME: We should handle raw-idents somehow instead of pretending they
         // don't exist here
         let k = format!("CARGO_CFG_{}", super::envify(k));
         cmd.env(&k, v.join(","));

@@ -2,7 +2,7 @@
 # This script checks if a crate needs a version bump.
 #
 # At the time of writing, it doesn't check what kind of bump is required.
-# In the future, we could take SemVer compatibliity into account, like
+# In the future, we could take SemVer compatibility into account, like
 # integrating `cargo-semver-checks` of else
 #
 # Inputs:
