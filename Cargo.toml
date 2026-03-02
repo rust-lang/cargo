@@ -18,7 +18,7 @@ repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
 annotate-snippets = { version = "0.12.12", features = ["simd"] }
-anstream = "0.6.21"
+anstream = "1.0.0"
 anstyle = "1.0.13"
 anyhow = "1.0.102"
 base64 = "0.22.1"
@@ -50,8 +50,8 @@ flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.4"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
-gix = { version = "0.79.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
-gix-transport = "0.54.0"
+gix = { version = "0.80.0", default-features = false, features = ["progress-tree", "parallel", "dirwalk", "status"] }
+gix-transport = "0.55.0"
 glob = "0.3.3"
 handlebars = { version = "6.4.0", features = ["dir_source"] }
 heck = "0.5.0"
@@ -82,7 +82,7 @@ pathdiff = "0.2.3"
 percent-encoding = "2.3.2"
 proptest = "1.10.0"
 pulldown-cmark = { version = "0.13.1", default-features = false, features = ["html"] }
-rand = "0.9.2"
+rand = "0.10.0"
 regex = "1.12.3"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 rustc-hash = "2.1.1"
@@ -104,13 +104,13 @@ shell-escape = "0.1.5"
 similar = "2.7.0"
 supports-hyperlinks = "3.2.0"
 supports-unicode = "3.0.0"
-snapbox = { version = "0.6.24", features = ["diff", "dir", "term-svg", "regex", "json"] }
+snapbox = { version = "1.0.0", features = ["diff", "dir", "term-svg", "regex", "json"] }
 tar = { version = "0.4.44", default-features = false }
 tempfile = "3.25.0"
 thiserror = "2.0.18"
 time = { version = "0.3.47", features = ["parsing", "formatting", "serde"] }
-toml = { version = "0.9.12", default-features = false }
-toml_edit = { version = "0.24.1", features = ["serde"] }
+toml = { version = "1.0.3", default-features = false }
+toml_edit = { version = "0.25.3", features = ["serde"] }
 tracing = { version = "0.1.44", default-features = false, features = ["std"] } # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }

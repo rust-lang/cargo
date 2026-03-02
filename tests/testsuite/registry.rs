@@ -3786,7 +3786,7 @@ internal server error
 /// to somewhat evenly distribute the different failures at different
 /// points.
 fn rand_prefix() -> String {
-    use rand::Rng;
+    use rand::RngExt;
     const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
     let mut rng = rand::rng();
     (0..5)
