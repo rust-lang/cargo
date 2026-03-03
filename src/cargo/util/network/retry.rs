@@ -44,7 +44,7 @@
 use crate::util::errors::{GitCliError, HttpNotSuccessful};
 use crate::{CargoResult, GlobalContext};
 use anyhow::Error;
-use rand::Rng;
+use rand::RngExt;
 use std::cmp::min;
 use std::time::Duration;
 

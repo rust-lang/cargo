@@ -1410,10 +1410,10 @@ fn error_malformed_workspace_root() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] unclosed array, expected `]`
- --> ../Cargo.toml:4:13
+ --> ../Cargo.toml:3:36
   |
-4 |             
-  |             ^
+3 |             members = [invalid toml
+  |                                    ^
 
 "#]])
         .run();
