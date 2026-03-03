@@ -130,7 +130,6 @@ Each new feature described below should explain how to use it.
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
     * [script](#script) --- Enable support for single-file `.rs` packages.
-    * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
@@ -1766,43 +1765,6 @@ will prefer the value in the configuration. The allows Cargo to add new built-in
 path bases without compatibility issues (as existing uses will shadow the
 built-in name).
 
-## lockfile-path
-
-* Original Issue: [#5707](https://github.com/rust-lang/cargo/issues/5707)
-* Tracking Issue: [#14421](https://github.com/rust-lang/cargo/issues/14421)
-
-The `-Zlockfile-path` flag enables the `resolver.lockfile-path` configuration option,
-which allows you to specify the path of the lockfile `Cargo.lock`.
-
-By default, lockfile is written into `<workspace_root>/Cargo.lock`. 
-However, when sources are stored in read-only directory,
-most of the cargo commands would fail when trying to write a lockfile.
-This configuration makes it easier to work with readonly sources. 
-
-Note, that currently path must end with `Cargo.lock`.
-If you want to use this feature in multiple projects,
-lockfiles should be stored in different directories.
-
-### Documentation updates
-
-*as a new `resolver.lockfile-path` entry in config.md*
-
-*Keep in mind, the `[resolver]` section has this clarification:*
-
-> *The `[resolver]` table overrides dependency resolution behavior for local development (e.g. excludes `cargo install`).*
-
-#### `resolver.lockfile-path`
-
-* Type: string (path)
-* Default: `<workspace_root>/Cargo.lock`
-* Environment: `CARGO_RESOLVER_LOCKFILE_PATH`
-
-Specifies the path to the lockfile.
-By default, the lockfile is written to `<workspace_root>/Cargo.lock`.
-This option is useful when working with read-only source directories.
-
-The path must end with `Cargo.lock`.
-
 ## native-completions
 * Original Issue: [#6645](https://github.com/rust-lang/cargo/issues/6645)
 * Tracking Issue: [#14520](https://github.com/rust-lang/cargo/issues/14520)
@@ -2353,3 +2315,7 @@ See the [`include` config documentation](config.md#include) for more.
 ## pubtime
 
 The `pubtime` index field  has been stabilized in Rust 1.94.0.
+
+## lockfile-path
+
+Support for `resolver.lockfile-path` config field has been stabilized in Rust 1.97.0.
