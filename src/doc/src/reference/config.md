@@ -149,6 +149,7 @@ rpath = false            # Sets the rpath linking option.
 # Same keys for a normal profile (minus `panic`, `lto`, and `rpath`).
 
 [resolver]
+lockfile-path = "…"  # Overrides the path used for
 incompatible-rust-versions = "allow"  # Specifies how resolver reacts to these
 
 [registries.<name>]  # registries other than crates.io
@@ -1098,7 +1099,19 @@ See [strip](profiles.md#strip).
 
 ### `[resolver]`
 
-The `[resolver]` table overrides [dependency resolution behavior](resolver.md) for local development (e.g. excludes `cargo install`).
+The `[resolver]` table overrides [dependency resolution behavior](resolver.md).
+
+#### `resolver.lockfile-path`
+* Type: string (path)
+* Default: `<workspace_root>/Cargo.lock`
+* Environment: `CARGO_RESOLVER_LOCKFILE_PATH`
+
+Specifies the path to the lockfile to use when resolving dependencies.
+This option is useful when working with read-only source directories.
+
+The path must end with `Cargo.lock`.
+
+> **MSRV:** Requires 1.95+
 
 #### `resolver.incompatible-rust-versions`
 * Type: string
@@ -1120,6 +1133,8 @@ See the [resolver](resolver.md#rust-version) chapter for more details.
 > **MSRV:**
 > - `allow` is supported on any version
 > - `fallback` is respected as of 1.84
+
+> **Note:** this is for local development (e.g. excludes `cargo install`)
 
 ### `[registries]`
 
