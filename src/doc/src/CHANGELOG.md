@@ -1,42 +1,192 @@
 # Changelog
 
+## Cargo 1.96 (2026-05-28)
+[f298b8c8...HEAD](https://github.com/rust-lang/cargo/compare/f298b8c8...HEAD)
+
+### Added
+
+- cargo-help: display manpages for nested subcommands.
+  For example, `cargo help report future-incompat`.
+  [#16432](https://github.com/rust-lang/cargo/pull/16432)
+
+### Changed
+
+- Improved error message when searching for a parent workspace
+  to explain why Cargo searches upward and suggest a workaround.
+  [#16669](https://github.com/rust-lang/cargo/pull/16669)
+- Clarified edition-related warning messages
+  for `Cargo.toml` and scripts to use more consistent wording.
+  [#16676](https://github.com/rust-lang/cargo/pull/16676)
+
+### Fixed
+
+### Nightly only
+
+- `unstable-editions`: Show the required Rust version in the error
+  when a package declares an unstable edition.
+  [#16653](https://github.com/rust-lang/cargo/pull/16653)
+- `-Zscript`: Inject an edition into scripts for `cargo fix`.
+  [#16678](https://github.com/rust-lang/cargo/pull/16678)
+
+### Documentation
+
+### Internal
+
+- Update dependencies.
+  [#16685](https://github.com/rust-lang/cargo/pull/16685)
+  [#16690](https://github.com/rust-lang/cargo/pull/16690)
+
 ## Cargo 1.95 (2026-04-16)
-[85eff7c8...HEAD](https://github.com/rust-lang/cargo/compare/85eff7c8...HEAD)
+[85eff7c8...rust-1.95.0](https://github.com/rust-lang/cargo/compare/85eff7c8...rust-1.95.0)
 
 ### Added
 
 ### Changed
 
+- ❗️ Forbid `cargo init` in the home directory to avoid problems with manifest discovery.
+  This previously led to confusing states for new users experimenting with Cargo.
+  [#16566](https://github.com/rust-lang/cargo/pull/16566)
+- The HTML timing report is now rendered using SVG instead of canvas.
+  The canvas renderer option is removed entirely.
+  This improves responsiveness and performance on large dependency graphs,
+  as well as enabling text selection in charts.
+  [#16602](https://github.com/rust-lang/cargo/pull/16602)
+  [#16607](https://github.com/rust-lang/cargo/pull/16607)
+- Improve error messages to follow rustc diagnostic style.
+  [#16498](https://github.com/rust-lang/cargo/pull/16498)
+  [#16625](https://github.com/rust-lang/cargo/pull/16625)
+  [#16643](https://github.com/rust-lang/cargo/pull/16643)
+- Improve bad manifest error
+  [#16630](https://github.com/rust-lang/cargo/pull/16630)
+- Suggest a `workspace.members` entry even from outside the workspace root
+  [#16616](https://github.com/rust-lang/cargo/pull/16616)
+- `term.progress.term-integration` detects if iTerm supports ANSI OSC 9;4 sequences.
+  [#16506](https://github.com/rust-lang/cargo/pull/16506)
+- cargo-install: Make the error messaging aware of `build.build-dir`
+  [#16623](https://github.com/rust-lang/cargo/pull/16623)
 - cargo-remove: Suggest `--dev`, `--build`, or `--target` flags when removing
   a dependency that exists in a different table.
   [#16533](https://github.com/rust-lang/cargo/pull/16533)
-- Improve patch-related error messages to follow rustc diagnostic style.
-  [#16498](https://github.com/rust-lang/cargo/pull/16498)
 
 ### Fixed
 
 - Fixed `cargo test --frozen` attempting to download dependencies
   that are not actually required for the specified tests.
   [#16221](https://github.com/rust-lang/cargo/pull/16221)
+- Fix `net.known_hosts` parsing for negations.
+  [#16596](https://github.com/rust-lang/cargo/pull/16596)
+- Only compute `y_ticks` when the `units` is not empty for timings SVG renderer.
+  [#16575](https://github.com/rust-lang/cargo/pull/16575)
+- Respect Clippy CLI arguments `CLIPPY_ARGS` in suggested fix message.
+  [#16652](https://github.com/rust-lang/cargo/pull/16652)
 
 ### Nightly only
 
-- `-Ztrim-paths`: use stabilized `-Cremap-path-scope` rustc flag.
-  [#16536](https://github.com/rust-lang/cargo/pull/16536)
-- `-Zcargo-lints`: new `non_kebab_case_bin` lint
-  to warn when binary names contain underscores instead of hyphens.
-  [#16524](https://github.com/rust-lang/cargo/pull/16524)
-- `-Zcargo-lints`: show `implicit_minimum_version_req` lint source once per package.
-  [#16535](https://github.com/rust-lang/cargo/pull/16535)
+- 🔥 `-Zhost-config`: Add `host.runner` for wrapping host build target executions
+  [#16599](https://github.com/rust-lang/cargo/pull/16599)
+  [#16674](https://github.com/rust-lang/cargo/pull/16674)
+  [#16638](https://github.com/rust-lang/cargo/pull/16638)
+  [#16631](https://github.com/rust-lang/cargo/pull/16631)
+- `--artifact-dir`: Remove deprecated, unstable `--out-dir`
+  [#16608](https://github.com/rust-lang/cargo/pull/16608)
+- `-Zbuild-analysis`: Add command field to BuildStarted message
+  [#16577](https://github.com/rust-lang/cargo/pull/16577)
+- `-Zbuild-dir-new-layout`: Update layout module docs to document new layout
+  [#16502](https://github.com/rust-lang/cargo/pull/16502)
 - `-Zbuild-dir-new-layout`: store artifact dependencies in build unit directory.
   [#16519](https://github.com/rust-lang/cargo/pull/16519)
+- `-Zbuild-dir-new-layout`: Change build script run `output` dir to `stdout` in new build-dir layout
+  [#16644](https://github.com/rust-lang/cargo/pull/16644)
+  [#16645](https://github.com/rust-lang/cargo/pull/16645)
+- `-Zbuild-dir-new-layout`: Reorganize build unit directory layout for new build-dir layout
+  [#16542](https://github.com/rust-lang/cargo/pull/16542)
+- `-Zcargo-lints`: Add `non_kebab_case_bins` lint
+  [#16524](https://github.com/rust-lang/cargo/pull/16524)
+  [#16553](https://github.com/rust-lang/cargo/pull/16553)
+- `-Zcargo-lints`: Add `missing_lints_inheritance` lint
+  [#16588](https://github.com/rust-lang/cargo/pull/16588)
+- `-Zcargo-lints`: Add `unused_workspace_package_fields` lint
+  [#16585](https://github.com/rust-lang/cargo/pull/16585)
+- `-Zcargo-lints`: Add `unused_workspace_dependencies` lint
+  [#16571](https://github.com/rust-lang/cargo/pull/16571)
+- `-Zcargo-lints`: Add `redundant_homepage` lint
+  [#16561](https://github.com/rust-lang/cargo/pull/16561)
+  [#16564](https://github.com/rust-lang/cargo/pull/16564)
+- `-Zcargo-lints`: Add `redundant_readme` lint
+  [#16552](https://github.com/rust-lang/cargo/pull/16552)
+- `-Zcargo-lints`: Add `non_*_case_features` lints
+  [#16560](https://github.com/rust-lang/cargo/pull/16560)
+- `-Zcargo-lints`: Add mutually exclusive `non_{kebab,snake}_case_packages`
+  [#16554](https://github.com/rust-lang/cargo/pull/16554)
+- `-Zcargo-lints`: show `implicit_minimum_version_req` lint source once per package.
+  [#16535](https://github.com/rust-lang/cargo/pull/16535)
+- `-Zcargo-lints`: Don't run on-by-default lints when MSRV is too old
+  [#16618](https://github.com/rust-lang/cargo/pull/16618)
+- `-Zfine-grain-locking`: Fix parallel locking
+  [#16659](https://github.com/rust-lang/cargo/pull/16659)
+- `-Zhost-config`: `host.linker` should not apply to non host unit
+  [#16641](https://github.com/rust-lang/cargo/pull/16641)
+- `-Zjson-target-spec`: Add the new `-Zjson-target-spec` flag to assist with
+  using custom `.json` target spec files.
+  [#16557](https://github.com/rust-lang/cargo/pull/16557)
+- `-Zlockfile-path`: Remove `--lockfile-path`
+  [#16621](https://github.com/rust-lang/cargo/pull/16621)
+- `-Zlockfile-path`: Respect the config in fix, install
+  [#16617](https://github.com/rust-lang/cargo/pull/16617)
+- `-Zscript`: Load config relative to the script
+  [#16620](https://github.com/rust-lang/cargo/pull/16620)
+- `-Zscript`: Make the lockfile script-specific independent of build-dir
+  [#16619](https://github.com/rust-lang/cargo/pull/16619)
+- `-Zscript`: Correct style of help message
+  [#16580](https://github.com/rust-lang/cargo/pull/16580)
+- `-Zscript`: Show remaining workspace behaviors
+  [#16633](https://github.com/rust-lang/cargo/pull/16633)
+- `-Ztrim-paths`: use stabilized `-Cremap-path-scope` rustc flag.
+  [#16536](https://github.com/rust-lang/cargo/pull/16536)
 
 ### Documentation
+
+- Improve documentation on reading cfg values with build scripts
+  [#16671](https://github.com/rust-lang/cargo/pull/16671)
+- Discuss commands and aliases
+  [#16581](https://github.com/rust-lang/cargo/pull/16581)
+- Remove redundant homepage link
+  [#16572](https://github.com/rust-lang/cargo/pull/16572)
+- cargo-report: enhance man pages for `cargo report *`
+  [#16430](https://github.com/rust-lang/cargo/pull/16430)
 
 ### Internal
 
 - Reuse timing metric collection logic between `--timings` and `-Zbuild-analysis`.
   [#16497](https://github.com/rust-lang/cargo/pull/16497)
+- Add a test for fingerprint checking when a symlink target changes
+  [#16661](https://github.com/rust-lang/cargo/pull/16661)
+- Update build-std tests to reflect compiler updates.
+  [#16550](https://github.com/rust-lang/cargo/pull/16550)
+  [#16551](https://github.com/rust-lang/cargo/pull/16551)
+  [#16559](https://github.com/rust-lang/cargo/pull/16559)
+  [#16658](https://github.com/rust-lang/cargo/pull/16658)
+- Enable triagebot new `[view-all-comments-link]` feature
+  [#16629](https://github.com/rust-lang/cargo/pull/16629)
+- Increase cache_lock test timeout
+  [#16545](https://github.com/rust-lang/cargo/pull/16545)
+- cargo-help: snapshot cargo help tests
+  [#16626](https://github.com/rust-lang/cargo/pull/16626)
+  [#16627](https://github.com/rust-lang/cargo/pull/16627)
+- Update dependencies.
+  [#16387](https://github.com/rust-lang/cargo/pull/16387)
+  [#16538](https://github.com/rust-lang/cargo/pull/16538)
+  [#16548](https://github.com/rust-lang/cargo/pull/16548)
+  [#16570](https://github.com/rust-lang/cargo/pull/16570)
+  [#16578](https://github.com/rust-lang/cargo/pull/16578)
+  [#16579](https://github.com/rust-lang/cargo/pull/16579)
+  [#16587](https://github.com/rust-lang/cargo/pull/16587)
+  [#16589](https://github.com/rust-lang/cargo/pull/16589)
+  [#16593](https://github.com/rust-lang/cargo/pull/16593)
+  [#16601](https://github.com/rust-lang/cargo/pull/16601)
+  [#16613](https://github.com/rust-lang/cargo/pull/16613)
+  [#16615](https://github.com/rust-lang/cargo/pull/16615)
+  [#16624](https://github.com/rust-lang/cargo/pull/16624)
 
 ## Cargo 1.94 (2026-03-05)
 
