@@ -15,7 +15,9 @@ use super::list_commands;
 use super::third_party_subcommands;
 use super::user_defined_aliases;
 use crate::command_prelude::*;
+use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::is_rustup;
+use cargo::core::Workspace;
 use cargo::core::shell::ColorChoice;
 use cargo::util::style;
 
@@ -729,6 +731,7 @@ See '<bright-cyan,bold>cargo help</> <cyan><<command>></>' for more information 
                 .collect::<Vec<_>>();
             if let Ok(gctx) = new_gctx_for_completions() {
                 candidates.extend(get_command_candidates(&gctx));
+                candidates.extend(get_script_candidates(&gctx));
             }
             candidates
         }))
@@ -778,7 +781,35 @@ fn get_command_candidates(gctx: &GlobalContext) -> Vec<clap_complete::Completion
         })
         .collect()
 }
+fn get_script_candidates(gctx: &GlobalContext) -> Vec<clap_complete::CompletionCandidate> {
+    get_script_candidates_(gctx).unwrap_or_default()
+}
+fn get_script_candidates_(
+    gctx: &GlobalContext,
+) -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, gctx)?;
 
+    let Some(pkg) = ws.current_opt() else {
+        return Ok(vec![]);
+    };
+
+    let mut candidates = Vec::new();
+
+    if let Some(metadata) = pkg.manifest().custom_metadata() {
+        if let Some(scripts) = metadata.get("scripts") {
+            if let Some(table) = scripts.as_table() {
+                for name in table.keys() {
+                    candidates.push(
+                        clap_complete::CompletionCandidate::new(name.clone())
+                            .help(Some("script".into())),
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(candidates)
+}
 #[test]
 fn verify_cli() {
     let gctx = GlobalContext::default().unwrap();
