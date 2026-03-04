@@ -128,14 +128,14 @@ impl<'a> DiagnosticPrinter<'a> {
             Message::ReplaceFailed { file, message } => {
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
 
-                let mut msg = format!("error applying suggestions to `{file}`\n\n");
-                write!(&mut msg, "The full error message was:\n\n> {message}\n\n",)?;
-                write!(
-                    &mut msg,
-                    "{}\n",
-                    gen_please_report_this_bug_text(issue_link)
-                )?;
-                write!(&mut msg, "{}\n", gen_suggest_broken_code())?;
+                let mut msg = format!("error applying suggestions to `{file}`\n");
+                writeln!(&mut msg)?;
+                writeln!(&mut msg, "The full error message was:")?;
+                writeln!(&mut msg)?;
+                writeln!(&mut msg, "> {message}")?;
+                writeln!(&mut msg)?;
+                writeln!(&mut msg, "{}", gen_please_report_this_bug_text(issue_link))?;
+                writeln!(&mut msg, "{}", gen_suggest_broken_code())?;
                 self.gctx.shell().warn(&msg)?;
                 Ok(())
             }
@@ -155,11 +155,13 @@ impl<'a> DiagnosticPrinter<'a> {
                 let mut msg =
                     format!("failed to automatically apply fixes suggested by rustc{to_crate}\n");
                 if !files.is_empty() {
+                    writeln!(&mut msg)?;
                     writeln!(
                         &mut msg,
-                        "\nafter fixes were automatically applied the compiler \
-                         reported errors within these files:\n"
+                        "after fixes were automatically applied the compiler \
+                         reported errors within these files:"
                     )?;
+                    writeln!(&mut msg)?;
                     for file in files {
                         writeln!(&mut msg, "  * {file}")?;
                     }
