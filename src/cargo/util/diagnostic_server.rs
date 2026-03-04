@@ -134,9 +134,10 @@ impl<'a> DiagnosticPrinter<'a> {
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
                     self.gctx.shell().err(),
-                    "{}\n\n",
+                    "{}\n",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
+                write!(self.gctx.shell().err(), "{}\n\n", gen_suggest_broken_code())?;
                 Ok(())
             }
             Message::FixFailed {
@@ -169,9 +170,10 @@ impl<'a> DiagnosticPrinter<'a> {
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
                     self.gctx.shell().err(),
-                    "{}\n\n",
+                    "{}\n",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
+                write!(self.gctx.shell().err(), "{}\n\n", gen_suggest_broken_code())?;
                 if !errors.is_empty() {
                     writeln!(
                         self.gctx.shell().err(),
@@ -233,11 +235,15 @@ fn gen_please_report_this_bug_text(url: &str) -> String {
      a number of compiler warnings after this message which cargo\n\
      attempted to fix but failed. If you could open an issue at\n\
      {url}\n\
-     quoting the full output of this command we'd be very appreciative!\n\
-     Note that you may be able to make some more progress in the near-term\n\
-     fixing code with the `--broken-code` flag\
+     quoting the full output of this command we'd be very appreciative!\
      ",
     )
+}
+
+fn gen_suggest_broken_code() -> &'static str {
+    "Note that you may be able to make some more progress in the near-term\n\
+     fixing code with the `--broken-code` flag\
+     "
 }
 
 fn get_bug_report_url(rustc_workspace_wrapper: &Option<PathBuf>) -> &str {
