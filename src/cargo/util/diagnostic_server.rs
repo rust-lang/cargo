@@ -2,7 +2,6 @@
 //! cross-platform way for the `cargo fix` command.
 
 use std::collections::HashSet;
-use std::fmt::Write as _;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -10,6 +9,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 
+use annotate_snippets::Group;
+use annotate_snippets::Level;
+use annotate_snippets::Origin;
 use anyhow::{Context as _, Error};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
@@ -128,15 +130,15 @@ impl<'a> DiagnosticPrinter<'a> {
             Message::ReplaceFailed { file, message } => {
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
 
-                let mut msg = format!("error applying suggestions to `{file}`\n");
-                writeln!(&mut msg)?;
-                writeln!(&mut msg, "The full error message was:")?;
-                writeln!(&mut msg)?;
-                writeln!(&mut msg, "> {message}")?;
-                writeln!(&mut msg)?;
-                writeln!(&mut msg, "{}", gen_please_report_this_bug_text(issue_link))?;
-                writeln!(&mut msg, "{}", gen_suggest_broken_code())?;
-                self.gctx.shell().warn(&msg)?;
+                let report = &[
+                    Level::ERROR
+                        .secondary_title("error applying suggestions")
+                        .element(Origin::path(file))
+                        .element(Level::ERROR.with_name("cause").message(message)),
+                    gen_please_report_this_bug_group(issue_link),
+                    gen_suggest_broken_code_group(),
+                ];
+                self.gctx.shell().print_report(report, false)?;
                 Ok(())
             }
             Message::FixFailed {
@@ -152,42 +154,34 @@ impl<'a> DiagnosticPrinter<'a> {
                 };
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
 
-                let mut msg =
-                    format!("failed to automatically apply fixes suggested by rustc{to_crate}\n");
-                if !files.is_empty() {
-                    writeln!(&mut msg)?;
-                    writeln!(
-                        &mut msg,
-                        "after fixes were automatically applied the compiler \
-                         reported errors within these files:"
-                    )?;
-                    writeln!(&mut msg)?;
-                    for file in files {
-                        writeln!(&mut msg, "  * {file}")?;
-                    }
-                    writeln!(&mut msg)?;
-                }
-                write!(
-                    &mut msg,
-                    "{}\n",
-                    gen_please_report_this_bug_text(issue_link)
-                )?;
-                write!(&mut msg, "{}\n\n", gen_suggest_broken_code())?;
-                if !errors.is_empty() {
-                    writeln!(&mut msg, "The following errors were reported:")?;
-                    for error in errors {
-                        write!(&mut msg, "{error}")?;
-                        if !error.ends_with('\n') {
-                            writeln!(&mut msg)?;
-                        }
-                    }
-                }
-                if let Some(exit) = abnormal_exit {
-                    writeln!(&mut msg, "rustc exited abnormally: {exit}")?;
-                }
-                writeln!(&mut msg, "Original diagnostics will follow.")?;
+                let cause_message = if !errors.is_empty() {
+                    Some(errors.join("\n").trim().to_owned())
+                } else {
+                    None
+                };
 
-                self.gctx.shell().warn(&msg)?;
+                let report = &[
+                    Level::ERROR
+                        .secondary_title(format!("errors present after applying fixes{to_crate}"))
+                        .elements(files.iter().map(|f| Origin::path(f)))
+                        .elements(
+                            cause_message
+                                .into_iter()
+                                .map(|err| Level::ERROR.with_name("cause").message(err)),
+                        )
+                        .elements(abnormal_exit.iter().map(|exit| {
+                            Level::ERROR
+                                .with_name("cause")
+                                .message(format!("rustc exited abnormally: {exit}"))
+                        })),
+                    gen_please_report_this_bug_group(issue_link),
+                    gen_suggest_broken_code_group(),
+                    Group::with_title(
+                        Level::NOTE.secondary_title("original diagnostics will follow:"),
+                    ),
+                ];
+
+                self.gctx.shell().print_report(report, false)?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { message, edition } => {
@@ -223,22 +217,17 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
     }
 }
 
-fn gen_please_report_this_bug_text(url: &str) -> String {
-    format!(
-        "This likely indicates a bug in either rustc or cargo itself,\n\
-     and we would appreciate a bug report! You're likely to see\n\
-     a number of compiler warnings after this message which cargo\n\
-     attempted to fix but failed. If you could open an issue at\n\
-     {url}\n\
-     quoting the full output of this command we'd be very appreciative!\
-     ",
-    )
+fn gen_please_report_this_bug_group(url: &str) -> Group<'static> {
+    Group::with_title(Level::HELP.secondary_title(format!(
+        "to report this as a bug, open an issue at {url}, quoting the full output of this command"
+    )))
 }
 
-fn gen_suggest_broken_code() -> &'static str {
-    "Note that you may be able to make some more progress in the near-term\n\
-     fixing code with the `--broken-code` flag\
-     "
+fn gen_suggest_broken_code_group() -> Group<'static> {
+    Group::with_title(
+        Level::HELP
+            .secondary_title("to possibly apply more fixes, pass in the `--broken-code` flag"),
+    )
 }
 
 fn get_bug_report_url(rustc_workspace_wrapper: &Option<PathBuf>) -> &str {

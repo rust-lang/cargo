@@ -1429,9 +1429,17 @@ fn fix_to_broken_code() {
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         .with_stderr_data(str![[r#"
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[ERROR] errors present after applying fixes to crate `bar`
+  |
+  = cause: thread 'main' ([..]) panicked at src/main.rs:23:29:
+           explicit panic
+           [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 ...
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `bar`
-...
+
 "#]])
         .run();
 
@@ -1772,13 +1780,18 @@ fn abnormal_exit() {
         )
         // "signal: 6, SIGABRT: process abort signal" on some platforms
         .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[ERROR] errors present after applying fixes to crate `foo`
+  |
+  = cause: I'm not a diagnostic.
+  = cause: rustc exited abnormally: [..]
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 ...
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
-...
-I'm not a diagnostic.
-rustc exited abnormally: [..]
-Original diagnostics will follow.
-...
+
 "#]])
         .run();
 }
