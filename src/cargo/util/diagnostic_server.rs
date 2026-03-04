@@ -2,6 +2,7 @@
 //! cross-platform way for the `cargo fix` command.
 
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -125,19 +126,17 @@ impl<'a> DiagnosticPrinter<'a> {
                 self.gctx.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
-                let msg = format!("error applying suggestions to `{file}`\n");
-                self.gctx.shell().warn(&msg)?;
-                write!(
-                    self.gctx.shell().err(),
-                    "The full error message was:\n\n> {message}\n\n",
-                )?;
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
+
+                let mut msg = format!("error applying suggestions to `{file}`\n\n");
+                write!(&mut msg, "The full error message was:\n\n> {message}\n\n",)?;
                 write!(
-                    self.gctx.shell().err(),
+                    &mut msg,
                     "{}\n",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
-                write!(self.gctx.shell().err(), "{}\n\n", gen_suggest_broken_code())?;
+                write!(&mut msg, "{}\n", gen_suggest_broken_code())?;
+                self.gctx.shell().warn(&msg)?;
                 Ok(())
             }
             Message::FixFailed {
@@ -146,53 +145,47 @@ impl<'a> DiagnosticPrinter<'a> {
                 errors,
                 abnormal_exit,
             } => {
-                if let Some(ref krate) = *krate {
-                    self.gctx.shell().warn(&format!(
-                        "failed to automatically apply fixes suggested by rustc \
-                         to crate `{krate}`",
-                    ))?;
+                let to_crate = if let Some(ref krate) = *krate {
+                    format!(" to crate `{krate}`",)
                 } else {
-                    self.gctx
-                        .shell()
-                        .warn("failed to automatically apply fixes suggested by rustc")?;
-                }
+                    "".to_owned()
+                };
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+
+                let mut msg =
+                    format!("failed to automatically apply fixes suggested by rustc{to_crate}\n");
                 if !files.is_empty() {
                     writeln!(
-                        self.gctx.shell().err(),
+                        &mut msg,
                         "\nafter fixes were automatically applied the compiler \
                          reported errors within these files:\n"
                     )?;
                     for file in files {
-                        writeln!(self.gctx.shell().err(), "  * {file}")?;
+                        writeln!(&mut msg, "  * {file}")?;
                     }
-                    writeln!(self.gctx.shell().err())?;
+                    writeln!(&mut msg)?;
                 }
-                let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
-                    self.gctx.shell().err(),
+                    &mut msg,
                     "{}\n",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
-                write!(self.gctx.shell().err(), "{}\n\n", gen_suggest_broken_code())?;
+                write!(&mut msg, "{}\n\n", gen_suggest_broken_code())?;
                 if !errors.is_empty() {
-                    writeln!(
-                        self.gctx.shell().err(),
-                        "The following errors were reported:"
-                    )?;
+                    writeln!(&mut msg, "The following errors were reported:")?;
                     for error in errors {
-                        write!(self.gctx.shell().err(), "{error}")?;
+                        write!(&mut msg, "{error}")?;
                         if !error.ends_with('\n') {
-                            writeln!(self.gctx.shell().err())?;
+                            writeln!(&mut msg)?;
                         }
                     }
                 }
                 if let Some(exit) = abnormal_exit {
-                    writeln!(self.gctx.shell().err(), "rustc exited abnormally: {exit}")?;
+                    writeln!(&mut msg, "rustc exited abnormally: {exit}")?;
                 }
-                writeln!(
-                    self.gctx.shell().err(),
-                    "Original diagnostics will follow.\n"
-                )?;
+                writeln!(&mut msg, "Original diagnostics will follow.")?;
+
+                self.gctx.shell().warn(&msg)?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { message, edition } => {
