@@ -112,7 +112,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 }
                 self.gctx.shell().status(
                     "Migrating",
-                    &format!("{} from {} edition to {}", file, from_edition, to_edition),
+                    &format!("{file} from {from_edition} edition to {to_edition}"),
                 )
             }
             Message::Fixing { file } => self
@@ -121,16 +121,15 @@ impl<'a> DiagnosticPrinter<'a> {
                 .verbose(|shell| shell.status("Fixing", file)),
             Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
-                let msg = format!("{} ({} {})", file, fixes, msg);
+                let msg = format!("{file} ({fixes} {msg})");
                 self.gctx.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
-                let msg = format!("error applying suggestions to `{}`\n", file);
+                let msg = format!("error applying suggestions to `{file}`\n");
                 self.gctx.shell().warn(&msg)?;
                 write!(
                     self.gctx.shell().err(),
-                    "The full error message was:\n\n> {}\n\n",
-                    message,
+                    "The full error message was:\n\n> {message}\n\n",
                 )?;
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
@@ -149,8 +148,7 @@ impl<'a> DiagnosticPrinter<'a> {
                 if let Some(ref krate) = *krate {
                     self.gctx.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
-                         to crate `{}`",
-                        krate,
+                         to crate `{krate}`",
                     ))?;
                 } else {
                     self.gctx
@@ -164,7 +162,7 @@ impl<'a> DiagnosticPrinter<'a> {
                          reported errors within these files:\n"
                     )?;
                     for file in files {
-                        writeln!(self.gctx.shell().err(), "  * {}", file)?;
+                        writeln!(self.gctx.shell().err(), "  * {file}")?;
                     }
                     writeln!(self.gctx.shell().err())?;
                 }
@@ -180,14 +178,14 @@ impl<'a> DiagnosticPrinter<'a> {
                         "The following errors were reported:"
                     )?;
                     for error in errors {
-                        write!(self.gctx.shell().err(), "{}", error)?;
+                        write!(self.gctx.shell().err(), "{error}")?;
                         if !error.ends_with('\n') {
                             writeln!(self.gctx.shell().err())?;
                         }
                     }
                 }
                 if let Some(exit) = abnormal_exit {
-                    writeln!(self.gctx.shell().err(), "rustc exited abnormally: {}", exit)?;
+                    writeln!(self.gctx.shell().err(), "rustc exited abnormally: {exit}")?;
                 }
                 writeln!(
                     self.gctx.shell().err(),
@@ -205,7 +203,7 @@ impl<'a> DiagnosticPrinter<'a> {
                     edition: *edition,
                 }) {
                     self.gctx.shell().warn(&format!("\
-{}
+{message}
 
 If you are trying to migrate from the previous edition ({prev_edition}), the
 process requires following these steps:
@@ -218,7 +216,7 @@ process requires following these steps:
 More details may be found at
 https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 ",
-                        message, this_edition=edition, prev_edition=edition.previous().unwrap()
+                        this_edition=edition, prev_edition=edition.previous().unwrap()
                     ))
                 } else {
                     self.gctx.shell().warn(message)
@@ -234,12 +232,11 @@ fn gen_please_report_this_bug_text(url: &str) -> String {
      and we would appreciate a bug report! You're likely to see\n\
      a number of compiler warnings after this message which cargo\n\
      attempted to fix but failed. If you could open an issue at\n\
-     {}\n\
+     {url}\n\
      quoting the full output of this command we'd be very appreciative!\n\
      Note that you may be able to make some more progress in the near-term\n\
      fixing code with the `--broken-code` flag\n\n\
      ",
-        url
     )
 }
 
@@ -304,11 +301,11 @@ impl RustfixDiagnosticServer {
             let mut client = BufReader::new(client);
             let mut s = String::new();
             if let Err(e) = client.read_to_string(&mut s) {
-                warn!("diagnostic server failed to read: {}", e);
+                warn!("diagnostic server failed to read: {e}");
             } else {
                 match serde_json::from_str(&s) {
                     Ok(message) => on_message(message),
-                    Err(e) => warn!("invalid diagnostics message: {}", e),
+                    Err(e) => warn!("invalid diagnostics message: {e}"),
                 }
             }
             // The client should be kept alive until after `on_message` is
