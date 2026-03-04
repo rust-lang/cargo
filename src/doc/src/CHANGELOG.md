@@ -1,5 +1,41 @@
 # Changelog
 
+## Cargo 1.96 (2026-05-28)
+[f298b8c8...HEAD](https://github.com/rust-lang/cargo/compare/f298b8c8...HEAD)
+
+### Added
+
+- cargo-help: display manpages for nested subcommands.
+  For example, `cargo help report future-incompat`.
+  [#16432](https://github.com/rust-lang/cargo/pull/16432)
+
+### Changed
+
+- Improved error message when searching for a parent workspace
+  to explain why Cargo searches upward and suggest a workaround.
+  [#16669](https://github.com/rust-lang/cargo/pull/16669)
+- Clarified edition-related warning messages
+  for `Cargo.toml` and scripts to use more consistent wording.
+  [#16676](https://github.com/rust-lang/cargo/pull/16676)
+
+### Fixed
+
+### Nightly only
+
+- `unstable-editions`: Show the required Rust version in the error
+  when a package declares an unstable edition.
+  [#16653](https://github.com/rust-lang/cargo/pull/16653)
+- `-Zscript`: Inject an edition into scripts for `cargo fix`.
+  [#16678](https://github.com/rust-lang/cargo/pull/16678)
+
+### Documentation
+
+### Internal
+
+- Update dependencies.
+  [#16685](https://github.com/rust-lang/cargo/pull/16685)
+  [#16690](https://github.com/rust-lang/cargo/pull/16690)
+
 ## Cargo 1.95 (2026-04-16)
 [85eff7c8...rust-1.95.0](https://github.com/rust-lang/cargo/compare/85eff7c8...rust-1.95.0)
 
