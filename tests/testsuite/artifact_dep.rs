@@ -1805,7 +1805,7 @@ fn proc_macro_in_artifact_dep() {
 [ERROR] failed to download from `[ROOTURL]/dl/pm/1.0.0/download`
 
 Caused by:
-  [37] Could[..]t read a file:// file (Couldn't open file [ROOT]/dl/pm/1.0.0/download)
+  [37] Could[..]t read a file:// file (Could[..]t open file [ROOT]/dl/pm/1.0.0/download)
 "#,
         )
         .with_status(101)
