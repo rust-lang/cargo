@@ -163,6 +163,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),
+        explicit_target_dir_arg: args.contains_id("target-dir"),
     };
     ops::clean(&ws, &opts)?;
     Ok(())
