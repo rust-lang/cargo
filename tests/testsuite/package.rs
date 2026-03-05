@@ -8025,11 +8025,8 @@ fn repackage_smaller_local_dep_tmp_registry_checksum_match() {
         fs::read(p.root().join("target/package/tmp-registry/bar-0.0.1.crate")).unwrap();
     let actual_cksum = registry::cksum(&crate_contents);
 
-    // FIXME: checksum should match after repackaging, but currently doesn't because
-    // `TmpRegistry::add_package` opens the existing `.crate` file with `open_rw_exclusive_create`
-    // (which uses `OpenOptions::create(true)` without `.truncate(true)`).
-    assert_ne!(
+    assert_eq!(
         expected_cksum, actual_cksum,
-        "tmp-registry crate checksum should not match index entry after repackaging with different contents"
+        "tmp-registry crate checksum should match index entry"
     );
 }
