@@ -281,12 +281,16 @@ impl CodeFix {
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        fix.apply(suggestion).or_else(|err| match err {
-            Error::AlreadyReplaced {
-                is_identical: true, ..
-            } => Ok(()),
-            _ => Err(err),
-        })?;
+        match fix.apply(suggestion) {
+            Ok(()) => {}
+            // Silently skip overlapping suggestions.
+            // Identical ones are de-dupes (e.g. rust-lang/rust#51211).
+            // Non-identical ones are conflicting alternatives for the same
+            // span; we keep the first applied and discard the rest.
+            // See rust-lang/cargo#13030.
+            Err(Error::AlreadyReplaced { .. }) => continue,
+            Err(e) => return Err(e),
+        }
     }
     fix.finish()
 }
@@ -331,8 +335,9 @@ mod tests {
                 }],
             },
         ];
-        // Currently this returns an error because non-identical overlapping
-        // suggestions are not handled gracefully. See rust-lang/cargo#13030.
-        assert!(apply_suggestions(code, &suggestions).is_err());
+        // Should NOT panic — one suggestion applies, the other is skipped.
+        let result = apply_suggestions(code, &suggestions).unwrap();
+        // The last suggestion in the vec is applied first (iterated in reverse).
+        assert_eq!(result, "let z = 0;\n");
     }
 }
