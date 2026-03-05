@@ -63,7 +63,7 @@ When the build script is run, there are a number of inputs to the build script,
 all passed in the form of [environment variables][build-env].
 
 In addition to environment variables, the build script’s current directory is
-the source directory of the build script’s package.
+the root directory of the build script’s package.
 
 [build-env]: environment-variables.md#environment-variables-cargo-sets-for-build-scripts
 
