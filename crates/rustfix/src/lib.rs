@@ -290,3 +290,49 @@ pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<Strin
     }
     fix.finish()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_non_identical_suggestions_are_skipped() {
+        let code = "let x = 0;\n";
+        let snippet = Snippet {
+            file_name: "test.rs".into(),
+            line_range: LineRange {
+                start: LinePosition { line: 1, column: 5 },
+                end: LinePosition { line: 1, column: 6 },
+            },
+            range: 4..5,
+        };
+        // Two suggestions targeting the same span with different replacements.
+        let suggestions = vec![
+            Suggestion {
+                message: "first suggestion".into(),
+                snippets: vec![snippet.clone()],
+                solutions: vec![Solution {
+                    message: "try this".into(),
+                    replacements: vec![Replacement {
+                        snippet: snippet.clone(),
+                        replacement: "y".into(),
+                    }],
+                }],
+            },
+            Suggestion {
+                message: "second suggestion".into(),
+                snippets: vec![snippet.clone()],
+                solutions: vec![Solution {
+                    message: "or this".into(),
+                    replacements: vec![Replacement {
+                        snippet: snippet.clone(),
+                        replacement: "z".into(),
+                    }],
+                }],
+            },
+        ];
+        // Currently this returns an error because non-identical overlapping
+        // suggestions are not handled gracefully. See rust-lang/cargo#13030.
+        assert!(apply_suggestions(code, &suggestions).is_err());
+    }
+}
