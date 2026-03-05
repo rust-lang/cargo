@@ -472,15 +472,9 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
         .env("RUSTFLAGS", "-W unused-crate-dependencies")
         .with_stderr_data(
             str![[r#"
-[WARNING] extern crate `alloc` is unused in crate `bar`
-[WARNING] extern crate `alloc` is unused in crate `buildstd_test`
 [WARNING] extern crate `bar` is unused in crate `buildstd_test`
-[WARNING] extern crate `compiler_builtins` is unused in crate `buildstd_test`
-[WARNING] extern crate `core` is unused in crate `buildstd_test`
-[WARNING] extern crate `proc_macro` is unused in crate `buildstd_test`
-[WARNING] `buildstd_test` (bin "buildstd_test") generated 5 warnings
+[WARNING] `buildstd_test` (bin "buildstd_test") generated 1 warning
 ...
-
 "#]]
             .unordered(),
         )
