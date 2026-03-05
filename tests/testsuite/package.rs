@@ -7948,3 +7948,88 @@ fn repackage_smaller_crate_has_trailing_garbage() {
         "the .crate file should be smaller after removing big.txt"
     );
 }
+
+#[cargo_test]
+fn repackage_smaller_local_dep_tmp_registry_checksum_match() {
+    let reg = registry::init();
+    let big_file_contents = "x".repeat(100_000);
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+                resolver = "2"
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "../bar", version = "0.0.1" }
+            "#,
+        )
+        .file("foo/src/lib.rs", "pub fn foo() { bar::bar(); }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2021"
+                include = ["src/**", "Cargo.toml", "big.txt"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("bar/big.txt", &big_file_contents)
+        .build();
+
+    p.cargo("package --workspace --no-verify")
+        .replace_crates_io(reg.index_url())
+        .run();
+
+    fs::remove_file(p.root().join("bar/big.txt")).unwrap();
+    p.change_file(
+        "bar/Cargo.toml",
+        r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            edition = "2021"
+            include = ["src/**", "Cargo.toml"]
+        "#,
+    );
+    p.cargo("package --workspace --no-verify")
+        .replace_crates_io(reg.index_url())
+        .run();
+
+    let index_line = read_to_string(p.root().join("target/package/tmp-registry/index/3/b/bar"))
+        .unwrap()
+        .lines()
+        .last()
+        .unwrap()
+        .to_owned();
+    let expected_cksum = serde_json::from_str::<serde_json::Value>(&index_line)
+        .unwrap()
+        .get("cksum")
+        .and_then(|value| value.as_str())
+        .unwrap()
+        .to_owned();
+
+    let crate_contents =
+        fs::read(p.root().join("target/package/tmp-registry/bar-0.0.1.crate")).unwrap();
+    let actual_cksum = registry::cksum(&crate_contents);
+
+    // FIXME: checksum should match after repackaging, but currently doesn't because
+    // `TmpRegistry::add_package` opens the existing `.crate` file with `open_rw_exclusive_create`
+    // (which uses `OpenOptions::create(true)` without `.truncate(true)`).
+    assert_ne!(
+        expected_cksum, actual_cksum,
+        "tmp-registry crate checksum should not match index entry after repackaging with different contents"
+    );
+}
