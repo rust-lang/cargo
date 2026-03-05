@@ -1726,7 +1726,7 @@ fn check_build_should_lock_target_dir_when_artifact_dir_is_same_as_build_dir() {
         .build();
 
     p.cargo("check").enable_mac_dsym().run();
-    assert!(p.root().join("target/debug/.cargo-lock").exists());
+    assert!(p.root().join("target/debug/.cargo-build-lock").exists());
 }
 
 #[cargo_test]
@@ -1748,7 +1748,7 @@ fn check_build_should_not_lock_artifact_dir_when_build_dir_is_not_same_dir() {
     // Verify we did NOT take the build-dir lock
     assert!(!p.root().join("target-dir/debug/.cargo-lock").exists());
     // Verify we did take the build-dir lock
-    assert!(p.root().join("build-dir/debug/.cargo-lock").exists());
+    assert!(p.root().join("build-dir/debug/.cargo-build-lock").exists());
 }
 
 // Regression test for #16305

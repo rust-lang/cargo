@@ -258,25 +258,19 @@ impl Layout {
         // actual destination (sub)subdirectory.
         paths::create_dir_all(dest.as_path_unlocked())?;
 
-        // We always need to take the build-dir lock but if the build-dir == artifact-dir then we
-        // only take the artifact-dir. (locking both as they are the same dir)
-        // However we need to take into account that for some builds like `cargo check` we avoid
-        // locking the artifact-dir. We still need to lock the build-dir to avoid file corruption.
-        let build_dir_lock = if (must_take_artifact_dir_lock && root == build_root)
-            || is_on_nfs_mount(build_root.as_path_unlocked())
-        {
+        let build_dir_lock = if is_on_nfs_mount(build_root.as_path_unlocked()) {
             None
         } else {
             if ws.gctx().cli_unstable().fine_grain_locking && !must_take_build_dir_lock_exclusively
             {
                 Some(build_dest.open_ro_shared_create(
-                    ".cargo-lock",
+                    ".cargo-build-lock",
                     ws.gctx(),
                     "build directory",
                 )?)
             } else {
                 Some(build_dest.open_rw_exclusive_create(
-                    ".cargo-lock",
+                    ".cargo-build-lock",
                     ws.gctx(),
                     "build directory",
                 )?)
