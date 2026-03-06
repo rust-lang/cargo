@@ -439,6 +439,49 @@ fn test_proc_macro() {
 }
 
 #[cargo_test(build_std_real)]
+fn build_std_does_not_warn_about_implicit_std_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "buildstd_test"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .build_std()
+        .target_host()
+        .env("RUSTFLAGS", "-W unused-crate-dependencies")
+        .with_stderr_data(
+            str![[r#"
+[WARNING] extern crate `bar` is unused in crate `buildstd_test`
+[WARNING] `buildstd_test` (bin "buildstd_test") generated 1 warning
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_real)]
 fn default_features_still_included_with_extra_build_std_features() {
     // This is a regression test to ensure when adding extra `build-std-features`,
     // the default feature set is still respected and included.
