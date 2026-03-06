@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::Write as _;
+use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::IndexSummary;
+use crate::core::{Dependency, PackageId, Registry, Shell, SourceId, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::{IndexSummary, PathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -392,11 +393,49 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
-        let _ = writeln!(
-            &mut msg,
-            "no matching package named `{}` found",
-            dep.package_name()
-        );
+        if dep.source_id().is_path() {
+            let path = dep
+                .source_id()
+                .url()
+                .to_file_path()
+                .expect("[ERROR]: failed to get the path");
+
+            let global_context = match gctx {
+                Some(context) => context,
+                None => &GlobalContext::new(Shell::new(), PathBuf::new(), PathBuf::new()),
+            };
+            let sid = dep.source_id();
+
+            let root_package =
+                inspect_root_package(&mut msg, Path::new(&path), global_context, sid);
+
+            if let Some(name) = root_package {
+                let _ = writeln!(
+                    &mut msg,
+                    "no matching package named `{}` found at `{}`",
+                    name.name,
+                    dep.package_name()
+                );
+
+                let _ = writeln!(
+                    &mut msg,
+                    "note: required by {}",
+                    describe_path_in_context(resolver_ctx, &parent.package_id()),
+                );
+
+                let _ = writeln!(
+                    &mut msg,
+                    "help: package `{}` exists at `{}`",
+                    name.name, name.name
+                );
+            }
+        } else {
+            let _ = writeln!(
+                &mut msg,
+                "no matching package named `{}` found",
+                dep.package_name()
+            );
+        }
     }
 
     let mut location_searched_msg = registry.describe_source(dep.source_id());
@@ -574,4 +613,35 @@ pub(crate) fn describe_path<'a>(
     }
 
     String::new()
+}
+
+#[derive(Debug)]
+struct RootPackageInfo {
+    pub name: String,
+}
+
+fn inspect_root_package(
+    msg: &mut String,
+    path: &Path,
+    gctx: &GlobalContext,
+    sid: SourceId,
+) -> Option<RootPackageInfo> {
+    let mut ps = PathSource::new(path, sid, gctx);
+
+    ps.root_package().expect("failed to get the root");
+
+    if let Err(e) = ps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+    }
+
+    let pkg = ps
+        .read_package()
+        .expect("failed to read the package in root");
+
+    let package_info = RootPackageInfo {
+        name: pkg.name().to_string(),
+    };
+
+    return Some(package_info);
 }
