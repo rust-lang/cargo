@@ -52,6 +52,8 @@ struct State<'a, 'gctx> {
     std_resolve: Option<&'a Resolve>,
     /// Like `usr_features` but for building standard library (`-Zbuild-std`).
     std_features: Option<&'a ResolvedFeatures>,
+    // The root units of any opaque dependencies present in the user resolve
+    opaque_roots: &'a HashMap<CompileKind, Vec<Unit>>,
     /// `true` while generating the dependencies for the standard library.
     is_std: bool,
     /// The high-level operation requested by the user.
@@ -92,7 +94,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     resolve: &'a Resolve,
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
-    roots: &[Unit],
+    roots: &[Unit], //TODO: builtins can be roots if requested on the command line
     scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     intent: UserIntent,
@@ -119,6 +121,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         usr_features: features,
         std_resolve,
         std_features,
+        opaque_roots: std_roots,
         is_std: false,
         intent,
         target_data,
@@ -129,14 +132,13 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
+    if let Some(std_unit_deps) = std_unit_deps {
+        attach_std_deps(&mut state, std_unit_deps);
+    }
 
     deps_of_roots(roots, &mut state)?;
     super::links::validate_links(state.resolve(), &state.unit_dependencies)?;
     // Hopefully there aren't any links conflicts with the standard library?
-
-    if let Some(std_unit_deps) = std_unit_deps {
-        attach_std_deps(&mut state, std_roots, std_unit_deps);
-    }
 
     connect_run_custom_build_deps(&mut state);
 
@@ -188,35 +190,14 @@ fn calc_deps_of_std(
     Ok(Some(std::mem::take(&mut state.unit_dependencies)))
 }
 
-/// Add the standard library units to the `unit_dependencies`.
-fn attach_std_deps(
-    state: &mut State<'_, '_>,
-    std_roots: &HashMap<CompileKind, Vec<Unit>>,
-    std_unit_deps: UnitGraph,
-) {
-    // Attach the standard library as a dependency of every target unit.
-    let mut found = false;
-    for (unit, deps) in state.unit_dependencies.iter_mut() {
-        if !unit.kind.is_host() && !unit.mode.is_run_custom_build() {
-            deps.extend(std_roots[&unit.kind].iter().map(|unit| UnitDep {
-                unit: unit.clone(),
-                unit_for: UnitFor::new_normal(unit.kind),
-                extern_crate_name: unit.pkg.name(),
-                dep_name: None,
-                // TODO: Does this `public` make sense?
-                public: true,
-                noprelude: true,
-            }));
-            found = true;
+/// Add the dependencies of standard library units to the `unit_dependencies`.
+fn attach_std_deps(state: &mut State<'_, '_>, std_unit_deps: UnitGraph) {
+    for (unit, deps) in std_unit_deps.into_iter() {
+        if unit.pkg.package_id().name() == "sysroot" {
+            continue;
         }
-    }
-    // And also include the dependencies of the standard library itself. Don't
-    // include these if no units actually needed the standard library.
-    if found {
-        for (unit, deps) in std_unit_deps.into_iter() {
-            if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
-                panic!("std unit collision with existing unit: {:?}", other_unit);
-            }
+        if let Some(other_unit) = state.unit_dependencies.insert(unit, deps) {
+            panic!("std unit collision with existing unit: {:?}", other_unit);
         }
     }
 }
@@ -333,16 +314,37 @@ fn compute_deps(
             )?;
             ret.push(unit_dep);
         } else {
-            let unit_dep = new_unit_dep(
-                state,
-                unit,
-                dep_pkg,
-                dep_lib,
-                dep_unit_for,
-                unit.kind.for_target(dep_lib),
-                mode,
-                IS_NO_ARTIFACT_DEP,
-            )?;
+            // if builtin, return from state.opaque_roots
+            let unit_dep = if dep_pkg_id.source_id().is_builtin() {
+                let unit: Vec<_> = state.opaque_roots[&unit.kind.for_target(dep_lib)]
+                    .iter()
+                    .filter(|&u| u.pkg.name() == dep_pkg_id.name())
+                    .collect();
+                assert!(
+                    unit.len() == 1,
+                    "libstd was resolved with all possible builtin deps as roots"
+                );
+                let unit = unit[0];
+                UnitDep {
+                    unit: unit.clone(),
+                    unit_for: UnitFor::new_normal(unit.kind),
+                    extern_crate_name: unit.pkg.name(),
+                    dep_name: None,
+                    public: true,
+                    noprelude: true,
+                }
+            } else {
+                new_unit_dep(
+                    state,
+                    unit,
+                    dep_pkg,
+                    dep_lib,
+                    dep_unit_for,
+                    unit.kind.for_target(dep_lib),
+                    mode,
+                    IS_NO_ARTIFACT_DEP,
+                )?
+            };
             ret.push(unit_dep);
         }
 

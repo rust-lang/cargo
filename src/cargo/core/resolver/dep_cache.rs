@@ -48,6 +48,9 @@ pub struct RegistryQueryer<'a> {
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
+    /// Cached builtin dependencies that should be injected. Empty implies that builtins shouldn't
+    /// be injected
+    builtins: Vec<Dependency>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -55,7 +58,24 @@ impl<'a> RegistryQueryer<'a> {
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
+        inject_builtins: bool,
     ) -> Self {
+        let builtins = if inject_builtins {
+            [
+                "std",
+                "alloc",
+                "core",
+                "panic_unwind",
+                "proc_macro",
+                "compiler_builtins",
+            ]
+            .iter()
+            .map(|&krate| Dependency::new_injected_builtin(krate.into()))
+            .collect()
+        } else {
+            vec![]
+        };
+
         RegistryQueryer {
             registry,
             replacements,
@@ -63,6 +83,7 @@ impl<'a> RegistryQueryer<'a> {
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
+            builtins,
         }
     }
 
@@ -238,10 +259,11 @@ impl<'a> RegistryQueryer<'a> {
         {
             return Ok(out.0.clone());
         }
+
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(parent, candidate, opts, &self.builtins)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -291,10 +313,20 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    builtins: &[Dependency],
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
+
+    let deps = deps
+        .into_iter()
+        .filter(|d| d.is_transitive() || opts.dev_deps);
+    let builtin_deps = if s.source_id().is_builtin() {
+        // Don't add builtin deps to dummy builtin packages
+        None
+    } else {
+        Some(builtins.iter())
+    };
 
     let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();
@@ -302,7 +334,7 @@ pub fn resolve_features<'b>(
     let mut valid_dep_names = HashSet::new();
 
     // Next, collect all actually enabled dependencies and their features.
-    for dep in deps {
+    for dep in deps.chain(builtin_deps.into_iter().flatten()) {
         // Skip optional dependencies, but not those enabled through a
         // feature
         if dep.is_optional() && !reqs.deps.contains_key(&dep.name_in_toml()) {

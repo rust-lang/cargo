@@ -126,6 +126,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
+    inject_builtins: bool,
 ) -> CargoResult<Resolve> {
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
@@ -133,7 +134,7 @@ pub fn resolve(
         }
         _ => None,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs, inject_builtins);
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
