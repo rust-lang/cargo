@@ -1307,6 +1307,7 @@ foo v0.1.0 ([ROOT]/foo)
 fn host_dep_feature() {
     // New feature resolver with optional build dep
     Package::new("optdep", "1.0.0").publish();
+    Package::new("optdep", "2.0.0").publish();
     Package::new("bar", "1.0.0")
         .add_dep(Dependency::new("optdep", "1.0").optional(true))
         .publish();
@@ -1318,11 +1319,9 @@ fn host_dep_feature() {
             name = "foo"
             version = "0.1.0"
 
-            [build-dependencies]
-            bar = { version = "1.0", features = ["optdep"] }
-
             [dependencies]
-            bar = "1.0"
+            optdep = "2.0"
+            bar = { version = "1.0", features = ["optdep"] }
             "#,
         )
         .file("src/lib.rs", "")
@@ -1333,10 +1332,9 @@ fn host_dep_feature() {
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar v1.0.0
-    └── optdep v1.0.0
-[build-dependencies]
-└── bar v1.0.0 (*)
+├── bar v1.0.0
+│   └── optdep v1.0.0
+└── optdep v2.0.0
 
 "#]])
         .run();
@@ -1351,12 +1349,10 @@ bar v1.0.0
         .run();
 
     // invert
-    p.cargo("tree -i optdep")
+    p.cargo("tree -i optdep@1.0.0")
         .with_stdout_data(str![[r#"
 optdep v1.0.0
 └── bar v1.0.0
-    └── foo v0.1.0 ([ROOT]/foo)
-    [build-dependencies]
     └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
@@ -1368,10 +1364,9 @@ optdep v1.0.0
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar v1.0.0
-[build-dependencies]
-└── bar v1.0.0
-    └── optdep v1.0.0
+├── bar v1.0.0
+│   └── optdep v1.0.0
+└── optdep v2.0.0
 
 "#]])
         .run();
@@ -1379,18 +1374,15 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree -p bar")
         .with_stdout_data(str![[r#"
 bar v1.0.0
-
-bar v1.0.0
 └── optdep v1.0.0
 
 "#]])
         .run();
 
-    p.cargo("tree -i optdep")
+    p.cargo("tree -i optdep@1.0.0")
         .with_stdout_data(str![[r#"
 optdep v1.0.0
 └── bar v1.0.0
-    [build-dependencies]
     └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
@@ -1399,11 +1391,11 @@ optdep v1.0.0
     // Check that -d handles duplicates with features.
     p.cargo("tree -d")
         .with_stdout_data(str![[r#"
-bar v1.0.0
-└── foo v0.1.0 ([ROOT]/foo)
+optdep v1.0.0
+└── bar v1.0.0
+    └── foo v0.1.0 ([ROOT]/foo)
 
-bar v1.0.0
-[build-dependencies]
+optdep v2.0.0
 └── foo v0.1.0 ([ROOT]/foo)
 
 "#]])
