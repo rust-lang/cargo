@@ -637,6 +637,16 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
+    let is_root = state.ws.is_member(&unit.pkg);
+
+    // Check if public-dependency feature is enabled
+    let public_deps_enabled = state.gctx.cli_unstable().public_dependency
+        || unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .is_enabled(Feature::public_dependency());
+
     for (id, deps) in state.deps(unit, unit_for) {
         let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
             continue;
@@ -657,7 +667,20 @@ fn compute_deps_doc(
             IS_NO_ARTIFACT_DEP,
         )?;
         ret.push(lib_unit_dep);
-        if dep_lib.documented() && state.intent.wants_deps_docs() {
+
+        // Decide whether to document this dependency.
+        // When public-dependency is enabled, only document:
+        // - Direct dependencies of workspace members
+        // - Public dependencies (recursively)
+        // This dramatically speeds up documentation builds by excluding indirect
+        // private dependencies that cannot be used by readers of the docs.
+        let should_doc_dep = if public_deps_enabled && !is_root {
+            state.resolve().is_public_dep(unit.pkg.package_id(), id)
+        } else {
+            true
+        };
+
+        if dep_lib.documented() && state.intent.wants_deps_docs() && should_doc_dep {
             // Document this lib as well.
             let doc_unit_dep = new_unit_dep(
                 state,
