@@ -867,10 +867,6 @@ fn make_ws_rustc_target<'gctx>(
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
-    // if --lockfile-path is set, imply --locked
-    if ws.requested_lockfile_path().is_some() {
-        ws.set_ignore_lock(false);
-    }
     ws.set_require_optional_deps(false);
 
     let rustc = gctx.load_global_rustc(Some(&ws))?;
