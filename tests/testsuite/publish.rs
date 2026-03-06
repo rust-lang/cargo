@@ -4038,10 +4038,28 @@ Caused by:
     // Publishing the whole workspace now will fail, as `a` is already published.
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] crate a@0.0.1 already exists on crates.io index
+[WARNING] crate a@0.0.1 already exists on crates.io index
+[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
+[UNPACKING] a v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] a v0.0.1
+[COMPILING] b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] skipping upload for crate a@0.0.1: already exists on crates.io index
+[UPLOADING] b v0.0.1 ([ROOT]/foo/b)
+[UPLOADED] b v0.0.1 to registry `crates-io`
+[NOTE] waiting for b v0.0.1 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] b v0.0.1 at registry `crates-io`
 
 "#]])
         .run();
@@ -4192,7 +4210,7 @@ fn virtual_ws_with_multiple_unpublishable_package() {
 }
 
 #[cargo_test]
-fn workspace_flag_with_unpublishable_packages() {
+fn workspace_flag_with_nonpublishable_packages() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
@@ -4408,6 +4426,120 @@ fn all_unpublishable_packages() {
 [WARNING] nothing to publish, but found 2 unpublishable packages
   |
   = [HELP] to publish packages, set `package.publish` to `true` or a non-empty list
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn all_published_packages() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // First, publish all members
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] bar v0.0.0 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.0 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] bar v0.0.0 ([ROOT]/foo/bar)
+[UPLOADED] bar v0.0.0 to registry `crates-io`
+[UPLOADING] foo v0.0.0 ([ROOT]/foo/foo)
+[UPLOADED] foo v0.0.0 to registry `crates-io`
+[NOTE] waiting for bar v0.0.0 or foo v0.0.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crates should be available shortly
+[PUBLISHED] bar v0.0.0 and foo v0.0.0 at registry `crates-io`
+
+"#]])
+        .run();
+
+    // Publishing all members again works
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate foo@0.0.0 already exists on crates.io index
+[WARNING] crate bar@0.0.0 already exists on crates.io index
+[PACKAGING] bar v0.0.0 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.0 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] skipping upload for crate bar@0.0.0: already exists on crates.io index
+[WARNING] skipping upload for crate foo@0.0.0: already exists on crates.io index
+
+"#]])
+        .run();
+
+    // Without `--workspace` works as it is a virtual workspace
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate foo@0.0.0 already exists on crates.io index
+[WARNING] crate bar@0.0.0 already exists on crates.io index
+[PACKAGING] bar v0.0.0 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.0 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] skipping upload for crate bar@0.0.0: already exists on crates.io index
+[WARNING] skipping upload for crate foo@0.0.0: already exists on crates.io index
+
+"#]])
+        .run();
+
+    // Change a file. It should fail due to checksum verification failure.
+    p.change_file("bar/src/lib.rs", "//! foo");
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate foo@0.0.0 already exists on crates.io index
+[WARNING] crate bar@0.0.0 already exists on crates.io index
+[PACKAGING] bar v0.0.0 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] foo v0.0.0 ([ROOT]/foo/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] crate bar@0.0.0 already exists on crates.io index but tarball checksum mismatched
+perhaps local files have changed but forgot to bump the version?
 
 "#]])
         .run();
