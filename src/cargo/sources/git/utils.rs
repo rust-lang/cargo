@@ -1303,47 +1303,23 @@ fn fetch_with_libgit2(
 /// descriptors, getting us dangerously close to blowing out the OS limits of
 /// how many fds we can have open. This is detailed in [#4403].
 ///
-/// To try to combat this problem we attempt a `git gc` here. Note, though, that
-/// we may not even have `git` installed on the system! As a result we
-/// opportunistically try a `git gc` when the pack directory looks too big, and
-/// failing that we just blow away the repository and start over.
-///
-/// In theory this shouldn't be too expensive compared to the network request
-/// we're about to issue.
+/// Instead of trying to be clever about when gc is needed, we just run
+/// `git gc --auto` and let git figure it out. It checks its own thresholds
+/// (gc.auto, gc.autoPackLimit) and either does the work or exits quickly.
+/// If git isn't installed, no worries - we skip it.
 ///
 /// [#4403]: https://github.com/rust-lang/cargo/issues/4403
-fn maybe_gc_repo(repo: &mut git2::Repository, gctx: &GlobalContext) -> CargoResult<()> {
-    // Here we arbitrarily declare that if you have more than 100 files in your
-    // `pack` folder that we need to do a gc.
-    let entries = match repo.path().join("objects/pack").read_dir() {
-        Ok(e) => e.count(),
-        Err(_) => {
-            debug!("skipping gc as pack dir appears gone");
-            return Ok(());
-        }
-    };
-    let max = gctx
-        .get_env("__CARGO_PACKFILE_LIMIT")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(100);
-    if entries < max {
-        debug!("skipping gc as there's only {} pack files", entries);
-        return Ok(());
-    }
-
-    // First up, try a literal `git gc` by shelling out to git. This is pretty
-    // likely to fail though as we may not have `git` installed. Note that
-    // libgit2 doesn't currently implement the gc operation, so there's no
-    // equivalent there.
+fn maybe_gc_repo(repo: &mut git2::Repository, _gctx: &GlobalContext) -> CargoResult<()> {
+    // Let git decide whether gc is actually needed based on its config.
     match Command::new("git")
         .arg("gc")
+        .arg("--auto")
         .current_dir(repo.path())
         .output()
     {
         Ok(out) => {
             debug!(
-                "git-gc status: {}\n\nstdout ---\n{}\nstderr ---\n{}",
+                "git-gc --auto status: {}\n\nstdout ---\n{}\nstderr ---\n{}",
                 out.status,
                 String::from_utf8_lossy(&out.stdout),
                 String::from_utf8_lossy(&out.stderr)
@@ -1354,7 +1330,7 @@ fn maybe_gc_repo(repo: &mut git2::Repository, gctx: &GlobalContext) -> CargoResu
                 return Ok(());
             }
         }
-        Err(e) => debug!("git-gc failed to spawn: {}", e),
+        Err(e) => debug!("git-gc --auto failed to spawn: {}", e),
     }
 
     // Alright all else failed, let's start over.
