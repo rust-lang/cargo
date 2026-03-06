@@ -1,7 +1,7 @@
 <svg width="827px" height="776px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -26,7 +26,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan class="bold"> </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS] [COMMAND]</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="bold">       </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-bright-cyan bold">-Zscript</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;MANIFEST_RS&gt; [ARGS]...</tspan>
+    <tspan x="10px" y="82px"><tspan class="bold">       </tspan><tspan class="fg-bright-cyan bold">cargo</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;MANIFEST_RS&gt; [ARGS]...</tspan>
 </tspan>
     <tspan x="10px" y="100px">
 </tspan>

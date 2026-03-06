@@ -22,6 +22,9 @@ Unlike {{man "cargo-test" 1}} and {{man "cargo-bench" 1}}, `cargo run` sets the
 working directory of the binary executed to the current working directory, same 
 as if it was executed in the shell directly.
 
+When running scripts, the process' [arg0](../../std/env/fn.args.html) will be set to the
+script's path on a best-effort basis.
+
 ## OPTIONS
 
 {{> section-options-package }}
