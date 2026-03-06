@@ -5,7 +5,7 @@ use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Shell, SourceId, Summary};
 use crate::sources::source::QueryKind;
-use crate::sources::{IndexSummary, PathSource};
+use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
@@ -409,6 +409,15 @@ pub(super) fn activation_error(
             let root_package =
                 inspect_root_package(&mut msg, Path::new(&path), global_context, sid);
 
+            let requested = dep.package_name().as_str();
+            let recursive_packages = inspect_recursive_packages(
+                &mut msg,
+                Path::new(&path),
+                global_context,
+                sid,
+                requested,
+            );
+
             if let Some(name) = root_package {
                 let _ = writeln!(
                     &mut msg,
@@ -428,6 +437,27 @@ pub(super) fn activation_error(
                     "help: package `{}` exists at `{}`",
                     name.name, name.name
                 );
+            } else if let Some(name) = recursive_packages {
+                let _ = writeln!(
+                    &mut msg,
+                    "no matching package named `{}` found at `{}`",
+                    dep.package_name(),
+                    path.display()
+                );
+
+                let _ = writeln!(
+                    &mut msg,
+                    "note: required by {}",
+                    describe_path_in_context(resolver_ctx, &parent.package_id()),
+                );
+
+                let _ = writeln!(
+                    &mut msg,
+                    "help: package `{}` exists at `{}`",
+                    name.name, name.name
+                );
+            } else {
+                let _ = writeln!(&mut msg, "no root or recursive package name is found");
             }
         } else {
             let _ = writeln!(
@@ -644,4 +674,51 @@ fn inspect_root_package(
     };
 
     return Some(package_info);
+}
+
+#[derive(Debug)]
+struct RecursivePackageInfo {
+    name: String,
+    _path: PathBuf,
+}
+
+fn inspect_recursive_packages(
+    msg: &mut String,
+    path: &Path,
+    gctx: &GlobalContext,
+    sid: SourceId,
+    requested: &str,
+) -> Option<RecursivePackageInfo> {
+    let mut rps = RecursivePathSource::new(path, sid, gctx);
+
+    if let Err(e) = rps.load() {
+        msg.push_str(&e.to_string());
+        msg.push('\n');
+    }
+
+    let pkgs = rps
+        .read_packages()
+        .expect("failed to read the packages recursively");
+
+    for pkg in pkgs {
+        if pkg.name() == requested {
+            let manifest = pkg.manifest_path();
+            let pkg_dir = manifest
+                .parent()
+                .expect("failed to take the parent path")
+                .to_path_buf();
+
+            let package_info = RecursivePackageInfo {
+                name: pkg.name().to_string(),
+                _path: pkg_dir,
+            };
+
+            return Some(package_info);
+            // } else {
+            //     let list = rps.list_files(&pkg).unwrap();
+            //     println!("{:?}", list);
+        }
+    }
+
+    return None;
 }
