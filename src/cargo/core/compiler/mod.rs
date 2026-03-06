@@ -802,6 +802,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
             );
         }
         base.arg("-Z").arg("crate-attr=feature(frontmatter)");
+        base.arg("-Z").arg("crate-attr=allow(unused_features)");
     }
 
     base.inherit_jobserver(&build_runner.jobserver);
@@ -857,6 +858,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
             );
         }
         rustdoc.arg("-Z").arg("crate-attr=feature(frontmatter)");
+        rustdoc.arg("-Z").arg("crate-attr=allow(unused_features)");
     }
     rustdoc.inherit_jobserver(&build_runner.jobserver);
     let crate_name = unit.target.crate_name();
