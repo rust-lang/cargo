@@ -156,6 +156,8 @@ where
 
     let mut requested_units: HashSet<UnitIndex> = HashSet::new();
 
+    let mut cpu_usage: Vec<(f64, f64)> = Vec::new();
+
     for msg in log {
         match msg {
             LogMessage::BuildStarted {
@@ -327,6 +329,9 @@ where
                     tracing::warn!("unit {index} ended, but it has no start recorded");
                 }
             },
+            LogMessage::CpuUsage { elapsed, usage } => {
+                cpu_usage.push((elapsed, usage));
+            }
             _ => {} // skip non-timing logs
         }
     }
@@ -382,6 +387,7 @@ where
     ctx.unit_data = unit_data;
     ctx.concurrency = compute_concurrency(&ctx.unit_data);
     ctx.requested_targets = platform_targets.into_iter().sorted_unstable().collect();
+    ctx.cpu_usage = std::borrow::Cow::Owned(cpu_usage);
 
     Ok(ctx)
 }
