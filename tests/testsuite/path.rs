@@ -1919,3 +1919,48 @@ foo v1.0.0 ([ROOT]/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn invalid_package_name_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `bar` found at `definitely_not_bar`
+[NOTE] required by package `foo v0.5.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `bar`
+location searched: [ROOT]/foo/crates/bar
+required by package `foo v0.5.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
