@@ -221,6 +221,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     for (pkg, _, src) in packaged {
         let filename = pkg.package_id().tarball_name();
         let dst = artifact_dir.open_rw_exclusive_create(filename, ws.gctx(), "uplifted package")?;
+        dst.file().set_len(0)?;
         src.file().seek(SeekFrom::Start(0))?;
         std::io::copy(&mut src.file(), &mut dst.file())?;
         result.push(dst);
@@ -1157,6 +1158,7 @@ impl<'a> TmpRegistry<'a> {
                 self.gctx,
                 "temporary package registry",
             )?;
+            tar_copy.file().set_len(0)?;
             tar.file().seek(SeekFrom::Start(0))?;
             std::io::copy(&mut tar.file(), &mut tar_copy)?;
             tar_copy.flush()?;
@@ -1229,6 +1231,7 @@ impl<'a> TmpRegistry<'a> {
             self.gctx,
             "temporary package registry",
         )?;
+        dst.file().set_len(0)?;
         dst.write_all(index_line.as_bytes())?;
         Ok(())
     }
