@@ -452,6 +452,9 @@ Aliases are recursive:
 rr = "run --release"
 recursive_example = "rr --example recursions"
 ```
+  
+Aliases can also be defined via environment variables. Each such environment variable is named `CARGO_ALIAS_<name>`, i.e. `CARGO_ALIAS_`, followed by the alias name in uppercase. For example, setting CARGO_ALIAS_BR="build --release" allows running `cargo br` as an alias for running `cargo build --release` without making any changes to a Cargo `config.toml` file.
+
 
 ### `[build]`
 
