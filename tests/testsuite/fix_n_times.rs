@@ -327,21 +327,11 @@ fn fix_overlapping_max() {
         |_execs| {},
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] error applying suggestions to `src/lib.rs`
-
-The full error message was:
-
-> cannot replace slice of data that was already replaced
-
-This likely indicates a bug in either rustc or cargo itself,
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
-
+[ERROR] error applying suggestions
+ --> src/lib.rs
+  = cause: cannot replace slice of data that was already replaced
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [FIXED] src/lib.rs (4 fixes)
 rustc fix shim comment 5
 rustc fix shim comment 6
@@ -362,25 +352,12 @@ fn fix_verification_failed() {
         |_execs| {},
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
-
-after fixes were automatically applied the compiler reported errors within these files:
-
-  * src/lib.rs
-
-This likely indicates a bug in either rustc or cargo itself,
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
-
-The following errors were reported:
-rustc fix shim error count=2
-Original diagnostics will follow.
-
+[ERROR] errors present after applying fixes to crate `foo`
+ --> src/lib.rs
+  = cause: rustc fix shim error count=2
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 [WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -402,25 +379,12 @@ fn fix_verification_failed_clippy() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
-
-after fixes were automatically applied the compiler reported errors within these files:
-
-  * src/lib.rs
-
-This likely indicates a bug in either rustc or cargo itself,
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust-clippy/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
-
-The following errors were reported:
-rustc fix shim error count=2
-Original diagnostics will follow.
-
+[ERROR] errors present after applying fixes to crate `foo`
+ --> src/lib.rs
+  = cause: rustc fix shim error count=2
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust-clippy/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 [WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -493,25 +457,12 @@ fn broken_code_one_suggestion() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
-
-after fixes were automatically applied the compiler reported errors within these files:
-
-  * src/lib.rs
-
-This likely indicates a bug in either rustc or cargo itself,
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
-
-The following errors were reported:
-rustc fix shim error count=2
-Original diagnostics will follow.
-
+[ERROR] errors present after applying fixes to crate `foo`
+ --> src/lib.rs
+  = cause: rustc fix shim error count=2
+[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 rustc fix shim error count=2
 [WARNING] `foo` (lib) generated 1 warning
