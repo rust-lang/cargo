@@ -699,7 +699,7 @@ See '<bright-cyan,bold>cargo help</> <cyan><<command>></>' for more information 
             .action(ArgAction::SetTrue)
             .global(true)
             .hide(true))
-        .arg(multi_opt("config", "KEY=VALUE|PATH", "Override a configuration value").global(true))
+        .arg(multi_opt("config", "KEY=VALUE|PATH", "Override a configuration value").value_hint(clap::ValueHint::FilePath).global(true))
         // Better suggestion for the unsupported lowercase unstable feature flag.
         .arg( Arg::new("unsupported-lowercase-unstable-feature-flag")
             .help("")
