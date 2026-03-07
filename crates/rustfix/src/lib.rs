@@ -232,16 +232,51 @@ impl CodeFix {
     }
 
     /// Applies a suggestion to the code.
+    ///
+    /// If a solution within the suggestion conflicts with another solution
+    /// **from the same suggestion** that was already applied, it is silently
+    /// skipped. This handles diagnostics that carry multiple exclusive
+    /// `MachineApplicable` children for the same span (see rust-lang/cargo#13030).
+    ///
+    /// Conflicts with solutions from *other* suggestions are still reported
+    /// as errors so that callers can decide how to handle them.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+        let mut applied_any = false;
         for solution in &suggestion.solutions {
+            let mut solution_ok = true;
             for r in &solution.replacements {
-                self.data
+                match self
+                    .data
                     .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
-                    .inspect_err(|_| self.data.restore())?;
+                {
+                    Ok(()) => {}
+                    Err(e @ Error::AlreadyReplaced { .. }) => {
+                        self.data.restore();
+                        if applied_any {
+                            // Conflict with a solution we already committed
+                            // within this same suggestion — skip this one.
+                            solution_ok = false;
+                            break;
+                        } else {
+                            // Conflict with a different suggestion — propagate.
+                            return Err(e);
+                        }
+                    }
+                    Err(e) => {
+                        self.data.restore();
+                        return Err(e);
+                    }
+                }
+            }
+            if solution_ok {
+                // Commit this solution so subsequent solutions see it as committed.
+                self.data.commit();
+                applied_any = true;
             }
         }
-        self.data.commit();
-        self.modified = true;
+        if applied_any {
+            self.modified = true;
+        }
         Ok(())
     }
 
@@ -281,12 +316,63 @@ impl CodeFix {
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        fix.apply(suggestion).or_else(|err| match err {
-            Error::AlreadyReplaced {
-                is_identical: true, ..
-            } => Ok(()),
-            _ => Err(err),
-        })?;
+        match fix.apply(suggestion) {
+            Ok(()) => {}
+            // Silently skip overlapping suggestions.
+            // Identical ones are de-dupes (e.g. rust-lang/rust#51211).
+            // Non-identical ones are conflicting alternatives for the same
+            // span; we keep the first applied and discard the rest.
+            // See rust-lang/cargo#13030.
+            Err(Error::AlreadyReplaced { .. }) => continue,
+            Err(e) => return Err(e),
+        }
     }
     fix.finish()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_non_identical_suggestions_are_skipped() {
+        let code = "let x = 0;\n";
+        let snippet = Snippet {
+            file_name: "test.rs".into(),
+            line_range: LineRange {
+                start: LinePosition { line: 1, column: 5 },
+                end: LinePosition { line: 1, column: 6 },
+            },
+            range: 4..5,
+        };
+        // Two suggestions targeting the same span with different replacements.
+        let suggestions = vec![
+            Suggestion {
+                message: "first suggestion".into(),
+                snippets: vec![snippet.clone()],
+                solutions: vec![Solution {
+                    message: "try this".into(),
+                    replacements: vec![Replacement {
+                        snippet: snippet.clone(),
+                        replacement: "y".into(),
+                    }],
+                }],
+            },
+            Suggestion {
+                message: "second suggestion".into(),
+                snippets: vec![snippet.clone()],
+                solutions: vec![Solution {
+                    message: "or this".into(),
+                    replacements: vec![Replacement {
+                        snippet: snippet.clone(),
+                        replacement: "z".into(),
+                    }],
+                }],
+            },
+        ];
+        // Should NOT panic — one suggestion applies, the other is skipped.
+        let result = apply_suggestions(code, &suggestions).unwrap();
+        // The last suggestion in the vec is applied first (iterated in reverse).
+        assert_eq!(result, "let z = 0;\n");
+    }
 }

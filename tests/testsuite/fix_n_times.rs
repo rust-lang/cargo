@@ -45,6 +45,8 @@ enum Step {
     Error = b'e',
     /// Emits one suggested fix and an error.
     OneFixError = b'f',
+    /// Emits one diagnostic with two exclusive, overlapping suggestions.
+    TwoFixExclusive = b'x',
 }
 
 /// Verifies `cargo fix` behavior based on the given sequence of behaviors for
@@ -138,6 +140,9 @@ fn main() {
             output_suggestion(successful_count + 1);
             output_message("error", successful_count + 2);
             std::process::exit(1);
+        }
+        b'x' => {
+            output_exclusive_suggestions(successful_count + 1);
         }
         _ => panic!("unexpected sequence"),
     }
@@ -252,6 +257,112 @@ fn output_message(level: &str, count: usize) {
     "children": [],
     "rendered": "rustc fix shim {level} count={count}"
 }}"#,
+    )
+    .replace("\n", "");
+    eprintln!("{json}");
+}
+
+fn output_exclusive_suggestions(count: usize) {
+    let json = format!(
+        r#"{{
+            "$message_type": "diagnostic",
+            "message": "rustc fix shim exclusive comment {count}",
+            "code": null,
+            "level": "warning",
+            "spans":
+            [
+                {{
+                    "file_name": "src/lib.rs",
+                    "byte_start": 13,
+                    "byte_end": 14,
+                    "line_start": 1,
+                    "line_end": 1,
+                    "column_start": 14,
+                    "column_end": 15,
+                    "is_primary": true,
+                    "text":
+                    [
+                        {{
+                            "text": "// fix-count 0",
+                            "highlight_start": 14,
+                            "highlight_end": 15
+                        }}
+                    ],
+                    "label": "increase this number",
+                    "suggested_replacement": null,
+                    "suggestion_applicability": null,
+                    "expansion": null
+                }}
+            ],
+            "children":
+            [
+                {{
+                    "message": "try this",
+                    "code": null,
+                    "level": "help",
+                    "spans":
+                    [
+                        {{
+                            "file_name": "src/lib.rs",
+                            "byte_start": 13,
+                            "byte_end": 14,
+                            "line_start": 1,
+                            "line_end": 1,
+                            "column_start": 14,
+                            "column_end": 15,
+                            "is_primary": true,
+                            "text":
+                            [
+                                {{
+                                    "text": "// fix-count 0",
+                                    "highlight_start": 14,
+                                    "highlight_end": 15
+                                }}
+                            ],
+                            "label": null,
+                            "suggested_replacement": "{count}a",
+                            "suggestion_applicability": "MachineApplicable",
+                            "expansion": null
+                        }}
+                    ],
+                    "children": [],
+                    "rendered": null
+                }},
+                {{
+                    "message": "or try this",
+                    "code": null,
+                    "level": "help",
+                    "spans":
+                    [
+                        {{
+                            "file_name": "src/lib.rs",
+                            "byte_start": 13,
+                            "byte_end": 14,
+                            "line_start": 1,
+                            "line_end": 1,
+                            "column_start": 14,
+                            "column_end": 15,
+                            "is_primary": true,
+                            "text":
+                            [
+                                {{
+                                    "text": "// fix-count 0",
+                                    "highlight_start": 14,
+                                    "highlight_end": 15
+                                }}
+                            ],
+                            "label": null,
+                            "suggested_replacement": "{count}b",
+                            "suggestion_applicability": "MachineApplicable",
+                            "expansion": null
+                        }}
+                    ],
+                    "children": [],
+                    "rendered": null
+                }}
+            ],
+            "rendered": "rustc fix shim exclusive comment {count}"
+        }}"#,
     )
     .replace("\n", "");
     eprintln!("{json}");
@@ -470,5 +581,23 @@ rustc fix shim error count=2
 
 "#]],
         "// fix-count 1",
+    );
+}
+
+#[cargo_test]
+fn fix_exclusive_suggestions() {
+    // One diagnostic with two exclusive suggestions for the same span.
+    // rustfix should apply the first one it iterates over (usually the last in the array)
+    // and gracefully skip the other without panicking.
+    expect_fix_runs_rustc_n_times(
+        &[Step::TwoFixExclusive, Step::SuccessNoOutput],
+        |_execs| {},
+        str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
+        "// fix-count 1a",
     );
 }
