@@ -232,16 +232,51 @@ impl CodeFix {
     }
 
     /// Applies a suggestion to the code.
+    ///
+    /// If a solution within the suggestion conflicts with another solution
+    /// **from the same suggestion** that was already applied, it is silently
+    /// skipped. This handles diagnostics that carry multiple exclusive
+    /// `MachineApplicable` children for the same span (see rust-lang/cargo#13030).
+    ///
+    /// Conflicts with solutions from *other* suggestions are still reported
+    /// as errors so that callers can decide how to handle them.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+        let mut applied_any = false;
         for solution in &suggestion.solutions {
+            let mut solution_ok = true;
             for r in &solution.replacements {
-                self.data
+                match self
+                    .data
                     .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
-                    .inspect_err(|_| self.data.restore())?;
+                {
+                    Ok(()) => {}
+                    Err(e @ Error::AlreadyReplaced { .. }) => {
+                        self.data.restore();
+                        if applied_any {
+                            // Conflict with a solution we already committed
+                            // within this same suggestion — skip this one.
+                            solution_ok = false;
+                            break;
+                        } else {
+                            // Conflict with a different suggestion — propagate.
+                            return Err(e);
+                        }
+                    }
+                    Err(e) => {
+                        self.data.restore();
+                        return Err(e);
+                    }
+                }
+            }
+            if solution_ok {
+                // Commit this solution so subsequent solutions see it as committed.
+                self.data.commit();
+                applied_any = true;
             }
         }
-        self.data.commit();
-        self.modified = true;
+        if applied_any {
+            self.modified = true;
+        }
         Ok(())
     }
 
