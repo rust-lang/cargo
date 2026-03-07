@@ -679,6 +679,7 @@ impl<'gctx> DrainState<'gctx> {
                             build_runner,
                             id,
                             &build_runner.bcx.rustc().workspace_wrapper,
+                            warning_handling,
                         );
                         self.active.remove(&id).unwrap()
                     }
@@ -1053,6 +1054,7 @@ impl<'gctx> DrainState<'gctx> {
         runner: &mut BuildRunner<'_, '_>,
         id: JobId,
         rustc_workspace_wrapper: &Option<PathBuf>,
+        warning_handling: WarningHandling,
     ) {
         let gctx = runner.bcx.gctx;
         let count = match self.warning_count.get(&id) {
@@ -1131,7 +1133,11 @@ impl<'gctx> DrainState<'gctx> {
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
-        let _ = gctx.shell().warn(message);
+        let _ = if warning_handling == WarningHandling::Deny && 0 < count.lints {
+            gctx.shell().error(message)
+        } else {
+            gctx.shell().warn(message)
+        };
     }
 
     fn finish(
