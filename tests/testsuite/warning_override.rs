@@ -50,7 +50,7 @@ fn rustc_caching_allow_first() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
+[ERROR] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -77,7 +77,7 @@ fn rustc_caching_deny_first() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
+[ERROR] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -114,7 +114,7 @@ fn config() {
   |
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
+[ERROR] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -194,7 +194,7 @@ fn clippy() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused import: `std::io`
 ...
-[WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
+[ERROR] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
