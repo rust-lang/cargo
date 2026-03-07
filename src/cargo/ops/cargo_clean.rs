@@ -7,14 +7,16 @@ use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{GlobalContext, Progress, ProgressStyle};
+use annotate_snippets::Level;
 use anyhow::bail;
 use cargo_util::paths;
 use indexmap::{IndexMap, IndexSet};
 
 use std::ffi::OsString;
-use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::{fs, io};
 
 pub struct CleanOptions<'gctx> {
     pub gctx: &'gctx GlobalContext,
@@ -30,6 +32,8 @@ pub struct CleanOptions<'gctx> {
     pub doc: bool,
     /// If set, doesn't delete anything.
     pub dry_run: bool,
+    /// true if target-dir was was explicitly specified via --target-dir
+    pub explicit_target_dir_arg: bool,
 }
 
 pub struct CleanContext<'gctx> {
@@ -48,6 +52,51 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let gctx = opts.gctx;
     let mut clean_ctx = CleanContext::new(gctx);
     clean_ctx.dry_run = opts.dry_run;
+
+    // do some validation on target_dir if it was specified
+    if opts.explicit_target_dir_arg || gctx.target_dir()?.is_some() {
+        let target_dir_path = target_dir.as_path_unlocked();
+
+        const CLEAN_ABORT_NOTE: &str =
+            "cleaning has been aborted to prevent accidental deletion of unrelated files";
+        // make sure target_dir is a directory so we don't delete files
+        if !target_dir_path.is_dir() {
+            let title = format!(
+                "cannot clean `{}`: not a directory",
+                target_dir_path.display()
+            );
+            let report = [Level::ERROR
+                .primary_title(title)
+                .element(Level::NOTE.message(CLEAN_ABORT_NOTE))];
+            gctx.shell().print_report(&report, false)?;
+            return Err(crate::AlreadyPrintedError::new(anyhow::anyhow!("")).into());
+        }
+
+        // check if the target directory has a valid CACHEDIR.TAG
+        if let Err(err) = validate_target_dir_tag(target_dir_path) {
+            if opts.explicit_target_dir_arg {
+                // if target_dir was passed explicitly via --target-dir, then hard error if validation fails
+                let title = format!("cannot clean `{}`: {err}", target_dir_path.display());
+                let report = [Level::ERROR
+                    .primary_title(title)
+                    .element(Level::NOTE.message(CLEAN_ABORT_NOTE))];
+                gctx.shell().print_report(&report, false)?;
+                return Err(crate::AlreadyPrintedError::new(anyhow::anyhow!("")).into());
+            } else {
+                // target_dir was set via env or build config
+                let title = format!(
+                    "`{}` does not appear to be a valid Cargo target directory: {err}",
+                    target_dir_path.display()
+                );
+                let note = "this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>";
+
+                let report = [Level::WARNING
+                    .primary_title(title)
+                    .element(Level::NOTE.message(note))];
+                gctx.shell().print_report(&report, false)?;
+            }
+        }
+    }
 
     if opts.doc {
         if !opts.spec.is_empty() {
@@ -102,6 +151,37 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     clean_ctx.display_summary()?;
+    Ok(())
+}
+
+fn validate_target_dir_tag(target_dir_path: &Path) -> CargoResult<()> {
+    const TAG_SIGNATURE: &[u8] = b"Signature: 8a477f597d28d172789f06886806bc55";
+
+    let tag_path = target_dir_path.join("CACHEDIR.TAG");
+
+    // per https://bford.info/cachedir the tag file must not be a symlink
+    if tag_path.is_symlink() {
+        bail!("expect `CACHEDIR.TAG` to be a regular file, got a symlink");
+    }
+
+    if !tag_path.is_file() {
+        bail!("missing or invalid `CACHEDIR.TAG` file");
+    }
+
+    let mut file = fs::File::open(&tag_path)
+        .map_err(|err| anyhow::anyhow!("failed to open `{}`: {}", tag_path.display(), err))?;
+
+    let mut buf = [0u8; TAG_SIGNATURE.len()];
+    match file.read_exact(&mut buf) {
+        Ok(()) if &buf[..] == TAG_SIGNATURE => {}
+        Err(e) if e.kind() != io::ErrorKind::UnexpectedEof => {
+            bail!("failed to read `{}`: {e}", tag_path.display());
+        }
+        _ => {
+            bail!("invalid signature in `CACHEDIR.TAG` file");
+        }
+    }
+
     Ok(())
 }
 

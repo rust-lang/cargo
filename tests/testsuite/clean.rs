@@ -1071,7 +1071,13 @@ fn explicit_target_dir_tag_not_present() {
 
     p.cargo("clean --target-dir bar")
         .with_stdout_data("")
-        .with_status(0)
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: missing or invalid `CACHEDIR.TAG` file
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
         .run();
 }
 
@@ -1085,7 +1091,13 @@ fn explicit_target_dir_tag_invalid_signature() {
 
     p.cargo("clean --target-dir bar")
         .with_stdout_data("")
-        .with_status(0)
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: invalid signature in `CACHEDIR.TAG` file
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
         .run();
 }
 
@@ -1103,7 +1115,13 @@ fn explicit_target_dir_tag_symlink() {
 
     p.cargo("clean --target-dir bar")
         .with_stdout_data("")
-        .with_status(0)
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: expect `CACHEDIR.TAG` to be a regular file, got a symlink
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
         .run();
 }
 
@@ -1131,13 +1149,15 @@ fn explicit_target_dir_is_file() {
 
     p.cargo("clean --target-dir bar")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
 
 #[cargo_test]
@@ -1150,7 +1170,15 @@ fn env_target_dir_tag_not_present() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("clean").env("CARGO_TARGET_DIR", "bar").run();
+    p.cargo("clean")
+        .env("CARGO_TARGET_DIR", "bar")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: missing or invalid `CACHEDIR.TAG` file
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1161,7 +1189,15 @@ fn env_target_dir_tag_invalid_signature() {
         .file("bar/CACHEDIR.TAG", "Signature: 1234")
         .build();
 
-    p.cargo("clean").env("CARGO_TARGET_DIR", "bar").run();
+    p.cargo("clean")
+        .env("CARGO_TARGET_DIR", "bar")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: invalid signature in `CACHEDIR.TAG` file
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1176,7 +1212,15 @@ fn env_target_dir_tag_symlink() {
         .symlink("src/CACHEDIR.TAG", "bar/CACHEDIR.TAG")
         .build();
 
-    p.cargo("clean").env("CARGO_TARGET_DIR", "bar").run();
+    p.cargo("clean")
+        .env("CARGO_TARGET_DIR", "bar")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: expect `CACHEDIR.TAG` to be a regular file, got a symlink
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1204,13 +1248,15 @@ fn env_target_dir_is_file() {
     p.cargo("clean")
         .env("CARGO_TARGET_DIR", "bar")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
 
 #[cargo_test]
@@ -1228,7 +1274,14 @@ fn config_target_dir_tag_not_present() {
         )
         .build();
 
-    p.cargo("clean").run();
+    p.cargo("clean")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: missing or invalid `CACHEDIR.TAG` file
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1244,7 +1297,14 @@ fn config_target_dir_tag_invalid_signature() {
         )
         .build();
 
-    p.cargo("clean").run();
+    p.cargo("clean")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: invalid signature in `CACHEDIR.TAG` file
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1264,7 +1324,14 @@ fn config_target_dir_tag_symlink() {
         )
         .build();
 
-    p.cargo("clean").run();
+    p.cargo("clean")
+        .with_stderr_data(str![[r#"
+[WARNING] `[ROOT]/foo/bar` does not appear to be a valid Cargo target directory: expect `CACHEDIR.TAG` to be a regular file, got a symlink
+  |
+  = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/9192>
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1301,11 +1368,13 @@ fn config_target_dir_is_file() {
 
     p.cargo("clean")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
