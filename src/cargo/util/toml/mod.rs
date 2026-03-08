@@ -2595,6 +2595,15 @@ pub fn validate_profile(
         }
     }
 
+    if let Some(frame_pointers) = &root.frame_pointers {
+        if frame_pointers != "force-on" && frame_pointers != "force-off" {
+            bail!(
+                "`frame-pointers` setting of `{frame_pointers}` is not a valid setting, \
+                     must be `\"force-on\"` or `\"force-off\"`.",
+            );
+        }
+    }
+
     Ok(())
 }
 
