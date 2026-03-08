@@ -581,6 +581,15 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     if let Some(hint_mostly_unused) = toml.hint_mostly_unused {
         profile.hint_mostly_unused = Some(hint_mostly_unused);
     }
+    if let Some(ref frame_pointers) = toml.frame_pointers {
+        profile.frame_pointers = match frame_pointers.as_str() {
+            "force-on" => Some(FramePointers::ForceOn),
+            "force-off" => Some(FramePointers::ForceOff),
+            "default" => None,
+            // This should be validated in TomlProfile::validate
+            _ => panic!("invalid frame-pointers value `{}`", frame_pointers),
+        };
+    }
     profile.strip = match toml.strip {
         Some(StringOrBool::Bool(true)) => Strip::Resolved(StripInner::Named("symbols".into())),
         Some(StringOrBool::Bool(false)) => Strip::Resolved(StripInner::None),
@@ -632,6 +641,8 @@ pub struct Profile {
     pub trim_paths: Option<TomlTrimPaths>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint_mostly_unused: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_pointers: Option<FramePointers>,
 }
 
 impl Default for Profile {
@@ -654,6 +665,7 @@ impl Default for Profile {
             rustflags: vec![],
             trim_paths: None,
             hint_mostly_unused: None,
+            frame_pointers: None,
         }
     }
 }
@@ -684,6 +696,7 @@ compact_debug! {
                 rustflags
                 trim_paths
                 hint_mostly_unused
+                frame_pointers
             )]
         }
     }
@@ -750,7 +763,12 @@ impl Profile {
             self.debug_assertions,
             self.overflow_checks,
             self.rpath,
-            (self.incremental, self.panic, self.strip),
+            (
+                self.incremental,
+                self.panic,
+                self.strip,
+                self.frame_pointers,
+            ),
             &self.rustflags,
             &self.trim_paths,
         )
@@ -969,6 +987,26 @@ impl PartialOrd for Strip {
 impl Ord for Strip {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.into_inner().cmp(&other.into_inner())
+    }
+}
+
+/// The setting for controlling frame pointers in generated code.
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum FramePointers {
+    ForceOn,
+    ForceOff,
+}
+
+impl fmt::Display for FramePointers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            FramePointers::ForceOn => "force-on",
+            FramePointers::ForceOff => "force-off",
+        }
+        .fmt(f)
     }
 }
 
