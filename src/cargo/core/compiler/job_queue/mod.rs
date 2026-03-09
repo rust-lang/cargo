@@ -675,13 +675,15 @@ impl<'gctx> DrainState<'gctx> {
                     Artifact::All => {
                         trace!("end: {:?}", id);
                         self.finished += 1;
+                        let unit = self.active.remove(&id).unwrap();
                         self.report_warning_count(
                             build_runner,
                             id,
+                            &unit,
                             &build_runner.bcx.rustc().workspace_wrapper,
                             warning_handling,
                         );
-                        self.active.remove(&id).unwrap()
+                        unit
                     }
                     // ... otherwise if it hasn't finished we leave it
                     // in there as we'll get another `Finish` later on.
@@ -1053,6 +1055,7 @@ impl<'gctx> DrainState<'gctx> {
         &mut self,
         runner: &mut BuildRunner<'_, '_>,
         id: JobId,
+        unit: &Unit,
         rustc_workspace_wrapper: &Option<PathBuf>,
         warning_handling: WarningHandling,
     ) {
@@ -1065,7 +1068,6 @@ impl<'gctx> DrainState<'gctx> {
             None | Some(_) => return,
         };
         runner.compilation.lint_warning_count += count.lints;
-        let unit = &self.active[&id];
         let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
         message.push_str(" generated ");
         match count.total {
