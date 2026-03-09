@@ -211,7 +211,7 @@ struct DrainState<'gctx> {
 }
 
 /// Count of warnings, used to print a summary after the job succeeds
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct WarningCount {
     /// total number of warnings
     pub total: usize,
@@ -248,7 +248,7 @@ impl WarningCount {
 
 /// Used to keep track of how many fixable warnings there are
 /// and if fixable warnings are allowed
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub enum FixableWarnings {
     NotAllowed,
     #[default]
@@ -676,13 +676,23 @@ impl<'gctx> DrainState<'gctx> {
                         trace!("end: {:?}", id);
                         self.finished += 1;
                         let unit = self.active.remove(&id).unwrap();
-                        self.report_warning_count(
-                            build_runner,
-                            id,
-                            &unit,
-                            &build_runner.bcx.rustc().workspace_wrapper,
-                            warning_handling,
-                        );
+                        // An error could add an entry for a `Unit`
+                        // with 0 warnings but having fixable
+                        // warnings be disallowed
+                        let count = self
+                            .warning_count
+                            .get(&id)
+                            .filter(|count| 0 < count.total)
+                            .cloned();
+                        if let Some(count) = count {
+                            self.report_warning_count(
+                                build_runner,
+                                &unit,
+                                &count,
+                                &build_runner.bcx.rustc().workspace_wrapper,
+                                warning_handling,
+                            );
+                        }
                         unit
                     }
                     // ... otherwise if it hasn't finished we leave it
@@ -1054,19 +1064,12 @@ impl<'gctx> DrainState<'gctx> {
     fn report_warning_count(
         &mut self,
         runner: &mut BuildRunner<'_, '_>,
-        id: JobId,
         unit: &Unit,
+        count: &WarningCount,
         rustc_workspace_wrapper: &Option<PathBuf>,
         warning_handling: WarningHandling,
     ) {
         let gctx = runner.bcx.gctx;
-        let count = match self.warning_count.get(&id) {
-            // An error could add an entry for a `Unit`
-            // with 0 warnings but having fixable
-            // warnings be disallowed
-            Some(count) if count.total > 0 => count,
-            None | Some(_) => return,
-        };
         runner.compilation.lint_warning_count += count.lints;
         let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
         message.push_str(" generated ");
