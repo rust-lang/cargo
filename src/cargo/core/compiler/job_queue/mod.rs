@@ -668,7 +668,7 @@ impl<'gctx> DrainState<'gctx> {
             Message::FixDiagnostic(msg) => {
                 self.print.print(&msg)?;
             }
-            Message::Finish(id, artifact, result) => {
+            Message::Finish(id, artifact, mut result) => {
                 let unit = match artifact {
                     // If `id` has completely finished we remove it
                     // from the `active` map ...
@@ -692,6 +692,14 @@ impl<'gctx> DrainState<'gctx> {
                                 &build_runner.bcx.rustc().workspace_wrapper,
                                 warning_handling,
                             );
+                            let stop_on_warnings = warning_handling == WarningHandling::Deny
+                                && 0 < count.lints
+                                && !build_runner.bcx.build_config.keep_going;
+                            if stop_on_warnings {
+                                result = Err(anyhow::format_err!(
+                                    "warnings are denied by `build.warnings` configuration"
+                                ))
+                            }
                         }
                         unit
                     }

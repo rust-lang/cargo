@@ -51,7 +51,6 @@ fn rustc_caching_allow_first() {
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -78,7 +77,6 @@ fn rustc_caching_deny_first() {
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -115,7 +113,6 @@ fn config() {
   = [NOTE] `#[warn(unused_variables)]` [..]on by default
 
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -195,7 +192,6 @@ fn clippy() {
 [WARNING] unused import: `std::io`
 ...
 [ERROR] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -318,10 +314,6 @@ fn keep_going() {
 [WARNING] unused variable: `x`
 ...
 [ERROR] `foo` (build script) generated 1 warning
-[WARNING] unused variable: `y`
-...
-[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -337,7 +329,7 @@ fn keep_going() {
 [WARNING] unused variable: `x`
 ...
 [ERROR] `foo` (build script) generated 1 warning
-[WARNING] unused variable: `y`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 ...
 [ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
