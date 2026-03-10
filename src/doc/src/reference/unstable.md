@@ -1859,7 +1859,7 @@ in the future.
 Controls how Cargo handles warnings. Allowed values are:
 * `warn`: warnings are emitted as warnings (default).
 * `allow`: warnings are hidden.
-* `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
+* `deny`: if warnings are emitted, an error will be raised at the end of the current crate and the process. Use `--keep-going` to see all warnings.
 
 ## feature unification
 
