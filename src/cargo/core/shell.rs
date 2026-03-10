@@ -646,8 +646,14 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
         && std::env::var("TERM_FEATURES")
             .ok()
             .is_some_and(|v| term_features_has_progress(&v));
+    // Ptyxis added OSC 9;4 support in 48.0.
+    // See https://gitlab.gnome.org/chergert/ptyxis/-/issues/305
+    let ptyxis = std::env::var("PTYXIS_VERSION")
+        .ok()
+        .and_then(|version| version.split(".").next()?.parse::<i32>().ok())
+        .is_some_and(|major_version| major_version >= 48);
 
-    (windows_terminal || conemu || wezterm || ghostty || iterm) && stream.is_terminal()
+    (windows_terminal || conemu || wezterm || ghostty || iterm || ptyxis) && stream.is_terminal()
 }
 
 // For iTerm, the TERM_FEATURES value "P" indicates OSC 9;4 support.
