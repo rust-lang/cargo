@@ -798,7 +798,7 @@ pub fn exclude_from_backups_and_indexing(p: impl AsRef<Path>) {
 /// * A dedicated resource property excluding from Time Machine backups on macOS
 /// * CACHEDIR.TAG files supported by various tools in a platform-independent way
 fn exclude_from_backups(path: &Path) {
-    exclude_from_time_machine(path);
+    exclude_from_time_machine_and_cloud_sync(path);
     let file = path.join("CACHEDIR.TAG");
     if !file.exists() {
         let _ = std::fs::write(
@@ -808,7 +808,7 @@ fn exclude_from_backups(path: &Path) {
 # For information about cache directory tags see https://bford.info/cachedir/
 ",
         );
-        // Similarly to exclude_from_time_machine() we ignore errors here as it's an optional feature.
+        // Similarly to exclude_from_time_machine_and_cloud_sync() we ignore errors here as it's an optional feature.
     }
 }
 
@@ -843,19 +843,31 @@ fn exclude_from_content_indexing(path: &Path) {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn exclude_from_time_machine(_: &Path) {}
+fn exclude_from_time_machine_and_cloud_sync(_: &Path) {}
 
 #[cfg(target_os = "macos")]
-/// Marks files or directories as excluded from Time Machine on macOS
-fn exclude_from_time_machine(path: &Path) {
+/// Marks files or directories as excluded from Time Machine and iCloud Drive on macOS
+fn exclude_from_time_machine_and_cloud_sync(path: &Path) {
     use core_foundation::base::TCFType;
     use core_foundation::{number, string, url};
     use std::ptr;
 
-    // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
-    let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
-    let path = url::CFURL::from_path(path, false);
-    if let (Some(path), Ok(is_excluded_key)) = (path, is_excluded_key) {
+    let path = match url::CFURL::from_path(path, false) {
+        Some(url) => url,
+        None => return,
+    };
+
+    // For compatibility with old systems strings are used instead of global symbols
+    const KEY_NAMES: [&str; 2] = [
+        "NSURLIsExcludedFromBackupKey", // kCFURLIsExcludedFromBackupKey
+        "NSURLUbiquitousItemIsExcludedFromSyncKey", // kCFURLUbiquitousItemIsExcludedFromSyncKey
+    ];
+
+    for key_name in KEY_NAMES {
+        let is_excluded_key = match key_name.parse::<string::CFString>() {
+            Ok(key) => key,
+            Err(_) => continue,
+        };
         unsafe {
             url::CFURLSetResourcePropertyForKey(
                 path.as_concrete_TypeRef(),
