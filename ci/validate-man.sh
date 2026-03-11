@@ -5,8 +5,9 @@ set -e
 
 cargo_man="src/doc"
 mdman_man="crates/mdman/doc"
+man_out="src/etc/man"
 
-changes=$(git status --porcelain -- $cargo_man $mdman_man)
+changes=$(git status --porcelain -- $cargo_man $mdman_man $man_out)
 if [ -n "$changes" ]
 then
     echo "git directory must be clean before running this script."
@@ -15,7 +16,7 @@ fi
 
 cargo build-man
 
-changes=$(git status --porcelain -- $cargo_man $mdman_man)
+changes=$(git status --porcelain -- $cargo_man $mdman_man $man_out)
 if [ -n "$changes" ]
 then
     echo "Detected changes of man pages:"
