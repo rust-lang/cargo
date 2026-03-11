@@ -163,7 +163,7 @@ registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
     p.cargo("pkgid two-ver@0")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] specificationm `two-ver@0` is ambiguous
+[ERROR] specification `two-ver@0` is ambiguous
 [HELP] re-run this command with one of the following specifications
   two-ver@0.1.0
   two-ver@0.2.0
@@ -183,7 +183,7 @@ registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
     p.cargo("pkgid two-ver")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] specificationm `two-ver` is ambiguous
+[ERROR] specification `two-ver` is ambiguous
 [HELP] re-run this command with one of the following specifications
   two-ver@0.1.0
   two-ver@0.2.0
@@ -278,7 +278,7 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("pkgid xyz")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] specificationm `xyz` is ambiguous
+[ERROR] specification `xyz` is ambiguous
 [HELP] re-run this command with one of the following specifications
   git+[ROOTURL]/xyz?rev=[..]#0.5.0
   git+[ROOTURL]/xyz?rev=[..]#0.5.0

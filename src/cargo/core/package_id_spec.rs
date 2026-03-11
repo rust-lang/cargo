@@ -112,7 +112,7 @@ impl PackageIdSpecQuery for PackageIdSpec {
         return match ids.next() {
             Some(other) => {
                 let mut msg = format!(
-                    "specificationm `{self}` is ambiguous
+                    "specification `{self}` is ambiguous
 help: re-run this command with one of the following specifications",
                 );
                 let mut vec = vec![ret, other];

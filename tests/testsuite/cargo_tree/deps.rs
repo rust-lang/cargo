@@ -1631,7 +1631,7 @@ fn ambiguous_name() {
 [DOWNLOADED] dep v2.0.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[ERROR] specificationm `dep` is ambiguous
+[ERROR] specification `dep` is ambiguous
 [HELP] re-run this command with one of the following specifications
   dep@1.0.0
   dep@2.0.0

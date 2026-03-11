@@ -2139,7 +2139,7 @@ fn update_ambiguous() {
     p.cargo("update bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] specificationm `bar` is ambiguous
+[ERROR] specification `bar` is ambiguous
 [HELP] re-run this command with one of the following specifications
   bar@0.5.0
   bar@0.6.0
