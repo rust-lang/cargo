@@ -511,8 +511,9 @@ impl CheckoutGuard {
 ///   (`git@github.com:rust-lang/cargo.git` is not a valid WHATWG URL)
 ///
 /// To overcome these, this patch always tries [`Url::parse`] first to normalize
-/// the path. If it couldn't, append the relative path as the last resort and
-/// pray the remote git service supports non-normalized URLs.
+/// the path. If it couldn't, append the relative path and/or convert SCP-like URLs
+/// to ssh:// format as the last resorts and pray the remote git service supports
+/// non-normalized URLs.
 ///
 /// See also rust-lang/cargo#12404 and rust-lang/cargo#12295.
 ///
@@ -544,6 +545,15 @@ fn absolute_submodule_url<'s>(base_url: &str, submodule_url: &'s str) -> CargoRe
         }
     } else {
         Cow::from(submodule_url)
+    };
+
+    let absolute_url = match gix::url::parse(gix::bstr::BStr::new(absolute_url.as_ref().as_bytes()))
+    {
+        Ok(mut url) if url.serialize_alternative_form && url.scheme == gix::url::Scheme::Ssh => {
+            url.serialize_alternative_form = false;
+            Cow::from(url.to_bstring().to_string())
+        }
+        _ => absolute_url,
     };
 
     Ok(absolute_url)
@@ -1623,7 +1633,7 @@ mod tests {
             (
                 "ssh://git@gitub.com/rust-lang/cargo",
                 "git@github.com:rust-lang/cargo.git",
-                "git@github.com:rust-lang/cargo.git",
+                "ssh://git@github.com/rust-lang/cargo.git",
             ),
             (
                 "ssh://git@gitub.com/rust-lang/cargo",
@@ -1668,37 +1678,37 @@ mod tests {
             (
                 "git@github.com:rust-lang/cargo.git",
                 "./",
-                "git@github.com:rust-lang/cargo.git/./",
+                "ssh://git@github.com/rust-lang/cargo.git/./",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../",
-                "git@github.com:rust-lang/cargo.git/../",
+                "ssh://git@github.com/rust-lang/cargo.git/../",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "./foo",
-                "git@github.com:rust-lang/cargo.git/./foo",
+                "ssh://git@github.com/rust-lang/cargo.git/./foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git/",
                 "./foo",
-                "git@github.com:rust-lang/cargo.git/./foo",
+                "ssh://git@github.com/rust-lang/cargo.git/./foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../foo",
-                "git@github.com:rust-lang/cargo.git/../foo",
+                "ssh://git@github.com/rust-lang/cargo.git/../foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git/",
                 "../foo",
-                "git@github.com:rust-lang/cargo.git/../foo",
+                "ssh://git@github.com/rust-lang/cargo.git/../foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../foo/bar/../baz",
-                "git@github.com:rust-lang/cargo.git/../foo/bar/../baz",
+                "ssh://git@github.com/rust-lang/cargo.git/../foo/bar/../baz",
             ),
         ];
 

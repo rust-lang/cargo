@@ -4379,3 +4379,74 @@ fn dep_with_cached_submodule() {
         .collect::<Vec<_>>();
     assert_eq!(db_paths.len(), 1, "submodule db created once");
 }
+
+#[cargo_test]
+fn dep_with_scp_like_submodule_url() {
+    // Regression test for https://github.com/rust-lang/cargo/pull/16727
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "pub fn dep() {}")
+    });
+    let git_project2 = git::new("dep2", |project| project.file("lib.rs", "pub fn dep2() {}"));
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = git_project2.root().to_url().to_string();
+    git::add_submodule(&repo, &url, Path::new("submod"));
+    git::commit(&repo);
+
+    git_project.change_file(
+        ".gitmodules",
+        "[submodule \"submod\"]\n\tpath = submod\n\turl = git@github.com:foo/bar.git",
+    );
+    git::add(&repo);
+    git::commit(&repo);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+
+                    [dependencies.dep1]
+                    git = '{}'
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "extern crate dep1;")
+        .build();
+
+    // With the SCP-like URL fix, Cargo converts `git@github.com:foo/bar.git`
+    // to `ssh://git@github.com/foo/bar.git` and tries to fetch, which fails
+    // with other errors like authentication failure or SSH server not reachable.
+    p.cargo("fetch")
+        .env(
+            "GIT_SSH_COMMAND",
+            "ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR",
+        )
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+[UPDATING] git submodule `ssh://git@github.com/foo/bar.git`
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `dep1`
+
+Caused by:
+  unable to update [ROOTURL]/dep1
+
+Caused by:
+  failed to update submodule `submod`
+
+Caused by:
+  failed to fetch submodule `submod` from ssh://git@github.com/foo/bar.git
+...
+"#]])
+        .run();
+}
