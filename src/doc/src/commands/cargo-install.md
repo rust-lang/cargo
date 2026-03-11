@@ -54,7 +54,7 @@ force Cargo to always reinstall the package.
 
 If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory. To avoid this, the target directory can be
-specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
+specified by setting the `CARGO_TARGET_DIR` environment variable to a
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
 
