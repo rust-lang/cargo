@@ -1137,6 +1137,12 @@ fn rustfix_and_fix(
                 Err(rustfix::Error::AlreadyReplaced {
                     is_identical: true, ..
                 }) => continue,
+                Err(rustfix::Error::MultipleOverlappingSuggestions(msg)) => {
+                    return Err(crate::util::internal(format!(
+                        "rustc emitted multiple overlapping MachineApplicable suggestions for the exact same span.\nDiagnostic message: {}",
+                        msg
+                    )));
+                }
                 Err(e) => fixed_file.errors_applying_fixes.push(e.to_string()),
             }
         }

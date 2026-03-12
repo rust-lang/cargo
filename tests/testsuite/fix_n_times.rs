@@ -636,35 +636,24 @@ rustc fix shim error count=2
 #[cargo_test]
 fn fix_exclusive_suggestions() {
     // One diagnostic with two exclusive suggestions for the same span.
-    // Currently, rustfix fails with a generic `AlreadyReplaced` error
-    // ("cannot replace slice of data that was already replaced") when it
-    // encounters this.
+    // Cargo should catch this intra-suggestion conflict and intentionally abort
+    // with an InternalError to alert compiler developers.
     expect_fix_runs_rustc_n_times(
         &[Step::TwoFixExclusive],
         |execs| {
-            execs.with_status(0);
+            execs.with_status(101);
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] error applying suggestions to `src/lib.rs`
+[ERROR] rustc emitted multiple overlapping MachineApplicable suggestions for the exact same span.
+Diagnostic message: rustc fix shim exclusive comment 1
+[NOTE] this is an unexpected cargo internal error
+[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
+[NOTE] cargo [..]
+[ERROR] could not compile `foo` (lib)
 
-The full error message was:
-
-> cannot replace slice of data that was already replaced
-
-[..]
-and we would appreciate a bug report! You're likely to see
-a number of compiler warnings after this message which cargo
-attempted to fix but failed. If you could open an issue at
-https://github.com/rust-lang/rust/issues
-quoting the full output of this command we'd be very appreciative!
-Note that you may be able to make some more progress in the near-term
-fixing code with the `--broken-code` flag
-
-[FIXED] src/lib.rs (0 fixes)
-rustc fix shim exclusive comment 1
-[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+Caused by:
+  process didn't exit successfully: [..]
 
 "#]],
         "// fix-count 0",
