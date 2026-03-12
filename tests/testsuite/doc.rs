@@ -3653,7 +3653,7 @@ fn mergeable_info_rebuild_with_depinfo() {
         .with_stderr_data(
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=invocation-specific,dep-info=[..] --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
+[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
@@ -3717,7 +3717,7 @@ fn mergeable_info_rebuild_with_depinfo() {
             str![[r#"
 [DIRTY] foo v0.0.0 ([ROOT]/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=invocation-specific,dep-info=[..] --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
+[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --merge=finalize --include-parts-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
