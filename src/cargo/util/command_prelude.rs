@@ -1063,20 +1063,10 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
                 manifest_path.display()
             )
         } else if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
-            if gctx.cli_unstable().script {
-                anyhow::bail!(
-                    "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
-                    path.display()
-                )
-            } else {
-                anyhow::bail!(
-                    "the manifest-path must be a path to a Cargo.toml file: `{}`",
-                    path.display()
-                )
-            }
-        }
-        if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
-            anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
+            anyhow::bail!(
+                "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
+                path.display()
+            )
         }
         Ok(path)
     } else {

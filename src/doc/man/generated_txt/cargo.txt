@@ -5,6 +5,7 @@ NAME
 
 SYNOPSIS
        cargo [options] command [args]
+       cargo [options] script [args]
        cargo [options] --version
        cargo [options] --list
        cargo [options] --help
@@ -18,10 +19,25 @@ DESCRIPTION
 
        o  built-in commands, see below
 
+       o  script
+
        o  aliases <https://doc.rust-lang.org/cargo/reference/config.html#alias>
 
        o  external tools
           <https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands>
+
+SCRIPTS
+       A script is distinguished from a command or alias by having path
+       separators present or a .rs extension. These are Rust source files with
+       an optional manifest
+       <https://doc.rust-lang.org/cargo/reference/manifest.html> embedded in
+       the frontmatter.
+
+       cargo script operate on system or user level, not project level. This
+       means that the local configuration discovery
+       <https://doc.rust-lang.org/cargo/reference/config.html#hierarchical-structure>
+       is ignored. Instead, the configuration discovery begins at
+       $CARGO_HOME/config.toml.
 
 COMMANDS
    Build Commands
@@ -315,7 +331,11 @@ EXAMPLES
               mkdir foo && cd foo
               cargo init .
 
-       6. Learn about a command’s options and usage:
+       6. Run a script
+
+              cargo task.rs --action
+
+       7. Learn about a command’s options and usage:
 
               cargo help clean
 
