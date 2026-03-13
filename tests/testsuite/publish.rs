@@ -4595,3 +4595,187 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn workspace_circular_publish_dependency() {
+    // Test that workspace circular dependencies (e.g. foo depends on bar, bar dev-depends
+    // on foo with version field) are correctly detected and reported.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .build();
+
+    cargo_test_support::registry::Package::new("foo", "0.1.0").publish();
+    cargo_test_support::registry::Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.1"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+
+            [dependencies]
+            bar = { version = "0.1", path = "../bar" }
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.1"
+            edition = "2015"
+            license = "MIT"
+            description = "bar"
+            repository = "bar"
+
+            [dev-dependencies]
+            foo = { version = "0.1", path = "../foo" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // With current buggy code, it will silently wait for dependencies because plan.take_ready() returns empty
+    // but the `plan` isn't fully completed. It eventually hits a timeout with a blank string.
+    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] foo v0.1.1 ([ROOT]/foo/foo)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] bar v0.1.1 ([ROOT]/foo/bar)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[NOTE] waiting for  to be available at registry `crates-io`.
+      2 remaining crates to be published
+[WARNING] timed out waiting for  to be available in registry `crates-io`
+  |
+  = [NOTE] the registry may have a backlog that is delaying making the crates available. The crates should be available soon.
+[ERROR] unable to publish bar v0.1.1 and foo v0.1.1 due to a timeout while waiting for published dependencies to be available.
+
+"#]])
+        .run();
+}
+#[cargo_test]
+fn workspace_circular_publish_dependency_with_non_cycle_package() {
+    // Test that when a workspace has a circular dependency, only the packages involved
+    // in the cycle are reported in the error message, even if other packages are
+    // blocked by the cycle.
+    // With current buggy code, all 3 crates timeout
+    // together with blank crate names. Only a and b
+    // form the cycle but c is also blocked.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .build();
+
+    cargo_test_support::registry::Package::new("a", "1.0.0").publish();
+    cargo_test_support::registry::Package::new("b", "1.0.0").publish();
+    cargo_test_support::registry::Package::new("c", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "a"
+            repository = "a"
+
+            [dependencies]
+            b = { version = "1.0", path = "../b" }
+            c = { version = "1.0", path = "../c" }
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "b"
+            repository = "b"
+
+            [dependencies]
+            c = { version = "1.0", path = "../c" }
+
+            [dev-dependencies]
+            a = { version = "1.0", path = "../a" }
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "c"
+            repository = "c"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] c v1.0.1 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v1.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] a v1.0.1 ([ROOT]/foo/a)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] c v1.0.1 ([ROOT]/foo/c)
+[UPLOADED] c v1.0.1 to registry `crates-io`
+[NOTE] waiting for c v1.0.1 to be available at registry `crates-io`.
+      2 remaining crates to be published
+[PUBLISHED] c v1.0.1 at registry `crates-io`
+[NOTE] waiting for  to be available at registry `crates-io`.
+      2 remaining crates to be published
+[WARNING] timed out waiting for  to be available in registry `crates-io`
+  |
+  = [NOTE] the registry may have a backlog that is delaying making the crates available. The crates should be available soon.
+[ERROR] unable to publish a v1.0.1 and b v1.0.1 due to a timeout while waiting for published dependencies to be available.
+
+"#]])
+        .run();
+}
