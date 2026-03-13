@@ -4598,8 +4598,7 @@ Caused by:
 
 #[cargo_test]
 fn workspace_circular_publish_dependency() {
-    // Test that workspace circular dependencies (e.g. foo depends on bar, bar dev-depends
-    // on foo with version field) are correctly detected and reported.
+    // Verify detection and reporting of workspace circular dependencies.
     let registry = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
@@ -4650,8 +4649,7 @@ fn workspace_circular_publish_dependency() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    // With current buggy code, it will silently wait for dependencies because plan.take_ready() returns empty
-    // but the `plan` isn't fully completed. It eventually hits a timeout with a blank string.
+    // Ensure the circular dependency is caught and reported clearly.
     p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .replace_crates_io(registry.index_url())
@@ -4664,24 +4662,17 @@ fn workspace_circular_publish_dependency() {
 [PACKAGING] bar v0.1.1 ([ROOT]/foo/bar)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[NOTE] waiting for  to be available at registry `crates-io`.
-      2 remaining crates to be published
-[WARNING] timed out waiting for  to be available in registry `crates-io`
-  |
-  = [NOTE] the registry may have a backlog that is delaying making the crates available. The crates should be available soon.
-[ERROR] unable to publish bar v0.1.1 and foo v0.1.1 due to a timeout while waiting for published dependencies to be available.
+[ERROR] circular dependency detected while publishing bar v0.1.1 and foo v0.1.1
+[HELP] to break a cycle between dev-dependencies and other dependencies, remove the version field on the dev-dependency so it will be implicitly stripped on publish
 
 "#]])
         .run();
 }
 #[cargo_test]
 fn workspace_circular_publish_dependency_with_non_cycle_package() {
-    // Test that when a workspace has a circular dependency, only the packages involved
-    // in the cycle are reported in the error message, even if other packages are
-    // blocked by the cycle.
-    // With current buggy code, all 3 crates timeout
-    // together with blank crate names. Only a and b
-    // form the cycle but c is also blocked.
+    // Verify that circular dependency errors only report packages actively involved in the cycle.
+    // Package 'c' is independent and should be excluded from the error message,
+    // even though the cycle between 'a' and 'b' blocks the overall workspace publish.
     let registry = registry::RegistryBuilder::new()
         .http_api()
         .http_index()
@@ -4764,17 +4755,8 @@ fn workspace_circular_publish_dependency_with_non_cycle_package() {
 [PACKAGING] a v1.0.1 ([ROOT]/foo/a)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] c v1.0.1 ([ROOT]/foo/c)
-[UPLOADED] c v1.0.1 to registry `crates-io`
-[NOTE] waiting for c v1.0.1 to be available at registry `crates-io`.
-      2 remaining crates to be published
-[PUBLISHED] c v1.0.1 at registry `crates-io`
-[NOTE] waiting for  to be available at registry `crates-io`.
-      2 remaining crates to be published
-[WARNING] timed out waiting for  to be available in registry `crates-io`
-  |
-  = [NOTE] the registry may have a backlog that is delaying making the crates available. The crates should be available soon.
-[ERROR] unable to publish a v1.0.1 and b v1.0.1 due to a timeout while waiting for published dependencies to be available.
+[ERROR] circular dependency detected while publishing a v1.0.1 and b v1.0.1
+[HELP] to break a cycle between dev-dependencies and other dependencies, remove the version field on the dev-dependency so it will be implicitly stripped on publish
 
 "#]])
         .run();
