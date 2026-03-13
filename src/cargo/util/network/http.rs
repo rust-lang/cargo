@@ -1,10 +1,12 @@
 //! Configures libcurl's http handles.
 
+use std::path::PathBuf;
 use std::str;
 use std::time::Duration;
 
 use anyhow::bail;
 use curl::easy::Easy;
+use curl::easy::Easy2;
 use curl::easy::InfoType;
 use curl::easy::SslOpt;
 use curl::easy::SslVersion;
@@ -15,7 +17,6 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::util::context::SslVersionConfig;
 use crate::util::context::SslVersionConfigRange;
-use crate::version;
 
 /// Creates a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(gctx: &GlobalContext) -> CargoResult<Easy> {
@@ -25,13 +26,6 @@ pub fn http_handle(gctx: &GlobalContext) -> CargoResult<Easy> {
 }
 
 pub fn http_handle_and_timeout(gctx: &GlobalContext) -> CargoResult<(Easy, HttpTimeout)> {
-    if let Some(offline_flag) = gctx.offline_flag() {
-        bail!(
-            "attempting to make an HTTP request, but {offline_flag} was \
-             specified"
-        )
-    }
-
     // The timeout option for libcurl by default times out the entire transfer,
     // but we probably don't want this. Instead we only set timeouts for the
     // connect phase as well as a "low speed" timeout so if we don't receive
@@ -50,96 +44,197 @@ pub fn needs_custom_http_transport(gctx: &GlobalContext) -> CargoResult<bool> {
         || *gctx.http_config()? != Default::default()
         || gctx.get_env_os("HTTP_TIMEOUT").is_some())
 }
-
 /// Configure a libcurl http handle with the defaults options for Cargo
-pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoResult<HttpTimeout> {
-    let http = gctx.http_config()?;
-    if let Some(proxy) = super::proxy::http_proxy(http) {
-        handle.proxy(&proxy)?;
-    }
-    if let Some(cainfo) = &http.cainfo {
-        let cainfo = cainfo.resolve_path(gctx);
-        handle.cainfo(&cainfo)?;
-    }
-    // Use `proxy_cainfo` if explicitly set; otherwise, fall back to `cainfo` as curl does #15376.
-    if let Some(proxy_cainfo) = http.proxy_cainfo.as_ref().or(http.cainfo.as_ref()) {
-        let proxy_cainfo = proxy_cainfo.resolve_path(gctx);
-        handle.proxy_cainfo(&format!("{}", proxy_cainfo.display()))?;
-    }
-    if let Some(check) = http.check_revoke {
-        handle.ssl_options(SslOpt::new().no_revoke(!check))?;
-    }
-
-    if let Some(user_agent) = &http.user_agent {
-        handle.useragent(user_agent)?;
-    } else {
-        handle.useragent(&format!("cargo/{}", version()))?;
-    }
-
-    fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
-        let version = match s {
-            "default" => SslVersion::Default,
-            "tlsv1" => SslVersion::Tlsv1,
-            "tlsv1.0" => SslVersion::Tlsv10,
-            "tlsv1.1" => SslVersion::Tlsv11,
-            "tlsv1.2" => SslVersion::Tlsv12,
-            "tlsv1.3" => SslVersion::Tlsv13,
-            _ => bail!(
-                "Invalid ssl version `{s}`,\
-                 choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'."
-            ),
-        };
-        Ok(version)
-    }
-
-    // Empty string accept encoding expands to the encodings supported by the current libcurl.
-    handle.accept_encoding("")?;
-    if let Some(ssl_version) = &http.ssl_version {
-        match ssl_version {
-            SslVersionConfig::Single(s) => {
-                let version = to_ssl_version(s.as_str())?;
-                handle.ssl_version(version)?;
-            }
-            SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
-                let min_version = min
-                    .as_ref()
-                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
-                let max_version = max
-                    .as_ref()
-                    .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
-                handle.ssl_min_max_version(min_version, max_version)?;
-            }
-        }
-    } else if cfg!(windows) {
-        // This is a temporary workaround for some bugs with libcurl and
-        // schannel and TLS 1.3.
-        //
-        // Our libcurl on Windows is usually built with schannel.
-        // On Windows 11 (or Windows Server 2022), libcurl recently (late
-        // 2022) gained support for TLS 1.3 with schannel, and it now defaults
-        // to 1.3. Unfortunately there have been some bugs with this.
-        // https://github.com/curl/curl/issues/9431 is the most recent. Once
-        // that has been fixed, and some time has passed where we can be more
-        // confident that the 1.3 support won't cause issues, this can be
-        // removed.
-        //
-        // Windows 10 is unaffected. libcurl does not support TLS 1.3 on
-        // Windows 10. (Windows 10 sorta had support, but it required enabling
-        // an advanced option in the registry which was buggy, and libcurl
-        // does runtime checks to prevent it.)
-        handle.ssl_min_max_version(SslVersion::Default, SslVersion::Tlsv12)?;
-    }
-
-    if let Some(true) = http.debug {
-        handle.verbose(true)?;
-        tracing::debug!(target: "network", "{:#?}", curl::Version::get());
-        handle.debug_function(debug)?;
-    }
-
-    HttpTimeout::new(gctx)
+pub struct HandleConfiguration {
+    proxy: Option<String>,
+    cainfo: Option<PathBuf>,
+    proxy_cainfo: Option<String>,
+    ssl_options: Option<SslOpt>,
+    useragent: String,
+    ssl_version: Option<SslVersion>,
+    ssl_min_max_version: Option<(SslVersion, SslVersion)>,
+    timeout: HttpTimeout,
+    pub verbose: bool,
+    pub multiplexing: bool,
 }
 
-pub fn debug(kind: InfoType, data: &[u8]) {
+pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoResult<HttpTimeout> {
+    let configuration = HandleConfiguration::new(gctx)?;
+    configuration.configure(handle)?;
+    Ok(configuration.timeout)
+}
+
+impl HandleConfiguration {
+    pub fn new(gctx: &GlobalContext) -> CargoResult<Self> {
+        if let Some(offline_flag) = gctx.offline_flag() {
+            bail!(
+                "attempting to make an HTTP request, but {offline_flag} was \
+                specified"
+            )
+        }
+
+        let http = gctx.http_config()?;
+        let timeout = HttpTimeout::new(gctx)?;
+        let useragent = if let Some(user_agent) = http.user_agent.clone() {
+            user_agent
+        } else {
+            format!("cargo/{}", crate::version())
+        };
+        let multiplexing = http.multiplexing.unwrap_or(true);
+        let mut handle = HandleConfiguration {
+            proxy: None,
+            cainfo: None,
+            proxy_cainfo: None,
+            ssl_options: None,
+            useragent,
+            ssl_version: None,
+            ssl_min_max_version: None,
+            verbose: false,
+            timeout,
+            multiplexing,
+        };
+        if let Some(proxy) = super::proxy::http_proxy(http) {
+            handle.proxy = Some(proxy);
+        }
+        if let Some(cainfo) = &http.cainfo {
+            let cainfo = cainfo.resolve_path(gctx);
+            handle.cainfo = Some(cainfo);
+        }
+        // Use `proxy_cainfo` if explicitly set; otherwise, fall back to `cainfo` as curl does #15376.
+        if let Some(proxy_cainfo) = http.proxy_cainfo.as_ref().or(http.cainfo.as_ref()) {
+            let proxy_cainfo = proxy_cainfo.resolve_path(gctx);
+            handle.proxy_cainfo = Some(format!("{}", proxy_cainfo.display()));
+        }
+        if let Some(check) = http.check_revoke {
+            let mut v = SslOpt::new();
+            v.no_revoke(!check);
+            handle.ssl_options = Some(v);
+        }
+
+        fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
+            let version = match s {
+                "default" => SslVersion::Default,
+                "tlsv1" => SslVersion::Tlsv1,
+                "tlsv1.0" => SslVersion::Tlsv10,
+                "tlsv1.1" => SslVersion::Tlsv11,
+                "tlsv1.2" => SslVersion::Tlsv12,
+                "tlsv1.3" => SslVersion::Tlsv13,
+                _ => bail!(
+                    "Invalid ssl version `{s}`,\
+                    choose from 'default', 'tlsv1', 'tlsv1.0', 'tlsv1.1', 'tlsv1.2', 'tlsv1.3'."
+                ),
+            };
+            Ok(version)
+        }
+
+        if let Some(ssl_version) = &http.ssl_version {
+            match ssl_version {
+                SslVersionConfig::Single(s) => {
+                    let version = to_ssl_version(s.as_str())?;
+                    handle.ssl_version = Some(version);
+                }
+                SslVersionConfig::Range(SslVersionConfigRange { min, max }) => {
+                    let min_version = min
+                        .as_ref()
+                        .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
+                    let max_version = max
+                        .as_ref()
+                        .map_or(Ok(SslVersion::Default), |s| to_ssl_version(s))?;
+                    handle.ssl_min_max_version = Some((min_version, max_version));
+                }
+            }
+        } else if cfg!(windows) {
+            // This is a temporary workaround for some bugs with libcurl and
+            // schannel and TLS 1.3.
+            //
+            // Our libcurl on Windows is usually built with schannel.
+            // On Windows 11 (or Windows Server 2022), libcurl recently (late
+            // 2022) gained support for TLS 1.3 with schannel, and it now defaults
+            // to 1.3. Unfortunately there have been some bugs with this.
+            // https://github.com/curl/curl/issues/9431 is the most recent. Once
+            // that has been fixed, and some time has passed where we can be more
+            // confident that the 1.3 support won't cause issues, this can be
+            // removed.
+            //
+            // Windows 10 is unaffected. libcurl does not support TLS 1.3 on
+            // Windows 10. (Windows 10 sorta had support, but it required enabling
+            // an advanced option in the registry which was buggy, and libcurl
+            // does runtime checks to prevent it.)
+            handle.ssl_min_max_version = Some((SslVersion::Default, SslVersion::Tlsv12));
+        }
+
+        if let Some(true) = http.debug {
+            handle.verbose = true;
+        }
+
+        Ok(handle)
+    }
+
+    pub fn configure(&self, handle: &mut Easy) -> Result<(), curl::Error> {
+        if let Some(v) = &self.proxy {
+            handle.proxy(&v)?;
+        }
+        if let Some(v) = &self.cainfo {
+            handle.cainfo(&v)?;
+        }
+        if let Some(v) = &self.proxy_cainfo {
+            handle.proxy_cainfo(&v)?;
+        }
+        if let Some(v) = &self.ssl_options {
+            handle.ssl_options(&v)?;
+        }
+        handle.useragent(&self.useragent)?;
+        // Empty string accept encoding expands to the encodings supported by the current libcurl.
+        handle.accept_encoding("")?;
+        if let Some(v) = &self.ssl_version {
+            handle.ssl_version(v.clone())?;
+        }
+        if let Some((min, max)) = &self.ssl_min_max_version {
+            handle.ssl_min_max_version(min.clone(), max.clone())?;
+        }
+        if self.verbose {
+            handle.verbose(true)?;
+            tracing::debug!(target: "network", "{:#?}", curl::Version::get());
+            handle.debug_function(debug)?;
+        }
+        Ok(())
+    }
+
+    pub fn configure2<T>(&self, handle: &mut Easy2<T>) -> Result<(), curl::Error> {
+        if let Some(v) = &self.proxy {
+            handle.proxy(&v)?;
+        }
+        if let Some(v) = &self.cainfo {
+            handle.cainfo(&v)?;
+        }
+        if let Some(v) = &self.proxy_cainfo {
+            handle.proxy_cainfo(&v)?;
+        }
+        if let Some(v) = &self.ssl_options {
+            handle.ssl_options(&v)?;
+        }
+        handle.useragent(&self.useragent)?;
+        // Empty string accept encoding expands to the encodings supported by the current libcurl.
+        handle.accept_encoding("")?;
+        if let Some(v) = &self.ssl_version {
+            handle.ssl_version(v.clone())?;
+        }
+        if let Some((min, max)) = &self.ssl_min_max_version {
+            handle.ssl_min_max_version(min.clone(), max.clone())?;
+        }
+        if self.verbose {
+            handle.verbose(true)?;
+            tracing::debug!(target: "network", "{:#?}", curl::Version::get());
+        }
+        self.timeout.configure2(handle)?;
+
+        // Enable HTTP/2 if possible.
+        crate::try_old_curl_http2_pipewait!(self.multiplexing, handle);
+        Ok(())
+    }
+}
+
+pub(crate) fn debug(kind: InfoType, data: &[u8]) {
     enum LogLevel {
         Debug,
         Trace,
@@ -214,6 +309,18 @@ impl HttpTimeout {
     }
 
     pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
+        // The timeout option for libcurl by default times out the entire
+        // transfer, but we probably don't want this. Instead we only set
+        // timeouts for the connect phase as well as a "low speed" timeout so
+        // if we don't receive many bytes in a large-ish period of time then we
+        // time out.
+        handle.connect_timeout(self.dur)?;
+        handle.low_speed_time(self.dur)?;
+        handle.low_speed_limit(self.low_speed_limit)?;
+        Ok(())
+    }
+
+    pub fn configure2<T>(&self, handle: &mut Easy2<T>) -> Result<(), curl::Error> {
         // The timeout option for libcurl by default times out the entire
         // transfer, but we probably don't want this. Instead we only set
         // timeouts for the connect phase as well as a "low speed" timeout so

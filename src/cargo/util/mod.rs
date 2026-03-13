@@ -72,6 +72,8 @@ mod vcs;
 mod workspace;
 
 pub use cargo_util_terminal::style;
+pub(crate) use futures::executor::block_on;
+pub(crate) use futures::executor::block_on_stream;
 
 pub fn is_rustup() -> bool {
     #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]
