@@ -45,7 +45,11 @@ impl GitShortID {
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRemote {
     /// URL to a remote repository.
-    url: Url,
+    ///
+    /// This may differ from the [`SourceId`] URL when the original URL
+    /// can't be represented as a WHATWG [`Url`], for example SCP-like URLs.
+    /// See <https://github.com/rust-lang/cargo/issues/16740>.
+    url: String,
 }
 
 /// A local clone of a remote repository's database. Multiple [`GitCheckout`]s
@@ -74,11 +78,20 @@ pub struct GitCheckout<'a> {
 impl GitRemote {
     /// Creates an instance for a remote repository URL.
     pub fn new(url: &Url) -> GitRemote {
-        GitRemote { url: url.clone() }
+        GitRemote {
+            url: url.as_str().to_owned(),
+        }
+    }
+
+    /// Creates an instance with an URL that may not be a valid WHATWG URL.
+    ///
+    /// This is needed because [`SourceId`] hasn't yet supported SCP-like URLs.
+    pub(super) fn new_from_str(url: String) -> GitRemote {
+        GitRemote { url }
     }
 
     /// Gets the remote repository URL.
-    pub fn url(&self) -> &Url {
+    pub fn url(&self) -> &str {
         &self.url
     }
 
@@ -102,7 +115,7 @@ impl GitRemote {
         if let Some(mut db) = db {
             fetch(
                 &mut db.repo,
-                self.url.as_str(),
+                self.url(),
                 reference,
                 gctx,
                 RemoteKind::GitDependency,
@@ -124,7 +137,7 @@ impl GitRemote {
         let mut repo = init(into, true)?;
         fetch(
             &mut repo,
-            self.url.as_str(),
+            self.url(),
             reference,
             gctx,
             RemoteKind::GitDependency,
@@ -266,8 +279,8 @@ impl<'a> GitCheckout<'a> {
     }
 
     /// Gets the remote repository URL.
-    fn remote_url(&self) -> &Url {
-        &self.database.remote.url()
+    fn remote_url(&self) -> &str {
+        self.database.remote.url()
     }
 
     /// Clone a repo for a `revision` into a local path from a `database`.
@@ -378,7 +391,7 @@ impl<'a> GitCheckout<'a> {
     ///
     /// [^1]: <https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-none>
     fn update_submodules(&self, gctx: &GlobalContext, quiet: bool) -> CargoResult<()> {
-        return update_submodules(&self.repo, gctx, quiet, self.remote_url().as_str());
+        return update_submodules(&self.repo, gctx, quiet, self.remote_url());
 
         /// Recursive helper for [`GitCheckout::update_submodules`].
         fn update_submodules(
@@ -460,17 +473,37 @@ impl<'a> GitCheckout<'a> {
             // Fetch submodule database and checkout to target revision
             let reference = GitReference::Rev(head.to_string());
 
+            // SCP-like URL is not a WHATWG Standard URL.
+            // `url` crate can't parse SCP-like URLs.
+            // We convert to `ssh://` for SourceId,
+            // but preserve the original URL for fetch to maintain correct semantics
+            // See <https://github.com/rust-lang/cargo/issues/16740>
+            let (source_url, fetch_url) = match child_remote_url.as_ref().into_url() {
+                Ok(url) => (url, None),
+                Err(_) => {
+                    let ssh_url = scp_to_ssh(&child_remote_url)
+                        .ok_or_else(|| anyhow::format_err!("invalid url `{child_remote_url}`"))?
+                        .as_str()
+                        .into_url()?;
+                    (ssh_url, Some(child_remote_url.into_owned()))
+                }
+            };
+
             // GitSource created from SourceId without git precise will result to
             // locked_rev being Deferred and fetch_db always try to fetch if online
-            let source_id = SourceId::for_git(&child_remote_url.into_url()?, reference)?
-                .with_git_precise(Some(head.to_string()));
+            let source_id =
+                SourceId::for_git(&source_url, reference)?.with_git_precise(Some(head.to_string()));
 
-            let mut source = GitSource::new(source_id, gctx)?;
+            let mut source = match &fetch_url {
+                Some(url) => GitSource::new_for_submodule(source_id, url.to_owned(), gctx)?,
+                None => GitSource::new(source_id, gctx)?,
+            };
             source.set_quiet(quiet);
 
             let (db, actual_rev) = source.fetch_db(true).with_context(|| {
                 let name = child.name().unwrap_or("");
-                format!("failed to fetch submodule `{name}` from {child_remote_url}",)
+                let url = fetch_url.unwrap_or_else(|| source_url.to_string());
+                format!("failed to fetch submodule `{name}` from {url}")
             })?;
             db.copy_to(actual_rev, repo.path(), gctx, quiet)?;
             Ok(())
@@ -547,16 +580,18 @@ fn absolute_submodule_url<'s>(base_url: &str, submodule_url: &'s str) -> CargoRe
         Cow::from(submodule_url)
     };
 
-    let absolute_url = match gix::url::parse(gix::bstr::BStr::new(absolute_url.as_ref().as_bytes()))
-    {
-        Ok(mut url) if url.serialize_alternative_form && url.scheme == gix::url::Scheme::Ssh => {
-            url.serialize_alternative_form = false;
-            Cow::from(url.to_bstring().to_string())
-        }
-        _ => absolute_url,
-    };
-
     Ok(absolute_url)
+}
+
+/// Converts an SCP-like URL to `ssh://` format.
+fn scp_to_ssh(url: &str) -> Option<String> {
+    let mut gix_url = gix::url::parse(gix::bstr::BStr::new(url.as_bytes())).ok()?;
+    if gix_url.serialize_alternative_form && gix_url.scheme == gix::url::Scheme::Ssh {
+        gix_url.serialize_alternative_form = false;
+        Some(gix_url.to_bstring().to_string())
+    } else {
+        None
+    }
 }
 
 /// Prepare the authentication callbacks for cloning a git repository.
@@ -1633,7 +1668,7 @@ mod tests {
             (
                 "ssh://git@gitub.com/rust-lang/cargo",
                 "git@github.com:rust-lang/cargo.git",
-                "ssh://git@github.com/rust-lang/cargo.git",
+                "git@github.com:rust-lang/cargo.git",
             ),
             (
                 "ssh://git@gitub.com/rust-lang/cargo",
@@ -1678,37 +1713,37 @@ mod tests {
             (
                 "git@github.com:rust-lang/cargo.git",
                 "./",
-                "ssh://git@github.com/rust-lang/cargo.git/./",
+                "git@github.com:rust-lang/cargo.git/./",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../",
-                "ssh://git@github.com/rust-lang/cargo.git/../",
+                "git@github.com:rust-lang/cargo.git/../",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "./foo",
-                "ssh://git@github.com/rust-lang/cargo.git/./foo",
+                "git@github.com:rust-lang/cargo.git/./foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git/",
                 "./foo",
-                "ssh://git@github.com/rust-lang/cargo.git/./foo",
+                "git@github.com:rust-lang/cargo.git/./foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../foo",
-                "ssh://git@github.com/rust-lang/cargo.git/../foo",
+                "git@github.com:rust-lang/cargo.git/../foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git/",
                 "../foo",
-                "ssh://git@github.com/rust-lang/cargo.git/../foo",
+                "git@github.com:rust-lang/cargo.git/../foo",
             ),
             (
                 "git@github.com:rust-lang/cargo.git",
                 "../foo/bar/../baz",
-                "ssh://git@github.com/rust-lang/cargo.git/../foo/bar/../baz",
+                "git@github.com:rust-lang/cargo.git/../foo/bar/../baz",
             ),
         ];
 

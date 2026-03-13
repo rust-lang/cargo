@@ -100,9 +100,29 @@ pub struct GitSource<'gctx> {
 impl<'gctx> GitSource<'gctx> {
     /// Creates a git source for the given [`SourceId`].
     pub fn new(source_id: SourceId, gctx: &'gctx GlobalContext) -> CargoResult<GitSource<'gctx>> {
+        let remote = GitRemote::new(source_id.url());
+        Self::new_with_remote(source_id, remote, gctx)
+    }
+
+    /// Creates a git source for a submodule with an URL that may not be a valid WHATWG URL.
+    ///
+    /// This is needed because [`SourceId`] hasn't yet supported SCP-like URLs.
+    pub(super) fn new_for_submodule(
+        source_id: SourceId,
+        fetch_url: String,
+        gctx: &'gctx GlobalContext,
+    ) -> CargoResult<GitSource<'gctx>> {
+        let remote = GitRemote::new_from_str(fetch_url);
+        Self::new_with_remote(source_id, remote, gctx)
+    }
+
+    fn new_with_remote(
+        source_id: SourceId,
+        remote: GitRemote,
+        gctx: &'gctx GlobalContext,
+    ) -> CargoResult<GitSource<'gctx>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
-        let remote = GitRemote::new(source_id.url());
         // Fallback to git ref from manifest if there is no locked revision.
         let locked_rev = source_id
             .precise_git_fragment()
@@ -132,7 +152,7 @@ impl<'gctx> GitSource<'gctx> {
 
     /// Gets the remote repository URL.
     pub fn url(&self) -> &Url {
-        self.remote.url()
+        self.source_id.url()
     }
 
     /// Returns the packages discovered by this source. It may fetch the Git
@@ -291,7 +311,7 @@ fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
 
 impl<'gctx> Debug for GitSource<'gctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "git repo at {}", self.remote.url())?;
+        write!(f, "git repo at {}", self.source_id.url())?;
         match &self.locked_rev {
             Revision::Deferred(git_ref) => match git_ref.pretty_ref(true) {
                 Some(s) => write!(f, " ({})", s),

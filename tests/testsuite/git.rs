@@ -4421,9 +4421,10 @@ fn dep_with_scp_like_submodule_url() {
         .file("src/lib.rs", "extern crate dep1;")
         .build();
 
-    // With the SCP-like URL fix, Cargo converts `git@github.com:foo/bar.git`
-    // to `ssh://git@github.com/foo/bar.git` and tries to fetch, which fails
-    // with other errors like authentication failure or SSH server not reachable.
+    // With the SCP-like URL fix, Cargo preserves the original SCP-like URL
+    // for the actual fetch, while using the ssh:// form internally for caching.
+    // The fetch fails because the SSH server is not reachable, but the URL
+    // shown in messages is the original SCP-like form.
     p.cargo("fetch")
         .env(
             "GIT_SSH_COMMAND",
@@ -4432,7 +4433,7 @@ fn dep_with_scp_like_submodule_url() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[UPDATING] git submodule `ssh://git@github.com/foo/bar.git`
+[UPDATING] git submodule `git@github.com:foo/bar.git`
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
@@ -4445,7 +4446,7 @@ Caused by:
   failed to update submodule `submod`
 
 Caused by:
-  failed to fetch submodule `submod` from ssh://git@github.com/foo/bar.git
+  failed to fetch submodule `submod` from git@github.com:foo/bar.git
 ...
 "#]])
         .run();
