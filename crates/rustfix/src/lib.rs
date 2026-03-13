@@ -233,12 +233,23 @@ impl CodeFix {
 
     /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+        let mut applied_any = false;
         for solution in &suggestion.solutions {
             for r in &solution.replacements {
-                self.data
+                if let Err(e) = self
+                    .data
                     .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
-                    .inspect_err(|_| self.data.restore())?;
+                {
+                    self.data.restore();
+                    if applied_any && matches!(e, Error::AlreadyReplaced { .. }) {
+                        return Err(Error::MultipleOverlappingSuggestions(
+                            suggestion.message.clone(),
+                        ));
+                    }
+                    return Err(e);
+                }
             }
+            applied_any = true;
         }
         self.data.commit();
         self.modified = true;

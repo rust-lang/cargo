@@ -21,6 +21,9 @@ pub enum Error {
         is_identical: bool,
     },
 
+    #[error("compiler emitted multiple overlapping suggestions for the same span: {0}")]
+    MultipleOverlappingSuggestions(String),
+
     #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
 }
