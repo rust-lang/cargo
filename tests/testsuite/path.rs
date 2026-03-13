@@ -574,10 +574,7 @@ fn error_message_for_missing_manifest() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOT]/foo/src/bar
+  failed to query [ROOT]/foo/src/bar for dependency `bar`
 
 Caused by:
   failed to read `[ROOT]/foo/src/bar/Cargo.toml`
@@ -1139,23 +1136,19 @@ fn invalid_path_with_base() {
     p.cargo("build")
         .masquerade_as_nightly_cargo(&["path-bases"])
         .with_status(101)
-        .with_stderr_data(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
+  failed to query [ROOT]/foo/shared_proj/" for dependency `bar`
 
 Caused by:
-  unable to update [ROOT]/foo/shared_proj/\"
-
-Caused by:
-  failed to read `[ROOT]/foo/shared_proj/\"/Cargo.toml`
+  failed to read `[ROOT]/foo/shared_proj/"/Cargo.toml`
 
 Caused by:
   [NOT_FOUND]
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1190,13 +1183,12 @@ fn self_dependency_using_base() {
     p.cargo("build")
         .masquerade_as_nightly_cargo(&["path-bases"])
         .with_status(101)
-        .with_stderr_data(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] cyclic package dependency: package `foo v0.1.0 ([ROOT]/foo)` depends on itself. Cycle:
 package `foo v0.1.0 ([ROOT]/foo)`
     ... which satisfies path dependency `foo` of package `foo v0.1.0 ([ROOT]/foo)`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1759,10 +1751,7 @@ fn deep_path_error() {
     ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `c`
-
-Caused by:
-  unable to update [ROOT]/foo/c
+  failed to query [ROOT]/foo/c for dependency `c`
 
 Caused by:
   failed to read `[ROOT]/foo/c/Cargo.toml`

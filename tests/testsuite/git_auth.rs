@@ -144,10 +144,7 @@ fn http_auth_offered() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update http://{addr}/foo/bar
+  failed to query http://{addr}/foo/bar for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -223,10 +220,7 @@ fn https_something_happens() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update https://{addr}/foo/bar
+  failed to query https://{addr}/foo/bar for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -321,10 +315,7 @@ fn ssh_something_happens() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update ssh://{addr}/foo/bar
+  failed to query ssh://{addr}/foo/bar for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -376,10 +367,7 @@ fn net_err_suggests_fetch_with_cli() {
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  unable to update ssh://needs-proxy.invalid/git
+  failed to query ssh://needs-proxy.invalid/git for dependency `foo`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/git-[HASH]
@@ -413,7 +401,7 @@ Caused by:
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains("[..]unable to update[..]")
+        .with_stderr_contains("[..]failed to query[..]")
         .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
         .run();
 }
@@ -454,10 +442,7 @@ fn instead_of_url_printed() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update https://foo.bar/foo/bar
+  failed to query https://foo.bar/foo/bar for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]

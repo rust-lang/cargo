@@ -65,7 +65,8 @@ use std::time::{Duration, Instant};
 use tracing::{debug, trace};
 
 use crate::core::PackageIdSpec;
-use crate::core::{Dependency, PackageId, Registry, Summary};
+use crate::core::registry::DynRegistry;
+use crate::core::{Dependency, PackageId, Summary};
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
@@ -122,7 +123,7 @@ mod version_prefs;
 pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut dyn Registry,
+    registry: &mut DynRegistry<'_>,
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
@@ -146,10 +147,8 @@ pub fn resolve(
             gctx,
             &mut past_conflicting_activations,
         )?;
-        if registry.reset_pending() {
+        if registry.wait()? {
             break resolver_ctx;
-        } else {
-            registry.registry.block_until_ready()?;
         }
     };
 
@@ -281,85 +280,88 @@ fn activate_deps_loop(
         loop {
             let next = remaining_candidates.next(&mut conflicting_activations, &resolver_ctx);
 
-            let (candidate, has_another) = next.ok_or(()).or_else(|_| {
-                // If we get here then our `remaining_candidates` was just
-                // exhausted, so `dep` failed to activate.
-                //
-                // It's our job here to backtrack, if possible, and find a
-                // different candidate to activate. If we can't find any
-                // candidates whatsoever then it's time to bail entirely.
-                trace!(
-                    "{}[{}]>{} -- no candidates",
-                    parent.name(),
-                    resolver_ctx.age,
-                    dep.package_name()
-                );
+            let (candidate, has_another) = match next {
+                Some(next) => Ok(next),
+                None => {
+                    // If we get here then our `remaining_candidates` was just
+                    // exhausted, so `dep` failed to activate.
+                    //
+                    // It's our job here to backtrack, if possible, and find a
+                    // different candidate to activate. If we can't find any
+                    // candidates whatsoever then it's time to bail entirely.
+                    trace!(
+                        "{}[{}]>{} -- no candidates",
+                        parent.name(),
+                        resolver_ctx.age,
+                        dep.package_name()
+                    );
 
-                // Use our list of `conflicting_activations` to add to our
-                // global list of past conflicting activations, effectively
-                // globally poisoning `dep` if `conflicting_activations` ever
-                // shows up again. We'll use the `past_conflicting_activations`
-                // below to determine if a dependency is poisoned and skip as
-                // much work as possible.
-                //
-                // If we're only here for the error messages then there's no
-                // need to try this as this dependency is already known to be
-                // bad.
-                //
-                // As we mentioned above with the `backtracked` variable if this
-                // local is set to `true` then our `conflicting_activations` may
-                // not be right, so we can't push into our global cache.
-                let mut generalize_conflicting_activations = None;
-                if !just_here_for_the_error_messages && !backtracked {
-                    past_conflicting_activations.insert(&dep, &conflicting_activations);
-                    if let Some(c) = generalize_conflicting(
-                        &resolver_ctx,
-                        registry,
-                        past_conflicting_activations,
-                        &parent,
-                        &dep,
-                        &conflicting_activations,
-                    ) {
-                        generalize_conflicting_activations = Some(c);
-                    }
-                }
-
-                match find_candidate(
-                    &resolver_ctx,
-                    &mut backtrack_stack,
-                    &parent,
-                    backtracked,
-                    generalize_conflicting_activations
-                        .as_ref()
-                        .unwrap_or(&conflicting_activations),
-                ) {
-                    Some((candidate, has_another, frame)) => {
-                        // Reset all of our local variables used with the
-                        // contents of `frame` to complete our backtrack.
-                        resolver_ctx = frame.context;
-                        remaining_deps = frame.remaining_deps;
-                        remaining_candidates = frame.remaining_candidates;
-                        parent = frame.parent;
-                        dep = frame.dep;
-                        features = frame.features;
-                        conflicting_activations = frame.conflicting_activations;
-                        backtracked = true;
-                        Ok((candidate, has_another))
-                    }
-                    None => {
-                        debug!("no candidates found");
-                        Err(errors::activation_error(
+                    // Use our list of `conflicting_activations` to add to our
+                    // global list of past conflicting activations, effectively
+                    // globally poisoning `dep` if `conflicting_activations` ever
+                    // shows up again. We'll use the `past_conflicting_activations`
+                    // below to determine if a dependency is poisoned and skip as
+                    // much work as possible.
+                    //
+                    // If we're only here for the error messages then there's no
+                    // need to try this as this dependency is already known to be
+                    // bad.
+                    //
+                    // As we mentioned above with the `backtracked` variable if this
+                    // local is set to `true` then our `conflicting_activations` may
+                    // not be right, so we can't push into our global cache.
+                    let mut generalize_conflicting_activations = None;
+                    if !just_here_for_the_error_messages && !backtracked {
+                        past_conflicting_activations.insert(&dep, &conflicting_activations);
+                        if let Some(c) = generalize_conflicting(
                             &resolver_ctx,
-                            registry.registry,
+                            registry,
+                            past_conflicting_activations,
                             &parent,
                             &dep,
                             &conflicting_activations,
-                            &candidates,
-                            gctx,
-                        ))
+                        ) {
+                            generalize_conflicting_activations = Some(c);
+                        }
+                    }
+
+                    match find_candidate(
+                        &resolver_ctx,
+                        &mut backtrack_stack,
+                        &parent,
+                        backtracked,
+                        generalize_conflicting_activations
+                            .as_ref()
+                            .unwrap_or(&conflicting_activations),
+                    ) {
+                        Some((candidate, has_another, frame)) => {
+                            // Reset all of our local variables used with the
+                            // contents of `frame` to complete our backtrack.
+                            resolver_ctx = frame.context;
+                            remaining_deps = frame.remaining_deps;
+                            remaining_candidates = frame.remaining_candidates;
+                            parent = frame.parent;
+                            dep = frame.dep;
+                            features = frame.features;
+                            conflicting_activations = frame.conflicting_activations;
+                            backtracked = true;
+                            Ok((candidate, has_another))
+                        }
+                        None => {
+                            debug!("no candidates found");
+                            Err(errors::activation_error(
+                                &resolver_ctx,
+                                registry.registry,
+                                &parent,
+                                &dep,
+                                &conflicting_activations,
+                                &candidates,
+                                gctx,
+                            ))
+                        }
                     }
                 }
-            })?;
+            }?;
 
             // If we're only here for the error messages then we know that this
             // activation will fail one way or another. To that end if we've got
@@ -648,7 +650,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, opts, None)? && activated {
+            if cx.flag_activated(&replace, opts, None)? && activated {
                 return Ok(None);
             }
             trace!(
@@ -848,8 +850,8 @@ fn generalize_conflicting(
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
                 .query(critical_parents_dep, first_version)
-                .expect("an already used dep now error!?")
                 .expect("an already used dep now pending!?")
+                .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .map(|other| {

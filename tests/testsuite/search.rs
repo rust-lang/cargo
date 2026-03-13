@@ -1,11 +1,7 @@
 //! Tests for the `cargo search` command.
 
-use std::collections::HashSet;
-
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo::util::cache_lock::CacheLockMode;
-use cargo_test_support::paths;
 use cargo_test_support::registry::{RegistryBuilder, Response};
 use cargo_test_support::str;
 
@@ -93,24 +89,15 @@ fn setup() -> RegistryBuilder {
 fn not_update() {
     let registry = setup().build();
 
-    use cargo::core::{Shell, SourceId};
-    use cargo::sources::RegistrySource;
-    use cargo::sources::source::Source;
-    use cargo::util::GlobalContext;
+    cargo_process("search postgres")
+        .replace_crates_io(registry.index_url())
+        .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[NOTE] to learn more about a package, run `cargo info <name>`
 
-    let sid = SourceId::for_registry(registry.index_url()).unwrap();
-    let gctx = GlobalContext::new(
-        Shell::from_write(Box::new(Vec::new())),
-        paths::root(),
-        paths::home().join(".cargo"),
-    );
-    let lock = gctx
-        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
-        .unwrap();
-    let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &gctx).unwrap();
-    regsrc.invalidate_cache();
-    regsrc.block_until_ready().unwrap();
-    drop(lock);
+"#]])
+        .run();
 
     cargo_process("search postgres")
         .replace_crates_io(registry.index_url())

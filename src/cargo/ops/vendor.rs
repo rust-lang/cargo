@@ -6,6 +6,7 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
 use crate::sources::path::PathSource;
+use crate::sources::source::Source;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::{CargoResult, GlobalContext, try_canonicalize};
 

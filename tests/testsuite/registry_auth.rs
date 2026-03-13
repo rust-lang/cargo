@@ -223,6 +223,9 @@ fn bad_environment_token_with_asymmetric_subject() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
+  failed to query registry `alternative` for dependency `bar`
+
+Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
@@ -256,6 +259,9 @@ fn bad_environment_token_with_asymmetric_incorrect_subject() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  failed to query registry `alternative` for dependency `bar`
 
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
@@ -296,6 +302,9 @@ fn bad_environment_token_with_incorrect_asymmetric() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
+  failed to query registry `alternative` for dependency `bar`
+
+Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
@@ -324,6 +333,9 @@ fn missing_token() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  failed to query registry `alternative` for dependency `bar`
 
 Caused by:
   no token found for `alternative`, please run `cargo login --registry alternative`
@@ -376,6 +388,9 @@ fn incorrect_token() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  failed to query registry `alternative` for dependency `bar`
 
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`

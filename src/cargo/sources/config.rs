@@ -6,7 +6,7 @@
 
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
-use crate::sources::source::Source;
+use crate::sources::source::{DynSource, Source};
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
 use crate::util::context::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
@@ -148,7 +148,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
         &self,
         id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'gctx>> {
+    ) -> CargoResult<Box<DynSource<'gctx>>> {
         debug!("loading: {}", id);
 
         let Some(mut name) = self.id2name.get(&id) else {
@@ -228,7 +228,7 @@ restore the source replacement configuration to continue the build
             );
         }
 
-        Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
+        Ok(DynSource::new_box(ReplacedSource::new(id, new_id, new_src)))
     }
 
     /// Gets the [`Source`] for a given [`SourceId`] without performing any source replacement.
@@ -236,13 +236,13 @@ restore the source replacement configuration to continue the build
         &self,
         id: SourceId,
         yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'gctx>> {
+    ) -> CargoResult<Box<DynSource<'gctx>>> {
         let src = id.load(self.gctx, yanked_whitelist)?;
         if let Some(overlay_id) = self.overlays.get(&id) {
             let overlay = overlay_id.load(self.gctx(), yanked_whitelist)?;
-            Ok(Box::new(DependencyConfusionThreatOverlaySource::new(
-                overlay, src,
-            )))
+            Ok(DynSource::new_box(
+                DependencyConfusionThreatOverlaySource::new(overlay, src),
+            ))
         } else {
             Ok(src)
         }

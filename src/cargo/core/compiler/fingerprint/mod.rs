@@ -397,6 +397,7 @@ use tracing::{debug, info};
 
 use crate::core::Package;
 use crate::core::compiler::unit_graph::UnitDep;
+use crate::sources::source::Source as _;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
