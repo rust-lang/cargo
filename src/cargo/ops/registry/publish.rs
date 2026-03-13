@@ -29,6 +29,7 @@ use crate::core::Package;
 use crate::core::PackageId;
 use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
+use crate::core::Summary;
 use crate::core::Workspace;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
@@ -86,15 +87,17 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         .into_iter()
         .partition(|(pkg, _)| pkg.publish() == &Some(vec![]));
     // If `--workspace` is passed,
-    // the intent is more like "publish all publisable packages in this workspace",
-    // so skip `publish=false` packages.
-    let allow_unpublishable = match &opts.to_publish {
+    // the intent is more like "publish all publisable packages in this workspace".
+    // Hence,
+    // * skip `publish=false` packages
+    // * skip already published packages
+    let is_workspace_publish = match &opts.to_publish {
         Packages::Default => ws.is_virtual(),
         Packages::All(_) => true,
         Packages::OptOut(_) => true,
         Packages::Packages(_) => false,
     };
-    if !unpublishable.is_empty() && !allow_unpublishable {
+    if !unpublishable.is_empty() && !is_workspace_publish {
         bail!(
             "{} cannot be published.\n\
             `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",
@@ -106,7 +109,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     }
 
     if pkgs.is_empty() {
-        if allow_unpublishable {
+        if is_workspace_publish {
             let n = unpublishable.len();
             let plural = if n == 1 { "" } else { "s" };
             ws.gctx().shell().print_report(
@@ -140,13 +143,30 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         Some(Operation::Read).filter(|_| !opts.dry_run),
     )?;
 
+    // `maybe_published` tracks package versions that already exist in the registry,
+    // meaning they might have been published before.
+    // Later, we verify the tarball checksum to see
+    // if the local package matches the registry.
+    // This helps catch cases where the local version
+    // wasn’t bumped but files changed.
+    let mut maybe_published = HashMap::new();
+
     {
         let _lock = opts
             .gctx
             .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
         for (pkg, _) in &pkgs {
-            verify_unpublished(pkg, &mut source, &source_ids, opts.dry_run, opts.gctx)?;
+            if let Some(summary) = verify_unpublished(
+                pkg,
+                &mut source,
+                &source_ids,
+                opts.dry_run,
+                is_workspace_publish,
+                opts.gctx,
+            )? {
+                maybe_published.insert(pkg.package_id(), summary);
+            }
             verify_dependencies(pkg, &registry, source_ids.original).map_err(|err| {
                 ManifestError::new(
                     err.context(format!(
@@ -199,15 +219,38 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         let mut ready = plan.take_ready();
         while let Some(pkg_id) = ready.pop_first() {
             let (pkg, (_features, tarball)) = &pkg_dep_graph.packages[&pkg_id];
-            opts.gctx.shell().status("Uploading", pkg.package_id())?;
 
-            if !opts.dry_run {
-                let ver = pkg.version().to_string();
-
+            if opts.dry_run {
+                opts.gctx.shell().status("Uploading", pkg.package_id())?;
+            } else {
                 tarball.file().seek(SeekFrom::Start(0))?;
                 let hash = cargo_util::Sha256::new()
                     .update_file(tarball.file())?
                     .finish_hex();
+
+                if let Some(summary) = maybe_published.get(&pkg.package_id()) {
+                    if summary.checksum() == Some(hash.as_str()) {
+                        opts.gctx.shell().warn(format_args!(
+                            "skipping upload for crate {}@{}: already exists on {}",
+                            pkg.name(),
+                            pkg.version(),
+                            source.describe()
+                        ))?;
+                        plan.mark_confirmed([pkg.package_id()]);
+                        continue;
+                    }
+                    bail!(
+                        "crate {}@{} already exists on {} but tarball checksum mismatched\n\
+                        perhaps local files have changed but forgot to bump the version?",
+                        pkg.name(),
+                        pkg.version(),
+                        source.describe()
+                    );
+                }
+
+                opts.gctx.shell().status("Uploading", pkg.package_id())?;
+
+                let ver = pkg.version().to_string();
                 let operation = Operation::Publish {
                     name: pkg.name().as_str(),
                     vers: &ver,
@@ -257,6 +300,12 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     format!("{short_pkg_description} to {source_description}"),
                 )?;
             }
+        }
+
+        if to_confirm.is_empty() {
+            // nothing to confirm because some are already uploaded before
+            // this cargo invocation.
+            continue;
         }
 
         let confirmed = if opts.dry_run {
@@ -431,13 +480,18 @@ fn poll_one_package(
     Ok(!summaries.is_empty())
 }
 
+/// Checks if a package is already published.
+///
+/// Returns a [`Summary`] for computing the tarball checksum
+/// to compare with the registry index later, if needed.
 fn verify_unpublished(
     pkg: &Package,
     source: &mut RegistrySource<'_>,
     source_ids: &RegistrySourceIds,
     dry_run: bool,
+    skip_already_publish: bool,
     gctx: &GlobalContext,
-) -> CargoResult<()> {
+) -> CargoResult<Option<Summary>> {
     let query = Dependency::parse(
         pkg.name(),
         Some(&pkg.version().to_exact_req().to_string()),
@@ -451,28 +505,36 @@ fn verify_unpublished(
             std::task::Poll::Pending => source.block_until_ready()?,
         }
     };
-    if !duplicate_query.is_empty() {
-        // Move the registry error earlier in the publish process.
-        // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a
-        // warning.
-        if dry_run {
-            gctx.shell().warn(format!(
-                "crate {}@{} already exists on {}",
-                pkg.name(),
-                pkg.version(),
-                source.describe()
-            ))?;
-        } else {
-            bail!(
-                "crate {}@{} already exists on {}",
-                pkg.name(),
-                pkg.version(),
-                source.describe()
-            );
-        }
+    if duplicate_query.is_empty() {
+        return Ok(None);
     }
 
-    Ok(())
+    // Move the registry error earlier in the publish process.
+    // Since dry-run wouldn't talk to the registry to get the error,
+    // we downgrade it to a warning.
+    if skip_already_publish || dry_run {
+        gctx.shell().warn(format!(
+            "crate {}@{} already exists on {}",
+            pkg.name(),
+            pkg.version(),
+            source.describe()
+        ))?;
+    } else {
+        bail!(
+            "crate {}@{} already exists on {}",
+            pkg.name(),
+            pkg.version(),
+            source.describe()
+        );
+    }
+
+    assert_eq!(
+        duplicate_query.len(),
+        1,
+        "registry must not have duplicate versions",
+    );
+    let summary = duplicate_query.into_iter().next().unwrap().into_summary();
+    Ok(skip_already_publish.then_some(summary))
 }
 
 fn verify_dependencies(
