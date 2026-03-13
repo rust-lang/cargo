@@ -117,6 +117,10 @@ fn extract_workflow_typos_version(metadata: &Metadata) -> anyhow::Result<Version
     let workflow_path = ws_root.join(".github").join("workflows").join("main.yml");
     let file_content = std::fs::read_to_string(workflow_path)?;
 
+    extract_typos_version_from_content(&file_content)
+}
+
+fn extract_typos_version_from_content(file_content: &str) -> anyhow::Result<Version> {
     if let Some(line) = file_content
         .lines()
         .find(|line| line.contains(TYPOS_STEP_PREFIX))
@@ -126,6 +130,25 @@ fn extract_workflow_typos_version(metadata: &Metadata) -> anyhow::Result<Version
         Ok(v)
     } else {
         Err(anyhow::anyhow!("Could not find typos version in workflow"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_typos_version_buggy_behavior() {
+        // Standard indentation (6 spaces) works
+        let content_6_spaces = "      uses: crate-ci/typos@v1.16.23";
+        assert_eq!(
+            extract_typos_version_from_content(content_6_spaces).unwrap().to_string(),
+            "1.16.23"
+        );
+
+        // Different indentation (e.g., 8 spaces) FAILS under current buggy behavior
+        let content_8_spaces = "        uses: crate-ci/typos@v1.16.23";
+        assert!(extract_typos_version_from_content(content_8_spaces).is_err());
     }
 }
 
