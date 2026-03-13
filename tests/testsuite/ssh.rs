@@ -136,10 +136,7 @@ fn no_known_host() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
+  failed to query ssh://testuser@127.0.0.1:[..]/repos/bar.git for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -228,10 +225,7 @@ fn same_key_different_hostname() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
+  failed to query ssh://testuser@127.0.0.1:[..]/repos/bar.git for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -341,10 +335,7 @@ fn invalid_key_error() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update ssh://testuser@127.0.0.1:{port}/repos/bar.git
+  failed to query ssh://testuser@127.0.0.1:{port}/repos/bar.git for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
@@ -471,10 +462,7 @@ fn bundled_github_works() {
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
+  failed to query ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -500,10 +488,7 @@ Caused by:
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
+  failed to query ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -533,10 +518,7 @@ Caused by:
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+  failed to query ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -562,10 +544,7 @@ Caused by:
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+  failed to query ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]

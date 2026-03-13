@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use anyhow::bail;
 use curl::easy::Easy;
+use curl::easy::Easy2;
 use curl::easy::InfoType;
 use curl::easy::SslOpt;
 use curl::easy::SslVersion;
@@ -52,6 +53,7 @@ pub fn needs_custom_http_transport(gctx: &GlobalContext) -> CargoResult<bool> {
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
+/// Note: keep in sync with `http_async::configure_http_handle`.
 pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     let http = gctx.http_config()?;
     if let Some(proxy) = super::proxy::http_proxy(http) {
@@ -133,58 +135,60 @@ pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoRe
     if let Some(true) = http.debug {
         handle.verbose(true)?;
         tracing::debug!(target: "network", "{:#?}", curl::Version::get());
-        handle.debug_function(|kind, data| {
-            enum LogLevel {
-                Debug,
-                Trace,
-            }
-            use LogLevel::*;
-            let (prefix, level) = match kind {
-                InfoType::Text => ("*", Debug),
-                InfoType::HeaderIn => ("<", Debug),
-                InfoType::HeaderOut => (">", Debug),
-                InfoType::DataIn => ("{", Trace),
-                InfoType::DataOut => ("}", Trace),
-                InfoType::SslDataIn | InfoType::SslDataOut => return,
-                _ => return,
-            };
-            let starts_with_ignore_case = |line: &str, text: &str| -> bool {
-                let line = line.as_bytes();
-                let text = text.as_bytes();
-                line[..line.len().min(text.len())].eq_ignore_ascii_case(text)
-            };
-            match str::from_utf8(data) {
-                Ok(s) => {
-                    for mut line in s.lines() {
-                        if starts_with_ignore_case(line, "authorization:") {
-                            line = "Authorization: [REDACTED]";
-                        } else if starts_with_ignore_case(line, "h2h3 [authorization:") {
-                            line = "h2h3 [Authorization: [REDACTED]]";
-                        } else if starts_with_ignore_case(line, "set-cookie") {
-                            line = "set-cookie: [REDACTED]";
-                        }
-                        match level {
-                            Debug => debug!(target: "network", "http-debug: {prefix} {line}"),
-                            Trace => trace!(target: "network", "http-debug: {prefix} {line}"),
-                        }
-                    }
-                }
-                Err(_) => {
-                    let len = data.len();
-                    match level {
-                        Debug => {
-                            debug!(target: "network", "http-debug: {prefix} ({len} bytes of data)")
-                        }
-                        Trace => {
-                            trace!(target: "network", "http-debug: {prefix} ({len} bytes of data)")
-                        }
-                    }
-                }
-            }
-        })?;
+        handle.debug_function(debug)?;
     }
 
     HttpTimeout::new(gctx)
+}
+
+pub fn debug(kind: InfoType, data: &[u8]) {
+    enum LogLevel {
+        Debug,
+        Trace,
+    }
+    use LogLevel::*;
+    let (prefix, level) = match kind {
+        InfoType::Text => ("*", Debug),
+        InfoType::HeaderIn => ("<", Debug),
+        InfoType::HeaderOut => (">", Debug),
+        InfoType::DataIn => ("{", Trace),
+        InfoType::DataOut => ("}", Trace),
+        InfoType::SslDataIn | InfoType::SslDataOut => return,
+        _ => return,
+    };
+    let starts_with_ignore_case = |line: &str, text: &str| -> bool {
+        let line = line.as_bytes();
+        let text = text.as_bytes();
+        line[..line.len().min(text.len())].eq_ignore_ascii_case(text)
+    };
+    match str::from_utf8(data) {
+        Ok(s) => {
+            for mut line in s.lines() {
+                if starts_with_ignore_case(line, "authorization:") {
+                    line = "Authorization: [REDACTED]";
+                } else if starts_with_ignore_case(line, "h2h3 [authorization:") {
+                    line = "h2h3 [Authorization: [REDACTED]]";
+                } else if starts_with_ignore_case(line, "set-cookie") {
+                    line = "set-cookie: [REDACTED]";
+                }
+                match level {
+                    Debug => debug!(target: "network", "http-debug: {prefix} {line}"),
+                    Trace => trace!(target: "network", "http-debug: {prefix} {line}"),
+                }
+            }
+        }
+        Err(_) => {
+            let len = data.len();
+            match level {
+                Debug => {
+                    debug!(target: "network", "http-debug: {prefix} ({len} bytes of data)")
+                }
+                Trace => {
+                    trace!(target: "network", "http-debug: {prefix} ({len} bytes of data)")
+                }
+            }
+        }
+    }
 }
 
 #[must_use]
@@ -212,6 +216,18 @@ impl HttpTimeout {
     }
 
     pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
+        // The timeout option for libcurl by default times out the entire
+        // transfer, but we probably don't want this. Instead we only set
+        // timeouts for the connect phase as well as a "low speed" timeout so
+        // if we don't receive many bytes in a large-ish period of time then we
+        // time out.
+        handle.connect_timeout(self.dur)?;
+        handle.low_speed_time(self.dur)?;
+        handle.low_speed_limit(self.low_speed_limit)?;
+        Ok(())
+    }
+
+    pub fn configure2<T>(&self, handle: &mut Easy2<T>) -> CargoResult<()> {
         // The timeout option for libcurl by default times out the entire
         // transfer, but we probably don't want this. Instead we only set
         // timeouts for the connect phase as well as a "low speed" timeout so

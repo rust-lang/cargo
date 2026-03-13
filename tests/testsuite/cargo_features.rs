@@ -562,10 +562,7 @@ fn nightly_feature_requires_nightly_in_dep() {
 [ERROR] failed to get `a` as a dependency of package `b v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `a`
-
-Caused by:
-  unable to update [ROOT]/foo/a
+  failed to query [ROOT]/foo/a for dependency `a`
 
 Caused by:
   failed to parse manifest at `[ROOT]/foo/a/Cargo.toml`

@@ -64,6 +64,7 @@ use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::registry::DynRegistry;
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
@@ -74,6 +75,7 @@ use crate::core::resolver::{
 use crate::core::summary::Summary;
 use crate::ops;
 use crate::sources::RecursivePathSource;
+use crate::sources::source::DynSource;
 use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::FeatureUnification;
@@ -505,7 +507,7 @@ pub fn resolve_with_previous<'gctx>(
     let mut resolved = resolver::resolve(
         &summaries,
         &replace,
-        registry,
+        DynRegistry::from_mut(registry),
         &version_prefs,
         ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         Some(ws.gctx()),
@@ -548,7 +550,7 @@ pub fn add_overrides<'a>(
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source = RecursivePathSource::new(&path, id, ws.gctx());
+        let source = RecursivePathSource::new(&path, id, ws.gctx());
         source.load().with_context(|| {
             format!(
                 "failed to update path override `{}` \
@@ -557,7 +559,7 @@ pub fn add_overrides<'a>(
                 definition
             )
         })?;
-        registry.add_override(Box::new(source));
+        registry.add_override(DynSource::new_box(source));
     }
     Ok(())
 }

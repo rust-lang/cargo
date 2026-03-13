@@ -49,10 +49,7 @@ fn self_signed_should_fail() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update https://127.0.0.1:[..]/repos/bar.git
+  failed to query https://127.0.0.1:[..]/repos/bar.git for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]

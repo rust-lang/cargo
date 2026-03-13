@@ -9,6 +9,7 @@
 //!
 //! This module impl that cache in all the gory details
 
+use crate::core::registry::DynRegistry;
 use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
@@ -25,18 +26,21 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 
 use anyhow::Context as _;
+use futures::StreamExt;
+use futures::stream::FuturesOrdered;
+use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::task::Poll;
 use tracing::debug;
 
+type CacheKey = (Dependency, Option<VersionOrdering>);
+
 pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (dyn Registry + 'a),
+    pub registry: &'a DynRegistry<'a>,
     replacements: &'a [(PackageIdSpec, Dependency)],
     version_prefs: &'a VersionPreferences,
-    /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
-    registry_cache: HashMap<(Dependency, Option<VersionOrdering>), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
     ///
     /// HACK: `first_version` is not kept in the cache key is it is 1:1 with
@@ -47,12 +51,23 @@ pub struct RegistryQueryer<'a> {
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
     /// all the cases we ended up using a supplied replacement
-    used_replacements: HashMap<PackageId, Summary>,
+    used_replacements: RefCell<HashMap<PackageId, Summary>>,
+
+    /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
+    registry_cache: HashMap<CacheKey, Rc<Vec<Summary>>>,
+
+    /// Summary requests that have been encounter this resolver iteration.
+    /// They will be fulfilled by [`RegistryQueryer::wait`].
+    async_pending: Vec<CacheKey>,
+
+    /// Summary requests completed during the previous resolver iteration.
+    /// When queried again, results will be placed in [`RegistryQueryer::summary_cache`].
+    async_complete: HashMap<CacheKey, CargoResult<Rc<Vec<Summary>>>>,
 }
 
 impl<'a> RegistryQueryer<'a> {
     pub fn new(
-        registry: &'a mut dyn Registry,
+        registry: &'a DynRegistry<'a>,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
     ) -> Self {
@@ -62,33 +77,66 @@ impl<'a> RegistryQueryer<'a> {
             version_prefs,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
-            used_replacements: HashMap::new(),
+            used_replacements: RefCell::new(HashMap::new()),
+            async_pending: Vec::new(),
+            async_complete: HashMap::new(),
         }
     }
 
-    pub fn reset_pending(&mut self) -> bool {
-        let mut all_ready = true;
-        self.registry_cache.retain(|_, r| {
-            if !r.is_ready() {
-                all_ready = false;
+    pub fn wait(&mut self) -> CargoResult<bool> {
+        debug!(target: "cargo::core::resolver::restarting", pending = self.async_pending.len());
+
+        // Have all outstanding registry requests been completed?
+        let mut all_ready = self.async_pending.is_empty();
+
+        // Temporary to hold completed requests
+        let mut complete = Vec::new();
+        {
+            // Grab the pending requests to avoid holding mutable borrow
+            let mut pending = Vec::new();
+            std::mem::swap(&mut pending, &mut self.async_pending);
+
+            let mut futures = FuturesOrdered::new();
+            let self_shared = &*self;
+            for key in pending {
+                futures.push_back(async move {
+                    let value = self_shared.query_uncached(&key.0, key.1).await;
+                    (key, value)
+                });
             }
-            r.is_ready()
-        });
+
+            // Execute futures in parallel
+            futures::executor::block_on(async {
+                while let Some((key, value)) = futures.next().await {
+                    complete.push((key, value));
+                }
+            });
+        }
+        // Place completed information into the complete map.
+        for (k, v) in complete {
+            self.async_complete.insert(k, v);
+        }
+
+        // Remove cached summaries that we produced with incomplete information.
         self.summary_cache.retain(|_, (_, r)| {
             if !*r {
                 all_ready = false;
             }
             *r
         });
-        all_ready
+
+        Ok(all_ready)
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
-        self.used_replacements.get(&p).map(|r| (p, r.package_id()))
+        self.used_replacements
+            .borrow()
+            .get(&p)
+            .map(|r| (p, r.package_id()))
     }
 
-    pub fn replacement_summary(&self, p: PackageId) -> Option<&Summary> {
-        self.used_replacements.get(&p)
+    pub fn replacement_summary(&self, p: PackageId) -> Option<Summary> {
+        self.used_replacements.borrow().get(&p).cloned()
     }
 
     /// Queries the `registry` to return a list of candidates for `dep`.
@@ -97,26 +145,81 @@ impl<'a> RegistryQueryer<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
+    ///
+    /// This method doesn't perform any queries. Queries are stored, then executed
+    /// by the [`RegistryQueryer::wait`] method. This method can then be called again
+    /// to get the result.
     pub fn query(
         &mut self,
         dep: &Dependency,
         first_version: Option<VersionOrdering>,
     ) -> Poll<CargoResult<Rc<Vec<Summary>>>> {
-        let registry_cache_key = (dep.clone(), first_version);
-        if let Some(out) = self.registry_cache.get(&registry_cache_key).cloned() {
-            return out.map(Result::Ok);
+        let cache_key = (dep.clone(), first_version);
+
+        // Check if the summary is already cached.
+        if let Some(out) = self.registry_cache.get(&cache_key).cloned() {
+            return Poll::Ready(Ok(out));
         }
 
-        let mut ret = Vec::new();
-        let ready = self.registry.query(dep, QueryKind::Exact, &mut |s| {
-            ret.push(s.into_summary());
-        })?;
-        if ready.is_pending() {
-            self.registry_cache
-                .insert((dep.clone(), first_version), Poll::Pending);
-            return Poll::Pending;
+        // Check if we completed fetching the summary in the previous cycle, and add it to the cache.
+        if let Some(out) = self.async_complete.remove(&cache_key) {
+            if let Ok(result) = &out {
+                self.registry_cache.insert(cache_key, result.clone());
+            }
+            return Poll::Ready(out);
         }
-        for summary in ret.iter() {
+
+        // We might have the item cached with a different ordering (`first_version`).
+        {
+            // All remaining possible ordering combinations:
+            let remaining_combinations = match first_version {
+                Some(VersionOrdering::MaximumVersionsFirst) => {
+                    [Some(VersionOrdering::MinimumVersionsFirst), None]
+                }
+                Some(VersionOrdering::MinimumVersionsFirst) => {
+                    [Some(VersionOrdering::MaximumVersionsFirst), None]
+                }
+                None => [
+                    Some(VersionOrdering::MinimumVersionsFirst),
+                    Some(VersionOrdering::MaximumVersionsFirst),
+                ],
+            };
+            for ordering in remaining_combinations {
+                let cache_key = (cache_key.0.clone(), ordering);
+                if let Some(summaries) = self.registry_cache.get(&cache_key).cloned() {
+                    // Found a cached item!
+                    let mut summaries = (*summaries).clone();
+                    // Re-sort the summaries.
+                    self.version_prefs
+                        .sort_summaries(&mut summaries, first_version);
+                    let summaries = Rc::new(summaries);
+                    // Insert a new entry in the cache with the re-sort.
+                    self.registry_cache.insert(cache_key, summaries.clone());
+                    return Poll::Ready(Ok(summaries));
+                }
+            }
+        }
+
+        // If it's not already pending, mark it.
+        if !self.async_pending.contains(&cache_key) {
+            self.async_pending.push(cache_key);
+        }
+        Poll::Pending
+    }
+
+    async fn query_uncached(
+        &self,
+        dep: &Dependency,
+        first_version: Option<VersionOrdering>,
+    ) -> CargoResult<Rc<Vec<Summary>>> {
+        let mut summaries = Vec::new();
+        self.registry
+            .query(dep, QueryKind::Exact, &mut |s| {
+                summaries.push(s.into_summary());
+            })
+            .await?;
+
+        for summary in summaries.iter() {
             let mut potential_matches = self
                 .replacements
                 .iter()
@@ -131,14 +234,11 @@ impl<'a> RegistryQueryer<'a> {
                 dep.version_req()
             );
 
-            let mut summaries = match self.registry.query_vec(dep, QueryKind::Exact)? {
-                Poll::Ready(s) => s.into_iter(),
-                Poll::Pending => {
-                    self.registry_cache
-                        .insert((dep.clone(), first_version), Poll::Pending);
-                    return Poll::Pending;
-                }
-            };
+            let mut summaries = Vec::new();
+            self.registry
+                .query(dep, QueryKind::Exact, &mut |s| summaries.push(s))
+                .await?;
+            let mut summaries = summaries.into_iter();
             let s = summaries
                 .next()
                 .ok_or_else(|| {
@@ -158,13 +258,13 @@ impl<'a> RegistryQueryer<'a> {
                     .iter()
                     .map(|s| format!("  * {}", s.package_id()))
                     .collect::<Vec<_>>();
-                return Poll::Ready(Err(anyhow::anyhow!(
+                return Err(anyhow::anyhow!(
                     "the replacement specification `{}` matched \
                      multiple packages:\n  * {}\n{}",
                     spec,
                     s.package_id(),
                     bullets.join("\n")
-                )));
+                ));
             }
 
             assert_eq!(
@@ -173,13 +273,13 @@ impl<'a> RegistryQueryer<'a> {
                 "dependency should be hard coded to have the same name"
             );
             if s.version() != summary.version() {
-                return Poll::Ready(Err(anyhow::anyhow!(
+                return Err(anyhow::anyhow!(
                     "replacement specification `{}` matched {} and tried to override it with {}\n\
                      avoid matching unrelated packages by being more specific",
                     spec,
                     summary.version(),
                     s.version(),
-                )));
+                ));
             }
 
             let replace = if s.source_id() == summary.source_id() {
@@ -192,30 +292,28 @@ impl<'a> RegistryQueryer<'a> {
 
             // Make sure no duplicates
             if let Some((spec, _)) = potential_matches.next() {
-                return Poll::Ready(Err(anyhow::anyhow!(
+                return Err(anyhow::anyhow!(
                     "overlapping replacement specifications found:\n\n  \
                      * {}\n  * {}\n\nboth specifications match: {}",
                     matched_spec,
                     spec,
                     summary.package_id()
-                )));
+                ));
             }
 
             for dep in summary.dependencies() {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
             }
             if let Some(r) = replace {
-                self.used_replacements.insert(summary.package_id(), r);
+                self.used_replacements
+                    .borrow_mut()
+                    .insert(summary.package_id(), r);
             }
         }
 
-        self.version_prefs.sort_summaries(&mut ret, first_version);
-
-        let out = Poll::Ready(Rc::new(ret));
-
-        self.registry_cache.insert(registry_cache_key, out.clone());
-
-        out.map(Result::Ok)
+        self.version_prefs
+            .sort_summaries(&mut summaries, first_version);
+        Ok(Rc::new(summaries))
     }
 
     /// Find out what dependencies will be added by activating `candidate`,
@@ -260,7 +358,7 @@ impl<'a> RegistryQueryer<'a> {
                     format!(
                         "failed to get `{}` as a dependency of {}",
                         dep.package_name(),
-                        describe_path_in_context(cx, &candidate.package_id()),
+                        describe_path_in_context(&cx, &candidate.package_id()),
                     )
                 })),
             })

@@ -1,8 +1,6 @@
-use std::task::ready;
-
 use tracing::debug;
 
-use crate::sources::IndexSummary;
+use crate::sources::{IndexSummary, source::DynSource};
 
 use super::source::{MaybePackage, Source};
 
@@ -16,13 +14,13 @@ use super::source::{MaybePackage, Source};
 pub struct DependencyConfusionThreatOverlaySource<'gctx> {
     // The overlay source. The naming here comes from the main application of this,
     // where there is a remote registry that we overlay some local packages on.
-    local: Box<dyn Source + 'gctx>,
+    local: Box<DynSource<'gctx>>,
     // The source we're impersonating.
-    remote: Box<dyn Source + 'gctx>,
+    remote: Box<DynSource<'gctx>>,
 }
 
 impl<'gctx> DependencyConfusionThreatOverlaySource<'gctx> {
-    pub fn new(local: Box<dyn Source + 'gctx>, remote: Box<dyn Source + 'gctx>) -> Self {
+    pub fn new(local: Box<DynSource<'gctx>>, remote: Box<DynSource<'gctx>>) -> Self {
         debug!(
             "overlaying {} on {}",
             local.source_id().as_url(),
@@ -45,12 +43,12 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         self.local.requires_precise() || self.remote.requires_precise()
     }
 
-    fn query(
-        &mut self,
+    async fn query(
+        &self,
         dep: &crate::core::Dependency,
         kind: super::source::QueryKind,
-        f: &mut dyn FnMut(super::IndexSummary),
-    ) -> std::task::Poll<crate::CargoResult<()>> {
+        f: &mut dyn FnMut(IndexSummary),
+    ) -> crate::CargoResult<()> {
         let local_source = self.local.source_id();
         let remote_source = self.remote.source_id();
 
@@ -61,7 +59,9 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
             local_packages.insert(index.as_summary().clone());
             f(index)
         };
-        ready!(self.local.query(&local_dep, kind, &mut local_callback))?;
+        self.local
+            .query(&local_dep, kind, &mut local_callback)
+            .await?;
 
         let mut remote_callback = |index: IndexSummary| {
             if local_packages.contains(index.as_summary()) {
@@ -70,12 +70,12 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
                 f(index)
             }
         };
-        ready!(self.remote.query(dep, kind, &mut remote_callback))?;
+        self.remote.query(dep, kind, &mut remote_callback).await?;
 
-        std::task::Poll::Ready(Ok(()))
+        Ok(())
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         self.local.invalidate_cache();
         self.remote.invalidate_cache();
     }
@@ -86,7 +86,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     }
 
     fn download(
-        &mut self,
+        &self,
         package: crate::core::PackageId,
     ) -> crate::CargoResult<super::source::MaybePackage> {
         let local_source = self.local.source_id();
@@ -104,7 +104,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     }
 
     fn finish_download(
-        &mut self,
+        &self,
         pkg_id: crate::core::PackageId,
         contents: Vec<u8>,
     ) -> crate::CargoResult<crate::core::Package> {
@@ -121,20 +121,12 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         self.remote.describe()
     }
 
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[crate::core::PackageId]) {
+    fn add_to_yanked_whitelist(&self, pkgs: &[crate::core::PackageId]) {
         self.local.add_to_yanked_whitelist(pkgs);
         self.remote.add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(
-        &mut self,
-        pkg: crate::core::PackageId,
-    ) -> std::task::Poll<crate::CargoResult<bool>> {
-        self.remote.is_yanked(pkg)
-    }
-
-    fn block_until_ready(&mut self) -> crate::CargoResult<()> {
-        self.local.block_until_ready()?;
-        self.remote.block_until_ready()
+    async fn is_yanked(&self, pkg: crate::core::PackageId) -> crate::CargoResult<bool> {
+        self.remote.is_yanked(pkg).await
     }
 }

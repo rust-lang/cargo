@@ -420,13 +420,10 @@ fn invalid_dir_bad() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
+  failed to query registry `crates-io` for dependency `bar`
 
 Caused by:
-  unable to update registry `crates-io`
-
-Caused by:
-  failed to update replaced source registry `crates-io`
+  failed to query replaced source registry `crates-io`
 
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere

@@ -2481,10 +2481,7 @@ fn invalid_missing() {
 [ERROR] failed to get `x` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `x`
-
-Caused by:
-  unable to update [ROOT]/foo/x
+  failed to query [ROOT]/foo/x for dependency `x`
 
 Caused by:
   failed to read `[ROOT]/foo/x/Cargo.toml`

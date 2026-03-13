@@ -38,6 +38,7 @@ use crate::lints::rules::unused_workspace_dependencies;
 use crate::lints::rules::unused_workspace_package_fields;
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
+use crate::sources::source::DynSource;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
 use crate::util::context;
 use crate::util::context::{FeatureUnification, Value};
@@ -1287,7 +1288,7 @@ impl<'gctx> Workspace<'gctx> {
                 MaybePackage::Virtual(_) => continue,
             };
             let src = PathSource::preload_with(pkg, self.gctx);
-            registry.add_preloaded(Box::new(src));
+            registry.add_preloaded(DynSource::new_box(src));
         }
     }
 

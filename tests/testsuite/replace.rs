@@ -736,10 +736,7 @@ fn override_with_nothing() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOTURL]/override
+  failed to query [ROOTURL]/override for dependency `bar`
 
 Caused by:
   could not find `Cargo.toml` in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/[..]`

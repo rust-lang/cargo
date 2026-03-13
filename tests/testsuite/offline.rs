@@ -299,10 +299,7 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update https://github.com/some_user/dep1.git
+  failed to query https://github.com/some_user/dep1.git for dependency `dep1`
 
 Caused by:
   can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)

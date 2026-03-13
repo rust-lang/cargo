@@ -2,7 +2,7 @@ use crate::core::GitReference;
 use crate::core::PackageId;
 use crate::core::SourceKind;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
-use crate::sources::source::Source;
+use crate::sources::source::DynSource;
 use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::interning::InternedString;
@@ -394,10 +394,10 @@ impl SourceId {
         self,
         gctx: &'a GlobalContext,
         yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'a>> {
+    ) -> CargoResult<Box<DynSource<'a>>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
-            SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, gctx)?)),
+            SourceKind::Git(..) => Ok(DynSource::new_box(GitSource::new(self, gctx)?)),
             SourceKind::Path => {
                 let path = self
                     .inner
@@ -407,9 +407,9 @@ impl SourceId {
                 if crate::util::toml::is_embedded(&path) && path.is_file() {
                     anyhow::bail!("single file packages cannot be used as dependencies")
                 }
-                Ok(Box::new(PathSource::new(&path, self, gctx)))
+                Ok(DynSource::new_box(PathSource::new(&path, self, gctx)))
             }
-            SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
+            SourceKind::Registry | SourceKind::SparseRegistry => Ok(DynSource::new_box(
                 RegistrySource::remote(self, yanked_whitelist, gctx)?,
             )),
             SourceKind::LocalRegistry => {
@@ -418,7 +418,7 @@ impl SourceId {
                     .url
                     .to_file_path()
                     .expect("path sources cannot be remote");
-                Ok(Box::new(RegistrySource::local(
+                Ok(DynSource::new_box(RegistrySource::local(
                     self,
                     &path,
                     yanked_whitelist,
@@ -431,7 +431,7 @@ impl SourceId {
                     .url
                     .to_file_path()
                     .expect("path sources cannot be remote");
-                Ok(Box::new(DirectorySource::new(&path, self, gctx)))
+                Ok(DynSource::new_box(DirectorySource::new(&path, self, gctx)))
             }
         }
     }

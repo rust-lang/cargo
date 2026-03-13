@@ -165,7 +165,7 @@ fn bad3() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to update registry `crates-io`
+[ERROR] failed to query registry `crates-io`
 
 Caused by:
   error in [ROOT]/foo/.cargo/config.toml: `http.proxy` expected a string, but found a boolean
@@ -217,7 +217,7 @@ fn bad6() {
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to update registry `crates-io`
+[ERROR] failed to query registry `crates-io`
 
 Caused by:
   error in [ROOT]/foo/.cargo/config.toml: `http.user-agent` expected a string, but found a boolean
@@ -452,10 +452,7 @@ fn bad_git_dependency() {
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  unable to update git://host.xz
+  failed to query git://host.xz for dependency `foo`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -473,10 +470,7 @@ Caused by:
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  unable to update file:///
+  failed to query file:/// for dependency `foo`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -2335,10 +2329,8 @@ fn github_pull_request_url() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
+  failed to query https://github.com/rust-lang/does-not-exist/pull/123 for dependency `bar`
 
-Caused by:
-  unable to update https://github.com/rust-lang/does-not-exist/pull/123
 ...
   [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository. 
   [HELP] Replace the dependency with 
@@ -2380,10 +2372,7 @@ fn fragment_in_git_url() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update http://127.0.0.1/#foo
+  failed to query http://127.0.0.1/#foo for dependency `bar`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
@@ -2442,9 +2431,6 @@ fn bad_source_config2() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
   unable to update registry `crates-io`
 
 Caused by:
@@ -2485,9 +2471,6 @@ fn bad_source_config3() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
 
 Caused by:
   unable to update registry `crates-io`
@@ -2533,9 +2516,6 @@ fn bad_source_config4() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
 
 Caused by:
   unable to update registry `crates-io`

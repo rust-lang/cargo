@@ -813,7 +813,11 @@ fn update_with_shared_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
-[ERROR] unable to update [ROOTURL]/bar#0.1.2
+[ERROR] failed to get `bar` as a dependency of package `dep1 v0.5.0 ([ROOT]/foo/dep1)`
+    ... which satisfies path dependency `dep1` (locked to 0.5.0) of package `foo v0.5.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to query [ROOTURL]/bar#0.1.2 for dependency `bar`
 
 Caused by:
   revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)
@@ -1068,10 +1072,7 @@ fn dep_with_bad_submodule() {
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
+  failed to query [ROOTURL]/dep1 for dependency `dep1`
 
 Caused by:
   failed to update submodule `src`
@@ -2847,10 +2848,7 @@ fn invalid_git_dependency_manifest() {
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
+  failed to query [ROOTURL]/dep1 for dependency `dep1`
 
 "#]])
         .run();
@@ -4140,10 +4138,7 @@ fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+  failed to query https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -4183,10 +4178,7 @@ fn git_fetch_libgit2_error_message() {
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bitflags`
-
-Caused by:
-  unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+  failed to query https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790 for dependency `bitflags`
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
@@ -4437,10 +4429,7 @@ fn dep_with_scp_like_submodule_url() {
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
+  failed to query [ROOTURL]/dep1 for dependency `dep1`
 
 Caused by:
   failed to update submodule `submod`

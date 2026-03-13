@@ -1,10 +1,9 @@
 use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::IndexSummary;
-use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::source::{DynSource, MaybePackage};
 use crate::util::errors::CargoResult;
-use std::task::Poll;
 
 /// A source that replaces one source with the other. This manages the [source
 /// replacement] feature.
@@ -17,7 +16,7 @@ pub struct ReplacedSource<'gctx> {
     to_replace: SourceId,
     /// The identifier of the new replacement source.
     replace_with: SourceId,
-    inner: Box<dyn Source + 'gctx>,
+    inner: Box<DynSource<'gctx>>,
 }
 
 impl<'gctx> ReplacedSource<'gctx> {
@@ -27,7 +26,7 @@ impl<'gctx> ReplacedSource<'gctx> {
     pub fn new(
         to_replace: SourceId,
         replace_with: SourceId,
-        src: Box<dyn Source + 'gctx>,
+        src: Box<DynSource<'gctx>>,
     ) -> ReplacedSource<'gctx> {
         ReplacedSource {
             to_replace,
@@ -62,12 +61,12 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.requires_precise()
     }
 
-    fn query(
-        &mut self,
+    async fn query(
+        &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 
@@ -75,6 +74,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
             .query(&dep, kind, &mut |summary| {
                 f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
             })
+            .await
             .map_err(|e| {
                 if self.is_builtin_replacement() {
                     e
@@ -87,7 +87,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
             })
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         self.inner.invalidate_cache()
     }
 
@@ -95,7 +95,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.set_quiet(quiet);
     }
 
-    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
+    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(self.replace_with);
         let pkg = self.inner.download(id).map_err(|e| {
             if self.is_builtin_replacement() {
@@ -115,7 +115,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         })
     }
 
-    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let id = id.with_source_id(self.replace_with);
         let pkg = self.inner.finish_download(id, data).map_err(|e| {
             if self.is_builtin_replacement() {
@@ -155,7 +155,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         !self.is_builtin_replacement()
     }
 
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
         let pkgs = pkgs
             .iter()
             .map(|id| id.with_source_id(self.replace_with))
@@ -163,20 +163,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.add_to_yanked_whitelist(&pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        self.inner.is_yanked(pkg)
-    }
-
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.inner.block_until_ready().map_err(|e| {
-            if self.is_builtin_replacement() {
-                e
-            } else {
-                e.context(format!(
-                    "failed to update replaced source {}",
-                    self.to_replace
-                ))
-            }
-        })
+    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+        self.inner.is_yanked(pkg).await
     }
 }
