@@ -2328,6 +2328,28 @@ invalid potential workspace manifest: `[ROOT]/home/.cargo/git/checkouts/foo-[HAS
 }
 
 #[cargo_test]
+fn install_git_with_rev_in_url() {
+    let p = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut url = p.url().to_string();
+    url.push_str("#0e8d88b5cfc173c5f5a6a0fe0ce1d4e6018600d4");
+
+    cargo_process("install --locked --git")
+        .arg(url)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid git url to install from
+
+[HELP] use `--rev <SHA>` to specify a commit
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn install_git_with_symlink_home() {
     // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
     // symlink, and uses an build script.
