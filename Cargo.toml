@@ -20,6 +20,7 @@ repository = "https://github.com/rust-lang/cargo"
 annotate-snippets = { version = "0.12.12", features = ["simd"] }
 anstream = "1.0.0"
 anstyle = "1.0.13"
+anstyle-hyperlink = "1.0.1"
 anyhow = "1.0.102"
 base64 = "0.22.1"
 blake3 = "1.8.3"
@@ -159,6 +160,7 @@ path = "src/cargo/lib.rs"
 annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
+anstyle-hyperlink = { workspace = true, features = ["file"] }
 anyhow.workspace = true
 base64.workspace = true
 blake3.workspace = true

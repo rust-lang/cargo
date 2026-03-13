@@ -95,6 +95,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5192cca8006f1fd4f7237516f40fa183bb07f8fbdfedaa0036de5ea9b0b45e78"
 
 [[package]]
+name = "anstyle-hyperlink"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "251c63848f1535e0cc16db89fe57637274fadca43ab63b12324b2a0e839f17cb"
+dependencies = [
+ "libc",
+ "percent-encoding",
+]
+
+[[package]]
 name = "anstyle-lossy"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -355,6 +365,7 @@ dependencies = [
  "annotate-snippets",
  "anstream 1.0.0",
  "anstyle",
+ "anstyle-hyperlink",
  "anyhow",
  "base64",
  "blake3",
@@ -4590,7 +4601,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0136791f7c95b1f6dd99f9cc786b91bb81c3800b639b3478e561ddb7be95e5f1"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.2",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
