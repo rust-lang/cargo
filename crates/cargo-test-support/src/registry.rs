@@ -1029,7 +1029,7 @@ impl HttpServer {
         Response {
             code: 401,
             headers: vec![
-                r#"WWW-Authenticate: Cargo login_url="https://test-registry-login/me""#.to_string(),
+                r#"www-authenticate: Cargo login_url="https://test-registry-login/me""#.to_string(),
             ],
             body: b"Unauthorized message from server.".to_vec(),
         }
