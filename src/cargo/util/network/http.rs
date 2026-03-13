@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use anyhow::bail;
 use curl::easy::Easy;
+use curl::easy::Easy2;
 use curl::easy::InfoType;
 use curl::easy::SslOpt;
 use curl::easy::SslVersion;
@@ -52,6 +53,7 @@ pub fn needs_custom_http_transport(gctx: &GlobalContext) -> CargoResult<bool> {
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
+/// Note: keep in sync with `http_async::configure_http_handle`.
 pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoResult<HttpTimeout> {
     let http = gctx.http_config()?;
     if let Some(proxy) = super::proxy::http_proxy(http) {
@@ -214,6 +216,18 @@ impl HttpTimeout {
     }
 
     pub fn configure(&self, handle: &mut Easy) -> CargoResult<()> {
+        // The timeout option for libcurl by default times out the entire
+        // transfer, but we probably don't want this. Instead we only set
+        // timeouts for the connect phase as well as a "low speed" timeout so
+        // if we don't receive many bytes in a large-ish period of time then we
+        // time out.
+        handle.connect_timeout(self.dur)?;
+        handle.low_speed_time(self.dur)?;
+        handle.low_speed_limit(self.low_speed_limit)?;
+        Ok(())
+    }
+
+    pub fn configure2<T>(&self, handle: &mut Easy2<T>) -> CargoResult<()> {
         // The timeout option for libcurl by default times out the entire
         // transfer, but we probably don't want this. Instead we only set
         // timeouts for the connect phase as well as a "low speed" timeout so
