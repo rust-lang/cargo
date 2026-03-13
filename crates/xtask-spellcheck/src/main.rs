@@ -14,7 +14,6 @@ use std::{
 
 const BIN_NAME: &str = "typos";
 const PKG_NAME: &str = "typos-cli";
-const TYPOS_STEP_PREFIX: &str = "      uses: crate-ci/typos@v";
 
 fn main() -> anyhow::Result<()> {
     let cli = cli();
@@ -117,16 +116,18 @@ fn extract_workflow_typos_version(metadata: &Metadata) -> anyhow::Result<Version
     let workflow_path = ws_root.join(".github").join("workflows").join("main.yml");
     let file_content = std::fs::read_to_string(workflow_path)?;
 
-    if let Some(line) = file_content
+    extract_typos_version_from_content(&file_content)
+}
+
+fn extract_typos_version_from_content(file_content: &str) -> anyhow::Result<Version> {
+    file_content
         .lines()
-        .find(|line| line.contains(TYPOS_STEP_PREFIX))
-        && let Some(stripped) = line.strip_prefix(TYPOS_STEP_PREFIX)
-        && let Ok(v) = Version::parse(stripped)
-    {
-        Ok(v)
-    } else {
-        Err(anyhow::anyhow!("Could not find typos version in workflow"))
-    }
+        .find_map(|line| {
+            line.trim()
+                .strip_prefix("uses: crate-ci/typos@v")
+                .and_then(|v| Version::parse(v).ok())
+        })
+        .ok_or_else(|| anyhow::anyhow!("Could not find typos version in workflow"))
 }
 
 /// If the given executable is installed with the given version, use that,
