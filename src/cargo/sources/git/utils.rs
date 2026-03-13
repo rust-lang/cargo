@@ -547,16 +547,22 @@ fn absolute_submodule_url<'s>(base_url: &str, submodule_url: &'s str) -> CargoRe
         Cow::from(submodule_url)
     };
 
-    let absolute_url = match gix::url::parse(gix::bstr::BStr::new(absolute_url.as_ref().as_bytes()))
-    {
-        Ok(mut url) if url.serialize_alternative_form && url.scheme == gix::url::Scheme::Ssh => {
-            url.serialize_alternative_form = false;
-            Cow::from(url.to_bstring().to_string())
-        }
-        _ => absolute_url,
-    };
+    let absolute_url = scp_to_ssh(&absolute_url)
+        .map(Into::into)
+        .unwrap_or(absolute_url);
 
     Ok(absolute_url)
+}
+
+/// Converts an SCP-like URL to `ssh://` format.
+fn scp_to_ssh(url: &str) -> Option<String> {
+    let mut gix_url = gix::url::parse(gix::bstr::BStr::new(url.as_bytes())).ok()?;
+    if gix_url.serialize_alternative_form && gix_url.scheme == gix::url::Scheme::Ssh {
+        gix_url.serialize_alternative_form = false;
+        Some(gix_url.to_bstring().to_string())
+    } else {
+        None
+    }
 }
 
 /// Prepare the authentication callbacks for cloning a git repository.
