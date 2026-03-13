@@ -14,7 +14,6 @@ use std::{
 
 const BIN_NAME: &str = "typos";
 const PKG_NAME: &str = "typos-cli";
-const TYPOS_STEP_PREFIX: &str = "      uses: crate-ci/typos@v";
 
 fn main() -> anyhow::Result<()> {
     let cli = cli();
@@ -121,35 +120,14 @@ fn extract_workflow_typos_version(metadata: &Metadata) -> anyhow::Result<Version
 }
 
 fn extract_typos_version_from_content(file_content: &str) -> anyhow::Result<Version> {
-    if let Some(line) = file_content
+    file_content
         .lines()
-        .find(|line| line.contains(TYPOS_STEP_PREFIX))
-        && let Some(stripped) = line.strip_prefix(TYPOS_STEP_PREFIX)
-        && let Ok(v) = Version::parse(stripped)
-    {
-        Ok(v)
-    } else {
-        Err(anyhow::anyhow!("Could not find typos version in workflow"))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_typos_version_buggy_behavior() {
-        // Standard indentation (6 spaces) works
-        let content_6_spaces = "      uses: crate-ci/typos@v1.16.23";
-        assert_eq!(
-            extract_typos_version_from_content(content_6_spaces).unwrap().to_string(),
-            "1.16.23"
-        );
-
-        // Different indentation (e.g., 8 spaces) FAILS under current buggy behavior
-        let content_8_spaces = "        uses: crate-ci/typos@v1.16.23";
-        assert!(extract_typos_version_from_content(content_8_spaces).is_err());
-    }
+        .find_map(|line| {
+            line.trim()
+                .strip_prefix("uses: crate-ci/typos@v")
+                .and_then(|v| Version::parse(v).ok())
+        })
+        .ok_or_else(|| anyhow::anyhow!("Could not find typos version in workflow"))
 }
 
 /// If the given executable is installed with the given version, use that,
