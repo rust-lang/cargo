@@ -43,6 +43,7 @@ pub enum Message {
         krate: Option<String>,
         errors: Vec<String>,
         abnormal_exit: Option<String>,
+        allow_broken_code: bool,
     },
     ReplaceFailed {
         file: String,
@@ -146,13 +147,13 @@ impl<'a> DiagnosticPrinter<'a> {
                 krate,
                 errors,
                 abnormal_exit,
+                allow_broken_code,
             } => {
                 let to_crate = if let Some(ref krate) = *krate {
                     format!(" to crate `{krate}`",)
                 } else {
                     "".to_owned()
                 };
-                let issue_link = get_bug_report_url(self.workspace_wrapper);
 
                 let cause_message = if !errors.is_empty() {
                     Some(errors.join("\n").trim().to_owned())
@@ -160,7 +161,9 @@ impl<'a> DiagnosticPrinter<'a> {
                     None
                 };
 
-                let report = &[
+                let issue_link = get_bug_report_url(self.workspace_wrapper);
+
+                let mut report = vec![
                     Level::ERROR
                         .secondary_title(format!("errors present after applying fixes{to_crate}"))
                         .elements(files.iter().map(|f| Origin::path(f)))
@@ -174,14 +177,22 @@ impl<'a> DiagnosticPrinter<'a> {
                                 .with_name("cause")
                                 .message(format!("rustc exited abnormally: {exit}"))
                         })),
-                    gen_please_report_this_bug_group(issue_link),
-                    gen_suggest_broken_code_group(),
-                    Group::with_title(
-                        Level::NOTE.secondary_title("original diagnostics will follow:"),
-                    ),
                 ];
 
-                self.gctx.shell().print_report(report, false)?;
+                if *allow_broken_code {
+                    report.push(Group::with_title(Level::WARNING.secondary_title(
+                        "fixes were applied, but the code is still in a broken state. broken code was saved as requested with `--broken-code`",
+                    )));
+                } else {
+                    report.push(gen_please_report_this_bug_group(issue_link));
+                    report.push(gen_suggest_broken_code_group());
+                }
+
+                report.push(Group::with_title(
+                    Level::NOTE.secondary_title("original diagnostics will follow:"),
+                ));
+
+                self.gctx.shell().print_report(&report, false)?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { message, edition } => {
