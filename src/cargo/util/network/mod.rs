@@ -8,6 +8,7 @@ use std::net::SocketAddrV6;
 use std::task::Poll;
 
 pub mod http;
+pub mod http_async;
 pub mod proxy;
 pub mod retry;
 pub mod sleep;

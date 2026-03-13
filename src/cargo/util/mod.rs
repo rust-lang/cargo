@@ -72,6 +72,9 @@ pub mod toml_mut;
 mod vcs;
 mod workspace;
 
+pub(crate) use futures::executor::block_on;
+pub(crate) use futures::executor::block_on_stream;
+
 pub fn is_rustup() -> bool {
     #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]
     std::env::var_os("RUSTUP_HOME").is_some()
