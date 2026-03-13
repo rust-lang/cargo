@@ -764,5 +764,8 @@ mod tests {
         err!("@1.2.3", ErrorKind::NameValidation(_));
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
+        assert!(std::panic::catch_unwind(|| {
+            err!("https://example.com/foo#", ErrorKind::NameValidation(_));
+        }).is_err());
     }
 }
