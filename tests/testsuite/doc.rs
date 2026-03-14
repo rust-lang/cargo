@@ -4029,3 +4029,333 @@ fn mergeable_info_dep_collision() {
     // ...and the fingerprint content are different (path to dep.json different)
     assert_ne!(first_fingerprint, second_fingerprint);
 }
+
+#[cargo_test(nightly, reason = "public-dependency feature is unstable")]
+fn doc_with_public_dependency_transitive() {
+    // selected is the user-chosen package
+    // foo-dep is a direct dep of selected
+    // public-bar-dep is a public dep of foo-dep
+    // public-baz-dep is a public dep of public-bar-dep
+    // All four should be documented since the whole chain is public.
+
+    Package::new("public-baz-dep", "0.0.1")
+        .file("src/lib.rs", "pub fn public_baz_dep() {}")
+        .publish();
+
+    Package::new("public-bar-dep", "0.0.1")
+        .cargo_feature("public-dependency")
+        .add_dep(
+            cargo_test_support::registry::Dependency::new("public-baz-dep", "0.0.1").public(true),
+        )
+        .file("src/lib.rs", "pub fn public_bar_dep() {}")
+        .publish();
+
+    Package::new("foo-dep", "0.0.1")
+        .cargo_feature("public-dependency")
+        .add_dep(
+            cargo_test_support::registry::Dependency::new("public-bar-dep", "0.0.1").public(true),
+        )
+        .file("src/lib.rs", "pub fn foo_dep() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "selected"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                foo-dep = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn selected() {}")
+        .build();
+
+    p.cargo("doc -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] public-baz-dep v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] public-bar-dep v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] foo-dep v0.0.1 (registry `dummy-registry`)
+[DOCUMENTING] public-baz-dep v0.0.1
+[CHECKING] public-baz-dep v0.0.1
+[DOCUMENTING] public-bar-dep v0.0.1
+[CHECKING] public-bar-dep v0.0.1
+[DOCUMENTING] foo-dep v0.0.1
+[CHECKING] foo-dep v0.0.1
+[DOCUMENTING] selected v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/selected/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // All four are documented: the whole chain is public.
+    assert!(p.root().join("target/doc/selected/index.html").is_file());
+    assert!(p.root().join("target/doc/foo_dep/index.html").is_file());
+    assert!(
+        p.root()
+            .join("target/doc/public_bar_dep/index.html")
+            .is_file()
+    );
+    assert!(
+        p.root()
+            .join("target/doc/public_baz_dep/index.html")
+            .is_file()
+    );
+}
+
+#[cargo_test(nightly, reason = "public-dependency feature is unstable")]
+fn doc_direct_deps_always_documented() {
+    // Direct dependencies should always be documented regardless of public flag
+    // foo -> bar (public=true), baz (public=false)
+    // Both bar and baz should be documented since they are direct deps
+
+    Package::new("bar", "0.0.1")
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    Package::new("baz", "0.0.1")
+        .file("src/lib.rs", "pub fn baz() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                bar = { version = "0.0.1", public = true }
+                baz = { version = "0.0.1", public = false }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
+[DOCUMENTING] bar v0.0.1
+[CHECKING] bar v0.0.1
+[DOCUMENTING] baz v0.0.1
+[CHECKING] baz v0.0.1
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // Both direct deps should be documented
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(p.root().join("target/doc/baz/index.html").is_file());
+}
+
+#[cargo_test(nightly, reason = "public-dependency feature is unstable")]
+fn doc_with_private_dependency() {
+    // foo -> bar (direct dep) -> baz (transitive private dep of bar)
+
+    Package::new("baz", "0.0.1")
+        .file("src/lib.rs", "pub fn baz() {}")
+        .publish();
+
+    Package::new("bar", "0.0.1")
+        .cargo_feature("public-dependency")
+        .add_dep(cargo_test_support::registry::Dependency::new("baz", "0.0.1").public(false))
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                bar = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[CHECKING] baz v0.0.1
+[DOCUMENTING] bar v0.0.1
+[CHECKING] bar v0.0.1
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/bar/index.html").is_file());
+    assert!(!p.root().join("target/doc/baz/index.html").is_file());
+}
+
+#[cargo_test(nightly, reason = "public-dependency feature is unstable")]
+fn doc_mixed_public_private_deps() {
+    // foo -> pub_dep (public), priv_dep (private), priv_dep_with_dep (unannotated)
+    // priv_dep_with_dep -> transitive
+
+    Package::new("pub_dep", "0.0.1")
+        .file("src/lib.rs", "pub fn pub_dep() {}")
+        .publish();
+
+    Package::new("priv_dep", "0.0.1")
+        .file("src/lib.rs", "pub fn priv_dep() {}")
+        .publish();
+
+    Package::new("transitive", "0.0.1")
+        .file("src/lib.rs", "pub fn transitive() {}")
+        .publish();
+
+    Package::new("priv_dep_with_dep", "0.0.1")
+        .dep("transitive", "0.0.1")
+        .file("src/lib.rs", "pub fn priv_dep_with_dep() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                pub_dep = { version = "0.0.1", public = true }
+                priv_dep = { version = "0.0.1", public = false }
+                priv_dep_with_dep = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("doc -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .run();
+
+    assert!(p.root().join("target/doc/foo/index.html").is_file());
+    assert!(p.root().join("target/doc/pub_dep/index.html").is_file());
+    assert!(p.root().join("target/doc/priv_dep/index.html").is_file());
+    assert!(
+        p.root()
+            .join("target/doc/priv_dep_with_dep/index.html")
+            .is_file()
+    );
+    assert!(!p.root().join("target/doc/transitive/index.html").is_file());
+}
+
+#[cargo_test(nightly, reason = "public-dependency feature is unstable")]
+fn doc_workspace_member_private_dep() {
+    // selected and skipped are both workspace members.
+    // selected has a private dep on skipped.
+    // skipped has a dep on transitive (a registry crate).
+    // Running `cargo doc -p selected`:
+    // - selected is documented (it is user-selected)
+    // - skipped is documented because it is a direct dep of selected (user-selected
+    //   packages always have all their direct deps documented)
+    // - transitive is NOT documented: skipped is not user-selected, so the
+    //   public-dependency filter applies to its deps, and transitive is not
+    //   marked public by skipped
+
+    Package::new("transitive", "0.0.1")
+        .file("src/lib.rs", "pub fn transitive() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["selected", "skipped"]
+            "#,
+        )
+        .file(
+            "selected/Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "selected"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                skipped = { path = "../skipped", public = false }
+            "#,
+        )
+        .file("selected/src/lib.rs", "pub fn selected() {}")
+        .file(
+            "skipped/Cargo.toml",
+            r#"
+                [package]
+                name = "skipped"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                transitive = "0.0.1"
+            "#,
+        )
+        .file("skipped/src/lib.rs", "pub fn skipped() {}")
+        .build();
+
+    p.cargo("doc -p selected -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .run();
+
+    // selected is documented (user-selected)
+    assert!(p.root().join("target/doc/selected/index.html").is_file());
+    // skipped is documented because it is a direct dep of the user-selected package
+    assert!(p.root().join("target/doc/skipped/index.html").is_file());
+    // transitive is NOT documented: skipped is not user-selected, and it does
+    // not mark transitive as public
+    assert!(!p.root().join("target/doc/transitive/index.html").is_file());
+}
