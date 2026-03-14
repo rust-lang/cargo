@@ -468,7 +468,7 @@ fn prepare_archive(
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let gctx = ws.gctx();
-    let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
+    let src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
     src.load()?;
 
     if opts.check_metadata {
@@ -1035,15 +1035,15 @@ pub fn check_yanked(
     // maybe updating files, so be sure to lock it here.
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
-    let mut sources = pkg_set.sources_mut();
+    let sources = pkg_set.sources();
     let mut pending: Vec<PackageId> = resolve.iter().collect();
     let mut results = Vec::new();
-    for (_id, source) in sources.sources_mut() {
+    for (_id, source) in sources.iter() {
         source.invalidate_cache();
     }
     while !pending.is_empty() {
         pending.retain(|pkg_id| {
-            if let Some(source) = sources.get_mut(pkg_id.source_id()) {
+            if let Some(source) = sources.get(pkg_id.source_id()) {
                 match source.is_yanked(*pkg_id) {
                     Poll::Ready(result) => results.push((*pkg_id, result)),
                     Poll::Pending => return true,
@@ -1051,7 +1051,7 @@ pub fn check_yanked(
             }
             false
         });
-        for (_id, source) in sources.sources_mut() {
+        for (_id, source) in sources.iter() {
             source.block_until_ready()?;
         }
     }

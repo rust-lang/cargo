@@ -316,7 +316,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         .iter()
         .map(|pkg_id| pkg_id.source_id())
         .collect();
-    let mut sources: HashMap<_, _> = source_ids
+    let sources: HashMap<_, _> = source_ids
         .into_iter()
         .filter_map(|sid| {
             let source = map.load(sid, &HashSet::new()).ok()?;
@@ -328,7 +328,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     let mut summaries = Vec::new();
     while !package_ids.is_empty() {
         package_ids.retain(|&pkg_id| {
-            let Some(source) = sources.get_mut(&pkg_id.source_id()) else {
+            let Some(source) = sources.get(&pkg_id.source_id()) else {
                 return false;
             };
             let Ok(dep) = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()) else {
@@ -343,7 +343,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
                 Poll::Pending => true,
             }
         });
-        for (_, source) in sources.iter_mut() {
+        for (_, source) in sources.iter() {
             source.block_until_ready().ok()?;
         }
     }

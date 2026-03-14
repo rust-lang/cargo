@@ -136,7 +136,7 @@ fn registry<'gctx>(
         auth::cache_token_from_commandline(gctx, &source_ids.original, token);
     }
 
-    let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
+    let src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
     let cfg = {
         let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         // Only update the index if `force_update` is set.

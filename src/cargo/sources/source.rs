@@ -2,6 +2,7 @@
 
 use std::collections::hash_map::HashMap;
 use std::fmt;
+use std::rc::Rc;
 use std::task::Poll;
 
 use crate::core::SourceId;
@@ -52,7 +53,7 @@ pub trait Source {
     ///
     /// The `f` argument is expected to get called when any [`IndexSummary`] becomes available.
     fn query(
-        &mut self,
+        &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
@@ -60,17 +61,13 @@ pub trait Source {
 
     /// Gathers the result from [`Source::query`] as a list of [`IndexSummary`] items
     /// when they become available.
-    fn query_vec(
-        &mut self,
-        dep: &Dependency,
-        kind: QueryKind,
-    ) -> Poll<CargoResult<Vec<IndexSummary>>> {
+    fn query_vec(&self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<IndexSummary>>> {
         let mut ret = Vec::new();
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
 
     /// Ensure that the source is fully up-to-date for the current session on the next query.
-    fn invalidate_cache(&mut self);
+    fn invalidate_cache(&self);
 
     /// If quiet, the source should not display any progress or status messages.
     fn set_quiet(&mut self, quiet: bool);
@@ -86,7 +83,7 @@ pub trait Source {
     /// In the case where [`MaybePackage::Download`] is returned, then the
     /// package downloader will call [`Source::finish_download`] after the
     /// download has finished.
-    fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
+    fn download(&self, package: PackageId) -> CargoResult<MaybePackage>;
 
     /// Gives the source the downloaded `.crate` file.
     ///
@@ -95,7 +92,7 @@ pub trait Source {
     /// the results of the download of the given URL. The source is
     /// responsible for saving to disk, and returning the appropriate
     /// [`Package`].
-    fn finish_download(&mut self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
+    fn finish_download(&self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -133,11 +130,11 @@ pub trait Source {
     /// Add a number of crates that should be whitelisted for showing up during
     /// queries, even if they are yanked. Currently only applies to registry
     /// sources.
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]);
+    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]);
 
     /// Query if a package is yanked. Only registry sources can mark packages
     /// as yanked. This ignores the yanked whitelist.
-    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>>;
+    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>>;
 
     /// Block until all outstanding [`Poll::Pending`] requests are [`Poll::Ready`].
     ///
@@ -146,7 +143,7 @@ pub trait Source {
     ///
     /// If no queries previously returned `Poll::Pending`, and [`Source::invalidate_cache`]
     /// was not called, this function should be a no-op.
-    fn block_until_ready(&mut self) -> CargoResult<()>;
+    fn block_until_ready(&self) -> CargoResult<()>;
 }
 
 /// Defines how a dependency query will be performed for a [`Source`].
@@ -211,7 +208,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     }
 
     fn query(
-        &mut self,
+        &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
@@ -219,7 +216,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).query(dep, kind, f)
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         (**self).invalidate_cache()
     }
 
@@ -227,11 +224,11 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).set_quiet(quiet)
     }
 
-    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
+    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         (**self).download(id)
     }
 
-    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         (**self).finish_download(id, data)
     }
 
@@ -251,15 +248,15 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).is_replaced()
     }
 
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
+    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
         (**self).add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
+    fn is_yanked(&self, pkg: PackageId) -> Poll<CargoResult<bool>> {
         (**self).is_yanked(pkg)
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&self) -> CargoResult<()> {
         (**self).block_until_ready()
     }
 }
@@ -267,7 +264,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 /// A [`HashMap`] of [`SourceId`] to `Box<Source>`.
 #[derive(Default)]
 pub struct SourceMap<'src> {
-    map: HashMap<SourceId, Box<dyn Source + 'src>>,
+    map: HashMap<SourceId, Rc<dyn Source + 'src>>,
 }
 
 // `impl Debug` on source requires specialization, if even desirable at all.
@@ -287,19 +284,14 @@ impl<'src> SourceMap<'src> {
     }
 
     /// Like `HashMap::get`.
-    pub fn get(&self, id: SourceId) -> Option<&(dyn Source + 'src)> {
-        self.map.get(&id).map(|s| s.as_ref())
-    }
-
-    /// Like `HashMap::get_mut`.
-    pub fn get_mut(&mut self, id: SourceId) -> Option<&mut (dyn Source + 'src)> {
-        self.map.get_mut(&id).map(|s| s.as_mut())
+    pub fn get(&self, id: SourceId) -> Option<&Rc<dyn Source + 'src>> {
+        self.map.get(&id)
     }
 
     /// Like `HashMap::insert`, but derives the [`SourceId`] key from the [`Source`].
     pub fn insert(&mut self, source: Box<dyn Source + 'src>) {
         let id = source.source_id();
-        self.map.insert(id, source);
+        self.map.insert(id, source.into());
     }
 
     /// Like `HashMap::len`.
@@ -307,11 +299,9 @@ impl<'src> SourceMap<'src> {
         self.map.len()
     }
 
-    /// Like `HashMap::iter_mut`.
-    pub fn sources_mut<'a>(
-        &'a mut self,
-    ) -> impl Iterator<Item = (&'a SourceId, &'a mut (dyn Source + 'src))> {
-        self.map.iter_mut().map(|(a, b)| (a, &mut **b))
+    /// Like `HashMap::iter`.
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a SourceId, &'a (dyn Source + 'src))> {
+        self.map.iter().map(|(a, b)| (a, &**b))
     }
 
     /// Merge the given map into self.

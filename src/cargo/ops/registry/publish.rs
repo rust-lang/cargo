@@ -439,7 +439,7 @@ fn wait_for_any_publish_confirmation(
 fn poll_one_package(
     registry_src: SourceId,
     pkg_id: &PackageId,
-    source: &mut dyn Source,
+    source: &dyn Source,
 ) -> CargoResult<bool> {
     let version_req = format!("={}", pkg_id.version());
     let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;

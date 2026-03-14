@@ -33,9 +33,11 @@ use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
+use std::rc::Rc;
 use std::str;
 use std::task::{Poll, ready};
 use tracing::info;
@@ -75,7 +77,7 @@ pub struct RegistryIndex<'gctx> {
     /// hasn't been cached already, it uses [`RegistryData::load`] to access
     /// to JSON files from the index, and the creates the optimized on-disk
     /// summary cache.
-    summaries_cache: HashMap<InternedString, Summaries>,
+    summaries_cache: RefCell<HashMap<InternedString, Rc<Summaries>>>,
     /// [`GlobalContext`] reference for convenience.
     gctx: &'gctx GlobalContext,
     /// Manager of on-disk caches.
@@ -109,7 +111,7 @@ struct Summaries {
 
     /// All known versions of a crate, keyed from their `Version` to the
     /// possibly parsed or unparsed version of the full summary.
-    versions: Vec<(Version, MaybeIndexSummary)>,
+    versions: Vec<(Version, RefCell<MaybeIndexSummary>)>,
 }
 
 /// A lazily parsed [`IndexSummary`].
@@ -253,7 +255,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         RegistryIndex {
             source_id,
             path: path.clone(),
-            summaries_cache: HashMap::new(),
+            summaries_cache: RefCell::new(HashMap::new()),
             gctx,
             cache_manager: CacheManager::new(path.join(".cache"), gctx),
         }
@@ -262,7 +264,7 @@ impl<'gctx> RegistryIndex<'gctx> {
     /// Returns the hash listed for a specified `PackageId`. Primarily for
     /// checking the integrity of a downloaded package matching the checksum in
     /// the index file, aka [`IndexSummary`].
-    pub fn hash(&mut self, pkg: PackageId, load: &mut dyn RegistryData) -> Poll<CargoResult<&str>> {
+    pub fn hash(&self, pkg: PackageId, load: &dyn RegistryData) -> Poll<CargoResult<String>> {
         let req = OptVersionReq::lock_to_exact(pkg.version());
         let summary = self.summaries(pkg.name(), &req, load)?;
         let summary = ready!(summary).next();
@@ -270,6 +272,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
             .as_summary()
             .checksum()
+            .map(|checksum| checksum.to_string())
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?))
     }
 
@@ -285,18 +288,14 @@ impl<'gctx> RegistryIndex<'gctx> {
     /// Internally there's quite a few layer of caching to amortize this cost
     /// though since this method is called quite a lot on null builds in Cargo.
     fn summaries<'a, 'b>(
-        &'a mut self,
+        &'a self,
         name: InternedString,
         req: &'b OptVersionReq,
-        load: &mut dyn RegistryData,
-    ) -> Poll<CargoResult<impl Iterator<Item = &'a IndexSummary> + 'b>>
+        load: &dyn RegistryData,
+    ) -> Poll<CargoResult<impl Iterator<Item = IndexSummary> + 'b>>
     where
         'a: 'b,
     {
-        let cli_unstable = self.gctx.cli_unstable();
-
-        let source_id = self.source_id;
-
         // First up parse what summaries we have available.
         let summaries = ready!(self.load_summaries(name, load)?);
 
@@ -306,20 +305,45 @@ impl<'gctx> RegistryIndex<'gctx> {
         // entry in a lock file on every build, so we want to absolutely
         // minimize the amount of work being done here and parse as little as
         // necessary.
-        let raw_data = &summaries.raw_data;
-        Poll::Ready(Ok(summaries
-            .versions
-            .iter_mut()
-            .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
-            .filter_map(move |maybe| {
-                match maybe.parse(raw_data, source_id, cli_unstable) {
-                    Ok(sum) => Some(sum),
-                    Err(e) => {
-                        info!("failed to parse `{}` registry package: {}", name, e);
-                        None
+
+        struct I<'a> {
+            name: InternedString,
+            index: &'a RegistryIndex<'a>,
+            req: &'a OptVersionReq,
+            summaries: Rc<Summaries>,
+            i: usize,
+        }
+
+        impl<'a> Iterator for I<'a> {
+            type Item = IndexSummary;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                while let Some((v, summary)) = self.summaries.versions.get(self.i) {
+                    self.i += 1;
+                    if self.req.matches(v) {
+                        match summary.borrow_mut().parse(
+                            &self.summaries.raw_data,
+                            self.index.source_id,
+                            self.index.gctx.cli_unstable(),
+                        ) {
+                            Ok(summary) => return Some(summary.clone()),
+                            Err(e) => {
+                                info!("failed to parse `{}` registry package: {}", self.name, e);
+                            }
+                        }
                     }
                 }
-            })))
+                None
+            }
+        }
+
+        Poll::Ready(Ok(I {
+            name,
+            index: self,
+            req,
+            summaries,
+            i: 0,
+        }))
     }
 
     /// Actually parses what summaries we have available.
@@ -338,14 +362,14 @@ impl<'gctx> RegistryIndex<'gctx> {
     ///
     /// [`RemoteRegistry`]: super::remote::RemoteRegistry
     fn load_summaries(
-        &mut self,
+        &self,
         name: InternedString,
-        load: &mut dyn RegistryData,
-    ) -> Poll<CargoResult<&mut Summaries>> {
+        load: &dyn RegistryData,
+    ) -> Poll<CargoResult<Rc<Summaries>>> {
         // If we've previously loaded what versions are present for `name`, just
         // return that since our in-memory cache should still be valid.
-        if self.summaries_cache.contains_key(&name) {
-            return Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()));
+        if let Some(summaries) = self.summaries_cache.borrow().get(&name) {
+            return Poll::Ready(Ok(summaries.clone()));
         }
 
         // Prepare the `RegistryData` which will lazily initialize internal data
@@ -362,23 +386,26 @@ impl<'gctx> RegistryIndex<'gctx> {
             &self.cache_manager,
         ))?
         .unwrap_or_default();
-        self.summaries_cache.insert(name, summaries);
-        Poll::Ready(Ok(self.summaries_cache.get_mut(&name).unwrap()))
+        let summaries = Rc::new(summaries);
+        self.summaries_cache
+            .borrow_mut()
+            .insert(name, summaries.clone());
+        Poll::Ready(Ok(summaries))
     }
 
     /// Clears the in-memory summaries cache.
-    pub fn clear_summaries_cache(&mut self) {
-        self.summaries_cache.clear();
+    pub fn clear_summaries_cache(&self) {
+        self.summaries_cache.borrow_mut().clear();
     }
 
     /// Attempts to find the packages that match a `name` and a version `req`.
     ///
     /// This is primarily used by [`Source::query`](super::Source).
     pub fn query_inner(
-        &mut self,
+        &self,
         name: InternedString,
         req: &OptVersionReq,
-        load: &mut dyn RegistryData,
+        load: &dyn RegistryData,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         if !self.gctx.network_allowed() {
@@ -412,10 +439,10 @@ impl<'gctx> RegistryIndex<'gctx> {
     ///
     /// The `online` controls whether Cargo can access the network when needed.
     fn query_inner_with_online(
-        &mut self,
+        &self,
         name: InternedString,
         req: &OptVersionReq,
-        load: &mut dyn RegistryData,
+        load: &dyn RegistryData,
         f: &mut dyn FnMut(IndexSummary),
         online: bool,
     ) -> Poll<CargoResult<()>> {
@@ -442,11 +469,7 @@ impl<'gctx> RegistryIndex<'gctx> {
     }
 
     /// Looks into the summaries to check if a package has been yanked.
-    pub fn is_yanked(
-        &mut self,
-        pkg: PackageId,
-        load: &mut dyn RegistryData,
-    ) -> Poll<CargoResult<bool>> {
+    pub fn is_yanked(&self, pkg: PackageId, load: &dyn RegistryData) -> Poll<CargoResult<bool>> {
         let req = OptVersionReq::lock_to_exact(pkg.version());
         let found = ready!(self.summaries(pkg.name(), &req, load))?.any(|s| s.is_yanked());
         Poll::Ready(Ok(found))
@@ -477,7 +500,7 @@ impl Summaries {
         root: &Path,
         name: &str,
         source_id: SourceId,
-        load: &mut dyn RegistryData,
+        load: &dyn RegistryData,
         cli_unstable: &CliUnstable,
         cache_manager: &CacheManager<'_>,
     ) -> Poll<CargoResult<Option<Summaries>>> {
@@ -549,7 +572,7 @@ impl Summaries {
                     };
                     let version = summary.package_id().version().clone();
                     cache.versions.push((version.clone(), line));
-                    ret.versions.push((version, summary.into()));
+                    ret.versions.push((version, RefCell::new(summary.into())));
                 }
                 if let Some(index_version) = index_version {
                     tracing::trace!("caching index_version {}", index_version);
@@ -585,8 +608,10 @@ impl Summaries {
         let mut ret = Summaries::default();
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
-            ret.versions
-                .push((version, MaybeIndexSummary::Unparsed { start, end }));
+            ret.versions.push((
+                version,
+                RefCell::new(MaybeIndexSummary::Unparsed { start, end }),
+            ));
         }
         ret.raw_data = contents;
         return Ok((ret, index_version));
