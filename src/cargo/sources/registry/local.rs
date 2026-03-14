@@ -5,6 +5,7 @@ use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, Registry
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
 use cargo_util::{Sha256, paths};
+use std::cell::Cell;
 use std::fs::File;
 use std::io::SeekFrom;
 use std::io::{self, prelude::*};
@@ -64,7 +65,7 @@ pub struct LocalRegistry<'gctx> {
     src_path: Filesystem,
     gctx: &'gctx GlobalContext,
     /// Whether this source has updated all package information it may contain.
-    updated: bool,
+    updated: Cell<bool>,
     /// Disables status messages.
     quiet: bool,
 }
@@ -80,7 +81,7 @@ impl<'gctx> LocalRegistry<'gctx> {
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
             gctx,
-            updated: false,
+            updated: Cell::new(false),
             quiet: false,
         }
     }
@@ -106,12 +107,12 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     }
 
     fn load(
-        &mut self,
+        &self,
         root: &Path,
         path: &Path,
         _index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
-        if self.updated {
+        if self.updated.get() {
             let raw_data = match paths::read_bytes(&root.join(path)) {
                 Err(e)
                     if e.downcast_ref::<io::Error>()
@@ -130,14 +131,14 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         }
     }
 
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         // Local registries don't have configuration for remote APIs or anything
         // like that
         Poll::Ready(Ok(None))
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if self.updated {
+    fn block_until_ready(&self) -> CargoResult<()> {
+        if self.updated.get() {
             return Ok(());
         }
         // Nothing to update, we just use what's on disk. Verify it actually
@@ -154,11 +155,11 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
                 index_path.display()
             );
         }
-        self.updated = true;
+        self.updated.set(true);
         Ok(())
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         // Local registry has no cache - just reads from disk.
     }
 
@@ -167,10 +168,10 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     }
 
     fn is_updated(&self) -> bool {
-        self.updated
+        self.updated.get()
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         // Note that the usage of `into_path_unlocked` here is because the local
         // crate files here never change in that we're not the one writing them,
         // so it's not our responsibility to synchronize access to them.
@@ -200,12 +201,7 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(
-        &mut self,
-        _pkg: PackageId,
-        _checksum: &str,
-        _data: &[u8],
-    ) -> CargoResult<File> {
+    fn finish_download(&self, _pkg: PackageId, _checksum: &str, _data: &[u8]) -> CargoResult<File> {
         panic!("this source doesn't download")
     }
 }

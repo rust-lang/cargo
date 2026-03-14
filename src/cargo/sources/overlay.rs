@@ -46,7 +46,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     }
 
     fn query(
-        &mut self,
+        &self,
         dep: &crate::core::Dependency,
         kind: super::source::QueryKind,
         f: &mut dyn FnMut(super::IndexSummary),
@@ -75,7 +75,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         std::task::Poll::Ready(Ok(()))
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         self.local.invalidate_cache();
         self.remote.invalidate_cache();
     }
@@ -86,7 +86,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     }
 
     fn download(
-        &mut self,
+        &self,
         package: crate::core::PackageId,
     ) -> crate::CargoResult<super::source::MaybePackage> {
         let local_source = self.local.source_id();
@@ -104,7 +104,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     }
 
     fn finish_download(
-        &mut self,
+        &self,
         pkg_id: crate::core::PackageId,
         contents: Vec<u8>,
     ) -> crate::CargoResult<crate::core::Package> {
@@ -121,19 +121,16 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         self.remote.describe()
     }
 
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[crate::core::PackageId]) {
+    fn add_to_yanked_whitelist(&self, pkgs: &[crate::core::PackageId]) {
         self.local.add_to_yanked_whitelist(pkgs);
         self.remote.add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(
-        &mut self,
-        pkg: crate::core::PackageId,
-    ) -> std::task::Poll<crate::CargoResult<bool>> {
+    fn is_yanked(&self, pkg: crate::core::PackageId) -> std::task::Poll<crate::CargoResult<bool>> {
         self.remote.is_yanked(pkg)
     }
 
-    fn block_until_ready(&mut self) -> crate::CargoResult<()> {
+    fn block_until_ready(&self) -> crate::CargoResult<()> {
         self.local.block_until_ready()?;
         self.remote.block_until_ready()
     }

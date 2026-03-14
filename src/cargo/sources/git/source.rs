@@ -19,6 +19,7 @@ use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use anyhow::Context as _;
 use cargo_util::paths::exclude_from_backups_and_indexing;
+use std::cell::RefCell;
 use std::fmt::{self, Debug, Formatter};
 use std::task::Poll;
 use tracing::trace;
@@ -73,14 +74,14 @@ pub struct GitSource<'gctx> {
     /// The revision which a git source is locked to.
     ///
     /// Expected to always be [`Revision::Locked`] after the Git repository is fetched.
-    locked_rev: Revision,
+    locked_rev: RefCell<Revision>,
     /// The unique identifier of this source.
-    source_id: SourceId,
+    source_id: RefCell<SourceId>,
     /// The underlying path source to discover packages inside the Git repository.
     ///
     /// This gets set to `Some` after the git repo has been checked out
     /// (automatically handled via [`GitSource::block_until_ready`]).
-    path_source: Option<RecursivePathSource<'gctx>>,
+    path_source: RefCell<Option<RecursivePathSource<'gctx>>>,
     /// A short string that uniquely identifies the version of the checkout.
     ///
     /// This is typically a 7-character string of the OID hash, automatically
@@ -88,7 +89,7 @@ pub struct GitSource<'gctx> {
     ///
     /// This is set to `Some` after the git repo has been checked out
     /// (automatically handled via [`GitSource::block_until_ready`]).
-    short_id: Option<InternedString>,
+    short_id: RefCell<Option<InternedString>>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
     ident: InternedString,
@@ -138,10 +139,10 @@ impl<'gctx> GitSource<'gctx> {
 
         let source = GitSource {
             remote,
-            locked_rev,
-            source_id,
-            path_source: None,
-            short_id: None,
+            locked_rev: RefCell::new(locked_rev),
+            source_id: RefCell::new(source_id),
+            path_source: RefCell::new(None),
+            short_id: RefCell::new(None),
             ident: ident.into(),
             gctx,
             quiet: false,
@@ -151,19 +152,23 @@ impl<'gctx> GitSource<'gctx> {
     }
 
     /// Gets the remote repository URL.
-    pub fn url(&self) -> &Url {
-        self.source_id.url()
+    pub fn url(&self) -> Url {
+        self.source_id.borrow().url().clone()
     }
 
     /// Returns the packages discovered by this source. It may fetch the Git
     /// repository as well as walk the filesystem if package information
     /// haven't yet updated.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
-        if self.path_source.is_none() {
+        if self.path_source.borrow().is_none() {
             self.invalidate_cache();
             self.block_until_ready()?;
         }
-        self.path_source.as_mut().unwrap().read_packages()
+        self.path_source
+            .borrow_mut()
+            .as_mut()
+            .unwrap()
+            .read_packages()
     }
 
     fn mark_used(&self) -> CargoResult<()> {
@@ -171,7 +176,7 @@ impl<'gctx> GitSource<'gctx> {
             .deferred_global_last_use()?
             .mark_git_checkout_used(global_cache_tracker::GitCheckout {
                 encoded_git_name: self.ident,
-                short_name: self.short_id.expect("update before download"),
+                short_name: self.short_id.borrow().expect("update before download"),
                 size: None,
             });
         Ok(())
@@ -188,7 +193,7 @@ impl<'gctx> GitSource<'gctx> {
 
         let db = self.remote.db_at(&db_path).ok();
 
-        let (db, actual_rev) = match (&self.locked_rev, db) {
+        let (db, actual_rev) = match (&*self.locked_rev.borrow(), db) {
             // If we have a locked revision, and we have a preexisting database
             // which has that revision, then no update needs to happen.
             (Revision::Locked(oid), Some(db)) if db.contains(*oid) => (db, *oid),
@@ -236,7 +241,7 @@ impl<'gctx> GitSource<'gctx> {
                 trace!("updating git source `{:?}`", self.remote);
 
                 let locked_rev = locked_rev.clone().into();
-                let manifest_reference = self.source_id.git_reference().unwrap();
+                let manifest_reference = self.source_id.borrow().git_reference().unwrap();
                 self.remote
                     .checkout(&db_path, db, manifest_reference, &locked_rev, self.gctx)?
             }
@@ -313,8 +318,8 @@ fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
 
 impl<'gctx> Debug for GitSource<'gctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "git repo at {}", self.source_id.url())?;
-        match &self.locked_rev {
+        write!(f, "git repo at {}", self.source_id.borrow().url())?;
+        match &*self.locked_rev.borrow() {
             Revision::Deferred(git_ref) => match git_ref.pretty_ref(true) {
                 Some(s) => write!(f, " ({})", s),
                 None => Ok(()),
@@ -326,12 +331,13 @@ impl<'gctx> Debug for GitSource<'gctx> {
 
 impl<'gctx> Source for GitSource<'gctx> {
     fn query(
-        &mut self,
+        &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        if let Some(src) = self.path_source.as_mut() {
+        let src = self.path_source.borrow();
+        if let Some(src) = src.as_ref() {
             src.query(dep, kind, f)
         } else {
             Poll::Pending
@@ -347,11 +353,11 @@ impl<'gctx> Source for GitSource<'gctx> {
     }
 
     fn source_id(&self) -> SourceId {
-        self.source_id
+        *self.source_id.borrow()
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if self.path_source.is_some() {
+    fn block_until_ready(&self) -> CargoResult<()> {
+        if self.path_source.borrow().is_some() {
             self.mark_used()?;
             return Ok(());
         }
@@ -394,52 +400,54 @@ impl<'gctx> Source for GitSource<'gctx> {
 
         let source_id = self
             .source_id
+            .borrow()
             .with_git_precise(Some(actual_rev.to_string()));
         let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
 
-        self.path_source = Some(path_source);
-        self.short_id = Some(short_id.as_str().into());
-        self.locked_rev = Revision::Locked(actual_rev);
-        self.path_source.as_mut().unwrap().load()?;
+        self.path_source.replace(Some(path_source));
+        self.short_id.replace(Some(short_id.as_str().into()));
+        self.locked_rev.replace(Revision::Locked(actual_rev));
+        self.path_source.borrow().as_ref().unwrap().load()?;
 
         self.mark_used()?;
         Ok(())
     }
 
-    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
+    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package ID `{}` from `{:?}`",
             id, self.remote
         );
         self.mark_used()?;
         self.path_source
+            .borrow_mut()
             .as_mut()
             .expect("BUG: `update()` must be called before `get()`")
             .download(id)
     }
 
-    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
-        match &self.locked_rev {
+        match &*self.locked_rev.borrow() {
             Revision::Locked(oid) => Ok(oid.to_string()),
             _ => unreachable!("locked_rev must be resolved when computing fingerprint"),
         }
     }
 
     fn describe(&self) -> String {
-        format!("Git repository {}", self.source_id)
+        format!("Git repository {}", self.source_id.borrow())
     }
 
-    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
         Poll::Ready(Ok(false))
     }
 
-    fn invalidate_cache(&mut self) {}
+    fn invalidate_cache(&self) {}
 
     fn set_quiet(&mut self, quiet: bool) {
         self.quiet = quiet;

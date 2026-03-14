@@ -25,6 +25,7 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 
 use anyhow::Context as _;
+use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
@@ -32,7 +33,7 @@ use std::task::Poll;
 use tracing::debug;
 
 pub struct RegistryQueryer<'a, T: Registry> {
-    pub registry: &'a mut T,
+    pub registry: &'a T,
     replacements: &'a [(PackageIdSpec, Dependency)],
     version_prefs: &'a VersionPreferences,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
@@ -47,12 +48,12 @@ pub struct RegistryQueryer<'a, T: Registry> {
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
     /// all the cases we ended up using a supplied replacement
-    used_replacements: HashMap<PackageId, Summary>,
+    used_replacements: RefCell<HashMap<PackageId, Summary>>,
 }
 
 impl<'a, T: Registry> RegistryQueryer<'a, T> {
     pub fn new(
-        registry: &'a mut T,
+        registry: &'a T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
     ) -> Self {
@@ -62,7 +63,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             version_prefs,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
-            used_replacements: HashMap::new(),
+            used_replacements: RefCell::new(HashMap::new()),
         }
     }
 
@@ -84,11 +85,14 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
     }
 
     pub fn used_replacement_for(&self, p: PackageId) -> Option<(PackageId, PackageId)> {
-        self.used_replacements.get(&p).map(|r| (p, r.package_id()))
+        self.used_replacements
+            .borrow()
+            .get(&p)
+            .map(|r| (p, r.package_id()))
     }
 
-    pub fn replacement_summary(&self, p: PackageId) -> Option<&Summary> {
-        self.used_replacements.get(&p)
+    pub fn replacement_summary(&self, p: PackageId) -> Option<Summary> {
+        self.used_replacements.borrow().get(&p).cloned()
     }
 
     /// Queries the `registry` to return a list of candidates for `dep`.
@@ -205,7 +209,9 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
                 debug!("\t{} => {}", dep.package_name(), dep.version_req());
             }
             if let Some(r) = replace {
-                self.used_replacements.insert(summary.package_id(), r);
+                self.used_replacements
+                    .borrow_mut()
+                    .insert(summary.package_id(), r);
             }
         }
 
