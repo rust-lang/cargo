@@ -182,6 +182,7 @@
 //! ```
 //!
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -261,13 +262,13 @@ pub struct RegistrySource<'gctx> {
     /// `cargo update somepkg` won't unlock yanked entries in `Cargo.lock`.
     /// Otherwise, the resolver would think that those entries no longer
     /// exist, and it would trigger updates to unrelated packages.
-    yanked_whitelist: HashSet<PackageId>,
+    yanked_whitelist: RefCell<HashSet<PackageId>>,
     /// Yanked versions that have already been selected during queries.
     ///
     /// As of this writing, this is for not emitting the `--precise <yanked>`
     /// warning twice, with the assumption of (`dep.package_name()` + `--precise`
     /// version) being sufficient to uniquely identify the same query result.
-    selected_precise_yanked: HashSet<(InternedString, semver::Version)>,
+    selected_precise_yanked: RefCell<HashSet<(InternedString, semver::Version)>>,
 }
 
 /// The [`config.json`] file stored in the index.
@@ -320,6 +321,7 @@ pub struct RegistryConfig {
 }
 
 /// Result from loading data from a registry.
+#[derive(Debug, Clone)]
 pub enum LoadResponse {
     /// The cache is valid. The cached data should be used.
     CacheValid,
@@ -366,7 +368,7 @@ pub trait RegistryData {
     /// * `index_version` is the version of the requested crate data currently
     ///    in cache. This is useful for checking if a local cache is outdated.
     fn load(
-        &mut self,
+        &self,
         root: &Path,
         path: &Path,
         index_version: Option<&str>,
@@ -375,10 +377,10 @@ pub trait RegistryData {
     /// Loads the `config.json` file and returns it.
     ///
     /// Local registries don't have a config, and return `None`.
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>>;
+    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>>;
 
     /// Invalidates locally cached data.
-    fn invalidate_cache(&mut self);
+    fn invalidate_cache(&self);
 
     /// If quiet, the source should not display any progress or status messages.
     fn set_quiet(&mut self, quiet: bool);
@@ -401,7 +403,7 @@ pub trait RegistryData {
     /// `finish_download`. For already downloaded `.crate` files, it does not
     /// validate the checksum, assuming the filesystem does not suffer from
     /// corruption or manipulation.
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
@@ -411,8 +413,7 @@ pub trait RegistryData {
     /// the given data to the on-disk cache.
     ///
     /// Returns a [`File`] handle to the `.crate` file, positioned at the start.
-    fn finish_download(&mut self, pkg: PackageId, checksum: &str, data: &[u8])
-    -> CargoResult<File>;
+    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File>;
 
     /// Returns whether or not the `.crate` file is already downloaded.
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
@@ -429,7 +430,7 @@ pub trait RegistryData {
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
 
     /// Block until all outstanding `Poll::Pending` requests are `Poll::Ready`.
-    fn block_until_ready(&mut self) -> CargoResult<()>;
+    fn block_until_ready(&self) -> CargoResult<()>;
 }
 
 /// The status of [`RegistryData::download`] which indicates if a `.crate`
@@ -541,16 +542,16 @@ impl<'gctx> RegistrySource<'gctx> {
             gctx,
             source_id,
             index: index::RegistryIndex::new(source_id, ops.index_path(), gctx),
-            yanked_whitelist: yanked_whitelist.clone(),
+            yanked_whitelist: RefCell::new(yanked_whitelist.clone()),
             ops,
-            selected_precise_yanked: HashSet::new(),
+            selected_precise_yanked: RefCell::new(HashSet::new()),
         }
     }
 
     /// Decode the [configuration](RegistryConfig) stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    pub fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         self.ops.config()
     }
 
@@ -696,11 +697,11 @@ impl<'gctx> RegistrySource<'gctx> {
     /// should only be called after doing integrity check. That is to say,
     /// you need to call either [`RegistryData::download`] or
     /// [`RegistryData::finish_download`] before calling this method.
-    fn get_pkg(&mut self, package: PackageId, path: &File) -> CargoResult<Package> {
+    fn get_pkg(&self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
             .with_context(|| format!("failed to unpack package `{}`", package))?;
-        let mut src = PathSource::new(&path, self.source_id, self.gctx);
+        let src = PathSource::new(&path, self.source_id, self.gctx);
         src.load()?;
         let mut pkg = match src.download(package)? {
             MaybePackage::Ready(pkg) => pkg,
@@ -711,7 +712,7 @@ impl<'gctx> RegistrySource<'gctx> {
         // field with the checksum we know for this `PackageId`.
         let cksum = self
             .index
-            .hash(package, &mut *self.ops)
+            .hash(package, &*self.ops)
             .expect("a downloaded dep now pending!?")
             .expect("summary not found");
         pkg.manifest_mut()
@@ -724,7 +725,7 @@ impl<'gctx> RegistrySource<'gctx> {
 
 impl<'gctx> Source for RegistrySource<'gctx> {
     fn query(
-        &mut self,
+        &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
@@ -760,7 +761,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             debug!("attempting query without update");
             ready!(
                 self.index
-                    .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                    .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
                         if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
                             && dep.matches(s.as_summary())
                         {
@@ -780,7 +781,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             let mut precise_yanked_in_use = false;
             ready!(
                 self.index
-                    .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
+                    .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
                         let matched = match kind {
                             QueryKind::Exact | QueryKind::RejectedVersions => {
                                 if req.is_precise() && self.gctx.cli_unstable().unstable_options {
@@ -802,7 +803,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                             s @ _ if kind == QueryKind::RejectedVersions => callback(s),
                             s @ IndexSummary::Candidate(_) => callback(s),
                             s @ IndexSummary::Yanked(_) => {
-                                if self.yanked_whitelist.contains(&s.package_id()) {
+                                if self.yanked_whitelist.borrow().contains(&s.package_id()) {
                                     callback(s);
                                 } else if req.is_precise() {
                                     precise_yanked_in_use = true;
@@ -839,7 +840,11 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 let version = req
                     .precise_version()
                     .expect("--precise <yanked-version> in use");
-                if self.selected_precise_yanked.insert((name, version.clone())) {
+                if self
+                    .selected_precise_yanked
+                    .borrow_mut()
+                    .insert((name, version.clone()))
+                {
                     let mut shell = self.gctx.shell();
                     shell.print_report(
                         &[Level::WARNING
@@ -875,7 +880,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     }
                     any_pending |= self
                         .index
-                        .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
+                        .query_inner(name_permutation, &req, &*self.ops, &mut |s| {
                             if !s.is_yanked() {
                                 f(s);
                             } else if kind == QueryKind::AlternativeNames {
@@ -905,7 +910,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         self.source_id
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         self.index.clear_summaries_cache();
         self.ops.invalidate_cache();
     }
@@ -914,14 +919,14 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         self.ops.set_quiet(quiet);
     }
 
-    fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage> {
+    fn download(&self, package: PackageId) -> CargoResult<MaybePackage> {
         let hash = loop {
-            match self.index.hash(package, &mut *self.ops)? {
+            match self.index.hash(package, &*self.ops)? {
                 Poll::Pending => self.block_until_ready()?,
                 Poll::Ready(hash) => break hash,
             }
         };
-        match self.ops.download(package, hash)? {
+        match self.ops.download(package, &hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download {
                 url,
@@ -935,14 +940,14 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         }
     }
 
-    fn finish_download(&mut self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = loop {
-            match self.index.hash(package, &mut *self.ops)? {
+            match self.index.hash(package, &*self.ops)? {
                 Poll::Pending => self.block_until_ready()?,
                 Poll::Ready(hash) => break hash,
             }
         };
-        let file = self.ops.finish_download(package, hash, &data)?;
+        let file = self.ops.finish_download(package, &hash, &data)?;
         self.get_pkg(package, &file)
     }
 
@@ -954,15 +959,15 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         self.source_id.display_index()
     }
 
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
-        self.yanked_whitelist.extend(pkgs);
+    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
+        self.yanked_whitelist.borrow_mut().extend(pkgs);
     }
 
-    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        self.index.is_yanked(pkg, &mut *self.ops)
+    fn is_yanked(&self, pkg: PackageId) -> Poll<CargoResult<bool>> {
+        self.index.is_yanked(pkg, &*self.ops)
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&self) -> CargoResult<()> {
         // Before starting to work on the registry, make sure that
         // `<cargo_home>/registry` is marked as excluded from indexing and
         // backups. Older versions of Cargo didn't do this, so we do it here

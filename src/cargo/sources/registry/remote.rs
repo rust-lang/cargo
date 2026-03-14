@@ -11,10 +11,9 @@ use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Filesystem, GlobalContext, OnceExt};
+use crate::util::{Filesystem, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
-use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell};
 use std::fs::File;
 use std::mem;
@@ -71,7 +70,7 @@ pub struct RemoteRegistry<'gctx> {
     /// [tree object]: https://git-scm.com/book/en/v2/Git-Internals-Git-Objects#_tree_objects
     tree: RefCell<Option<git2::Tree<'static>>>,
     /// A Git repository that contains the actual index we want.
-    repo: OnceCell<git2::Repository>,
+    repo: RefCell<Option<git2::Repository>>,
     /// The current HEAD commit of the underlying Git repository.
     head: Cell<Option<git2::Oid>>,
     /// This stores sha value of the current HEAD commit for convenience.
@@ -80,7 +79,7 @@ pub struct RemoteRegistry<'gctx> {
     ///
     /// See [`RemoteRegistry::mark_updated`] on how to make sure a registry
     /// index is updated only once per session.
-    needs_update: bool,
+    needs_update: Cell<bool>,
     /// Disables status messages.
     quiet: bool,
 }
@@ -103,24 +102,24 @@ impl<'gctx> RemoteRegistry<'gctx> {
             gctx,
             index_git_ref: GitReference::DefaultBranch,
             tree: RefCell::new(None),
-            repo: OnceCell::new(),
+            repo: RefCell::new(None),
             head: Cell::new(None),
             current_sha: Cell::new(None),
-            needs_update: false,
+            needs_update: Cell::new(false),
             quiet: false,
         }
     }
 
     /// Creates intermediate dirs and initialize the repository.
-    fn repo(&self) -> CargoResult<&git2::Repository> {
-        self.repo.try_borrow_with(|| {
+    fn repo(&self) -> CargoResult<Ref<'_, Option<git2::Repository>>> {
+        if self.repo.borrow().is_none() {
             trace!("acquiring registry index lock");
             let path = self
                 .gctx
                 .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
 
-            match git2::Repository::open(&path) {
-                Ok(repo) => Ok(repo),
+            self.repo.replace(Some(match git2::Repository::open(&path) {
+                Ok(repo) => repo,
                 Err(_) => {
                     drop(paths::remove_dir_all(&path));
                     paths::create_dir_all(&path)?;
@@ -142,18 +141,21 @@ impl<'gctx> RemoteRegistry<'gctx> {
                     // things that we don't want.
                     let mut opts = git2::RepositoryInitOptions::new();
                     opts.external_template(false);
-                    Ok(git2::Repository::init_opts(&path, &opts).with_context(|| {
+                    git2::Repository::init_opts(&path, &opts).with_context(|| {
                         format!("failed to initialize index git repository (in {:?})", path)
-                    })?)
+                    })?
                 }
-            }
-        })
+            }));
+        }
+
+        Ok(self.repo.borrow())
     }
 
     /// Get the object ID of the HEAD commit from the underlying Git repository.
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
             let repo = self.repo()?;
+            let repo = repo.as_ref().unwrap();
             let oid = resolve_ref(&self.index_git_ref, repo)?;
             self.head.set(Some(oid));
         }
@@ -170,6 +172,7 @@ impl<'gctx> RemoteRegistry<'gctx> {
             }
         }
         let repo = self.repo()?;
+        let repo = repo.as_ref().unwrap();
         let commit = repo.find_commit(self.head()?)?;
         let tree = commit.tree()?;
 
@@ -257,12 +260,12 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     ///
     /// Cargo now uses a hash of the file's contents as provided by git.
     fn load(
-        &mut self,
+        &self,
         _root: &Path,
         path: &Path,
         index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
-        if self.needs_update {
+        if self.needs_update.get() {
             return Poll::Pending;
         }
         // Check if the cache is valid.
@@ -281,6 +284,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
             index_version: Option<&str>,
         ) -> CargoResult<LoadResponse> {
             let repo = registry.repo()?;
+            let repo = repo.as_ref().unwrap();
             let tree = registry.tree()?;
             let entry = tree.get_path(path);
             let entry = entry?;
@@ -307,7 +311,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
             Err(_) if !self.is_updated() => {
                 // If git returns an error and we haven't updated the repo,
                 // return pending to allow an update to try again.
-                self.needs_update = true;
+                self.needs_update.set(true);
                 Poll::Pending
             }
             Err(e)
@@ -322,7 +326,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         }
     }
 
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         debug!("loading config");
         self.prepare()?;
         self.gctx
@@ -337,12 +341,12 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         }
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if !self.needs_update {
+    fn block_until_ready(&self) -> CargoResult<()> {
+        if !self.needs_update.get() {
             return Ok(());
         }
 
-        self.needs_update = false;
+        self.needs_update.set(false);
 
         if self.is_updated() {
             return Ok(());
@@ -382,7 +386,8 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         // Fetch the latest version of our `index_git_ref` into the index
         // checkout.
         let url = self.source_id.url();
-        let repo = self.repo.get_mut().unwrap();
+        let mut repo = self.repo.borrow_mut();
+        let repo = repo.as_mut().unwrap();
         git::fetch(
             repo,
             url.as_str(),
@@ -399,8 +404,8 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     /// [`RegistryData::invalidate_cache`].
     ///
     /// To fully invalidate, undo [`RemoteRegistry::mark_updated`]'s work.
-    fn invalidate_cache(&mut self) {
-        self.needs_update = true;
+    fn invalidate_cache(&self) {
+        self.needs_update.set(true);
     }
 
     fn set_quiet(&mut self, quiet: bool) {
@@ -411,7 +416,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         self.is_updated()
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
@@ -429,12 +434,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         )
     }
 
-    fn finish_download(
-        &mut self,
-        pkg: PackageId,
-        checksum: &str,
-        data: &[u8],
-    ) -> CargoResult<File> {
+    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File> {
         download::finish_download(
             &self.cache_path,
             &self.gctx,

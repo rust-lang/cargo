@@ -17,7 +17,7 @@ use cargo_credential::Operation;
 use cargo_util::paths;
 use curl::easy::{Easy, List};
 use curl::multi::{EasyHandle, Multi};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::ErrorKind;
@@ -73,41 +73,41 @@ pub struct HttpRegistry<'gctx> {
     url: Url,
 
     /// HTTP multi-handle for asynchronous/parallel requests.
-    multi: Multi,
+    multi: RefCell<Multi>,
 
     /// Has the client requested a cache update?
     ///
     /// Only if they have do we double-check the freshness of each locally-stored index file.
-    requested_update: bool,
+    requested_update: Cell<bool>,
 
     /// State for currently pending index downloads.
     downloads: Downloads<'gctx>,
 
     /// Does the config say that we can use HTTP multiplexing?
-    multiplexing: bool,
+    multiplexing: Cell<bool>,
 
     /// What paths have we already fetched since the last index update?
     ///
     /// We do not need to double-check any of these index files since we have already done so.
-    fresh: HashSet<PathBuf>,
+    fresh: RefCell<HashSet<PathBuf>>,
 
     /// Have we started to download any index files?
-    fetch_started: bool,
+    fetch_started: Cell<bool>,
 
     /// Cached registry configuration.
-    registry_config: Option<RegistryConfig>,
+    registry_config: RefCell<Option<RegistryConfig>>,
 
     /// Should we include the authorization header?
-    auth_required: bool,
+    auth_required: Cell<bool>,
 
     /// Url to get a token for the registry.
-    login_url: Option<Url>,
+    login_url: RefCell<Option<Url>>,
 
     /// Headers received with an HTTP 401.
-    auth_error_headers: Vec<String>,
+    auth_error_headers: RefCell<Vec<String>>,
 
     /// Disables status messages.
-    quiet: bool,
+    quiet: Cell<bool>,
 }
 
 /// State for currently pending index file downloads.
@@ -115,23 +115,23 @@ struct Downloads<'gctx> {
     /// When a download is started, it is added to this map. The key is a
     /// "token" (see [`Download::token`]). It is removed once the download is
     /// finished.
-    pending: HashMap<usize, (Download<'gctx>, EasyHandle)>,
+    pending: RefCell<HashMap<usize, (Download<'gctx>, EasyHandle)>>,
     /// Set of paths currently being downloaded.
     /// This should stay in sync with the `pending` field.
-    pending_paths: HashSet<PathBuf>,
+    pending_paths: RefCell<HashSet<PathBuf>>,
     /// Downloads that have failed and are waiting to retry again later.
-    sleeping: SleepTracker<(Download<'gctx>, Easy)>,
+    sleeping: RefCell<SleepTracker<(Download<'gctx>, Easy)>>,
     /// The final result of each download.
-    results: HashMap<PathBuf, CargoResult<CompletedDownload>>,
+    results: RefCell<HashMap<PathBuf, CargoResult<CompletedDownload>>>,
     /// The next ID to use for creating a token (see [`Download::token`]).
-    next: usize,
+    next: Cell<usize>,
     /// Progress bar.
     progress: RefCell<Option<Progress<'gctx>>>,
     /// Number of downloads that have successfully finished.
-    downloads_finished: usize,
+    downloads_finished: Cell<usize>,
     /// Number of times the caller has requested blocking. This is used for
     /// an estimate of progress.
-    blocking_calls: usize,
+    blocking_calls: Cell<usize>,
 }
 
 /// Represents a single index file download, including its progress and retry.
@@ -210,30 +210,30 @@ impl<'gctx> HttpRegistry<'gctx> {
             source_id,
             gctx,
             url,
-            multi: Multi::new(),
-            multiplexing: false,
+            multi: RefCell::new(Multi::new()),
+            multiplexing: Cell::new(false),
             downloads: Downloads {
-                next: 0,
-                pending: HashMap::new(),
-                pending_paths: HashSet::new(),
-                sleeping: SleepTracker::new(),
-                results: HashMap::new(),
+                next: Cell::new(0),
+                pending: RefCell::new(HashMap::new()),
+                pending_paths: RefCell::new(HashSet::new()),
+                sleeping: RefCell::new(SleepTracker::new()),
+                results: RefCell::new(HashMap::new()),
                 progress: RefCell::new(Some(Progress::with_style(
                     "Fetch",
                     ProgressStyle::Indeterminate,
                     gctx,
                 ))),
-                downloads_finished: 0,
-                blocking_calls: 0,
+                downloads_finished: Cell::new(0),
+                blocking_calls: Cell::new(0),
             },
-            fresh: HashSet::new(),
-            requested_update: false,
-            fetch_started: false,
-            registry_config: None,
-            auth_required: false,
-            login_url: None,
-            auth_error_headers: vec![],
-            quiet: false,
+            fresh: RefCell::new(HashSet::new()),
+            requested_update: Cell::new(false),
+            fetch_started: Cell::new(false),
+            registry_config: RefCell::new(None),
+            auth_required: Cell::new(false),
+            login_url: RefCell::new(None),
+            auth_error_headers: RefCell::new(vec![]),
+            quiet: Cell::new(false),
         })
     }
 
@@ -255,25 +255,27 @@ impl<'gctx> HttpRegistry<'gctx> {
     /// Setup the necessary works before the first fetch gets started.
     ///
     /// This is a no-op if called more than one time.
-    fn start_fetch(&mut self) -> CargoResult<()> {
-        if self.fetch_started {
+    fn start_fetch(&self) -> CargoResult<()> {
+        if self.fetch_started.get() {
             // We only need to run the setup code once.
             return Ok(());
         }
-        self.fetch_started = true;
+        self.fetch_started.set(true);
 
         // We've enabled the `http2` feature of `curl` in Cargo, so treat
         // failures here as fatal as it would indicate a build-time problem.
-        self.multiplexing = self.gctx.http_config()?.multiplexing.unwrap_or(true);
+        self.multiplexing
+            .set(self.gctx.http_config()?.multiplexing.unwrap_or(true));
 
         self.multi
-            .pipelining(false, self.multiplexing)
+            .borrow_mut()
+            .pipelining(false, self.multiplexing.get())
             .context("failed to enable multiplexing/pipelining in curl")?;
 
         // let's not flood the server with connections
-        self.multi.set_max_host_connections(2)?;
+        self.multi.borrow_mut().set_max_host_connections(2)?;
 
-        if !self.quiet {
+        if !self.quiet.get() {
             self.gctx
                 .shell()
                 .status("Updating", self.source_id.display_index())?;
@@ -284,17 +286,17 @@ impl<'gctx> HttpRegistry<'gctx> {
 
     /// Checks the results inside the [`HttpRegistry::multi`] handle, and
     /// updates relevant state in [`HttpRegistry::downloads`] accordingly.
-    fn handle_completed_downloads(&mut self) -> CargoResult<()> {
+    fn handle_completed_downloads(&self) -> CargoResult<()> {
         assert_eq!(
-            self.downloads.pending.len(),
-            self.downloads.pending_paths.len()
+            self.downloads.pending.borrow().len(),
+            self.downloads.pending_paths.borrow().len()
         );
 
         // Collect the results from the Multi handle.
         let results = {
             let mut results = Vec::new();
-            let pending = &mut self.downloads.pending;
-            self.multi.messages(|msg| {
+            let pending = self.downloads.pending.borrow_mut();
+            self.multi.borrow().messages(|msg| {
                 let token = msg.token().expect("failed to read token");
                 let (_, handle) = &pending[&token];
                 if let Some(result) = msg.result_for(handle) {
@@ -304,14 +306,19 @@ impl<'gctx> HttpRegistry<'gctx> {
             results
         };
         for (token, result) in results {
-            let (mut download, handle) = self.downloads.pending.remove(&token).unwrap();
-            let was_present = self.downloads.pending_paths.remove(&download.path);
+            let (mut download, handle) =
+                self.downloads.pending.borrow_mut().remove(&token).unwrap();
+            let was_present = self
+                .downloads
+                .pending_paths
+                .borrow_mut()
+                .remove(&download.path);
             assert!(
                 was_present,
                 "expected pending_paths to contain {:?}",
                 download.path
             );
-            let mut handle = self.multi.remove(handle)?;
+            let mut handle = self.multi.borrow().remove(handle)?;
             let data = download.data.take();
             let url = self.full_url(&download.path);
             let result = match download.retry.r#try(|| {
@@ -343,13 +350,19 @@ impl<'gctx> HttpRegistry<'gctx> {
                 RetryResult::Err(e) => Err(e),
                 RetryResult::Retry(sleep) => {
                     debug!(target: "network", "download retry {:?} for {sleep}ms", download.path);
-                    self.downloads.sleeping.push(sleep, (download, handle));
+                    self.downloads
+                        .sleeping
+                        .borrow_mut()
+                        .push(sleep, (download, handle));
                     continue;
                 }
             };
 
-            self.downloads.results.insert(download.path, result);
-            self.downloads.downloads_finished += 1;
+            self.downloads
+                .results
+                .borrow_mut()
+                .insert(download.path, result);
+            self.downloads.downloads_finished.update(|v| v + 1);
         }
 
         self.downloads.tick()?;
@@ -367,7 +380,7 @@ impl<'gctx> HttpRegistry<'gctx> {
     ///
     /// The `path` argument is the same as in [`RegistryData::load`].
     fn is_fresh(&self, path: &Path) -> bool {
-        if !self.requested_update {
+        if !self.requested_update.get() {
             trace!(
                 "using local {} as user did not request update",
                 path.display()
@@ -379,7 +392,7 @@ impl<'gctx> HttpRegistry<'gctx> {
         } else if !self.gctx.network_allowed() {
             trace!("using local {} in offline mode", path.display());
             true
-        } else if self.fresh.contains(path) {
+        } else if self.fresh.borrow().contains(path) {
             trace!("using local {} as it was already fetched", path.display());
             true
         } else {
@@ -389,9 +402,9 @@ impl<'gctx> HttpRegistry<'gctx> {
     }
 
     /// Get the cached registry configuration, if it exists.
-    fn config_cached(&mut self) -> CargoResult<Option<&RegistryConfig>> {
-        if self.registry_config.is_some() {
-            return Ok(self.registry_config.as_ref());
+    fn config_cached(&self) -> Option<RegistryConfig> {
+        if let Some(cfg) = self.registry_config.borrow().as_ref() {
+            return Some(cfg.clone());
         }
         let config_json_path = self
             .assert_index_locked(&self.index_path)
@@ -399,7 +412,7 @@ impl<'gctx> HttpRegistry<'gctx> {
         match fs::read(&config_json_path) {
             Ok(raw_data) => match serde_json::from_slice(&raw_data) {
                 Ok(json) => {
-                    self.registry_config = Some(json);
+                    self.registry_config.replace(Some(json));
                 }
                 Err(e) => tracing::debug!("failed to decode cached config.json: {}", e),
             },
@@ -409,16 +422,18 @@ impl<'gctx> HttpRegistry<'gctx> {
                 }
             }
         }
-        Ok(self.registry_config.as_ref())
+        self.registry_config.borrow().clone()
     }
 
     /// Get the registry configuration from either cache or remote.
-    fn config(&mut self) -> Poll<CargoResult<&RegistryConfig>> {
+    fn config(&self) -> Poll<CargoResult<RegistryConfig>> {
         debug!("loading config");
         let index_path = self.assert_index_locked(&self.index_path);
         let config_json_path = index_path.join(RegistryConfig::NAME);
-        if self.is_fresh(Path::new(RegistryConfig::NAME)) && self.config_cached()?.is_some() {
-            return Poll::Ready(Ok(self.registry_config.as_ref().unwrap()));
+        if self.is_fresh(Path::new(RegistryConfig::NAME))
+            && let Some(config) = self.config_cached()
+        {
+            return Poll::Ready(Ok(config.clone()));
         }
 
         match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
@@ -427,13 +442,14 @@ impl<'gctx> HttpRegistry<'gctx> {
                 index_version: _,
             } => {
                 trace!("config loaded");
-                self.registry_config = Some(serde_json::from_slice(&raw_data)?);
+                self.registry_config
+                    .replace(Some(serde_json::from_slice(&raw_data)?));
                 if paths::create_dir_all(&config_json_path.parent().unwrap()).is_ok() {
                     if let Err(e) = fs::write(&config_json_path, &raw_data) {
                         tracing::debug!("failed to write config.json cache: {}", e);
                     }
                 }
-                Poll::Ready(Ok(self.registry_config.as_ref().unwrap()))
+                Poll::Ready(Ok(self.registry_config.borrow().clone().unwrap()))
             }
             LoadResponse::NotFound => {
                 Poll::Ready(Err(anyhow::anyhow!("config.json not found in registry")))
@@ -445,13 +461,21 @@ impl<'gctx> HttpRegistry<'gctx> {
     }
 
     /// Moves failed [`Download`]s that are ready to retry to the pending queue.
-    fn add_sleepers(&mut self) -> CargoResult<()> {
-        for (dl, handle) in self.downloads.sleeping.to_retry() {
-            let mut handle = self.multi.add(handle)?;
+    fn add_sleepers(&self) -> CargoResult<()> {
+        for (dl, handle) in self.downloads.sleeping.borrow_mut().to_retry() {
+            let mut handle = self.multi.borrow().add(handle)?;
             handle.set_token(dl.token)?;
-            let is_new = self.downloads.pending_paths.insert(dl.path.to_path_buf());
+            let is_new = self
+                .downloads
+                .pending_paths
+                .borrow_mut()
+                .insert(dl.path.to_path_buf());
             assert!(is_new, "path queued for download more than once");
-            let previous = self.downloads.pending.insert(dl.token, (dl, handle));
+            let previous = self
+                .downloads
+                .pending
+                .borrow_mut()
+                .insert(dl.token, (dl, handle));
             assert!(previous.is_none(), "dl token queued more than once");
         }
         Ok(())
@@ -482,17 +506,17 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
     }
 
     fn is_updated(&self) -> bool {
-        self.requested_update
+        self.requested_update.get()
     }
 
     fn load(
-        &mut self,
+        &self,
         _root: &Path,
         path: &Path,
         index_version: Option<&str>,
     ) -> Poll<CargoResult<LoadResponse>> {
         trace!("load: {}", path.display());
-        if let Some(_token) = self.downloads.pending_paths.get(path) {
+        if let Some(_token) = self.downloads.pending_paths.borrow().get(path) {
             debug!("dependency is still pending: {}", path.display());
             return Poll::Pending;
         }
@@ -506,7 +530,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             if self.is_fresh(path) {
                 return Poll::Ready(Ok(LoadResponse::CacheValid));
             }
-        } else if self.fresh.contains(path) {
+        } else if self.fresh.borrow().contains(path) {
             // We have no cached copy of this file, and we already downloaded it.
             debug!(
                 "cache did not contain previously downloaded file {}",
@@ -522,11 +546,11 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             return Poll::Ready(Ok(LoadResponse::NotFound));
         }
 
-        if let Some(result) = self.downloads.results.remove(path) {
+        if let Some(result) = self.downloads.results.borrow_mut().remove(path) {
             let result =
                 result.with_context(|| format!("download of {} failed", path.display()))?;
 
-            let is_new = self.fresh.insert(path.to_path_buf());
+            let is_new = self.fresh.borrow_mut().insert(path.to_path_buf());
             assert!(
                 is_new,
                 "downloaded the index file `{}` twice",
@@ -564,11 +588,11 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                     return Poll::Ready(Ok(LoadResponse::NotFound));
                 }
                 StatusCode::Unauthorized
-                    if !self.auth_required && path == Path::new(RegistryConfig::NAME) =>
+                    if !self.auth_required.get() && path == Path::new(RegistryConfig::NAME) =>
                 {
                     debug!(target: "network", "re-attempting request for config.json with authorization included.");
-                    self.fresh.remove(path);
-                    self.auth_required = true;
+                    self.fresh.borrow_mut().remove(path);
+                    self.auth_required.set(true);
 
                     // Look for a `www-authenticate` header with the `Cargo` scheme.
                     for header in &result.header_map.www_authenticate {
@@ -578,7 +602,8 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                                     // Look for the `login_url` parameter.
                                     for (param, value) in challenge.params {
                                         if param.eq_ignore_ascii_case("login_url") {
-                                            self.login_url = Some(value.to_unescaped().into_url()?);
+                                            self.login_url
+                                                .replace(Some(value.to_unescaped().into_url()?));
                                         }
                                     }
                                 }
@@ -591,7 +616,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                             }
                         }
                     }
-                    self.auth_error_headers = result.header_map.all;
+                    self.auth_error_headers.replace(result.header_map.all);
                 }
                 StatusCode::Unauthorized => {
                     let err = Err(HttpNotSuccessful {
@@ -602,11 +627,11 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                         headers: result.header_map.all,
                     }
                     .into());
-                    if self.auth_required {
+                    if self.auth_required.get() {
                         let auth_error = auth::AuthorizationError::new(
                             self.gctx,
                             self.source_id,
-                            self.login_url.clone(),
+                            self.login_url.borrow().clone(),
                             auth::AuthorizationErrorReason::TokenRejected,
                         )?;
                         return Poll::Ready(err.context(auth_error));
@@ -618,12 +643,12 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         }
 
         if path != Path::new(RegistryConfig::NAME) {
-            self.auth_required = ready!(self.config()?).auth_required;
-        } else if !self.auth_required {
+            self.auth_required.set(ready!(self.config()?).auth_required);
+        } else if !self.auth_required.get() {
             // Check if there's a cached config that says auth is required.
             // This allows avoiding the initial unauthenticated request to probe.
-            if let Some(config) = self.config_cached()? {
-                self.auth_required = config.auth_required;
+            if let Some(config) = self.config_cached() {
+                self.auth_required.set(config.auth_required);
             }
         }
 
@@ -638,7 +663,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         handle.follow_location(true)?;
 
         // Enable HTTP/2 if possible.
-        crate::try_old_curl_http2_pipewait!(self.multiplexing, handle);
+        crate::try_old_curl_http2_pipewait!(self.multiplexing.get(), handle);
 
         let mut headers = List::new();
         // Include a header to identify the protocol. This allows the server to
@@ -658,13 +683,13 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                 }
             }
         }
-        if self.auth_required {
+        if self.auth_required.get() {
             let authorization = auth::auth_token(
                 self.gctx,
                 &self.source_id,
-                self.login_url.as_ref(),
+                self.login_url.borrow().as_ref(),
                 Operation::Read,
-                self.auth_error_headers.clone(),
+                self.auth_error_headers.borrow().clone(),
                 true,
             )?;
             headers.append(&format!("Authorization: {}", authorization))?;
@@ -675,10 +700,14 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         // We're going to have a bunch of downloads all happening "at the same time".
         // So, we need some way to track what headers/data/responses are for which request.
         // We do that through this token. Each request (and associated response) gets one.
-        let token = self.downloads.next;
-        self.downloads.next += 1;
+        let token = self.downloads.next.get();
+        self.downloads.next.update(|v| v + 1);
         debug!(target: "network", "downloading {} as {}", path.display(), token);
-        let is_new = self.downloads.pending_paths.insert(path.to_path_buf());
+        let is_new = self
+            .downloads
+            .pending_paths
+            .borrow_mut()
+            .insert(path.to_path_buf());
         assert!(is_new, "path queued for download more than once");
 
         // Each write should go to self.downloads.pending[&token].data.
@@ -689,7 +718,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             trace!(target: "network", "{} - {} bytes of data", token, buf.len());
             tls::with(|downloads| {
                 if let Some(downloads) = downloads {
-                    downloads.pending[&token]
+                    downloads.pending.borrow()[&token]
                         .0
                         .data
                         .borrow_mut()
@@ -704,7 +733,8 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             if let Some((tag, value)) = Self::handle_http_header(buf) {
                 tls::with(|downloads| {
                     if let Some(downloads) = downloads {
-                        let mut header_map = downloads.pending[&token].0.header_map.borrow_mut();
+                        let pending = downloads.pending.borrow();
+                        let mut header_map = pending[&token].0.header_map.borrow_mut();
                         header_map.all.push(format!("{tag}: {value}"));
                         match tag.to_ascii_lowercase().as_str() {
                             LAST_MODIFIED => header_map.last_modified = Some(value.to_string()),
@@ -728,33 +758,36 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         };
 
         // Finally add the request we've lined up to the pool of requests that cURL manages.
-        let mut handle = self.multi.add(handle)?;
+        let mut handle = self.multi.borrow().add(handle)?;
         handle.set_token(token)?;
-        self.downloads.pending.insert(dl.token, (dl, handle));
+        self.downloads
+            .pending
+            .borrow_mut()
+            .insert(dl.token, (dl, handle));
 
         Poll::Pending
     }
 
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         let cfg = ready!(self.config()?).clone();
         Poll::Ready(Ok(Some(cfg)))
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         // Actually updating the index is more or less a no-op for this implementation.
         // All it does is ensure that a subsequent load will double-check files with the
         // server rather than rely on a locally cached copy of the index files.
         debug!("invalidated index cache");
-        self.fresh.clear();
-        self.requested_update = true;
+        self.fresh.borrow_mut().clear();
+        self.requested_update.set(true);
     }
 
     fn set_quiet(&mut self, quiet: bool) {
-        self.quiet = quiet;
+        self.quiet.set(quiet);
         self.downloads.progress.replace(None);
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         let registry_config = loop {
             match self.config()? {
                 Poll::Pending => self.block_until_ready()?,
@@ -772,12 +805,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         )
     }
 
-    fn finish_download(
-        &mut self,
-        pkg: PackageId,
-        checksum: &str,
-        data: &[u8],
-    ) -> CargoResult<File> {
+    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File> {
         download::finish_download(
             &self.cache_path,
             &self.gctx,
@@ -792,16 +820,17 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         download::is_crate_downloaded(&self.cache_path, &self.gctx, pkg)
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
+    fn block_until_ready(&self) -> CargoResult<()> {
         trace!(target: "network::HttpRegistry::block_until_ready",
             "{} transfers pending",
-            self.downloads.pending.len()
+            self.downloads.pending.borrow().len()
         );
-        self.downloads.blocking_calls += 1;
+        self.downloads.blocking_calls.update(|v| v + 1);
 
         loop {
             let remaining_in_multi = tls::set(&self.downloads, || {
                 self.multi
+                    .borrow()
                     .perform()
                     .context("failed to perform http requests")
             })?;
@@ -810,15 +839,15 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             // `self.downloads.results`. Failed transfers get added to
             // `self.downloads.sleeping` for retry.
             self.handle_completed_downloads()?;
-            if remaining_in_multi + self.downloads.sleeping.len() as u32 == 0 {
+            if remaining_in_multi + self.downloads.sleeping.borrow().len() as u32 == 0 {
                 return Ok(());
             }
             // Handles failed transfers in `self.downloads.sleeping` and
             // re-adds them to `self.multi`.
             self.add_sleepers()?;
 
-            if self.downloads.pending.is_empty() {
-                let delay = self.downloads.sleeping.time_to_next().unwrap();
+            if self.downloads.pending.borrow().is_empty() {
+                let delay = self.downloads.sleeping.borrow().time_to_next().unwrap();
                 debug!(target: "network", "sleeping main thread for {delay:?}");
                 std::thread::sleep(delay);
             } else {
@@ -826,9 +855,11 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                 // so we need to wait until cURL has something new for us.
                 let timeout = self
                     .multi
+                    .borrow()
                     .get_timeout()?
                     .unwrap_or_else(|| Duration::new(1, 0));
                 self.multi
+                    .borrow()
                     .wait(&mut [], timeout)
                     .context("failed to wait on curl `Multi`")?;
             }
@@ -858,12 +889,12 @@ impl<'gctx> Downloads<'gctx> {
         let approximate_tree_depth = 10;
 
         progress.tick(
-            self.blocking_calls.min(approximate_tree_depth),
+            self.blocking_calls.get().min(approximate_tree_depth),
             approximate_tree_depth + 1,
             &format!(
                 " {} complete; {} pending",
-                self.downloads_finished,
-                self.pending.len() + self.sleeping.len()
+                self.downloads_finished.get(),
+                self.pending.borrow().len() + self.sleeping.borrow().len()
             ),
         )
     }

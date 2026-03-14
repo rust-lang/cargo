@@ -1,5 +1,5 @@
 use std::cell::OnceCell;
-use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::cell::{Cell, Ref, RefCell};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -663,10 +663,6 @@ impl<'gctx> PackageSet<'gctx> {
         self.sources.borrow()
     }
 
-    pub fn sources_mut(&self) -> RefMut<'_, SourceMap<'gctx>> {
-        self.sources.borrow_mut()
-    }
-
     /// Merge the given set into self.
     pub fn add_set(&mut self, set: PackageSet<'gctx>) {
         assert!(!self.downloading.get());
@@ -707,9 +703,9 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
         // Ask the original source for this `PackageId` for the corresponding
         // package. That may immediately come back and tell us that the package
         // is ready, or it could tell us that it needs to be downloaded.
-        let mut sources = self.set.sources.borrow_mut();
+        let sources = self.set.sources.borrow_mut();
         let source = sources
-            .get_mut(id.source_id())
+            .get(id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
         let pkg = source
             .download(id)
@@ -924,9 +920,9 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
 
         // Inform the original source that the download is finished which
         // should allow us to actually get the package and fill it in now.
-        let mut sources = self.set.sources.borrow_mut();
+        let sources = self.set.sources.borrow_mut();
         let source = sources
-            .get_mut(dl.id.source_id())
+            .get(dl.id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", dl.id)))?;
         let start = Instant::now();
         let pkg = source.finish_download(dl.id, data)?;
