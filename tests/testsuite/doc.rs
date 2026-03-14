@@ -4218,7 +4218,6 @@ fn doc_with_private_dependency() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[DOCUMENTING] baz v0.0.1
 [CHECKING] baz v0.0.1
 [DOCUMENTING] bar v0.0.1
 [CHECKING] bar v0.0.1
@@ -4233,7 +4232,7 @@ fn doc_with_private_dependency() {
 
     assert!(p.root().join("target/doc/foo/index.html").is_file());
     assert!(p.root().join("target/doc/bar/index.html").is_file());
-    assert!(p.root().join("target/doc/baz/index.html").is_file());
+    assert!(!p.root().join("target/doc/baz/index.html").is_file());
 }
 
 #[cargo_test(nightly, reason = "public-dependency feature is unstable")]
@@ -4290,7 +4289,7 @@ fn doc_mixed_public_private_deps() {
             .join("target/doc/priv_dep_with_dep/index.html")
             .is_file()
     );
-    assert!(p.root().join("target/doc/transitive/index.html").is_file());
+    assert!(!p.root().join("target/doc/transitive/index.html").is_file());
 }
 
 #[cargo_test(nightly, reason = "public-dependency feature is unstable")]
@@ -4298,9 +4297,13 @@ fn doc_workspace_member_private_dep() {
     // selected and skipped are both workspace members.
     // selected has a private dep on skipped.
     // skipped has a dep on transitive (a registry crate).
-    // Running `cargo doc -p selected` currently documents all of them,
-    // including transitive, because the public-dependency filter is not
-    // applied to workspace members' deps.
+    // Running `cargo doc -p selected`:
+    // - selected is documented (it is user-selected)
+    // - skipped is documented because it is a direct dep of selected (user-selected
+    //   packages always have all their direct deps documented)
+    // - transitive is NOT documented: skipped is not user-selected, so the
+    //   public-dependency filter applies to its deps, and transitive is not
+    //   marked public by skipped
 
     Package::new("transitive", "0.0.1")
         .file("src/lib.rs", "pub fn transitive() {}")
@@ -4348,8 +4351,11 @@ fn doc_workspace_member_private_dep() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .run();
 
+    // selected is documented (user-selected)
     assert!(p.root().join("target/doc/selected/index.html").is_file());
+    // skipped is documented because it is a direct dep of the user-selected package
     assert!(p.root().join("target/doc/skipped/index.html").is_file());
-    // transitive is documented under the current behavior (no filter applied)
-    assert!(p.root().join("target/doc/transitive/index.html").is_file());
+    // transitive is NOT documented: skipped is not user-selected, and it does
+    // not mark transitive as public
+    assert!(!p.root().join("target/doc/transitive/index.html").is_file());
 }
