@@ -246,6 +246,63 @@ impl<'gctx> GitSource<'gctx> {
         };
         Ok((db, actual_rev))
     }
+
+    fn update(&self) -> CargoResult<()> {
+        if self.path_source.borrow().is_some() {
+            self.mark_used()?;
+            return Ok(());
+        }
+
+        let git_fs = self.gctx.git_path();
+        // Ignore errors creating it, in case this is a read-only filesystem:
+        // perhaps the later operations can succeed anyhow.
+        let _ = git_fs.create_dir();
+        let git_path = self
+            .gctx
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_fs);
+
+        // Before getting a checkout, make sure that `<cargo_home>/git` is
+        // marked as excluded from indexing and backups. Older versions of Cargo
+        // didn't do this, so we do it here regardless of whether `<cargo_home>`
+        // exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        exclude_from_backups_and_indexing(&git_path);
+
+        let (db, actual_rev) = self.fetch_db(false)?;
+
+        // Don’t use the full hash, in order to contribute less to reaching the
+        // path length limit on Windows. See
+        // <https://github.com/servo/servo/pull/14397>.
+        let short_id = db.to_short_id(actual_rev)?;
+
+        // Check out `actual_rev` from the database to a scoped location on the
+        // filesystem. This will use hard links and such to ideally make the
+        // checkout operation here pretty fast.
+        let checkout_path = self
+            .gctx
+            .git_checkouts_path()
+            .join(&self.ident)
+            .join(short_id.as_str());
+        let checkout_path = checkout_path.into_path_unlocked();
+        db.copy_to(actual_rev, &checkout_path, self.gctx, self.quiet)?;
+
+        let source_id = self
+            .source_id
+            .borrow()
+            .with_git_precise(Some(actual_rev.to_string()));
+        let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
+
+        self.path_source.replace(Some(path_source));
+        self.short_id.replace(Some(short_id.as_str().into()));
+        self.locked_rev.replace(Revision::Locked(actual_rev));
+        self.path_source.borrow().as_ref().unwrap().load()?;
+
+        self.mark_used()?;
+        Ok(())
+    }
 }
 
 /// Indicates a [Git revision] that might be locked or deferred to be resolved.
@@ -356,60 +413,7 @@ impl<'gctx> Source for GitSource<'gctx> {
     }
 
     fn block_until_ready(&self) -> CargoResult<()> {
-        if self.path_source.borrow().is_some() {
-            self.mark_used()?;
-            return Ok(());
-        }
-
-        let git_fs = self.gctx.git_path();
-        // Ignore errors creating it, in case this is a read-only filesystem:
-        // perhaps the later operations can succeed anyhow.
-        let _ = git_fs.create_dir();
-        let git_path = self
-            .gctx
-            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_fs);
-
-        // Before getting a checkout, make sure that `<cargo_home>/git` is
-        // marked as excluded from indexing and backups. Older versions of Cargo
-        // didn't do this, so we do it here regardless of whether `<cargo_home>`
-        // exists.
-        //
-        // This does not use `create_dir_all_excluded_from_backups_atomic` for
-        // the same reason: we want to exclude it even if the directory already
-        // exists.
-        exclude_from_backups_and_indexing(&git_path);
-
-        let (db, actual_rev) = self.fetch_db(false)?;
-
-        // Don’t use the full hash, in order to contribute less to reaching the
-        // path length limit on Windows. See
-        // <https://github.com/servo/servo/pull/14397>.
-        let short_id = db.to_short_id(actual_rev)?;
-
-        // Check out `actual_rev` from the database to a scoped location on the
-        // filesystem. This will use hard links and such to ideally make the
-        // checkout operation here pretty fast.
-        let checkout_path = self
-            .gctx
-            .git_checkouts_path()
-            .join(&self.ident)
-            .join(short_id.as_str());
-        let checkout_path = checkout_path.into_path_unlocked();
-        db.copy_to(actual_rev, &checkout_path, self.gctx, self.quiet)?;
-
-        let source_id = self
-            .source_id
-            .borrow()
-            .with_git_precise(Some(actual_rev.to_string()));
-        let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
-
-        self.path_source.replace(Some(path_source));
-        self.short_id.replace(Some(short_id.as_str().into()));
-        self.locked_rev.replace(Revision::Locked(actual_rev));
-        self.path_source.borrow().as_ref().unwrap().load()?;
-
-        self.mark_used()?;
-        Ok(())
+        self.update()
     }
 
     fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
