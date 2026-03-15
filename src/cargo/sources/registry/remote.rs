@@ -221,6 +221,7 @@ impl<'gctx> RemoteRegistry<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?;

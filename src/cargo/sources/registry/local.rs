@@ -87,6 +87,7 @@ impl<'gctx> LocalRegistry<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         Ok(())

@@ -97,6 +97,7 @@ impl<'gctx> Debug for DirectorySource<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> Source for DirectorySource<'gctx> {
     fn query(
         &self,

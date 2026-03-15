@@ -32,6 +32,7 @@ impl<'gctx> DependencyConfusionThreatOverlaySource<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     fn source_id(&self) -> crate::core::SourceId {
         self.remote.source_id()

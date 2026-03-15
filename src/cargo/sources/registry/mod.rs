@@ -342,6 +342,7 @@ pub enum LoadResponse {
 /// This allows [`RegistrySource`] to abstractly handle each registry kind.
 ///
 /// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
+#[async_trait::async_trait(?Send)]
 pub trait RegistryData {
     /// Performs initialization for the registry.
     ///
@@ -723,6 +724,7 @@ impl<'gctx> RegistrySource<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> Source for RegistrySource<'gctx> {
     fn query(
         &self,
