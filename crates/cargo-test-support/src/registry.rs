@@ -823,7 +823,6 @@ impl HttpServer {
                 url,
                 body,
             };
-            println!("req: {:#?}", req);
             let response = self.route(&req);
             let buf = buf.get_mut();
             write!(buf, "HTTP/1.1 {}\r\n", response.code).unwrap();
