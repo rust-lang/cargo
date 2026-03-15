@@ -85,6 +85,28 @@ impl<'gctx> LocalRegistry<'gctx> {
             quiet: false,
         }
     }
+
+    fn update(&self) -> CargoResult<()> {
+        if self.updated.get() {
+            return Ok(());
+        }
+        // Nothing to update, we just use what's on disk. Verify it actually
+        // exists though. We don't use any locks as we're just checking whether
+        // these directories exist.
+        let root = self.root.clone().into_path_unlocked();
+        if !root.is_dir() {
+            anyhow::bail!("local registry path is not a directory: {}", root.display());
+        }
+        let index_path = self.index_path.clone().into_path_unlocked();
+        if !index_path.is_dir() {
+            anyhow::bail!(
+                "local registry index path is not a directory: {}",
+                index_path.display()
+            );
+        }
+        self.updated.set(true);
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait(?Send)]
@@ -139,25 +161,7 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     }
 
     fn block_until_ready(&self) -> CargoResult<()> {
-        if self.updated.get() {
-            return Ok(());
-        }
-        // Nothing to update, we just use what's on disk. Verify it actually
-        // exists though. We don't use any locks as we're just checking whether
-        // these directories exist.
-        let root = self.root.clone().into_path_unlocked();
-        if !root.is_dir() {
-            anyhow::bail!("local registry path is not a directory: {}", root.display());
-        }
-        let index_path = self.index_path.clone().into_path_unlocked();
-        if !index_path.is_dir() {
-            anyhow::bail!(
-                "local registry index path is not a directory: {}",
-                index_path.display()
-            );
-        }
-        self.updated.set(true);
-        Ok(())
+        self.update()
     }
 
     fn invalidate_cache(&self) {
