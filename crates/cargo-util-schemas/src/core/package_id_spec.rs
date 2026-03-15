@@ -159,7 +159,11 @@ impl PackageIdSpec {
                 Some(fragment) => match parse_spec(&fragment)? {
                     Some((name, ver)) => (name, ver),
                     None => {
-                        if fragment.chars().next().unwrap().is_alphabetic() {
+                        let Some(f) = fragment.chars().next() else {
+                            return Err(PackageIdSpecError(ErrorKind::EmptyFragment));
+                        };
+
+                        if f.is_alphabetic() {
                             (String::from(fragment.as_str()), None)
                         } else {
                             let version = fragment.parse::<PartialVersion>()?;
@@ -321,6 +325,9 @@ enum ErrorKind {
 
     #[error("package ID specification `{spec}` looks like a file path, maybe try {maybe_url}")]
     MaybeFilePath { spec: String, maybe_url: String },
+
+    #[error("pkgid url cannot have an empty fragment")]
+    EmptyFragment,
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -764,5 +771,6 @@ mod tests {
         err!("@1.2.3", ErrorKind::NameValidation(_));
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
+        err!("https://example.com/foo#", ErrorKind::EmptyFragment);
     }
 }
