@@ -607,6 +607,7 @@ pub struct Dependency {
 enum EntryData {
     Regular(String),
     Symlink(PathBuf),
+    Directory,
 }
 
 /// A file to be created in a package.
@@ -1330,6 +1331,17 @@ impl Package {
         self
     }
 
+    /// Adds an empty directory at the given path.
+    pub fn directory(&mut self, path: &str) -> &mut Package {
+        self.files.push(PackageFile {
+            path: path.to_string(),
+            contents: EntryData::Directory,
+            mode: DEFAULT_MODE,
+            extra: false,
+        });
+        self
+    }
+
     /// Adds an "extra" file that is not rooted within the package.
     ///
     /// Normal files are automatically placed within a directory named
@@ -1741,6 +1753,10 @@ impl Package {
                 header.set_entry_type(tar::EntryType::Symlink);
                 t!(header.set_link_name(src));
                 "" // Symlink has no contents.
+            }
+            EntryData::Directory => {
+                header.set_entry_type(tar::EntryType::Directory);
+                ""
             }
         };
         header.set_size(contents.len() as u64);
