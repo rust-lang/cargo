@@ -83,6 +83,7 @@ mod corrupt_git;
 mod credential_process;
 mod cross_compile;
 mod cross_publish;
+#[cfg(false)] // Disabling custom target tests, not backporting support to 1.94.
 mod custom_target;
 mod death;
 mod dep_info;
