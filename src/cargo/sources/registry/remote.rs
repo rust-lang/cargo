@@ -219,6 +219,66 @@ impl<'gctx> RemoteRegistry<'gctx> {
     fn mark_updated(&self) {
         self.gctx.updated_sources().insert(self.source_id);
     }
+
+    fn update(&self) -> CargoResult<()> {
+        if !self.needs_update.get() {
+            return Ok(());
+        }
+
+        self.needs_update.set(false);
+
+        if self.is_updated() {
+            return Ok(());
+        }
+        self.mark_updated();
+
+        if !self.gctx.network_allowed() {
+            return Ok(());
+        }
+        if self.gctx.cli_unstable().no_index_update {
+            return Ok(());
+        }
+
+        debug!("updating the index");
+
+        // Ensure that we'll actually be able to acquire an HTTP handle later on
+        // once we start trying to download crates. This will weed out any
+        // problems with `.cargo/config` configuration related to HTTP.
+        //
+        // This way if there's a problem the error gets printed before we even
+        // hit the index, which may not actually read this configuration.
+        self.gctx.http()?;
+
+        self.prepare()?;
+        self.head.set(None);
+        *self.tree.borrow_mut() = None;
+        self.current_sha.set(None);
+        let _path = self
+            .gctx
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
+        if !self.quiet {
+            self.gctx
+                .shell()
+                .status("Updating", self.source_id.display_index())?;
+        }
+
+        // Fetch the latest version of our `index_git_ref` into the index
+        // checkout.
+        let url = self.source_id.url();
+        let mut repo = self.repo.borrow_mut();
+        let repo = repo.as_mut().unwrap();
+        git::fetch(
+            repo,
+            url.as_str(),
+            &self.index_git_ref,
+            &self.index_git_ref,
+            self.gctx,
+            RemoteKind::Registry,
+        )
+        .with_context(|| format!("failed to fetch `{}`", url))?;
+
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait(?Send)]
@@ -343,63 +403,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     }
 
     fn block_until_ready(&self) -> CargoResult<()> {
-        if !self.needs_update.get() {
-            return Ok(());
-        }
-
-        self.needs_update.set(false);
-
-        if self.is_updated() {
-            return Ok(());
-        }
-        self.mark_updated();
-
-        if !self.gctx.network_allowed() {
-            return Ok(());
-        }
-        if self.gctx.cli_unstable().no_index_update {
-            return Ok(());
-        }
-
-        debug!("updating the index");
-
-        // Ensure that we'll actually be able to acquire an HTTP handle later on
-        // once we start trying to download crates. This will weed out any
-        // problems with `.cargo/config` configuration related to HTTP.
-        //
-        // This way if there's a problem the error gets printed before we even
-        // hit the index, which may not actually read this configuration.
-        self.gctx.http()?;
-
-        self.prepare()?;
-        self.head.set(None);
-        *self.tree.borrow_mut() = None;
-        self.current_sha.set(None);
-        let _path = self
-            .gctx
-            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
-        if !self.quiet {
-            self.gctx
-                .shell()
-                .status("Updating", self.source_id.display_index())?;
-        }
-
-        // Fetch the latest version of our `index_git_ref` into the index
-        // checkout.
-        let url = self.source_id.url();
-        let mut repo = self.repo.borrow_mut();
-        let repo = repo.as_mut().unwrap();
-        git::fetch(
-            repo,
-            url.as_str(),
-            &self.index_git_ref,
-            &self.index_git_ref,
-            self.gctx,
-            RemoteKind::Registry,
-        )
-        .with_context(|| format!("failed to fetch `{}`", url))?;
-
-        Ok(())
+        self.update()
     }
 
     /// Read the general concept for `invalidate_cache()` on

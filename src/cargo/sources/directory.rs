@@ -89,51 +89,8 @@ impl<'gctx> DirectorySource<'gctx> {
             updated: Cell::new(false),
         }
     }
-}
 
-impl<'gctx> Debug for DirectorySource<'gctx> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "DirectorySource {{ root: {:?} }}", self.root)
-    }
-}
-
-#[async_trait::async_trait(?Send)]
-impl<'gctx> Source for DirectorySource<'gctx> {
-    fn query(
-        &self,
-        dep: &Dependency,
-        kind: QueryKind,
-        f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
-        if !self.updated.get() {
-            return Poll::Pending;
-        }
-        let packages = self.packages.borrow();
-        let packages = packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| match kind {
-            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
-            QueryKind::AlternativeNames => true,
-            QueryKind::Normalized => dep.matches(pkg.summary()),
-        });
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(IndexSummary::Candidate(summary));
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn supports_checksums(&self) -> bool {
-        true
-    }
-
-    fn requires_precise(&self) -> bool {
-        true
-    }
-
-    fn source_id(&self) -> SourceId {
-        self.source_id
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
+    fn update(&self) -> CargoResult<()> {
         if self.updated.get() {
             return Ok(());
         }
@@ -211,6 +168,53 @@ impl<'gctx> Source for DirectorySource<'gctx> {
 
         self.updated.set(true);
         Ok(())
+    }
+}
+
+impl<'gctx> Debug for DirectorySource<'gctx> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "DirectorySource {{ root: {:?} }}", self.root)
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl<'gctx> Source for DirectorySource<'gctx> {
+    fn query(
+        &self,
+        dep: &Dependency,
+        kind: QueryKind,
+        f: &mut dyn FnMut(IndexSummary),
+    ) -> Poll<CargoResult<()>> {
+        if !self.updated.get() {
+            return Poll::Pending;
+        }
+        let packages = self.packages.borrow();
+        let packages = packages.values().map(|p| &p.0);
+        let matches = packages.filter(|pkg| match kind {
+            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
+            QueryKind::AlternativeNames => true,
+            QueryKind::Normalized => dep.matches(pkg.summary()),
+        });
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
+            f(IndexSummary::Candidate(summary));
+        }
+        Poll::Ready(Ok(()))
+    }
+
+    fn supports_checksums(&self) -> bool {
+        true
+    }
+
+    fn requires_precise(&self) -> bool {
+        true
+    }
+
+    fn source_id(&self) -> SourceId {
+        self.source_id
+    }
+
+    fn block_until_ready(&self) -> CargoResult<()> {
+        self.update()
     }
 
     fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
