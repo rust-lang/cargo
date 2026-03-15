@@ -45,6 +45,7 @@ impl<'gctx> ReplacedSource<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> Source for ReplacedSource<'gctx> {
     fn source_id(&self) -> SourceId {
         self.to_replace

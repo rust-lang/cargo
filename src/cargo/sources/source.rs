@@ -28,6 +28,7 @@ use crate::util::CargoResult;
 /// all use cases. See [`crate::sources`] for implementations provided by Cargo.
 ///
 /// [dependency confusion attack]: https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610
+#[async_trait::async_trait(?Send)]
 pub trait Source {
     /// Returns the [`SourceId`] corresponding to this source.
     fn source_id(&self) -> SourceId;
@@ -190,6 +191,7 @@ pub enum MaybePackage {
 }
 
 /// A blanket implementation forwards all methods to [`Source`].
+#[async_trait::async_trait(?Send)]
 impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
     fn source_id(&self) -> SourceId {
         (**self).source_id()

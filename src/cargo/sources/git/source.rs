@@ -329,6 +329,7 @@ impl<'gctx> Debug for GitSource<'gctx> {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> Source for GitSource<'gctx> {
     fn query(
         &self,
