@@ -74,7 +74,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 
 pub(super) fn activation_error(
     resolver_ctx: &ResolverContext,
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
@@ -429,7 +429,7 @@ pub(super) fn activation_error(
 // was meant. So we re-query the registry with `dep="*"` so we can
 // list a few versions that were actually found.
 fn alt_versions(
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     dep: &Dependency,
 ) -> Option<CargoResult<Vec<Summary>>> {
     let mut wild_dep = dep.clone();
@@ -456,7 +456,7 @@ fn alt_versions(
 
 /// Maybe something is wrong with the available versions
 fn rejected_versions(
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     dep: &Dependency,
 ) -> Option<CargoResult<Vec<IndexSummary>>> {
     let mut version_candidates = loop {
@@ -480,7 +480,7 @@ fn rejected_versions(
 /// Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
 /// was meant. So we try asking the registry for a `fuzzy` search for suggestions.
 fn alt_names(
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     dep: &Dependency,
 ) -> Option<CargoResult<Vec<(usize, Summary)>>> {
     let mut wild_dep = dep.clone();
