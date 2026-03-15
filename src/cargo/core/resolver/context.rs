@@ -2,7 +2,7 @@ use super::RequestedFeatures;
 use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ActivationsKey, ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
-use crate::core::{Dependency, PackageId, Summary};
+use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::Graph;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::format_err;
@@ -178,7 +178,7 @@ impl ResolverContext {
 
     pub fn resolve_replacements(
         &self,
-        registry: &RegistryQueryer<'_>,
+        registry: &RegistryQueryer<'_, impl Registry>,
     ) -> HashMap<PackageId, PackageId> {
         self.activations
             .values()

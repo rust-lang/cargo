@@ -31,8 +31,8 @@ use std::rc::Rc;
 use std::task::Poll;
 use tracing::debug;
 
-pub struct RegistryQueryer<'a> {
-    pub registry: &'a mut (dyn Registry + 'a),
+pub struct RegistryQueryer<'a, T: Registry> {
+    pub registry: &'a mut T,
     replacements: &'a [(PackageIdSpec, Dependency)],
     version_prefs: &'a VersionPreferences,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
@@ -50,9 +50,9 @@ pub struct RegistryQueryer<'a> {
     used_replacements: HashMap<PackageId, Summary>,
 }
 
-impl<'a> RegistryQueryer<'a> {
+impl<'a, T: Registry> RegistryQueryer<'a, T> {
     pub fn new(
-        registry: &'a mut dyn Registry,
+        registry: &'a mut T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
     ) -> Self {

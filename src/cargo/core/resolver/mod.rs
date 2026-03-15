@@ -122,7 +122,7 @@ mod version_prefs;
 pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut dyn Registry,
+    registry: &mut impl Registry,
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
@@ -194,7 +194,7 @@ pub fn resolve(
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, `cx` is returned.
 fn activate_deps_loop(
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     summaries: &[(Summary, ResolveOpts)],
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
@@ -622,7 +622,7 @@ fn activate_deps_loop(
 /// iterate through next.
 fn activate(
     cx: &mut ResolverContext,
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     parent: Option<(&Summary, &Dependency)>,
     candidate: Summary,
     first_version: Option<VersionOrdering>,
@@ -808,7 +808,7 @@ impl RemainingCandidates {
 /// It will add the new conflict to the cache if one is found.
 fn generalize_conflicting(
     cx: &ResolverContext,
-    registry: &mut RegistryQueryer<'_>,
+    registry: &mut RegistryQueryer<'_, impl Registry>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
     parent: &Summary,
     dep: &Dependency,
