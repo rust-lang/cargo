@@ -132,6 +132,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstyle-progress"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee65f3323c89eac2de51015f125682e9a88c3bf7a10d0c39b3768ff6af654ff7"
+
+[[package]]
 name = "anstyle-query"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,6 +372,7 @@ dependencies = [
  "anstream 1.0.0",
  "anstyle",
  "anstyle-hyperlink",
+ "anstyle-progress",
  "anyhow",
  "base64",
  "blake3",
