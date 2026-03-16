@@ -2109,9 +2109,6 @@ script.path = "script.rs"
 [ERROR] failed to get `script` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `script`
-
-Caused by:
   unable to update [ROOT]/foo/script.rs
 
 Caused by:

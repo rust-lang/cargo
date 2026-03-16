@@ -666,9 +666,6 @@ fn git_override_requires_lockfile() {
 [ERROR] failed to get `git` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `git`
-
-Caused by:
   unable to update https://example.com/
 
 Caused by:
