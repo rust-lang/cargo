@@ -842,7 +842,14 @@ fn update_with_shared_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
-[ERROR] unable to update [ROOTURL]/bar#0.1.2
+[ERROR] failed to get `bar` as a dependency of package `dep1 v0.5.0 ([ROOT]/foo/dep1)`
+    ... which satisfies path dependency `dep1` (locked to 0.5.0) of package `foo v0.5.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bar`
+
+Caused by:
+  unable to update [ROOTURL]/bar#0.1.2
 
 Caused by:
   revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)

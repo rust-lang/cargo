@@ -219,15 +219,8 @@ fn query_summaries(
 ) -> CargoResult<(Vec<IndexSummary>, Option<String>)> {
     // Query without version requirement to get all index summaries.
     let dep = Dependency::parse(spec.name(), None, source_ids.original)?;
-    let results = loop {
-        // Use normalized crate name lookup for user-provided package names.
-        match registry.query_vec(&dep, QueryKind::Normalized) {
-            std::task::Poll::Ready(res) => {
-                break res?;
-            }
-            std::task::Poll::Pending => registry.block_until_ready()?,
-        }
-    };
+    // Use normalized crate name lookup for user-provided package names.
+    let results = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?;
 
     let normalized_name = results.first().map(|s| s.package_id().name().to_string());
 

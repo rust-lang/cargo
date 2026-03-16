@@ -3,7 +3,6 @@
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::rc::Rc;
-use std::task::Poll;
 
 use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId};
@@ -48,23 +47,21 @@ pub trait Source {
 
     /// Attempts to find the packages that match a dependency request.
     ///
-    /// Usually you should call [`Source::block_until_ready`] somewhere and
-    /// wait until package information become available. Otherwise any query
-    /// may return a [`Poll::Pending`].
-    ///
     /// The `f` argument is expected to get called when any [`IndexSummary`] becomes available.
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>>;
+    ) -> CargoResult<()>;
 
     /// Gathers the result from [`Source::query`] as a list of [`IndexSummary`] items
     /// when they become available.
-    fn query_vec(&self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<IndexSummary>>> {
+    async fn query_vec(&self, dep: &Dependency, kind: QueryKind) -> CargoResult<Vec<IndexSummary>> {
         let mut ret = Vec::new();
-        self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
+        self.query(dep, kind, &mut |s| ret.push(s))
+            .await
+            .map(|()| ret)
     }
 
     /// Ensure that the source is fully up-to-date for the current session on the next query.
@@ -135,16 +132,7 @@ pub trait Source {
 
     /// Query if a package is yanked. Only registry sources can mark packages
     /// as yanked. This ignores the yanked whitelist.
-    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>>;
-
-    /// Block until all outstanding [`Poll::Pending`] requests are [`Poll::Ready`].
-    ///
-    /// After calling this function, the source should return `Poll::Ready` for
-    /// any queries that previously returned `Poll::Pending`.
-    ///
-    /// If no queries previously returned `Poll::Pending`, and [`Source::invalidate_cache`]
-    /// was not called, this function should be a no-op.
-    fn block_until_ready(&self) -> CargoResult<()>;
+    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool>;
 }
 
 /// Defines how a dependency query will be performed for a [`Source`].
@@ -209,13 +197,13 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).requires_precise()
     }
 
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
-        (**self).query(dep, kind, f)
+    ) -> CargoResult<()> {
+        (**self).query(dep, kind, f).await
     }
 
     fn invalidate_cache(&self) {
@@ -254,12 +242,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).add_to_yanked_whitelist(pkgs);
     }
 
-    fn is_yanked(&self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        (**self).is_yanked(pkg)
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        (**self).block_until_ready()
+    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+        (**self).is_yanked(pkg).await
     }
 }
 

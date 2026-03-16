@@ -190,12 +190,12 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::task::{Poll, ready};
 
 use anyhow::Context as _;
-use cargo_util::paths::{self, exclude_from_backups_and_indexing};
+use cargo_util::paths;
 use cargo_util_terminal::report::Level;
 use flate2::read::GzDecoder;
+use futures::FutureExt as _;
 use serde::Deserialize;
 use serde::Serialize;
 use tar::Archive;
@@ -210,7 +210,6 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
-use crate::util::network::PollExt;
 use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
 use crate::util::{VersionExt, hex};
 
@@ -368,17 +367,17 @@ pub trait RegistryData {
     /// * `path` is the relative path to the package to load (like `ca/rg/cargo`).
     /// * `index_version` is the version of the requested crate data currently
     ///    in cache. This is useful for checking if a local cache is outdated.
-    fn load(
+    async fn load(
         &self,
         root: &Path,
         path: &Path,
         index_version: Option<&str>,
-    ) -> Poll<CargoResult<LoadResponse>>;
+    ) -> CargoResult<LoadResponse>;
 
     /// Loads the `config.json` file and returns it.
     ///
     /// Local registries don't have a config, and return `None`.
-    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>>;
+    async fn config(&self) -> CargoResult<Option<RegistryConfig>>;
 
     /// Invalidates locally cached data.
     fn invalidate_cache(&self);
@@ -429,9 +428,6 @@ pub trait RegistryData {
     ///
     /// Returns the [`Path`] to the [`Filesystem`].
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
-
-    /// Block until all outstanding `Poll::Pending` requests are `Poll::Ready`.
-    fn block_until_ready(&self) -> CargoResult<()>;
 }
 
 /// The status of [`RegistryData::download`] which indicates if a `.crate`
@@ -537,6 +533,21 @@ impl<'gctx> RegistrySource<'gctx> {
         ops: Box<dyn RegistryData + 'gctx>,
         yanked_whitelist: &HashSet<PackageId>,
     ) -> RegistrySource<'gctx> {
+        // Before starting to work on the registry, make sure that
+        // `<cargo_home>/registry` is marked as excluded from indexing and
+        // backups. Older versions of Cargo didn't do this, so we do it here
+        // regardless of whether `<cargo_home>` exists.
+        //
+        // This does not use `create_dir_all_excluded_from_backups_atomic` for
+        // the same reason: we want to exclude it even if the directory already
+        // exists.
+        //
+        // IO errors in creating and marking it are ignored, e.g. in case we're on a
+        // read-only filesystem.
+        let registry_base = gctx.registry_base_path();
+        let _ = registry_base.create_dir();
+        cargo_util::paths::exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
+
         RegistrySource {
             name: name.into(),
             src_path: gctx.registry_source_path().join(name),
@@ -552,8 +563,8 @@ impl<'gctx> RegistrySource<'gctx> {
     /// Decode the [configuration](RegistryConfig) stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
-        self.ops.config()
+    pub async fn config(&self) -> CargoResult<Option<RegistryConfig>> {
+        self.ops.config().await
     }
 
     /// Unpacks a downloaded package into a location where it's ready to be
@@ -714,6 +725,7 @@ impl<'gctx> RegistrySource<'gctx> {
         let cksum = self
             .index
             .hash(package, &*self.ops)
+            .now_or_never()
             .expect("a downloaded dep now pending!?")
             .expect("summary not found");
         pkg.manifest_mut()
@@ -726,12 +738,12 @@ impl<'gctx> RegistrySource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for RegistrySource<'gctx> {
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         let mut req = dep.version_req().clone();
 
         // Handle `cargo update --precise` here.
@@ -761,143 +773,131 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         // updated, so we fall back to performing a lazy update.
         if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
-            ready!(
-                self.index
-                    .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
-                        if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
-                            && dep.matches(s.as_summary())
-                        {
-                            // We are looking for a package from a lock file so we do not care about yank
-                            callback(s)
-                        }
-                    },)
-            )?;
+            self.index
+                .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
+                    if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
+                        && dep.matches(s.as_summary())
+                    {
+                        // We are looking for a package from a lock file so we do not care about yank
+                        callback(s)
+                    }
+                })
+                .await?;
             if called {
-                Poll::Ready(Ok(()))
+                return Ok(());
             } else {
                 debug!("falling back to an update");
                 self.invalidate_cache();
-                Poll::Pending
-            }
-        } else {
-            let mut precise_yanked_in_use = false;
-            ready!(
-                self.index
-                    .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
-                        let matched = match kind {
-                            QueryKind::Exact | QueryKind::RejectedVersions => {
-                                if req.is_precise() && self.gctx.cli_unstable().unstable_options {
-                                    dep.matches_prerelease(s.as_summary())
-                                } else {
-                                    dep.matches(s.as_summary())
-                                }
-                            }
-                            QueryKind::AlternativeNames => true,
-                            QueryKind::Normalized => true,
-                        };
-                        if !matched {
-                            return;
-                        }
-                        // Next filter out all yanked packages. Some yanked packages may
-                        // leak through if they're in a whitelist (aka if they were
-                        // previously in `Cargo.lock`
-                        match s {
-                            s @ _ if kind == QueryKind::RejectedVersions => callback(s),
-                            s @ IndexSummary::Candidate(_) => callback(s),
-                            s @ IndexSummary::Yanked(_) => {
-                                if self.yanked_whitelist.borrow().contains(&s.package_id()) {
-                                    callback(s);
-                                } else if req.is_precise() {
-                                    precise_yanked_in_use = true;
-                                    callback(s);
-                                }
-                            }
-                            IndexSummary::Unsupported(summary, v) => {
-                                tracing::debug!(
-                                    "unsupported schema version {} ({} {})",
-                                    v,
-                                    summary.name(),
-                                    summary.version()
-                                );
-                            }
-                            IndexSummary::Invalid(summary) => {
-                                tracing::debug!(
-                                    "invalid ({} {})",
-                                    summary.name(),
-                                    summary.version()
-                                );
-                            }
-                            IndexSummary::Offline(summary) => {
-                                tracing::debug!(
-                                    "offline ({} {})",
-                                    summary.name(),
-                                    summary.version()
-                                );
-                            }
-                        }
-                    })
-            )?;
-            if precise_yanked_in_use {
-                let name = dep.package_name();
-                let version = req
-                    .precise_version()
-                    .expect("--precise <yanked-version> in use");
-                if self
-                    .selected_precise_yanked
-                    .borrow_mut()
-                    .insert((name, version.clone()))
-                {
-                    let mut shell = self.gctx.shell();
-                    shell.print_report(
-                        &[Level::WARNING
-                            .secondary_title(format!(
-                                "selected package `{name}@{version}` was yanked by the author"
-                            ))
-                            .element(
-                                Level::HELP
-                                    .message("if possible, try a compatible non-yanked version"),
-                            )],
-                        false,
-                    )?;
-                }
-            }
-            if called {
-                return Poll::Ready(Ok(()));
-            }
-            let mut any_pending = false;
-            if kind == QueryKind::AlternativeNames || kind == QueryKind::Normalized {
-                // Attempt to handle misspellings by searching for a chain of related
-                // names to the original name. The resolver will later
-                // reject any candidates that have the wrong name, and with this it'll
-                // have enough information to offer "a similar crate exists" suggestions.
-                // For now we only try canonicalizing `-` to `_` and vice versa.
-                // More advanced fuzzy searching become in the future.
-                for name_permutation in [
-                    dep.package_name().replace('-', "_"),
-                    dep.package_name().replace('_', "-"),
-                ] {
-                    let name_permutation = name_permutation.into();
-                    if name_permutation == dep.package_name() {
-                        continue;
-                    }
-                    any_pending |= self
-                        .index
-                        .query_inner(name_permutation, &req, &*self.ops, &mut |s| {
-                            if !s.is_yanked() {
-                                f(s);
-                            } else if kind == QueryKind::AlternativeNames {
-                                f(s);
-                            }
-                        })?
-                        .is_pending();
-                }
-            }
-            if any_pending {
-                Poll::Pending
-            } else {
-                Poll::Ready(Ok(()))
             }
         }
+
+        let mut called = false;
+        let callback = &mut |s| {
+            called = true;
+            f(s);
+        };
+
+        let mut precise_yanked_in_use = false;
+        self.index
+            .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
+                let matched = match kind {
+                    QueryKind::Exact | QueryKind::RejectedVersions => {
+                        if req.is_precise() && self.gctx.cli_unstable().unstable_options {
+                            dep.matches_prerelease(s.as_summary())
+                        } else {
+                            dep.matches(s.as_summary())
+                        }
+                    }
+                    QueryKind::AlternativeNames => true,
+                    QueryKind::Normalized => true,
+                };
+                if !matched {
+                    return;
+                }
+                // Next filter out all yanked packages. Some yanked packages may
+                // leak through if they're in a whitelist (aka if they were
+                // previously in `Cargo.lock`
+                match s {
+                    s @ _ if kind == QueryKind::RejectedVersions => callback(s),
+                    s @ IndexSummary::Candidate(_) => callback(s),
+                    s @ IndexSummary::Yanked(_) => {
+                        if self.yanked_whitelist.borrow().contains(&s.package_id()) {
+                            callback(s);
+                        } else if req.is_precise() {
+                            precise_yanked_in_use = true;
+                            callback(s);
+                        }
+                    }
+                    IndexSummary::Unsupported(summary, v) => {
+                        tracing::debug!(
+                            "unsupported schema version {} ({} {})",
+                            v,
+                            summary.name(),
+                            summary.version()
+                        );
+                    }
+                    IndexSummary::Invalid(summary) => {
+                        tracing::debug!("invalid ({} {})", summary.name(), summary.version());
+                    }
+                    IndexSummary::Offline(summary) => {
+                        tracing::debug!("offline ({} {})", summary.name(), summary.version());
+                    }
+                }
+            })
+            .await?;
+        if precise_yanked_in_use {
+            let name = dep.package_name();
+            let version = req
+                .precise_version()
+                .expect("--precise <yanked-version> in use");
+            if self
+                .selected_precise_yanked
+                .borrow_mut()
+                .insert((name, version.clone()))
+            {
+                let mut shell = self.gctx.shell();
+                shell.print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!(
+                            "selected package `{name}@{version}` was yanked by the author"
+                        ))
+                        .element(
+                            Level::HELP.message("if possible, try a compatible non-yanked version"),
+                        )],
+                    false,
+                )?;
+            }
+        }
+        if called {
+            return Ok(());
+        }
+        if kind == QueryKind::AlternativeNames || kind == QueryKind::Normalized {
+            // Attempt to handle misspellings by searching for a chain of related
+            // names to the original name. The resolver will later
+            // reject any candidates that have the wrong name, and with this it'll
+            // have enough information to offer "a similar crate exists" suggestions.
+            // For now we only try canonicalizing `-` to `_` and vice versa.
+            // More advanced fuzzy searching become in the future.
+            for name_permutation in [
+                dep.package_name().replace('-', "_"),
+                dep.package_name().replace('_', "-"),
+            ] {
+                let name_permutation = name_permutation.into();
+                if name_permutation == dep.package_name() {
+                    continue;
+                }
+                self.index
+                    .query_inner(name_permutation, &req, &*self.ops, &mut |s| {
+                        if !s.is_yanked() {
+                            f(s);
+                        } else if kind == QueryKind::AlternativeNames {
+                            f(s);
+                        }
+                    })
+                    .await?;
+            }
+        }
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -922,12 +922,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     }
 
     fn download(&self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = loop {
-            match self.index.hash(package, &*self.ops)? {
-                Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(hash) => break hash,
-            }
-        };
+        let hash = crate::util::block_on(self.index.hash(package, &*self.ops))?;
         match self.ops.download(package, &hash)? {
             MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
             MaybeLock::Download {
@@ -943,12 +938,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     }
 
     fn finish_download(&self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = loop {
-            match self.index.hash(package, &*self.ops)? {
-                Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(hash) => break hash,
-            }
-        };
+        let hash = crate::util::block_on(self.index.hash(package, &*self.ops))?;
         let file = self.ops.finish_download(package, &hash, &data)?;
         self.get_pkg(package, &file)
     }
@@ -965,27 +955,8 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         self.yanked_whitelist.borrow_mut().extend(pkgs);
     }
 
-    fn is_yanked(&self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        self.index.is_yanked(pkg, &*self.ops)
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        // Before starting to work on the registry, make sure that
-        // `<cargo_home>/registry` is marked as excluded from indexing and
-        // backups. Older versions of Cargo didn't do this, so we do it here
-        // regardless of whether `<cargo_home>` exists.
-        //
-        // This does not use `create_dir_all_excluded_from_backups_atomic` for
-        // the same reason: we want to exclude it even if the directory already
-        // exists.
-        //
-        // IO errors in creating and marking it are ignored, e.g. in case we're on a
-        // read-only filesystem.
-        let registry_base = self.gctx.registry_base_path();
-        let _ = registry_base.create_dir();
-        exclude_from_backups_and_indexing(&registry_base.into_path_unlocked());
-
-        self.ops.block_until_ready()
+    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+        self.index.is_yanked(pkg, &*self.ops).await
     }
 }
 

@@ -15,7 +15,6 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
-use std::task;
 
 use cargo::CargoResult;
 use cargo::core::Package;
@@ -444,15 +443,9 @@ fn check_crates_io<'a>(
         let current = member.version();
         let version_req = format!(">={current}");
         let query = Dependency::parse(*name, Some(&version_req), source_id)?;
-        let possibilities = loop {
-            // Exact to avoid returning all for path/git
-            match registry.query_vec(&query, QueryKind::Exact) {
-                task::Poll::Ready(res) => {
-                    break res?;
-                }
-                task::Poll::Pending => registry.block_until_ready()?,
-            }
-        };
+        // Exact to avoid returning all for path/git
+        let possibilities =
+            futures::executor::block_on(registry.query_vec(&query, QueryKind::Exact))?;
         if possibilities.is_empty() {
             tracing::trace!("dep `{name}` has no version greater than or equal to `{current}`");
         } else {

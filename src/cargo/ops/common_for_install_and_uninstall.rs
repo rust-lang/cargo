@@ -4,7 +4,6 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::task::Poll;
 
 use anyhow::{Context as _, bail, format_err};
 use cargo_util::paths;
@@ -18,8 +17,7 @@ use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::core::{PackageSet, Target};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
-use crate::sources::source::Source;
-use crate::sources::source::{QueryKind, SourceMap};
+use crate::sources::source::{QueryKind, Source, SourceMap};
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::{ConfigRelativePath, Definition};
@@ -610,12 +608,7 @@ pub fn select_dep_pkg(
         source.invalidate_cache();
     }
 
-    let deps = loop {
-        match source.query_vec(&dep, QueryKind::Exact)? {
-            Poll::Ready(deps) => break deps,
-            Poll::Pending => source.block_until_ready()?,
-        }
-    };
+    let deps = crate::util::block_on(source.query_vec(&dep, QueryKind::Exact))?;
     match deps
         .iter()
         .map(|s| s.as_summary())
@@ -630,12 +623,8 @@ pub fn select_dep_pkg(
                         // Match any version, not just the selected
                         let msrv_dep =
                             Dependency::parse(dep.package_name(), None, dep.source_id())?;
-                        let msrv_deps = loop {
-                            match source.query_vec(&msrv_dep, QueryKind::Exact)? {
-                                Poll::Ready(deps) => break deps,
-                                Poll::Pending => source.block_until_ready()?,
-                            }
-                        };
+                        let msrv_deps =
+                            crate::util::block_on(source.query_vec(&msrv_dep, QueryKind::Exact))?;
                         if let Some(alt) = msrv_deps
                             .iter()
                             .map(|s| s.as_summary())
@@ -683,13 +672,7 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
                     PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
                 {
                     source.invalidate_cache();
-                    loop {
-                        match source.is_yanked(pkg_id) {
-                            Poll::Ready(Ok(is_yanked)) => break is_yanked,
-                            Poll::Ready(Err(_)) => break false,
-                            Poll::Pending => source.block_until_ready()?,
-                        }
-                    }
+                    crate::util::block_on(source.is_yanked(pkg_id)).unwrap_or_default()
                 } else {
                     false
                 }

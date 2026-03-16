@@ -146,10 +146,8 @@ pub fn resolve(
             gctx,
             &mut past_conflicting_activations,
         )?;
-        if registry.reset_pending() {
+        if registry.wait()? {
             break resolver_ctx;
-        } else {
-            registry.registry.block_until_ready()?;
         }
     };
 
@@ -350,7 +348,7 @@ fn activate_deps_loop(
                         debug!("no candidates found");
                         Err(errors::activation_error(
                             &resolver_ctx,
-                            registry.registry,
+                            registry.registry(),
                             &parent,
                             &dep,
                             &conflicting_activations,
