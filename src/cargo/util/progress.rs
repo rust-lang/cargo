@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::core::shell::Verbosity;
 use crate::util::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
+use anstyle_progress::TermProgress;
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
@@ -92,11 +93,11 @@ enum StatusValue {
     /// Remove progress.
     Remove,
     /// Progress value (0-100).
-    Value(f64),
+    Value(u8),
     /// Indeterminate state (no bar, just animation)
     Indeterminate,
     /// Progress value in an error state (0-100).
-    Error(f64),
+    Error(u8),
 }
 
 enum ProgressOutput {
@@ -136,7 +137,7 @@ impl TerminalIntegration {
             (true, false) => value,
             (true, true) => match value {
                 StatusValue::Value(v) => StatusValue::Error(v),
-                _ => StatusValue::Error(100.0),
+                _ => StatusValue::Error(100),
             },
             (false, _) => StatusValue::None,
         }
@@ -146,7 +147,7 @@ impl TerminalIntegration {
         self.progress_state(StatusValue::Remove)
     }
 
-    pub fn value(&self, percent: f64) -> StatusValue {
+    pub fn value(&self, percent: u8) -> StatusValue {
         self.progress_state(StatusValue::Value(percent))
     }
 
@@ -161,21 +162,15 @@ impl TerminalIntegration {
 
 impl std::fmt::Display for StatusValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // From https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
-        // ESC ] 9 ; 4 ; st ; pr ST
-        // When st is 0: remove progress.
-        // When st is 1: set progress value to pr (number, 0-100).
-        // When st is 2: set error state in taskbar, pr is optional.
-        // When st is 3: set indeterminate state, pr is ignored.
-        // When st is 4: set paused state, pr is optional.
-        let (state, progress) = match self {
-            Self::None => return Ok(()), // No output
-            Self::Remove => (0, 0.0),
-            Self::Value(v) => (1, *v),
-            Self::Indeterminate => (3, 0.0),
-            Self::Error(v) => (2, *v),
+        let progress = match self {
+            Self::None => TermProgress::none(),
+            Self::Remove => TermProgress::remove(),
+            Self::Value(v) => TermProgress::start().percent(*v),
+            Self::Indeterminate => TermProgress::start(),
+            Self::Error(v) => TermProgress::error().percent(*v),
         };
-        write!(f, "\x1b]9;4;{state};{progress:.0}\x1b\\")
+
+        progress.fmt(f)
     }
 }
 
@@ -479,7 +474,9 @@ impl Format {
         };
         let report = match self.style {
             ProgressStyle::Percentage | ProgressStyle::Ratio => {
-                self.term_integration.value(pct * 100.0)
+                let pct = (pct * 100.0) as u8;
+                let pct = pct.clamp(0, 100);
+                self.term_integration.value(pct)
             }
             ProgressStyle::Indeterminate => self.term_integration.indeterminate(),
         };
@@ -697,7 +694,7 @@ fn test_term_integration_disabled() {
     let report = TerminalIntegration::new(false);
     let mut out = String::new();
     out.push_str(&report.remove().to_string());
-    out.push_str(&report.value(10.0).to_string());
+    out.push_str(&report.value(10).to_string());
     out.push_str(&report.indeterminate().to_string());
     assert!(out.is_empty());
 }
@@ -705,7 +702,7 @@ fn test_term_integration_disabled() {
 #[test]
 fn test_term_integration_error_state() {
     let mut report = TerminalIntegration::new(true);
-    assert_eq!(report.value(10.0), StatusValue::Value(10.0));
+    assert_eq!(report.value(10), StatusValue::Value(10));
     report.error();
-    assert_eq!(report.value(50.0), StatusValue::Error(50.0));
+    assert_eq!(report.value(50), StatusValue::Error(50));
 }
