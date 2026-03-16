@@ -12,7 +12,6 @@ mod yank;
 
 use std::collections::HashSet;
 use std::str;
-use std::task::Poll;
 
 use anyhow::{Context as _, bail, format_err};
 use cargo_credential::{Operation, Secret};
@@ -143,15 +142,9 @@ fn registry<'gctx>(
         if force_update {
             src.invalidate_cache()
         }
-        let cfg = loop {
-            match src.config()? {
-                Poll::Pending => src
-                    .block_until_ready()
-                    .with_context(|| format!("failed to update {}", source_ids.replacement))?,
-                Poll::Ready(cfg) => break cfg,
-            }
-        };
-        cfg.expect("remote registries must have config")
+        futures::executor::block_on(src.config())
+            .with_context(|| format!("failed to update {}", source_ids.replacement))?
+            .expect("remote registries must have config")
     };
     let api_host = cfg
         .api

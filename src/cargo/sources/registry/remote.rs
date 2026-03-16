@@ -19,7 +19,6 @@ use std::fs::File;
 use std::mem;
 use std::path::Path;
 use std::str;
-use std::task::{Poll, ready};
 use tracing::{debug, trace};
 
 /// A remote registry is a registry that lives at a remote URL (such as
@@ -319,21 +318,21 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     /// read it, as long as we check for that hash value.
     ///
     /// Cargo now uses a hash of the file's contents as provided by git.
-    fn load(
+    async fn load(
         &self,
         _root: &Path,
         path: &Path,
         index_version: Option<&str>,
-    ) -> Poll<CargoResult<LoadResponse>> {
+    ) -> CargoResult<LoadResponse> {
         if self.needs_update.get() {
-            return Poll::Pending;
+            self.update()?;
         }
         // Check if the cache is valid.
         let git_commit_hash = self.current_version();
         if index_version.is_some() && index_version == git_commit_hash.as_deref() {
             // This file was written by an old version of cargo, but it is
             // still up-to-date.
-            return Poll::Ready(Ok(LoadResponse::CacheValid));
+            return Ok(LoadResponse::CacheValid);
         }
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
@@ -366,43 +365,45 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
             })
         }
 
-        match load_helper(&self, path, index_version) {
-            Ok(result) => Poll::Ready(Ok(result)),
-            Err(_) if !self.is_updated() => {
-                // If git returns an error and we haven't updated the repo,
-                // return pending to allow an update to try again.
-                self.needs_update.set(true);
-                Poll::Pending
-            }
-            Err(e)
-                if e.downcast_ref::<git2::Error>()
-                    .map(|e| e.code() == git2::ErrorCode::NotFound)
-                    .unwrap_or_default() =>
-            {
-                // The repo has been updated and the file does not exist.
-                Poll::Ready(Ok(LoadResponse::NotFound))
-            }
-            Err(e) => Poll::Ready(Err(e)),
+        loop {
+            return match load_helper(&self, path, index_version) {
+                Ok(result) => Ok(result),
+                Err(_) if !self.is_updated() => {
+                    // If git returns an error and we haven't updated the repo,
+                    // return pending to allow an update to try again.
+                    self.needs_update.set(true);
+                    self.update()?;
+                    continue;
+                }
+                Err(e)
+                    if e.downcast_ref::<git2::Error>()
+                        .map(|e| e.code() == git2::ErrorCode::NotFound)
+                        .unwrap_or_default() =>
+                {
+                    // The repo has been updated and the file does not exist.
+                    Ok(LoadResponse::NotFound)
+                }
+                Err(e) => Err(e),
+            };
         }
     }
 
-    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    async fn config(&self) -> CargoResult<Option<RegistryConfig>> {
         debug!("loading config");
         self.prepare()?;
         self.gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
-        match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
+        match self
+            .load(Path::new(""), Path::new(RegistryConfig::NAME), None)
+            .await?
+        {
             LoadResponse::Data { raw_data, .. } => {
                 trace!("config loaded");
                 let cfg: RegistryConfig = serde_json::from_slice(&raw_data)?;
-                Poll::Ready(Ok(Some(cfg)))
+                Ok(Some(cfg))
             }
-            _ => Poll::Ready(Ok(None)),
+            _ => Ok(None),
         }
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.update()
     }
 
     /// Read the general concept for `invalidate_cache()` on
@@ -422,12 +423,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     }
 
     fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
-        let registry_config = loop {
-            match self.config()? {
-                Poll::Pending => self.block_until_ready()?,
-                Poll::Ready(cfg) => break cfg.unwrap(),
-            }
-        };
+        let registry_config = futures::executor::block_on(self.config())?.unwrap();
 
         download::download(
             &self.cache_path,

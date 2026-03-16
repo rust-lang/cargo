@@ -4,7 +4,6 @@ use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::task::Poll;
 
 use crate::core::{Dependency, EitherManifest, Manifest, Package, PackageId, SourceId};
 use crate::ops;
@@ -140,12 +139,12 @@ impl<'gctx> Debug for PathSource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for PathSource<'gctx> {
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         self.load()?;
         if let Some(s) = self.package.borrow().as_ref().map(|p| p.summary()) {
             let matched = match kind {
@@ -157,7 +156,7 @@ impl<'gctx> Source for PathSource<'gctx> {
                 f(IndexSummary::Candidate(s.clone()))
             }
         }
-        Poll::Ready(Ok(()))
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -204,12 +203,8 @@ impl<'gctx> Source for PathSource<'gctx> {
 
     fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
-        Poll::Ready(Ok(false))
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.load()
+    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
     }
 
     fn invalidate_cache(&self) {
@@ -329,12 +324,12 @@ impl<'gctx> Debug for RecursivePathSource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for RecursivePathSource<'gctx> {
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         self.load()?;
         for s in self
             .packages
@@ -360,7 +355,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
                 f(IndexSummary::Candidate(s.clone()))
             }
         }
-        Poll::Ready(Ok(()))
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -409,12 +404,8 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
 
     fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
-        Poll::Ready(Ok(false))
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.load()
+    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
     }
 
     fn invalidate_cache(&self) {

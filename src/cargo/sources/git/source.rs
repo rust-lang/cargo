@@ -21,7 +21,6 @@ use anyhow::Context as _;
 use cargo_util::paths::exclude_from_backups_and_indexing;
 use std::cell::RefCell;
 use std::fmt::{self, Debug, Formatter};
-use std::task::Poll;
 use tracing::trace;
 use url::Url;
 
@@ -80,7 +79,7 @@ pub struct GitSource<'gctx> {
     /// The underlying path source to discover packages inside the Git repository.
     ///
     /// This gets set to `Some` after the git repo has been checked out
-    /// (automatically handled via [`GitSource::block_until_ready`]).
+    /// (automatically handled via [`GitSource::update`]).
     path_source: RefCell<Option<RecursivePathSource<'gctx>>>,
     /// A short string that uniquely identifies the version of the checkout.
     ///
@@ -88,7 +87,7 @@ pub struct GitSource<'gctx> {
     /// increasing in size if it is ambiguous.
     ///
     /// This is set to `Some` after the git repo has been checked out
-    /// (automatically handled via [`GitSource::block_until_ready`]).
+    /// (automatically handled via [`GitSource::update`]).
     short_id: RefCell<Option<InternedString>>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
@@ -162,7 +161,7 @@ impl<'gctx> GitSource<'gctx> {
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.borrow().is_none() {
             self.invalidate_cache();
-            self.block_until_ready()?;
+            self.update()?;
         }
         self.path_source
             .borrow_mut()
@@ -386,18 +385,18 @@ impl<'gctx> Debug for GitSource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for GitSource<'gctx> {
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
-        let src = self.path_source.borrow();
-        if let Some(src) = src.as_ref() {
-            src.query(dep, kind, f)
-        } else {
-            Poll::Pending
+    ) -> CargoResult<()> {
+        if self.path_source.borrow().is_none() {
+            self.update()?;
         }
+        let src = self.path_source.borrow();
+        let src = src.as_ref().unwrap();
+        src.query(dep, kind, f).await
     }
 
     fn supports_checksums(&self) -> bool {
@@ -410,10 +409,6 @@ impl<'gctx> Source for GitSource<'gctx> {
 
     fn source_id(&self) -> SourceId {
         *self.source_id.borrow()
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.update()
     }
 
     fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -446,8 +441,8 @@ impl<'gctx> Source for GitSource<'gctx> {
 
     fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
-        Poll::Ready(Ok(false))
+    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
     }
 
     fn invalidate_cache(&self) {}

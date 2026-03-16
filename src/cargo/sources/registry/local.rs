@@ -10,7 +10,6 @@ use std::fs::File;
 use std::io::SeekFrom;
 use std::io::{self, prelude::*};
 use std::path::Path;
-use std::task::Poll;
 
 /// A local registry is a registry that lives on the filesystem as a set of
 /// `.crate` files with an `index` directory in the [same format] as a remote
@@ -129,39 +128,34 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         path.as_path_unlocked()
     }
 
-    fn load(
+    async fn load(
         &self,
         root: &Path,
         path: &Path,
         _index_version: Option<&str>,
-    ) -> Poll<CargoResult<LoadResponse>> {
-        if self.updated.get() {
-            let raw_data = match paths::read_bytes(&root.join(path)) {
-                Err(e)
-                    if e.downcast_ref::<io::Error>()
-                        .map_or(false, |ioe| ioe.kind() == io::ErrorKind::NotFound) =>
-                {
-                    return Poll::Ready(Ok(LoadResponse::NotFound));
-                }
-                r => r,
-            }?;
-            Poll::Ready(Ok(LoadResponse::Data {
-                raw_data,
-                index_version: None,
-            }))
-        } else {
-            Poll::Pending
+    ) -> CargoResult<LoadResponse> {
+        if !self.updated.get() {
+            self.update()?;
         }
+        let raw_data = match paths::read_bytes(&root.join(path)) {
+            Err(e)
+                if e.downcast_ref::<io::Error>()
+                    .map_or(false, |ioe| ioe.kind() == io::ErrorKind::NotFound) =>
+            {
+                return Ok(LoadResponse::NotFound);
+            }
+            r => r,
+        }?;
+        Ok(LoadResponse::Data {
+            raw_data,
+            index_version: None,
+        })
     }
 
-    fn config(&self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    async fn config(&self) -> CargoResult<Option<RegistryConfig>> {
         // Local registries don't have configuration for remote APIs or anything
         // like that
-        Poll::Ready(Ok(None))
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.update()
+        Ok(None)
     }
 
     fn invalidate_cache(&self) {
@@ -173,7 +167,8 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     }
 
     fn is_updated(&self) -> bool {
-        self.updated.get()
+        // There is nothing to update.
+        true
     }
 
     fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {

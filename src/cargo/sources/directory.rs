@@ -2,7 +2,6 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
-use std::task::Poll;
 
 use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::IndexSummary;
@@ -179,14 +178,14 @@ impl<'gctx> Debug for DirectorySource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for DirectorySource<'gctx> {
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         if !self.updated.get() {
-            return Poll::Pending;
+            self.update()?;
         }
         let packages = self.packages.borrow();
         let packages = packages.values().map(|p| &p.0);
@@ -198,7 +197,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(IndexSummary::Candidate(summary));
         }
-        Poll::Ready(Ok(()))
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -211,10 +210,6 @@ impl<'gctx> Source for DirectorySource<'gctx> {
 
     fn source_id(&self) -> SourceId {
         self.source_id
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.update()
     }
 
     fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -274,8 +269,8 @@ impl<'gctx> Source for DirectorySource<'gctx> {
 
     fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
-        Poll::Ready(Ok(false))
+    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
     }
 
     fn invalidate_cache(&self) {

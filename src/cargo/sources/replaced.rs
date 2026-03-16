@@ -4,7 +4,6 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::errors::CargoResult;
-use std::task::Poll;
 
 /// A source that replaces one source with the other. This manages the [source
 /// replacement] feature.
@@ -63,12 +62,12 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.requires_precise()
     }
 
-    fn query(
+    async fn query(
         &self,
         dep: &Dependency,
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
+    ) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 
@@ -76,6 +75,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
             .query(&dep, kind, &mut |summary| {
                 f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
             })
+            .await
             .map_err(|e| {
                 if self.is_builtin_replacement() {
                     e
@@ -164,20 +164,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.add_to_yanked_whitelist(&pkgs);
     }
 
-    fn is_yanked(&self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        self.inner.is_yanked(pkg)
-    }
-
-    fn block_until_ready(&self) -> CargoResult<()> {
-        self.inner.block_until_ready().map_err(|e| {
-            if self.is_builtin_replacement() {
-                e
-            } else {
-                e.context(format!(
-                    "failed to update replaced source {}",
-                    self.to_replace
-                ))
-            }
-        })
+    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+        self.inner.is_yanked(pkg).await
     }
 }

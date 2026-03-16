@@ -11,7 +11,6 @@ use std::cell::RefCell;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::Resolve;
@@ -135,12 +134,12 @@ pub fn resolve_with_global_context_raw(
         used: RefCell<HashSet<PackageId>>,
     }
     impl<'a> Registry for MyRegistry<'a> {
-        fn query(
+        async fn query(
             &self,
             dep: &Dependency,
             kind: QueryKind,
             f: &mut dyn FnMut(IndexSummary),
-        ) -> Poll<CargoResult<()>> {
+        ) -> CargoResult<()> {
             for summary in self.list.iter() {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(summary),
@@ -153,7 +152,7 @@ pub fn resolve_with_global_context_raw(
                     f(IndexSummary::Candidate(summary.clone()));
                 }
             }
-            Poll::Ready(Ok(()))
+            Ok(())
         }
 
         fn describe_source(&self, _src: SourceId) -> String {
@@ -162,10 +161,6 @@ pub fn resolve_with_global_context_raw(
 
         fn is_replaced(&self, _src: SourceId) -> bool {
             false
-        }
-
-        fn block_until_ready(&self) -> CargoResult<()> {
-            Ok(())
         }
     }
     impl<'a> Drop for MyRegistry<'a> {
