@@ -2,6 +2,7 @@
 
 use crate::prelude::*;
 use crate::utils::tools;
+use cargo_test_support::registry::Package;
 use cargo_test_support::{Project, cargo_test, project, str};
 
 fn make_project_with_rustc_warning() -> Project {
@@ -333,6 +334,67 @@ fn keep_going() {
 ...
 [ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn cap_lints() {
+    Package::new("has_warning", "1.0.0")
+        .file("src/lib.rs", "pub fn foo() { let x = 3; }")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                has_warning = "1"
+            "#
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -vv")
+        .env("RUSTFLAGS", "-Dwarnings")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] has_warning v1.0.0 (registry `dummy-registry`)
+[CHECKING] has_warning v1.0.0
+[RUNNING] [..]
+[WARNING] unused variable: `x`
+...
+[WARNING] `has_warning` (lib) generated 1 warning
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[CHECKING] has_warning v1.0.0
+[RUNNING] [..]
+[WARNING] unused variable: `x`
+...
+[ERROR] `has_warning` (lib) generated 1 warning
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
