@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::core::shell::Verbosity;
 use crate::util::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
+use anstyle_progress::TermProgress;
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
@@ -161,21 +162,15 @@ impl TerminalIntegration {
 
 impl std::fmt::Display for StatusValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // From https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
-        // ESC ] 9 ; 4 ; st ; pr ST
-        // When st is 0: remove progress.
-        // When st is 1: set progress value to pr (number, 0-100).
-        // When st is 2: set error state in taskbar, pr is optional.
-        // When st is 3: set indeterminate state, pr is ignored.
-        // When st is 4: set paused state, pr is optional.
-        let (state, progress) = match self {
-            Self::None => return Ok(()), // No output
-            Self::Remove => (0, 0),
-            Self::Value(v) => (1, *v),
-            Self::Indeterminate => (3, 0),
-            Self::Error(v) => (2, *v),
+        let progress = match self {
+            Self::None => TermProgress::none(),
+            Self::Remove => TermProgress::remove(),
+            Self::Value(v) => TermProgress::start().percent(*v),
+            Self::Indeterminate => TermProgress::start(),
+            Self::Error(v) => TermProgress::error().percent(*v),
         };
-        write!(f, "\x1b]9;4;{state};{progress}\x1b\\")
+
+        progress.fmt(f)
     }
 }
 
