@@ -4595,3 +4595,169 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn workspace_circular_publish_dependency() {
+    // Verify detection and reporting of workspace circular dependencies.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .build();
+
+    cargo_test_support::registry::Package::new("foo", "0.1.0").publish();
+    cargo_test_support::registry::Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.1"
+            edition = "2015"
+            license = "MIT"
+            description = "foo"
+            repository = "foo"
+
+            [dependencies]
+            bar = { version = "0.1", path = "../bar" }
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.1"
+            edition = "2015"
+            license = "MIT"
+            description = "bar"
+            repository = "bar"
+
+            [dev-dependencies]
+            foo = { version = "0.1", path = "../foo" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // Ensure the circular dependency is caught and reported clearly.
+    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] foo v0.1.1 ([ROOT]/foo/foo)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] bar v0.1.1 ([ROOT]/foo/bar)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] circular dependency detected while publishing bar v0.1.1 and foo v0.1.1
+[HELP] to break a cycle between dev-dependencies and other dependencies, remove the version field on the dev-dependency so it will be implicitly stripped on publish
+
+"#]])
+        .run();
+}
+#[cargo_test]
+fn workspace_circular_publish_dependency_with_non_cycle_package() {
+    // Verify that circular dependency errors only report packages actively involved in the cycle.
+    // Package 'c' is independent and should be excluded from the error message,
+    // even though the cycle between 'a' and 'b' blocks the overall workspace publish.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .build();
+
+    cargo_test_support::registry::Package::new("a", "1.0.0").publish();
+    cargo_test_support::registry::Package::new("b", "1.0.0").publish();
+    cargo_test_support::registry::Package::new("c", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "a"
+            repository = "a"
+
+            [dependencies]
+            b = { version = "1.0", path = "../b" }
+            c = { version = "1.0", path = "../c" }
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "b"
+            repository = "b"
+
+            [dependencies]
+            c = { version = "1.0", path = "../c" }
+
+            [dev-dependencies]
+            a = { version = "1.0", path = "../a" }
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "1.0.1"
+            edition = "2015"
+            license = "MIT"
+            description = "c"
+            repository = "c"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+        .masquerade_as_nightly_cargo(&["publish-timeout"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] c v1.0.1 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v1.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] a v1.0.1 ([ROOT]/foo/a)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] circular dependency detected while publishing a v1.0.1 and b v1.0.1
+[HELP] to break a cycle between dev-dependencies and other dependencies, remove the version field on the dev-dependency so it will be implicitly stripped on publish
+
+"#]])
+        .run();
+}
