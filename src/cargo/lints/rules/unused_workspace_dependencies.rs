@@ -25,7 +25,6 @@ pub static LINT: &Lint = &Lint {
     desc: "unused workspace dependency",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
-    edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
         r#"
@@ -57,7 +56,6 @@ pub fn unused_workspace_dependencies(
     let (lint_level, reason) = LINT.level(
         cargo_lints,
         ws.lowest_rust_version(),
-        maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
     );
     if lint_level == LintLevel::Allow {
