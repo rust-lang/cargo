@@ -1097,8 +1097,8 @@ fn invalid_base() {
         .with_stderr_data(
             "\
 [ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
-
-
+       
+       
   --> Cargo.toml:10:23
    |
 10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
@@ -1673,8 +1673,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
 [ERROR] no matching package found
 searched package name: `bar`
 perhaps you meant:      foo
-location searched: [ROOT]/foo/foo
-required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+
 
 "#]])
         .run();
@@ -1953,9 +1952,9 @@ fn invalid_package_name_in_path() {
     p.cargo("generate-lockfile")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no matching package named `definitely_not_bar` found
-location searched: [ROOT]/foo/crates/bar
-required by package `foo v0.5.0 ([ROOT]/foo)`
+[ERROR] no matching package named `definitely_not_bar` found at `[ROOT]/foo/crates/bar`
+[NOTE] required by package `foo v0.5.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/crates/bar`
 
 "#]])
         .run();
