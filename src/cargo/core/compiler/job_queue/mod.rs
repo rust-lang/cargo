@@ -1049,7 +1049,12 @@ impl<'gctx> DrainState<'gctx> {
         let count = self.warning_count.entry(id).or_default();
         count.total += 1;
         if lint {
-            count.lints += 1;
+            let unit = self.active.get(&id).unwrap();
+            // If this is an upstream dep but we *do* want warnings, make sure that they
+            // don't fail compilation.
+            if unit.is_local() {
+                count.lints += 1;
+            }
         }
         if !emitted {
             count.duplicates += 1;

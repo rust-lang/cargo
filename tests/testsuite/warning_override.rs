@@ -394,10 +394,11 @@ fn cap_lints() {
 [RUNNING] [..]
 [WARNING] unused variable: `x`
 ...
-[ERROR] `has_warning` (lib) generated 1 warning
-[ERROR] warnings are denied by `build.warnings` configuration
+[WARNING] `has_warning` (lib) generated 1 warning
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .with_status(101)
         .run();
 }
