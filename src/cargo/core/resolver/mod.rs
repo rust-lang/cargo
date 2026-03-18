@@ -848,8 +848,8 @@ fn generalize_conflicting(
             // to be conflicting, then we can just say that we conflict with the parent.
             if let Some(others) = registry
                 .query(critical_parents_dep, first_version)
-                .expect("an already used dep now error!?")
                 .expect("an already used dep now pending!?")
+                .expect("an already used dep now error!?")
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .map(|other| {
