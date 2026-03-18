@@ -643,9 +643,9 @@ impl<'gctx> DrainState<'gctx> {
                     self.bump_warning_count(id, lint, emitted, fixable);
                 }
                 if level == "error" {
-                    let cnts = self.warning_count.entry(id).or_default();
+                    let count = self.warning_count.entry(id).or_default();
                     // If there is an error, the `cargo fix` message should not show
-                    cnts.disallow_fixable();
+                    count.disallow_fixable();
                 }
             }
             Message::Warning { id, warning } => {
@@ -1046,20 +1046,25 @@ impl<'gctx> DrainState<'gctx> {
     }
 
     fn bump_warning_count(&mut self, id: JobId, lint: bool, emitted: bool, fixable: bool) {
-        let cnts = self.warning_count.entry(id).or_default();
-        cnts.total += 1;
+        let count = self.warning_count.entry(id).or_default();
+        count.total += 1;
         if lint {
-            cnts.lints += 1;
+            let unit = self.active.get(&id).unwrap();
+            // If this is an upstream dep but we *do* want warnings, make sure that they
+            // don't fail compilation.
+            if unit.is_local() {
+                count.lints += 1;
+            }
         }
         if !emitted {
-            cnts.duplicates += 1;
+            count.duplicates += 1;
         // Don't add to fixable if it's already been emitted
         } else if fixable {
             // Do not add anything to the fixable warning count if
             // is `NotAllowed` since that indicates there was an
             // error while building this `Unit`
-            if cnts.fixable_allowed() {
-                cnts.fixable = match cnts.fixable {
+            if count.fixable_allowed() {
+                count.fixable = match count.fixable {
                     FixableWarnings::NotAllowed => FixableWarnings::NotAllowed,
                     FixableWarnings::Zero => FixableWarnings::Positive(1),
                     FixableWarnings::Positive(fixable) => FixableWarnings::Positive(fixable + 1),
