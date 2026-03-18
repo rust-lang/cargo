@@ -52,6 +52,8 @@ pub mod into_url;
 mod into_url_with_base;
 mod io;
 pub mod job;
+mod local_poll_adapter;
+pub use local_poll_adapter::LocalPollAdapter;
 mod lockserver;
 pub mod log_message;
 pub mod logger;
