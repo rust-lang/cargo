@@ -594,16 +594,13 @@ pub fn path_source(source_id: SourceId, gctx: &GlobalContext) -> CargoResult<Pat
 }
 
 /// Gets a Package based on command-line requirements.
-pub fn select_dep_pkg<T>(
-    source: &mut T,
+pub fn select_dep_pkg(
+    source: &mut dyn Source,
     dep: Dependency,
     gctx: &GlobalContext,
     needs_update: bool,
     current_rust_version: Option<&PartialVersion>,
-) -> CargoResult<Package>
-where
-    T: Source,
-{
+) -> CargoResult<Package> {
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
