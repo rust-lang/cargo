@@ -412,7 +412,7 @@ fn wait_for_any_publish_confirmation(
             source.invalidate_cache();
             let mut available = BTreeSet::new();
             for pkg in pkgs {
-                if poll_one_package(registry_src, pkg, &mut source)? {
+                if poll_one_package(registry_src, pkg, &mut *source)? {
                     available.insert(*pkg);
                 }
             }
