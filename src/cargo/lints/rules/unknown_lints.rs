@@ -20,7 +20,6 @@ pub static LINT: &Lint = &Lint {
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
-    edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
         r#"
