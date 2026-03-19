@@ -313,19 +313,11 @@ fn cargo_compile_git_dep_pull_request() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
 ...
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1?rev=refs%2Fpull%2F330%2Fhead#[..]
-
-Caused by:
-  revspec '[..]' not found; class=Reference (4); code=NotFound (-3)
+[CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?rev=refs%2Fpull%2F330%2Fhead#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .with_status(101)
         .run();
 }
 

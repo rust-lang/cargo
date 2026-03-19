@@ -236,7 +236,9 @@ impl<'gctx> GitSource<'gctx> {
                 trace!("updating git source `{:?}`", self.remote);
 
                 let locked_rev = locked_rev.clone().into();
-                self.remote.checkout(&db_path, db, &locked_rev, self.gctx)?
+                let manifest_reference = self.source_id.git_reference().unwrap();
+                self.remote
+                    .checkout(&db_path, db, manifest_reference, &locked_rev, self.gctx)?
             }
         };
         Ok((db, actual_rev))
