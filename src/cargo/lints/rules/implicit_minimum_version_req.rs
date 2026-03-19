@@ -20,7 +20,7 @@ use crate::core::Package;
 use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
-use crate::lints::LintLevelReason;
+use crate::lints::LintLevelSource;
 use crate::lints::PEDANTIC;
 use crate::lints::get_key_value;
 use crate::lints::rel_cwd_manifest_path;
@@ -89,7 +89,7 @@ pub fn implicit_minimum_version_req_pkg(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),
@@ -124,7 +124,7 @@ pub fn implicit_minimum_version_req_pkg(
 
         let Some(report) = report(
             lint_level,
-            reason,
+            source,
             contents,
             document,
             key_path,
@@ -156,7 +156,7 @@ pub fn implicit_minimum_version_req_ws(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         ws.lowest_rust_version(),
         maybe_pkg.unstable_features(),
@@ -207,7 +207,7 @@ pub fn implicit_minimum_version_req_ws(
 
         let Some(report) = report(
             lint_level,
-            reason,
+            source,
             contents,
             document,
             &key_path,
@@ -255,7 +255,7 @@ pub fn span_of_version_req<'doc>(
 
 fn report<'a>(
     lint_level: LintLevel,
-    reason: LintLevelReason,
+    source: LintLevelSource,
     contents: Option<&'a str>,
     document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
     key_path: &[&str],
@@ -264,7 +264,7 @@ fn report<'a>(
     emit_source: bool,
 ) -> Option<[Group<'a>; 2]> {
     let level = lint_level.to_diagnostic_level();
-    let emitted_source = LINT.emitted_source(lint_level, reason);
+    let emitted_source = LINT.emitted_source(lint_level, source);
     let replacement = format!(r#""{suggested_req}""#);
     let label = "missing full version components";
     let secondary_title = "consider specifying full `major.minor.patch` version components";

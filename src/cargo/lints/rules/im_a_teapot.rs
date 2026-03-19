@@ -35,7 +35,7 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) =
+    let (lint_level, source) =
         LINT.level(pkg_lints, pkg.rust_version(), manifest.unstable_features());
 
     if lint_level == LintLevel::Allow {
@@ -52,7 +52,7 @@ pub fn check_im_a_teapot(
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let emitted_reason = LINT.emitted_source(lint_level, reason);
+        let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut desc = Group::with_title(level.primary_title(LINT.desc));
 
@@ -70,7 +70,7 @@ pub fn check_im_a_teapot(
             desc = desc.element(Origin::path(&manifest_path));
         }
 
-        let report = &[desc.element(Level::NOTE.message(&emitted_reason))];
+        let report = &[desc.element(Level::NOTE.message(&emitted_source))];
 
         gctx.shell().print_report(report, lint_level.force())?;
     }

@@ -53,7 +53,7 @@ pub fn unused_workspace_package_fields(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         ws.lowest_rust_version(),
         maybe_pkg.unstable_features(),
@@ -101,7 +101,7 @@ pub fn unused_workspace_package_fields(
         let contents = maybe_pkg.contents();
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
-        let emitted_source = LINT.emitted_source(lint_level, reason);
+        let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
         if let Some(document) = document

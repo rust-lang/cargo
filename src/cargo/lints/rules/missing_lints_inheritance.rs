@@ -60,7 +60,7 @@ pub fn missing_lints_inheritance(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),
@@ -89,7 +89,7 @@ pub fn missing_lints_inheritance(
     let manifest = pkg.manifest();
     let contents = manifest.contents();
     let level = lint_level.to_diagnostic_level();
-    let emitted_source = LINT.emitted_source(lint_level, reason);
+    let emitted_source = LINT.emitted_source(lint_level, source);
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
     let mut primary = Group::with_title(level.primary_title(LINT.desc));

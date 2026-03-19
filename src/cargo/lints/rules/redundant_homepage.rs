@@ -14,7 +14,7 @@ use crate::GlobalContext;
 use crate::core::Package;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
-use crate::lints::LintLevelReason;
+use crate::lints::LintLevelSource;
 use crate::lints::STYLE;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
@@ -66,7 +66,7 @@ pub fn redundant_homepage(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),
@@ -78,14 +78,14 @@ pub fn redundant_homepage(
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    lint_package(pkg, &manifest_path, lint_level, reason, error_count, gctx)
+    lint_package(pkg, &manifest_path, lint_level, source, error_count, gctx)
 }
 
 pub fn lint_package(
     pkg: &Package,
     manifest_path: &str,
     lint_level: LintLevel,
-    reason: LintLevelReason,
+    source: LintLevelSource,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -113,7 +113,7 @@ pub fn lint_package(
     let document = manifest.document();
     let contents = manifest.contents();
     let level = lint_level.to_diagnostic_level();
-    let emitted_source = LINT.emitted_source(lint_level, reason);
+    let emitted_source = LINT.emitted_source(lint_level, source);
 
     let mut primary = Group::with_title(level.primary_title(LINT.desc));
     if let Some(document) = document
