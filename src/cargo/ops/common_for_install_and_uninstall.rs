@@ -13,13 +13,13 @@ use cargo_util_schemas::core::PartialVersion;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
-use crate::core::Target;
 use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
+use crate::core::{PackageSet, Target};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::PathSource;
-use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::source::{QueryKind, SourceMap};
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::{ConfigRelativePath, Definition};
@@ -594,16 +594,13 @@ pub fn path_source(source_id: SourceId, gctx: &GlobalContext) -> CargoResult<Pat
 }
 
 /// Gets a Package based on command-line requirements.
-pub fn select_dep_pkg<T>(
-    source: &mut T,
+pub fn select_dep_pkg(
+    source: &mut dyn Source,
     dep: Dependency,
     gctx: &GlobalContext,
     needs_update: bool,
     current_rust_version: Option<&PartialVersion>,
-) -> CargoResult<Package>
-where
-    T: Source,
-{
+) -> CargoResult<Package> {
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
@@ -673,8 +670,11 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
                     )
                 }
             }
-            let pkg = Box::new(source).download_now(summary.package_id(), gctx)?;
-            Ok(pkg)
+            // Download the package immediately.
+            let mut sources = SourceMap::new();
+            sources.insert(Box::new(source));
+            let pkg_set = PackageSet::new(&[summary.package_id()], sources, gctx)?;
+            Ok(pkg_set.get_one(summary.package_id())?.clone())
         }
         None => {
             let is_yanked: bool = if dep.version_req().is_exact() {

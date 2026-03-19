@@ -149,7 +149,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                 let mut source = map.load(source_id, &HashSet::new())?;
                 if let Ok(Some(pkg)) = installed_exact_package(
                     dep.clone(),
-                    &mut source,
+                    &mut *source,
                     gctx,
                     original_opts,
                     &root,
@@ -164,7 +164,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                     return Ok(None);
                 }
                 select_dep_pkg(
-                    &mut source,
+                    &mut *source,
                     dep,
                     gctx,
                     needs_update_if_source_is_index,
@@ -821,18 +821,15 @@ fn is_installed(
 /// Checks if vers can only be satisfied by exactly one version of a package in a registry, and it's
 /// already installed. If this is the case, we can skip interacting with a registry to check if
 /// newer versions may be installable, as no newer version can exist.
-fn installed_exact_package<T>(
+fn installed_exact_package(
     dep: Dependency,
-    source: &mut T,
+    source: &mut dyn Source,
     gctx: &GlobalContext,
     opts: &ops::CompileOptions,
     root: &Filesystem,
     dst: &Path,
     force: bool,
-) -> CargoResult<Option<Package>>
-where
-    T: Source,
-{
+) -> CargoResult<Option<Package>> {
     if !dep.version_req().is_exact() {
         // If the version isn't exact, we may need to update the registry and look for a newer
         // version - we can't know if the package is installed without doing so.

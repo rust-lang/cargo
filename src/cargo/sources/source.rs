@@ -5,10 +5,9 @@ use std::fmt;
 use std::task::Poll;
 
 use crate::core::SourceId;
-use crate::core::package::PackageSet;
 use crate::core::{Dependency, Package, PackageId};
 use crate::sources::IndexSummary;
-use crate::util::{CargoResult, GlobalContext};
+use crate::util::CargoResult;
 
 /// An abstraction of different sources of Cargo packages.
 ///
@@ -88,27 +87,6 @@ pub trait Source {
     /// package downloader will call [`Source::finish_download`] after the
     /// download has finished.
     fn download(&mut self, package: PackageId) -> CargoResult<MaybePackage>;
-
-    /// Convenience method used to **immediately** fetch a [`Package`] for the
-    /// given [`PackageId`].
-    ///
-    /// This may trigger a download if necessary. This should only be used
-    /// when a single package is needed (as in the case for `cargo install`).
-    /// Otherwise downloads should be batched together via [`PackageSet`].
-    fn download_now(
-        self: Box<Self>,
-        package: PackageId,
-        gctx: &GlobalContext,
-    ) -> CargoResult<Package>
-    where
-        Self: std::marker::Sized,
-    {
-        let mut sources = SourceMap::new();
-        sources.insert(self);
-        let pkg_set = PackageSet::new(&[package], sources, gctx)?;
-        let pkg = pkg_set.get_one(package)?;
-        Ok(Package::clone(pkg))
-    }
 
     /// Gives the source the downloaded `.crate` file.
     ///
@@ -212,78 +190,6 @@ pub enum MaybePackage {
         /// Authorization data that may be required to attach when downloading.
         authorization: Option<String>,
     },
-}
-
-/// A blanket implementation forwards all methods to [`Source`].
-impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
-    fn source_id(&self) -> SourceId {
-        (**self).source_id()
-    }
-
-    fn replaced_source_id(&self) -> SourceId {
-        (**self).replaced_source_id()
-    }
-
-    fn supports_checksums(&self) -> bool {
-        (**self).supports_checksums()
-    }
-
-    fn requires_precise(&self) -> bool {
-        (**self).requires_precise()
-    }
-
-    fn query(
-        &mut self,
-        dep: &Dependency,
-        kind: QueryKind,
-        f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
-        (**self).query(dep, kind, f)
-    }
-
-    fn invalidate_cache(&mut self) {
-        (**self).invalidate_cache()
-    }
-
-    fn set_quiet(&mut self, quiet: bool) {
-        (**self).set_quiet(quiet)
-    }
-
-    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
-        (**self).download(id)
-    }
-
-    fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        (**self).finish_download(id, data)
-    }
-
-    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
-        (**self).fingerprint(pkg)
-    }
-
-    fn verify(&self, pkg: PackageId) -> CargoResult<()> {
-        (**self).verify(pkg)
-    }
-
-    fn describe(&self) -> String {
-        (**self).describe()
-    }
-
-    fn is_replaced(&self) -> bool {
-        (**self).is_replaced()
-    }
-
-    fn add_to_yanked_whitelist(&mut self, pkgs: &[PackageId]) {
-        (**self).add_to_yanked_whitelist(pkgs);
-    }
-
-    fn is_yanked(&mut self, pkg: PackageId) -> Poll<CargoResult<bool>> {
-        (**self).is_yanked(pkg)
-    }
-
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        (**self).block_until_ready()
-    }
 }
 
 /// A blanket implementation forwards all methods to [`Source`].

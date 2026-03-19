@@ -337,7 +337,7 @@ fn all_not_found() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [CREDENTIAL] [..]not_found[..] get crates-io
-{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=/"https://test-registry-login/me/""[..]]},"kind":"get","operation":"read"}
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"www-authenticate: Cargo login_url=/"https://test-registry-login/me/""[..]]},"kind":"get","operation":"read"}
 [ERROR] no token found, please run `cargo login`
 
 "#]])
@@ -373,7 +373,7 @@ fn all_not_supported() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [CREDENTIAL] [..]not_supported[..] get crates-io
-{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=/"https://test-registry-login/me/""[..]]},"kind":"get","operation":"read"}
+{"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"www-authenticate: Cargo login_url=/"https://test-registry-login/me/""[..]]},"kind":"get","operation":"read"}
 [ERROR] no credential providers could handle the request
 
 "#]])
