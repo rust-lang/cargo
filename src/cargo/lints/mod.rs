@@ -604,6 +604,21 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
+    fn ensure_lint_groups_do_not_default_to_forbid() {
+        let forbid_groups = super::LINT_GROUPS
+            .iter()
+            .filter(|g| matches!(g.default_level, super::LintLevel::Forbid))
+            .collect::<Vec<_>>();
+
+        assert!(
+            forbid_groups.is_empty(),
+            "\n`LintGroup`s should never default to `forbid`, but the following do:\n\
+            {}\n",
+            forbid_groups.iter().map(|g| g.name).join("\n")
+        );
+    }
+
+    #[test]
     fn ensure_sorted_lints() {
         // This will be printed out if the fields are not sorted.
         let location = std::panic::Location::caller();
