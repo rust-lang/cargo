@@ -45,12 +45,7 @@ pub enum ManifestFor<'a> {
 
 impl ManifestFor<'_> {
     fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
-        lint.level(
-            pkg_lints,
-            self.rust_version(),
-            self.edition(),
-            self.unstable_features(),
-        )
+        lint.level(pkg_lints, self.rust_version(), self.unstable_features())
     }
 
     pub fn rust_version(&self) -> Option<&RustVersion> {
@@ -111,20 +106,12 @@ pub fn analyze_cargo_lints_table(
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut unknown_lints = Vec::new();
     for lint_name in cargo_lints.keys().map(|name| name) {
-        let Some((name, default_level, edition_lint_opts, feature_gate)) =
-            find_lint_or_group(lint_name)
-        else {
+        let Some((name, default_level, feature_gate)) = find_lint_or_group(lint_name) else {
             unknown_lints.push(lint_name);
             continue;
         };
 
-        let (_, reason, _) = level_priority(
-            name,
-            *default_level,
-            *edition_lint_opts,
-            cargo_lints,
-            manifest.edition(),
-        );
+        let (_, reason, _) = level_priority(name, *default_level, cargo_lints);
 
         // Only run analysis on user-specified lints
         if !reason.is_user_specified() {
@@ -160,21 +147,15 @@ pub fn analyze_cargo_lints_table(
 
 fn find_lint_or_group<'a>(
     name: &str,
-) -> Option<(
-    &'static str,
-    &LintLevel,
-    &Option<(Edition, LintLevel)>,
-    &Option<&'static Feature>,
-)> {
+) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
     if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
         Some((
             lint.name,
             &lint.primary_group.default_level,
-            &lint.edition_lint_opts,
             &lint.feature_gate,
         ))
     } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((group.name, &group.default_level, &None, &group.feature_gate))
+        Some((group.name, &group.default_level, &group.feature_gate))
     } else {
         None
     }
@@ -423,7 +404,6 @@ pub struct Lint {
     /// linting system, then at earliest an MSRV of 1.78 is required as `[lints.cargo]` was a hard
     /// error before then.
     pub msrv: Option<RustVersion>,
-    pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating
     /// the lint documentation. If docs is `None`, the lint will not be
@@ -436,7 +416,6 @@ impl Lint {
         &self,
         pkg_lints: &TomlToolLints,
         pkg_rust_version: Option<&RustVersion>,
-        edition: Edition,
         unstable_features: &Features,
     ) -> (LintLevel, LintLevelReason) {
         // We should return `Allow` if a lint is behind a feature, but it is
@@ -455,20 +434,13 @@ impl Lint {
             }
         }
 
-        let lint_level_priority = level_priority(
-            self.name,
-            self.primary_group.default_level,
-            self.edition_lint_opts,
-            pkg_lints,
-            edition,
-        );
+        let lint_level_priority =
+            level_priority(self.name, self.primary_group.default_level, pkg_lints);
 
         let group_level_priority = level_priority(
             self.primary_group.name,
             self.primary_group.default_level,
-            None,
             pkg_lints,
-            edition,
         );
 
         let (_, (l, r, _)) = max_by_key(
@@ -541,7 +513,6 @@ impl From<TomlLintLevel> for LintLevel {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LintLevelReason {
     Default,
-    Edition(Edition),
     Package,
 }
 
@@ -549,7 +520,6 @@ impl Display for LintLevelReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LintLevelReason::Default => write!(f, "by default"),
-            LintLevelReason::Edition(edition) => write!(f, "in edition {}", edition),
             LintLevelReason::Package => write!(f, "in `[lints]`"),
         }
     }
@@ -559,7 +529,6 @@ impl LintLevelReason {
     fn is_user_specified(&self) -> bool {
         match self {
             LintLevelReason::Default => false,
-            LintLevelReason::Edition(_) => false,
             LintLevelReason::Package => true,
         }
     }
@@ -568,24 +537,8 @@ impl LintLevelReason {
 fn level_priority(
     name: &str,
     default_level: LintLevel,
-    edition_lint_opts: Option<(Edition, LintLevel)>,
     pkg_lints: &TomlToolLints,
-    edition: Edition,
 ) -> (LintLevel, LintLevelReason, i8) {
-    let (unspecified_level, reason) = if let Some(level) = edition_lint_opts
-        .filter(|(e, _)| edition >= *e)
-        .map(|(_, l)| l)
-    {
-        (level, LintLevelReason::Edition(edition))
-    } else {
-        (default_level, LintLevelReason::Default)
-    };
-
-    // Don't allow the group to be overridden if the level is `Forbid`
-    if unspecified_level == LintLevel::Forbid {
-        return (unspecified_level, reason, 0);
-    }
-
     if let Some(defined_level) = pkg_lints.get(name) {
         (
             defined_level.level().into(),
@@ -593,7 +546,7 @@ fn level_priority(
             defined_level.priority(),
         )
     } else {
-        (unspecified_level, reason, 0)
+        (default_level, LintLevelReason::Default, 0)
     }
 }
 
@@ -602,6 +555,21 @@ mod tests {
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::collections::HashSet;
+
+    #[test]
+    fn ensure_lint_groups_do_not_default_to_forbid() {
+        let forbid_groups = super::LINT_GROUPS
+            .iter()
+            .filter(|g| matches!(g.default_level, super::LintLevel::Forbid))
+            .collect::<Vec<_>>();
+
+        assert!(
+            forbid_groups.is_empty(),
+            "\n`LintGroup`s should never default to `forbid`, but the following do:\n\
+            {}\n",
+            forbid_groups.iter().map(|g| g.name).join("\n")
+        );
+    }
 
     #[test]
     fn ensure_sorted_lints() {

@@ -23,7 +23,6 @@ pub static LINT: &Lint = &Lint {
     desc: "features should have a snake-case name",
     primary_group: &RESTRICTION,
     msrv: None,
-    edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
         r#"
@@ -66,7 +65,6 @@ pub fn non_snake_case_features(
     let (lint_level, reason) = LINT.level(
         cargo_lints,
         pkg.rust_version(),
-        pkg.manifest().edition(),
         pkg.manifest().unstable_features(),
     );
 

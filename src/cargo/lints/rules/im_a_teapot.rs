@@ -23,7 +23,6 @@ pub static LINT: &Lint = &Lint {
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
     msrv: None,
-    edition_lint_opts: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
     docs: None,
 };
@@ -36,12 +35,8 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) = LINT.level(
-        pkg_lints,
-        pkg.rust_version(),
-        manifest.edition(),
-        manifest.unstable_features(),
-    );
+    let (lint_level, reason) =
+        LINT.level(pkg_lints, pkg.rust_version(), manifest.unstable_features());
 
     if lint_level == LintLevel::Allow {
         return Ok(());
