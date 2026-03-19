@@ -15,7 +15,11 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
+pub fn std_crates<'a>(
+    crates: &'a [String],
+    default: &'static str,
+    units: &[Unit],
+) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.

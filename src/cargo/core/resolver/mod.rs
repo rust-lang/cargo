@@ -135,7 +135,8 @@ pub fn resolve(
         }
         _ => None,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs, builtins_root);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, builtins_root, gctx);
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();

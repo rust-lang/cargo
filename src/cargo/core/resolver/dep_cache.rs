@@ -9,6 +9,8 @@
 //!
 //! This module impl that cache in all the gory details
 
+use crate::GlobalContext;
+use crate::core::compiler::standard_lib::std_crates;
 use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
@@ -60,21 +62,17 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
         builtins_root: Option<&PathBuf>,
+        gctx: Option<&GlobalContext>,
     ) -> Self {
-        let builtins = if let Some(root) = builtins_root {
-            [
-                "std",
-                "alloc",
-                "core",
-                "panic_unwind",
-                "proc_macro",
-                "compiler_builtins",
-            ]
-            .iter()
-            .map(|&krate| Dependency::new_injected_builtin(krate.into(), root))
-            .collect()
-        } else {
-            vec![]
+        // TODO: Hack - default should come from TargetInfo
+        // units is fine empty as we don't need to inject test here, but it looks weird.
+        let buildstd_crates = gctx.and_then(|gctx| gctx.cli_unstable().build_std.as_ref());
+        let builtins = match (builtins_root, buildstd_crates) {
+            (Some(root), Some(crates)) => std_crates(&crates, "std", &[])
+                .iter()
+                .map(|&krate| Dependency::new_injected_builtin(krate.into(), root))
+                .collect(),
+            (_, _) => vec![],
         };
 
         RegistryQueryer {
