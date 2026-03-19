@@ -1069,13 +1069,15 @@ fn target_dir_is_file() {
 
     p.cargo("clean")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/target`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("target").exists());
+    assert!(p.root().join("target").exists());
 }
 
 #[cargo_test]
@@ -1088,13 +1090,15 @@ fn explicit_target_dir_is_file() {
 
     p.cargo("clean --target-dir bar")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
 
 #[cargo_test]
@@ -1108,13 +1112,15 @@ fn env_target_dir_is_file() {
     p.cargo("clean")
         .env("CARGO_TARGET_DIR", "bar")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
 
 #[cargo_test]
@@ -1132,13 +1138,15 @@ fn config_target_dir_is_file() {
 
     p.cargo("clean")
         .with_stderr_data(str![[r#"
-[REMOVED] 1 file
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
-        .with_status(0)
+        .with_status(101)
         .run();
 
-    assert!(!p.root().join("bar").exists());
+    assert!(p.root().join("bar").exists());
 }
 
 #[cargo_test]
