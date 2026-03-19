@@ -109,6 +109,7 @@ impl GitRemote {
         &self,
         into: &Path,
         db: Option<GitDatabase>,
+        manifest_reference: &GitReference,
         reference: &GitReference,
         gctx: &GlobalContext,
     ) -> CargoResult<(GitDatabase, git2::Oid)> {
@@ -116,6 +117,7 @@ impl GitRemote {
             fetch(
                 &mut db.repo,
                 self.url(),
+                manifest_reference,
                 reference,
                 gctx,
                 RemoteKind::GitDependency,
@@ -138,6 +140,7 @@ impl GitRemote {
         fetch(
             &mut repo,
             self.url(),
+            manifest_reference,
             reference,
             gctx,
             RemoteKind::GitDependency,
@@ -993,7 +996,8 @@ pub fn with_fetch_options(
 pub fn fetch(
     repo: &mut git2::Repository,
     remote_url: &str,
-    reference: &GitReference,
+    manifest_reference: &GitReference,
+    locked_reference: &GitReference,
     gctx: &GlobalContext,
     remote_kind: RemoteKind,
 ) -> CargoResult<()> {
@@ -1009,7 +1013,7 @@ pub fn fetch(
     // Flag to keep track if the rev is a full commit hash
     let mut fast_path_rev: bool = false;
 
-    let oid_to_fetch = match github_fast_path(repo, remote_url, reference, gctx) {
+    let oid_to_fetch = match github_fast_path(repo, remote_url, locked_reference, gctx) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
         Ok(FastPathRev::Indeterminate) => None,
@@ -1030,7 +1034,7 @@ pub fn fetch(
     // The `+` symbol on the refspec means to allow a forced (fast-forward)
     // update which is needed if there is ever a force push that requires a
     // fast-forward.
-    match reference {
+    match locked_reference {
         // For branches and tags we can fetch simply one reference and copy it
         // locally, no need to fetch other branches/tags.
         GitReference::Branch(b) => {
@@ -1061,6 +1065,12 @@ pub fn fetch(
                 // The reason we write to `refs/remotes/origin/HEAD` is that it's of special significance
                 // when during `GitReference::resolve()`, but otherwise it shouldn't matter.
                 refspecs.push(format!("+{0}:refs/remotes/origin/HEAD", rev));
+            } else if let GitReference::Rev(rev) = manifest_reference
+                && rev.starts_with("refs/")
+            {
+                // If the lockfile has a commit. we can't directly fetch it (unless we're talking
+                // to GitHub), so we fetch the ref associated with it from the manifest.
+                refspecs.push(format!("+{0}:{0}", rev));
             } else {
                 // We don't know what the rev will point to. To handle this
                 // situation we fetch all branches and tags, and then we pray
