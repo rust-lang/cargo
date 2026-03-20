@@ -249,10 +249,20 @@ fn cargo_compile_git_dep_pull_request() {
 
     // Make a reference in GitHub's pull request ref naming convention.
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let oid = repo.refname_to_id("HEAD").unwrap();
-    let force = false;
     let log_message = "open pull request";
-    repo.reference("refs/pull/330/head", oid, force, log_message)
+    let parent = repo.head().unwrap().peel_to_commit().unwrap();
+    let author = repo.signature().unwrap();
+    let oid = repo
+        .commit(
+            None,
+            &author,
+            &author,
+            log_message,
+            &parent.tree().unwrap(),
+            &[&parent],
+        )
+        .unwrap();
+    repo.reference("refs/pull/330/head", oid, false, log_message)
         .unwrap();
 
     let project = project
@@ -290,6 +300,25 @@ fn cargo_compile_git_dep_pull_request() {
         .run();
 
     assert!(project.bin("foo").is_file());
+
+    // Delete the local cache, but keep the Cargo.lock to prevent regression
+    // of <https://github.com/rust-lang/cargo/issues/16767>
+    // This ensures we fetch the refs/pull/330/head spec explicitly, even
+    // if we have a locked commit.
+    paths::cargo_home().join("git").rm_rf();
+
+    project
+        .cargo("check")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "true")
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+...
+[CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?rev=refs%2Fpull%2F330%2Fhead#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]

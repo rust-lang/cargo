@@ -387,6 +387,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
             repo,
             url.as_str(),
             &self.index_git_ref,
+            &self.index_git_ref,
             self.gctx,
             RemoteKind::Registry,
         )
