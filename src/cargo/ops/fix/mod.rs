@@ -814,6 +814,7 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
             krate,
             &fixes.last_output.stderr,
             fixes.last_output.status,
+            allow_broken_code,
         )?;
         // Display the diagnostics that appeared at the start, before the
         // fixes failed. This can help with diagnosing which suggestions
@@ -1171,6 +1172,7 @@ fn log_failed_fix(
     krate: Option<String>,
     stderr: &[u8],
     status: ExitStatus,
+    allow_broken_code: bool,
 ) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
@@ -1205,6 +1207,7 @@ fn log_failed_fix(
         krate,
         errors,
         abnormal_exit,
+        allow_broken_code,
     }
     .post(gctx)?;
 

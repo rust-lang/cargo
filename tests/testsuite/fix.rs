@@ -1435,11 +1435,9 @@ fn fix_to_broken_code() {
   = cause: thread 'main' ([..]) panicked at src/main.rs:23:29:
            explicit panic
            [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
 [NOTE] original diagnostics will follow:
 ...
-
 "#]])
         .run();
 
