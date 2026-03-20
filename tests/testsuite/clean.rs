@@ -1058,3 +1058,153 @@ fn quiet_does_not_show_summary() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn target_dir_is_file() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("target", "")
+        .build();
+
+    p.cargo("clean")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/target`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
+        .run();
+
+    assert!(p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn explicit_target_dir_is_file() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("bar", "")
+        .build();
+
+    p.cargo("clean --target-dir bar")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
+        .run();
+
+    assert!(p.root().join("bar").exists());
+}
+
+#[cargo_test]
+fn env_target_dir_is_file() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("bar", "")
+        .build();
+
+    p.cargo("clean")
+        .env("CARGO_TARGET_DIR", "bar")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
+        .run();
+
+    assert!(p.root().join("bar").exists());
+}
+
+#[cargo_test]
+fn config_target_dir_is_file() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("bar", "")
+        .file(
+            ".cargo/config.toml",
+            "[build]
+        target-dir = 'bar'",
+        )
+        .build();
+
+    p.cargo("clean")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
+        .run();
+
+    assert!(p.root().join("bar").exists());
+}
+
+#[cargo_test]
+fn target_dir_is_symlink_dir() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .symlink_dir("bar-dest", "target")
+        .file("bar-dest/.keep", "")
+        .build();
+
+    let mut check = p.cargo("clean");
+    #[cfg(windows)]
+    {
+        check.with_stderr_data(str![[r#"
+[REMOVED] 1 file
+
+"#]]);
+    }
+    #[cfg(not(windows))]
+    {
+        check.with_stderr_data(str![[r#"
+[REMOVED] 1 file, [FILE_SIZE]B total
+
+"#]]);
+    }
+    check.with_status(0).run();
+
+    // make sure cargo has not deleted the files of the symlinked target dir
+    assert!(p.root().join("bar-dest/.keep").exists());
+}
+
+#[cargo_test]
+fn target_dir_is_symlink_file() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .symlink("bar-dest", "target")
+        .file("bar-dest", "")
+        .build();
+
+    let mut check = p.cargo("clean");
+    #[cfg(windows)]
+    {
+        check.with_stderr_data(str![[r#"
+[REMOVED] 1 file
+
+"#]]);
+    }
+    #[cfg(not(windows))]
+    {
+        check.with_stderr_data(str![[r#"
+[REMOVED] 1 file, [FILE_SIZE]B total
+
+"#]]);
+    }
+    check.with_status(0).run();
+
+    // make sure cargo has not deleted the file of the symlinked target dir
+    assert!(p.root().join("bar-dest").exists());
+}
