@@ -32,7 +32,7 @@ cargo-credential-macos-keychain = { version = "0.4.20", path = "credential/cargo
 cargo-credential-wincred = { version = "0.4.20", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.3.0" }
 cargo-test-macro = { version = "0.4.9", path = "crates/cargo-test-macro" }
-cargo-test-support = { version = "0.10.0", path = "crates/cargo-test-support" }
+cargo-test-support = { version = "0.11.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.27", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.12.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.23.1"
@@ -103,7 +103,7 @@ similar = "2.7.0"
 supports-hyperlinks = "3.2.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "0.6.23", features = ["diff", "dir", "term-svg", "regex", "json"] }
-tar = { version = "0.4.44", default-features = false }
+tar = { version = "0.4.45", default-features = false }
 tempfile = "3.24.0"
 thiserror = "2.0.17"
 time = { version = "0.3.44", features = ["parsing", "formatting", "serde"] }

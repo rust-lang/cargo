@@ -21,12 +21,9 @@
 #![allow(clippy::disallowed_methods)]
 
 use cargo_test_support::Execs;
-use cargo_test_support::basic_manifest;
-use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::rustc_host;
 use cargo_test_support::str;
-use cargo_test_support::target_spec_json;
 use cargo_test_support::{Project, prelude::*};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -165,9 +162,7 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
-[COMPILING] [..]
 ...
-[COMPILING] test v0.0.0 ([..])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
@@ -279,6 +274,7 @@ fn host_proc_macro() {
 }
 
 #[cargo_test(build_std_real)]
+#[cfg(false)] // Disabling custom target tests, not backporting support to 1.94.
 fn cross_custom() {
     let p = project()
         .file(
@@ -308,6 +304,7 @@ fn cross_custom() {
 }
 
 #[cargo_test(build_std_real)]
+#[cfg(false)] // Disabling custom target tests, not backporting support to 1.94.
 fn custom_test_framework() {
     let p = project()
         .file(

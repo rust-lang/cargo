@@ -3509,7 +3509,8 @@ fn two_dep_forms() {
     // the two local deps.
     project
         .cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
 [UPDATING] git repository `[ROOTURL]/dep1`
 [LOCKING] 3 packages to latest compatible versions
@@ -3519,7 +3520,9 @@ fn two_dep_forms() {
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
