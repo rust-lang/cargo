@@ -439,6 +439,11 @@ fn broken_code_no_suggestions() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] errors present after applying fixes to crate `foo`
+ --> src/lib.rs
+  = cause: rustc fix shim error count=1
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
+[NOTE] original diagnostics will follow:
 rustc fix shim error count=1
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 

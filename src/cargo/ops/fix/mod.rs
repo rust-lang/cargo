@@ -789,12 +789,7 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
         }
     }
 
-    // If there were any fixes, let the user know that there was a failure
-    // attempting to apply them, and to ask for a bug report.
-    //
-    // FIXME: The error message here is not correct with --broken-code.
-    //        https://github.com/rust-lang/cargo/issues/10955
-    if fixes.files.is_empty() {
+    if fixes.files.is_empty() && !allow_broken_code {
         // No fixes were available. Display whatever errors happened.
         emit_output(&fixes.last_output)?;
         exit_with(fixes.last_output.status);
