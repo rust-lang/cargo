@@ -4695,3 +4695,77 @@ fn deterministic_mtime() {
     assert_deterministic_mtime(pkg_root.join("Cargo.toml"));
     assert_deterministic_mtime(pkg_root.join(".cargo_vcs_info.json"));
 }
+
+#[cargo_test]
+fn symlink_and_directory() {
+    // Tests for symlink and directory entry in a tar file. The tar crate
+    // would incorrectly change the permissions of the symlink destination,
+    // which could be anywhere on the filesystem.
+    let victim = paths::root().join("victim");
+    fs::create_dir(&victim).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perm = fs::Permissions::from_mode(0o700);
+        fs::set_permissions(&victim, perm).unwrap();
+        assert_eq!(
+            victim.metadata().unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
+
+    Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "")
+        .symlink("smuggled", victim.to_str().unwrap())
+        .directory("smuggled")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[ERROR] failed to download replaced source registry `crates-io`
+
+Caused by:
+  failed to unpack package `bar v1.0.0 (registry `dummy-registry`)`
+
+Caused by:
+  failed to unpack entry at `bar-1.0.0/smuggled`
+
+Caused by:
+  failed to unpack `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled`
+
+Caused by:
+  [..] when creating dir [ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled
+
+"#]])
+        .run();
+
+    #[cfg(unix)]
+    {
+        // Permissions should not change.
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            victim.metadata().unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
+}
