@@ -104,7 +104,7 @@ similar = "2.7.0"
 supports-hyperlinks = "3.2.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "0.6.23", features = ["diff", "dir", "term-svg", "regex", "json"] }
-tar = { version = "0.4.44", default-features = false }
+tar = { version = "0.4.45", default-features = false }
 tempfile = "3.24.0"
 thiserror = "2.0.17"
 time = { version = "0.3.47", features = ["parsing", "formatting", "serde"] }
