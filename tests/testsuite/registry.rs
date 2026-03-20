@@ -4697,57 +4697,23 @@ fn deterministic_mtime() {
 }
 
 #[cargo_test]
-#[cfg(unix)]
-fn symlink_and_directory_on_unix() {
+fn symlink_and_directory() {
     // Tests for symlink and directory entry in a tar file. The tar crate
     // would incorrectly change the permissions of the symlink destination,
     // which could be anywhere on the filesystem.
     let victim = paths::root().join("victim");
     fs::create_dir(&victim).unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    let perm = fs::Permissions::from_mode(0o700);
-    fs::set_permissions(&victim, perm).unwrap();
-    assert_eq!(
-        victim.metadata().unwrap().permissions().mode() & 0o777,
-        0o700
-    );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perm = fs::Permissions::from_mode(0o700);
+        fs::set_permissions(&victim, perm).unwrap();
+        assert_eq!(
+            victim.metadata().unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
 
-    Package::new("bar", "1.0.0")
-        .file("src/lib.rs", "")
-        .symlink("smuggled", victim.to_str().unwrap())
-        .directory("smuggled")
-        .publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                edition = "2015"
-
-                [dependencies]
-                bar = "1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("fetch").run();
-
-    // FIXME: This should not change permission.
-    assert_eq!(
-        victim.metadata().unwrap().permissions().mode() & 0o777,
-        0o644
-    );
-}
-
-#[cargo_test]
-#[cfg(windows)]
-fn symlink_and_directory_on_windows() {
-    // Equivalent of chmod_target_symlink for Windows, which does not allow
-    // trying to create a directory on top of a symlink.
-    let victim = paths::root().join("victim");
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "")
         .symlink("smuggled", victim.to_str().unwrap())
@@ -4788,8 +4754,18 @@ Caused by:
   failed to unpack `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled`
 
 Caused by:
-  [..](os error 183) when creating dir [ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled
+  [..] when creating dir [ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled
 
 "#]])
         .run();
+
+    #[cfg(unix)]
+    {
+        // Permissions should not change.
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            victim.metadata().unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
 }
