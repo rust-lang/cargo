@@ -1746,6 +1746,10 @@ impl Package {
         mode: u32,
         contents: &EntryData,
     ) {
+        // Unfortunately we cannot use GNU headers with dynamic extensions for
+        // long paths because that would cause package checksums to change
+        // based on whether or not the tests are running in a long directory
+        // name.
         let mut header = Header::new_ustar();
         let contents = match contents {
             EntryData::Regular(contents) => contents.as_str(),
