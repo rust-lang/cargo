@@ -4701,22 +4701,25 @@ fn symlink_and_directory() {
     // Tests for symlink and directory entry in a tar file. The tar crate
     // would incorrectly change the permissions of the symlink destination,
     // which could be anywhere on the filesystem.
-    let victim = paths::root().join("victim");
-    fs::create_dir(&victim).unwrap();
+    //
+    // Use a tempfile path to keep the path length below 100 for a USTAR
+    // archive. Otherwise, a long target directory name would break the
+    // archive generation.
+    let victim = tempfile::tempdir().unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let perm = fs::Permissions::from_mode(0o700);
         fs::set_permissions(&victim, perm).unwrap();
         assert_eq!(
-            victim.metadata().unwrap().permissions().mode() & 0o777,
+            victim.path().metadata().unwrap().permissions().mode() & 0o777,
             0o700
         );
     }
 
     Package::new("bar", "1.0.0")
         .file("src/lib.rs", "")
-        .symlink("smuggled", victim.to_str().unwrap())
+        .symlink("smuggled", victim.path().to_str().unwrap())
         .directory("smuggled")
         .publish();
 
@@ -4764,7 +4767,7 @@ Caused by:
         // Permissions should not change.
         use std::os::unix::fs::PermissionsExt;
         assert_eq!(
-            victim.metadata().unwrap().permissions().mode() & 0o777,
+            victim.path().metadata().unwrap().permissions().mode() & 0o777,
             0o700
         );
     }
