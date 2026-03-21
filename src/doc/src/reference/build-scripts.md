@@ -15,13 +15,24 @@ that script and execute it just before building the package.
 // Example custom build script.
 fn main() {
     // Tell Cargo that if the given file changes, to rerun this build script.
-    println!("cargo::rerun-if-changed=src/hello.c");
+    //recommended method(using the build_rs crate)
+    build_rs::rerun_if_changed("src/hello.c");
     // Use the `cc` crate to build a C file and statically link it.
     cc::Build::new()
         .file("src/hello.c")
         .compile("hello");
 }
 ```
+
+> **Note**
+> Build scripts communicate with Cargo by printing specially formatted lines to stdout.
+> While you can print these lines manually (e.g., `println!("cargo::rerun-if-changed=build.rs")`),
+> we recommend using the [`build-rs`](https://crates.io/crates/build-rs) crate.
+> It provides a type-safe API that ensures your build instructions are formatted correctly.
+>
+> The examples in this reference guide use `build-rs` to demonstrate best practices,
+> while the section headers preserve the raw protocol strings for specification purposes.
+
 
 Some example use cases of build scripts are:
 
@@ -170,6 +181,9 @@ option][link-arg] to the compiler, but only when building supported targets
 highly platform specific. It is useful to set the shared library version or
 linker script.
 
+**Recommended:** Use [`build_rs::output::rustc_link_arg`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg.html) from the `build-rs` crate.
+
+
 [link-arg]: ../../rustc/codegen-options/index.md#link-arg
 
 ### `cargo::rustc-link-arg-cdylib=FLAG` {#rustc-cdylib-link-arg}
@@ -182,12 +196,16 @@ to set the shared library version or the runtime-path.
 For historical reasons, the `cargo::rustc-cdylib-link-arg` form is an alias
 for `cargo::rustc-link-arg-cdylib`, and has the same meaning.
 
+**Recommended:** Use [`build_rs::output::rustc_cdylib_link_arg`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_cdylib_link_arg.html) from the `build-rs` crate.
+
 ### `cargo::rustc-link-arg-bin=BIN=FLAG` {#rustc-link-arg-bin}
 
 The `rustc-link-arg-bin` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building
 the binary target with name `BIN`. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
+
+**Recommended:** Use [`build_rs::output::rustc_link_arg_bin`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg_bin.html) from the `build-rs` crate.
 
 ### `cargo::rustc-link-arg-bins=FLAG` {#rustc-link-arg-bins}
 
@@ -196,11 +214,15 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 binary target. Its usage is highly platform specific. It is useful
 to set a linker script or other linker options.
 
+**Recommended:** Use [`build_rs::output::rustc_link_arg_bins`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg_bins.html) from the `build-rs` crate.
+
 ### `cargo::rustc-link-arg-tests=FLAG` {#rustc-link-arg-tests}
 
 The `rustc-link-arg-tests` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 tests target.
+
+**Recommended:** Use [`build_rs::output::rustc_link_arg_tests`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg_tests.html) from the `build-rs` crate.
 
 ### `cargo::rustc-link-arg-examples=FLAG` {#rustc-link-arg-examples}
 
@@ -208,11 +230,15 @@ The `rustc-link-arg-examples` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building an examples
 target.
 
+**Recommended:** Use [`build_rs::output::rustc_link_arg_examples`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg_examples.html) from the `build-rs` crate.
+
 ### `cargo::rustc-link-arg-benches=FLAG` {#rustc-link-arg-benches}
 
 The `rustc-link-arg-benches` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a benchmark
 target.
+
+**Recommended:** Use [`build_rs::output::rustc_link_arg_benches`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_arg_benches.html) from the `build-rs` crate.
 
 ### `cargo::rustc-link-lib=LIB` {#rustc-link-lib}
 
@@ -235,6 +261,8 @@ through the library target's public API.
 The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 [rustc book][option-link] for more detail.
 
+**Recommended:** Use [`build_rs::output::rustc_link_lib`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_lib.html) from the `build-rs` crate.
+
 [option-link]: ../../rustc/command-line-arguments.md#option-l-link-lib
 [FFI]: ../../nomicon/ffi.md
 
@@ -254,6 +282,8 @@ difficult to use the resulting binary. In general, it is best to avoid
 creating dynamic libraries in a build script (using existing system libraries
 is fine).
 
+**Recommended:** Use [`build_rs::output::rustc_link_search`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_link_search.html) from the `build-rs` crate.
+
 [option-search]: ../../rustc/command-line-arguments.md#option-l-search-path
 
 ### `cargo::rustc-flags=FLAGS` {#rustc-flags}
@@ -262,6 +292,8 @@ The `rustc-flags` instruction tells Cargo to pass the given space-separated
 flags to the compiler. This only allows the `-l` and `-L` flags, and is
 equivalent to using [`rustc-link-lib`](#rustc-link-lib) and
 [`rustc-link-search`](#rustc-link-search).
+
+**Recommended:** Use [`build_rs::output::rustc_flags`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_flags.html) from the `build-rs` crate.
 
 ### `cargo::rustc-cfg=KEY[="VALUE"]` {#rustc-cfg}
 
@@ -283,6 +315,8 @@ of `feature=`). Or an arbitrary key/value pair may be used with an `=` symbol
 like `cargo::rustc-cfg=my_component="foo"`. The key should be a Rust
 identifier, the value should be a string.
 
+**Recommended:** Use [`build_rs::output::rustc_cfg`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_cfg.html) from the `build-rs` crate.
+
 [cargo features]: features.md
 [conditional compilation]: ../../reference/conditional-compilation.md
 [option-cfg]: ../../rustc/command-line-arguments.md#option-cfg
@@ -300,9 +334,12 @@ The instruction can be used like this:
 
 ```rust,no_run
 // build.rs
-println!("cargo::rustc-check-cfg=cfg(foo, values(\"bar\"))");
+build_rs::output::rustc_check_cfg_values(
+  "foo",
+  &["bar"],
+);
 if foo_bar_condition {
-    println!("cargo::rustc-cfg=foo=\"bar\"");
+  build_rs::output::rustc_cfg_value("foo", "bar");
 }
 ```
 
@@ -315,6 +352,8 @@ avoid typos, missing check-cfg, stale cfgs...
 
 See also the
 [conditional compilation][conditional-compilation-example] example.
+
+**Recommended:** Use [`build_rs::output::rustc_check_cfgs`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_check_cfgs.html) from the `build-rs` crate.
 
 > **MSRV:** Respected as of 1.80
 
@@ -339,6 +378,8 @@ Cargo][env-cargo].
 > Normally, these environment variables should only be checked at compile-time
 > with the `env!` macro.
 
+**Recommended:** Use [`build_rs::output::rustc_env`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.rustc_env.html) from the `build-rs` crate.
+
 [env-macro]: ../../std/macro.env.html
 [env-cargo]: environment-variables.md#environment-variables-cargo-sets-for-crates
 
@@ -353,6 +394,9 @@ has finished running, and then fail the build.
  > The caller can then decide whether or not to display the `Err` variant
  > using `cargo::error`.
 
+
+**Recommended:** Use [`build_rs::output::error`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.error.html) from the `build-rs` crate.
+
 > **MSRV:** Respected as of 1.84
 
 ### `cargo::warning=MESSAGE` {#cargo-warning}
@@ -363,6 +407,8 @@ script has finished running. Warnings are only shown for `path` dependencies
 out in [crates.io] crates are not emitted by default, unless the build fails.
 The `-vv` "very verbose" flag may be used to have Cargo display warnings for
 all crates.
+
+**Recommended:** Use [`build_rs::output::warning`](https://docs.rs/build-rs/0.3.3/build_rs/output/fn.warning.html) from the `build-rs` crate.
 
 ## Build Dependencies
 
@@ -420,6 +466,8 @@ automatically handles whether or not the script itself needs to be recompiled,
 and of course the script will be re-run after it has been recompiled.
 Otherwise, specifying `build.rs` is redundant and unnecessary.
 
+**Recommended**: Use `build_rs::rerun_if_changed` to emit this instruction safely. The behavior is similar to `cargo::rerun-if-changed`.
+
 ### `cargo::rerun-if-env-changed=NAME` {#rerun-if-env-changed}
 
 The `rerun-if-env-changed` instruction tells Cargo to re-run the build script
@@ -435,6 +483,8 @@ As of 1.46, using [`env!`][env-macro] and [`option_env!`][option-env-macro] in
 source code will automatically detect changes and trigger rebuilds.
 `rerun-if-env-changed` is no longer needed for variables already referenced by
 these macros.
+
+**Recommended**: Use `build_rs::output::rerun_if_env_changed` to monitor environment variables. Its behavior similar to that of `cargo::rerun-if-env-changed`.
 
 [option-env-macro]: ../../std/macro.option_env.html
 
@@ -561,4 +611,5 @@ at the same time.
 [`cc` crate]: https://crates.io/crates/cc
 [`jobserver` crate]: https://crates.io/crates/jobserver
 [jobserver protocol]: http://make.mad-scientist.net/papers/jobserver-implementation/
+[`build-rs` crate]: https://crates.io/crates/build-rs
 [crates.io]: https://crates.io/
