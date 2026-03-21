@@ -7,12 +7,13 @@ use std::sync::{Arc, Mutex};
 use crate::core::PackageId;
 use crate::core::compiler::compilation::{self, UnitOutput};
 use crate::core::compiler::locking::LockManager;
+use crate::core::compiler::rustdoc::is_json_output;
 use crate::core::compiler::{self, Unit, UserIntent, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use annotate_snippets::{Level, Message};
 use anyhow::{Context as _, bail};
-use cargo_util::paths;
+use cargo_util::paths::{self, copy};
 use filetime::FileTime;
 use itertools::Itertools;
 use jobserver::Client;
@@ -234,6 +235,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
             self.collect_tests_and_executables(unit)?;
+
+            // Uplift rustdoc
+            if unit.mode.is_doc() {
+                self.uplift_rustdoc(unit)?;
+            }
 
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
@@ -786,5 +792,26 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             self.metadata_for_doc_units
                 .insert(unit.clone(), self.files().metadata(metadata_unit));
         }
+    }
+
+    /// Uplifts final json to <doc_dir>/<crate_name>.json (for backward compatibility)
+    /// The final output is produced only after root unit is complete
+    fn uplift_rustdoc(&self, unit: &Unit) -> CargoResult<()> {
+        let doc_dir = self.files().output_dir(unit);
+        let crate_name = unit.target.crate_name();
+        let crate_hash_suffix = self.files().metadata(unit).unit_id();
+        let full_name = format!("{crate_name}-{crate_hash_suffix}");
+        let is_json_output = is_json_output(self);
+
+        if is_json_output {
+            let src_path = doc_dir
+                .join("json")
+                .join(&full_name)
+                .join(format!("{crate_name}.json"));
+            let filename = format!("{crate_name}.json");
+
+            copy(src_path, doc_dir.join(&filename))?;
+        }
+        Ok(())
     }
 }

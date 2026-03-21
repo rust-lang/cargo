@@ -513,8 +513,12 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             }
             CompileMode::Doc => {
                 let path = if bcx.build_config.intent.wants_doc_json_output() {
+                    let hash = self.metadata(unit).unit_id();
+                    let crate_name = unit.target.crate_name();
                     self.output_dir(unit)
-                        .join(format!("{}.json", unit.target.crate_name()))
+                        .join("json")
+                        .join(format!("{crate_name}-{hash}"))
+                        .join(format!("{crate_name}.json"))
                 } else {
                     self.output_dir(unit)
                         .join(unit.target.crate_name())

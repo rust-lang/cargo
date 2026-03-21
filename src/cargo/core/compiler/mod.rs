@@ -96,6 +96,7 @@ use self::unit_graph::UnitDep;
 
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 use crate::core::compiler::locking::LockKey;
+use crate::core::compiler::rustdoc::is_json_output;
 use crate::core::compiler::timings::SectionTiming;
 pub use crate::core::compiler::unit::Unit;
 pub use crate::core::compiler::unit::UnitIndex;
@@ -867,7 +868,22 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_cap_lints(bcx, unit, &mut rustdoc);
 
     unit.kind.add_target_arg(&mut rustdoc);
-    let doc_dir = build_runner.files().output_dir(unit);
+
+    let doc_dir_base = build_runner.files().output_dir(unit);
+    let doc_dir = if is_json_output(build_runner) {
+        // Set hash-suffixed output path for JSON outputs
+        // because rustdoc's -o option controls output directory, not the filename
+        // In fix for https://github.com/rust-lang/cargo/issues/16291
+
+        let crate_name = unit.target.crate_name();
+        let suffix = build_runner.files().metadata(unit).unit_id();
+        doc_dir_base
+            .join("json")
+            .join(format!("{crate_name}-{suffix}"))
+    } else {
+        doc_dir_base
+    };
+
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(unit));
@@ -971,6 +987,8 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let mut rustdoc = prepare_rustdoc(build_runner, unit)?;
 
     let crate_name = unit.target.crate_name();
+    let crate_hash_suffix = build_runner.files().metadata(unit).unit_id();
+    let is_json_output = is_json_output(build_runner);
     let doc_dir = build_runner.files().output_dir(unit);
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
@@ -1054,12 +1072,18 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             }
         }
 
-        let crate_dir = doc_dir.join(&crate_name);
+        let crate_dir = if is_json_output {
+            let name = format!("{crate_name}-{crate_hash_suffix}");
+            doc_dir.join("json").join(name)
+        } else {
+            doc_dir.join(&crate_name)
+        };
+
         if crate_dir.exists() {
             // Remove output from a previous build. This ensures that stale
             // files for removed items are removed.
             debug!("removing pre-existing doc directory {:?}", crate_dir);
-            paths::remove_dir_all(crate_dir)?;
+            paths::remove_dir_all(&crate_dir)?;
         }
         state.running(&rustdoc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
