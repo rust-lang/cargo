@@ -77,9 +77,9 @@ dependencies = [
 ]
 
 [metadata]
-"checksum dep1 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ad5d1a0cb2ca0bb8c8ed7623c0309c3b25092b11cb2d578e35ec8e5d280faa5c"
-"checksum dep2 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ed104779d80bde57bdbefd4bcd27e6948caab7f0b8ded30a5cb125a8cba814c8"
-"checksum dep3 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "15fd0baaa7ffd9dd001841b029542f4744180449bc01fff2c40a6d2fd974457e"
-"checksum my-package 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3325a560d0542c9d7bc4a0737e74ea3734fd756a707fd50bea8bc0e5ad1ae74f"
-"checksum my-package 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "597285c86228731859f5b5f08b11731cc5cb150d0a5373572522ff726cb97411"
-"checksum my-package 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3beee062f199bc0f6afc7e97e1518710462b921272773202d8636a59a12a791a"
+"checksum dep1 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "04d8b4f31fd5567a6fdff0ed6e8cefef7cf3e6c78901da2fc30d8d5e29234e6b"
+"checksum dep2 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "89c67d07ff6ba145890649315b474c237e1ae6ebc52f4a975e2faacaca90e022"
+"checksum dep3 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "eaa4f0d447e37f991ed1a95b64f344525f57e26cf3583b0f540d78c98924d176"
+"checksum my-package 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7e14eaabf99a0a524c663f4877b800c8cc326688b164d02f852e6bddc5638791"
+"checksum my-package 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d359681509e8f342b300242a33e406eb8ff16e1c5781de4ea4bf5e9ee6c9d931"
+"checksum my-package 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9028f7c57d3e7f5a8f999cb88de5cd64a79fd172d220ce2f3a1a4f28037ffe4b"

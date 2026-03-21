@@ -1804,7 +1804,7 @@ dependencies = [
 name = "foo"
 version = "0.1.0"
 source = "sparse+http://127.0.0.1:[..]/index/"
-checksum = "458c1addb23fde7dfbca0410afdbcc0086f96197281ec304d9e0e10def3cb899"
+checksum = "02da3acb8b30d60a1f825a40308c224c233760749d18be53b7ed49bd82898b8b"
 
 "##]],
     );

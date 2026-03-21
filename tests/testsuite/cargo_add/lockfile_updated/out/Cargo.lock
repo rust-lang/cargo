@@ -14,10 +14,10 @@ dependencies = [
 name = "my-package"
 version = "99999.0.0+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73cfa03cf28feb001362b377a837910c5a6ec1cc5cceaa562b97fc14d15edec8"
+checksum = "5a5f44b789373bb6a8ba3c00b128c92988245035210879e7d7f8312d92167cf0"
 
 [[package]]
 name = "unrelateed-crate"
 version = "0.2.0+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b16af1a8ba7e4331ca62d945483a3028c2afbbe06a7f2ffaa0a3538ef0a7d63e"
+checksum = "ab9bcb03df75fcba470549967100c58f77794e1721b987c3ef561ceb5ff37689"

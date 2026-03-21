@@ -1746,24 +1746,26 @@ impl Package {
         mode: u32,
         contents: &EntryData,
     ) {
-        let mut header = Header::new_ustar();
-        let contents = match contents {
-            EntryData::Regular(contents) => contents.as_str(),
+        let mut header = Header::new_gnu();
+        header.set_mode(mode);
+        match contents {
+            EntryData::Regular(contents) => {
+                header.set_size(contents.len() as u64);
+                t!(ar.append_data(&mut header, path, contents.as_bytes()));
+            }
             EntryData::Symlink(src) => {
                 header.set_entry_type(tar::EntryType::Symlink);
-                t!(header.set_link_name(src));
-                "" // Symlink has no contents.
+                header.set_size(0);
+                t!(ar.append_link(&mut header, path, src));
             }
             EntryData::Directory => {
                 header.set_entry_type(tar::EntryType::Directory);
-                ""
+                t!(header.set_path(path));
+                header.set_size(0);
+                header.set_cksum();
+                t!(ar.append(&header, &[][..]));
             }
         };
-        header.set_size(contents.len() as u64);
-        t!(header.set_path(path));
-        header.set_mode(mode);
-        header.set_cksum();
-        t!(ar.append(&header, contents.as_bytes()));
     }
 
     /// Returns the path to the compressed package file.

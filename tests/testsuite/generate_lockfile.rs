@@ -368,13 +368,13 @@ dependencies = [
 name = "has_time"
 version = "2025.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "105ca3acbc796da3e728ff310cafc6961cebc48d0106285edb8341015b5cc2d7"
+checksum = "7c2b785233e952a06d7587a6ff52bbff3c80dba6e0d4de75fa9e242b540f002c"
 
 [[package]]
 name = "no_time"
 version = "2025.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01e688c07975f1e85f526c033322273181a4d8fe97800543d813d0a0adc134e3"
+checksum = "1954af12e2672ec49b44fa45ff51f5f38c800946a480147e16229ebed6abd914"
 
 "##]],
     );
