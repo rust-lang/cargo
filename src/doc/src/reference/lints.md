@@ -24,6 +24,7 @@ These lints are all set to the 'allow' level by default.
 - [`non_kebab_case_packages`](#non_kebab_case_packages)
 - [`non_snake_case_features`](#non_snake_case_features)
 - [`non_snake_case_packages`](#non_snake_case_packages)
+- [`uninherited_repository`](#uninherited_repository)
 
 ## Warn-by-default
 
@@ -390,6 +391,60 @@ Should be written as:
 ```toml
 [package]
 name = "foo"
+```
+
+
+## `uninherited_repository`
+Group: `pedantic`
+
+Level: `allow`
+
+MSRV: `1.79.0`
+
+### What it does
+
+Checks for `package.repository` fields in workspace members that are set
+explicitly instead of being inherited from `[workspace.package]`.
+
+See also [`package.repository` reference documentation](manifest.md#the-repository-field).
+
+### Why it is bad
+
+A common mistake is setting `package.repository` to the URL of the git host's
+file browser for the specific crate (e.g. a GitHub `/tree/` URL) rather than
+the root of the repository. Moving the field to `[workspace.package]` and
+inheriting it encourages using the correct root URL in one place and avoids
+per-crate drift.
+
+### Note
+
+This lint fires for any explicit `repository` value in a workspace member,
+regardless of whether the URL looks correct or not. It does not validate the
+URL itself; it only checks that the field is inherited rather than set
+explicitly.
+
+### Drawbacks
+
+A workspace that spans multiple repositories would need to suppress this lint,
+since each member legitimately has a different repository URL.
+
+### Example
+
+```toml
+[workspace]
+
+[package]
+repository = "https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-macro"
+```
+
+Should be written as:
+
+```toml
+[workspace.package]
+repository = "https://github.com/rust-lang/cargo"
+
+[package]
+repository.workspace = true
 ```
 
 
