@@ -145,6 +145,7 @@ pub fn resolve(
             first_version,
             gctx,
             &mut past_conflicting_activations,
+            resolve_version,
         )?;
         if registry.reset_pending() {
             break resolver_ctx;
@@ -199,6 +200,7 @@ fn activate_deps_loop(
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    version: ResolveVersion,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
@@ -214,6 +216,7 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            version,
         );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
@@ -241,7 +244,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut dep, candidates, mut features)) = frame;
+        let (mut parent, ((mut dep, candidates, mut features), package_requiring_this)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -352,6 +355,7 @@ fn activate_deps_loop(
                             &resolver_ctx,
                             registry.registry,
                             &parent,
+                            package_requiring_this,
                             &dep,
                             &conflicting_activations,
                             &candidates,
@@ -415,6 +419,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -445,7 +450,7 @@ fn activate_deps_loop(
                             frame
                                 .remaining_siblings
                                 .remaining()
-                                .find_map(|(new_dep, _, _)| {
+                                .find_map(|((new_dep, _, _), _)| {
                                     past_conflicting_activations.conflicting(&resolver_ctx, new_dep)
                                 })
                         {
@@ -627,9 +632,16 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
+    version: ResolveVersion,
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
+    let weak_dep_feat_requires = cx
+        .weak_dep_with_feats
+        .iter()
+        .find_map(|(dep, v)| dep.matches(&candidate).then_some(v))
+        .cloned()
+        .unwrap_or_default();
     if let Some((parent, dep)) = parent {
         let parent_pid = parent.package_id();
         // add an edge from candidate to parent in the parents graph
@@ -637,6 +649,13 @@ fn activate(
             .link(candidate_pid, parent_pid)
             // and associate dep with that edge
             .insert(dep.clone());
+        for wdf in weak_dep_feat_requires.iter() {
+            // add an edge from candidate to parent in the parents graph
+            cx.parents
+                .link(candidate_pid, wdf.direct_parent)
+                // and associate dep with that edge
+                .insert(dep.clone());
+        }
     }
 
     let activated = cx.flag_activated(&candidate, opts, parent)?;
@@ -673,7 +692,9 @@ fn activate(
         parent.map(|p| p.0.package_id()),
         &candidate,
         opts,
+        weak_dep_feat_requires,
         first_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.

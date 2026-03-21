@@ -188,10 +188,8 @@ fn test_12_weak_dependencies() {
     ]);
 
     let deps = vec!["rust_decimal".with(&["default"])];
-
-    // Weak dependencies are not supported yet in the dependency resolver
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]
@@ -206,16 +204,14 @@ fn test_13_weak_dependencies() {
     ]);
 
     let deps = vec!["winnow".with(&["default"])];
-
-    // Weak dependencies are not supported yet in the dependency resolver
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]
 fn test_14_weak_dependencies() {
     let reg = registry(vec![
-        pkg_dep("a", vec![dep("bad")]),
+        pkg("a"),
         pkg_dep_with("b", vec!["a".opt()], &[("perf-literal", &["dep:a"])]),
         pkg_dep_with(
             "c",
@@ -229,10 +225,8 @@ fn test_14_weak_dependencies() {
     ]);
 
     let deps = vec!["dep".with(&["default"])];
-
-    // Weak dependencies are not supported yet in the dependency resolver
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]

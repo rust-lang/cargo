@@ -25,6 +25,12 @@ pub struct ResolverContext {
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, im_rc::HashSet<Dependency, rustc_hash::FxBuildHasher>>,
+    /// a cache of `Dependency`s that contain at least one weak features
+    ///
+    /// when resolver try to resolve the very dependency, these features will also be added as
+    /// input of `resolve_features`. This make deferring dependency possible
+    pub weak_dep_with_feats:
+        im_rc::HashMap<Dependency, Vec<WeakDepFeats>, rustc_hash::FxBuildHasher>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -49,6 +55,7 @@ impl ResolverContext {
             links: im_rc::HashMap::default(),
             parents: Graph::new(),
             activations: im_rc::HashMap::default(),
+            weak_dep_with_feats: im_rc::HashMap::default(),
         }
     }
 
@@ -201,4 +208,17 @@ impl ResolverContext {
         }
         graph
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+/// Describe what feats the dependency should have if enabled,
+/// and their parent packages
+pub struct WeakDepFeats {
+    pub extra_feats: Vec<InternedString>,
+    pub direct_parent: PackageId,
+    /// used to trace the root cause that requires these features
+    ///
+    /// if A depend on B, while B opt dep on C with weak feature F,
+    /// then this will be set to A
+    pub package_requiring_this: PackageId,
 }
