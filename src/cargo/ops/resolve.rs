@@ -63,6 +63,7 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
+use crate::core::compiler::standard_lib::detect_sysroot_src_path;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
@@ -85,6 +86,7 @@ use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::rc::Rc;
 use tracing::{debug, trace};
 
@@ -133,7 +135,9 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>, dry_run: bool) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = ws.package_registry()?;
-    let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
+    let target_data = RustcTargetData::new(ws, &[])?;
+    let builtins_root = detect_sysroot_src_path(&target_data)?;
+    let resolve = resolve_with_registry(ws, &mut registry, dry_run, Some(&builtins_root))?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -157,6 +161,7 @@ pub fn resolve_ws_with_opts<'gctx>(
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
     dry_run: bool,
+    inject_builtins: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
     let feature_unification = ws.resolve_feature_unification();
     let individual_specs = match feature_unification {
@@ -173,6 +178,9 @@ pub fn resolve_ws_with_opts<'gctx>(
         .cloned()
         .collect();
     let specs = &specs[..];
+    let builtins_root =
+        inject_builtins.then(|| detect_sysroot_src_path(target_data).expect("sysroot path ok"));
+    let builtins_root = builtins_root.as_ref();
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
@@ -186,13 +194,14 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         ops::print_lockfile_changes(ws, None, &resolved_with_overrides, &mut registry)?;
         (resolve, resolved_with_overrides)
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
+        let resolve = resolve_with_registry(ws, &mut registry, dry_run, builtins_root)?;
         // No need to add patches again, `resolve_with_registry` has done it.
         let add_patches = false;
 
@@ -244,6 +253,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         (Some(resolve), resolved_with_overrides)
     } else {
@@ -258,6 +268,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         // Skipping `print_lockfile_changes` as there are cases where this prints irrelevant
         // information
@@ -352,6 +363,7 @@ fn resolve_with_registry<'gctx>(
     ws: &Workspace<'gctx>,
     registry: &mut PackageRegistry<'gctx>,
     dry_run: bool,
+    builtins_root: Option<&PathBuf>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -363,6 +375,7 @@ fn resolve_with_registry<'gctx>(
         None,
         &[],
         true,
+        builtins_root,
     )?;
 
     let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
@@ -410,6 +423,7 @@ pub fn resolve_with_previous<'gctx>(
     keep_previous: Option<Keep<'_>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
+    builtins_root: Option<&PathBuf>,
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
@@ -509,6 +523,7 @@ pub fn resolve_with_previous<'gctx>(
         &version_prefs,
         ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         Some(ws.gctx()),
+        builtins_root,
     )?;
 
     let patches = registry.patches().values().flat_map(|v| v.iter());
