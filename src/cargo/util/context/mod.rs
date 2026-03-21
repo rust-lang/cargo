@@ -88,6 +88,7 @@ use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
+use crate::util::network::http_async;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -267,6 +268,7 @@ pub struct GlobalContext {
     package_cache_lock: CacheLocker,
     /// Cached configuration parsed by Cargo
     http_config: OnceLock<CargoHttpConfig>,
+    http_async: OnceLock<http_async::Client>,
     future_incompat_config: OnceLock<CargoFutureIncompatConfig>,
     net_config: OnceLock<CargoNetConfig>,
     build_config: OnceLock<CargoBuildConfig>,
@@ -361,6 +363,7 @@ impl GlobalContext {
             registry_config: Default::default(),
             package_cache_lock: CacheLocker::new(),
             http_config: Default::default(),
+            http_async: Default::default(),
             future_incompat_config: Default::default(),
             net_config: Default::default(),
             build_config: Default::default(),
@@ -1892,6 +1895,16 @@ impl GlobalContext {
             timeout.configure(&mut http)?;
         }
         Ok(http)
+    }
+
+    pub async fn http_async(
+        &self,
+        request: http::Request<Vec<u8>>,
+    ) -> CargoResult<http::Response<Vec<u8>>> {
+        let http_async = self
+            .http_async
+            .try_borrow_with(|| http_async::Client::new(self))?;
+        http_async.request(self, request).await
     }
 
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {

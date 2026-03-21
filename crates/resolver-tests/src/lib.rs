@@ -7,10 +7,10 @@
 pub mod helpers;
 pub mod sat;
 
+use std::cell::RefCell;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::Resolve;
@@ -131,15 +131,15 @@ pub fn resolve_with_global_context_raw(
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
-        used: HashSet<PackageId>,
+        used: RefCell<HashSet<PackageId>>,
     }
     impl<'a> Registry for MyRegistry<'a> {
-        fn query(
-            &mut self,
+        async fn query(
+            &self,
             dep: &Dependency,
             kind: QueryKind,
             f: &mut dyn FnMut(IndexSummary),
-        ) -> Poll<CargoResult<()>> {
+        ) -> CargoResult<()> {
             for summary in self.list.iter() {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(summary),
@@ -148,11 +148,11 @@ pub fn resolve_with_global_context_raw(
                     QueryKind::Normalized => true,
                 };
                 if matched {
-                    self.used.insert(summary.package_id());
+                    self.used.borrow_mut().insert(summary.package_id());
                     f(IndexSummary::Candidate(summary.clone()));
                 }
             }
-            Poll::Ready(Ok(()))
+            Ok(())
         }
 
         fn describe_source(&self, _src: SourceId) -> String {
@@ -162,14 +162,10 @@ pub fn resolve_with_global_context_raw(
         fn is_replaced(&self, _src: SourceId) -> bool {
             false
         }
-
-        fn block_until_ready(&mut self) -> CargoResult<()> {
-            Ok(())
-        }
     }
     impl<'a> Drop for MyRegistry<'a> {
         fn drop(&mut self) {
-            if std::thread::panicking() && self.list.len() != self.used.len() {
+            if std::thread::panicking() && self.list.len() != self.used.get_mut().len() {
                 // we found a case that causes a panic and did not use all of the input.
                 // lets print the part of the input that was used for minimization.
                 eprintln!(
@@ -177,7 +173,7 @@ pub fn resolve_with_global_context_raw(
                     PrettyPrintRegistry(
                         self.list
                             .iter()
-                            .filter(|s| { self.used.contains(&s.package_id()) })
+                            .filter(|s| { self.used.get_mut().contains(&s.package_id()) })
                             .cloned()
                             .collect()
                     )
@@ -187,7 +183,7 @@ pub fn resolve_with_global_context_raw(
     }
     let mut registry = MyRegistry {
         list: registry,
-        used: HashSet::new(),
+        used: RefCell::new(HashSet::new()),
     };
 
     let root_summary =

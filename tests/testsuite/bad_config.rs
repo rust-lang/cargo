@@ -2442,9 +2442,6 @@ fn bad_source_config2() {
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
   unable to update registry `crates-io`
 
 Caused by:
@@ -2485,9 +2482,6 @@ fn bad_source_config3() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
 
 Caused by:
   unable to update registry `crates-io`
@@ -2533,9 +2527,6 @@ fn bad_source_config4() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
 
 Caused by:
   unable to update registry `crates-io`

@@ -23,6 +23,7 @@ anstyle = "1.0.13"
 anstyle-hyperlink = "1.0.1"
 anstyle-progress = "0.1.0"
 anyhow = "1.0.102"
+async-trait = "0.1.89"
 base64 = "0.22.1"
 blake3 = "1.8.3"
 build-rs = { version = "0.3.4", path = "crates/build-rs" }
@@ -49,6 +50,8 @@ curl = "0.4.49"
 curl-sys = "=0.4.83"
 filetime = "0.2.27"
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
+futures = { version = "0.3", default-features = false, features = ["std", "executor"]}
+futures-timer = "3.0.3"
 git2 = "0.20.4"
 git2-curl = "0.21.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
@@ -60,6 +63,7 @@ heck = "0.5.0"
 hex = "0.4.3"
 hmac = "0.12.1"
 home = "0.5.12"
+http = "1.4.0"
 http-auth = { version = "0.1.10", default-features = false }
 ignore = "0.4.25"
 im-rc = "15.1.0"
@@ -164,6 +168,7 @@ anstyle.workspace = true
 anstyle-hyperlink = { workspace = true, features = ["file"] }
 anstyle-progress.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 base64.workspace = true
 blake3.workspace = true
 cargo-credential.workspace = true
@@ -178,6 +183,8 @@ curl = { workspace = true, features = ["http2"] }
 curl-sys.workspace = true
 filetime.workspace = true
 flate2.workspace = true
+futures.workspace = true
+futures-timer.workspace = true
 git2.workspace = true
 git2-curl.workspace = true
 gix.workspace = true
@@ -186,6 +193,7 @@ heck.workspace = true
 hex.workspace = true
 hmac.workspace = true
 home.workspace = true
+http.workspace = true
 http-auth.workspace = true
 ignore.workspace = true
 im-rc.workspace = true

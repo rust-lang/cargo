@@ -389,13 +389,7 @@ fn patch_to_git_pull_request() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/does-not-exist/pull/123`
 ...
-[ERROR] failed to load source for dependency `bar`
-
-Caused by:
-  unable to update https://github.com/rust-lang/does-not-exist/pull/123
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
+[ERROR] failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
 
 Caused by:
   network failure seems to have happened
