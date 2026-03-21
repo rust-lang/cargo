@@ -67,6 +67,12 @@ struct State<'a, 'gctx> {
     /// dependency from a to b was added purely because it was a dev-dependency.
     /// This is used during `connect_run_custom_build_deps`.
     dev_dependency_edges: HashSet<(Unit, Unit)>,
+
+    /// The set of packages explicitly selected by the user (e.g. via `-p`).
+    /// Used to determine whether to apply the public-dependency doc filter:
+    /// only root packages bypass the filter; their deps must be public to
+    /// have their own docs generated.
+    root_pkg_ids: HashSet<PackageId>,
 }
 
 /// A boolean-like to indicate if a `Unit` is an artifact or not.
@@ -126,6 +132,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         interner,
         scrape_units,
         dev_dependency_edges: HashSet::new(),
+        root_pkg_ids: roots.iter().map(|u| u.pkg.package_id()).collect(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
@@ -638,6 +645,21 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
+
+    // Check if public-dependency feature is enabled
+    let public_deps_enabled = state.gctx.cli_unstable().public_dependency
+        || unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .is_enabled(Feature::public_dependency());
+
+    // Whether this package was explicitly selected by the user (e.g. via `-p`).
+    // User-selected packages always have all their direct deps documented,
+    // regardless of public/private status. For everything else, only public
+    // deps get their own docs generated when public-dependency is enabled.
+    let is_user_selected = state.root_pkg_ids.contains(&unit.pkg.package_id());
+
     for (id, deps) in state.deps(unit, unit_for) {
         let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
             continue;
@@ -658,7 +680,20 @@ fn compute_deps_doc(
             IS_NO_ARTIFACT_DEP,
         )?;
         ret.push(lib_unit_dep);
-        if dep_lib.documented() && state.intent.wants_deps_docs() {
+
+        // Decide whether to document this dependency.
+        // When public-dependency is enabled, only document:
+        // - Direct dependencies of user-selected packages
+        // - Public dependencies (recursively)
+        // This dramatically speeds up documentation builds by excluding indirect
+        // private dependencies that cannot be used by readers of the docs.
+        let should_doc_dep = if is_user_selected || !public_deps_enabled {
+            true
+        } else {
+            state.resolve().is_public_dep(unit.pkg.package_id(), id)
+        };
+
+        if dep_lib.documented() && state.intent.wants_deps_docs() && should_doc_dep {
             // Document this lib as well.
             let doc_unit_dep = new_unit_dep(
                 state,
