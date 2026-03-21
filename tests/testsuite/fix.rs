@@ -1435,11 +1435,9 @@ fn fix_to_broken_code() {
   = cause: thread 'main' ([..]) panicked at src/main.rs:23:29:
            explicit panic
            [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
 [NOTE] original diagnostics will follow:
 ...
-
 "#]])
         .run();
 
@@ -2381,6 +2379,38 @@ fn fix_in_rust_src() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[ERROR] errors present after applying fixes to crate `foo`
+ --> [..]macros/mod.rs
+ ::: lib.rs
+  = cause: error[E0308]: mismatched types
+            --> lib.rs:5:9
+             |
+           2 | /     if true {
+           3 | |         writeln!(w, "`;?` here ->")?;
+           4 | |     } else {
+           5 | |         writeln!(w, "but not here")
+             | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `()`, found `Result<(), Error>`
+           6 | |     }
+             | |_____- expected this to be `()`
+             |
+             = [NOTE] expected unit type `()`
+                             found enum `Result<(), std::fmt::Error>`
+             = [NOTE] this error originates in the macro `writeln` (in Nightly builds, run with -Z macro-backtrace for more info)
+           [HELP] consider using a semicolon here
+             |
+           6 |     };
+             |      +
+           [HELP] you might have meant to return this value
+             |
+           5 |         return writeln!(w, "but not here");
+             |         ++++++                            +
+           [HELP] use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller
+            --> [..]macros/mod.rs:670:58
+             |
+           67|         $dst.write_fmt($crate::format_args_nl!($($arg)*))?
+             |                                                          +
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
+[NOTE] original diagnostics will follow:
 error[E0308]: mismatched types
  --> lib.rs:5:9
   |
@@ -2404,7 +2434,7 @@ error[E0308]: mismatched types
 5 |         return writeln!(w, "but not here");
   |         ++++++                            +
 [HELP] use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller
- --> [..]/lib/rustlib/src/rust/library/core/src/macros/mod.rs:670:58
+ --> [..]macros/mod.rs:670:58
   |
 67|         $dst.write_fmt($crate::format_args_nl!($($arg)*))?
   |                                                          +

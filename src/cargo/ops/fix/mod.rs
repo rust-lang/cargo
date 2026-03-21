@@ -789,12 +789,7 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
         }
     }
 
-    // If there were any fixes, let the user know that there was a failure
-    // attempting to apply them, and to ask for a bug report.
-    //
-    // FIXME: The error message here is not correct with --broken-code.
-    //        https://github.com/rust-lang/cargo/issues/10955
-    if fixes.files.is_empty() {
+    if fixes.files.is_empty() && !allow_broken_code {
         // No fixes were available. Display whatever errors happened.
         emit_output(&fixes.last_output)?;
         exit_with(fixes.last_output.status);
@@ -814,6 +809,7 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
             krate,
             &fixes.last_output.stderr,
             fixes.last_output.status,
+            allow_broken_code,
         )?;
         // Display the diagnostics that appeared at the start, before the
         // fixes failed. This can help with diagnosing which suggestions
@@ -1171,6 +1167,7 @@ fn log_failed_fix(
     krate: Option<String>,
     stderr: &[u8],
     status: ExitStatus,
+    allow_broken_code: bool,
 ) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
@@ -1205,6 +1202,7 @@ fn log_failed_fix(
         krate,
         errors,
         abnormal_exit,
+        allow_broken_code,
     }
     .post(gctx)?;
 
