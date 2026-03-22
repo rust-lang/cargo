@@ -4490,6 +4490,7 @@ fn doc_direct_deps_always_documented() {
 #[cargo_test(nightly, reason = "public-dependency feature is unstable")]
 fn doc_with_transitive_private_dependency() {
     // foo -> bar (direct dep) -> baz (private dep of bar, transitive to foo)
+    // baz should NOT be documented because it is a private transitive dep.
 
     Package::new("baz", "0.0.1")
         .file("src/lib.rs", "pub fn baz() {}")
@@ -4528,7 +4529,6 @@ fn doc_with_transitive_private_dependency() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[DOCUMENTING] baz v0.0.1
 [CHECKING] baz v0.0.1
 [DOCUMENTING] bar v0.0.1
 [CHECKING] bar v0.0.1
@@ -4543,7 +4543,7 @@ fn doc_with_transitive_private_dependency() {
 
     assert!(p.root().join("target/doc/foo/index.html").is_file());
     assert!(p.root().join("target/doc/bar/index.html").is_file());
-    assert!(p.root().join("target/doc/baz/index.html").is_file());
+    assert!(!p.root().join("target/doc/baz/index.html").is_file());
 }
 
 #[cargo_test(nightly, reason = "public-dependency feature is unstable")]
@@ -4551,7 +4551,11 @@ fn doc_workspace_member_private_dep() {
     // selected, skipped and transitive are all workspace members.
     // selected has a private dep on skipped.
     // skipped has a dep on transitive.
-    // Running `cargo doc -p selected` currently documents all of them.
+    //
+    // Running `cargo doc -p selected`, selected is the root so all its
+    // direct deps (skipped) are documented. But skipped is not a root,
+    // so the public-dependency filter applies: transitive is not marked
+    // public by skipped, so it should not be documented.
 
     let p = project()
         .file(
@@ -4607,6 +4611,7 @@ fn doc_workspace_member_private_dep() {
 
     assert!(p.root().join("target/doc/selected/index.html").is_file());
     assert!(p.root().join("target/doc/skipped/index.html").is_file());
-    // transitive is documented under the current behavior
-    assert!(p.root().join("target/doc/transitive/index.html").is_file());
+    // transitive is not documented: skipped is not a root, so the
+    // public-dependency filter kicks in and transitive is not public
+    assert!(!p.root().join("target/doc/transitive/index.html").is_file());
 }
