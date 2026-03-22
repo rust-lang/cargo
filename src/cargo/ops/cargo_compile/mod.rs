@@ -886,7 +886,7 @@ fn traverse_and_share(
     let mut dep_hash = StableHasher::new();
     let skip_non_compile_time_deps = compile_time_deps_only
         && (!unit.target.is_compile_time_dependency() ||
-            // Root unit is not a dependency unless other units are dependant
+            // Root unit is not a dependency unless other units are dependent
             // to it.
             unit_is_root);
     let new_deps: Vec<_> = unit_graph[unit]
