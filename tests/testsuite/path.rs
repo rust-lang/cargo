@@ -1993,19 +1993,9 @@ fn invalid_package_in_subdirectory() {
     p.cargo("generate-lockfile")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `definitely_not_bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `definitely_not_bar`
-
-Caused by:
-  Unable to update [ROOT]/foo/crates/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/crates/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `definitely_not_bar` found at `[ROOT]/foo/crates/bar`
+[NOTE] required by package `foo v0.5.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/crates/bar/definitely_not_bar`
 
 "#]])
         .run();
