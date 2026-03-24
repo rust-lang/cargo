@@ -23,30 +23,10 @@ fn make_project_with_rustc_warning() -> Project {
 }
 
 #[cargo_test]
-fn requires_nightly() {
-    // build.warnings has no effect without -Zwarnings.
-    let p = make_project_with_rustc_warning();
-    p.cargo("check")
-        .arg("--config")
-        .arg("build.warnings='deny'")
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused variable: `x`
-...
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
 fn always_show_error_diags() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
         .env("RUSTFLAGS", "-Dunused_variables")
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
@@ -76,8 +56,6 @@ fn clippy() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
@@ -97,8 +75,6 @@ fn clippy() {
 fn config() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .env("CARGO_BUILD_WARNINGS", "deny")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -113,8 +89,6 @@ fn config() {
 
     // CLI has precedence over env
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='warn'")
         .env("CARGO_BUILD_WARNINGS", "deny")
@@ -132,8 +106,6 @@ fn config() {
 fn unknown_value() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='forbid'")
         .with_stderr_data(str![[r#"
@@ -166,8 +138,6 @@ fn keep_going() {
         .build();
 
     p.cargo("build")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
@@ -184,8 +154,6 @@ fn keep_going() {
     assert!(!p.bin("foo").is_file());
 
     p.cargo("build --keep-going")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
@@ -209,8 +177,6 @@ fn keep_going() {
 fn rustc_caching_allow_first() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
@@ -221,8 +187,6 @@ fn rustc_caching_allow_first() {
         .run();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
@@ -240,8 +204,6 @@ fn rustc_caching_allow_first() {
 fn rustc_caching_deny_first() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
@@ -256,8 +218,6 @@ fn rustc_caching_deny_first() {
         .run();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
@@ -328,8 +288,6 @@ fn hard_warning_deny() {
 
     // Behavior under test
     p.cargo("rustc")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .arg("--")
@@ -407,8 +365,6 @@ fn hard_warning_allow() {
 
     // Behavior under test
     p.cargo("rustc")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='allow'")
         .arg("--")
@@ -489,8 +445,6 @@ fn cap_lints_deny() {
 
     // Behavior under test
     p.cargo("check -vv")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
@@ -563,8 +517,6 @@ fn cap_lints_allow() {
 
     // Behavior under test
     p.cargo("check -vv")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"

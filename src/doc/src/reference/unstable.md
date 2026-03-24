@@ -132,7 +132,6 @@ Each new feature described below should explain how to use it.
     * [script](#script) --- Enable support for single-file `.rs` packages.
     * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
-    * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
     * [`fix-edition`](#fix-edition) --- A permanently unstable edition migration helper.
     * [Plumbing subcommands](https://github.com/crate-ci/cargo-plumbing) --- Low, level commands that act as APIs for Cargo, like `cargo metadata`
@@ -1844,28 +1843,6 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 - powershell:
   Add `CARGO_COMPLETE=powershell cargo +nightly | Invoke-Expression` to `$PROFILE`.
 
-## warnings
-
-* Original Issue: [#8424](https://github.com/rust-lang/cargo/issues/8424)
-* Tracking Issue: [#14802](https://github.com/rust-lang/cargo/issues/14802)
-
-The `-Z warnings` feature enables the `build.warnings` configuration option to control how
-Cargo handles warnings. If the `-Z warnings` unstable flag is not enabled, then
-the `build.warnings` config will be ignored.
-
-This setting currently only applies to rustc warnings. It may apply to additional warnings (such as Cargo lints or Cargo warnings)
-in the future.
-
-### `build.warnings`
-* Type: string
-* Default: `warn`
-* Environment: `CARGO_BUILD_WARNINGS`
-
-Controls how Cargo handles warnings. Allowed values are:
-* `warn`: warnings are emitted as warnings (default).
-* `allow`: warnings are hidden.
-* `deny`: if warnings are emitted, an error will be raised at the end of the current crate and the process. Use `--keep-going` to see all warnings.
-
 ## feature unification
 
 * RFC: [#3692](https://github.com/rust-lang/rfcs/blob/master/text/3692-feature-unification.md)
@@ -2353,3 +2330,7 @@ See the [`include` config documentation](config.md#include) for more.
 ## pubtime
 
 The `pubtime` index field  has been stabilized in Rust 1.94.0.
+
+## warnings
+
+The `build.warnings` config field has been stabilized in Rust 1.97.
