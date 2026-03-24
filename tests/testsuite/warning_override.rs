@@ -305,7 +305,7 @@ fn keep_going() {
         .file("src/main.rs", "fn main() { let y = 4; }")
         .build();
 
-    p.cargo("check")
+    p.cargo("build")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
         .arg("--config")
@@ -320,8 +320,10 @@ fn keep_going() {
 "#]])
         .with_status(101)
         .run();
+    // No uplifting
+    assert!(!p.bin("foo").is_file());
 
-    p.cargo("check --keep-going")
+    p.cargo("build --keep-going")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
         .arg("--config")
@@ -339,6 +341,8 @@ fn keep_going() {
 "#]])
         .with_status(101)
         .run();
+    // Uplifting happened despite the error
+    assert!(p.bin("foo").is_file());
 }
 
 #[cargo_test]
