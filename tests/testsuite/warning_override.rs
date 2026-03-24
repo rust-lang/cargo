@@ -305,7 +305,7 @@ fn keep_going() {
         .file("src/main.rs", "fn main() { let y = 4; }")
         .build();
 
-    p.cargo("check")
+    p.cargo("build")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
         .arg("--config")
@@ -320,8 +320,10 @@ fn keep_going() {
 "#]])
         .with_status(101)
         .run();
+    // No uplifting
+    assert!(!p.bin("foo").is_file());
 
-    p.cargo("check --keep-going")
+    p.cargo("build --keep-going")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
         .arg("--config")
@@ -339,6 +341,8 @@ fn keep_going() {
 "#]])
         .with_status(101)
         .run();
+    // Uplifting happened despite the error
+    assert!(p.bin("foo").is_file());
 }
 
 #[cargo_test]
@@ -397,6 +401,19 @@ fn cap_lints() {
 [WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[FRESH] has_warning v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
