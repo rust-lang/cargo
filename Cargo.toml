@@ -44,9 +44,7 @@ core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.18", path = "crates/crates-io" }
 criterion = { version = "0.8.2", features = ["html_reports"] }
 curl = "0.4.49"
-# Do not upgrade curl-sys past 0.4.83
-# https://github.com/rust-lang/cargo/issues/16357
-curl-sys = "=0.4.83"
+curl-sys = "0.4.86"
 filetime = "0.2.27"
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.4"
