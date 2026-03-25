@@ -1264,7 +1264,8 @@ versions that meet the requirements `*` are: 0.5.0
 
 package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Try to adjust your dependencies so that only one package uses the `links = "a"` value.
 
 failed to select a version for `a-sys` which could resolve this conflict
 
@@ -1391,7 +1392,8 @@ versions that meet the requirements `*` are: 0.5.0
 
 package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Try to adjust your dependencies so that only one package uses the `links = "a"` value.
 
 failed to select a version for `a-sys` which could resolve this conflict
 
@@ -5419,7 +5421,8 @@ versions that meet the requirements `*` are: 0.5.0
 
 package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([ROOT]/foo)`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+Try to adjust your dependencies so that only one package uses the `links = "a"` value.
 
 failed to select a version for `a` which could resolve this conflict
 
