@@ -257,7 +257,6 @@ fn hard_warning_deny() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
-                edition = "2021"
             "#
             ),
         )
@@ -271,6 +270,7 @@ fn hard_warning_deny() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] [..]
 
@@ -293,7 +293,6 @@ fn hard_warning_allow() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
-                edition = "2021"
             "#
             ),
         )
@@ -307,6 +306,7 @@ fn hard_warning_allow() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
